@@ -98,7 +98,8 @@ namespace dsn {
             }
         }
 
-        screen_logger::screen_logger()
+        screen_logger::screen_logger(const char* log_dir)
+            : logging_provider(log_dir)
         {
             _short_header = dsn_config_get_value_bool("tools.screen_logger", "short_header",
                 true, "whether to use short header (excluding file/function etc.)");
@@ -133,8 +134,10 @@ namespace dsn {
             ::fflush(stdout);
         }
 
-        simple_logger::simple_logger() 
+        simple_logger::simple_logger(const char* log_dir)
+            : logging_provider(log_dir)
         {
+            _log_dir = std::string(log_dir);
             _start_index = 0;
             _index = 0;
             _lines = 0;
@@ -154,10 +157,9 @@ namespace dsn {
 
             // check existing log files
             std::vector<std::string> sub_list;
-            std::string path = "./";
-            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false))
             {
-                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                dassert(false, "Fail to get subfiles in %s.", _log_dir.c_str());
             }             
             for (auto& fpath : sub_list)
             {
@@ -192,28 +194,33 @@ namespace dsn {
             _lines = 0;
 
             std::stringstream str;
-            str << "log." << ++_index << ".txt";
+            str << _log_dir << "/log." << ++_index << ".txt";
             _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
-            if (_index - _start_index > 20)
+            while (_index - _start_index > 20)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                if (::remove(str2.str().c_str()) != 0)
+                auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
+                if (::remove(dp.c_str()) != 0)
                 {
-                    printf("Failed to remove garbage log file %s\n", str2.str().c_str());
+                    printf("Failed to remove garbage log file %s\n", dp.c_str());
+                    _start_index--;
+                    break;
                 }
             }
         }
 
         simple_logger::~simple_logger(void) 
         { 
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
             ::fclose(_log);
         }
 
         void simple_logger::flush()
         {
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
             ::fflush(_log);
         }
 

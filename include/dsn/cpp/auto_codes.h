@@ -283,7 +283,6 @@ namespace dsn
         {
             return !(*this == r);
         }
-       
     
     # ifdef TRACK_ERROR_CODE
         ~error_code()
@@ -375,6 +374,9 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_NOT_IMPLEMENTED)
     DEFINE_ERR_CODE(ERR_CHECKPOINT_FAILED)
     DEFINE_ERR_CODE(ERR_WRONG_TIMING)
+    DEFINE_ERR_CODE(ERR_NO_NEED_OPERATE)
+    DEFINE_ERR_CODE(ERR_CORRUPTION)
+    DEFINE_ERR_CODE(ERR_TRY_AGAIN)
 
 } // end namespace
 

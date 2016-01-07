@@ -13,15 +13,27 @@ set(MY_PROJ_INC_PATH "")
 
 set(MY_BOOST_PACKAGES system)
 
-set(MY_PROJ_LIBS dsn.replication.global_checker dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
+set(MY_PROJ_LIBS 
+    dsn.replication.global_checker 
+    dsn.replication 
+    dsn.replication.meta_server 
+    dsn.replication.clientlib 
+    dsn.failure_detector
+    dsn.replication.zookeeper_provider 
+    zookeeper_mt
+    )
 
-set(MY_PROJ_LIB_PATH "")
+
+set(MY_PROJ_LIB_PATH "${ZOOKEEPER_LIB_DIR}")
 
 set(INI_FILES "")
 file(GLOB
-	INI_FILES
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
-	)
+    INI_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
+    "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/multi-meta.sh"
+    )
 
 # Extra files that will be installed
 set(MY_BINPLACES ${INI_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/test.cmd" "${CMAKE_CURRENT_SOURCE_DIR}/vtest.cmd")

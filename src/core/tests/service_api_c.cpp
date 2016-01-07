@@ -126,7 +126,6 @@ TEST(core, dsn_task_code)
 
 TEST(core, dsn_config)
 {
-    ASSERT_STREQ("client", dsn_config_get_value_string("apps.client", "name", "unknown", "client name"));
     ASSERT_TRUE(dsn_config_get_value_bool("apps.client", "run", false, "client run"));
     ASSERT_EQ(1u, dsn_config_get_value_uint64("apps.client", "count", 100, "client count"));
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
@@ -232,7 +231,7 @@ TEST(core, dsn_file)
 
     dsn_handle_t fin = dsn_file_open("command.txt", O_RDONLY, 0);
     ASSERT_NE(nullptr, fin);
-    dsn_handle_t fout = dsn_file_open("command.copy.txt", O_RDWR | O_CREAT, 0666);
+    dsn_handle_t fout = dsn_file_open("command.copy.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
     ASSERT_NE(nullptr, fout);
     char buffer[1024];
     uint64_t offset = 0;
@@ -251,7 +250,7 @@ TEST(core, dsn_file)
         ASSERT_NE(nullptr, tin);
         ASSERT_EQ(1, dsn_task_get_ref(tin));
         dsn_file_read(fin, buffer, 1024, offset, tin);
-        ASSERT_TRUE(dsn_task_wait_timeout(tin, 5000));
+        ASSERT_TRUE(dsn_task_wait(tin));
         ASSERT_EQ(rin.err, dsn_task_error(tin));
         if (rin.err != ERR_OK)
         {
@@ -260,7 +259,11 @@ TEST(core, dsn_file)
         }
         ASSERT_LT(0u, rin.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tin));
-        ASSERT_EQ(1, dsn_task_get_ref(tin));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(tin));
+        }
         dsn_task_release_ref(tin);
 
         aio_result rout;
@@ -280,7 +283,11 @@ TEST(core, dsn_file)
         ASSERT_EQ(ERR_OK, dsn_task_error(tout));
         ASSERT_EQ(rin.sz, rout.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tout));
-        ASSERT_EQ(1, dsn_task_get_ref(tout));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(tout));
+        }
         dsn_task_release_ref(tout);
 
         ASSERT_EQ(ERR_OK, dsn_file_flush(fout));
@@ -296,6 +303,8 @@ TEST(core, dsn_file)
     ASSERT_EQ(fin_size, fout_size);
 }
 
+//TODO: On windows an opened file cannot be deleted, so this test cannot pass
+#ifndef WIN32
 TEST(core, dsn_nfs)
 {
     // if in dsn_mimic_app() and nfs_io_mode == IOE_PER_QUEUE
@@ -334,7 +343,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
 
         ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
@@ -373,7 +386,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
     }
 
@@ -398,7 +415,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
 
         ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
@@ -419,6 +440,7 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(sz1, sz2);
     }
 }
+#endif
 
 TEST(core, dsn_env)
 {
@@ -439,19 +461,29 @@ TEST(core, dsn_system)
     tools::tool_app* tool = tools::get_current_tool();
     ASSERT_EQ(tool->name(), dsn_config_get_value_string("core", "tool", "", ""));
 
+    int app_count = 5;
+    int type_count = 1;
+    if (tool->get_service_spec().enable_default_app_mimic)
+    {
+        app_count++;
+        type_count++;
+    }   
+
     {
         dsn_app_info apps[20];
         int count = dsn_get_all_apps(apps, 20);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
         std::map<std::string, int> type_to_count;
         for (int i = 0; i < count; ++i)
         {
             type_to_count[apps[i].type] += 1;
         }
+
+        ASSERT_EQ(type_count, static_cast<int>(type_to_count.size()));
         ASSERT_EQ(5, type_to_count["test"]);
 
         count = dsn_get_all_apps(apps, 3);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
     }
 }
 

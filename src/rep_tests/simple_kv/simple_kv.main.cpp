@@ -87,11 +87,15 @@ int main(int argc, char** argv)
 
     if (dsn::replication::test::g_fail)
     {
+#ifndef ENABLE_GCOV
+        dsn_exit(-1);
+#endif
         return -1;
     }
 
-    // success: avoid rdsn exit coredump (no elegant exits so far
-    dsn_terminate(); // return SIGKILL 137
+#ifndef ENABLE_GCOV
+    dsn_exit(0);
+#endif
     return 0;
 }
 

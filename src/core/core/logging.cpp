@@ -75,7 +75,13 @@ DSN_API void dsn_logv(const char *file, const char *function, const int line, ds
     if (logger != nullptr)
     {
         logger->dsn_logv(file, function, line, log_level, title, fmt, args);
-    }        
+    }
+    else
+    {
+        printf("%s:%d:%s():", title, line, function);
+        vprintf(fmt, args);
+        printf("\n");
+    }
 }
 
 DSN_API void dsn_logf(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, ...)

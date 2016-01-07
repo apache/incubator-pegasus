@@ -34,6 +34,12 @@ namespace dsn {
             class simple_kv_service_impl : public simple_kv_service
             {
             public:
+                static bool s_simple_kv_open_fail;
+                static bool s_simple_kv_close_fail;
+                static bool s_simple_kv_get_checkpoint_fail;
+                static bool s_simple_kv_apply_checkpoint_fail;
+
+            public:
                 simple_kv_service_impl(replica* replica);
 
                 // RPC_SIMPLE_KV_READ
@@ -43,13 +49,14 @@ namespace dsn {
                 // RPC_SIMPLE_KV_APPEND
                 virtual void on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
 
-                virtual int  open(bool create_new);
-                virtual int  close(bool clear_state);
-                virtual int  checkpoint();
+                virtual ::dsn::error_code open(bool create_new) override;
+                virtual ::dsn::error_code close(bool clear_state) override;
+                virtual ::dsn::error_code checkpoint() override;
+                virtual ::dsn::error_code checkpoint_async() override;
 
                 // helper routines to accelerate learning
-                virtual int get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state);
-                virtual int apply_checkpoint(learn_state& state, chkpt_apply_mode mode);
+                virtual ::dsn::error_code get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state) override;
+                virtual ::dsn::error_code apply_checkpoint(learn_state& state, chkpt_apply_mode mode) override;
 
             private:
                 void recover();

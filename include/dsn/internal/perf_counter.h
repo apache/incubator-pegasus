@@ -37,58 +37,44 @@
 
 # include <memory>
 # include <dsn/internal/enum_helper.h>
+# include <dsn/service_api_c.h>
+# include <dsn/cpp/autoref_ptr.h>
+# include <sstream>
+# include <vector>
 
 namespace dsn {
-
-enum perf_counter_type
-{
-    COUNTER_TYPE_NUMBER,
-    COUNTER_TYPE_RATE,
-    COUNTER_TYPE_NUMBER_PERCENTILES,
-    COUNTER_TYPE_INVALID,
-    COUNTER_TYPE_COUNT
-};
-
-ENUM_BEGIN(perf_counter_type, COUNTER_TYPE_INVALID)
+ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
     ENUM_REG(COUNTER_TYPE_NUMBER)
     ENUM_REG(COUNTER_TYPE_RATE)
     ENUM_REG(COUNTER_TYPE_NUMBER_PERCENTILES)
-ENUM_END(perf_counter_type)
+ENUM_END(dsn_perf_counter_type_t)
 
-enum counter_percentile_type
-{
-    COUNTER_PERCENTILE_50,
-    COUNTER_PERCENTILE_90,
-    COUNTER_PERCENTILE_95,
-    COUNTER_PERCENTILE_99,
-    COUNTER_PERCENTILE_999,    
-
-    COUNTER_PERCENTILE_COUNT,
-    COUNTER_PERCENTILE_INVALID
-};
-
-ENUM_BEGIN(counter_percentile_type, COUNTER_PERCENTILE_INVALID)
+ENUM_BEGIN(dsn_perf_counter_percentile_type_t, COUNTER_PERCENTILE_INVALID)
     ENUM_REG(COUNTER_PERCENTILE_50)
     ENUM_REG(COUNTER_PERCENTILE_90)
     ENUM_REG(COUNTER_PERCENTILE_95)
     ENUM_REG(COUNTER_PERCENTILE_99)
     ENUM_REG(COUNTER_PERCENTILE_999)
-ENUM_END(counter_percentile_type)
+ENUM_END(dsn_perf_counter_percentile_type_t)
 
-class perf_counter
+class perf_counter;
+typedef ref_ptr<perf_counter> perf_counter_ptr;
+
+class perf_counter : public ref_counter
 {
 public:
-    template <typename T> static perf_counter* create(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+    template <typename T> static perf_counter* create(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
     {
-        return new T(section, name, type, dsptr);
+        return new T(app, section, name, type, dsptr);
     }
 
-    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type, const char *);
+    typedef perf_counter* (*factory)(const char*, const char *, const char *, dsn_perf_counter_type_t, const char *);
 
 public:
-    perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr) 
-        : _name(name), _section(section), _dsptr(dsptr)
+    perf_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
+        : _app(app), _name(name), _section(section), _dsptr(dsptr), _type(type), _index(0)
     {
+        build_full_name(app, section, name, _full_name);
     }
 
     virtual ~perf_counter(void) {}
@@ -98,20 +84,42 @@ public:
     virtual void   add(uint64_t val) = 0;
     virtual void   set(uint64_t val) = 0;
     virtual double get_value() = 0;
-    virtual double get_percentile(counter_percentile_type type) = 0;
-    virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
-    virtual uint64_t get_current_sample() const { return 0; }
+    virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
 
-    const char* name() const { return _name.c_str(); }
+    typedef std::vector<std::pair<uint64_t*, int> > samples_t;
+
+    // return actual sample count, must <= required_sample_count
+    virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const { return 0; }
+
+    // return the latest sample value
+    virtual uint64_t get_latest_sample() const { return 0; }
+
+    const char* full_name() const { return _full_name.c_str(); }
+    const char* app() const { return _app.c_str(); }
     const char* section() const { return _section.c_str(); }
+    const char* name() const { return _name.c_str(); }    
     const char* dsptr() const { return _dsptr.c_str(); }
+    dsn_perf_counter_type_t type() const { return _type; }
+    uint64_t index() const { return _index; } // index << 32 | version
+
+public:
+    static void build_full_name(const char* app, const char* section, const char* name, /*out*/ std::string& counter_name)
+    {
+        std::stringstream ss;
+        ss << app << "*" << section << "*" << name;
+        counter_name = std::move(ss.str());
+    }
 
 private:
-    std::string _name;
-    std::string _section;
+    std::string _full_name; 
+    std::string _app;
+    std::string _section; 
+    std::string _name;        
     std::string _dsptr;
-};
+    dsn_perf_counter_type_t _type;
 
-typedef std::shared_ptr<perf_counter> perf_counter_ptr;
+    friend class perf_counters;
+    uint64_t    _index; // for quick query in perf_counters: index << 32 | version
+};
 
 } // end namespace

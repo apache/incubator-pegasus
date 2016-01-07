@@ -46,12 +46,15 @@ struct partition_configuration
     8:i64                    last_committed_decree;
 }
 
+
+
 struct replica_configuration
 {
     1:global_partition_id gpid;
     2:i64                 ballot;
     3:dsn.address         primary;
     4:partition_status    status = partition_status.PS_INACTIVE;
+    5:i64                 learner_signature;
 }
 
 struct prepare_msg
@@ -106,15 +109,17 @@ enum learn_type
 
 struct learn_state
 {
-    1:list<dsn.blob> meta;
-    2:list<string>   files;
+    1:i64 from_decree_excluded;
+    2:i64 to_decree_included;
+    3:list<dsn.blob> meta;
+    4:list<string>   files;
 }
 
 enum learner_status
 {
     LearningWithoutPrepare,
+    LearningWithPrepareTransient,
     LearningWithPrepare,
-	LearningWithPrepareS2, // prepare + checkpointing
     LearningSucceeded,
     LearningFailed,
     Learning_INVALID
@@ -123,22 +128,23 @@ enum learner_status
 struct learn_request
 {
     1:global_partition_id gpid;
-    2:dsn.address         learner;
-    3:i64                 signature;
-    4:i64                 last_committed_decree_in_app;
-    5:i64                 last_committed_decree_in_prepare_list;
-    6:dsn.blob            app_specific_learn_request;
+    2:dsn.address         learner; // learner's address
+    3:i64                 signature; // learning signature
+    4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
+    5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
+    6:dsn.blob            app_specific_learn_request; // learning request data by app.prepare_learn_request()
 }
 
 struct learn_response
 {
-    1:dsn.error_code        err;
-    2:replica_configuration config;
-    3:i64                   commit_decree;
-    4:i64                   prepare_start_decree;
-    5:learn_type            type;
-    6:learn_state           state;
-    7:string                base_local_dir;
+    1:dsn.error_code        err; // error code
+    2:replica_configuration config; // learner's replica config
+    3:i64                   last_committed_decree; // learnee's last committed decree
+    4:i64                   prepare_start_decree; // prepare start decree
+    5:learn_type            type; // learning type: CACHE, LOG, APP
+    6:learn_state           state; // learning data, including memory data and files
+    7:dsn.address           address; // learnee's address
+    8:string                base_local_dir; // base dir of files on learnee
 }
 
 struct group_check_request
@@ -174,6 +180,27 @@ enum config_type
 
     // not used by meta server
     CT_UPGRADE_TO_SECONDARY,
+}
+
+enum app_status
+{
+    available,
+    creating,
+    creating_failed,
+    dropping,
+    dropping_failed,
+    dropped,
+    all,
+    invalid
+}
+
+struct app_info
+{
+    1:app_status    status;
+    2:string        app_type;
+    3:string        app_name;
+    4:i32           app_id;
+    5:i32           partition_count;
 }
 
 struct meta_request_header
@@ -218,7 +245,54 @@ struct configuration_query_by_node_request
     1:dsn.address    node;
 }
 
+struct create_app_options
+{
+    1:i32              partition_count;
+    2:i32              replica_count;
+    3:bool             success_if_exist;
+    4:string           app_type;
+}
+
+struct configuration_create_app_request
+{
+    1:string                     app_name;
+    2:create_app_options         options;
+}
+
+struct drop_app_options
+{
+    1:bool             success_if_not_exist;
+}
+
+struct configuration_drop_app_request
+{
+    1:string                   app_name;
+    2:drop_app_options         options;
+}
+
+struct configuration_list_apps_request
+{
+    1:app_status               status;
+}
+
 // meta server => client
+struct configuration_create_app_response
+{
+    1:dsn.error_code   err;
+    2:i32              appid;
+}
+
+struct configuration_drop_app_response
+{
+    1:dsn.error_code       err;
+}
+
+struct configuration_list_apps_response
+{
+    1:dsn.error_code       err;
+    2:list<app_info>       info;
+}
+
 struct configuration_query_by_node_response
 {
     1:dsn.error_code                err;

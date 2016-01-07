@@ -95,9 +95,13 @@ namespace dsn {
                 reply(0);
             }
             
-            int simple_kv_service_impl::open(bool create_new)
+            ::dsn::error_code simple_kv_service_impl::open(bool create_new)
             {
                 zauto_lock l(_lock);
+
+                init_last_commit_decree(0);
+                _last_durable_decree = 0;
+
                 if (create_new)
                 {
                     auto& dir = data_dir();
@@ -108,10 +112,10 @@ namespace dsn {
                 {
                     recover();
                 }
-                return 0;
+                return ERR_OK;
             }
 
-            int simple_kv_service_impl::close(bool clear_state)
+            ::dsn::error_code simple_kv_service_impl::close(bool clear_state)
             {
                 zauto_lock l(_lock);
                 if (clear_state)
@@ -121,7 +125,7 @@ namespace dsn {
                         dassert(false, "Fail to delete directory %s.", data_dir().c_str());
                     }
                 }
-                return 0;
+                return ERR_OK;
             }
 
             // checkpoint related
@@ -201,13 +205,13 @@ namespace dsn {
                 init_last_commit_decree(version);
             }
 
-            int simple_kv_service_impl::checkpoint()
+            ::dsn::error_code simple_kv_service_impl::checkpoint()
             {
                 zauto_lock l(_lock);
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    return 0;
+                    return ERR_OK;
                 }
 
                 // TODO: should use async write instead
@@ -222,7 +226,7 @@ namespace dsn {
                 os.write((const char*)&count, (uint32_t)sizeof(count));
                 os.write((const char*)&magic, (uint32_t)sizeof(magic));
 
-                for (auto it = _store.begin(); it != _store.end(); it++)
+                for (auto it = _store.begin(); it != _store.end(); ++it)
                 {
                     const std::string& k = it->first;
                     uint32_t sz = (uint32_t)k.length();
@@ -240,11 +244,11 @@ namespace dsn {
                 // TODO: gc checkpoints
 
                 _last_durable_decree = last_committed_decree();
-                return 0;
+                return ERR_OK;
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
+            ::dsn::error_code simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 if (_last_durable_decree.load() > 0)
                 {
@@ -268,7 +272,7 @@ namespace dsn {
                 }
             }
 
-            int simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
             {
                 if (mode == CHKPT_LEARN)
                 {

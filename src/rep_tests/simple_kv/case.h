@@ -87,8 +87,16 @@ private:
     bool _disable_lb_set;
     bool _close_replica_stub;
     bool _close_replica_stub_set;
-    bool _not_exist_on_log_failure;
-    bool _not_exist_on_log_failure_set;
+    bool _not_exit_on_log_failure;
+    bool _not_exit_on_log_failure_set;
+    bool _simple_kv_open_fail;
+    bool _simple_kv_open_fail_set;
+    bool _simple_kv_close_fail;
+    bool _simple_kv_close_fail_set;
+    bool _simple_kv_get_checkpoint_fail;
+    bool _simple_kv_get_checkpoint_fail_set;
+    bool _simple_kv_apply_checkpoint_fail;
+    bool _simple_kv_apply_checkpoint_fail_set;
 };
 
 // SKIP:100
@@ -107,6 +115,16 @@ public:
 private:
     int _count;
     int _skipped;
+};
+
+// EXIT:
+class exit_case_line : public case_line
+{
+public:
+    static const char* NAME() { return "exit"; }
+    virtual std::string name() const { return NAME(); }
+    virtual std::string to_string() const;
+    virtual bool parse(const std::string& params);
 };
 
 class state_case_line : public case_line

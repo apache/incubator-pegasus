@@ -45,6 +45,9 @@
 int g_test_count = 0;
 int g_test_ret = 0;
 
+extern void lock_test_init();
+extern void fd_test_init();
+
 class test_client : public ::dsn::service_app
 {
 public:
@@ -74,14 +77,18 @@ GTEST_API_ int main(int argc, char **argv)
 {
     // register all possible services
     dsn::register_app<test_client>("test");
-    
+    lock_test_init();
+    fd_test_init();
+
     // specify what services and tools will run in config file, then run
     dsn_run_config("config-test.ini", false);
-
     while (g_test_count == 0)
     {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
+#ifndef ENABLE_GCOV
+    dsn_exit(g_test_ret);
+#endif
     return g_test_ret;
 }

@@ -34,7 +34,7 @@
  */
 
 # pragma once
-# include "simple_kv.client.h"
+# include "simple_kv.client.impl.h"
 # include "simple_kv.client.perf.h"
 # include "simple_kv.server.h"
 
@@ -61,7 +61,7 @@ public:
         std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
-        _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
+        _simple_kv_client = new simple_kv_client_impl(meta_servers, argv[1]);
         _timer = ::dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
         return ::dsn::ERR_OK;
     }
@@ -103,7 +103,7 @@ public:
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                if (1 == SKV_PARTITION_COUNT)
+                if (1 == _simple_kv_client->get_partition_count())
                 {
                     dassert(v == req.value, "data is inconsistent!");
                 }

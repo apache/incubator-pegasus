@@ -38,7 +38,6 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "replication_failure_detector.h"
-#include "rpc_replicated.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -124,7 +123,7 @@ void replica::assign_primary(configuration_update_request& proposal)
     }
 
     if (proposal.type == CT_UPGRADE_TO_PRIMARY 
-        && (status() != PS_SECONDARY || _secondary_states.checkpoint_task != nullptr))
+        && (status() != PS_SECONDARY || _secondary_states.checkpoint_is_running))
     {
         dwarn(
             "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
@@ -141,12 +140,14 @@ void replica::assign_primary(configuration_update_request& proposal)
     update_configuration_on_meta_server(proposal.type, proposal.node, proposal.config);
 }
 
+// run on primary to send ADD_LEARNER request to candidate replica server
 void replica::add_potential_secondary(configuration_update_request& proposal)
 {
     if (status() != PS_PRIMARY)
     {
+        dwarn("ignore add secondary proposal for invalid state, state = %s", enum_to_string(status()));
         return;
-    }   
+    }
 
     dassert (proposal.config.ballot == get_ballot(), "");
     dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
@@ -269,6 +270,8 @@ void replica::remove(configuration_update_request& proposal)
         }
         break;
     case PS_POTENTIAL_SECONDARY:
+        break;
+    default:
         break;
     }
 
@@ -502,6 +505,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         return true;
 
     // skip invalid change
+    // but do not disable transitions to PS_ERROR as errors
+    // must be handled immmediately
     switch (old_status)
     {
     case PS_ERROR:
@@ -533,7 +538,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (config.status == PS_ERROR || config.status == PS_INACTIVE)
+        if (config.status == PS_INACTIVE)
         {
             if (!_potential_secondary_states.cleanup(false))
             {
@@ -550,23 +555,28 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }
         break;
     case PS_SECONDARY:
-        if (config.status != PS_SECONDARY
-            && _secondary_states.checkpoint_task != nullptr)
+        if (config.status != PS_SECONDARY && config.status != PS_ERROR)
         {
-            dwarn(
-                "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
-                name(),
-                enum_to_string(old_status),
-                old_ballot,
-                enum_to_string(config.status),
-                config.ballot,
-                _secondary_states.checkpoint_task->native_handle()
-                );
-            return false;
+            if (!_secondary_states.cleanup(false))
+            {
+                dwarn(
+                    "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
+                    name(),
+                    enum_to_string(old_status),
+                    old_ballot,
+                    enum_to_string(config.status),
+                    config.ballot,
+                    _secondary_states.checkpoint_task->native_handle()
+                    );
+                return false;
+            }
         }
+        break;
+    default:
         break;
     }
 
+    bool r = false;
     uint64_t oldTs = _last_config_change_time_ms;
     _config = config;
     _last_config_change_time_ms = now_ms();
@@ -580,16 +590,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         {
         case PS_PRIMARY:
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
             break;
         case PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
             break;
         case PS_SECONDARY:
         case PS_ERROR:
-            _primary_states.cleanup();
+            _primary_states.cleanup(true);
             break;
         case PS_POTENTIAL_SECONDARY:
             dassert (false, "invalid execution path");
@@ -605,9 +612,6 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_PRIMARY:
             init_group_check();            
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
             break;
         case PS_SECONDARY:
             break;
@@ -619,6 +623,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            // _secondary_states.cleanup(true); => do it in close as it may block
             break;
         default:
             dassert (false, "invalid execution path");
@@ -632,17 +637,23 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             break;
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
-            _potential_secondary_states.cleanup(true);
+
+            // using force cleanup now as all tasks must be done already
+            r = _potential_secondary_states.cleanup(true);
+            dassert(r, "%s: potential secondary context cleanup failed", name());
+
             check_state_completeness();
             break;
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
-            _potential_secondary_states.cleanup(true);
             break;
         case PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
-            _potential_secondary_states.cleanup(true);
+            _potential_secondary_states.cleanup(false);
+            // => do this in close as it may block
+            // r = _potential_secondary_states.cleanup(true);
+            // dassert(r, "%s: potential secondary context cleanup failed", name());
             break;
         default:
             dassert (false, "invalid execution path");
@@ -652,14 +663,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
+            dassert (_inactive_is_transient, "must be in transient state for being primary next");
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
             break;
-        case PS_SECONDARY:            
+        case PS_SECONDARY:
+            dassert(_inactive_is_transient, "must be in transient state for being secondary next");
             _inactive_is_transient = false;
             break;
         case PS_POTENTIAL_SECONDARY:
@@ -668,6 +678,17 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            // => do this in close as it may block
+            // if (_inactive_is_transient)
+            // {
+            //    _secondary_states.cleanup(true);
+            // }
+
+            if (_inactive_is_transient)
+            {
+                _primary_states.cleanup(true);
+                _secondary_states.cleanup(false);
+            }
             _inactive_is_transient = false;
             break;
         default:
@@ -699,7 +720,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         dassert (false, "invalid execution path");
     }
 
-    dwarn(
+    ddebug(
         "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration=%" PRIu64 " ms",
         name(),
         enum_to_string(old_status),
@@ -715,10 +736,10 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 
     if (status() != old_status)
     {
-        bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
-        _stub->notify_replica_state_update(config, isClosing);
+        bool is_closing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
+        _stub->notify_replica_state_update(config, is_closing);
 
-        if (isClosing)
+        if (is_closing)
         {
             ddebug("%s: being close ...", name());
             _stub->begin_close_replica(this);
@@ -729,6 +750,19 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     {
         _stub->notify_replica_state_update(config, false);
     }
+
+    // start pending mutations if necessary
+    if (status() == PS_PRIMARY)
+    {
+        mutation_ptr next = _primary_states.write_queue.check_possible_work(
+            static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
+            );
+        if (next)
+        {
+            init_prepare(next);
+        }
+    }
+
     return true;
 }
 
@@ -790,6 +824,8 @@ void replica::replay_prepare_list()
 
         if (old != nullptr)
         {
+            dinfo("copy mutation from mutation_tid=%" PRIu64 " to mutation_tid=%" PRIu64,
+                  old->tid(), mu->tid());
             mu->copy_from(old);
         }
         else
@@ -797,9 +833,10 @@ void replica::replay_prepare_list()
             mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
 
             ddebug(
-                "%s: emit empty mutation %" PRId64 " when replay prepare list",
+                "%s: emit empty mutation %s with mutation_tid=%" PRIu64 " when replay prepare list",
                 name(),
-                decree
+                mu->name(),
+                mu->tid()
                 );
         }
 

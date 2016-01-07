@@ -84,21 +84,26 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     decree d = mu->data.header.decree;
     dassert (d > last_committed_decree(), "");
 
-    while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
-    {
-        pop_min();
-    }   
-
     error_code err;
     switch (status)
     {
     case PS_PRIMARY:
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         return mutation_cache::put(mu);
 
     case PS_SECONDARY: 
     case PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;
@@ -121,31 +126,20 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     //    return err;
      
     case PS_INACTIVE: // only possible during init  
-        err = ERR_OK;
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);
         }
         else if (mu->data.header.last_committed_decree > _last_committed_decree)
         {
-            for (decree d = last_committed_decree() + 1; d <= mu->data.header.last_committed_decree; d++)
-            {
-                _last_committed_decree++;   
-                if (count() == 0)
-                    break;
-                
-                if (d == min_decree())
-                {
-                    mutation_ptr mu2 = get_mutation_by_decree(d);
-                    pop_min();
-                    if (mu2 != nullptr) _committer(mu2);
-                }
-            }
-
-            dassert (_last_committed_decree == mu->data.header.last_committed_decree, "");
-            sanity_check();
+            // all mutations with lower decree must be ready
+            commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
-        
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;
@@ -164,6 +158,7 @@ bool prepare_list::commit(decree d, commit_type ct)
     if (d <= last_committed_decree())
         return false;
     
+    ballot last_bt = 0;
     switch (ct)
     {
     case COMMIT_TO_DECREE_HARD:
@@ -172,12 +167,14 @@ bool prepare_list::commit(decree d, commit_type ct)
             {
                 mutation_ptr mu = get_mutation_by_decree(d0);
                 dassert(mu != nullptr &&
-                    (mu->is_logged()),
+                    (mu->is_logged()) &&
+                    mu->data.header.ballot >= last_bt,
                     "mutation %" PRId64 " is missing in prepare list",
                     d0
                     );
 
                 _last_committed_decree++;
+                last_bt = mu->data.header.ballot;
                 _committer(mu);
             }
 
@@ -189,9 +186,10 @@ bool prepare_list::commit(decree d, commit_type ct)
             for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
             {
                 mutation_ptr mu = get_mutation_by_decree(d0);
-                if (mu != nullptr && mu->is_ready_for_commit())
+                if (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt)
                 {
                     _last_committed_decree++;
+                    last_bt = mu->data.header.ballot;
                     _committer(mu);
                 }
                 else
@@ -209,9 +207,10 @@ bool prepare_list::commit(decree d, commit_type ct)
             int count = 0;
             mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
 
-            while (mu != nullptr && mu->is_ready_for_commit())
+            while (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt)
             {
                 _last_committed_decree++;
+                last_bt = mu->data.header.ballot;
                 _committer(mu);
                 count++;
                 mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);

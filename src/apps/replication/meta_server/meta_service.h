@@ -36,13 +36,13 @@
 # pragma once
 
 # include "replication_common.h"
+# include "server_load_balancer.h"
 
 using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
 class server_state;
-class load_balancer;
 class meta_server_failure_detector;
 class replication_checker;
 namespace test {
@@ -50,7 +50,7 @@ namespace test {
 }
 
 namespace dsn {
-    namespace replication{
+    namespace replication {
         class replication_checker;
         class test_checker;
     }
@@ -59,13 +59,15 @@ namespace dsn {
 class meta_service : public serverlet<meta_service>
 {
 public:
-    meta_service(server_state* state);
-    ~meta_service(void);
+    meta_service();
+    virtual ~meta_service();
 
-    void start();
-    bool stop();
+    error_code start();
+    void stop();
 
 private:
+    void register_rpc_handlers();
+
     // partition server & client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
@@ -76,21 +78,29 @@ private:
     void on_update_configuration(dsn_message_t req);
     void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
 
+    // table operations
+    void on_create_app(dsn_message_t req);
+    void on_drop_app(dsn_message_t req);
+    void on_list_apps(dsn_message_t req);
+
     // load balance actions
-    void on_load_balance_start();
+    void start_load_balance();
     void on_load_balance_timer();
     void on_config_changed(global_partition_id gpid);
+
+    // common routines
+    bool check_primary(dsn_message_t req);
 
 private:
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
 
-    meta_server_failure_detector *_failure_detector;    
-    server_state                 *_state;
-    load_balancer                *_balancer;
-    dsn::task_ptr                _balancer_timer;
-    replication_options          _opts;
-    bool                         _started;
+    server_state                    *_state;
+    meta_server_failure_detector    *_failure_detector;
+    dsn::dist::server_load_balancer *_balancer;
+    dsn::task_ptr                   _balancer_timer;
+    replication_options             _opts;
+    bool                            _started;
 }; 
 

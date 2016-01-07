@@ -103,11 +103,13 @@ namespace dsn
             _samples.enqueue(task, task->spec().priority);
         }
 
-        task* simple_task_queue::dequeue()
+        // always return 1 or 0 task so far
+        task* simple_task_queue::dequeue(/*inout*/int& batch_size)
         {
             long c = 0;
             auto t = _samples.dequeue(c);
             dassert(t != nullptr, "dequeue does not return empty tasks");
+            batch_size = 1;
             return t;
         }
     }

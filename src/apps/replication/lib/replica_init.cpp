@@ -48,16 +48,8 @@ namespace dsn { namespace replication {
 
 using namespace dsn::service;
 
-error_code replica::initialize_on_new(const char* app_type, global_partition_id gpid)
+error_code replica::initialize_on_new()
 {
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
-
-    _config.gpid = gpid;
-    _dir = utils::filesystem::path_combine(_stub->dir(), buffer);
-
-    sprintf(_name, "%u.%u@%s", _config.gpid.app_id, _config.gpid.pidx, _stub->_primary_address.to_string());
-
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
@@ -67,19 +59,21 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 
     if (!dsn::utils::filesystem::create_directory(_dir))
     {
-        dassert(false, "Fail to create directory %s.", _dir.c_str());
+        derror("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    error_code err = init_app_and_prepare_list(app_type, true);
-    dassert (err == ERR_OK, "");
-    return err;
+    return init_app_and_prepare_list(true);
 }
 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
 {
-    replica* rep = new replica(stub, gpid, app_type);
-    error_code err = rep->initialize_on_new(app_type, gpid);
+    char buffer[256];
+    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
+    std::string dir = utils::filesystem::path_combine(stub->dir(), buffer);
+
+    replica* rep = new replica(stub, gpid, app_type, dir.c_str());
+    error_code err = rep->initialize_on_new();
     if (err == ERR_OK)
     {
         dinfo("%s: new replica succeed", rep->name());
@@ -87,45 +81,33 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     }
     else
     {
-        dinfo("%s: new replica failed: %s", rep->name(), err.to_string());
+        derror("%s: new replica failed: %s", rep->name(), err.to_string());
         rep->close();
         delete rep;
+        rep = nullptr;
+
+        // clear work on failure
+        utils::filesystem::remove_path(dir);
+
         return nullptr;
     }
 }
 
-error_code replica::initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure)
+error_code replica::initialize_on_load()
 {
-    _dir = dir;
-
-    sprintf(_name, "%u.%u@%s", _config.gpid.app_id, _config.gpid.pidx, _stub->_primary_address.to_string());
-
-    error_code err = init_app_and_prepare_list(app_type, false);
-
-    if (err != ERR_OK && rename_dir_on_failure)
+    if (!dsn::utils::filesystem::directory_exists(_dir))
     {
-        // GCed later
-        char newPath[256];
-        sprintf(newPath, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-        if (dsn::utils::filesystem::rename_path(dir, newPath))
-        {
-            derror("move bad replica from '%s' to '%s'", dir, newPath);
-        }
-        else
-        {
-            err = ERR_FILE_OPERATION_FAILED;
-        }
+        derror("cannot load replica @ %s, because dir not exist", _dir.c_str());
+        return ERR_PATH_NOT_FOUND;
     }
-    return err;
+
+    return init_app_and_prepare_list(false);
 }
 
-
-/*static*/ replica* replica::load(replica_stub* stub, const char* dir, bool rename_dir_on_failure)
+/*static*/ replica* replica::load(replica_stub* stub, const char* dir)
 {
-    std::string dr(dir);
     char splitters[] = { '\\', '/', 0 };
-    std::string name = utils::get_last_component(dr, splitters);
-
+    std::string name = utils::get_last_component(std::string(dir), splitters);
     if (name == "")
     {
         derror("invalid replica dir %s", dir);
@@ -141,30 +123,46 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
     }
 
     replica* rep = new replica(stub, gpid, app_type, dir);
-    error_code err = rep->initialize_on_load(dir, app_type, rename_dir_on_failure);
+    error_code err = rep->initialize_on_load();
     if (err == ERR_OK)
     {
-        dinfo("%s: load replica succeed", rep->name());
+        ddebug("%s: load replica @ %s succeed", dir, rep->name());
         return rep;
     }
     else
     {
-        dinfo("%s: load replica failed: %s", rep->name(), err.to_string());
+        derror("%s: load replica @ %s failed: %s", rep->name(), dir, err.to_string());
         rep->close();
         delete rep;
+        rep = nullptr;
+
+        // clear work on failure
+        if (dsn::utils::filesystem::directory_exists(dir))
+        {
+            char rename_dir[256];
+            sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
+            if (dsn::utils::filesystem::rename_path(dir, rename_dir))
+            {
+                dwarn("move bad replica from '%s' to '%s'", dir, rename_dir);
+            }
+            else
+            {
+                derror("move bad replica from '%s' to '%s' failed", dir, rename_dir);
+            }
+        }
+
         return nullptr;
     }
 }
 
-error_code replica::init_app_and_prepare_list(const char* app_type, bool create_new)
+error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
 
-    sprintf(_name, "%u.%u @ %s", _config.gpid.app_id, _config.gpid.pidx, primary_address().to_string());
-
-    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
+    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), PROVIDER_TYPE_MAIN, this));
     if (nullptr == _app)
     {
+        derror( "%s: app type %s not found", name(), _app_type.c_str());
         return ERR_OBJECT_NOT_FOUND;
     }
 
@@ -175,115 +173,123 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 
     if (err == ERR_OK)
     {
+        dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (_options->log_enable_private_prepare
+        if (!_options->log_private_disabled
             || !_app->is_delta_state_learning_supported())
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
 
-            std::string log_dir = utils::filesystem::path_combine(dir(), "log");
+            std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
             _private_log = new mutation_log(
                 log_dir,
+                _options->log_private_batch_buffer_kb,
+                _options->log_file_size_mb,
                 true,
-                _options->log_batch_buffer_KB_private,
-                _options->log_file_size_mb
+                get_gpid()
                 );
         }
 
-        // sync vaid start log offset between app and logs
+        // sync valid_start_offset between app and logs
         if (create_new)
         {
-            err = _app->update_log_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
-                _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
-                );
+            dassert(_app->last_committed_decree() == 0, "");
+            int64_t shared_log_offset = _stub->_log->on_partition_reset(get_gpid(), 0);
+            int64_t private_log_offset = _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0;
+            err = _app->update_init_info(this, shared_log_offset, private_log_offset);
         }
         else
         {
-            _stub->_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_shared_log);
+            _stub->_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_shared_log);
             if (_private_log)
-                _private_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
         }
 
         // replay the logs
         if (nullptr != _private_log)
         {
             err = _private_log->open(
-                get_gpid(),
                 [this](mutation_ptr& mu)
                 {
-                    return replay_mutation(mu);
+                    return replay_mutation(mu, true);
                 }
             );
 
             if (err == ERR_OK)
             {
                 ddebug(
-                    "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset = %" PRId64,
+                    "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
+                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64,
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log,
+                    _private_log->max_decree(get_gpid()),
+                    _private_log->max_commit_on_disk()
                     );
-                _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
             }
             /* in the beginning the prepare_list is reset to the durable_decree */
             else
             {
                 derror(
-                    "%s: private log initialized with error, durable = %" PRId64 ", committed = %" PRId64 ", maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset = %" PRId64,
+                    "%s: private log initialized with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+                    "maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64,
                     name(),
+                    err.to_string(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
 
                 set_inactive_state_transient(false);
 
                 _private_log->close();
                 _private_log = nullptr;
+
+                _stub->_log->on_partition_removed(get_gpid());
             }
         }
 
-        if (nullptr == _check_timer && err == ERR_OK)
+        if (err == ERR_OK && !_options->checkpoint_disabled && nullptr == _checkpoint_timer)
         {
-            _check_timer = tasking::enqueue(
-                LPC_PER_REPLICA_CHECK_TIMER,
+            _checkpoint_timer = tasking::enqueue(
+                LPC_PER_REPLICA_CHECKPOINT_TIMER,
                 this,
                 &replica::on_checkpoint_timer,
                 gpid_to_hash(get_gpid()),
                 0,
-                _options->checkpoint_interval_mins * 60 * 1000
+                _options->checkpoint_interval_seconds * 1000
                 );
         }
     }
-    
 
     if (err != ERR_OK)
     {
         derror( "%s: open replica failed, error = %s", name(), err.to_string());
         _app->close(false);
-        delete _app;
         _app = nullptr;
     }
-    
+
     return err;
 }
 
-// return false only when the log is invalid
+// return false only when the log is invalid:
+// - for private log, return false if offset < init_offset_in_private_log
+// - for shared log, return false if offset < init_offset_in_shared_log
 bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
     auto offset = mu->data.header.log_offset;
-    if (is_private && offset < _app->log_info().init_offset_in_private_log)
+    if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
         ddebug(
             "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
@@ -296,7 +302,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         return false;
     }
     
-    if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
+    if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
     {
         ddebug(
             "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
@@ -307,6 +313,23 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
             offset
             );
         return false;
+    }
+
+    // fix private log completeness when it is from shared
+    if (!is_private && _private_log && d > _private_log->max_commit_on_disk())
+    {
+        _private_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            [this, mu](error_code err, size_t size)
+        {
+            if (err != ERR_OK)
+            {
+                handle_local_failure(err);
+            }
+        },
+            gpid_to_hash(get_gpid())
+            );
     }
 
     if (d <= last_committed_decree())
@@ -327,7 +350,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
         ddebug(
-            "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
+            "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 "), decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             old->data.header.ballot,
@@ -342,7 +365,8 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (mu->data.header.ballot > get_ballot())
     {
         _config.ballot = mu->data.header.ballot;
-        update_local_configuration(_config, true);
+        bool ret = update_local_configuration(_config, true);
+        dassert(ret, "");
     }
 
     ddebug(
@@ -356,23 +380,6 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     // prepare
     error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
     dassert (err == ERR_OK, "");
-
-    // fix private log completeness when it is from shared
-    if (_private_log && !is_private)
-    {
-        _private_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            [this, mu](error_code err, size_t size)
-        {
-            if (err != ERR_OK)
-            {
-                handle_local_failure(err);
-            }
-        },
-            gpid_to_hash(get_gpid())
-            );
-    }
 
     return true;
 }

@@ -53,7 +53,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _name.append(num);
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
-    _appro_count = 0;
+    _queue_length = 0;
     _virtual_queue_length = 0;
     _enable_virtual_queue_throttling = pool->spec().enable_virtual_queue_throttling;
     if (pool->spec().throttling_delay_vector_milliseconds.size() > 0)
@@ -83,7 +83,7 @@ void task_queue::enqueue_internal(task* task)
         }
         else
         {
-            ac_value = approx_count();
+            ac_value = count();
         }
 
         _delayer.delay(ac_value);
@@ -110,7 +110,7 @@ void task_queue::enqueue_internal(task* task)
         //        if (++i % 1000 == 0)
         //        {
         //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->approx_count());
+        //                q->get_name().c_str(), q->count());
         //        }
         //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         //    }
@@ -119,7 +119,7 @@ void task_queue::enqueue_internal(task* task)
         //    && _spec.queue_length_throttling_threshold != 0x0FFFFFFFUL)
         //{
         //    int i = 0;
-        //    while (q->approx_count() >= _spec.queue_length_throttling_threshold)
+        //    while (q->count() >= _spec.queue_length_throttling_threshold)
         //    {
         //        // any customized rejection handler?
         //        if (t->spec().rejection_handler != nullptr)
@@ -137,7 +137,7 @@ void task_queue::enqueue_internal(task* task)
         //        if (++i % 1000 == 0)
         //        {
         //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->approx_count());
+        //                q->get_name().c_str(), q->count());
         //        }
         //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         //    }

@@ -29,6 +29,7 @@
  *     What is this file about?
  *
  * Revision history:
+ *     2015-12-25, @shengofsun(Weijie Sun) add types for create/drop app
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
@@ -45,6 +46,7 @@
 // # define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 # include <dsn/service_api_cpp.h>
+
 
 # ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
@@ -277,6 +279,21 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<group_check_response>(&proto, val, &group_check_response::read);
     };
 
+    // ---------- app_info -------------
+    inline void marshall(::dsn::binary_writer& writer, const app_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<app_info>(&proto, val, &app_info::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ app_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<app_info>(&proto, val, &app_info::read);
+    };
+
     // ---------- meta_request_header -------------
     inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val)
     {
@@ -365,6 +382,126 @@ namespace dsn { namespace replication {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<configuration_query_by_node_request>(&proto, val, &configuration_query_by_node_request::read);
+    };
+
+    // ---------- create_app_options -------------
+    inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<create_app_options>(&proto, val, &create_app_options::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<create_app_options>(&proto, val, &create_app_options::read);
+    };
+
+    // ---------- configuration_create_app_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::read);
+    };
+
+    // ---------- drop_app_options -------------
+    inline void marshall(::dsn::binary_writer& writer, const drop_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::read);
+    };
+
+    // ---------- configuration_drop_app_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::read);
+    };
+
+    // ---------- configuration_list_apps_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::read);
+    };
+
+    // ---------- configuration_create_app_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::read);
+    };
+
+    // ---------- configuration_drop_app_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::read);
+    };
+
+    // ---------- configuration_list_apps_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::read);
     };
 
     // ---------- configuration_query_by_node_response -------------
@@ -509,6 +646,22 @@ namespace dsn { namespace replication {
     };
 
     DEFINE_POD_SERIALIZATION(config_type);
+
+    // ---------- app_status -------------
+    enum class app_status
+    {
+        available = 0,
+        creating = 1,
+        creating_failed = 2,
+        dropping = 3,
+        dropping_failed = 4,
+        dropped = 5,
+        all = 6,
+        invalid = 7,
+    };
+
+    DEFINE_POD_SERIALIZATION(app_status);
+
 
     // ---------- global_partition_id -------------
     struct global_partition_id
@@ -882,6 +1035,34 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.node);
     };
 
+    // ---------- app_info -------------
+    struct app_info
+    {
+        app_status status;
+        std::string app_type;
+        std::string app_name;
+        int32_t app_id;
+        int32_t partition_count;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const app_info& val)
+    {
+        marshall(writer, val.status);
+        marshall(writer, val.app_type);
+        marshall(writer, val.app_name);
+        marshall(writer, val.app_id);
+        marshall(writer, val.partition_count);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ app_info& val)
+    {
+        unmarshall(reader, val.status);
+        unmarshall(reader, val.app_type);
+        unmarshall(reader, val.app_name);
+        unmarshall(reader, val.app_id);
+        unmarshall(reader, val.partition_count);
+    };
+
     // ---------- meta_request_header -------------
     struct meta_request_header
     {
@@ -986,6 +1167,137 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.is_upgrade);
     };
 
+    // ---------- create_app_options -------------
+    struct create_app_options
+    {
+        int32_t partition_count;
+        int32_t replica_count;
+        bool success_if_exist;
+        std::string app_type;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
+    {
+        marshall(writer, val.partition_count);
+        marshall(writer, val.replica_count);
+        marshall(writer, val.success_if_exist);
+        marshall(writer, val.app_type);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
+    {
+        unmarshall(reader, val.partition_count);
+        unmarshall(reader, val.replica_count);
+        unmarshall(reader, val.success_if_exist);
+        unmarshall(reader, val.app_type);
+    };
+
+    // ---------- configuration_create_app_request -------------
+    struct configuration_create_app_request
+    {
+        std::string app_name;
+        create_app_options options;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_request& val)
+    {
+        marshall(writer, val.app_name);
+        marshall(writer, val.options);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_request& val)
+    {
+        unmarshall(reader, val.app_name);
+        unmarshall(reader, val.options);
+    };
+
+    // ---------- drop_app_options -------------
+    struct drop_app_options
+    {
+        bool success_if_not_exist;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const drop_app_options& val)
+    {
+        marshall(writer, val.success_if_not_exist);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_app_options& val)
+    {
+        unmarshall(reader, val.success_if_not_exist);
+    };
+
+    // ---------- configuration_drop_app_request -------------
+    struct configuration_drop_app_request
+    {
+        std::string app_name;
+        drop_app_options options;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_request& val)
+    {
+        marshall(writer, val.app_name);
+        marshall(writer, val.options);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_request& val)
+    {
+        unmarshall(reader, val.app_name);
+        unmarshall(reader, val.options);
+    };
+
+    // ---------- configuration_list_apps_request -------------
+    struct configuration_list_apps_request
+    {
+        app_status status;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_request& val)
+    {
+        marshall(writer, val.status);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_request& val)
+    {
+        unmarshall(reader, val.status);
+    };
+
+
+    // ---------- configuration_create_app_response -------------
+    struct configuration_create_app_response
+    {
+        ::dsn::error_code err;
+        int32_t appid;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_response& val)
+    {
+        marshall(writer, val.err);
+        marshall(writer, val.appid);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_response& val)
+    {
+        unmarshall(reader, val.err);
+        unmarshall(reader, val.appid);
+    };
+
+    // ---------- configuration_drop_app_response -------------
+    struct configuration_drop_app_response
+    {
+        ::dsn::error_code err;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_response& val)
+    {
+        marshall(writer, val.err);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_response& val)
+    {
+        unmarshall(reader, val.err);
+    };
+
     // ---------- configuration_query_by_node_request -------------
     struct configuration_query_by_node_request
     {
@@ -1000,6 +1312,25 @@ namespace dsn { namespace replication {
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_node_request& val)
     {
         unmarshall(reader, val.node);
+    };
+
+    // ---------- configuration_list_apps_response -------------
+    struct configuration_list_apps_response
+    {
+        ::dsn::error_code err;
+        std::vector< app_info> infos;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_response& val)
+    {
+        marshall(writer, val.err);
+        marshall(writer, val.infos);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_response& val)
+    {
+        unmarshall(reader, val.err);
+        unmarshall(reader, val.infos);
     };
 
     // ---------- configuration_query_by_node_response -------------

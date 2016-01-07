@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     rpc engine implementation
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -65,7 +65,7 @@ namespace dsn {
     {
     public:
         rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 
-            : task(LPC_RPC_TIMEOUT, 0, node)
+            : task(LPC_RPC_TIMEOUT, nullptr, nullptr, 0, node)
         {
             _matcher = matcher;
             _id = id;
@@ -135,8 +135,36 @@ namespace dsn {
         }
         else
         {
+            auto err = reply->error();
+
+            // server address side effect
+            auto req = call->get_request();
+            task_spec* sp;
+            if (reply->from_address != req->to_address)
+            {
+                switch (req->server_address.type())
+                {
+                case HOST_TYPE_GROUP:
+                    sp = task_spec::get(call->get_request()->local_rpc_code);
+                    switch (sp->grpc_mode)
+                    {
+                    case GRPC_TO_LEADER:
+                        if (err == ERR_OK)
+                        {
+                            req->server_address.group_address()->set_leader(reply->from_address);
+                        }
+                        break;
+                        // TODO:
+                    }
+                    break;
+                case HOST_TYPE_URI:
+                    // TODO:
+                    break;
+                }
+            }
+
             call->set_delay(delay_ms);
-            call->enqueue(reply->error(), reply);
+            call->enqueue(err, reply);
         }
 
         call->release_ref(); // added in on_call
@@ -191,7 +219,58 @@ namespace dsn {
         call->add_ref(); // released in on_rpc_timeout or on_recv_reply
     }
 
-    //------------------------
+    //----------------------------------------------------------------------------------------------
+    bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_ptr& handler)
+    {
+        auto name = std::string(dsn_task_code_to_string(handler->code));
+
+        utils::auto_write_lock l(_handlers_lock);
+        auto it = _handlers.find(name);
+        auto it2 = _handlers.find(handler->name);
+        if (it == _handlers.end() && it2 == _handlers.end())
+        {
+            _handlers[name] = handler;
+            _handlers[handler->name] = handler;
+            return true;
+        }
+        else
+        {
+            dassert(false, "rpc registration confliction for '%s'", name.c_str());
+            return false;
+        }
+    }
+
+    rpc_handler_ptr rpc_server_dispatcher::unregister_rpc_handler(dsn_task_code_t rpc_code)
+    {
+        utils::auto_write_lock l(_handlers_lock);
+        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
+        if (it == _handlers.end())
+            return nullptr;
+
+        auto ret = it->second;
+        std::string name = it->second->name;
+        _handlers.erase(it);
+        _handlers.erase(name);
+
+        return ret;
+    }
+
+    rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
+    {
+        rpc_request_task* tsk = nullptr;
+        {
+            utils::auto_read_lock l(_handlers_lock);
+            auto it = _handlers.find(msg->header->rpc_name);
+            if (it != _handlers.end())
+            {
+                msg->local_rpc_code = (uint16_t)it->second->code;
+                tsk = new rpc_request_task(msg, it->second, node);
+            }
+        }
+        return tsk;
+    }
+
+    //----------------------------------------------------------------------------------------------
     /*static*/ bool rpc_engine::_message_crc_required;
 
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
@@ -371,52 +450,74 @@ namespace dsn {
         _is_running = true;
         return ERR_OK;
     }
-    
-    bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler)
-    {
-        auto name = std::string(dsn_task_code_to_string(handler->code));
 
-        utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(name);
-        auto it2 = _handlers.find(handler->name);
-        if (it == _handlers.end() && it2 == _handlers.end())
+    bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid)
+    {
+        if (0 == vnid)
         {
-            _handlers[name] = handler;
-            _handlers[handler->name] = handler;
-            return true;
+            return _rpc_dispatcher.register_rpc_handler(handler);
         }
         else
         {
-            dassert(false, "rpc registration confliction for '%s'", name.c_str());
-            return false;
+            utils::auto_write_lock l(_vnodes_lock);
+            auto it = _vnodes.find(vnid);
+            if (it == _vnodes.end())
+            {
+                auto dispatcher = new rpc_server_dispatcher();
+                return _vnodes.insert(
+                    std::unordered_map<uint64_t, rpc_server_dispatcher* >::value_type(vnid, dispatcher))
+                    .first->second->register_rpc_handler(handler);
+            }
+            else
+            {
+                return it->second->register_rpc_handler(handler);
+            }
         }
     }
 
-    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code)
+    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid)
     {
-        utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
-        if (it == _handlers.end())
-            return nullptr;
-
-        auto ret = it->second;
-        std::string name = it->second->name;
-        _handlers.erase(it);
-        _handlers.erase(name);
-
-        return ret;
+        if (0 == vnid)
+        {
+            return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
+        }
+        else
+        {
+            utils::auto_write_lock l(_vnodes_lock);
+            auto it = _vnodes.find(vnid);
+            if (it == _vnodes.end())
+            {
+                return nullptr;
+            }
+            else
+            {
+                auto r = it->second->unregister_rpc_handler(rpc_code);
+                if (0 == it->second->handler_count())
+                {
+                    delete it->second;
+                    _vnodes.erase(it);
+                }
+                return r;
+            }
+        }
     }
-
+    
     void rpc_engine::on_recv_request(message_ex* msg, int delay_ms)
     {
-        rpc_request_task* tsk = nullptr;
+        rpc_request_task* tsk;
+        if (msg->header->vnid == 0)
+            tsk = _rpc_dispatcher.on_request(msg, _node);
+        else
         {
-            utils::auto_read_lock l(_handlers_lock);
-            auto it = _handlers.find(msg->header->rpc_name);
-            if (it != _handlers.end())
+            utils::auto_read_lock l(_vnodes_lock);
+            auto it = _vnodes.find(msg->header->vnid);
+            if (it != _vnodes.end())
             {
-                msg->local_rpc_code = (uint16_t)it->second->code;
-                tsk = new rpc_request_task(msg, it->second, _node);                
+                tsk = it->second->on_request(msg, _node);
+            }
+            else
+            {
+                tsk = nullptr;
             }
         }
 
@@ -444,7 +545,10 @@ namespace dsn {
         auto& hdr = *request->header;
 
         hdr.client.port = primary_address().port();
-        hdr.rpc_id = utils::get_random64();        
+        hdr.rpc_id = dsn_random64(
+            std::numeric_limits<decltype(hdr.rpc_id)>::min(),
+            std::numeric_limits<decltype(hdr.rpc_id)>::max()
+            );
         request->seal(_message_crc_required);
         
         switch (request->server_address.type())
@@ -546,16 +650,6 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        auto s = response->io_session.get();
-        if (s == nullptr)
-        {
-            // do not delete following add and release here for cancellation
-            // as response may initially have ref_count == 0
-            response->add_ref();
-            response->release_ref(); 
-            return;
-        }   
-
         response->header->server.error = err;
         response->seal(_message_crc_required);
 
@@ -568,7 +662,15 @@ namespace dsn {
             response->release_ref();
             return;
         }
-                
-        s->send_message(response);
+        auto s = response->io_session.get();
+        if (s != nullptr) {
+            s->send_message(response);
+        }
+        else
+        {
+            auto sp = task_spec::get(response->local_rpc_code);
+            auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
+            net->send_message(response);
+        }
     }
 }

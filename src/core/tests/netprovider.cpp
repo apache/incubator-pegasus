@@ -95,7 +95,7 @@ void rpc_client_session_send(rpc_session_ptr client_session)
     ::marshall(msg, std::string(buffer));
 
     wait_flag = 0;
-    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer);
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
 
     client_session->net().engine()->matcher()->on_call(msg, t);
     client_session->send_message(msg);
@@ -138,11 +138,7 @@ TEST(tools_common, asio_net_provider)
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifier);
     ASSERT_TRUE(start_result == ERR_SERVICE_ALREADY_RUNNING);
     ddebug("result: %s", start_result.to_string());
-
-    asio_network_provider* asio_network3 = new asio_network_provider(task::get_current_rpc(), nullptr);
-    start_result = asio_network3->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifier);
-    ASSERT_TRUE(start_result == ERR_ADDRESS_ALREADY_USED);
-
+    
     rpc_session_ptr client_session = asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
     client_session->connect();
 
@@ -152,6 +148,47 @@ TEST(tools_common, asio_net_provider)
 
     TEST_PORT++;
 }
+
+TEST(tools_common, asio_udp_provider)
+{
+    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name == "dsn::tools::sim_semaphore_provider")
+        return;
+
+    ASSERT_TRUE(dsn_rpc_register_handler(RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response, (void*)101));
+
+    auto client = new asio_udp_provider(task::get_current_rpc(), nullptr);
+    io_modifer modifier;
+    modifier.mode = IOE_PER_NODE;
+    modifier.queue = nullptr;
+
+    error_code start_result;
+    start_result = client->start(RPC_CHANNEL_UDP, 0, true, modifier);
+    ASSERT_TRUE(start_result == ERR_OK);
+
+    auto server = new asio_udp_provider(task::get_current_rpc(), nullptr);
+    start_result = client->start(RPC_CHANNEL_UDP, TEST_PORT, false, modifier);
+    ASSERT_TRUE(start_result == ERR_OK);
+
+    message_ex* msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
+    char *buffer = new char[128];
+    memset(buffer, 0, 128);
+    strcpy(buffer, "hello world");
+    ::marshall(msg, std::string(buffer));
+
+    wait_flag = 0;
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
+
+    client->engine()->matcher()->on_call(msg, t);
+    client->send_message(msg);
+
+    wait_response();
+    delete[]buffer;
+
+    ASSERT_EQ((void*)101, dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
+    TEST_PORT++;
+}
+
+
 
 TEST(tools_common, sim_net_provider)
 {

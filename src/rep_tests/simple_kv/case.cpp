@@ -38,7 +38,7 @@
 
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
-# include "../../apps/replication/meta_server/load_balancer.h"
+# include "../../apps/replication/meta_server/server_load_balancer.h"
 # include "../../apps/replication/lib/replica_stub.h"
 # include "../../core/core/service_engine.h"
 
@@ -112,10 +112,34 @@ std::string set_case_line::to_string() const
         oss << "close_replica_stub_on_exit=" << _close_replica_stub;
         count++;
     }
-    if (_not_exist_on_log_failure_set)
+    if (_not_exit_on_log_failure_set)
     {
         if (count > 0) oss << ",";
-        oss << "not_exist_on_log_failure=" << _not_exist_on_log_failure;
+        oss << "not_exit_on_log_failure=" << _not_exit_on_log_failure;
+        count++;
+    }
+    if (_simple_kv_open_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_open_fail=" << _simple_kv_open_fail;
+        count++;
+    }
+    if (_simple_kv_close_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_close_fail=" << _simple_kv_close_fail;
+        count++;
+    }
+    if (_simple_kv_get_checkpoint_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_get_checkpoint_fail=" << _simple_kv_get_checkpoint_fail;
+        count++;
+    }
+    if (_simple_kv_apply_checkpoint_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_apply_checkpoint_fail=" << _simple_kv_apply_checkpoint_fail;
         count++;
     }
     return oss.str();
@@ -134,7 +158,11 @@ bool set_case_line::parse(const std::string& params)
     _lb_for_test_set = false;
     _disable_lb_set = false;
     _close_replica_stub_set = false;
-    _not_exist_on_log_failure_set = false;
+    _not_exit_on_log_failure_set = false;
+    _simple_kv_open_fail_set = false;
+    _simple_kv_close_fail_set = false;
+    _simple_kv_get_checkpoint_fail_set = false;
+    _simple_kv_apply_checkpoint_fail_set = false;
     for (auto& kv : kv_map)
     {
         const std::string& k = kv.first;
@@ -159,10 +187,30 @@ bool set_case_line::parse(const std::string& params)
             _close_replica_stub = boost::lexical_cast<bool>(v);
             _close_replica_stub_set = true;
         }
-        else if (k == "not_exist_on_log_failure")
+        else if (k == "not_exit_on_log_failure")
         {
-            _not_exist_on_log_failure = boost::lexical_cast<bool>(v);
-            _not_exist_on_log_failure_set = true;
+            _not_exit_on_log_failure = boost::lexical_cast<bool>(v);
+            _not_exit_on_log_failure_set = true;
+        }
+        else if (k == "simple_kv_open_fail")
+        {
+            _simple_kv_open_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_open_fail_set = true;
+        }
+        else if (k == "simple_kv_close_fail")
+        {
+            _simple_kv_close_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_close_fail_set = true;
+        }
+        else if (k == "simple_kv_get_checkpoint_fail")
+        {
+            _simple_kv_get_checkpoint_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_get_checkpoint_fail_set = true;
+        }
+        else if (k == "simple_kv_apply_checkpoint_fail")
+        {
+            _simple_kv_apply_checkpoint_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_apply_checkpoint_fail_set = true;
         }
         else
         {
@@ -182,19 +230,35 @@ void set_case_line::apply_set() const
     }
     if (_lb_for_test_set)
     {
-        load_balancer::s_lb_for_test = _lb_for_test;
+        ::dsn::dist::server_load_balancer::s_lb_for_test = _lb_for_test;
     }
     if (_disable_lb_set)
     {
-        load_balancer::s_disable_lb = _disable_lb;
+        ::dsn::dist::server_load_balancer::s_disable_lb = _disable_lb;
     }
     if (_close_replica_stub_set)
     {
         test_case::s_close_replica_stub_on_exit = _close_replica_stub;
     }
-    if (_not_exist_on_log_failure_set)
+    if (_not_exit_on_log_failure_set)
     {
-        replica_stub::s_not_exit_on_log_failure = _not_exist_on_log_failure;
+        replica_stub::s_not_exit_on_log_failure = _not_exit_on_log_failure;
+    }
+    if (_simple_kv_open_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_open_fail = _simple_kv_open_fail;
+    }
+    if (_simple_kv_close_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_close_fail = _simple_kv_close_fail;
+    }
+    if (_simple_kv_get_checkpoint_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = _simple_kv_get_checkpoint_fail;
+    }
+    if (_simple_kv_apply_checkpoint_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = _simple_kv_apply_checkpoint_fail;
     }
 }
 
@@ -217,6 +281,18 @@ bool skip_case_line::parse(const std::string& params)
         return false;
     }
     _skipped = 0;
+    return true;
+}
+
+std::string exit_case_line::to_string() const
+{
+    std::ostringstream oss;
+    oss << name() << ":";
+    return oss.str();
+}
+
+bool exit_case_line::parse(const std::string& params)
+{
     return true;
 }
 
@@ -585,6 +661,7 @@ bool event_on_aio::check_satisfied(const event* ev) const
 void event_on_aio::init(aio_task* tsk)
 {
     event_on_task::init(tsk);
+    if (tsk->aio()->type == dsn::AIO_Invalid) return; // for flush task, the type is AIO_Invalid
     _type = (tsk->aio()->type == dsn::AIO_Read ? "READ" : "WRITE");
     _file_offset = boost::lexical_cast<std::string>(tsk->aio()->file_offset);
     _buffer_size = boost::lexical_cast<std::string>(tsk->aio()->buffer_size);
@@ -885,6 +962,7 @@ test_case::test_case() : _next(0), _null_loop_count(0)
 {
     register_creator<set_case_line>();
     register_creator<skip_case_line>();
+    register_creator<exit_case_line>();
     register_creator<state_case_line>();
     register_creator<config_case_line>();
     register_creator<wait_case_line>();
@@ -1013,6 +1091,12 @@ void test_case::forward()
         {
             set_case_line* scl = static_cast<set_case_line*>(cl);
             scl->apply_set();
+        }
+        else if (cl->name() == exit_case_line::NAME())
+        {
+            ddebug("=== on_case_exit");
+            g_done = true;
+            break;
         }
         else
         {

@@ -180,7 +180,7 @@ namespace dsn
     
     void rpc_session::send_message(message_ex* msg)
     {
-        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
+        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
 
         _net.delay(_message_count++); // -- in unlink_message
 
@@ -326,7 +326,7 @@ namespace dsn
 
     bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
-        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
+        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
         if (reply != nullptr)
         {
             reply->from_address = remote_address();
@@ -338,7 +338,7 @@ namespace dsn
 
     void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
-        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
+        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
         msg->from_address = remote_address();
         msg->from_address.c_addr_ptr()->u.v4.port = msg->header->client.port;
         msg->to_address = _net.address();
@@ -376,6 +376,11 @@ namespace dsn
         return _engine->on_recv_request(msg, delay_ms);
     }
 
+    void network::on_recv_reply(message_ex* msg, int delay_ms)
+    {
+        _engine->matcher()->on_recv_reply(msg->header->id, msg, delay_ms);
+    }
+
     std::shared_ptr<message_parser> network::new_message_parser()
     {
         message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.to_string(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);
@@ -385,11 +390,27 @@ namespace dsn
 
     uint32_t network::get_local_ipv4()
     {
+        static const char* explicit_host = dsn_config_get_value_string(
+            "network", "explicit_host_address",
+            "", "explicit host name or ip (v4) assigned to this node (e.g., service ip for pods in kubernets)"
+            );
+
         static const char* inteface = dsn_config_get_value_string(
             "network", "primary_interface",
             "eth0", "network interface name used to init primary ip address");
 
-        uint32_t ip = dsn_ipv4_local(inteface);
+        uint32_t ip = 0;
+
+        if (strlen(explicit_host) > 0)
+        {
+            ip = dsn_ipv4_from_host(explicit_host);
+        }
+
+        if (0 == ip)
+        {
+            ip = dsn_ipv4_local(inteface);
+        }
+        
         if (0 == ip)
         {
             char name[128];
@@ -399,6 +420,7 @@ namespace dsn
             }
             ip = dsn_ipv4_from_host(name);
         }
+
         return ip;
     }
 
@@ -474,7 +496,7 @@ namespace dsn
             scount = (int)_servers.size();
         }
 
-        dwarn("server session %s accepted (%d in total)", s->remote_address().to_string(), scount);
+        ddebug("server session %s accepted (%d in total)", s->remote_address().to_string(), scount);
     }
 
     void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr& s)
@@ -494,7 +516,7 @@ namespace dsn
 
         if (r)
         {
-            dwarn("server session %s disconnected (%d in total)",
+            ddebug("server session %s disconnected (%d in total)",
                 s->remote_address().to_string(),
                 scount
                 );
@@ -525,7 +547,7 @@ namespace dsn
 
         if (r)
         {
-            dwarn("client session %s disconnected (%d in total)", s->remote_address().to_string(), scount);
+            ddebug("client session %s disconnected (%d in total)", s->remote_address().to_string(), scount);
         }
     }
 }

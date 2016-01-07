@@ -66,21 +66,27 @@ void replica::init_group_check()
 void replica::broadcast_group_check()
 {
     dassert (nullptr != _primary_states.group_check_task, "");
+
+    ddebug(
+        "%s: start broadcast group check",
+        name()
+    );
+
     if (_primary_states.group_check_pending_replies.size() > 0)
     {
         dwarn(
-            "%s: %u group check replies are still pending when doing next round check",
+            "%s: %u group check replies are still pending when doing next round check, cancel first",
             name(), static_cast<int>(_primary_states.group_check_pending_replies.size())
             );
 
-        for (auto it = _primary_states.group_check_pending_replies.begin(); it != _primary_states.group_check_pending_replies.end(); it++)
+        for (auto it = _primary_states.group_check_pending_replies.begin(); it != _primary_states.group_check_pending_replies.end(); ++it)
         {
             it->second->cancel(true);
         }
         _primary_states.group_check_pending_replies.clear();
     }
 
-    for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
+    for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); ++it)
     {
         if (it->first == _stub->_primary_address)
             continue;
@@ -137,7 +143,10 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     else if (request.config.ballot > get_ballot())
     {
         if (!update_local_configuration(request.config))
+        {
+            response.err = ERR_INVALID_STATE;
             return;
+        }
     }
     else if (is_same_ballot_status_change_allowed(status(), request.config.status))
     {

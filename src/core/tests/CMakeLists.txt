@@ -10,11 +10,11 @@ set(MY_PROJ_SRC "../dll/core_main.cpp")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH
-	${GTEST_INCLUDE_DIRS} 
-	../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
-	../../dev/cpp
-	)
-	
+    ${GTEST_INCLUDE_DIR} 
+    ../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
+    ../../dev/cpp
+    )
+    
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
@@ -26,7 +26,7 @@ set(MY_PROJ_LIBS gtest
                  dsn.corelib
 )
 
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
 
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
@@ -47,6 +47,7 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/nfs_test_file2"
                  "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/clear.cmd"
 )
 
 dsn_add_executable()

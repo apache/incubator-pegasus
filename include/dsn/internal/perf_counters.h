@@ -39,8 +39,10 @@
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/synchronize.h>
 # include <map>
+# include <sstream>
+# include <queue>
 
-namespace dsn { namespace utils {
+namespace dsn {
 
 class perf_counters : public dsn::utils::singleton<perf_counters>
 {
@@ -49,44 +51,38 @@ public:
     ~perf_counters(void);
 
     perf_counter_ptr get_counter(
+                    const char* app,
                     const char *section, 
                     const char *name, 
-                    perf_counter_type flags, 
+                    dsn_perf_counter_type_t flags, 
                     const char *dsptr,
                     bool create_if_not_exist = false
                     );
 
-    bool remove_counter(const char* section, const char* name);
 
-    perf_counter_ptr get_counter(
-                    const char *name, 
-                    perf_counter_type flags,
-                    const char *dsptr,
-                    bool create_if_not_exist = false)
-    {
-        return get_counter("dsn", name, flags,dsptr, create_if_not_exist);
-    }
-
-    bool remove_counter(const char* name)
-    {
-        return remove_counter("dsn", name);
-    }
-
+    // full_name = perf_counter::build_full_name(...);
+    perf_counter_ptr get_counter(const char* full_name);
+    perf_counter_ptr get_counter(uint64_t index);
+    bool remove_counter(const char* full_name);
+    
     void register_factory(perf_counter::factory factory);
+    static std::string list_counter(const std::vector<std::string>& args);
+    static std::string get_counter_value(const std::vector<std::string>& args);
+    static std::string get_counter_sample(const std::vector<std::string>& args);
+    static std::string get_counter_value_i(const std::vector<std::string>& args);
+    static std::string get_counter_sample_i(const std::vector<std::string>& args);
 
-    typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
-    typedef std::map<std::string, same_section_counters> all_counters;
+    typedef std::map<std::string, perf_counter_ptr > all_counters;
 
-    all_counters get_all_counters()
-    {
-        return _counters;
-    }
 private:
-
-
+    std::string list_counter_internal(const std::vector<std::string>& args);
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;
-    perf_counter::factory       _factory;
+    perf_counter::factory      _factory;
+
+    uint64_t                   _max_counter_count;
+    perf_counter               **_quick_counters;
+    std::queue<uint64_t>       _quick_counters_empty_slots;
 };
 
-}} // end namespace dsn::utils
+} // end namespace dsn::utils

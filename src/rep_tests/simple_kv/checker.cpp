@@ -81,7 +81,7 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
         if (0 == strcmp(app.type, "meta"))
         {
             meta_service_app* meta_app = (meta_service_app*)app.app_context_ptr;
-            meta_app->_state->set_config_change_subscriber_for_test(
+            meta_app->_service->_state->set_config_change_subscriber_for_test(
                         std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             _meta_servers.push_back(meta_app);
         }
@@ -209,6 +209,7 @@ void test_checker::get_current_states(state_snapshot& states)
             rs.status = r->status();
             rs.ballot = r->get_ballot();
             rs.last_committed_decree = r->last_committed_decree();
+            rs.last_durable_decree = r->last_durable_decree();
         }
     }
 }
@@ -219,7 +220,7 @@ bool test_checker::get_current_config(parti_config& config)
     if (meta == nullptr)
         return false;
     partition_configuration c;
-    meta->_state->query_configuration_by_gpid(g_default_gpid, c);
+    meta->_service->_state->query_configuration_by_gpid(g_default_gpid, c);
     config.convert_from(c);
     return true;
 }

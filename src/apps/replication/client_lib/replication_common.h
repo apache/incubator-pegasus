@@ -64,7 +64,6 @@ typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 class replication_options
 {
 public:
-    std::string working_dir;
     std::vector< ::dsn::rpc_address> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
@@ -78,12 +77,13 @@ public:
     bool    group_check_disabled;
     int32_t group_check_interval_ms;
 
-    int32_t checkpoint_interval_mins;
+    bool    checkpoint_disabled;
+    int32_t checkpoint_interval_seconds;
     int64_t checkpoint_min_decree_gap;
     int32_t checkpoint_max_interval_hours;
 
-    int32_t gc_interval_ms;
     bool    gc_disabled;
+    int32_t gc_interval_ms;
     int32_t gc_memory_replica_interval_ms;
     int32_t gc_disk_error_replica_interval_seconds;
     
@@ -93,18 +93,15 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_enable_private_prepare;
-
+    bool    log_private_disabled;
     int32_t log_file_size_mb;
-    int32_t log_batch_buffer_KB_shared;
-    int32_t log_batch_buffer_KB_private;
-    int32_t log_pending_max_ms;
-    int32_t log_file_size_mb_private;
-    int32_t log_buffer_size_mb_private;
-    int32_t log_pending_max_ms_private;
+    int32_t log_shared_batch_buffer_kb;
+    int32_t log_private_batch_buffer_kb;
 
-    int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
+    int32_t config_sync_interval_ms;
+
+    int32_t lb_interval_ms;
 
 public:
     replication_options();

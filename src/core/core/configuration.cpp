@@ -198,10 +198,23 @@ ConfReg:
             {
                 conf* cf = new conf;
                 cf->section = (const char*)pSectionName;
-                cf->key = pKey;
-                cf->value = pValue ? pValue : "";
+                cf->key = pKey;                
                 cf->line = lineno; 
                 cf->present = true;
+
+                if (pValue)
+                {
+                    // if argument is not provided
+                    if (strlen(pValue) > 2 && *pValue == '%' && pValue[strlen(pValue) - 1] == '%')
+                        cf->value = "";
+                    else
+                        cf->value = pValue;
+                }
+                else
+                {
+                    cf->value = "";
+                }
+
                 pSection->insert(std::make_pair(std::string(pKey), cf));
             }            
         }
@@ -249,7 +262,7 @@ err:
 void configuration::get_all_sections(std::vector<std::string>& sections)
 {
     sections.clear();
-    for (auto it = _configs.begin(); it != _configs.end(); it++)
+    for (auto it = _configs.begin(); it != _configs.end(); ++it)
     {
         sections.push_back(it->first);
     }
@@ -378,6 +391,43 @@ void configuration::dump(std::ostream& os)
         }
 
         os << std::endl;
+    }
+
+    _lock.unlock();
+}
+
+void configuration::set(const char* section, const char* key, const char* value, const char* dsptr)
+{
+    std::map<std::string, conf*>* psection;
+
+    _lock.lock();
+    
+    auto it = _configs.find(section);
+    if (it != _configs.end())
+    {
+        psection = &it->second;
+    }
+    else
+    {
+        std::map<std::string, conf*> s;
+        psection = &_configs.insert(config_map::value_type(section, s)).first->second;
+    }
+
+    auto it2 = psection->find(key);
+    if (it2 == psection->end())
+    {
+        conf* cf = new conf();
+        cf->dsptr = dsptr;
+        cf->key = key;
+        cf->value = value;
+        cf->line = 0;
+        cf->present = true;
+        cf->section = section;
+        psection->insert(std::make_pair(cf->key, cf));
+    }
+    else
+    {
+        it2->second->value = value;
     }
 
     _lock.unlock();

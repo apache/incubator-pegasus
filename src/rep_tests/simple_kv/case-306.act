@@ -3,7 +3,7 @@
 # - test sending upgrade_to_primary to secondary
 # - test sending add_secondary to node
 
-set:load_balance_for_test=1,not_exist_on_log_failure=1
+set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 # wait for server ready
 config:{3,r1,[r2,r3]}
@@ -17,7 +17,7 @@ client:replica_config:receiver=r1,type=remove,node=r3
 
 # secondary removed
 config:{4,r1,[r2]}
-state:{{r1,pri,4,0},{r2,sec,3,0}}
+state:{{r1,pri,4,0},{r2,sec,4,0}}
 
 # enable the lb again
 set:disable_load_balance=0

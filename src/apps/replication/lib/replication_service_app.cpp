@@ -48,15 +48,6 @@ replication_service_app::replication_service_app()
     : service_app()
 {
     _stub = new replica_stub();
-
-#if 0
-    ::boost::filesystem::path pr("./");
-    if (!::boost::filesystem::exists(pr))
-    {
-        printf("we are avoiding a bug in boost file system here\n");
-        // http://boost.2283326.n4.nabble.com/filesystem-v3-v1-49-Path-constructor-issue-in-VS-Debug-configuration-td4463703.html
-    }
-#endif
 }
 
 replication_service_app::~replication_service_app(void)
@@ -66,13 +57,11 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    std::string app_name(argv[0]); 
-    
     opts.initialize();    
-    opts.working_dir = utils::filesystem::path_combine(opts.working_dir, app_name);
 
     _stub->initialize(opts);
     _stub->open_service();
+
     return ERR_OK;
 }
 

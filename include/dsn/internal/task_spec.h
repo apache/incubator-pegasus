@@ -246,6 +246,7 @@ struct threadpool_spec
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
+    int                     dequeue_batch_size;
     int                     queue_length_throttling_threshold; // 0x0FFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
@@ -259,8 +260,8 @@ struct threadpool_spec
     std::string             admission_controller_arguments;
 
     threadpool_spec(const dsn_threadpool_code_t& code) : pool_code(code), name(dsn_threadpool_code_to_string(code)) {}
-    threadpool_spec(const threadpool_spec& source);
-    threadpool_spec& operator=(const threadpool_spec& source);
+    threadpool_spec(const threadpool_spec& source) = default;
+    threadpool_spec& operator=(const threadpool_spec& source) = default;
 
     static bool init(/*out*/ std::vector<threadpool_spec>& specs);
 };
@@ -269,6 +270,7 @@ CONFIG_BEGIN(threadpool_spec)
     // CONFIG_FLD_ID(dsn_threadpool_code_t, pool_code) // no need to define it inside section
     CONFIG_FLD_STRING(name, "", "thread pool name")
     CONFIG_FLD(int, uint64, worker_count, 2, "thread/worker count")
+    CONFIG_FLD(int, uint64, dequeue_batch_size, 5, "how many tasks (if available) should be returned for one dequeue call for best batching performance") 
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
     CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")

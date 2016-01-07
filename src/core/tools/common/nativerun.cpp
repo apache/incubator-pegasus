@@ -64,6 +64,18 @@ namespace dsn {
             cs2.message_buffer_block_size = 1024 * 64;
             spec.network_default_server_cfs[cs2] = cs2;
 
+            
+            cs.factory_name = "dsn::tools::asio_udp_provider";
+            cs.message_buffer_block_size = 1024 * 64;
+            spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
+
+            cs2.port = 0;
+            cs2.channel = RPC_CHANNEL_UDP;
+            cs2.hdr_format = NET_HDR_DSN;
+            cs2.factory_name = "dsn::tools::asio_udp_provider";
+            cs2.message_buffer_block_size = 1024 * 64;
+            spec.network_default_server_cfs[cs2] = cs2;
+
             if (spec.perf_counter_factory_name == "")
                 spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";
 
@@ -91,7 +103,7 @@ namespace dsn {
             if (spec.nfs_factory_name == "")
                 spec.nfs_factory_name = "dsn::service::nfs_node_simple";
 
-            for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
+            for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it)
             {
                 threadpool_spec& tspec = *it;
 

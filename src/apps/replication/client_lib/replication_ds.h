@@ -37,44 +37,6 @@
 
 # include <dsn/internal/enum_helper.h>
 # include <dsn/dist/replication/replication.types.h>
-
-namespace dsn {
-    namespace replication {
-
-        ENUM_BEGIN(partition_status, PS_INVALID)
-            ENUM_REG(PS_INACTIVE)
-            ENUM_REG(PS_ERROR)
-            ENUM_REG(PS_PRIMARY)
-            ENUM_REG(PS_SECONDARY)
-            ENUM_REG(PS_POTENTIAL_SECONDARY)
-        ENUM_END(partition_status)
-
-        ENUM_BEGIN(learn_type, LT_NONE)
-            ENUM_REG(LT_CACHE)
-            ENUM_REG(LT_APP)
-            ENUM_REG(LT_LOG)
-        ENUM_END(learn_type)
-
-        ENUM_BEGIN(learner_status, Learning_INVALID)
-            ENUM_REG(LearningWithoutPrepare)
-            ENUM_REG(LearningWithPrepareTransient)
-            ENUM_REG(LearningWithPrepare)
-            ENUM_REG(LearningSucceeded)
-            ENUM_REG(LearningFailed)
-        ENUM_END(learner_status)
-        
-        ENUM_BEGIN(config_type, CT_NONE)
-            ENUM_REG(CT_ASSIGN_PRIMARY)
-            ENUM_REG(CT_UPGRADE_TO_PRIMARY)
-            ENUM_REG(CT_ADD_SECONDARY)
-            ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
-            ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)
-            ENUM_REG(CT_REMOVE)
-            ENUM_REG(CT_UPGRADE_TO_SECONDARY)
-        ENUM_END(config_type)
-    }
-} // end namespace dsn::replication
-
 namespace std
 {
     template<>

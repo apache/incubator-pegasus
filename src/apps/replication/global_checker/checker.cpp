@@ -135,13 +135,13 @@ namespace dsn {
 
             void single_primary()
             {
-                auto meta = meta_leader();
-                if (!meta) return;
+                meta_service_app* meta_app = meta_leader();
+                if (!meta_app) return;
 
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_meta_server;
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_replica_servers;
 
-                for (auto& app : meta->_state->_apps)
+                for (auto& app : meta_app->_service->_state->_apps)
                 {
                     for (int i = 0; i < app.partition_count; i++)
                     {

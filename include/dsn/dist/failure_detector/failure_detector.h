@@ -30,9 +30,30 @@
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced, give the subClasses flexibility
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+/*
+ * Notes on the failure detector:
+ *
+ * 1. Due to the fact that we can only check the liveness inside check-all-records call, which happens 
+ *    every "check_interval_seconds" seconds, worker may disconnect from master in the period earlier 
+ *    that the lease_seconds to ensure the perfect FD. In the worst case, workers may disconnect themselves
+ *    after "lease" -  "check_interval_seconds" seconds;
+ *    Similarily, master may claim a worker dead more slowly even the workers are dead for longer than 
+ *    grace_seconds. In the worst case, it will be "grace" + "check_interval_seconds" seconds.
+ *
+ * 2. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
+ *    For client, you may set it as 2 second as it usually connect to a small number of masters.
+ *    For master, you may set it as 5 or 10 seconds.
+ *
+ * 3. We should always use dedicated thread pools for THREAD_POOL_FD, and set thread priority to being
+ *    highest so as to minimize the performance interference with other workloads.
+ *
+ * 4. The lease_periods must be less than the grace_periods, as required by prefect FD.
+ *
+ */
 # pragma once
 
 # include <dsn/dist/failure_detector/fd.client.h>
@@ -42,15 +63,18 @@ namespace dsn { namespace fd {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD)
 DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
+DEFINE_TASK_CODE(LPC_BEACON_SEND, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
 
 class failure_detector_callback
 {
 public:
-    // client side
+    virtual ~failure_detector_callback() {}
+
+    // worker side
     virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_master_connected( ::dsn::rpc_address node) = 0;
 
-    // server side
+    // master side
     virtual void on_worker_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_worker_connected( ::dsn::rpc_address node ) = 0;
 };
@@ -62,6 +86,7 @@ class failure_detector :
 {
 public:
     failure_detector();
+    virtual ~failure_detector() {}
 
     virtual void on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply);
 
@@ -108,12 +133,15 @@ public:
 protected:
     void on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack);
 
+    // return false when the ack is not applicable
+    bool end_ping_internal(::dsn::error_code err, const beacon_ack& ack);
+
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 
     void report(::dsn::rpc_address node, bool is_master, bool is_connected);
 
 private:
-    void process_all_records();
+    void check_all_records();
 
 private:
     class master_record
@@ -121,16 +149,15 @@ private:
     public:
         ::dsn::rpc_address       node;
         uint64_t        last_send_time_for_beacon_with_ack;
-        uint64_t        next_beacon_time;
         bool            is_alive;
         bool            rejected;
+        task_ptr        send_beacon_timer;
 
         // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
-        master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
+        master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_)
         {
             node = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
-            next_beacon_time = next_beacon_time_;
             is_alive = false;
             rejected = false;
         }
@@ -159,7 +186,6 @@ private:
     // allow list are set on machine name (port can vary)
     typedef std::unordered_set< ::dsn::rpc_address>   allow_list;
 
-    mutable service::zlock _lock;
     master_map            _masters;
     worker_map            _workers;
 
@@ -168,12 +194,13 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    ::dsn::task_ptr _current_task;
+    ::dsn::task_ptr      _check_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;
 
 protected:
+    mutable service::zlock _lock;
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
 

@@ -109,10 +109,7 @@ TEST(core, configuration)
     c->get_all_keys("test", keys);
     ASSERT_EQ(0u, keys.size());
 
-    const char* v = c->get_string_value("apps.client", "name", "unknown", "client name");
-    ASSERT_STREQ("client", v);
-
-    v = c->get_string_value("apps.server", "replace_data", "unknown", "for test replace");
+    auto v = c->get_string_value("apps.server", "replace_data", "unknown", "for test replace");
     ASSERT_STREQ("replace_value", v);
 
     v = c->get_string_value("apps.server", "shift_data", "unknown", "for test shift");
@@ -162,7 +159,6 @@ TEST(core, configuration)
 
     ASSERT_STREQ("config-sample.ini", c->get_file_name());
 
-    ASSERT_EQ("client", c->get_value<std::string>("apps.client", "name", "unknown", "client name"));
     ASSERT_EQ("unexist_value", c->get_value<std::string>("apps.client", "unexist_key", "unexist_value", ""));
     ASSERT_EQ(1.0, c->get_value<double>("apps.client", "count", 2.0, "client count"));
     ASSERT_EQ(2.0, c->get_value<double>("apps.client", "unexist_double_key", 2.0, ""));
@@ -203,5 +199,12 @@ TEST(core, configuration)
     ASSERT_EQ("apps.server", sections[2]);
     ASSERT_EQ("my_section", sections[3]);
     ASSERT_EQ("test", sections[4]);
+
+    // configuration set test
+    ASSERT_TRUE(!c->has_key("not-exsit", "not-exsit"));
+    c->set("not-exsit", "not-exsit", "exsit", "kaka");
+    ASSERT_EQ(std::string("exsit"), std::string(c->get_string_value("not-exsit", "not-exsit", "", "")));
+    c->set("not-exsit", "not-exsit", "exsit2", "kaka");
+    ASSERT_EQ(std::string("exsit2"), std::string(c->get_string_value("not-exsit", "not-exsit", "", "")));
 }
 

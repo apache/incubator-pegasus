@@ -50,19 +50,23 @@ namespace dsn {
         {
             check_hashed_access();
             init_checkpoint();
-            gc();
+            garbage_collection();
         }
 
-        void replica::gc()
+        // run in replica thread
+        void replica::garbage_collection()
         {
             if (_private_log)
+            {
                 _private_log->garbage_collection(
                     get_gpid(),
                     _app->last_durable_decree(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
+            }
         }
 
+        // run in replica thread
         void replica::init_checkpoint()
         {
             // only applicable to primary and secondary replicas
@@ -76,9 +80,14 @@ namespace dsn {
             auto err = _app->checkpoint_async();
             if (err != ERR_NOT_IMPLEMENTED)
             {
-                if (err != 0)
+                if (err == ERR_OK)
                 {
-                    derror("%s: checkpoint_async failed, err = %d", err);
+                    ddebug("%s: checkpoint_async succeed, app_last_committed_decree=%" PRId64 ", app_last_durable_decree=%" PRId64,
+                           name(), _app->last_committed_decree(), _app->last_durable_decree());
+                }
+                if (err != ERR_OK && err != ERR_WRONG_TIMING && err != ERR_NO_NEED_OPERATE && err != ERR_TRY_AGAIN)
+                {
+                    derror("%s: checkpoint_async failed, err = %s", name(), err.to_string());
                 }
                 return;
             }
@@ -123,12 +132,14 @@ namespace dsn {
                 dassert(PS_SECONDARY == status(), "");
 
                 // only one running instance
-                if (nullptr == _secondary_states.checkpoint_task)
+                if (!_secondary_states.checkpoint_is_running)
                 {
-                    _secondary_states.checkpoint_task = tasking::enqueue(
+                    _secondary_states.checkpoint_is_running = true;
+                    tasking::enqueue(
+                        &_secondary_states.checkpoint_task,
                         LPC_CHECKPOINT_REPLICA,
                         this,
-                        &replica::checkpoint,
+                        &replica::background_checkpoint,
                         gpid_to_hash(get_gpid())
                         );
                 }                
@@ -223,7 +234,7 @@ namespace dsn {
                 resp->state.files,
                 ldir,
                 false,
-                LPC_REPLICATION_COPY_REMOTE_FILES,
+                LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
                 this,
                 [this, resp](error_code err, size_t sz)
                 {
@@ -235,6 +246,8 @@ namespace dsn {
 
         void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
         {
+            check_hashed_access();
+
             if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
                 _app->apply_checkpoint(resp->state, CHKPT_COPY);
@@ -243,12 +256,10 @@ namespace dsn {
             _primary_states.checkpoint_task = nullptr;
         }
 
-        void replica::checkpoint()
+        // run in background thread
+        void replica::background_checkpoint()
         {
-            auto lerr = _app->checkpoint();
-            auto err = lerr == 0 ? ERR_OK :
-                (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
-            
+            auto err = _app->checkpoint();
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
@@ -260,7 +271,7 @@ namespace dsn {
         void replica::catch_up_with_private_logs(partition_status s)
         {
             learn_state state;
-            _private_log->get_checkpoint(
+            _private_log->get_learn_state(
                 get_gpid(),
                 _app->last_committed_decree() + 1,
                 state
@@ -268,32 +279,42 @@ namespace dsn {
 
             auto err = apply_learned_state_from_private_log(state);
 
-            tasking::enqueue(
-                LPC_CHECKPOINT_REPLICA_COMPLETED,
-                this,
-                [this, err, s]() 
-                {
-                    if (PS_SECONDARY == s)
-                        this->on_checkpoint_completed(err);
-                    else if (PS_POTENTIAL_SECONDARY == s)
-                        this->on_learn_remote_state_completed(err);
-                    else
+            if (s == PS_POTENTIAL_SECONDARY)
+            {
+                tasking::enqueue(
+                    &_potential_secondary_states.learn_remote_files_completed_task, 
+                    LPC_CHECKPOINT_REPLICA_COMPLETED,
+                    this,
+                    [this, err]() 
                     {
-                        dassert(false, "invalid state %s", enum_to_string(s));
-                    }
-                },
-                gpid_to_hash(get_gpid())
-                );
+                        this->on_learn_remote_state_completed(err);
+                    },
+                    gpid_to_hash(get_gpid())
+                    );
+            }
+            else
+            {
+                tasking::enqueue(
+                    &_secondary_states.checkpoint_completed_task,
+                    LPC_CHECKPOINT_REPLICA_COMPLETED,
+                    this,
+                    [this, err]() 
+                    {
+                        this->on_checkpoint_completed(err);
+                    },
+                    gpid_to_hash(get_gpid())
+                    );
+            }
         }
 
         void replica::on_checkpoint_completed(error_code err)
         {
             check_hashed_access();
 
-            // closing or wrong timing
-            if (PS_SECONDARY != status() || ERR_WRONG_TIMING == err)
+            // closing or wrong timing or no need operate
+            if (PS_SECONDARY != status() || err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE)
             {
-                _secondary_states.checkpoint_task = nullptr;
+                _secondary_states.checkpoint_is_running = false;
                 return;
             } 
 
@@ -301,7 +322,7 @@ namespace dsn {
             if (err != ERR_OK)
             {
                 // done checkpointing
-                _secondary_states.checkpoint_task = nullptr;
+                _secondary_states.checkpoint_is_running = false;
                 handle_local_failure(err);
                 return;
             }
@@ -321,21 +342,22 @@ namespace dsn {
                         err = _app->write_internal(mu);
                         if (ERR_OK != err)
                         {
-                            _secondary_states.checkpoint_task = nullptr;
+                            _secondary_states.checkpoint_is_running = false;
                             handle_local_failure(err);
                             return;
                         }
                     }
 
                     // everything is ok now, done checkpointing
-                    _secondary_states.checkpoint_task = nullptr;
+                    _secondary_states.checkpoint_is_running = false;
                 }
 
                 // missed ones need to be loaded via private logs
                 else
                 {
-                    _secondary_states.checkpoint_task = tasking::enqueue(
-                        LPC_CHECKPOINT_REPLICA,
+                    tasking::enqueue(
+                        &_secondary_states.catchup_with_private_log_task,
+                        LPC_CATCHUP_WITH_PRIVATE_LOGS,
                         this,
                         [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },
                         gpid_to_hash(get_gpid())
@@ -347,7 +369,7 @@ namespace dsn {
             else
             {
                 // everything is ok now, done checkpointing
-                _secondary_states.checkpoint_task = nullptr;
+                _secondary_states.checkpoint_is_running = false;
             }
         }
     }

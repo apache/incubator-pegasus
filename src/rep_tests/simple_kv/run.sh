@@ -8,15 +8,18 @@ function run_single()
     echo "${bin} ${prefix}.ini ${prefix}.act"
     ${bin} ${prefix}.ini ${prefix}.act
     ret=$?
-    if [ -f log.1.txt ]; then
-        #mv log.1.txt ${prefix}.log
-        cat log.1.txt | grep -v FAILURE_DETECT | grep -v BEACON | grep -v beacon | grep -v THREAD_POOL_FD >${prefix}.log
-        rm log.1.txt
+    if find . -name log.1.txt &>/dev/null; then
+        log=`find . -name log.1.txt`
+        cat ${log} | grep -v FAILURE_DETECT | grep -v BEACON | grep -v beacon | grep -v THREAD_POOL_FD >${prefix}.log
+        rm ${log}
     fi
 
-    # successful case calls dsn_terminates which returns SIGKILL
-    if [ ${ret} -ne 137 ]; then
+    if [ ${ret} -ne 0 ]; then
         echo "run ${prefix} failed, return value = ${ret}"
+        if [ -f core ]; then
+            echo "---- gdb ./dsn.rep_tests.simple_kv core ----"
+            gdb ./dsn.rep_tests.simple_kv core -ex "thread apply all bt" -ex "set pagination 0" -batch
+        fi
         exit -1
     fi
 }
@@ -55,7 +58,11 @@ function run_case()
 }
 
 if [ $# -eq 0 ]; then
-    cases=`ls case-* 2>/dev/null | sed -n 's/^case-\([0-9][0-9][0-9]\).*$/\1/p' | sort -u`
+    if [ ! -z "${DSN_TEST_FILTER}" ]; then
+        cases=`echo ${DSN_TEST_FILTER} | sed 's/[,:]/ /g'`
+    else
+        cases=`ls case-* 2>/dev/null | sed -n 's/^case-\([0-9][0-9][0-9]\).*$/\1/p' | sort -u`
+    fi
 else
     cases=$*
 fi

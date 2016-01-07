@@ -44,12 +44,18 @@ namespace dsn {
             class simple_kv_client_impl : public simple_kv_client
             {
             public:
-                simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers);
+                simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers, const char* app_name);
                 ~simple_kv_client_impl(void);
 
-            protected:
-                virtual int get_partition_index(const std::string& key);
-                virtual int get_partition_index(const kv_pair& pr);
+                virtual uint64_t get_key_hash(const std::string& key) override
+                {
+                    return dsn_crc64_compute(key.c_str(), key.size(), 0);
+                }
+
+                virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
+                {
+                    return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
+                }
             };
 
         }

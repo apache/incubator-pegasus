@@ -97,7 +97,7 @@ namespace dsn {
             cp->offset = request.offset;
             cp->size = request.size;
 
-            auto task = file::read(
+            file::read(
                 hfile,
                 bb.buffer().get(),
                 request.size,

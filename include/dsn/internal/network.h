@@ -102,6 +102,11 @@ namespace dsn {
         // called when network received a complete message
         //
         void on_recv_request(message_ex* msg, int delay_ms);
+
+        //
+        //
+        //
+        void on_recv_reply(message_ex* msg, int delay_ms);
         
         //
         // create a message parser for

@@ -77,20 +77,30 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 
 typedef struct service_app_role
 {
-    std::string     name; // type name
+    std::string     type_name;
     dsn_app_create  create;
     dsn_app_start   start;
     dsn_app_destroy destroy;
-
 } service_app_role;
 
+// Terms used in rDSN:
+//  - app_id
+//  - app_name/role_name
+//  - role_index
+//  - app_full_name
+//  - app_type
 struct service_app_spec
 {
-    int                  id;    // global for all roles
-    int                  index; // local index for the current role (1,2,3,...)
-    std::string          config_section; //[apps.$role]
-    std::string          name;  // $role.$count
-    std::string          type;  // registered type_name
+    int                  id;    // global id for all roles, assigned by rDSN automatically, also named as "app_id"
+    int                  index; // local index for the current role (1,2,3,...), also named as "role_index"
+    std::string          data_dir; // data dir for the app. it is auto-set as ${service_spec.data_dir}/${service_app_spec.name}.
+    std::string          config_section; // [apps.${role_name}]
+    std::string          role_name;  // role name of [apps.${role_name}], also named as "app_name"
+    std::string          name;  // combined by role_name and role_index, also named as "app_full_name"
+                                // e.g., if role_name = meta and role_index = 1, then app_full_name = meta1
+                                // specially, if role count is 1, then app_full_name equals to role_name
+                                // it is usually used for printing log
+    std::string          type;  // registered type name, alse named as "app_type"
     std::string          arguments;
     std::vector<int>     ports;
     std::list<dsn_threadpool_code_t> pools;
@@ -100,8 +110,12 @@ struct service_app_spec
     int                  ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
     std::string          dmodule; // when the service is a dynamcially loaded module
 
-    // when the service cannot be automatied register its app types into rdsn through %dmoudule% 
-    // dllmain or atribute(contructor)
+    //
+    // when the service cannot automatically register its app types into rdsn 
+    // through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule%
+    // implement an exported function called "dsn_error_t dsn_app_bridge(int argc, const char** argv);",
+    // which loads the real target (e.g., a python/Java/php module), that registers their
+    // app types and factories.
     //
     std::string          dmodule_bridge_arguments; 
     service_app_role     role;
@@ -112,7 +126,7 @@ struct service_app_spec
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
     bool init(const char* section, 
-        const char* role, 
+        const char* role_name_,
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
@@ -123,6 +137,13 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app_role")
     CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
     CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
+    CONFIG_FLD_STRING(dmodule_bridge_arguments, "",
+        "\n; when the service cannot automatically register its app types into rdsn \n"
+        "; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule% \n"
+        "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* args);\", \n"
+        "; which loads the real target (e.g., a python/Java/php module), that registers their \n"
+        "; app types and factories."
+        );
     CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
     CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
@@ -136,8 +157,21 @@ struct service_spec
 
     std::string                  tool;   // the main tool (only 1 is allowed for a time)
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
-    std::string                  coredump_dir; // to store core dump files
+    std::string                  data_dir; // to store all data/log/coredump etc.
     bool                         start_nfs;
+
+    //
+    // we allow multiple apps in the same process in rDSN, and each app (service_app_spec)
+    // has its own rpc/thread/disk engines etc..
+    // when a rDSN call is made in a thread not belonging to any rDSN app,
+    // developers need to call dsn_mimic_app to designated which app this call and subsequent
+    // calls belong to. 
+    // this is kinds of tedious sometimes, we therefore introduce enable_default_app_mimic
+    // option here, which automatically starts an internal app which does nothing but serves
+    // those external calls only. This will release the developers from writing dsn_mimic_app
+    // when they write certain codes, esp. client side code.
+    //
+    bool                         enable_default_app_mimic;
     
     std::string                  timer_factory_name;
     std::string                  aio_factory_name;
@@ -172,6 +206,10 @@ struct service_spec
     std::vector<threadpool_spec>  threadpool_specs;
     std::vector<service_app_spec> app_specs;
 
+    // auto-set
+    std::string                   dir_coredump;
+    std::string                   dir_log;
+
     service_spec() {}
     bool init();
     bool init_app_specs();
@@ -182,8 +220,14 @@ struct service_spec
 CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING(tool, "", "use what tool to run this process, e.g., native or simulator")
     CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
-    CONFIG_FLD_STRING(coredump_dir, "./coredump", "where to put the core dump files")
+    CONFIG_FLD_STRING(data_dir, "./data", "where to put the all the data/log/coredump, etc..")
     CONFIG_FLD(bool, bool, start_nfs, false, "whether to start nfs")
+    CONFIG_FLD(bool, bool, enable_default_app_mimic, false,
+        "whether to start a default service app for serving the rDSN calls made in\n"
+        "; non-rDSN threads, so that developers do not need to write dsn_mimic_app call before them\n"
+        "; in this case, a [apps.mimic] section must be defined in config files"
+        );   
+
     CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
     CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")
     CONFIG_FLD_STRING(env_factory_name, "", "environment provider")

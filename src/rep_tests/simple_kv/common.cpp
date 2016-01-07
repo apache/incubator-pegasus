@@ -155,12 +155,14 @@ std::string replica_state::to_string() const
         << id.to_string() << ","
         << partition_status_to_short_string(status) << ","
         << ballot << ","
-        << last_committed_decree
-        << "}";
+        << last_committed_decree;
+    if (last_durable_decree != -1)
+        oss << "," << last_durable_decree;
+    oss << "}";
     return oss.str();
 }
 
-//{r3,sec,3,0}
+//{r3,sec,3,0} or {r3,sec,3,1,0}
 bool replica_state::from_string(const std::string& str)
 {
     if (str.size() < 2 || str[0] != '{' || str[str.size()-1] != '}')
@@ -168,13 +170,15 @@ bool replica_state::from_string(const std::string& str)
     std::string s = str.substr(1, str.size()-2);
     std::vector<std::string> splits;
     dsn::utils::split_args(s.c_str(), splits, ',');
-    if (splits.size() != 4)
+    if (splits.size() != 4 && splits.size() != 5)
         return false;
     if (!id.from_string(splits[0]))
         return false;
     status = partition_status_from_short_string(splits[1]);
     ballot = boost::lexical_cast<int64_t>(splits[2]);
     last_committed_decree = boost::lexical_cast<decree>(splits[3]);
+    if (splits.size() == 5)
+        last_durable_decree = boost::lexical_cast<decree>(splits[4]);
     return true;
 }
 
@@ -188,12 +192,7 @@ std::string state_snapshot::to_string() const
         const replica_state& s = kv.second;
         if (i != 0)
             oss << ",";
-        oss << "{"
-            << s.id.to_string() << ","
-            << partition_status_to_short_string(s.status) << ","
-            << s.ballot << ","
-            << s.last_committed_decree
-            << "}";
+        oss << s.to_string();
         i++;
     }
     oss << "}";

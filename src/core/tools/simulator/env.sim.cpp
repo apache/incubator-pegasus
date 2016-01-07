@@ -52,21 +52,22 @@ uint64_t sim_env_provider::now_ns() const
 
 uint64_t sim_env_provider::random64(uint64_t min, uint64_t max)
 {
-    uint64_t gap = max - min + 1;
-    if (gap == 1) return min;
-
-    uint64_t v = ((uint64_t)std::rand());
-    v *= ((uint64_t)std::rand());
-    v *= ((uint64_t)std::rand());
-    v *= ((uint64_t)std::rand());
-    v *= ((uint64_t)std::rand());
-    v ^= ((uint64_t)std::rand());
-    return gap == 0 ? (min + v) : (min + v % gap);
+    if (_tls_magic != 0xdeadbeef)
+    {
+        _tls_magic = 0xdeadbeef;
+        _rng = new std::remove_pointer<decltype(_rng)>::type;
+    }
+    return std::uniform_int_distribution<uint64_t>{min, max}(*_rng);
 }
 
 void sim_env_provider::on_worker_start(task_worker* worker)
 {
-    std::srand((_seed + worker->index() + worker->index()*worker->pool_spec().pool_code) ^ worker->index());
+    if (_tls_magic != 0xdeadbeef)
+    {
+        _tls_magic = 0xdeadbeef;
+        _rng = new std::remove_pointer<decltype(_rng)>::type;
+    }
+    _rng->seed((_seed + worker->index() + worker->index()*worker->pool_spec().pool_code) ^ worker->index());
 }
 
 sim_env_provider::sim_env_provider(env_provider* inner_provider)
@@ -77,7 +78,7 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
     _seed = config()->get_value<int>("tools.simulator", "random_seed", 0, "random seed for the simulator, 0 for random random seed");
     if (_seed == 0)
     {
-        _seed = static_cast<int>(utils::get_current_physical_time_ns())  * std::rand();
+        _seed = std::random_device{}();
     }
 
     derror("simulation.random seed for this round is %d", _seed);

@@ -35,6 +35,7 @@
 
 # include "repli.app.h"
 # include <dsn/cpp/utils.h>
+# include <dsn/internal/configuration.h>
 # include "../../apps/replication/lib/mutation_log.h"
 
 # include <iostream>
@@ -53,6 +54,7 @@ namespace dsn {
             std::cout << "------------ commands -----------" << std::endl;
             std::cout << "help" << std::endl;
             std::cout << "log_file <file_name>" << std::endl;
+            std::cout << "config_get <config_file> <section> <key>" << std::endl;
             std::cout << "---------------------------------" << std::endl;
         }
 
@@ -70,7 +72,7 @@ namespace dsn {
             {
                 usage();
             }
-            if (cmd == "log_file")
+            else if (cmd == "log_file")
             {
                 if (s_args.size() < 2)
                 {
@@ -96,17 +98,18 @@ namespace dsn {
                 std::cout << "file_index=" << lf->index() << std::endl;
                 std::cout << "start_offset=" << lf->start_offset() << std::endl;
                 std::cout << "end_offset=" << lf->end_offset() << std::endl;
-                std::cout << "previous_log_max_decrees={";
-                const multi_partition_decrees_ex& previous = lf->previous_log_max_decrees();
+                std::cout << "previous_log_max_decrees={" << std::endl;
+                std::cout << "  /* app_id.pidx : previous_max_decree : valid_start_offset */" << std::endl;
+                const replica_log_info_map& previous = lf->previous_log_max_decrees();
                 int i = 0;
                 for (auto& kv : previous)
                 {
-                    if (i != 0) std::cout << ",";
-                    std::cout << "p" << kv.first.pidx << "->" << kv.second.decree;
+                    std::cout << "  " << kv.first.app_id << "." << kv.first.pidx << " : " << kv.second.max_decree
+                              << " : " << kv.second.valid_start_offset << std::endl;
                 }
                 std::cout << "}" << std::endl;
-                std::cout << "-----------------------------------" << std::endl;
-                std::cout << "ballot.decree : last_committed_decree : global_log_offset" << std::endl;
+                std::cout << "mutations={" << std::endl;
+                std::cout << "  /* app_id.pidx.ballot.decree : last_committed_decree : log_offset */" << std::endl;
                 lf->close();
                 lf = nullptr;
                 int64_t offset = 0;
@@ -114,15 +117,36 @@ namespace dsn {
                 files.push_back(file_name);
                 err = mutation_log::replay(files, [](mutation_ptr mu)->bool
                     {
-                        std::cout << mu->name() << " : " << mu->data.header.last_committed_decree
+                        std::cout << "  " << mu->name() << " : " << mu->data.header.last_committed_decree
                                   << " : " << mu->data.header.log_offset << std::endl;
                         return true;
                     },
                     offset
                 );
-                std::cout << "-----------------------------------" << std::endl;
+                std::cout << "}" << std::endl;
                 std::cout << "read_return_err=" << dsn_error_to_string(err) << std::endl;
                 std::cout << "read_end_offset=" << offset << std::endl;
+            }
+            else if (cmd == "config_get")
+            {
+                if (s_args.size() < 4)
+                {
+                    std::cerr << "ERROR: lack of param" << std::endl;
+                    usage();
+                    g_done = true;
+                    return ERR_OK;
+                }
+
+                ::dsn::configuration_ptr config(new ::dsn::configuration());
+                if(!config->load(s_args[1].c_str(), nullptr))
+                {   
+                    std::cerr << "ERROR: failed to load config file \"" << s_args[1] << "\"" << std::endl;
+                    g_done = true;
+                    return ERR_OK;
+                }   
+                config->set_warning(true);
+                const char * result = config->get_string_value(s_args[2].c_str(), s_args[3].c_str(), "", "");
+                std::cout << result << std::endl;
             }
             else
             {

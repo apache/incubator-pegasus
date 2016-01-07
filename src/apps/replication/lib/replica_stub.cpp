@@ -33,12 +33,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+
 #include "replica.h"
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
 #include "replication_failure_detector.h"
-#include "rpc_replicated.h"
+#include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -52,18 +53,31 @@ using namespace dsn::service;
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serverlet("replica_stub"), _replicas_lock(true)
-{
+    : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr)
+{    
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
     _state = NS_Disconnected;
     _log = nullptr;
+    install_perf_counters();
 }
 
 replica_stub::~replica_stub(void)
-{
+{    
     close();
+}
+
+void replica_stub::install_perf_counters()
+{
+    _counter_replicas_count.init("eon.replication", "replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
+    _counter_replicas_opening_count.init("eon.replication", "opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
+    _counter_replicas_closing_count.init("eon.replication", "closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
+    _counter_replicas_total_commit_throught.init("eon.replication", "replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
+
+    _counter_replicas_learning_failed_latency.init("eon.replication", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
+    _counter_replicas_learning_success_latency.init("eon.replication", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
+    _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)
@@ -80,14 +94,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init dirs
     set_options(opts);
-    _dir = _options.working_dir;
+    _dir = std::string(dsn_get_current_app_data_dir());
     _primary_address = primary_address();
     
     if (clear)
     {
         if (!dsn::utils::filesystem::remove_path(_dir))
         {
-            dassert("Fail to remove %s.", _dir.c_str());
+            dassert(false, "Fail to remove %s.", _dir.c_str());
         }
     }
 
@@ -102,15 +116,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
     }
     _dir = temp;
-    std::string log_dir = _dir + "/log";
+    std::string log_dir = dsn::utils::filesystem::path_combine(_dir, "slog");
     if (!dsn::utils::filesystem::create_directory(log_dir))
     {
         dassert(false, "Fail to create directory %s.", log_dir.c_str());
     }
     _log = new mutation_log(
         log_dir,
-        false,
-        opts.log_batch_buffer_KB_shared,
+        opts.log_shared_batch_buffer_kb,
         opts.log_file_size_mb
         );
 
@@ -120,18 +133,16 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
     {
-        dassert(false, "Fail to get files in %s.", dir().c_str());
+        dassert(false, "Fail to get subdirectories in %s.", dir().c_str());
     }
 
     for (auto& name : dir_list)
     {
         if (name.length() >= 4 &&
-            (name.substr(name.length() - strlen("log")) == "log" ||
-                name.substr(name.length() - strlen(".err")) == ".err")
-            )
+            (name.substr(name.length() - 4) == "slog" || name.substr(name.length() - 4) == ".err"))
             continue;
 
-        auto r = replica::load(this, name.c_str(), true);
+        auto r = replica::load(this, name.c_str());
         if (r != nullptr)
         {
             ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
@@ -157,7 +168,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 return it->second->replay_mutation(mu, false);
             }
             else
+            {
                 return false;
+            }
         }
         );
 
@@ -176,7 +189,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
         // delete all replicas
         // TODO: checkpoint latest state and update on meta server so learning is cheaper
-        for (auto it = rps.begin(); it != rps.end(); it++)
+        for (auto it = rps.begin(); it != rps.end(); ++it)
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
@@ -188,32 +201,41 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         rps.clear();
 
         // restart log service
-        _log->close(true);
+        _log->close();
+        _log = nullptr;
+        if (!utils::filesystem::remove_path(log_dir))
+        {
+            dassert(false, "remove directory %s failed", log_dir.c_str());
+        }
+        _log = new mutation_log(
+            log_dir,
+            opts.log_shared_batch_buffer_kb,
+            opts.log_file_size_mb
+            );
         auto lerr = _log->open(nullptr);
-        dassert(lerr == ERR_OK, "restart log service must succeed");    
+        dassert(lerr == ERR_OK, "restart log service must succeed");
     }
-    
 
-    for (auto it = rps.begin(); it != rps.end(); it++)
+    for (auto it = rps.begin(); it != rps.end(); ++it)
     {
         it->second->reset_prepare_list_after_replay();
                 
         decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
-        if (_options.log_enable_private_prepare)
+        if (it->second->private_log())
         {
             pmax = it->second->private_log()->max_decree(it->first);
 
             // possible when shared log is restarted
             if (smax == 0)
             {
-                _log->update_max_decrees(it->first, pmax);
+                _log->update_max_decree(it->first, pmax);
                 smax = pmax;
             }
         }
 
         dwarn(
-            "%u.%u @ %s: load replica with err %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "%u.%u @ %s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
             "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
@@ -224,12 +246,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             it->second->get_ballot(),
             smax,
             pmax,
-            it->second->get_app()->log_info().init_offset_in_shared_log,
-            it->second->get_app()->log_info().init_offset_in_private_log
+            it->second->get_app()->init_info().init_offset_in_shared_log,
+            it->second->get_app()->init_info().init_offset_in_private_log
             );
 
         if (err == ERR_OK)
-        {            
+        {
             dassert(smax == pmax, "incomplete private log state");
             it->second->set_inactive_state_transient(true);
         }
@@ -254,6 +276,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     // attach rps
     _replicas = std::move(rps);
+    _counter_replicas_count.add((uint64_t)_replicas.size());
 
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
@@ -370,6 +393,8 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
         return;
     }
 
+    // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
+    // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr)
     {
@@ -508,7 +533,7 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
 
 void replica_stub::on_add_learner(const group_check_request& request)
 {
-    replica_ptr rep = get_replica(request.config.gpid, true, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
     if (rep != nullptr)
     {
         rep->on_add_learner(request);
@@ -528,6 +553,38 @@ void replica_stub::on_remove(const replica_configuration& request)
     {
         rep->on_remove(request);
     }
+}
+
+void replica_stub::json_state(std::stringstream& out) const
+{
+    std::vector<replica_ptr> replicas_copy;
+    {
+        zauto_lock _(_replicas_lock);
+        for (auto& rep : _replicas)
+        {
+            replicas_copy.push_back(rep.second);
+        }
+    }
+    json_encode(out, replicas_copy);
+}
+
+void replica_stub::static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
+{
+    auto stub = reinterpret_cast<replica_stub*>(context);
+    std::stringstream ss;
+    stub->json_state(ss);
+    auto danglingstr = new std::string(std::move(ss.str()));
+    reply->message = danglingstr->c_str();
+    reply->size = danglingstr->size();
+    reply->context = danglingstr;
+}
+
+void replica_stub::static_replica_stub_json_state_freer(dsn_cli_reply reply)
+{
+    dassert(reply.context != nullptr, "corrupted cli reply");
+    auto danglingstr = reinterpret_cast<std::string*>(reply.context);
+    dassert(danglingstr->c_str() == reply.message, "corrupted cli reply");
+    delete danglingstr;
 }
 
 void replica_stub::query_configuration_by_node()
@@ -611,7 +668,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         replicas rs = _replicas;
-        for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
+        for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
         {
             rs.erase(it->gpid);
             tasking::enqueue(
@@ -623,7 +680,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         }
 
         // for rps not exist on meta_servers
-        for (auto it = rs.begin(); it != rs.end(); it++)
+        for (auto it = rs.begin(); it != rs.end(); ++it)
         {
             tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
@@ -641,7 +698,7 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
     dassert (_state != NS_Connected, "");
     _state = NS_Connected;
 
-    for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
+    for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
     {
         tasking::enqueue(
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
@@ -740,7 +797,7 @@ void replica_stub::on_meta_server_disconnected()
 
     _state = NS_Disconnected;
 
-    for (auto it = _replicas.begin(); it != _replicas.end(); it++)
+    for (auto it = _replicas.begin(); it != _replicas.end(); ++it)
     {
         tasking::enqueue(
             LPC_CM_DISCONNECTED_SCATTER,
@@ -793,19 +850,29 @@ void replica_stub::on_gc()
         rs = _replicas;
     }
 
-    // gc prepare log
+    // gc shared prepare log
     if (_log != nullptr)
     {
-        multi_partition_decrees_ex durable_decrees;
-        for (auto it = rs.begin(); it != rs.end(); it++)
+        // gc condition is:
+        //   d <= last_durable_decree && d <= private_log.max_commit_decree
+        replica_log_info_map gc_condition;
+        for (auto it = rs.begin(); it != rs.end(); ++it)
         {
-            log_replica_info ri;
-            ri.decree = it->second->last_durable_decree();
-            ri.log_start_offset = it->second->get_app()->_info.init_offset_in_shared_log;
-
-            durable_decrees[it->first] = ri;
+            replica_log_info ri;
+            replica_ptr r = it->second;
+            mutation_log_ptr plog = r->private_log();
+            if (plog)
+            {
+                ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit_on_disk());
+            }
+            else
+            {
+                ri.max_decree = r->last_durable_decree();
+            }
+            ri.valid_start_offset = r->get_app()->init_info().init_offset_in_shared_log;
+            gc_condition[it->first] = ri;
         }
-        _log->garbage_collection(durable_decrees);
+        _log->garbage_collection(gc_condition);
     }
     
     // gc on-disk rps
@@ -883,6 +950,8 @@ void replica_stub::on_gc()
             {
                 replica_ptr r = it2->second.second;
                 _closing_replicas.erase(it2);
+                _counter_replicas_closing_count.decrement();
+
                 add_replica(r);
 
                 // unlock here to avoid dead lock
@@ -906,7 +975,9 @@ void replica_stub::on_gc()
         }
         else 
         {
-            auto task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+
+            _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
             _replicas_lock.unlock();
             return task;
@@ -923,7 +994,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     dwarn("open replica '%s'", dr.c_str());
 
-    replica_ptr rep = replica::load(this, dr.c_str(), true);
+    replica_ptr rep = replica::load(this, dr.c_str());
 
     if (rep == nullptr)
     {
@@ -932,12 +1003,14 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (rep == nullptr)
     {
+        _counter_replicas_opening_count.decrement();
         zauto_lock l(_replicas_lock);
         _opening_replicas.erase(gpid);
         return;
     }
             
     {
+        _counter_replicas_opening_count.decrement();
         zauto_lock l(_replicas_lock);
         auto it = _replicas.find(gpid);
         dassert (it == _replicas.end(), "");
@@ -953,20 +1026,29 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
+    dassert(
+        r->status() == PS_ERROR || r->status() == PS_INACTIVE,
+        "%s: invalid state %s when calling begin_close_replica",
+        r->name(),
+        enum_to_string(r->status())
+        );
+
     zauto_lock l(_replicas_lock);
 
-    // initialization is still ongoing
-    if (nullptr == _failure_detector)
-        return nullptr;
+    //// TODO: so what?
+    //// initialization is still ongoing
+    //if (nullptr == _failure_detector)
+    //    return nullptr;
 
     if (remove_replica(r))
     {
-        auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, 
+        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA, this,
             std::bind(&replica_stub::close_replica, this, r), 
             0, 
             r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
+        _counter_replicas_closing_count.increment();
         return task;
     }
     else
@@ -982,6 +1064,7 @@ void replica_stub::close_replica(replica_ptr r)
     r->close();
 
     {
+        _counter_replicas_closing_count.decrement();
         zauto_lock l(_replicas_lock);
         _closing_replicas.erase(r->get_gpid());
     }
@@ -989,6 +1072,7 @@ void replica_stub::close_replica(replica_ptr r)
 
 void replica_stub::add_replica(replica_ptr r)
 {
+    _counter_replicas_count.increment();
     zauto_lock l(_replicas_lock);
     auto pr = _replicas.insert(replicas::value_type(r->get_gpid(), r));
     dassert(pr.second, "replica %s is already in the collection", r->name());
@@ -999,6 +1083,7 @@ bool replica_stub::remove_replica(replica_ptr r)
     zauto_lock l(_replicas_lock);
     if (_replicas.erase(r->get_gpid()) > 0)
     {
+        _counter_replicas_count.decrement();
         return true;
     }
     else
@@ -1007,23 +1092,24 @@ bool replica_stub::remove_replica(replica_ptr r)
     }
 }
 
-void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
+void replica_stub::notify_replica_state_update(const replica_configuration& config, bool is_closing)
 {
     if (nullptr != _replica_state_subscriber)
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, is_closing));
         }
         else
         {
-            _replica_state_subscriber(_primary_address, config, isClosing);
+            _replica_state_subscriber(_primary_address, config, is_closing);
         }
     }
 }
 
 void replica_stub::handle_log_failure(error_code err)
 {
+    derror("handle log failure: %s", err.to_string());
     if (!s_not_exit_on_log_failure)
     {
         dassert(false, "TODO: better log failure handling ...");
@@ -1045,10 +1131,18 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
     register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
+
+    _cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
+        this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
+    dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");
 }
 
 void replica_stub::close()
 {
+    dassert(_cli_replica_stub_json_state_handle != nullptr, "unable to find registered cli command, close before initialize?");
+    dsn_cli_deregister(_cli_replica_stub_json_state_handle);
+    _cli_replica_stub_json_state_handle = nullptr;
+
     if (_config_sync_timer_task != nullptr)
     {
         _config_sync_timer_task->cancel(true);
@@ -1072,22 +1166,25 @@ void replica_stub::close()
         zauto_lock l(_replicas_lock);    
         while (_closing_replicas.empty() == false)
         {
-            auto task = _closing_replicas.begin()->second.first;
+            task_ptr task = _closing_replicas.begin()->second.first;
             _replicas_lock.unlock();
 
             task->wait();
 
+
+            _counter_replicas_closing_count.decrement();
             _replicas_lock.lock();
             _closing_replicas.erase(_closing_replicas.begin());
         }
 
         while (_opening_replicas.empty() == false)
         {
-            auto task = _opening_replicas.begin()->second;
+            task_ptr task = _opening_replicas.begin()->second;
             _replicas_lock.unlock();
 
             task->cancel(true);
 
+            _counter_replicas_opening_count.decrement();
             _replicas_lock.lock();
             _opening_replicas.erase(_opening_replicas.begin());
         }
@@ -1095,6 +1192,8 @@ void replica_stub::close()
         while (_replicas.empty() == false)
         {
             _replicas.begin()->second->close();
+
+            _counter_replicas_count.decrement();
             _replicas.erase(_replicas.begin());
         }
     }
@@ -1111,6 +1210,7 @@ void replica_stub::close()
         _log->close();
         _log = nullptr;
     }
+
 }
 
 }} // namespace

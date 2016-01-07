@@ -53,7 +53,7 @@ namespace dsn {
             return code;
         }
 
-        static counter_percentile_type find_percentail_type(const std::string &name)
+        static dsn_perf_counter_percentile_type_t find_percentail_type(const std::string &name)
         {
             int num = atoi(name.c_str());
             if (num == 0)
@@ -184,7 +184,7 @@ namespace dsn {
                     return ss.str();
                 }
 
-                counter_percentile_type percentile_type = COUNTER_PERCENTILE_50;
+                dsn_perf_counter_percentile_type_t percentile_type = COUNTER_PERCENTILE_50;
                 if ((args.size() > 3) && (find_percentail_type(args[3]) != COUNTER_PERCENTILE_INVALID))
                 {
                     percentile_type = find_percentail_type(args[3]);
@@ -201,7 +201,7 @@ namespace dsn {
             size_t k = args.size();
             int task_id;
             perf_counter_ptr_type counter_type;
-            counter_percentile_type percentile_type;
+            dsn_perf_counter_percentile_type_t percentile_type;
             std::stringstream ss;
             std::vector<std::string> val;
 
@@ -272,8 +272,9 @@ namespace dsn {
             {
                 int task_id;
                 perf_counter_ptr_type counter_type;
-                counter_percentile_type percentile_type;
+                dsn_perf_counter_percentile_type_t percentile_type;
 
+                bool first_flag = 0;
                 ss << "[";
                 for (int i = 0; i <= dsn_task_code_max(); ++i)
                 {
@@ -285,7 +286,12 @@ namespace dsn {
                     double query_record[PREF_COUNTER_COUNT] = { 0 };
                     for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
                     {
-                        percentile_type = static_cast<counter_percentile_type>(j);
+                        if (first_flag)
+                            ss << ",";
+                        else
+                            first_flag = 1;
+
+                        percentile_type = static_cast<dsn_perf_counter_percentile_type_t>(j);
                         ss << "[\"" << dsn_task_code_to_string(task_id) << "\",";
                         ss << "\"" << percentail_counter_string[percentile_type] << "\"";
 
@@ -321,7 +327,7 @@ namespace dsn {
                                 }
                             }
                         }
-                        ss << "],";
+                        ss << "]";
                     }
                 }
                 ss << "]";
@@ -399,14 +405,30 @@ namespace dsn {
                             ss << "[\"" << name << name_suffix << "\"";
                             counterList << "\"" << name << name_suffix << "\",";
 
-                            int sample_count = 0;
-                            uint64_t* samples = s_spec_profilers[task_id].ptr[counter_type]->get_samples(sample_count);
+                            // get samples
+                            perf_counter::samples_t samples;
+                            int sample_count = 1000;
+                            sample_count = s_spec_profilers[task_id].ptr[counter_type]->get_latest_samples(sample_count, samples);
+                            
+                            // merge and sort
+                            std::vector<uint64_t> sorted_samples;
+                            sorted_samples.resize(sample_count); 
+                            
+                            int copy_index = 0;
+                            for (auto& s : samples)
+                            {
+                                dassert(copy_index + s.second < (int)sorted_samples.size(),
+                                    "return of get_latest_samples() is inconsistent with what is get in samples");
 
-                            std::vector<uint64_t> sampleArr(samples, samples + sample_count);
-                            std::sort(sampleArr.begin(), sampleArr.end());
+                                memcpy((void*)&sorted_samples[copy_index], (const void*)s.first, s.second * sizeof(uint64_t));
+                                copy_index += s.second;
+                            }
+                            dassert(copy_index == sample_count, "return of get_latest_samples() is inconsistent with what is get in samples");
 
-                            for (int l = 0; l < sample_count; l += sample_count / 1000)
-                                ss << ", " << sampleArr[l];
+                            std::sort(sorted_samples.begin(), sorted_samples.end());
+
+                            for (int l = 0; l < sorted_samples.size(); l++)
+                                ss << ", " << sorted_samples[l];
 
                             ss << "],\n";
                         }
@@ -460,8 +482,9 @@ namespace dsn {
                     ss << "unenough arguments" << std::endl;
                     return ss.str();
                 }
-
                 int task_id = find_task_id(args[1]);
+                int query_percentile = (args.size() == 2) ? 50 : atoi(args[2].c_str());
+                
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
@@ -483,7 +506,25 @@ namespace dsn {
                             if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
                                 continue;
 
-                            double timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
+                            double timeGet = 0;
+                            switch (query_percentile)
+                            {
+                                case 50: 
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
+                                    break;
+                                case 90:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_90);
+                                    break;
+                                case 95:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_95);
+                                    break;
+                                case 99:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_99);
+                                    break;
+                                case 999:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_999);
+                                    break;
+                            }
 
                             if (strcmp(counter_info_ptr[counter_type]->title, "RPC.SERVER(ns)") == 0 && task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                                 timeList[0] = timeGet;
@@ -505,8 +546,8 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                timeList[0] = (timeList[3] - timeList[0]) / 2;
-                timeList[3] = timeList[0];
+                //timeList[0] = (timeList[3] - timeList[0]) / 2;
+                //timeList[3] = timeList[0];
                 for (auto i : timeList)
                     ss << ((i < 0) ? 0 : i) << ",";
                 return ss.str();
@@ -528,7 +569,10 @@ namespace dsn {
                     return ss.str();
                 }
 
-                ss << "[";
+                char str[24];
+                ::dsn::utils::time_ms_to_string(dsn_now_ns() / 1000000, str);
+                ss << "{\"time\":\"" << str <<"\",";
+                ss << "\"data\":[";
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
@@ -567,7 +611,7 @@ namespace dsn {
 
                             ss << "{\"name\":\"" << name << name_suffix << "\"";
 
-                            uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_current_sample();
+                            uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_latest_sample();
                             ss << ", \"value\":" << sample;
 
                             ss << "}\n";
@@ -577,7 +621,7 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                ss << "]";
+                ss << "]}";
                 return ss.str();
             }
             //return a list of 2 elements for a specific task
@@ -646,25 +690,12 @@ namespace dsn {
                 ss << "]";
                 return ss.str();
             }
-            //return a list of all counters
-            else if (args[0] == "list_counter")
+            //query time
+            else if (args[0] == "time")
             {
-                utils::perf_counters& c = utils::perf_counters::instance();
-                auto counters = c.get_all_counters();
-                ss << "[";
-                bool first_flag = 0;
-                for (auto section : counters)
-                {
-                    for (auto counter : section.second)
-                    {
-                        if (!first_flag)
-                            first_flag = 1;
-                        else
-                            ss << ",";
-                        ss << "\"" << counter.first << "\"";
-                    }
-                }
-                ss << "]";
+                char str[24];
+                ::dsn::utils::time_ms_to_string(dsn_now_ns() / 1000000, str);
+                ss << str;
                 return ss.str();
             }
             else

@@ -47,16 +47,18 @@ namespace dsn
             : public distributed_lock_service, public clientlet
         {
         public:
-            virtual error_code initialize() override;
+            // no parameter need
+            virtual error_code initialize(int argc, const char** argv) override;
+            virtual error_code finalize() override { return ERR_OK; }
 
             virtual std::pair<task_ptr, task_ptr> lock(
                 const std::string& lock_id,
                 const std::string& myself_id,
-                bool create_if_not_exist,
                 task_code lock_cb_code,
                 const lock_callback& lock_cb,
                 task_code lease_expire_code,
-                const lock_callback& lease_expire_callback
+                const lock_callback& lease_expire_callback, 
+                const lock_options& opt
                 ) override;
 
             virtual task_ptr cancel_pending_lock(
@@ -77,6 +79,10 @@ namespace dsn
                 task_code cb_code,
                 const lock_callback& cb) override;
 
+            virtual error_code query_cache(
+                const std::string& lock_id, 
+                /*out*/std::string& owner, 
+                /*out*/uint64_t& version) override;
         private:
             void random_lock_lease_expire(const std::string& lock_id);
 

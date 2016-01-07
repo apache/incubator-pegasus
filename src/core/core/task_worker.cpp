@@ -77,6 +77,7 @@ task_worker::task_worker(task_worker_pool* pool, task_queue* q, int index, task_
     _is_running = false;
 
     _thread = nullptr;
+    _processed_task_count = 0;
 }
 
 task_worker::~task_worker()
@@ -325,23 +326,39 @@ void task_worker::run_internal()
 void task_worker::loop()
 {
     task_queue* q = queue();
+    int best_batch_size = pool_spec().dequeue_batch_size;
 
     //try {
         while (_is_running)
         {
-            task* task = q->dequeue(), *next;
+            int batch_size = best_batch_size;
+            task* task = q->dequeue(batch_size), *next;
+
+            q->decrease_count(batch_size);
+
+# ifndef NDEBUG
+            int count = 0;
+# endif
             while (task != nullptr)
-            {
-                if (q->decrease_count() < 0)
-                {
-                    // fix count approximation
-                    q->reset_count();
-                }
+            {                
                 next = task->next;
                 task->next = nullptr;
-                task->exec_internal();
+                task->exec_internal();                
                 task = next;
+# ifndef NDEBUG
+                count++;
+# endif
             }
+
+# ifndef NDEBUG
+            dassert(count == batch_size, 
+                "returned task count and batch size do not match: %d vs %d",
+                count,
+                batch_size
+                );
+# endif
+
+            _processed_task_count += batch_size;
         }
     /*}
     catch (std::exception& ex)

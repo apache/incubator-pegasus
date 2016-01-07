@@ -34,7 +34,8 @@
  */
 
 
-#include <dsn/toollet/tracer.h>
+# include <dsn/toollet/tracer.h>
+# include <dsn/internal/command.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -66,7 +67,7 @@ namespace dsn {
                 break;
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
-                auto tsk = (rpc_request_task*)this_;
+                rpc_request_task* tsk = (rpc_request_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
@@ -78,7 +79,7 @@ namespace dsn {
                 break;
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
-                auto tsk = (rpc_response_task*)this_;
+                rpc_response_task* tsk = (rpc_response_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
@@ -87,6 +88,8 @@ namespace dsn {
                     tsk->get_request()->header->rpc_id
                     );
             }
+                break;
+            default:
                 break;
             }
         }
@@ -192,6 +195,112 @@ namespace dsn {
                 );
         }
 
+        enum logged_event_t
+        {
+            LET_TASK_BEGIN,
+            LET_TASK_END, 
+            LET_LOG,
+            LET_RPC_CALL,
+            LET_RPC_REPLY,
+            LET_AIO_CALL,
+            LET_LPC_CALL,
+            
+            LET_INVALID
+        };
+
+        ENUM_BEGIN(logged_event_t, LET_INVALID)
+            ENUM_REG(LET_TASK_BEGIN)
+            ENUM_REG(LET_TASK_END)
+            ENUM_REG(LET_RPC_CALL)
+            ENUM_REG(LET_RPC_REPLY)
+            ENUM_REG(LET_AIO_CALL)
+            ENUM_REG(LET_LPC_CALL)
+        ENUM_END(logged_event_t)
+
+        struct logged_event
+        {
+            uint64_t       ts;
+            logged_event_t event_type;
+            uint64_t       correlation_id; // task or rpc
+            std::string    context; // log or rpc address
+        };
+
+        struct logged_task
+        {
+            uint64_t task_id;
+            uint64_t rpc_id; // if present
+
+            std::vector<logged_event> events;
+        };
+
+
+        static std::string tracer_log_flow_error(const char* msg)
+        {
+            return std::string("invalid arguments for tracer.find: ") + msg;
+        }
+
+        static std::string tracer_log_flow(const std::vector<std::string>& args)
+        {
+            // forward|f|backward|b rpc|r|task|t rpc_id|task_id(e.g., 002a003920302390) log_file_name(log.xx.txt)
+            if (args.size() < 4)
+            {
+                return tracer_log_flow_error("not enough arguments");
+            }
+
+            bool is_forward;
+            if (args[0] == "forward" || args[0] == "f")
+            {
+                is_forward = true;
+            }
+            else if (args[0] == "backward" || args[0] == "b")
+            {
+                is_forward = false;
+            }
+            else
+            {
+                return tracer_log_flow_error("invalid direction argument - must be forward|f|backward|b");
+            }
+
+            bool is_rpc;
+            if (args[1] == "rpc" || args[1] == "r")
+            {
+                is_rpc = true;
+            }
+            else if (args[1] == "task" || args[1] == "t")
+            {
+                is_rpc = false;
+            }
+            else
+            {
+                return tracer_log_flow_error("invalid id type argument - must be rpc|r|task|t");
+            }
+
+            uint64_t xid = 0;
+            sscanf(args[2].c_str(), "%016" PRIx64, &xid);
+            if (xid == 0)
+            {
+                return tracer_log_flow_error("invalid id value - must be with 016llx format");
+            }
+
+            std::string log_dir = utils::filesystem::path_combine(
+                tools::spec().data_dir,
+                "logs"
+                );
+
+            std::string fpath = utils::filesystem::path_combine(
+                log_dir,
+                args[3]
+                );
+
+            if (!utils::filesystem::file_exists(fpath))
+            {
+                return tracer_log_flow_error((fpath + " not exist").c_str());
+            }
+
+
+            return "Not implemented";
+        }
+
         void tracer::install(service_spec& spec)
         {
             auto trace = config()->get_value<bool>("task..default", "is_trace", false,
@@ -262,6 +371,12 @@ namespace dsn {
                     "whetehr to trace when a rpc response task is enqueued"))
                     spec->on_rpc_response_enqueue.put_back(tracer_on_rpc_response_enqueue, "tracer");
             }
+
+            register_command({ "tracer.find" }, 
+                "tracer.find - find related logs", 
+                "tracer.find forward|f|backward|b rpc|r|task|t rpc_id|task_id(e.g., a023003920302390) log_file_name(log.xx.txt)",
+                tracer_log_flow
+                );
         }
 
         tracer::tracer(const char* name)

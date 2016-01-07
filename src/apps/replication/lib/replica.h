@@ -67,10 +67,10 @@ public:
     //
     //    routines for replica stub
     //
-    static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
+    static replica* load(replica_stub* stub, const char* dir);
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     // return true when the mutation is valid for the current replica
-    bool replay_mutation(mutation_ptr& mu, bool is_private = true);
+    bool replay_mutation(mutation_ptr& mu, bool is_private);
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
@@ -118,7 +118,7 @@ public:
     ballot get_ballot() const {return _config.ballot; }    
     partition_status status() const { return _config.status; }
     global_partition_id get_gpid() const { return _config.gpid; }    
-    replication_app_base* get_app() { return _app; }
+    replication_app_base* get_app() { return _app.get(); }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
@@ -128,6 +128,9 @@ public:
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
+
+    void json_state(std::stringstream& out) const;
+    void update_commit_statistics(int count);
         
 private:
     // common helpers
@@ -137,11 +140,10 @@ private:
     mutation_ptr new_mutation(decree decree);    
         
     // initialization
-    error_code init_app_and_prepare_list(const char* app_type, bool create_new);
-    error_code initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure);
-    error_code initialize_on_new(const char* app_type, global_partition_id gpid);    
-    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir); // for replica::load(..) only
-    replica(replica_stub* stub, global_partition_id gpid, const char* app_type); // for replica::newr(...) only
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir);
+    error_code initialize_on_new();
+    error_code initialize_on_load();
+    error_code init_app_and_prepare_list(bool create_new);
         
     /////////////////////////////////////////////////////////////////
     // 2pc
@@ -157,7 +159,7 @@ private:
     // learning    
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
@@ -195,9 +197,9 @@ private:
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
     void on_checkpoint_timer();
-    void gc();
+    void garbage_collection();
     void init_checkpoint();
-    void checkpoint();
+    void background_checkpoint();
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp);
@@ -218,14 +220,15 @@ private:
     // private prepare log (may be empty, depending on config)
     mutation_log_ptr        _private_log;
 
-    // local check timer for gc, checkpoint, etc.
-    dsn::task_ptr           _check_timer;
+    // local checkpoint timer for gc, checkpoint, etc.
+    dsn::task_ptr           _checkpoint_timer;
 
     // application
-    replication_app_base*   _app;
+    std::unique_ptr<replication_app_base>  _app;
 
     // constants
     replica_stub*           _stub;
+    std::string             _app_type;
     std::string             _dir;
     char                    _name[256]; // app.index @ host:port
     replication_options     *_options;
@@ -235,5 +238,9 @@ private:
     secondary_context           _secondary_states;
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
+
+    // perf counters
+    perf_counter_               _counter_commit_latency;
 };
+
 }} // namespace

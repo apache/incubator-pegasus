@@ -39,7 +39,7 @@
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
-static void copy_file(const char* from_file, const char* to_file, int to_size = -1)
+static void copy_file(const char* from_file, const char* to_file, int64_t to_size = -1)
 {
     int64_t from_size;
     ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
@@ -53,7 +53,7 @@ static void copy_file(const char* from_file, const char* to_file, int to_size = 
     if (to_size > 0)
     {
         std::unique_ptr<char> buf(new char[to_size]);
-        int n = fread(buf.get(), 1, to_size, from);
+        auto n = fread(buf.get(), 1, to_size, from);
         ASSERT_EQ(to_size, n);
         n = fwrite(buf.get(), 1, to_size, to);
         ASSERT_EQ(to_size, n);
@@ -78,9 +78,9 @@ static void overwrite_file(const char* file, int offset, const void* buf, int si
 
 TEST(replication, log_file)
 {
-    multi_partition_decrees_ex mdecrees;
+    replica_log_info_map mdecrees;
     global_partition_id gpid = { 1, 0 };
-    mdecrees[gpid] = log_replica_info(3, 0);
+    mdecrees[gpid] = replica_log_info(3, 0);
     std::string fpath = "./log.1.100";
     int index = 1;
     int64_t offset = 100;
@@ -107,10 +107,9 @@ TEST(replication, log_file)
         if (i == 0)
         {
             binary_writer temp_writer;
-            lf->write_header(
+            lf->write_file_header(
                 temp_writer,
-                mdecrees,
-                1024
+                mdecrees
                 );
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
@@ -122,7 +121,7 @@ TEST(replication, log_file)
         temp_writer.write(str);
         writer->add(temp_writer.get_buffer());
 
-        auto task = lf->commit_log_block(
+        task_ptr task = lf->commit_log_block(
             *writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
             );
         task->wait();
@@ -249,18 +248,18 @@ TEST(replication, log_file)
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
-    lf->crc32() = 0;
+    lf->reset_stream();
     for (int i = 0; i < 100; i++)
     {
         blob bb;
-        auto err = lf->read_next_log_block(offset - lf->start_offset(), bb);
+        auto err = lf->read_next_log_block(bb);
         ASSERT_EQ(ERR_OK, err);
 
         binary_reader reader(bb);
 
         if (i == 0)
         {
-            lf->read_header(reader);
+            lf->read_file_header(reader);
             ASSERT_TRUE(lf->is_right_header());
             ASSERT_EQ(100, lf->header().start_global_offset);
         }
@@ -275,7 +274,7 @@ TEST(replication, log_file)
     ASSERT_TRUE(offset == lf->end_offset());
 
     blob bb;
-    err = lf->read_next_log_block(offset - lf->start_offset(), bb);
+    err = lf->read_next_log_block(bb);
     ASSERT_TRUE(err == ERR_HANDLE_EOF);
 
     lf = nullptr;
@@ -297,12 +296,13 @@ TEST(replication, mutation_log)
     // writing logs
     mutation_log_ptr mlog = new mutation_log(
         logp,
-        true,
         1,
-        4
+        4,
+        true,
+        gpid
         );
 
-    auto err = mlog->open(gpid, nullptr);
+    auto err = mlog->open(nullptr);
     EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
@@ -336,13 +336,14 @@ TEST(replication, mutation_log)
     // reading logs
     mlog = new mutation_log(
         logp,
-        true,
         1,
-        4
+        4,
+        true,
+        gpid
         );
 
     int mutation_index = -1;
-    mlog->open(gpid,
+    mlog->open(
         [&mutations, &mutation_index](mutation_ptr& mu)->bool
     {
         mutation_ptr wmu = mutations[++mutation_index];

@@ -153,7 +153,7 @@ struct read_context
 
 void simple_kv_client_app::begin_read(int id, const std::string& key, int timeout_ms)
 {
-    ddebug("=== on_begin_write:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
+    ddebug("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
     read_context* ctx = new read_context();
     ctx->id = id;
     ctx->key = key;

@@ -51,16 +51,16 @@ namespace dsn {
         class perf_counter_number : public perf_counter
         {
         public:
-            perf_counter_number(const char *section, const char *name, perf_counter_type type, const char *dsptr)
-                : perf_counter(section, name, type, dsptr), _val(0){}
+            perf_counter_number(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+                : perf_counter(app, section, name, type, dsptr), _val(0){}
             ~perf_counter_number(void) {}
 
             virtual void   increment() { _val++; }
             virtual void   decrement() { _val--; }
             virtual void   add(uint64_t val) { _val += val; }
-            virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
+            virtual void   set(uint64_t val) { _val = val; }
             virtual double get_value() { return static_cast<double>(_val.load()); }
-            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             std::atomic<uint64_t> _val;
@@ -71,8 +71,8 @@ namespace dsn {
         class perf_counter_rate : public perf_counter
         {
         public:
-            perf_counter_rate(const char *section, const char *name, perf_counter_type type, const char *dsptr)
-                : perf_counter(section, name, type, dsptr), _val(0)
+            perf_counter_rate(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+                : perf_counter(app, section, name, type, dsptr), _val(0)
             {
                 qts = 0;
             }
@@ -91,7 +91,7 @@ namespace dsn {
                 _val = 0;
                 return val / interval * 1000 * 1000 * 1000;
             }
-            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             std::atomic<uint64_t> _val;
@@ -109,8 +109,8 @@ namespace dsn {
         class perf_counter_number_percentile : public perf_counter
         {
         public:
-            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type, const char *dsptr)
-                : perf_counter(section, name, type, dsptr), _tail(0)
+            perf_counter_number_percentile(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+                : perf_counter(app, section, name, type, dsptr), _tail(0)
             {
                 _counter_computation_interval_seconds = config()->get_value<int>(
                     "components.simple_perf_counter", 
@@ -120,14 +120,15 @@ namespace dsn {
 
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
-                _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+
+                this->add_ref();
+                _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, _timer, std::placeholders::_1));
 
                 memset(_samples, 0, sizeof(_samples));
             }
             
             ~perf_counter_number_percentile(void) 
             {
-                _timer->cancel();
             }
 
             virtual void   increment() { dassert(false, "invalid execution flow"); }
@@ -141,7 +142,7 @@ namespace dsn {
 
             virtual double get_value() { dassert(false, "invalid execution flow");  return 0.0; }
 
-            virtual double get_percentile(counter_percentile_type type)
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {
                 if (_tail == 0)
                     return -1.0;
@@ -153,13 +154,31 @@ namespace dsn {
                 return (double)_results[type];
             }
 
-            virtual uint64_t* get_samples(/*out*/ int& sample_count) const override 
+            virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const override
             { 
-                sample_count = static_cast<int>(sizeof(_samples) / sizeof(uint64_t));
-                return (uint64_t*)(_samples);
+                dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
+
+                int count = _tail.load();
+                int return_count = count >= required_sample_count ? required_sample_count : count;
+
+                samples.clear();
+                int end_index = (count + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                int start_index = (end_index + MAX_QUEUE_LENGTH - return_count) % MAX_QUEUE_LENGTH;
+
+                if (end_index >= start_index)
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, return_count));
+                }
+                else
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, MAX_QUEUE_LENGTH - start_index));
+                    samples.push_back(std::make_pair((uint64_t*)_samples, return_count - (MAX_QUEUE_LENGTH - start_index)));
+                }
+
+                return return_count;
             }
 
-            virtual uint64_t get_current_sample() const override
+            virtual uint64_t get_latest_sample() const override
             {
                 int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
                 return _samples[idx];
@@ -281,17 +300,22 @@ namespace dsn {
                 return;
             }
 
-            void on_timer(const boost::system::error_code& ec)
+            void on_timer(std::shared_ptr<boost::asio::deadline_timer> timer, const boost::system::error_code& ec)
             {
                 //as the callback is not in tls context, so the log system calls like ddebug, dassert will cause a lock
                 if (!ec)
                 {
-                    boost::shared_ptr<compute_context> ctx(new compute_context());
-                    calc(ctx);
+                    // only when others also hold the reference
+                    if (this->get_count() > 1)
+                    {
+                        boost::shared_ptr<compute_context> ctx(new compute_context());
+                        calc(ctx);
 
-                    _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
-                    _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
-                    _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+                        timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
+
+                        this->add_ref();
+                        timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, timer, std::placeholders::_1));
+                    }                    
                 }
                 else if (boost::system::errc::operation_canceled == ec)
                 {
@@ -301,6 +325,8 @@ namespace dsn {
                 {
                     dassert(false, "on_timer error!!!");
                 }
+
+                this->release_ref();
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
@@ -312,20 +338,14 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr)
-            : perf_counter(section, name, type, dsptr)
+        perf_counter* simple_perf_counter_factory(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
         {
-            if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
-                _counter_impl = new perf_counter_number(section, name, type, dsptr);
-            else if (type == perf_counter_type::COUNTER_TYPE_RATE)
-                _counter_impl = new perf_counter_rate(section, name, type, dsptr);
+            if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER)
+                return new perf_counter_number(app, section, name, type, dsptr);
+            else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_RATE)
+                return new perf_counter_rate(app, section, name, type, dsptr);
             else
-                _counter_impl = new perf_counter_number_percentile(section, name, type, dsptr);
-        }
-
-        simple_perf_counter::~simple_perf_counter(void) 
-        {
-            delete _counter_impl;
+                return new perf_counter_number_percentile(app, section, name, type, dsptr);
         }
     }
 }

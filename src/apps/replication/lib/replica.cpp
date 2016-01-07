@@ -37,6 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -45,39 +46,32 @@
 
 namespace dsn { namespace replication {
 
-// for replica::load(..) only
-replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir)
     : serverlet<replica>("replica"), 
     _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
-    dassert (stub, "");
+    dassert(stub != nullptr, "");
     _stub = stub;
-    _app = nullptr;
-    _check_timer = nullptr;
-    _dir = path;
+    _app_type = app_type;
+    _dir = dir;
+    sprintf(_name, "%u.%u@%s", gpid.app_id, gpid.pidx, stub->_primary_address.to_string());
     _options = &stub->options();
-
     init_state();
     _config.gpid = gpid;
+
+    std::stringstream ss;
+    ss << _name << ".2pc.latency(ns)";
+    _counter_commit_latency.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
 }
 
-// for replica::newr(...) only
-replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
-: serverlet<replica>("replica"),
-  _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
+void replica::json_state(std::stringstream& out) const
 {
-    dassert (stub, "");
-    _stub = stub;
-    _app = nullptr;
-    _check_timer = nullptr;
+    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
+}
 
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
-    _dir = _stub->dir() + "/" + buffer;
-    _options = &stub->options();
-
-    init_state();
-    _config.gpid = gpid;
+void replica::update_commit_statistics(int count)
+{
+    _stub->_counter_replicas_total_commit_throught.add((uint64_t)count);
 }
 
 void replica::init_state()
@@ -198,16 +192,15 @@ void replica::check_state_completeness()
     dassert(max_prepared_decree() >= last_committed_decree(), "");
     dassert(last_committed_decree() >= last_durable_decree(), "");
 
-    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_shared_log);
+    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_shared_log);
     dassert(mind <= last_durable_decree(), "");
-    _stub->_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_shared_log);
+    _stub->_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_shared_log);
 
     if (_private_log != nullptr)
     {   
-        auto mind = _private_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_private_log);
+        auto mind = _private_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_private_log);
         dassert(mind <= last_durable_decree(), "");
-
-        _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+        _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
     }
 }
 
@@ -248,7 +241,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
 
     case PS_SECONDARY:
-        if (_secondary_states.checkpoint_task == nullptr)
+        if (!_secondary_states.checkpoint_is_running)
         {
             check_state_completeness();
             dassert (_app->last_committed_decree() + 1 == d, "");
@@ -294,6 +287,8 @@ void replica::execute_mutation(mutation_ptr& mu)
     }
     
     ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+
+    _counter_commit_latency.set(dsn_now_ns() - mu->create_ts_ns());
 
     if (err != ERR_OK)
     {
@@ -355,22 +350,38 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
-    if (nullptr != _check_timer)
-    {
-        _check_timer->cancel(true);
-        _check_timer = nullptr;
-    }
+    dassert(
+        status() == PS_ERROR || status() == PS_INACTIVE,
+        "%s: invalid state %s when calling replica::close",
+        name(),
+        enum_to_string(status())
+        );
 
-    if (status() != PS_INACTIVE && status() != PS_ERROR)
+    if (nullptr != _checkpoint_timer)
     {
-        update_local_configuration_with_no_ballot_change(PS_INACTIVE);
+        _checkpoint_timer->cancel(true);
+        _checkpoint_timer = nullptr;
     }
 
     cleanup_preparing_mutations(true);
-    _primary_states.cleanup();
-    _secondary_states.cleanup();
-    _potential_secondary_states.cleanup(true);
+    dassert(_primary_states.is_cleaned(), "primary context is not cleared");
 
+    if (PS_INACTIVE == status())
+    {
+        dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
+        dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
+    }
+
+    // for PS_ERROR, context cleanup is done here as they may block
+    else
+    {
+        bool r = _secondary_states.cleanup(true);
+        dassert(r, "secondary context is not cleared");
+        
+        r = _potential_secondary_states.cleanup(true);
+        dassert(r, "potential secondary context is not cleared");
+    }
+    
     if (_private_log != nullptr)
     {
         _private_log->close();
@@ -380,8 +391,6 @@ void replica::close()
     if (_app != nullptr)
     {
         _app->close(false);
-        delete _app;
-        _app = nullptr;
     }
 }
 

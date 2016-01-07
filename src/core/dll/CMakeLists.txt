@@ -17,7 +17,7 @@ set(MY_BOOST_PACKAGES system)
 set(MY_PROJ_LIBS dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
-				 dsn.tools.simulator
+                 dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
    )

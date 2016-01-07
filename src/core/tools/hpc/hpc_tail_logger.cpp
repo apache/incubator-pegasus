@@ -72,8 +72,10 @@ namespace dsn
         
         static void hpc_tail_logs_dumpper();
 
-        hpc_tail_logger::hpc_tail_logger() 
+        hpc_tail_logger::hpc_tail_logger(const char* log_dir) 
+            : logging_provider(log_dir)
         {
+            _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
                 "tools.hpc_tail_logger",
                 "per_thread_buffer_bytes",
@@ -140,11 +142,11 @@ namespace dsn
             hpc_tail_logs_dumpper();
         }
 
-        static void hpc_tail_logs_dumpper()
+        void hpc_tail_logger::hpc_tail_logs_dumpper()
         {
             uint64_t nts = dsn_now_ns();
             std::stringstream log;
-            log << ::dsn::tools::spec().coredump_dir << "/hpc_tail_logs." << nts << ".log";
+            log << _log_dir << "/hpc_tail_logs." << nts << ".log";
 
             std::ofstream olog(log.str().c_str());
 

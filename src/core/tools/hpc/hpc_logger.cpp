@@ -138,9 +138,10 @@ namespace dsn
             write_buffer_list(saved_list);
         }
 
-        hpc_logger::hpc_logger() 
-            : _stop_thread(false)
+        hpc_logger::hpc_logger(const char* log_dir) 
+            : logging_provider(log_dir), _stop_thread(false)
         {
+            _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
                 "tools.hpc_logger",
                 "per_thread_buffer_bytes",
@@ -154,10 +155,9 @@ namespace dsn
 
             // check existing log files and decide start_index
             std::vector<std::string> sub_list;
-            std::string path = "./";
-            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false))
             {
-                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                dassert(false, "Fail to get subfiles in %s.", _log_dir.c_str());
             }
 
             for (auto& fpath : sub_list)
@@ -190,18 +190,21 @@ namespace dsn
         void hpc_logger::create_log_file()
         {
             std::stringstream log;
-            log << "log." << ++_index << ".txt";
+            log << _log_dir << "/log." << ++_index << ".txt";
             _current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
             _current_log_file_bytes = 0;
 
             // TODO: move gc out of criticial path
-            if (_index - _start_index > 20)
+            while (_index - _start_index > 20)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                if (!::remove(str2.str().c_str()))
+                auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
+                if (::remove(dp.c_str()) != 0)
                 {
-                    printf("Fail to remove file %s\n", str2.str().c_str());
+                    printf("Failed to remove garbage log file %s\n", dp.c_str());
+                    _start_index--;
+                    break;
                 }
             }
         }

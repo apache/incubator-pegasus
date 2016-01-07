@@ -35,9 +35,12 @@
 
 #pragma once
 
-#include "replication_common.h"
+# include <dsn/dist/replication/replication_other_types.h>
+# include "replication_common.h"
 # include <dsn/dist/meta_state_service.h>
-#include <set>
+# include <set>
+# include <unordered_set>
+# include <list>
 
 using namespace dsn;
 using namespace dsn::service;
@@ -56,26 +59,28 @@ typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
 struct app_state
 {
+    app_status                           status;
     std::string                          app_type;
     std::string                          app_name;
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions);
 };
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
-class server_state : 
+class server_state :
     public ::dsn::serverlet<server_state>
 {
 public:
-    server_state(void);
-    ~server_state(void);
+    server_state();
+    virtual ~server_state();
 
-    // init _app[1] by "[replication.app]" config
-    void initialize(const char* dir);
+    // initialize server state
+    error_code initialize();
 
     // when the server becomes the leader
     error_code on_become_leader();
@@ -88,7 +93,16 @@ public:
     //  * set node state from live to unlive, and returns configuration_update_request to apply
     //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
-    
+
+    // add alive node to cache when initializing
+    void add_alive_node_to_cache(const rpc_address& node) { _cache_alive_nodes.insert(node); }
+
+    // remove dead node from cache when initializing
+    void remove_dead_node_from_cache(const rpc_address& node) { _cache_alive_nodes.erase(node); }
+
+    // apply the cache
+    void apply_cache_nodes();
+
     // partition server & client => meta server
 
     // query all partition configurations of a replica server
@@ -104,11 +118,17 @@ public:
     // first persistent to log file, then apply to memory state
     //void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
+    // TODO: callback should pass in error_code
     void update_configuration(
         std::shared_ptr<configuration_update_request>& req,
-        dsn_message_t request_msg, 
+        dsn_message_t request_msg,
         std::function<void()> callback
         );
+
+    // table options
+    void create_app(dsn_message_t msg);
+    void drop_app(dsn_message_t msg);
+    void list_apps(dsn_message_t msg);
 
     void unfree_if_possible_on_start();
 
@@ -117,8 +137,8 @@ public:
 
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
-    
-private:    
+
+private:
     // initialize apps in local cache and in remote storage
     error_code initialize_apps();
 
@@ -140,6 +160,19 @@ private:
     // check equality of two partition configurations, not take last_drops into account
     bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
 
+    void initialize_app(app_state& app, dsn_message_t msg);
+    void do_app_drop(app_state& app, dsn_message_t msg);
+    // join path
+    static std::string join_path(const std::string& input1, const std::string& input2);
+
+    // get the application_id from name, -1 for app doesn't exist
+    int32_t get_app_index(const char* app_name) const;
+
+    //path util function in meta_state_service
+    std::string get_app_path(const app_state& app) const;
+    std::string get_partition_path(const global_partition_id& gpid) const;
+    std::string get_partition_path(const app_state& app, int partition_id) const;
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -150,13 +183,25 @@ private:
         ::dsn::rpc_address            address;
         std::set<global_partition_id> primaries;
         std::set<global_partition_id> partitions;
+        DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions);
     };
 
-    friend class load_balancer;
-    mutable zrwlock_nr                                 _lock;
+    friend class simple_stateful_load_balancer;
+    std::string                                         _cluster_root;
+
+    //_cluster_root + "/apps"
+    std::string                                         _apps_root;
+    mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
-    std::vector<app_state>                             _apps; // vec_index = app_id - 1
-    
+
+    /*
+     * in the initializing of server_state, we firstly cache all
+     * alived nodes detected by fd.
+     */
+    std::unordered_set<dsn::rpc_address> _cache_alive_nodes;
+
+    std::vector<app_state>                              _apps; // vec_index = app_id - 1
+
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
@@ -177,5 +222,12 @@ private:
 
     // for test
     config_change_subscriber          _config_change_subscriber;
+
+    dsn_handle_t                      _cli_json_state_handle;
+
+public:
+    void json_state(std::stringstream& out) const;
+    static void static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+    static void static_cli_json_state_cleanup(dsn_cli_reply reply);
 };
 
