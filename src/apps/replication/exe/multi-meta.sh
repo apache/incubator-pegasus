@@ -47,7 +47,7 @@ function count_core_file()
     if [ -d $target_dir ]; then
         echo `ls $target_dir | grep core | wc -l`
     else
-	echo "0"
+        echo "0"
     fi
 }
 

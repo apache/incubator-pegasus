@@ -72,7 +72,10 @@ void aio_testcase(uint64_t block_size, size_t concurrency, bool is_write, bool r
         }
         auto cb = [&](error_code ec, int sz)
         {
-            dassert(ec == ERR_OK && sz == block_size, "");
+            dassert(ec == ERR_OK && sz == block_size, 
+                "ec = %s, sz = %d, block_size = %" PRId64 "",
+                ec.to_string(), sz, block_size
+                );
             remain_concurrency.fetch_add(1, std::memory_order_relaxed);
         };
         auto offset = random_offset ? dsn_random64(0, total_size_bytes - block_size) : bytes_written;

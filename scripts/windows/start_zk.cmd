@@ -15,6 +15,9 @@ IF "%PORT%" EQU "" (
     GOTO exit
 )
 
+
+CALL %bin_dir%\pre-require.cmd
+
 IF NOT EXIST %INSTALL_DIR% mkdir %INSTALL_DIR%
 
 
@@ -22,12 +25,13 @@ pushd %INSTALL_DIR%
 
 IF NOT EXIST %INSTALL_DIR%\%zk% (
     CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/shengofsun/packages/raw/master/%zk%.tar.gz?raw=true
-    IF NOT EXIST %INSTALL_DIR%\%zk% (
+    IF NOT EXIST %zk%.tar.gz (
         CALL %bin_dir%\echoc.exe 4 download zookeeper package failed from  https://github.com/shengofsun/packages/raw/master/%zk%.tar.gz?raw=true
         popd
         GOTO exit
     )    
-    CALL %bin_dir%\7z.exe x %INSTALL_DIR%\%zk%.tar.gz -y -o"%INSTALL_DIR%"
+    CALL %bin_dir%\7z.exe x %zk%.tar.gz -y -o"%INSTALL_DIR%"
+    CALL %bin_dir%\7z.exe x %zk%.tar -y -o"%INSTALL_DIR%"
 )
 
 SET ZOOKEEPER_HOME=%INSTALL_DIR%\%zk%

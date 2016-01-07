@@ -40,38 +40,64 @@
 # endif
 # define __TITLE__ "replica.context"
 
-namespace dsn { namespace replication {
+namespace dsn {
+    namespace replication {
+
+# define CLEANUP_TASK(task_, force)         \
+    {                                       \
+        task_ptr t = task_;                 \
+        if (t != nullptr)                   \
+        {                                   \
+            bool finished;                  \
+            t->cancel(force, &finished);    \
+            if (!finished && !dsn_task_current(task_->native_handle()))   \
+                return false;               \
+            task_ = nullptr;                \
+        }                                   \
+    }
+
+# define CLEANUP_TASK_ALWAYS(task_)         \
+    {                                       \
+        task_ptr t = task_;                 \
+        if (t != nullptr)                   \
+        {                                   \
+            bool finished;                  \
+            t->cancel(false, &finished);    \
+   dassert (finished || dsn_task_current(task_->native_handle()), "task must be finished at this point"); \
+            task_ = nullptr;                \
+        }                                   \
+    }
 
 void primary_context::cleanup(bool clean_pending_mutations)
 {
     do_cleanup_pending_mutations(clean_pending_mutations);
 
     // clean up group check
-    if (nullptr != group_check_task)
-    {
-        group_check_task->cancel(true);
-        group_check_task = nullptr;
-    }
+    CLEANUP_TASK_ALWAYS(group_check_task)
 
     for (auto it = group_check_pending_replies.begin(); it != group_check_pending_replies.end(); ++it)
     {
-        it->second->cancel(true);
+        CLEANUP_TASK_ALWAYS(it->second)
+        //it->second->cancel(true);
     }
+
     group_check_pending_replies.clear();
 
     // clean up reconfiguration
-    if (nullptr != reconfiguration_task)
-    {
-        reconfiguration_task->cancel(true);
-        reconfiguration_task = nullptr;
-    }
+    CLEANUP_TASK_ALWAYS(reconfiguration_task)
 
     // clean up checkpoint
-    if (nullptr != checkpoint_task)
-    {
-        checkpoint_task->cancel(true);
-        checkpoint_task = nullptr;
-    }
+    CLEANUP_TASK_ALWAYS(checkpoint_task)
+}
+
+bool primary_context::is_cleaned()
+{
+    return
+        nullptr == group_check_task &&
+        nullptr == reconfiguration_task &&
+        nullptr == checkpoint_task &&
+        group_check_pending_replies.empty()
+        ;
 }
 
 void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)
@@ -134,54 +160,66 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
     }
 }
 
-void secondary_context::cleanup()
+bool secondary_context::cleanup(bool force)
 {
-    task_ptr t = nullptr;
-
-    t = checkpoint_task;
-    if (nullptr != t)
+    CLEANUP_TASK(checkpoint_task, force)
+    
+    if (!force)
     {
-        t->cancel(true);
-        checkpoint_task = nullptr;
+        CLEANUP_TASK_ALWAYS(checkpoint_completed_task);
     }
+    else
+    {
+        CLEANUP_TASK(checkpoint_completed_task, force)
+    }
+
+    CLEANUP_TASK(catchup_with_private_log_task, force)
+
+    checkpoint_is_running = false;
+    return true;
+}
+
+bool secondary_context::is_cleaned()
+{
+    return checkpoint_is_running == false;
 }
 
 bool potential_secondary_context::cleanup(bool force)
 {
     task_ptr t = nullptr;
 
-    t = learn_remote_files_task;
-    if (t != nullptr)
+    if (!force)
     {
-        bool clean_remote_learning;
-        t->cancel(false, &clean_remote_learning);
-        if (force)
-        {
-            t->cancel(true);
-        }
-        else if (!clean_remote_learning)
-        {
-            return false;
-        }
-    }
+        CLEANUP_TASK_ALWAYS(learning_task)
 
-    t = learning_task;
-    if (t != nullptr)
+        CLEANUP_TASK_ALWAYS(learn_remote_files_completed_task)
+    }
+    else
     {
-        t->cancel(true);
-    }
+        CLEANUP_TASK(learning_task, true)
 
-    t = learn_remote_files_completed_task;
-    if (t != nullptr)
-    {
-        t->cancel(true);
+        CLEANUP_TASK(learn_remote_files_completed_task, true)
     }
+        
+    CLEANUP_TASK(learn_remote_files_task, force)
 
+    CLEANUP_TASK(catchup_with_private_log_task, force)
+    
     learning_signature = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
     learning_status = Learning_INVALID;
     return true;
+}
+
+bool potential_secondary_context::is_cleaned()
+{
+    return 
+        nullptr == learn_remote_files_completed_task &&
+        nullptr == learning_task &&
+        nullptr == learn_remote_files_completed_task &&
+        nullptr == catchup_with_private_log_task
+        ;
 }
 
 }} // end namespace
