@@ -204,7 +204,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     learn_response response;
     if (PS_PRIMARY != status())
     {
-        response.err = ERR_INVALID_STATE;
+        response.err = (PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE;
         reply(msg, response);
         return;
     }
@@ -439,7 +439,19 @@ void replica::on_learn_reply(
 
     if (resp->err != ERR_OK)
     {
-        handle_learning_error(resp->err);
+        if (resp->err == ERR_INACTIVE_STATE)
+        {
+            // primary is updating ballot, wait group_check to trigger another round of learning
+            dwarn(
+                "%s: on_learn_reply[%016llx]: learnee = %s, learnee is updating ballot, waiting",
+                name(), req->signature, resp->config.primary.to_string()
+                );
+            _potential_secondary_states.learning_round_is_running = false;
+        }
+        else
+        {
+            handle_learning_error(err);
+        }
         return;
     }
 
