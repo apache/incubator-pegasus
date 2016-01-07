@@ -80,6 +80,16 @@ namespace dsn
             int timer_interval_milliseconds = 0
             );
 
+        void enqueue(
+            /*our*/ task_ptr* ptask, // null for not returning task handle
+            dsn_task_code_t evt,
+            clientlet* svc,
+            task_handler callback,
+            int hash = 0,
+            int delay_milliseconds = 0,
+            int timer_interval_milliseconds = 0
+            );
+
         template<typename T> // where T : public virtual clientlet
         inline task_ptr enqueue(
             dsn_task_code_t evt,
@@ -93,6 +103,30 @@ namespace dsn
         {
             task_handler h = std::bind(callback, owner);
             return enqueue(
+                evt,
+                owner,
+                h,
+                hash,
+                delay_milliseconds,
+                timer_interval_milliseconds
+                );
+        }
+
+        template<typename T> // where T : public virtual clientlet
+        inline void enqueue(
+            /*out*/ task_ptr* ptask,
+            dsn_task_code_t evt,
+            T* owner,
+            void (T::*callback)(),
+            //TParam param,
+            int hash = 0,
+            int delay_milliseconds = 0,
+            int timer_interval_milliseconds = 0
+            )
+        {
+            task_handler h = std::bind(callback, owner);
+            return enqueue(
+                ptask,
                 evt,
                 owner,
                 h,
