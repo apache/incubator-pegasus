@@ -447,6 +447,7 @@ extern DSN_API dsn_task_code_t       dsn_task_code_from_string(const char* s, ds
 extern DSN_API int                   dsn_task_code_max();
 extern DSN_API const char*           dsn_task_type_to_string(dsn_task_type_t tt);
 extern DSN_API const char*           dsn_task_priority_to_string(dsn_task_priority_t tt);
+extern DSN_API bool                  dsn_task_current(dsn_task_t t); // is inside given task
 extern DSN_API const char*           dsn_config_get_value_string(
                                         const char* section,       // [section]
                                         const char* key,           // key = value

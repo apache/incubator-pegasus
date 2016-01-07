@@ -1094,7 +1094,7 @@ void server_state::list_apps(dsn_message_t msg)
     configuration_list_apps_response response;
     ::unmarshall(msg, request);
     {
-        zauto_write_lock l(_lock);
+        zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
             if ( request.status == app_status::all || request.status == app.status)
             {

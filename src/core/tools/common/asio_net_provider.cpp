@@ -193,22 +193,7 @@ namespace dsn {
             _is_client = client_only;
             int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
                                                                    "thread number for io service (timer and boost network)");
-            for (int i = 0; i < io_service_worker_count; i++)
-            {
-                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]()
-                    {
-                        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
-
-                        const char* name = ::dsn::tools::get_service_node_name(node());
-                        char buffer[128];
-                        sprintf(buffer, "%s.asio.udp.%d", name, i);
-                        task_worker::set_name(buffer);
-
-                        boost::asio::io_service::work work(_io_service);
-                        _io_service.run();
-                    })));
-            }
-
+           
             dassert(channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
             if (client_only)
@@ -223,7 +208,6 @@ namespace dsn {
                     try
                     {
                         _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
-                        do_receive();
                         break;
                     }
                     catch (boost::system::system_error& err)
@@ -231,13 +215,14 @@ namespace dsn {
                         derror("boost asio listen on port %u failed, err: %s\n", port, err.what());
                     }
                 } while (true);
-            } else {
+            }
+            else
+            {
                 _address.assign_ipv4(get_local_ipv4(), port);
                 ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
                 try
                 {
                     _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
-                    do_receive();
                 }
                 catch (boost::system::system_error& err)
                 {
@@ -246,6 +231,23 @@ namespace dsn {
                 }
             }
 
+            for (int i = 0; i < io_service_worker_count; i++)
+            {
+                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]()
+                {
+                    task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+
+                    const char* name = ::dsn::tools::get_service_node_name(node());
+                    char buffer[128];
+                    sprintf(buffer, "%s.asio.udp.%d.%d", name, (int)(this->address().port()), i);
+                    task_worker::set_name(buffer);
+
+                    boost::asio::io_service::work work(_io_service);
+                    _io_service.run();
+                })));
+            }
+
+            do_receive();
             return ERR_OK;
         }
     }
