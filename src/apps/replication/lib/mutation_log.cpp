@@ -250,7 +250,12 @@ void mutation_log::flush()
             {
                 break;
             }
-            write_pending_mutations();
+            auto err = write_pending_mutations();
+            dassert(
+                err == ERR_OK,
+                "write pending mutation failed, err = %s",
+                err.to_string()
+                );
         }
     }
 }
@@ -403,6 +408,13 @@ void mutation_log::internal_write_callback(
 {
     dassert(_is_writing, "");
 
+    dinfo(
+        "%s mutation log write callback, err = %s, size = %d",
+        _is_private ? "private" : "shared",
+        err.to_string(),
+        (int)size
+        );
+
     auto hdr = (log_block_header*)block->front().data();
     dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
@@ -425,10 +437,26 @@ void mutation_log::internal_write_callback(
         }
     }
 
-    // here we use _is_writing instead of _issued_write.expired() to check writing done,
-    // because the following callbacks may run before "block" released, which may cause
-    // the next init_prepare() not starting the write.
-    _is_writing = false;
+    {
+        zauto_lock l(_lock);
+
+        // here we use _is_writing instead of _issued_write.expired() to check writing done,
+        // because the following callbacks may run before "block" released, which may cause
+        // the next init_prepare() not starting the write.
+        _is_writing = false;
+
+        // trigger another round of writing if possible
+        if (_pending_write != nullptr
+            && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+        {
+            auto err = write_pending_mutations();
+            dassert(
+                err == ERR_OK,
+                "write pending mutation failed, err = %s",
+                err.to_string()
+                );
+        }
+    }
 
     for (auto& cb : *callbacks)
     {
@@ -775,36 +803,16 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
                                              mu->data.header.last_committed_decree);
     }
 
-    //
-    // start to write
-    //
-    if (!_is_writing)
+    // start to write if possible
+    if (!_is_writing && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
     {
-        if (_batch_buffer_bytes == 0)
-        {
-            // not batching
-            err = write_pending_mutations();
-        }
-        else
-        {
-            // batching
-            if (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
-            {
-                // batch full, write now
-                err = write_pending_mutations();
-            }
-            else
-            {
-                // batch not full, wait for batch write later
-            }
-        }
+        err = write_pending_mutations();
+        dassert(
+            err == ERR_OK,
+            "write pending mutation failed, err = %s",
+            err.to_string()
+            );
     }
-
-    dassert(
-        err == ERR_OK,
-        "write pending mutation failed, err = %s",
-        err.to_string()
-        );
 
     return tsk;
 }

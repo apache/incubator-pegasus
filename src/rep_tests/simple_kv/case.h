@@ -199,6 +199,7 @@ public:
 
     void init(task* tsk);
 public:
+    task*       _task;
     std::string _task_id;
     std::string _node;
     std::string _task_code;
@@ -339,6 +340,18 @@ public:
     static const char* NAME() { return "inject"; }
     virtual std::string name() const { return NAME(); }
     virtual bool parse(const std::string& params);
+};
+
+class modify_case_line : public event_case_line
+{
+public:
+    static const char* NAME() { return "modify"; }
+    virtual std::string name() const { return NAME(); }
+    virtual std::string to_string() const;
+    virtual bool parse(const std::string& params);
+    virtual void modify(const event* ev);
+public:
+    std::string _modify_delay;
 };
 
 class client_case_line : public case_line
