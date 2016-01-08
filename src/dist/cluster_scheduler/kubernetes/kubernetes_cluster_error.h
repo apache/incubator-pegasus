@@ -26,39 +26,18 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Define kubernetes cluster error code to dsn error code
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-1-6, Guoxi Li(goksyli1990@gmail.com), first version
+ *   
  */
+#pragma once
 
-# include "kubernetes_cluster_scheduler.h"
+#include <dsn/cpp/auto_codes.h>
 
-class test_client : public ::dsn::service_app
-{
-public:
-    ::dsn::error_code start(int argc, char** argv)
-    {
-        auto err = _k8s.initialize();
-        return err;
-    }
+namespace dsn { namespace dist {
 
-    void stop(bool cleanup = false)
-    {
+DEFINE_ERR_CODE(ERR_K8S);
 
-    }
-
-    ::dsn::dist::kubernetes_cluster_scheduler _k8s;
-};
-
-int main(int argc, char **argv)
-{
-    // register all possible services
-    dsn::register_app<test_client>("client");
-
-    // specify what services and tools will run in config file, then run
-    dsn_run_config("config.ini", true);
-
-    return 0;
-}
+}}
