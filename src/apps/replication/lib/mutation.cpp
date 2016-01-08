@@ -143,8 +143,12 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
 
     for (auto& d : mu->data.updates)
     {
-        client_info ci;
-        unmarshall(reader, ci.code);
+        client_info ci; 
+        std::string code_str;
+        unmarshall(reader, code_str);
+
+        ci.code = dsn_task_code_from_string(code_str.c_str(), TASK_CODE_INVALID);
+        dassert(ci.code != TASK_CODE_INVALID, "invalid mutation");
         ci.req = nullptr;
         mu->client_requests.push_back(ci);
     }
@@ -186,7 +190,14 @@ void mutation::write_to_scatter(std::function<void(blob)> inserter) const
         binary_writer temp_writer;
         for (auto& ci : client_requests)
         {
-            marshall(temp_writer, ci.code);
+            //std::string code_str(dsn_task_code_to_string(ci.code));
+            //marshall(temp_writer, code_str);
+
+            // to avoid strcpy in std::string
+            const char* cstr = dsn_task_code_to_string(ci.code);
+            int len = static_cast<int>(strlen(cstr));
+            temp_writer.write_pod(len);
+            temp_writer.write(cstr, len);
         }
         inserter(temp_writer.get_buffer());
     }
@@ -198,7 +209,14 @@ void mutation::write_to(binary_writer& writer)
 
     for (auto& ci : client_requests)
     {
-        marshall(writer, ci.code);
+        //std::string code_str(dsn_task_code_to_string(ci.code));
+        //marshall(writer, code_str);
+
+        // to avoid strcpy in std::string
+        const char* cstr = dsn_task_code_to_string(ci.code);
+        int len = static_cast<int>(strlen(cstr));
+        writer.write_pod(len);
+        writer.write(cstr, len);
     }
 }
 
