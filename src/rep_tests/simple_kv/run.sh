@@ -58,7 +58,11 @@ function run_case()
 }
 
 if [ $# -eq 0 ]; then
-    cases=`ls case-* 2>/dev/null | sed -n 's/^case-\([0-9][0-9][0-9]\).*$/\1/p' | sort -u`
+    if [ ! -z "${DSN_TEST_FILTER}" ]; then
+        cases=`echo ${DSN_TEST_FILTER} | sed 's/[,:]/ /g'`
+    else
+        cases=`ls case-* 2>/dev/null | sed -n 's/^case-\([0-9][0-9][0-9]\).*$/\1/p' | sort -u`
+    fi
 else
     cases=$*
 fi

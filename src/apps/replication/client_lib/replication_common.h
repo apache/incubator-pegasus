@@ -77,7 +77,8 @@ public:
     bool    group_check_disabled;
     int32_t group_check_interval_ms;
 
-    int32_t checkpoint_interval_mins;
+    bool    checkpoint_disabled;
+    int32_t checkpoint_interval_seconds;
     int64_t checkpoint_min_decree_gap;
     int32_t checkpoint_max_interval_hours;
 

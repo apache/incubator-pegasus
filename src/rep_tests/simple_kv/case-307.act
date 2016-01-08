@@ -37,5 +37,14 @@ client:begin_read:id=2,key=k2,timeout=0
 # end read 2
 client:end_read:id=2,err=err_ok,resp=v2
 
+set:disable_load_balance=1
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r2
+config:{4,r1,[r3]}
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r3
+config:{5,r1,[]}
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r1
+config:{6,-,[]}
+state:{}
+
 set:close_replica_stub_on_exit=1
 

@@ -125,9 +125,9 @@ namespace dsn { namespace replication {
             task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
-                owner,
                 callback,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
@@ -258,9 +258,9 @@ namespace dsn { namespace replication {
             task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
-                owner,
                 callback,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);

@@ -274,6 +274,7 @@ namespace dsn {
                 perf_counter_ptr_type counter_type;
                 dsn_perf_counter_percentile_type_t percentile_type;
 
+                bool first_flag = 0;
                 ss << "[";
                 for (int i = 0; i <= dsn_task_code_max(); ++i)
                 {
@@ -285,6 +286,11 @@ namespace dsn {
                     double query_record[PREF_COUNTER_COUNT] = { 0 };
                     for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
                     {
+                        if (first_flag)
+                            ss << ",";
+                        else
+                            first_flag = 1;
+
                         percentile_type = static_cast<dsn_perf_counter_percentile_type_t>(j);
                         ss << "[\"" << dsn_task_code_to_string(task_id) << "\",";
                         ss << "\"" << percentail_counter_string[percentile_type] << "\"";
@@ -321,7 +327,7 @@ namespace dsn {
                                 }
                             }
                         }
-                        ss << "],";
+                        ss << "]";
                     }
                 }
                 ss << "]";

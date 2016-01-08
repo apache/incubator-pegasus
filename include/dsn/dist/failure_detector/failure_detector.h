@@ -36,34 +36,23 @@
 
 /*
  * Notes on the failure detector:
- * 1. We mainly send beacon when checking the beacons. So in normal cases,
- *    the beacon_interval_seconds is useless if beacon_interval_seconds < check_interval_seconds.
- *    So you'd better set the beacon_interval_seconds larger than check_interval_seconds
  *
- * 2. Worker may disconnect from master in the period earlier that the lease_seconds
- *    to ensure the perfect FD. In the worst case, workers may lease "check_interval_seconds"
- *    earlier.
- *    While on the master side, it may claim a worker disconnected longer than the grace_seconds, which
- *    can also be "check_interval_seconds" later in the worst case.
+ * 1. Due to the fact that we can only check the liveness inside check-all-records call, which happens 
+ *    every "check_interval_seconds" seconds, worker may disconnect from master in the period earlier 
+ *    that the lease_seconds to ensure the perfect FD. In the worst case, workers may disconnect themselves
+ *    after "lease" -  "check_interval_seconds" seconds;
+ *    Similarily, master may claim a worker dead more slowly even the workers are dead for longer than 
+ *    grace_seconds. In the worst case, it will be "grace" + "check_interval_seconds" seconds.
  *
- * 3. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
- *    For client, you may set it 1 second as it usually connect to a small number of masters.
- *    For master, you may set it 2 or 3 seconds.
+ * 2. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
+ *    For client, you may set it as 2 second as it usually connect to a small number of masters.
+ *    For master, you may set it as 5 or 10 seconds.
  *
- * 4. the scale between beacon_interval and lease_periods is up to the rpc channel somewhat.
- *    In tcp, the channel itself supports the "keepalive" so you don't need to send beacons frequently.
- *    But in udp, you may want to try several times before the worker expires.
- *    So in tcp, the beacon_interval/lease_periods could be 10/30. And in UDP, 4/30 is acceptable
+ * 3. We should always use dedicated thread pools for THREAD_POOL_FD, and set thread priority to being
+ *    highest so as to minimize the performance interference with other workloads.
  *
- * 5. The lease_periods must be less than the grace_periods to tolerant the
- *    clock drift or delay by the OS scheduler.
+ * 4. The lease_periods must be less than the grace_periods, as required by prefect FD.
  *
- * 6. Another factor have influence on the FD is the lease period in distributed lock and the
- *    config_sync_interval. With zookeeper, the distributed lock's lease period depends on the timeout
- *    value. We need it to be smaller than the worker's lease period to support master switching fluently.
- *
- * 7. All in one: (1) check_interval < beacon_interval
- *                (2) dist_lock_timeout < lease_period < grace_period
  */
 # pragma once
 
@@ -74,17 +63,18 @@ namespace dsn { namespace fd {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD)
 DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
+DEFINE_TASK_CODE(LPC_BEACON_SEND, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
 
 class failure_detector_callback
 {
 public:
     virtual ~failure_detector_callback() {}
 
-    // client side
+    // worker side
     virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_master_connected( ::dsn::rpc_address node) = 0;
 
-    // server side
+    // master side
     virtual void on_worker_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_worker_connected( ::dsn::rpc_address node ) = 0;
 };
@@ -151,7 +141,7 @@ protected:
     void report(::dsn::rpc_address node, bool is_master, bool is_connected);
 
 private:
-    void process_all_records();
+    void check_all_records();
 
 private:
     class master_record
@@ -159,16 +149,15 @@ private:
     public:
         ::dsn::rpc_address       node;
         uint64_t        last_send_time_for_beacon_with_ack;
-        uint64_t        next_beacon_time;
         bool            is_alive;
         bool            rejected;
+        task_ptr        send_beacon_timer;
 
         // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
-        master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
+        master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_)
         {
             node = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
-            next_beacon_time = next_beacon_time_;
             is_alive = false;
             rejected = false;
         }
@@ -205,7 +194,7 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    ::dsn::task_ptr      _current_task;
+    ::dsn::task_ptr      _check_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;

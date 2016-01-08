@@ -87,6 +87,11 @@
 # endif
 
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "dsn.file_utils"
+
 namespace dsn {
     namespace utils {
         namespace filesystem {
@@ -112,10 +117,12 @@ namespace dsn {
                 if (err != 0)
                 {
                     err = errno;
+                    /*
                     dinfo("get_stat_internal %s failed, err = %s",
                         npath.c_str(),
                         strerror(err)
                         );
+                    */
                 }
 
                 return err;
