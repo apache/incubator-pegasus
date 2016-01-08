@@ -24,4 +24,4 @@ else
 fi
 
 docker pull {{ placeholder['image_name'] }}
-docker run -d ${PORT_ARGS} -e NAME=${NAME} -e META_HOST=${META_HOST} -e HOST=${HOST} -e NUM=${NUM} {{ placeholder['image_name'] }}
+docker run -d ${PORT_ARGS} -e NAME=${NAME} -e META_HOST=${META_HOST} -e HOST=${HOST} -e NUM=${NUM} {{ placeholder['image_name'] }} > ${PREFIX}/containerid

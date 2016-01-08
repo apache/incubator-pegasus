@@ -24,6 +24,7 @@ file(GLOB
     )
 
 # Extra files that will be installed
-set(MY_BINPLACES ${INI_FILES})
+set(MY_BINPLACES "${INI_FILES}"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
 
 dsn_add_executable()

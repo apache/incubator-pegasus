@@ -46,6 +46,15 @@ namespace dsn
 {
     namespace dist
     {
+        enum class cluster_type
+        {
+            kubernetes,
+            docker,
+            bare_medal_linux,
+            bare_medal_windows,
+            yarn,
+            mesos
+        };
         class cluster_scheduler
         {
         public:
@@ -62,7 +71,11 @@ namespace dsn
                 std::string name;
                 std::string description;
                 std::string local_package_directory;
+                std::string remote_package_directory;
                 std::string command_line;
+                cluster_type package_type;
+                std::function<void(error_code, rpc_address)> deployment_callback;
+                std::function<void(error_code, std::string)> failure_notification;
                 // TODO: ...
             };
 
@@ -77,9 +90,7 @@ namespace dsn
              *  failure_notification is specific for this deployment unit
              */
             virtual void schedule(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback,
-                std::function<void(error_code, std::string)> failure_notification
+                std::shared_ptr<deployment_unit>& unit
                 ) = 0;
 
             /*

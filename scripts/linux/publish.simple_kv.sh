@@ -19,6 +19,7 @@ function publish_app(){
         cp $b_dir/bin/dsn.replication.simple_kv/config.ini $t_dir/$1
     fi
     cp $t_dir/start.sh $t_dir/$1
+    cp $scripts_dir/deploy/stop.sh $t_dir/$1
 }
 
 if [ -z $repub ] || [ ! -f $t_dir/metalist ] || [ ! -f $t_dir/replicalist ] || [ ! -f $t_dir/clientlist ] || [ ! -f $t_dir/client.perf.testlist ];then

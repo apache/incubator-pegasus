@@ -13,4 +13,5 @@ PROGRAM=${PREFIX}/{{ placeholder['deploy_name'] }}
 CONFIG=${PREFIX}/config.ini
 ARGS="-cargs meta-ip=${META_IP};data-dir=${PREFIX} -app_list ${APP}"
 
-${PROGRAM} ${CONFIG} ${ARGS} &>${PREFIX}/${APP}.out
+${PROGRAM} ${CONFIG} ${ARGS} &>${PREFIX}/${APP}.out &
+echo $! > ${PREFIX}/pid
