@@ -136,6 +136,7 @@ public:
         const std::string& dir,
         int32_t batch_buffer_size_kb,
         int32_t max_log_file_mb,
+        bool force_flush = false,
         bool is_private = false,
         global_partition_id private_gpid = {0, 0}
         );
@@ -321,6 +322,7 @@ private:
     // options
     int64_t                   _max_log_file_size_in_bytes;    
     uint32_t                  _batch_buffer_bytes;
+    bool                      _force_flush;
 
     ///////////////////////////////////////////////
     //// memory states

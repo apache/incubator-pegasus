@@ -299,6 +299,7 @@ TEST(replication, mutation_log)
         1,
         4,
         true,
+        true,
         gpid
         );
 
@@ -338,6 +339,7 @@ TEST(replication, mutation_log)
         logp,
         1,
         4,
+        true,
         true,
         gpid
         );

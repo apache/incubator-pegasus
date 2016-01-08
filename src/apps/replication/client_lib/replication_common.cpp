@@ -73,9 +73,13 @@ replication_options::replication_options()
     fd_grace_seconds = 15;
 
     log_private_disabled = false;
-    log_file_size_mb = 32;
-    log_shared_batch_buffer_kb = 0;
+    log_private_file_size_mb = 32;
     log_private_batch_buffer_kb = 4;
+    log_private_force_flush = true;
+
+    log_shared_file_size_mb = 32;
+    log_shared_batch_buffer_kb = 0;
+    log_shared_force_flush = false;
 
     config_sync_disabled = false;
     config_sync_interval_ms = 30000;
@@ -253,11 +257,30 @@ void replication_options::initialize()
         log_private_disabled,
         "whether to disable logging committed mutations for each app, which is used for easier learning"
         );
-    log_file_size_mb =
+    log_private_file_size_mb =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_private_file_size_mb",
+        log_private_file_size_mb,
+        "private log maximum segment file size (MB)"
+        );
+    log_private_batch_buffer_kb =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_private_batch_buffer_kb",
+        log_private_batch_buffer_kb,
+        "private log buffer size (KB) for batching incoming logs"
+        );
+    log_private_force_flush =
+        dsn_config_get_value_bool("replication",
+        "log_private_force_flush",
+        log_private_force_flush,
+        "when write private log, whether to flush file after write done"
+        );
+
+    log_shared_file_size_mb =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_file_size_mb", 
-        log_file_size_mb,
-        "maximum log segment file size (MB), for both shared and private log"
+        "log_shared_file_size_mb",
+        log_shared_file_size_mb,
+        "shared log maximum segment file size (MB)"
         );
     log_shared_batch_buffer_kb =
         (int)dsn_config_get_value_uint64("replication", 
@@ -265,11 +288,11 @@ void replication_options::initialize()
         log_shared_batch_buffer_kb,
         "shared log buffer size (KB) for batching incoming logs"
         );
-    log_private_batch_buffer_kb =
-        (int)dsn_config_get_value_uint64("replication",
-        "log_private_batch_buffer_kb",
-        log_private_batch_buffer_kb,
-        "private log buffer size (KB) for batching incoming logs"
+    log_shared_force_flush =
+        dsn_config_get_value_bool("replication",
+        "log_shared_force_flush",
+        log_shared_force_flush,
+        "when write shared log, whether to flush file after write done"
         );
 
     config_sync_disabled =
