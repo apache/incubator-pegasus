@@ -207,17 +207,22 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::checkpoint()
             {
+                char name[256];
+                sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(),
+                    last_committed_decree());
+
                 zauto_lock l(_lock);
 
                 if (last_committed_decree() == last_durable_decree())
                 {
+                    dassert(utils::filesystem::file_exists(name), 
+                        "checkpoint file %s is missing!",
+                        name
+                        );
                     return ERR_OK;
                 }
 
-                // TODO: should use async write instead
-                char name[256];
-                sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(),
-                        last_committed_decree());
+                // TODO: should use async write instead                
                 std::ofstream os(name, std::ios::binary);
 
                 uint64_t count = (uint64_t)_store.size();
@@ -240,6 +245,8 @@ namespace dsn {
                     os.write((const char*)&sz, (uint32_t)sizeof(sz));
                     os.write((const char*)&v[0], sz);
                 }
+                
+                os.close();
 
                 // TODO: gc checkpoints
 

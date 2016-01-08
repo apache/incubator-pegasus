@@ -491,17 +491,15 @@ void replica::on_learn_reply(
                     err.to_string()
                     );
             }
-            else
-            {
-                dassert(_app->last_committed_decree() == 0, "");
-                dassert(_app->last_durable_decree() == 0, "");
-            }
         }
 
         if (err == ERR_OK)
-        {
+        {            
+            dassert(_app->last_committed_decree() == 0, "must be zero after app::open(true)");
+            dassert(_app->last_durable_decree() == 0, "must be zero after app::open(true)");
+
             // reset prepare list
-            _prepare_list->reset(_app->last_committed_decree());
+            _prepare_list->reset(0);
 
             err = _app->update_init_info(
                 this,
