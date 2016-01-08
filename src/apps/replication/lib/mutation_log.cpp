@@ -52,6 +52,7 @@ mutation_log::mutation_log(
     const std::string& dir,
     int32_t batch_buffer_size_kb,
     int32_t max_log_file_mb,
+    bool force_flush,
     bool is_private,
     global_partition_id private_gpid
     )
@@ -61,6 +62,7 @@ mutation_log::mutation_log(
     _private_gpid = private_gpid;
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
+    _force_flush = force_flush;
     init_states();
 }
 
@@ -426,27 +428,34 @@ void mutation_log::internal_write_callback(
             block->size()
             );
 
-        if(_is_private)
+        if(_force_flush)
         {
-            // TODO(qinzuoyan): why flush private log but not flush shared log?
+            // flush to ensure that there is no gap between private log and in-memory buffer
+            // so that we can get all mutations in learning process.
+            //
             // FIXME : the file could have been closed
             file->flush();
+        }
 
+        if (_is_private)
+        {
             // update _private_max_commit_on_disk after writen into log file done
             update_max_commit_on_disk(max_commit);
         }
     }
 
+    // here we use _is_writing instead of _issued_write.expired() to check writing done,
+    // because the following callbacks may run before "block" released, which may cause
+    // the next init_prepare() not starting the write.
+    _is_writing = false;
+
+    if (err == ERR_OK)
     {
         zauto_lock l(_lock);
 
-        // here we use _is_writing instead of _issued_write.expired() to check writing done,
-        // because the following callbacks may run before "block" released, which may cause
-        // the next init_prepare() not starting the write.
-        _is_writing = false;
-
         // trigger another round of writing if possible
-        if (_pending_write != nullptr
+        if (!_is_writing
+            && _pending_write != nullptr
             && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
         {
             auto err = write_pending_mutations();

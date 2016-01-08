@@ -94,9 +94,13 @@ public:
     int32_t fd_grace_seconds;
 
     bool    log_private_disabled;
-    int32_t log_file_size_mb;
-    int32_t log_shared_batch_buffer_kb;
+    int32_t log_private_file_size_mb;
     int32_t log_private_batch_buffer_kb;
+    bool    log_private_force_flush;
+
+    int32_t log_shared_file_size_mb;
+    int32_t log_shared_batch_buffer_kb;
+    bool    log_shared_force_flush;
 
     bool    config_sync_disabled;
     int32_t config_sync_interval_ms;
