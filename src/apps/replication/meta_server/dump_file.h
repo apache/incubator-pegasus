@@ -7,7 +7,7 @@
 #include <cerrno>
 
 #ifdef _WIN32
-#define errno_msg strerror_s
+#define errno_msg(errno, buffer, length) strerror_s(buffer, length, errno)
 #else
 #define errno_msg strerror_r
 #endif
