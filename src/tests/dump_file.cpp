@@ -42,7 +42,6 @@ TEST(dump_file, read_write)
         int block_offset = 0;
         while ( true )
         {
-            dinfo("block offset: %d", block_offset);
             int ans = f->read_next_buffer(bb);
             ASSERT_TRUE(ans != -1);
             if ( ans == 0)
@@ -56,5 +55,63 @@ TEST(dump_file, read_write)
 
         ASSERT_EQ(block_offset, length_blocks.size());
         ASSERT_EQ(memcmp(out_buffer.get(), buffer.get(), total_length), 0);
+    }
+
+    //corrupted end
+    {
+        FILE* fp = fopen("test_file", "rb+");
+        fseek(fp, -4, SEEK_END);
+        uint32_t num = 0;
+        fwrite(&num, sizeof(num), 1, fp);
+        fclose(fp);
+
+        std::shared_ptr<dump_file> f = dump_file::open_file("test_file", false);
+        dsn::blob bb;
+        int block_offset = 0;
+        while ( true )
+        {
+            int ans = f->read_next_buffer(bb);
+            if (ans == 0)
+                break;
+
+            if (block_offset < length_blocks.size()-1)
+                ASSERT_EQ(ans, 1);
+            else
+                ASSERT_EQ(ans, -1);
+            block_offset++;
+        }
+    }
+
+    // data loss in the end
+    {
+        FILE* fp = fopen("test_file", "rb");
+        FILE* fp2 = fopen("test_file2", "wb");
+
+        fseek(fp, 0, SEEK_END);
+        auto size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        char* mem = new char[size-4];
+        size_t cnt = fread(mem, 1, size-4, fp);
+        ASSERT_EQ(cnt, size-4);
+        cnt = fwrite(mem, 1, cnt, fp2);
+        ASSERT_EQ(cnt, size-4);
+
+        fclose(fp);
+        fclose(fp2);
+
+        std::shared_ptr<dump_file> f = dump_file::open_file("test_file2", false);
+        dsn::blob bb;
+        int block_offset = 0;
+        while ( true )
+        {
+            int ans = f->read_next_buffer(bb);
+            if (ans == 0)
+                break;
+            if (block_offset < length_blocks.size()-1)
+                ASSERT_EQ(ans, 1);
+            else
+                ASSERT_EQ(ans, -1);
+            block_offset++;
+        }
     }
 }

@@ -230,7 +230,7 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
 }
 
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr)
+    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -252,13 +252,9 @@ server_state::~server_state()
     }
 }
 
-error_code server_state::dump_from_remote_storage(const char *format, const char *local_path)
+error_code server_state::dump_from_remote_storage(const char *format, const char *local_path, bool sync_immediately)
 {
     error_code ec;
-    if ((ec = initialize()) != ERR_OK)
-    {
-        return ec;
-    }
     std::shared_ptr<dump_file> file = dump_file::open_file(local_path, true);
     if (file == nullptr)
     {
@@ -266,7 +262,7 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    if ((ec = sync_apps_from_remote_storage()) != ERR_OK) {
+    if (sync_immediately && ((ec=sync_apps_from_remote_storage())!=ERR_OK)) {
         if (ec == ERR_OBJECT_NOT_FOUND) {
             dwarn("remote storage is empty, just stop the dump");
             return ERR_OK;
@@ -277,43 +273,42 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
         }
     }
 
-    dassert(file->append_buffer(format, strlen(format))==0, "write file failed");
-    if ( strcmp(format, "json")==0 )
+    file->append_buffer(format, strlen(format));
+
+    size_t apps_count = _apps.size();
+    for (size_t i=0; i!=apps_count; ++i)
     {
-        for (const app_state& app: _apps)
+        app_state snapshot;
+        {
+            zauto_read_lock l(_lock);
+            snapshot = _apps[i];
+        }
+        if (strcmp(format, "json") == 0)
         {
             blob data;
-            marshall_json(data, app, app.status==app_status::available);
+            marshall_json(data, snapshot, snapshot.status==app_status::available);
             file->append_buffer(data);
-            for (const partition_configuration& pc: app.partitions)
+            for (const partition_configuration& pc: snapshot.partitions)
             {
                 marshall_json(data, pc);
                 file->append_buffer(data);
             }
         }
-    }
-    else if ( strcmp(format, "binary")==0 )
-    {
-        binary_writer writer;
-        for (const app_state& app: _apps)
+        else if (strcmp(format, "binary") == 0)
         {
-            marshall(writer, app);
-            dassert(file->append_buffer(writer.get_buffer())==0, "write file failed");
+            binary_writer writer;
+            marshall(writer, snapshot);
+            file->append_buffer(writer.get_buffer());
         }
+        else
+            return ERR_INVALID_PARAMETERS;
     }
-    else
-    {
-        dassert(false, "unsupported format");
-    }
+    return ERR_OK;
 }
 
 error_code server_state::restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage)
 {
     error_code ec;
-    if ((ec = initialize()) != ERR_OK)
-    {
-        return ec;
-    }
 
     std::shared_ptr<dump_file> file = dump_file::open_file(local_path, false);
     if (file == nullptr)
@@ -443,6 +438,16 @@ error_code server_state::initialize()
     dassert(_cli_json_state_handle == nullptr, "server state is initialized twice");
     _cli_json_state_handle = dsn_cli_app_register("info", "get info of nodes and apps on meta_server", "", this, &static_cli_json_state, &static_cli_json_state_cleanup);
     dassert(_cli_json_state_handle != nullptr, "register cil handler failed, maybe it has been registered");
+
+    _cli_dump_handle = dsn_cli_app_register(
+        "dump",
+        "dump app_states of meta server to local file",
+        "usage: -f|--format [json|binary] -t|--target target_file",
+        this,
+        &static_cli_dump_app_states,
+        &static_cli_dump_app_states_cleanup
+    );
+    dassert(_cli_dump_handle != nullptr, "register cli handler failed");
 
     ddebug("init server_state succeed, cluster_root = %s", _cluster_root.c_str());
     return ERR_OK;
@@ -1471,4 +1476,47 @@ void server_state::static_cli_json_state_cleanup(dsn_cli_reply reply)
     auto danglingstring = reinterpret_cast<std::string*>(reply.context);
     dassert(reply.message == danglingstring->c_str(), "corrupted cli reply message");
     delete danglingstring;
+}
+
+void server_state::static_cli_dump_app_states(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    server_state* _this = reinterpret_cast<server_state*>(context);
+    std::string* dump_result;
+    if (argc != 4)
+    {
+        dump_result = new std::string("invalid command parameter");
+    }
+    else
+    {
+        const char* format = nullptr;
+        const char* target_file = nullptr;
+        for (int i=0; i<argc; i+=2)
+        {
+            if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0)
+                format = argv[i+1];
+            else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--target") == 0)
+                target_file = argv[i+1];
+        }
+
+        if (format==nullptr || target_file==nullptr)
+        {
+            dump_result = new std::string("invalid command parameter");
+        }
+        else {
+            error_code ec = _this->dump_from_remote_storage(format, target_file, false);
+            dump_result = new std::string("execute result: ");
+            dump_result->append(ec.to_string());
+        }
+    }
+
+    reply->message = dump_result->c_str();
+    reply->size = dump_result->size();
+    reply->context = dump_result;
+}
+
+void server_state::static_cli_dump_app_states_cleanup(dsn_cli_reply reply)
+{
+    dassert(reply.context != nullptr, "corrupted cli context");
+    std::string* dump_result = reinterpret_cast<std::string*>(reply.context);
+    delete dump_result;
 }
