@@ -92,7 +92,7 @@ bool configuration::load(const char* file_name, const char* arguments)
     if (arguments != nullptr)
     {
         std::list<std::string> argkvs;
-        utils::split_args(arguments, argkvs, ';');
+        utils::split_args(arguments, argkvs, ',');
         for (auto& kv : argkvs)
         {
             std::list<std::string> vs;
