@@ -4,6 +4,19 @@
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
 #include <cstdio>
+#include <cerrno>
+
+#ifdef _WIN32
+#define errno_msg strerror_s
+#else
+#define errno_msg strerror_r
+#endif
+
+#define log_error_and_return(buffer, length) do {\
+    errno_msg(errno, buffer, length);\
+    derror("append file failed, reason(%s)", buffer);\
+    return -1;\
+} while (0)
 
 struct block_header{
     uint32_t length;
@@ -31,18 +44,29 @@ public:
 
     int append_buffer(const char* data, uint32_t data_length)
     {
+        static __thread char msg_buffer[128];
+
         dassert(_is_write, "call append when open file with read mode");
+
         block_header hdr = {data_length, 0};
-        hdr.crc32 = dsn_crc32_compute(data, data_length, 0);
-        int len = fwrite(&hdr, sizeof(hdr), 1, _file_handle);
-        if (len < 1) {
-            derror("append file failed");
-            return -1;
+        hdr.crc32 = dsn_crc32_compute(data, data_length, _crc);
+        _crc = hdr.crc32;
+
+        size_t len = fwrite(&hdr, sizeof(hdr), 1, _file_handle);
+        if (len < 1)
+        {
+            log_error_and_return(msg_buffer, 128);
         }
+
         len = 0;
         while (len < data_length)
         {
-            len += fwrite(data+len, 1, data_length-len, _file_handle);
+            size_t cnt = fwrite(data+len, 1, data_length-len, _file_handle);
+            if (len+cnt<data_length && errno!=EINTR)
+            {
+                log_error_and_return(msg_buffer, 128);
+            }
+            len += cnt;
         }
         return 0;
     }
@@ -52,15 +76,17 @@ public:
     }
     int read_next_buffer(/*out*/dsn::blob& output)
     {
+        static __thread char msg_buffer[128];
         dassert(!_is_write, "call read next buffer when open file with write mode");
+
         block_header hdr;
-        int len = fread(&hdr, sizeof(hdr), 1, _file_handle);
-        if (len < 1 ) {
+        size_t len = fread(&hdr, sizeof(hdr), 1, _file_handle);
+        if (len < 1 )
+        {
             if ( feof(_file_handle) )
                 return 0;
             else {
-                derror("read file failed, offset(%ld)", ftell(_file_handle));
-                return -1;
+                log_error_and_return(msg_buffer, 128);
             }
         }
 
@@ -69,12 +95,25 @@ public:
         len = 0;
         while (len < hdr.length)
         {
-            len += fread(raw_mem+len, 1, hdr.length-len, _file_handle);
+            size_t cnt = fread(raw_mem+len, 1, hdr.length-len, _file_handle);
+            if (len+cnt<hdr.length)
+            {
+                if ( feof(_file_handle) )
+                {
+                    derror("unexpected file end, start offset of this block (%u)", ftell(_file_handle)-len-sizeof(hdr));
+                    return -1;
+                }
+                else if (errno != EINTR)
+                {
+                    log_error_and_return(msg_buffer, 128);
+                }
+            }
+            len += cnt;
         }
-        uint32_t crc_res = dsn_crc32_compute(raw_mem, len, 0);
-        if (crc_res != hdr.crc32)
+        _crc = dsn_crc32_compute(raw_mem, len, _crc);
+        if (_crc != hdr.crc32)
         {
-            derror("file %s data error, block offset(%ld)", ftell(_file_handle)-hdr.length-sizeof(hdr));
+            derror("file %s data error, block offset(%ld)", _filename.c_str(), ftell(_file_handle)-hdr.length-sizeof(hdr));
             return -1;
         }
 
@@ -83,9 +122,10 @@ public:
     }
 
 private:
-    dump_file(): _file_handle(nullptr) {}
+    dump_file(): _file_handle(nullptr), _crc(0) {}
     bool _is_write;//true for write, false for read
     FILE* _file_handle;
     std::string _filename;
+    uint32_t _crc;
 };
 #endif // DUMP_FILE_H
