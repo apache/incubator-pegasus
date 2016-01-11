@@ -22,7 +22,7 @@ cp $scripts_dir/deploy/genrcyaml.sh $t_dir
 cp $scripts_dir/deploy/gensvcyaml.sh $t_dir
 cp $scripts_dir/deploy/rdsn-rc.yaml.in $t_dir
 cp $scripts_dir/deploy/rdsn-service.yaml.in $t_dir
-
+cp $scripts_dir/deploy/stop_docker.sh $t_dir/stop.sh
 if [ -z $repub ] || [ ! -f $t_dir/config.ini ];then
     cp $b_dir/bin/dsn.replication.simple_kv/config-docker.ini $t_dir/config.ini
     echo "please customize your config.ini"
@@ -59,6 +59,7 @@ function publish_app_docker(){
     cp $t_dir/configtool $t_dir/$1
     cp $t_dir/start.sh  $t_dir/$1
     cp $t_dir/libdsn.core.so $t_dir/$1
+    cp $t_dir/stop.sh $t_dir/$1
 }
 
 if [ -z $repub ] || [ ! -f $t_dir/metalist ] || [ ! -f $t_dir/replicalist ] || [ ! -f $t_dir/clientlist ] || [ ! -f $t_dir/client.perf.clientlist ];then

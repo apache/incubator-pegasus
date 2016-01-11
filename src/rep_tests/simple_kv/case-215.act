@@ -1,0 +1,128 @@
+# Case Description: test learn
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+# wait until r1 becomes primary
+config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+
+# wait r2 checkpoint done
+state:{{r1,pri,2,10,10},{r2,sec,2,10,10}}
+
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+
+# add secondary r3 (new replica)
+# will trigger learning in on_learn():
+#   _prepare_list.count() {=10} > 0 
+#   learn_start_decree {=1} == _prepare_list->min_decree() {=1}
+#   to-be-learn state is covered by prepare list, learn by CACHE, learn_mutation_count = 10
+#
+#                      (1)                 (10)
+#   prepare_list :      |-------------------|  
+#   learn        :      |-->
+#                      (1)
+#
+# change primary's ballot when some one is learning
+#
+# time +0   (learn@c)
+client:replica_config:receiver=r1,type=add_secondary,node=r3
+# time +10  (learn@m)   (downgrade@c)
+wait:on_task_begin:node=m,task_code=RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r2
+# time +20  (learn@r1)  (downgrade@m)
+wait:on_task_begin:node=m,task_code=RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND
+# time +30  (learn@r3)  (downgrade@r1)
+wait:on_rpc_call:rpc_name=RPC_CM_UPDATE_PARTITION_CONFIGURATION,from=r1,to=m
+state:{{r1,ina,2,10},{r2,sec,2,10},{r3,pot,2,0}}
+# time +40  (learn@r1)  (downgrade@m)
+wait:on_task_begin:node=r1,task_code=RPC_LEARN
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+# time +50  (learn@r3)  (downgrade@r1)
+# this will trigger LPC_DELAY_LEARN
+# and the r1 changes to primary again, which will trigger group check
+wait:on_task_begin:node=r3,task_code=RPC_LEARN_ACK
+wait:on_task_enqueue:node=r3,task_code=LPC_DELAY_LEARN
+# time +60
+# group check arrives r3, starting another round of learn
+wait:on_task_begin:node=r3,task_code=RPC_GROUP_CHECK
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+# time +70
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+# finally
+config:{4,r1,[r3]}
+state:{{r1,pri,4,10},{r3,sec,4,10}}
+
+# change primary from r1 to r3
+client:replica_config:receiver=r1,type=downgrade_to_secondary,node=r1
+config:{5,-,[r1,r3]}
+state:{{r1,sec,5,10},{r3,sec,5,10}}
+client:replica_config:receiver=r3,type=upgrade_to_primary,node=r3
+config:{6,r3,[r1]}
+state:{{r1,sec,6,10},{r3,pri,6,10}}
+
+# check r3 data corrent
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r3
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+

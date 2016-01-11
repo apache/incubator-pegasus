@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/dist/cluster_scheduler.h>
-
+# include <unordered_map>
 using namespace ::dsn::service;
 
 namespace dsn
@@ -47,6 +47,7 @@ namespace dsn
             : public cluster_scheduler, public clientlet
         {
         public:
+            kubernetes_cluster_scheduler();
             virtual error_code initialize() override;
 
             /*
@@ -54,10 +55,8 @@ namespace dsn
             *  failure_notification is specific for this deployment unit
             */
             virtual void schedule(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback,
-                std::function<void(error_code, std::string)> failure_notification
-                ) override {}
+                std::shared_ptr<deployment_unit>& unit
+                ) override;
 
             /*
             * option 2: seperated deploy and failure notification service
@@ -71,6 +70,18 @@ namespace dsn
             virtual void register_failure_callback(
                 std::function<void(error_code, std::string)> failure_notification
                 ) override {}
+            static void get_k8s_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+            static void get_k8s_state_cleanup(dsn_cli_reply reply);
+            static void deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+            static void deploy_k8s_unit_cleanup(dsn_cli_reply reply);
+        private:
+            void create_pod( std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory );
+            using deploy_map = std::unordered_map<std::string, std::shared_ptr<deployment_unit> >;
+            std::string                 _run_path;
+            dsn_handle_t                _k8s_state_handle;
+            dsn_handle_t                _k8s_deploy_handle;
+            deploy_map                  _deploy_map;
         };
+
     }
 }

@@ -205,7 +205,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     learn_response response;
     if (PS_PRIMARY != status())
     {
-        response.err = ERR_INVALID_STATE;
+        response.err = (PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE;
         reply(msg, response);
         return;
     }
@@ -440,7 +440,26 @@ void replica::on_learn_reply(
 
     if (resp->err != ERR_OK)
     {
-        handle_learning_error(resp->err);
+        if (resp->err == ERR_INACTIVE_STATE)
+        {
+            dwarn(
+                "%s: on_learn_reply[%016llx]: learnee = %s, learnee is updating ballot, delay to start another round of learning",
+                name(), req->signature, resp->config.primary.to_string()
+                );
+            _potential_secondary_states.learning_round_is_running = false;
+            tasking::enqueue(
+                &_potential_secondary_states.delay_learning_task,
+                LPC_DELAY_LEARN,
+                this,
+                std::bind(&replica::init_learn, this, req->signature),
+                gpid_to_hash(get_gpid()),
+                1000
+                );
+        }
+        else
+        {
+            handle_learning_error(err);
+        }
         return;
     }
 
@@ -491,17 +510,15 @@ void replica::on_learn_reply(
                     err.to_string()
                     );
             }
-            else
-            {
-                dassert(_app->last_committed_decree() == 0, "");
-                dassert(_app->last_durable_decree() == 0, "");
-            }
         }
 
         if (err == ERR_OK)
-        {
+        {            
+            dassert(_app->last_committed_decree() == 0, "must be zero after app::open(true)");
+            dassert(_app->last_durable_decree() == 0, "must be zero after app::open(true)");
+
             // reset prepare list
-            _prepare_list->reset(_app->last_committed_decree());
+            _prepare_list->reset(0);
 
             err = _app->update_init_info(
                 this,

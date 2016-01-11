@@ -52,6 +52,7 @@ mutation_log::mutation_log(
     const std::string& dir,
     int32_t batch_buffer_size_kb,
     int32_t max_log_file_mb,
+    bool force_flush,
     bool is_private,
     global_partition_id private_gpid
     )
@@ -61,6 +62,7 @@ mutation_log::mutation_log(
     _private_gpid = private_gpid;
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
+    _force_flush = force_flush;
     init_states();
 }
 
@@ -250,7 +252,12 @@ void mutation_log::flush()
             {
                 break;
             }
-            write_pending_mutations();
+            auto err = write_pending_mutations();
+            dassert(
+                err == ERR_OK,
+                "write pending mutation failed, err = %s",
+                err.to_string()
+                );
         }
     }
 }
@@ -403,6 +410,13 @@ void mutation_log::internal_write_callback(
 {
     dassert(_is_writing, "");
 
+    dinfo(
+        "%s mutation log write callback, err = %s, size = %d",
+        _is_private ? "private" : "shared",
+        err.to_string(),
+        (int)size
+        );
+
     auto hdr = (log_block_header*)block->front().data();
     dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
@@ -414,12 +428,17 @@ void mutation_log::internal_write_callback(
             block->size()
             );
 
-        if(_is_private)
+        if(_force_flush)
         {
-            // TODO(qinzuoyan): why flush private log but not flush shared log?
+            // flush to ensure that there is no gap between private log and in-memory buffer
+            // so that we can get all mutations in learning process.
+            //
             // FIXME : the file could have been closed
             file->flush();
+        }
 
+        if (_is_private)
+        {
             // update _private_max_commit_on_disk after writen into log file done
             update_max_commit_on_disk(max_commit);
         }
@@ -429,6 +448,24 @@ void mutation_log::internal_write_callback(
     // because the following callbacks may run before "block" released, which may cause
     // the next init_prepare() not starting the write.
     _is_writing = false;
+
+    if (err == ERR_OK)
+    {
+        zauto_lock l(_lock);
+
+        // trigger another round of writing if possible
+        if (!_is_writing
+            && _pending_write != nullptr
+            && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+        {
+            auto err = write_pending_mutations();
+            dassert(
+                err == ERR_OK,
+                "write pending mutation failed, err = %s",
+                err.to_string()
+                );
+        }
+    }
 
     for (auto& cb : *callbacks)
     {
@@ -775,36 +812,16 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
                                              mu->data.header.last_committed_decree);
     }
 
-    //
-    // start to write
-    //
-    if (!_is_writing)
+    // start to write if possible
+    if (!_is_writing && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
     {
-        if (_batch_buffer_bytes == 0)
-        {
-            // not batching
-            err = write_pending_mutations();
-        }
-        else
-        {
-            // batching
-            if (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
-            {
-                // batch full, write now
-                err = write_pending_mutations();
-            }
-            else
-            {
-                // batch not full, wait for batch write later
-            }
-        }
+        err = write_pending_mutations();
+        dassert(
+            err == ERR_OK,
+            "write pending mutation failed, err = %s",
+            err.to_string()
+            );
     }
-
-    dassert(
-        err == ERR_OK,
-        "write pending mutation failed, err = %s",
-        err.to_string()
-        );
 
     return tsk;
 }

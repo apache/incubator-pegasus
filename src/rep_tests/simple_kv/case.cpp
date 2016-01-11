@@ -525,6 +525,7 @@ bool event_on_task::check_satisfied(const event* ev) const
 
 void event_on_task::init(task* tsk)
 {
+    _task = tsk;
     if (tsk != nullptr)
     {
         char buf[100];
@@ -731,6 +732,39 @@ bool inject_case_line::parse(const std::string& params)
         return false;
     }
     return true;
+}
+
+std::string modify_case_line::to_string() const
+{
+    std::ostringstream oss;
+    oss << event_case_line::to_string()
+        << ",modify_delay=" << _modify_delay;
+    return oss.str();
+}
+
+bool modify_case_line::parse(const std::string& params)
+{
+    if (!event_case_line::parse(params))
+        return false;
+    size_t pos = params.find(':');
+    dassert(pos != std::string::npos, "");
+    std::map<std::string, std::string> kv_map;
+    bool parse_ret = parse_kv_map(line_no(), params.substr(pos + 1), kv_map);
+    dassert(parse_ret, "");
+    std::map<std::string, std::string>::const_iterator it;
+    if ((it = kv_map.find("modify_delay")) != kv_map.end()) _modify_delay = it->second;
+    return true;
+}
+
+void modify_case_line::modify(const event* ev)
+{
+    if (!_modify_delay.empty())
+    {
+        const event_on_task* e = dynamic_cast<const event_on_task*>(ev);
+        dassert(e != nullptr, "");
+        dassert(e->_task != nullptr, "");
+        e->_task->set_delay(boost::lexical_cast<int>(_modify_delay));
+    }
 }
 
 std::string client_case_line::to_string() const
@@ -967,6 +1001,7 @@ test_case::test_case() : _next(0), _null_loop_count(0)
     register_creator<config_case_line>();
     register_creator<wait_case_line>();
     register_creator<inject_case_line>();
+    register_creator<modify_case_line>();
     register_creator<client_case_line>();
 }
 
@@ -1330,6 +1365,7 @@ bool test_case::on_event(const event* ev)
 
     case_line* c = _case_lines[_next];
     if (c->name() != inject_case_line::NAME()
+            && c->name() != modify_case_line::NAME()
             && c->name() != wait_case_line::NAME())
     {
         return true;
@@ -1346,6 +1382,11 @@ bool test_case::on_event(const event* ev)
     {
         // should inject fault
         ret = false;
+    }
+    else if (cl->name() == modify_case_line::NAME())
+    {
+        modify_case_line* mcl = static_cast<modify_case_line*>(cl);
+        mcl->modify(ev);
     }
 
     forward();
