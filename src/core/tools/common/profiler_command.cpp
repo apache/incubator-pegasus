@@ -413,15 +413,19 @@ namespace dsn {
                             // merge and sort
                             std::vector<uint64_t> sorted_samples;
                             sorted_samples.resize(sample_count); 
-                            
+
                             int copy_index = 0;
                             for (auto& s : samples)
                             {
-                                dassert(copy_index + s.second < (int)sorted_samples.size(),
-                                    "return of get_latest_samples() is inconsistent with what is get in samples");
+                                if (s.second != 0)
+                                {
 
-                                memcpy((void*)&sorted_samples[copy_index], (const void*)s.first, s.second * sizeof(uint64_t));
-                                copy_index += s.second;
+                                    dassert(copy_index + s.second <= (int)sorted_samples.size(),
+                                        "return of get_latest_samples() is inconsistent with what is get in samples");
+
+                                    memcpy((void*)&sorted_samples[copy_index], (const void*)s.first, s.second * sizeof(uint64_t));
+                                    copy_index += s.second;
+                                }
                             }
                             dassert(copy_index == sample_count, "return of get_latest_samples() is inconsistent with what is get in samples");
 
