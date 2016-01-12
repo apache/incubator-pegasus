@@ -63,13 +63,25 @@ namespace dsn
 
         void add_ref()
         {
-            ++_counter;
+            //Increasing the reference counter can always be done with memory_order_relaxed:
+            //New references to an object can only be formed from an existing reference,
+            //and passing an existing reference from one thread to another must already provide any required synchronization.
+            _counter.fetch_add(1, std::memory_order_relaxed);
         }
 
         void release_ref()
         {
-            if (--_counter == 0)
+            //It is important to enforce any possible access to the object in one thread
+            //(through an existing reference) to happen before deleting the object in a different thread.
+            //This is achieved by a "release" operation after dropping a reference
+            //(any access to the object through this reference must obviously happened before),
+            //and an "acquire" operation before deleting the object.
+            //reference: http://www.boost.org/doc/libs/1_60_0/doc/html/atomic/usage_examples.html
+            if (_counter.fetch_sub(1, std::memory_order_release) == 1)
+            {
+                std::atomic_thread_fence(std::memory_order_acquire);
                 delete this;
+            }
         }
 
         long get_count()

@@ -21,7 +21,7 @@ goto :eof
 	cd test-%x%
 	set /a replica_port=!replica_port!+3
 	set /a meta_port=!meta_port!+3
-	set lcmd=../test/dsn.replication.simple_kv.exe ../test/vconfig.ini -cargs meta_port=!meta_port!;replica_port=!replica_port!
+        set lcmd=../test/dsn.replication.simple_kv.exe ../test/vconfig.ini -cargs meta_port=!meta_port!;replica_port=!replica_port!
 	echo %lcmd%
 	start "test-%x%" /LOW %lcmd%
 	cd ..

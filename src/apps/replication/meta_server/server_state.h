@@ -138,10 +138,16 @@ public:
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
 
+    // dump & restore
+    error_code dump_from_remote_storage(const char* format, const char* local_path, bool sync_immediately);
+    error_code restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage);
+
 private:
     // initialize apps in local cache and in remote storage
     error_code initialize_apps();
 
+    // synchronize the state to meta state server
+    error_code sync_apps_to_remote_storage();
     // synchronize the latest state from meta state server (i.e., _storage)
     error_code sync_apps_from_remote_storage();
 
@@ -224,10 +230,13 @@ private:
     config_change_subscriber          _config_change_subscriber;
 
     dsn_handle_t                      _cli_json_state_handle;
-
+    dsn_handle_t                      _cli_dump_handle;
 public:
     void json_state(std::stringstream& out) const;
     static void static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
     static void static_cli_json_state_cleanup(dsn_cli_reply reply);
+
+    static void static_cli_dump_app_states(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+    static void static_cli_dump_app_states_cleanup(dsn_cli_reply reply);
 };
 

@@ -129,12 +129,11 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 }
 
 task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_cancel, int hash, service_node* node)
-    : _state(TASK_STATE_READY)
+    : _state(TASK_STATE_READY), _wait_event(nullptr)
 {
     _spec = task_spec::get(code);
     _context = context;
     _on_cancel = on_cancel;
-    _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
@@ -187,7 +186,6 @@ void task::exec_internal()
         _spec->on_task_begin.execute(this);
 
         exec();
-        
         if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED))
         {
             _spec->on_task_end.execute(this);

@@ -186,7 +186,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             _private_log = new mutation_log(
                 log_dir,
                 _options->log_private_batch_buffer_kb,
-                _options->log_file_size_mb,
+                _options->log_private_file_size_mb,
+                _options->log_private_force_flush,
                 true,
                 get_gpid()
                 );
