@@ -20,6 +20,7 @@
 #    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
 
 ROOT=`pwd`
+REPORT_DIR=$ROOT/test_reports
 BUILD_DIR="$ROOT/builder"
 GCOV_DIR="$ROOT/gcov_report"
 GCOV_TMP="$ROOT/.gcov_tmp"
@@ -182,10 +183,15 @@ then
     fi
 fi
 
+if [ ! -d "$REPORT_DIR" ]
+then
+    mkdir -p $REPORT_DIR
+fi
+
 for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     echo "====================== run $MODULE =========================="
     cd $BUILD_DIR/bin/$MODULE
-    ./run.sh
+    REPORT_DIR=$REPORT_DIR ./run.sh
     if [ $? -ne 0 ]
     then
         echo "ERROR: run $MODULE failed"
