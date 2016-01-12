@@ -1,7 +1,7 @@
 namespace cpp dsn
 
 // place holder
-struct address
+struct rpc_address
 {
 }
 
