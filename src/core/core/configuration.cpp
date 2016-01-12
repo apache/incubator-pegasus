@@ -38,6 +38,7 @@
 # include <dsn/cpp/utils.h>
 # include <errno.h>
 # include <iostream>
+# include <algorithm>
 
 namespace dsn {
 
@@ -55,7 +56,7 @@ configuration::~configuration()
 // e.g.,
 //    port = %port%
 //    timeout = %timeout%
-// arguments: port=23466;timeout=1000
+// arguments: port=23466;timeout=1000 or arguments: ports=23466,timout=1000
 bool configuration::load(const char* file_name, const char* arguments)
 {
     _file_name = std::string(file_name);
@@ -91,8 +92,10 @@ bool configuration::load(const char* file_name, const char* arguments)
     // replace data with arguments
     if (arguments != nullptr)
     {
+        std::string str_arguments(arguments);
+        std::replace(str_arguments.begin(), str_arguments.end(), ',', ';');
         std::list<std::string> argkvs;
-        utils::split_args(arguments, argkvs, ',');
+        utils::split_args(str_arguments.c_str(), argkvs, ';');
         for (auto& kv : argkvs)
         {
             std::list<std::string> vs;
