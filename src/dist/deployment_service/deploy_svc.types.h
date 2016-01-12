@@ -1,5 +1,6 @@
 # pragma once
 # include <dsn/service_api_cpp.h>
+# include <dsn/dist/cluster_scheduler.h>
 
 //
 // uncomment the following line if you want to use 
@@ -16,7 +17,7 @@
 # include <dsn/thrift_helper.h>
 # include "deploy_svc_types.h" 
 
-
+namespace dsn { namespace dist { 
     // ---------- deploy_request -------------
     inline void marshall(::dsn::binary_writer& writer, const deploy_request& val)
     {
@@ -92,17 +93,18 @@
         ::dsn::unmarshall_rpc_args<cluster_list>(&proto, val, &cluster_list::read);
     };
 
-
+} } 
 
 
 # else // use rDSN's data encoding/decoding
 
-
+namespace dsn { namespace dist { 
     // ---------- deploy_request -------------
     struct deploy_request
     {
         std::string package_id;
-        std::string package_local_path;
+        std::string package_full_path;
+        ::dsn::rpc_address package_server;
         std::string cluster_name;
         std::string name;
     };
@@ -110,7 +112,8 @@
     inline void marshall(::dsn::binary_writer& writer, const deploy_request& val)
     {
         marshall(writer, val.package_id);
-        marshall(writer, val.package_local_path);
+        marshall(writer, val.package_full_path);
+        marshall(writer, val.package_server);
         marshall(writer, val.cluster_name);
         marshall(writer, val.name);
     };
@@ -118,7 +121,8 @@
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ deploy_request& val)
     {
         unmarshall(reader, val.package_id);
-        unmarshall(reader, val.package_local_path);
+        unmarshall(reader, val.package_full_path);
+        unmarshall(reader, val.package_server);
         unmarshall(reader, val.cluster_name);
         unmarshall(reader, val.name);
     };
@@ -128,15 +132,17 @@
     {
         std::string package_id;
         std::string name;
-        std::string error;
+        std::string service_url;
+        ::dsn::error_code error;
         std::string cluster;
-        std::string status;
+        service_status status;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const deploy_info& val)
     {
         marshall(writer, val.package_id);
         marshall(writer, val.name);
+        marshall(writer, val.service_url);
         marshall(writer, val.error);
         marshall(writer, val.cluster);
         marshall(writer, val.status);
@@ -146,6 +152,7 @@
     {
         unmarshall(reader, val.package_id);
         unmarshall(reader, val.name);
+        unmarshall(reader, val.service_url);
         unmarshall(reader, val.error);
         unmarshall(reader, val.cluster);
         unmarshall(reader, val.status);
@@ -171,7 +178,7 @@
     struct cluster_info
     {
         std::string name;
-        std::string type;
+        cluster_type type;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const cluster_info& val)
@@ -202,6 +209,6 @@
         unmarshall(reader, val.clusters);
     };
 
-
+} } 
 
 #endif 

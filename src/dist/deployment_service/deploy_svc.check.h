@@ -1,7 +1,7 @@
 # pragma once
 # include <dsn/tool/global_checker.h>
 
- 
+namespace dsn { namespace dist {  
 
 class deploy_svc_checker 
     : public ::dsn::tools::checker
@@ -49,3 +49,4 @@ private:
     //std::vector<meta_service_app*>        _meta_servers;
 };
 
+} } 

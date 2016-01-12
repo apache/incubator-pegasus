@@ -40,9 +40,9 @@ struct partition_configuration
     2:global_partition_id    gpid;
     3:i64                    ballot;
     4:i32                    max_replica_count;
-    5:dsn.address            primary;
-    6:list<dsn.address>      secondaries;
-    7:list<dsn.address>      last_drops;
+    5:dsn.rpc_address        primary;
+    6:list<dsn.rpc_address>  secondaries;
+    7:list<dsn.rpc_address>  last_drops;
     8:i64                    last_committed_decree;
 }
 
@@ -52,7 +52,7 @@ struct replica_configuration
 {
     1:global_partition_id gpid;
     2:i64                 ballot;
-    3:dsn.address         primary;
+    3:dsn.rpc_address     primary;
     4:partition_status    status = partition_status.PS_INACTIVE;
     5:i64                 learner_signature;
 }
@@ -128,7 +128,7 @@ enum learner_status
 struct learn_request
 {
     1:global_partition_id gpid;
-    2:dsn.address         learner; // learner's address
+    2:dsn.rpc_address     learner; // learner's address
     3:i64                 signature; // learning signature
     4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
     5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
@@ -143,14 +143,14 @@ struct learn_response
     4:i64                   prepare_start_decree; // prepare start decree
     5:learn_type            type; // learning type: CACHE, LOG, APP
     6:learn_state           state; // learning data, including memory data and files
-    7:dsn.address           address; // learnee's address
+    7:dsn.rpc_address       address; // learnee's address
     8:string                base_local_dir; // base dir of files on learnee
 }
 
 struct group_check_request
 {
     1:string                app_type;
-    2:dsn.address           node;
+    2:dsn.rpc_address       node;
     3:replica_configuration config;
     4:i64                   last_committed_decree;
     5:i64                   learner_signature;
@@ -164,7 +164,7 @@ struct group_check_response
     4:i64                 last_committed_decree_in_prepare_list;
     5:learner_status      learner_status_ = learner_status.LearningFailed;
     6:i64                 learner_signature;
-    7:dsn.address         node;
+    7:dsn.rpc_address     node;
 }
 
 /////////////////// meta server messages ////////////////////
@@ -211,7 +211,7 @@ struct meta_request_header
 struct meta_response_header
 {
     1:dsn.error_code err;
-    2:dsn.address  primary_address;
+    2:dsn.rpc_address  primary_address;
 }
 
 // primary | secondary(upgrading) (w/ new config) => meta server
@@ -219,7 +219,7 @@ struct configuration_update_request
 {
     1:partition_configuration  config;
     2:config_type              type = config_type.CT_NONE;
-    3:dsn.address              node;
+    3:dsn.rpc_address              node;
 }
 
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
@@ -234,7 +234,7 @@ struct configuration_proposal_request
 {
     1:partition_configuration  config;
     2:config_type              type = config_type.CT_NONE;
-    3:dsn.address              node;
+    3:dsn.rpc_address          node;
     4:bool                     is_clean_data = false;
     5:bool                     is_upgrade = false;
 }
@@ -242,7 +242,7 @@ struct configuration_proposal_request
 // client => meta server
 struct configuration_query_by_node_request
 {
-    1:dsn.address    node;
+    1:dsn.rpc_address    node;
 }
 
 struct create_app_options
@@ -316,7 +316,7 @@ struct configuration_query_by_index_response
 struct query_replica_decree_request
 {
     1:global_partition_id gpid;
-    2:dsn.address         node;
+    2:dsn.rpc_address     node;
 }
 
 struct query_replica_decree_response

@@ -2,7 +2,7 @@
 
 # include "deploy_svc.client.h"
 
- 
+namespace dsn { namespace dist {  
 
  
 class deploy_svc_perf_test_client
@@ -95,7 +95,7 @@ public:
 
     virtual void end_undeploy(
         ::dsn::error_code err,
-        const std::string& resp,
+        const ::dsn::error_code& resp,
         void* context) override
     {
         end_send_one(context, err);
@@ -165,3 +165,4 @@ public:
     }
 };
 
+} } 

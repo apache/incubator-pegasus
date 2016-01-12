@@ -47,27 +47,34 @@ namespace dsn
 {
     namespace dist
     {
+        // ---------- cluster_type -------------
         enum class cluster_type
         {
-            kubernetes,
-            docker,
-            bare_medal_linux,
-            bare_medal_windows,
-            yarn,
-            mesos
+            kubernetes = 0,
+            docker = 1,
+            bare_medal_linux = 2,
+            bare_medal_windows = 3,
+            yarn_on_linux = 4,
+            yarn_on_windows = 5,
+            mesos_on_linux = 6,
+            mesos_on_windows = 7,
         };
 
+        DEFINE_POD_SERIALIZATION(cluster_type);
+
+        // ---------- service_status -------------
         enum class service_status
         {
-            SS_PREPARE_RESOURCE,
-            SS_DEPLOYING,
-            SS_RUNNING,
-            SS_FAILOVER,
-            SS_FAILED,
-
-            SS_COUNT,
-            SS_INVALID
+            SS_PREPARE_RESOURCE = 0,
+            SS_DEPLOYING = 1,
+            SS_RUNNING = 2,
+            SS_FAILOVER = 3,
+            SS_FAILED = 4,
+            SS_COUNT = 5,
+            SS_INVALID = 6,
         };
+
+        DEFINE_POD_SERIALIZATION(service_status);
 
         ENUM_BEGIN(service_status, service_status::SS_INVALID)
             ENUM_REG(service_status::SS_PREPARE_RESOURCE)
@@ -119,6 +126,8 @@ namespace dsn
             virtual void schedule(
                 std::shared_ptr<deployment_unit>& unit
                 ) = 0;
+
+            virtual cluster_type type() const = 0;
 
             /*
             * option 2: seperated deploy and failure notification service
