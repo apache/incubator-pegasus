@@ -102,7 +102,7 @@
     struct deploy_request
     {
         std::string package_id;
-        std::string package_url;
+        std::string package_local_path;
         std::string cluster_name;
         std::string name;
     };
@@ -110,7 +110,7 @@
     inline void marshall(::dsn::binary_writer& writer, const deploy_request& val)
     {
         marshall(writer, val.package_id);
-        marshall(writer, val.package_url);
+        marshall(writer, val.package_local_path);
         marshall(writer, val.cluster_name);
         marshall(writer, val.name);
     };
@@ -118,7 +118,7 @@
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ deploy_request& val)
     {
         unmarshall(reader, val.package_id);
-        unmarshall(reader, val.package_url);
+        unmarshall(reader, val.package_local_path);
         unmarshall(reader, val.cluster_name);
         unmarshall(reader, val.name);
     };
@@ -130,7 +130,7 @@
         std::string name;
         std::string error;
         std::string cluster;
-        std::string dsptr;
+        std::string status;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const deploy_info& val)
@@ -139,7 +139,7 @@
         marshall(writer, val.name);
         marshall(writer, val.error);
         marshall(writer, val.cluster);
-        marshall(writer, val.dsptr);
+        marshall(writer, val.status);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ deploy_info& val)
@@ -148,7 +148,7 @@
         unmarshall(reader, val.name);
         unmarshall(reader, val.error);
         unmarshall(reader, val.cluster);
-        unmarshall(reader, val.dsptr);
+        unmarshall(reader, val.status);
     };
 
     // ---------- deploy_info_list -------------

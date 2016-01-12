@@ -20,14 +20,14 @@ protected:
         reply(resp);
     }
     // RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY 
-    virtual void on_undeploy(const std::string& service_url, ::dsn::rpc_replier<std::string>& reply)
+    virtual void on_undeploy(const std::string& service_name, ::dsn::rpc_replier<std::string>& reply)
     {
         std::cout << "... exec RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ... (not implemented) " << std::endl;
         std::string resp;
         reply(resp);
     }
     // RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST 
-    virtual void on_get_service_list(const std::string& format, ::dsn::rpc_replier<deploy_info_list>& reply)
+    virtual void on_get_service_list(const std::string& package_id, ::dsn::rpc_replier<deploy_info_list>& reply)
     {
         std::cout << "... exec RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST ... (not implemented) " << std::endl;
         deploy_info_list resp;

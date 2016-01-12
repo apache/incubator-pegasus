@@ -114,7 +114,7 @@ error_code kubernetes_cluster_scheduler::initialize()
     _k8s_deploy_handle = dsn_cli_app_register("deploy","deploy onto k8s scheduler","",this,&deploy_k8s_unit,&deploy_k8s_unit_cleanup);
     dassert(_k8s_deploy_handle != nullptr, "register cli handler failed");
 
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
 void kubernetes_cluster_scheduler::schedule(
@@ -144,7 +144,7 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
     ret = system(full_path.str().c_str());
     if( ret == 0 )
     {
-        deployment_callback(::dsn::ERR_OK,rpc_address());
+        deployment_callback(ERR_OK,rpc_address());
     }
     else
     {

@@ -1,5 +1,5 @@
 // apps
-# include "deploy_svc.app.example.h"
+# include "deploy_svc.app.h"
 
 void dsn_app_registration()
 {
@@ -16,8 +16,7 @@ int main(int argc, char** argv)
     dsn_app_registration();
     
     // specify what services and tools will run in config file, then run
-    dsn_run(argc, argv, true);
-    return 0;
+     return 0;
 }
 
 # else

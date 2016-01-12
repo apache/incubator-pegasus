@@ -41,6 +41,7 @@
 # include <string>
 # include <functional>
 # include <memory>
+# include <dsn/internal/enum_helper.h>
 
 namespace dsn
 {
@@ -55,6 +56,43 @@ namespace dsn
             yarn,
             mesos
         };
+
+        enum class service_status
+        {
+            SS_PREPARE_RESOURCE,
+            SS_DEPLOYING,
+            SS_RUNNING,
+            SS_FAILOVER,
+            SS_FAILED,
+
+            SS_COUNT,
+            SS_INVALID
+        };
+
+        ENUM_BEGIN(service_status, service_status::SS_INVALID)
+            ENUM_REG(service_status::SS_PREPARE_RESOURCE)
+            ENUM_REG(service_status::SS_DEPLOYING)
+            ENUM_REG(service_status::SS_RUNNING)
+            ENUM_REG(service_status::SS_FAILOVER)
+            ENUM_REG(service_status::SS_FAILED)
+        ENUM_END(service_status)
+
+        struct deployment_unit
+        {
+            std::string name;
+            //std::string description;
+            std::string local_package_directory;
+            std::string remote_package_directory;
+            //std::string command_line;
+            std::string cluster;
+            std::string package_id;
+            service_status status;
+            //cluster_type package_type;
+            std::function<void(error_code, rpc_address)> deployment_callback;
+            std::function<void(error_code, const std::string&)> failure_notification;
+            // TODO: ...
+        };
+
         class cluster_scheduler
         {
         public:
@@ -66,18 +104,7 @@ namespace dsn
             typedef cluster_scheduler* (*factory)();
 
         public:
-            struct deployment_unit
-            {
-                std::string name;
-                std::string description;
-                std::string local_package_directory;
-                std::string remote_package_directory;
-                std::string command_line;
-                cluster_type package_type;
-                std::function<void(error_code, rpc_address)> deployment_callback;
-                std::function<void(error_code, std::string)> failure_notification;
-                // TODO: ...
-            };
+            
 
         public:
             /*
