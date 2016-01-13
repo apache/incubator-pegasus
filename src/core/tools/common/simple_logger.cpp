@@ -138,9 +138,9 @@ namespace dsn {
             : logging_provider(log_dir)
         {
             _log_dir = std::string(log_dir);
-            //we assume all valid entries are non-negetive
-            _start_index = -1;
-            _index = 0;
+            //we assume all valid entries are positive
+            _start_index = 0;
+            _index = 1;
             _lines = 0;
             _log = nullptr;
             _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
@@ -170,18 +170,18 @@ namespace dsn {
                     continue;
 
                 int index;
-                if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index < 0)
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index <= 0)
                     continue;
 
                 if (index > _index)
                     _index = index;
 
-                if (_start_index == -1 || index < _start_index)
+                if (_start_index == 0 || index < _start_index)
                     _start_index = index;
             }
             sub_list.clear();
 
-            if (_start_index == -1)
+            if (_start_index == 0)
             {
                 _start_index = _index;
             }

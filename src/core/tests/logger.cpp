@@ -120,10 +120,6 @@ TEST(tools_common, simple_logger)
     EXPECT_TRUE(!index.empty());
     sort(index.begin(), index.end());
     EXPECT_EQ(simple_logger_gc_gap, index.size());
-    for (unsigned int i=0; i!=index.size(); ++i)
-    {
-        EXPECT_TRUE(index[i]==i+10);
-    }
     clear_files(index);
     finish_test_dir();
 }
