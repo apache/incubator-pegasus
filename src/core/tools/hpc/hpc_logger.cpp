@@ -293,7 +293,8 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf_p(ptr, capacity, "%s (%" PRIu64 " %04x) ", str, ts, tid);
+            static const char s_level_char[] = "IDWEF";
+            auto wn = snprintf_p(ptr, capacity, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level], str, ts, tid);
             ptr += wn;
             capacity -= wn;
 
