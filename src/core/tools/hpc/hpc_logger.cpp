@@ -150,7 +150,7 @@ namespace dsn
                 );
 
             _start_index = 0;
-            _index = 0;
+            _index = 1;
             _current_log_file_bytes = 0;
 
             // check existing log files and decide start_index
@@ -168,7 +168,7 @@ namespace dsn
                     continue;
 
                 int index;
-                if (1 != sscanf(name.c_str(), "log.%d.txt", &index))
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index < 1)
                     continue;
 
                 if (index > _index)
@@ -181,6 +181,8 @@ namespace dsn
 
             if (_start_index == 0)
                 _start_index = _index;
+            else
+                _index++;
 
             _current_log = nullptr;
             create_log_file();
@@ -190,7 +192,7 @@ namespace dsn
         void hpc_logger::create_log_file()
         {
             std::stringstream log;
-            log << _log_dir << "/log." << ++_index << ".txt";
+            log << _log_dir << "/log." << _index++ << ".txt";
             _current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
             _current_log_file_bytes = 0;
 
