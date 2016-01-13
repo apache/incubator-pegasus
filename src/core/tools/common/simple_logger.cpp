@@ -185,10 +185,8 @@ namespace dsn {
             {
                 _start_index = _index;
             }
-            else if (_start_index == _index)
-            {
+            else
                 ++_index;
-            }
 
             create_log_file();
         }
