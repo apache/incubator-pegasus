@@ -50,8 +50,11 @@
 # endif
 # define __TITLE__ "meta.server.state"
 
+# include "dump_file.h"
+
 void marshall(binary_writer& writer, const app_state& val)
 {
+    marshall(writer, val.status);
     marshall(writer, val.app_type);
     marshall(writer, val.app_name);
     marshall(writer, val.app_id);
@@ -155,6 +158,7 @@ void marshall_json(blob& output, const partition_configuration& pc)
 
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
+    unmarshall(reader, val.status);
     unmarshall(reader, val.app_type);
     unmarshall(reader, val.app_name);
     unmarshall(reader, val.app_id);
@@ -226,7 +230,7 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
 }
 
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr)
+    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -246,6 +250,121 @@ server_state::~server_state()
         dsn_cli_deregister(_cli_json_state_handle);
         _cli_json_state_handle = nullptr;
     }
+}
+
+error_code server_state::dump_from_remote_storage(const char *format, const char *local_path, bool sync_immediately)
+{
+    error_code ec;
+    std::shared_ptr<dump_file> file = dump_file::open_file(local_path, true);
+    if (file == nullptr)
+    {
+        derror("open file failed, file(%s)", local_path);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    if (sync_immediately && ((ec=sync_apps_from_remote_storage())!=ERR_OK)) {
+        if (ec == ERR_OBJECT_NOT_FOUND) {
+            dwarn("remote storage is empty, just stop the dump");
+            return ERR_OK;
+        }
+        else {
+            derror("sync from remote storage failed, err(%s)", ec.to_string());
+            return ec;
+        }
+    }
+
+    file->append_buffer(format, strlen(format));
+
+    size_t apps_count = _apps.size();
+    for (size_t i=0; i!=apps_count; ++i)
+    {
+        app_state snapshot;
+        {
+            zauto_read_lock l(_lock);
+            snapshot = _apps[i];
+        }
+        if (strcmp(format, "json") == 0)
+        {
+            blob data;
+            marshall_json(data, snapshot, snapshot.status==app_status::available);
+            file->append_buffer(data);
+            for (const partition_configuration& pc: snapshot.partitions)
+            {
+                marshall_json(data, pc);
+                file->append_buffer(data);
+            }
+        }
+        else if (strcmp(format, "binary") == 0)
+        {
+            binary_writer writer;
+            marshall(writer, snapshot);
+            file->append_buffer(writer.get_buffer());
+        }
+        else
+            return ERR_INVALID_PARAMETERS;
+    }
+    return ERR_OK;
+}
+
+error_code server_state::restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage)
+{
+    error_code ec;
+
+    std::shared_ptr<dump_file> file = dump_file::open_file(local_path, false);
+    if (file == nullptr)
+    {
+        derror("open file failed, file(%s)", local_path);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    blob data;
+    dassert(file->read_next_buffer(data)==1, "read format header fail");
+    _apps.clear();
+
+    if ( memcmp(data.data(), "json", 4)==0 )
+    {
+        while ( true )
+        {
+            int ans = file->read_next_buffer(data);
+            dassert(ans != -1, "read file failed");
+            if (ans == 0) //file end
+                break;
+            _apps.push_back( app_state() );
+            app_state& app = _apps.back();
+            unmarshall_json(data, app);
+            app.partitions.resize(app.partition_count);
+            for (unsigned int i=0; i!=app.partition_count; ++i)
+            {
+                ans = file->read_next_buffer(data);
+                dassert(ans == 1, "unexpect read buffer, ret(%d)", ans);
+                unmarshall_json(data, app.partitions[i]);
+                dassert(app.partitions[i].gpid.pidx==i, "uncorrect partition data, gpid(%d.%d), appname(%s)", app.app_id, i, app.app_name.c_str());
+            }
+        }
+    }
+    else if ( memcmp(data.data(), "binary", 6)==0 )
+    {
+        while (true)
+        {
+            int ans = file->read_next_buffer(data);
+            dassert(ans != -1, "read file failed");
+            if (ans == 0) break;
+
+            _apps.push_back( app_state() );
+            binary_reader reader(data);
+            unmarshall(reader, _apps.back());
+        }
+    }
+    else
+    {
+        dassert(false, "unsupported format");
+    }
+
+    if (write_back_to_remote_storage)
+    {
+        ec = sync_apps_to_remote_storage();
+    }
+    return ec;
 }
 
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
@@ -320,6 +439,16 @@ error_code server_state::initialize()
     _cli_json_state_handle = dsn_cli_app_register("info", "get info of nodes and apps on meta_server", "", this, &static_cli_json_state, &static_cli_json_state_cleanup);
     dassert(_cli_json_state_handle != nullptr, "register cil handler failed, maybe it has been registered");
 
+    _cli_dump_handle = dsn_cli_app_register(
+        "dump",
+        "dump app_states of meta server to local file",
+        "usage: -f|--format [json|binary] -t|--target target_file",
+        this,
+        &static_cli_dump_app_states,
+        &static_cli_dump_app_states_cleanup
+    );
+    dassert(_cli_dump_handle != nullptr, "register cli handler failed");
+
     ddebug("init server_state succeed, cluster_root = %s", _cluster_root.c_str());
     return ERR_OK;
 }
@@ -380,11 +509,36 @@ error_code server_state::initialize_apps()
         "partition_count", 1, "how many partitions the app should have");
     app.status = app_status::available;
 
-    error_code err = ERR_OK;
-    clientlet tracker;
+    _apps.push_back(app);
 
+    partition_configuration pc;
+    pc.app_type = app.app_type;
+    pc.ballot = 0;
+    pc.gpid.app_id = app.app_id;
+    pc.last_committed_decree = 0;
+    pc.last_drops.clear(); pc.secondaries.clear();
+    pc.primary.set_invalid();
+    pc.max_replica_count = dsn_config_get_value_uint64("replication.app", "max_replica_count", 3, "max replica count in app");
+
+    std::vector<partition_configuration>& partitions = _apps.back().partitions;
+    partitions.resize(app.partition_count, pc);
+    for (unsigned int i=0; i!=partitions.size(); ++i)
+        partitions[i].gpid.pidx = i;
+
+    error_code err = sync_apps_to_remote_storage();
+    if (err != ERR_OK)
+    {
+        _apps.pop_back();
+        return err;
+    }
+    return ERR_OK;
+}
+
+error_code server_state::sync_apps_to_remote_storage()
+{
     // create  cluster_root/apps node
     std::string& apps_path = _apps_root;
+    error_code err;
     auto t = _storage->create_node(apps_path, LPC_META_STATE_SVC_CALLBACK,
         [&err](error_code ec)
         {err = ec; }
@@ -398,73 +552,35 @@ error_code server_state::initialize_apps()
         return err;
     }
 
-    err = ERR_OK;
-    // create cluster_root/apps/app_name node
-    std::string app_path = get_app_path(app);
-    blob value;
-    marshall_json(value, app, true);
+    typedef dsn::dist::meta_state_service::transaction_entries TEntries;
+    dsn::blob data;
 
-    _storage->create_node(app_path, LPC_META_STATE_SVC_CALLBACK,
-        [&err, this, &app, &tracker, &app_path](error_code ec)
-        {
-            if (ec == ERR_OK)
-            {
-                int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app",
-                    "max_replica_count", 3, "maximum replica count for each partition");
-
-                for (int i = 0; i < app.partition_count; i++)
-                {
-                    std::string partition_path = join_path(app_path, boost::lexical_cast<std::string>(i));
-
-                    partition_configuration ps;
-                    ps.app_type = app.app_type;
-                    ps.ballot = 0;
-                    ps.gpid.app_id = app.app_id;
-                    ps.gpid.pidx = i;
-                    ps.last_committed_decree = 0;
-                    ps.max_replica_count = max_replica_count;
-                    ps.primary.set_invalid();
-
-                    app.partitions.push_back(ps);
-
-                    blob value;
-                    marshall_json(value, ps);
-
-                    _storage->create_node(partition_path, LPC_META_STATE_SVC_CALLBACK,
-                        [&err, this, &app](error_code ec)
-                        {
-                            if (ec == ERR_OK)
-                            {
-
-                            }
-                            else
-                            {
-                                err = ec;
-                            }
-                        },
-                        value,
-                        &tracker
-                        );
-                }
-            }
-            else
-            {
-                err = ec;
-            }
-        },
-        value,
-        &tracker
-        );
-    
-    // wait for all those tasks completed
-    dsn_task_tracker_wait_all(tracker.tracker());
-
-    if (err == ERR_OK)
+    for (const app_state& app: _apps)
     {
-        _apps.push_back(app);
+        //TODO: handling the case when app.partition_count is a large value
+        std::shared_ptr<TEntries> entries = _storage->new_transaction_entries(app.partition_count+1);
+        marshall_json(data, app, app.status==app_status::available);
+        entries->create_node(get_app_path(app), data);
+        for (const partition_configuration& pc: app.partitions) {
+            marshall_json(data, pc);
+            entries->create_node(get_partition_path(pc.gpid), data);
+        }
+        error_code ec;
+        task_ptr tsk = _storage->submit_transaction(
+            entries,
+            LPC_META_STATE_SVC_CALLBACK,
+            [&err](error_code e) { err = e; });
+        dassert(tsk->wait(), "");
+        if (ec == ERR_NODE_ALREADY_EXIST)
+        {
+            dwarn("ignore the sync as the node exist in remote storage");
+        }
+        else if (ec != ERR_OK)
+        {
+            return ec;
+        }
     }
-    
-    return err;
+    return ERR_OK;
 }
 
 error_code server_state::sync_apps_from_remote_storage()
@@ -1361,4 +1477,47 @@ void server_state::static_cli_json_state_cleanup(dsn_cli_reply reply)
     auto danglingstring = reinterpret_cast<std::string*>(reply.context);
     dassert(reply.message == danglingstring->c_str(), "corrupted cli reply message");
     delete danglingstring;
+}
+
+void server_state::static_cli_dump_app_states(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    server_state* _this = reinterpret_cast<server_state*>(context);
+    std::string* dump_result;
+    if (argc != 4)
+    {
+        dump_result = new std::string("invalid command parameter");
+    }
+    else
+    {
+        const char* format = nullptr;
+        const char* target_file = nullptr;
+        for (int i=0; i<argc; i+=2)
+        {
+            if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0)
+                format = argv[i+1];
+            else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--target") == 0)
+                target_file = argv[i+1];
+        }
+
+        if (format==nullptr || target_file==nullptr)
+        {
+            dump_result = new std::string("invalid command parameter");
+        }
+        else {
+            error_code ec = _this->dump_from_remote_storage(format, target_file, false);
+            dump_result = new std::string("execute result: ");
+            dump_result->append(ec.to_string());
+        }
+    }
+
+    reply->message = dump_result->c_str();
+    reply->size = dump_result->size();
+    reply->context = dump_result;
+}
+
+void server_state::static_cli_dump_app_states_cleanup(dsn_cli_reply reply)
+{
+    dassert(reply.context != nullptr, "corrupted cli context");
+    std::string* dump_result = reinterpret_cast<std::string*>(reply.context);
+    delete dump_result;
 }

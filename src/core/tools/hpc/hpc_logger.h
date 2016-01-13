@@ -43,11 +43,12 @@
 
 namespace dsn {
     namespace tools {
-        typedef struct __buffer_info__
+        struct buffer_info
         {
             char*    buffer;
             int      buffer_size;
-        } buffer_info;
+            buffer_info(char* buffer, int buffer_size) : buffer(buffer), buffer_size(buffer_size) {}
+        };
 
         class hpc_logger : public logging_provider
         {
@@ -72,7 +73,7 @@ namespace dsn {
             void flush_all_buffers_at_exit();
             void buffer_push(char* buffer, int size);
             //print logs in log list
-            void write_buffer_list(std::list<buffer_info>& llist);
+            void write_buffer_list(std::vector<buffer_info>& llist);
             void create_log_file();
 
         private:            
@@ -83,7 +84,7 @@ namespace dsn {
             // global buffer list
             std::condition_variable_any   _write_list_cond;
             ::dsn::utils::ex_lock_nr_spin _write_list_lock;            
-            std::list<buffer_info>        _write_list;
+            std::vector<buffer_info>        _write_list;
 
             // log file and line count
             int _start_index;

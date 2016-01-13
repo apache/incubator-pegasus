@@ -114,9 +114,43 @@ namespace dsn {
         {
         }
 
-        ::dsn::error_code meta_service_app::start(int /*argc*/, char** /*argv*/)
+        ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            return _service->start();
+            if (argc == 4)
+            {
+                //for dump and restore
+                server_state *state = new server_state();
+                error_code ec = state->initialize();
+                if (ec != ERR_OK)
+                {
+                    derror("initialize failed, err=%s", ec.to_string());
+                    dsn_exit(0);
+                }
+
+                if (strcmp(argv[1], "dump") == 0)
+                {
+                    ec = state->dump_from_remote_storage(argv[2], argv[3], true);
+                }
+                else if (strcmp(argv[1], "restore") == 0)
+                {
+                    bool write_back_to_remote = false;
+                    if (strcmp(argv[3], "write_back") == 0)
+                        write_back_to_remote = true;
+                    ec = state->restore_from_local_storage(argv[2], write_back_to_remote);
+                }
+                else
+                {
+                    dassert(false, "unsupported command arguments");
+                }
+
+                if (ec != ERR_OK)
+                {
+                    derror("%s failed, err=%s", argv[1], ec.to_string());
+                }
+                dsn_exit(0);
+            }
+            else
+                return _service->start();
         }
 
         void meta_service_app::stop(bool /*cleanup*/)

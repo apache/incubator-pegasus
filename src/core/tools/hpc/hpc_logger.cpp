@@ -117,13 +117,13 @@ namespace dsn
         //daemon thread
         void hpc_logger::log_thread()
         {
-            std::list<buffer_info> saved_list;
+            std::vector<buffer_info> saved_list;
 
             while (!_stop_thread)
             {
                 _write_list_lock.lock();
                 _write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
-                saved_list = _write_list;
+                saved_list = std::move(_write_list);
                 _write_list.clear();
                 _write_list_lock.unlock();
                 
@@ -350,19 +350,13 @@ namespace dsn
 
         void hpc_logger::buffer_push(char* buffer, int size)
         {
-            buffer_info new_buffer_info;
-            new_buffer_info.buffer = buffer;
-            new_buffer_info.buffer_size = size;
-            _write_list.push_back(new_buffer_info);
+            _write_list.emplace_back(buffer, size); 
         }
 
-        void hpc_logger::write_buffer_list(std::list<buffer_info>& llist)
+        void hpc_logger::write_buffer_list(std::vector<buffer_info>& llist)
         {
-            while (!llist.empty())
+            for (auto& new_buffer_info : llist)
             {
-                buffer_info new_buffer_info = llist.front();
-                llist.pop_front();
-
                 if (_current_log_file_bytes + new_buffer_info.buffer_size >= MAX_FILE_SIZE)
                 {
                     _current_log->close();
@@ -378,6 +372,7 @@ namespace dsn
 
                 free(new_buffer_info.buffer);
             }
+            llist.clear();
         }
     }
 }

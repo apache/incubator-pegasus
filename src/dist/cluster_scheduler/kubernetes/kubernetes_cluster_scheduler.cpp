@@ -177,7 +177,7 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
     ret = system(command.str().c_str());
     if( ret == 0 )
     {
-        deployment_callback(::dsn::ERR_OK,rpc_address());
+        deployment_callback(ERR_OK,rpc_address());
     }
     else
     {
