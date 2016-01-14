@@ -415,7 +415,12 @@ void task::enqueue(task_worker_pool* pool)
     }
 
     // fast execution
-    if (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
+    if (_is_null)
+    {
+        dassert (_node == task::get_current_node(), "");
+        exec_internal();
+    }
+    else if (_spec->fast_execution_in_network_thread)
     {
         if (_node != task::get_current_node())
         {
@@ -426,6 +431,11 @@ void task::enqueue(task_worker_pool* pool)
         {
             exec_internal();
         }
+    }
+    else if (_spec->allow_inline && !task::get_current_worker2() /*in io-thread*/ )
+    {
+        dassert(_node == task::get_current_node(), "");
+        exec_internal();
     }
 
     // normal path
