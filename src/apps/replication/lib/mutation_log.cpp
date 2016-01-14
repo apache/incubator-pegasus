@@ -342,12 +342,16 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
         ;
 
+    auto code = _force_flush ? 
+        LPC_WRITE_REPLICATION_LOG_FLUSH
+        : LPC_WRITE_REPLICATION_LOG_WITHOUT_FLUSH;
+
     _is_writing = true;
     _issued_write = _pending_write;
     _issued_write_task = _current_log_file->commit_log_block(
         *_pending_write,
         start_offset,
-        LPC_WRITE_REPLICATION_LOG_FLUSH,
+        code,
         this,
         std::bind(
             &mutation_log::internal_write_callback, this,
@@ -363,7 +367,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     if (_issued_write_task == nullptr)
     {
         tasking::enqueue(
-            LPC_WRITE_REPLICATION_LOG_FLUSH,
+            code,
             this,
             std::bind(
                 &mutation_log::internal_write_callback, this,
