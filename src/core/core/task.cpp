@@ -176,7 +176,7 @@ void task::exec_internal()
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
     bool notify_if_necessary = true;
 
-    if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
+    if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING, std::memory_order_relaxed))
     {
         dassert(tls_dsn.magic == 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
 
@@ -186,7 +186,7 @@ void task::exec_internal()
         _spec->on_task_begin.execute(this);
 
         exec();
-        if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED))
+        if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED, std::memory_order_release, std::memory_order_relaxed))
         {
             _spec->on_task_end.execute(this);
         }
@@ -202,7 +202,7 @@ void task::exec_internal()
             else
             {
                 // for cancelled
-                if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED))
+                if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED, std::memory_order_release, std::memory_order_relaxed))
                 {
                     _spec->on_task_cancelled.execute(this);
                 }
@@ -323,14 +323,14 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
         return false;
     }
     
-    if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED))
+    if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED, std::memory_order_relaxed))
     {
         succ = true;
         finish = true;
     }
     else
     {
-        task_state old_state = _state.load();
+        task_state old_state = READY_STATE;
         if (old_state == TASK_STATE_CANCELLED)
         {
             succ = false; // this cancellation fails
@@ -465,16 +465,14 @@ timer_task::timer_task(
 
 void timer_task::exec()
 {
-    task_state RUNNING_STATE = TASK_STATE_RUNNING;
-    
     _cb(_context);
 
     if (_interval_milliseconds > 0)
     {
-        if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_READY))
-        {
-            set_delay(_interval_milliseconds);            
-        }        
+        //_state must be TASK_STATE_RUNNING here
+        dbg_dassert(_state.load(std::memory_order_relaxed) == TASK_STATE_RUNNING, "corrupted timer task state");
+        _state.store(TASK_STATE_READY, std::memory_order_release);
+        set_delay(_interval_milliseconds);
     }
 }
 

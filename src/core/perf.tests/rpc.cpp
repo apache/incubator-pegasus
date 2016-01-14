@@ -46,18 +46,18 @@ TEST(core, rpc_perf_test)
 
     ::dsn::rpc_read_stream response;
     std::mutex lock;
-    for (auto concurrency : {100, 1000, 10000})
+    for (auto concurrency : {10, 100, 1000, 10000})
     {
         std::atomic_int remain_concurrency;
         remain_concurrency = concurrency;
-        auto total_query_count = 20000;
+        size_t total_query_count = 1000000;
         std::chrono::steady_clock clock;
         auto tic = clock.now();
-        for (;total_query_count --;)
+        for (auto remain_query_count = total_query_count; remain_query_count--;)
         {
             while(true)
             {
-                if (remain_concurrency.fetch_sub(1, std::memory_order_acquire) <= 0)
+                if (remain_concurrency.fetch_sub(1, std::memory_order_relaxed) <= 0)
                 {
                     remain_concurrency.fetch_add(1, std::memory_order_relaxed);
                 }
@@ -76,7 +76,8 @@ TEST(core, rpc_perf_test)
                     ec.end_tracking();
                     remain_concurrency.fetch_add(1, std::memory_order_relaxed);
                 },
-                nullptr
+                nullptr,
+                1
             );
         }
         while(remain_concurrency != concurrency)
@@ -86,6 +87,7 @@ TEST(core, rpc_perf_test)
         auto toc = clock.now();
         auto time_us = std::chrono::duration_cast<std::chrono::microseconds>(toc - tic).count();
         std::cout << "rpc perf test: concurrency = " << concurrency
-            << " throughput = " << total_query_count * 1000000 / time_us << "call/sec" << std::endl;
+            << " throughput = " << total_query_count * 1000000llu / time_us << "call/sec" << std::endl;
     }
+
 }

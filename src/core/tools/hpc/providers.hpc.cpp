@@ -51,6 +51,7 @@ namespace dsn {
             register_component_provider<hpc_logger>("dsn::tools::hpc_logger");
             register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
             register_component_provider<hpc_task_priority_queue>("dsn::tools::hpc_task_priority_queue");            
+            register_component_provider<hpc_concurrent_task_queue>("dsn::tools::hpc_concurrent_task_queue");
             register_component_provider<hpc_env_provider>("dsn::tools::hpc_env_provider");
             
             register_component_provider<hpc_aio_provider>("dsn::tools::hpc_aio_provider");

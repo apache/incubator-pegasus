@@ -122,7 +122,7 @@ public:
     void                    set_tracker(task_tracker* tracker) { _context_tracker.set_tracker(tracker, this); }
 
     uint64_t                id() const { return _task_id; }
-    task_state              state() const { return _state.load(); }
+    task_state              state() const { return _state.load(std::memory_order_acquire); }
     dsn_task_code_t         code() const { return _spec->code; }
     task_spec&              spec() const { return *_spec; }
     int                     hash() const { return _hash; }
