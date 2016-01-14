@@ -267,6 +267,13 @@ DSN_API int dsn_config_get_all_keys(const char* section, const char** buffers, /
     return kcount;
 }
 
+DSN_API void dsn_config_dump(const char* file)
+{
+    std::ofstream os(file, std::ios::out);
+    dsn_all.config->dump(os);
+    os.close();
+}
+
 DSN_API void dsn_coredump()
 {
     ::dsn::utils::coredump::write(); 

@@ -139,6 +139,13 @@ perf_counters::perf_counters(void)
         "counter.samplei counter-index",
         &perf_counters::get_counter_sample_i
         );
+
+    ::dsn::register_command("counter.getindex",
+        "counter.getindex - get index of a list of counters by name",
+        "counter.getindex app-name1*section-name1*counter-name1 app-name2*section-name2*counter-name2 ...",
+        &perf_counters::get_counter_index
+        );
+
 }
 
 perf_counters::~perf_counters(void)
@@ -413,6 +420,26 @@ std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& 
         sample = counter->get_latest_sample();
 
     sample_resp{ sample, ts }.json_state(ss);
+    return ss.str();
+}
+
+std::string perf_counters::get_counter_index(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    std::vector<uint64_t> counter_index_list;
+
+    for (auto counter_name : args)
+    {
+        perf_counters& c = perf_counters::instance();
+        auto counter = c.get_counter(counter_name.c_str());
+        if (counter)
+            counter_index_list.push_back(counter->index());
+        else
+            counter_index_list.push_back(0);
+    }
+    
+    std::json_encode(ss, counter_index_list);
     return ss.str();
 }
 
