@@ -54,7 +54,7 @@ struct auto_timer {
     std::string prefix;
     uint64_t delivery;
     std::chrono::steady_clock clock;
-    std::chrono::system_clock::time_point start_time;
+    std::chrono::time_point<std::chrono::system_clock> start_time;
     std::vector<task_ptr> waited_task;
     auto_timer(const std::string& prefix, uint64_t delivery) : prefix(prefix), delivery(delivery)
     {
