@@ -21,8 +21,8 @@ wait:on_task_begin:node=r1,task_code=RPC_REPLICATION_CLIENT_WRITE
 wait:on_task_end:node=r1,task_code=RPC_REPLICATION_CLIENT_WRITE
 
 # after delay time, wait callback of writing shared log for #1 and #2
-wait:on_task_begin:node=r1,task_code=LPC_WRITE_REPLICATION_LOG_FLUSH
-wait:on_task_begin:node=r1,task_code=LPC_WRITE_REPLICATION_LOG_FLUSH
+wait:on_task_begin:node=r1,task_code=LPC_WRITE_REPLICATION_LOG_WITHOUT_FLUSH
+wait:on_task_begin:node=r1,task_code=LPC_WRITE_REPLICATION_LOG_WITHOUT_FLUSH
 
 # end write 2
 client:end_write:id=2,err=err_ok,resp=0
