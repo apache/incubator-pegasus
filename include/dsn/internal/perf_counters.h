@@ -71,6 +71,7 @@ public:
     static std::string get_counter_sample(const std::vector<std::string>& args);
     static std::string get_counter_value_i(const std::vector<std::string>& args);
     static std::string get_counter_sample_i(const std::vector<std::string>& args);
+    static std::string get_counter_index(const std::vector<std::string>& args);
 
     typedef std::map<std::string, perf_counter_ptr > all_counters;
 

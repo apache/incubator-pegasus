@@ -267,6 +267,10 @@ namespace dsn {
                         std::ofstream result_f(report.c_str(), std::ios::out);
                         result_f << ss.str() << std::endl;
                         result_f.close();
+
+                        report += ".config.ini";
+                        dsn_config_dump(report.c_str());
+
                         dsn_exit(0);
                     }
 

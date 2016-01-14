@@ -124,7 +124,7 @@ namespace dsn
 
                 if (tspec.queue_factory_name == "")
                     tspec.queue_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_task_queue")
-                                                                : "dsn::tools::hpc_task_priority_queue";
+                                                                : "dsn::tools::hpc_concurrent_task_queue";
             }
 
         }

@@ -37,6 +37,8 @@
 
 # include <dsn/tool_api.h>
 # include <condition_variable>
+# include <concurrentqueue.h>
+# include <blockingconcurrentqueue.h>
 
 namespace dsn 
 {
@@ -68,6 +70,24 @@ namespace dsn
             utils::ex_lock_nr_spin        _lock[TASK_PRIORITY_COUNT];
             slist<task>                   _tasks[TASK_PRIORITY_COUNT];
             utils::semaphore              _sema;
+        };
+
+        class hpc_concurrent_task_queue : public task_queue
+        {
+            using sema_t = moodycamel::details::mpmc_sema::LightweightSemaphore;
+            using queue_t = moodycamel::ConcurrentQueue<task*>;
+
+            queue_t _queue[TASK_PRIORITY_COUNT];
+            sema_t _sema;
+        public:
+            hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
+                : task_queue(pool, index, inner_provider)
+            {
+            }
+
+            void enqueue(task* task) override;
+
+            task* dequeue(/*inout*/int& batch_size) override;
         };
     }
 }
