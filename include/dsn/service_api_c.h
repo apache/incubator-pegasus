@@ -478,6 +478,8 @@ extern DSN_API int                   dsn_config_get_all_keys(
                                         const char** buffers, 
                                         /*inout*/ int* buffer_count
                                         );
+extern DSN_API void                  dsn_config_dump(const char* file);
+
 // logs with level smaller than this start_level will not be logged
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
 extern DSN_API dsn_log_level_t       dsn_log_get_start_level();
