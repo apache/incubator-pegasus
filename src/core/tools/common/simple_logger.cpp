@@ -138,8 +138,9 @@ namespace dsn {
             : logging_provider(log_dir)
         {
             _log_dir = std::string(log_dir);
+            //we assume all valid entries are positive
             _start_index = 0;
-            _index = 0;
+            _index = 1;
             _lines = 0;
             _log = nullptr;
             _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
@@ -169,7 +170,7 @@ namespace dsn {
                     continue;
 
                 int index;
-                if (1 != sscanf(name.c_str(), "log.%d.txt", &index))
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index <= 0)
                     continue;
 
                 if (index > _index)
@@ -181,7 +182,11 @@ namespace dsn {
             sub_list.clear();
 
             if (_start_index == 0)
+            {
                 _start_index = _index;
+            }
+            else
+                ++_index;
 
             create_log_file();
         }
@@ -194,7 +199,8 @@ namespace dsn {
             _lines = 0;
 
             std::stringstream str;
-            str << _log_dir << "/log." << ++_index << ".txt";
+            // so now the start index is from 0
+            str << _log_dir << "/log." << _index++ << ".txt";
             _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
