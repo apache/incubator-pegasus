@@ -141,8 +141,8 @@ perf_counters::perf_counters(void)
         );
 
     ::dsn::register_command("counter.getindex",
-        "counter.getindex - get index of a specific counter",
-        "counter.getindex app-name*section-name*counter-name",
+        "counter.getindex - get index of a list of counters by name",
+        "counter.getindex app-name1*section-name1*counter-name1 app-name2*section-name2*counter-name2 ...",
         &perf_counters::get_counter_index
         );
 
