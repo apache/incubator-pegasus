@@ -43,6 +43,9 @@ namespace dsn
 {
     namespace dist
     {
+        DEFINE_TASK_CODE(LPC_K8S_CREATE,TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+        DEFINE_TASK_CODE(LPC_K8S_DELETE,TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
         class kubernetes_cluster_scheduler 
             : public cluster_scheduler, public clientlet
         {

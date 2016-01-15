@@ -43,6 +43,8 @@ namespace dsn
 {
     namespace dist
     {
+        DEFINE_TASK_CODE(LPC_DOCKER_CREATE,TASK_PRIORITY_COMMON,THREAD_POOL_DEFAULT)
+        DEFINE_TASK_CODE(LPC_DOCKER_DELETE,TASK_PRIORITY_COMMON,THREAD_POOL_DEFAULT)
         class docker_scheduler 
             : public cluster_scheduler, public clientlet
         {

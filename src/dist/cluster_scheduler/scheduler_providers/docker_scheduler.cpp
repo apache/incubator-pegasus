@@ -117,7 +117,7 @@ error_code docker_scheduler::initialize()
     _run_path = dsn_config_get_value_string("apps.client","run_path","","");
     dassert( _run_path != "", "run path is empty");
     dinfo("run path is %s",_run_path.c_str());
-    
+#ifndef _WIN32    
     ret = system("docker version");
     if (ret != 0)
     {
@@ -145,7 +145,7 @@ error_code docker_scheduler::initialize()
         }
     }
     pclose(in);
-    
+#endif
     dassert(_docker_state_handle == nullptr, "docker state is initialized twice");
     _docker_state_handle = dsn_cli_app_register("info","get info from docker scheduler","",this,&get_docker_state,&get_docker_state_cleanup);
     dassert(_docker_state_handle != nullptr, "register cli handler failed");
@@ -181,7 +181,10 @@ void docker_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
-        std::async(std::launch::async,&docker_scheduler::create_containers,this,std::ref(unit->name),std::ref(unit->deployment_callback),std::ref(unit->local_package_directory),std::ref(unit->remote_package_directory));
+        auto cb = [this,&unit](){
+            create_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
+        };
+        dsn::tasking::enqueue(LPC_DOCKER_CREATE,this,cb);
     }
     
 }
@@ -223,7 +226,10 @@ void docker_scheduler::unschedule(
         _deploy_map.erase(it);
         _lock.unlock();
 
-        std::async(&docker_scheduler::delete_containers,this,std::ref(unit->name),std::ref(unit->deployment_callback),std::ref(unit->local_package_directory),std::ref(unit->remote_package_directory));
+        auto cb = [this,&unit](){
+            delete_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
+        };
+        dsn::tasking::enqueue(LPC_DOCKER_DELETE,this,cb);
     }
     else
     {
