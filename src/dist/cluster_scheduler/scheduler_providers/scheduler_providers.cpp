@@ -26,21 +26,40 @@
 
 /*
  * Description:
- *     Define docker error code to dsn error code
+ *     implementations of providers install
  *
  * Revision history:
- *     2016-1-6, Guoxi Li(goksyli1990@gmail.com), first version
+ *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
  *   
  */
-#pragma once
+#include "scheduler_providers.h"
+#include <dsn/internal/factory_store.h>
 
-#include <dsn/cpp/auto_codes.h>
+namespace dsn {
+    namespace dist {
 
-namespace dsn { namespace dist {
+        static bool register_component_provider(
+                const char * name,
+                ::dsn::dist::cluster_scheduler::factory f)
+        {
+            return dsn::utils::factory_store<::dsn::dist::cluster_scheduler>::register_factory(
+                    name,
+                    f,
+                    PROVIDER_TYPE_MAIN);
+        }
+        void register_cluster_scheduler_providers()
+        {
 
-DEFINE_ERR_CODE(ERR_DOCKER_DAEMON_NOT_FOUND);
-DEFINE_ERR_CODE(ERR_DOCKER_BINARY_NOT_FOUND);
-DEFINE_ERR_CODE(ERR_DOCKER_DEPLOY_FAILED);
-DEFINE_ERR_CODE(ERR_DOCKER_UNDEPLOY_FAILED);
+            // register all cluster provider
+            register_component_provider(
+                    "dsn::dist::kubernetes_cluster_scheduler",
+                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::kubernetes_cluster_scheduler>
+                    );
+            register_component_provider(
+                    "dsn::dist::docker_scheduler",
+                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::docker_scheduler>
+                    );
+        }
 
-}}
+    }
+}

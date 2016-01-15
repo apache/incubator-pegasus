@@ -1,31 +1,11 @@
 // apps
 # include "deploy_svc.app.h"
-# include <dsn/internal/factory_store.h>
-# include "../cluster_scheduler/scheduler_providers/kubernetes_cluster_scheduler.h"
-# include "../cluster_scheduler/scheduler_providers/docker_scheduler.h"
-static bool register_component_provider(
-        const char * name,
-        ::dsn::dist::cluster_scheduler::factory f)
-{
-    return dsn::utils::factory_store<::dsn::dist::cluster_scheduler>::register_factory(
-            name,
-            f,
-            PROVIDER_TYPE_MAIN);
-}
-
+# include "../cluster_scheduler/scheduler_providers/scheduler_providers.h"
 
 
 void dsn_app_registration()
 {
-    // register all cluster provider
-    register_component_provider(
-            "dsn::dist::kubernetes_cluster_scheduler",
-            ::dsn::dist::cluster_scheduler::create<::dsn::dist::kubernetes_cluster_scheduler>
-            );
-    register_component_provider(
-            "dsn::dist::docker_scheduler",
-            ::dsn::dist::cluster_scheduler::create<::dsn::dist::docker_scheduler>
-            );
+    dsn::dist::register_cluster_scheduler_providers();
     // register all possible service apps
     dsn::register_app< ::dsn::dist::deploy_svc_server_app>("server");
     dsn::register_app< ::dsn::dist::deploy_svc_client_app>("client");

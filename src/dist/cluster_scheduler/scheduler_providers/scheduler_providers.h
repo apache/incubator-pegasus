@@ -26,21 +26,21 @@
 
 /*
  * Description:
- *     Define docker error code to dsn error code
+ *     include all providers header file and providers install
  *
  * Revision history:
- *     2016-1-6, Guoxi Li(goksyli1990@gmail.com), first version
+ *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
  *   
  */
 #pragma once
 
-#include <dsn/cpp/auto_codes.h>
+#include "kubernetes_cluster_error.h"
+#include "kubernetes_cluster_scheduler.h"
+#include "docker_error.h"
+#include "docker_scheduler.h"
 
-namespace dsn { namespace dist {
-
-DEFINE_ERR_CODE(ERR_DOCKER_DAEMON_NOT_FOUND);
-DEFINE_ERR_CODE(ERR_DOCKER_BINARY_NOT_FOUND);
-DEFINE_ERR_CODE(ERR_DOCKER_DEPLOY_FAILED);
-DEFINE_ERR_CODE(ERR_DOCKER_UNDEPLOY_FAILED);
-
-}}
+namespace dsn {
+    namespace dist{
+        extern void register_cluster_scheduler_providers();
+    }
+}
