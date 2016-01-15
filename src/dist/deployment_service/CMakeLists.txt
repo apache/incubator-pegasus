@@ -10,9 +10,9 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
+set(MY_PROJ_INC_PATH ${RAPIDJSON_INCLUDE_DIR})
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS "dsn.schedule.providers")
 
 set(MY_PROJ_LIB_PATH "")
 
@@ -25,4 +25,4 @@ dsn_add_executable()
 
 add_custom_target( docker 
     COMMAND docker build -t "${MY_PROJ_NAME}-image" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${MY_PROJ_NAME}")
-add_dependencies( docker "${MY_PROJ_NAME}")
+add_dependencies( docker rapidjson_header "${MY_PROJ_NAME}")
