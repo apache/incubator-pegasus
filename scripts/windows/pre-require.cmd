@@ -5,31 +5,20 @@ SET has_cl=false
 cl >nul 2>&1 && SET has_cl=true
 
 IF "%has_cl%" NEQ "true" (
-    IF NOT "%VS120COMNTOOLS%"=="" (
-        CALL "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat" amd64
-    ) ELSE (
-        IF NOT "%VS140COMNTOOLS%"=="" (
-            CALL "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" amd64
-        )    
-    )
+    IF NOT "%VS140COMNTOOLS%"=="" (
+        CALL "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" amd64
+    )  
 )
 
-IF NOT "%VS120COMNTOOLS%"=="" (
-    SET cmake_target=Visual Studio 12 2013 Win64
-    SET boost_lib=lib64-msvc-12.0
-    SET boost_package_name=boost_1_57_0_vc12_amd64.7z
-    SET boost_dir_name=boost_1_57_0
-) ELSE (
-    IF NOT "%VS140COMNTOOLS%"=="" (
-        SET cmake_target=Visual Studio 14 2015 Win64
-        SET boost_lib=lib64-msvc-14.0
-        SET boost_package_name=boost_1_59_0_vc14_amd64.7z
-        SET boost_dir_name=boost_1_59_0
-    )    
-)
+IF NOT "%VS140COMNTOOLS%"=="" (
+    SET cmake_target=Visual Studio 14 2015 Win64
+    SET boost_lib=lib64-msvc-14.0
+    SET boost_package_name=boost_1_59_0_vc14_amd64.7z
+    SET boost_dir_name=boost_1_59_0
+)    
 
 IF "%cmake_target%"=="" (
-    ECHO "error: neither Visusal studio 2013 nor 2015 is installed, please fix and try later"
+    ECHO "error: Visusal studio 2015 is not installed, please fix and try later"
     GOTO error
 )
 
