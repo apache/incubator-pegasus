@@ -63,7 +63,7 @@ namespace dsn
                     );
             virtual cluster_type type() const override
             {
-                return cluster_type::kubernetes;
+                return cluster_type::docker;
             }
 
             /*
