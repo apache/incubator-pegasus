@@ -16,25 +16,12 @@ namespace dsn
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
-            if (err == ERR_OK)
-            {
-                writer.String("ok");
-            }
-            else if (err == ERR_INVALID_PARAMETERS)
-            {
-                writer.String("invalid parameters");
-            }
-            else
-            {
-                writer.String("internal error");
-            }
+            writer.String(dsn_error_to_string(err));
         };
 
-        const char* status_name[] = { "prepare resource", "deploying", "running", "failover", "failed", "count", "invalid" };
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const service_status& status)
         {
-            int status_val = (int)status;
-            writer.String(status_name[status_val]);
+            writer.String(enum_to_string(status));
         };
 
         const char* cltype_name[] = { "kubernetes", "docker", "bare_medal_linux", "bare_medal_windows", "yarn_on_linux", "yarn_on_windows", "mesos_on_linux", "mesos_on_windows" };
@@ -223,15 +210,16 @@ namespace dsn
 
             TEST_PARAM(!doc.Parse<0>(json_str).HasParseError())
             TEST_PARAM(doc.IsObject())
-            TEST_PARAM(doc.HasMember("cluster_name"))
+            TEST_PARAM(doc[key].IsObject())
+            TEST_PARAM(doc[key].HasMember("cluster_name"))
             TEST_PARAM(!unmarshall_json(doc[key]["cluster_name"], val.cluster_name))
-            TEST_PARAM(doc.HasMember("name"))
+            TEST_PARAM(doc[key].HasMember("name"))
             TEST_PARAM(!unmarshall_json(doc[key]["name"], val.name))
-            TEST_PARAM(doc.HasMember("package_full_path"))
+            TEST_PARAM(doc[key].HasMember("package_full_path"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_full_path"], val.package_full_path))
-            TEST_PARAM(doc.HasMember("package_id"))
+            TEST_PARAM(doc[key].HasMember("package_id"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_id"], val.package_id))
-            TEST_PARAM(doc.HasMember("package_server"))
+            TEST_PARAM(doc[key].HasMember("package_server"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_server"], val.package_server))
 
             return ERR_OK;
