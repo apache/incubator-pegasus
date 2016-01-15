@@ -117,7 +117,7 @@ namespace dsn {
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
-        void delay(int len) { _delayer.delay(len, _send_queue_threshold); }
+        int delay(int len) { return _delayer.delay(len, _send_queue_threshold); }
 
     protected:
         static uint32_t get_local_ipv4();
@@ -190,6 +190,7 @@ namespace dsn {
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
         bool cancel(message_ex* request);
+        void delay_rpc_request_rate(int delay_ms);
 
     // for client session
     public:
@@ -211,6 +212,10 @@ namespace dsn {
         // always call on_send_completed later
         //
         virtual void send(uint64_t signature) = 0;
+        virtual void do_read(int read_next) = 0;
+
+        friend void __delayed_rpc_session_read_next__(void*);
+        void start_read_next(int read_next = 256);
 
     protected:
         bool try_connecting(); // return true when it is permitted
@@ -255,7 +260,16 @@ namespace dsn {
         bool                               _is_sending_next;
         dlink                              _messages;        
         volatile session_state             _connect_state;
-        uint64_t                           _message_sent;     
+        uint64_t                           _message_sent;   
+        int                                _delay_server_receive_ms;
         // ]
     };
+
+    // --------- inline implementation ---------------
+    inline void rpc_session::delay_rpc_request_rate(int delay_ms)
+    {
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        if (delay_ms > _delay_server_receive_ms)
+            _delay_server_receive_ms = delay_ms;
+    }
 }
