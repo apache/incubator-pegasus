@@ -1,29 +1,29 @@
 version: 1.0.{build}
 
 environment:
-    DSN_VS: "Visual Studio 12 2013 Win64"
-    DSN_BOOST: boost_1_57_0
-    DSN_BOOST_LIB: lib64-msvc-12.0
-    DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0_vc12_amd64.7z?raw=true
+    DSN_VS: "Visual Studio 14 2015 Win64"
+    DSN_BOOST: boost_1_59_0
+    DSN_BOOST_LIB: lib64-msvc-14.0
+    DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_59_0_vc14_amd64.7z?raw=true
 
 install:
     - ps: >-
         git submodule update --init
 
-        if (!(Test-Path boost.7z)) {
+        if (!(Test-Path boost-1.59.7z)) {
 
             echo "Downloading boost binaries from ${env:DSN_BOOST_PKG} ..."
 
-            appveyor DownloadFile "${env:DSN_BOOST_PKG}" -FileName boost.7z -Timeout 1200000
+            appveyor DownloadFile "${env:DSN_BOOST_PKG}" -FileName boost-1.59.7z -Timeout 1200000
         }
 
     - cmd: >-
         echo "Extracting boost libs to %APPVEYOR_BUILD_FOLDER% ..."
 
-        7z x boost.7z -y -o"%APPVEYOR_BUILD_FOLDER%" > null
+        7z x boost-1.59.7z -y -o"%APPVEYOR_BUILD_FOLDER%" > null
         
 cache:
-    - boost.7z
+    - boost-1.59.7z
 
 before_build:
     - cmd: >-        
