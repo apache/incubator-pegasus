@@ -1,8 +1,11 @@
 // apps
 # include "deploy_svc.app.h"
+# include "../cluster_scheduler/scheduler_providers/scheduler_providers.h"
+
 
 void dsn_app_registration()
 {
+    dsn::dist::register_cluster_scheduler_providers();
     // register all possible service apps
     dsn::register_app< ::dsn::dist::deploy_svc_server_app>("server");
     dsn::register_app< ::dsn::dist::deploy_svc_client_app>("client");
