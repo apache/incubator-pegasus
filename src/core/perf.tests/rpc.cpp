@@ -66,18 +66,16 @@ TEST(core, rpc_perf_test)
                     break;
                 }
             }
-            ::dsn::rpc::call_typed<int, std::string>(
+            ::dsn::rpc::call_typed(
                 localhost,
                 RPC_TEST_HASH,
                 0,
                 nullptr,
-                [&remain_concurrency](error_code ec, const std::string&, void*)
+                [&remain_concurrency](error_code ec, const std::string&)
                 {
                     ec.end_tracking();
                     remain_concurrency.fetch_add(1, std::memory_order_relaxed);
-                },
-                nullptr,
-                1
+                }
             );
         }
         while(remain_concurrency != concurrency)

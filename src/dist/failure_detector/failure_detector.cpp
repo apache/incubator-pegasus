@@ -524,39 +524,39 @@ bool failure_detector::is_worker_connected( ::dsn::rpc_address node) const
 
 void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
 {
-    std::shared_ptr<beacon_msg> beacon(new beacon_msg());
-    beacon->time = time;
-    beacon->from = primary_address();
-    beacon->to = target;
+    beacon_msg beacon;
+    beacon.time = time;
+    beacon.from = primary_address();
+    beacon.to = target;
 
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-          beacon->from.to_string(), beacon->to.to_string(), time);
-    begin_ping2(
+          beacon.from.to_string(), beacon.to.to_string(), time);
+
+    ::dsn::rpc::call_typed(
+        target,
+        RPC_FD_FAILURE_DETECTOR_PING,
         beacon,
+        this,
+        [=](error_code err, beacon_ack&& resp)
+        {
+            if (err != ::dsn::ERR_OK)
+            {
+                beacon_ack ack;
+                ack.this_node = beacon.to;
+                ack.time = beacon.time;
+                ack.allowed = true;
+                end_ping(err, ack, nullptr);
+            }
+            else
+            {
+                end_ping(err, std::move(resp), nullptr);
+            }
+        },
+        0,
         static_cast<int>(_check_interval_milliseconds),
-        0,
-        0,
-        &target
+        0
         );
 }
 
-void failure_detector::end_ping2(
-    ::dsn::error_code err,
-    std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,
-    std::shared_ptr< ::dsn::fd::beacon_ack>& resp)
-{
-    if (err != ::dsn::ERR_OK)
-    {
-        beacon_ack ack;
-        ack.this_node = beacon->to;
-        ack.time = beacon->time;
-        ack.allowed = true;
-        end_ping(err, ack, nullptr);
-    }
-    else
-    {
-        end_ping(err, *resp, nullptr);
-    }
-}
 
 }} // end namespace

@@ -7,12 +7,12 @@ $file_prefix = $argv[3];
 
 # include "<?=$file_prefix?>.client.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?> 
+<?=$_PROG->get_cpp_namespace_begin()?>
 
-<?php foreach ($_PROG->services as $svc) { ?> 
+<?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client
-    : public <?=$svc->name?>_client, 
-      public ::dsn::service::perf_client_helper 
+    : public <?=$svc->name?>_client,
+      public ::dsn::service::perf_client_helper
 {
 public:
     <?=$svc->name?>_perf_test_client(
@@ -33,10 +33,10 @@ public:
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
 <?php } ?>
         start(suits);
-    }                
+    }
 <?php foreach ($svc->functions as $f) { ?>
 
     void send_one_<?=$f->name?>(int payload_bytes)
@@ -48,13 +48,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_<?=$f->name?>(req, ctx, _timeout_ms);
     }
 
     virtual void end_<?=$f->name?>(
         ::dsn::error_code err,
-        const <?=$f->get_cpp_return_type()?>& resp,
+        <?=$f->get_cpp_return_type()?>&& resp,
         void* context) override
     {
         end_send_one(context, err);

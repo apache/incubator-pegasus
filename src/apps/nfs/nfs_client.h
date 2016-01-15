@@ -79,9 +79,11 @@ public:
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_NFS_COPY, 
                     request, 
-                    this, 
-                    &nfs_client::end_copy,
-                    context,
+                    this,
+                    [=](error_code err, copy_response&& resp)
+                    {
+                        end_copy(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -99,39 +101,6 @@ public:
             std::cout << "reply RPC_NFS_COPY ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<copy_request> and std::shared_ptr<copy_response> 
-    ::dsn::task_ptr begin_copy2(
-        std::shared_ptr<copy_request>& request,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_NFS_COPY, 
-                    request, 
-                    this, 
-                    &nfs_client::end_copy2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_copy2(
-        ::dsn::error_code err, 
-        std::shared_ptr<copy_request>& request, 
-        std::shared_ptr<copy_response>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_NFS_COPY ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_NFS_GET_FILE_SIZE ------------
     // - synchronous 
@@ -166,8 +135,10 @@ public:
                     RPC_NFS_GET_FILE_SIZE, 
                     request, 
                     this, 
-                    &nfs_client::end_get_file_size,
-                    context,
+                    [=](error_code err, get_file_size_response&& resp)
+                    {
+                        end_get_file_size(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -186,39 +157,6 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<get_file_size_request> and std::shared_ptr<get_file_size_response> 
-    ::dsn::task_ptr begin_get_file_size2(
-        std::shared_ptr<get_file_size_request>& request,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_NFS_GET_FILE_SIZE, 
-                    request, 
-                    this, 
-                    &nfs_client::end_get_file_size2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_get_file_size2(
-        ::dsn::error_code err, 
-        std::shared_ptr<get_file_size_request>& request, 
-        std::shared_ptr<get_file_size_response>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
-        }
-    }
-    
-
 private:
     ::dsn::rpc_address _server;
 };

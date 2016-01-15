@@ -95,8 +95,10 @@ foreach ($keys as $k => $v)
             <?=$f->get_rpc_code()?>, 
             <?=$f->get_first_param()->name?>,
             this,
-            &<?=$svc->name?>_client::end_<?=$f->name?>, 
-            context,
+            [=](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
+            {
+                end_<?=$f->name?>(err, std::move(resp), context);
+            },
             timeout_milliseconds,
             reply_hash<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?> 
             );
@@ -104,7 +106,7 @@ foreach ($keys as $k => $v)
 
     virtual void end_<?=$f->name?>(
         ::dsn::error_code err, 
-        const <?=$f->get_cpp_return_type()?>& resp,
+        <?=$f->get_cpp_return_type()?>&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
@@ -114,35 +116,6 @@ foreach ($keys as $k => $v)
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::task_ptr begin_<?=$f->name?>2(
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 
-        )
-    {
-        return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_key_hash(*<?=$f->get_first_param()->name?>),
-            <?=$f->get_rpc_code()?>,
-            <?=$f->get_first_param()->name?>,
-            this,
-            &<?=$svc->name?>_client::end_<?=$f->name?>2, 
-            timeout_milliseconds,
-            reply_hash<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?> 
-            );
-    }
-
-    virtual void end_<?=$f->name?>2(
-        ::dsn::error_code err, 
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
-        std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
-    }
     
 <?php    }?>
 <?php } ?>

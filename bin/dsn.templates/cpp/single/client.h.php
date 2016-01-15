@@ -64,8 +64,10 @@ public:
                     <?=$f->get_rpc_code()?>, 
                     <?=$f->get_first_param()->name?>, 
                     this, 
-                    &<?=$svc->name?>_client::end_<?=$f->name?>,
-                    context,
+                    [=](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
+                    {
+                        <?=$svc->name?>_client::end_<?=$f->name?>(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -74,7 +76,7 @@ public:
 
     virtual void end_<?=$f->name?>(
         ::dsn::error_code err, 
-        const <?=$f->get_cpp_return_type()?>& resp,
+        <?=$f->get_cpp_return_type()?>&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
@@ -83,39 +85,6 @@ public:
             std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::task_ptr begin_<?=$f->name?>2(
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    <?=$f->get_rpc_code()?>, 
-                    <?=$f->get_first_param()->name?>, 
-                    this, 
-                    &<?=$svc->name?>_client::end_<?=$f->name?>2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_<?=$f->name?>2(
-        ::dsn::error_code err, 
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
-        std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
-    }
-    
 <?php    }?>
 <?php } ?>
 
