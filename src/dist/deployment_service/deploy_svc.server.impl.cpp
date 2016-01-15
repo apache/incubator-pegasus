@@ -69,7 +69,7 @@ namespace dsn
             dsn_address_t addr;
             addr.u.value = doc.GetUint64();           
             val = rpc_address(addr);
-            TEST_PARAM(val.is_invalid())
+            TEST_PARAM(!val.is_invalid())
             return ERR_OK;
         }
 
@@ -194,9 +194,11 @@ namespace dsn
 
         inline error_code unmarshall_json(const char* json_str, const char* key, std::string& val)
         {
+            std::string jstr(json_str);
+            std::replace(jstr.begin(), jstr.end(), '\'', '\"');
             rapidjson::Document doc;
 
-            TEST_PARAM(!doc.Parse<0>(json_str).HasParseError())
+            TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError())
             TEST_PARAM(doc.IsObject())
             TEST_PARAM(doc.HasMember(key))
             TEST_PARAM(!unmarshall_json(doc[key], val))
@@ -206,9 +208,11 @@ namespace dsn
 
         inline error_code unmarshall_json(const char* json_str, const char* key, deploy_request& val)
         {
+            std::string jstr(json_str);
+            std::replace(jstr.begin(), jstr.end(), '\'', '\"');
             rapidjson::Document doc;
 
-            TEST_PARAM(!doc.Parse<0>(json_str).HasParseError())
+            TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError())
             TEST_PARAM(doc.IsObject())
             TEST_PARAM(doc[key].IsObject())
             TEST_PARAM(doc[key].HasMember("cluster_name"))
