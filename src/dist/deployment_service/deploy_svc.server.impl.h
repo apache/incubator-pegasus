@@ -2,13 +2,9 @@
 
 # include "deploy_svc.server.h"
 # include "deploy_svc.types.h"
-# include <unordered_map>
 # include <dsn/dist/cluster_scheduler.h>
 
-# include <rapidjson/document.h> 
-# include <rapidjson/writer.h>
-# include <rapidjson/stringbuffer.h>
-
+# include <unordered_map>
 
 namespace dsn
 {

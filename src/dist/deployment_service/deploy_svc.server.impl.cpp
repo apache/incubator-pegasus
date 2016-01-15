@@ -2,6 +2,11 @@
 # include "deploy_svc.server.impl.h"
 # include <dsn/internal/factory_store.h>
 
+# include <rapidjson/document.h> 
+# include <rapidjson/writer.h>
+# include <rapidjson/stringbuffer.h>
+
+
 namespace dsn
 {
     namespace dist
