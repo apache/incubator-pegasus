@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.scheduler.kubernetes.test)
+set(MY_PROJ_NAME dsn.scheduler.docker.test)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -12,7 +12,7 @@ set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../scheduler_providers")
 
 set(MY_BOOST_PACKAGES system)
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS "dsn.scheduler.providers")
 
 set(MY_PROJ_LIB_PATH "")
 
