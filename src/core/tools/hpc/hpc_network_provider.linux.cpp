@@ -428,7 +428,7 @@ namespace dsn
                     events
                     );
 
-                do_read();
+                start_read_next();
             }
         }
 

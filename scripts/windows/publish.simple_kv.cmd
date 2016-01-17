@@ -28,7 +28,7 @@ GOTO exit
         COPY /Y %monitor_url% .\skv\%app%\MonitorPack.7z
     )
     
-    CALL %bin_dir%\copy_dsn_shared.cmd .\skv\%app%
+    CALL %bin_dir%\copy_dsn_shared.cmd .\skv\%app% %build_dir% %build_type%
     COPY /Y %build_dir%\bin\dsn.replication.simple_kv\%build_type%\dsn.replication.simple_kv.* .\skv\%app%
     if "%cmd%" NEQ "republish" (
         COPY /Y %build_dir%\bin\dsn.replication.simple_kv\config.ini .\skv\%app%
