@@ -144,21 +144,25 @@ namespace dsn
     class safe_task : public safe_task_handle
     {
     public:
-        safe_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+        safe_task(THandler&& h, bool is_timer) : _handler(std::move(h)), _is_timer(is_timer)
         {
         }
 
-        safe_task(THandler& h) : _handler(h), _is_timer(false)
+        safe_task(THandler&& h) : _handler(std::move(h)), _is_timer(false)
+        {
+        }
+
+        safe_task(const THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+        {
+        }
+
+        safe_task(const THandler& h) : _handler(h), _is_timer(false)
         {
         }
 
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
             bool r = safe_task_handle::cancel(wait_until_finished, finished);
-            if (r)
-            {
-                _handler = nullptr;
-            }
             return r;
         }
 
@@ -174,7 +178,6 @@ namespace dsn
             t->_handler();
             if (!t->_is_timer)
             {
-                t->_handler = nullptr;
                 t->release_ref(); // added upon callback exec registration
             }
         }
@@ -182,22 +185,14 @@ namespace dsn
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
-            if (t->_handler)
-            {
-                t->_handler(err, req, resp);
-                t->_handler = nullptr;
-            }
+            t->_handler(err, req, resp);
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
             safe_task* t = (safe_task*)task;
-            if (t->_handler)
-            {
-                t->_handler(err, sz);
-                t->_handler = nullptr;
-            }
+            t->_handler(err, sz);
             t->release_ref(); // added upon callback exec_aio registration
         }
             

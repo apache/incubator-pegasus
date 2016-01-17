@@ -158,8 +158,8 @@ private:
     /////////////////////////////////////////////////////////////////
     // learning    
     void init_learn(uint64_t signature);
-    void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp);
+    void on_learn_reply(error_code err, const std::shared_ptr<learn_request>& req, const  std::shared_ptr<learn_response>& resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, const std::shared_ptr<learn_request> req, const std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
@@ -192,7 +192,7 @@ private:
     // group check
     void init_group_check();
     void broadcast_group_check();
-    void on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp);
+    void on_group_check_reply(error_code err, const std::shared_ptr<group_check_request>& req, const std::shared_ptr<group_check_response>& resp);
 
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
@@ -202,7 +202,7 @@ private:
     void background_checkpoint();
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
-    void on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp);
+    void on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp);
     void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp);
 
 private:
