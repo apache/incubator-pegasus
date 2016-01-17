@@ -26,63 +26,21 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     include all providers header file and providers install
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
+ *   
  */
+#pragma once
 
-
-# ifndef _WIN32
-
-# include "coredump.h"
-# include <dsn/tool_api.h>
-# include <sys/types.h>
-# include <signal.h>
-
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "coredump"
+#include "kubernetes_cluster_error.h"
+#include "kubernetes_cluster_scheduler.h"
+#include "docker_error.h"
+#include "docker_scheduler.h"
 
 namespace dsn {
-    namespace utils {
-
-        static std::string s_dump_dir;
-        static void handle_core_dump(int);
-
-        void coredump::init(const char* dump_dir)
-        {
-            s_dump_dir = dump_dir;
-
-            signal(SIGSEGV, handle_core_dump);
-        }
-
-        void coredump::write()
-        {
-            // TODO: not implemented
-            //
-
-            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
-        }
-
-        static void handle_core_dump(int signal_id)
-        {
-            printf("got signal id: %d\n", signal_id);
-            /*
-             * firstly we must set the sig_handler to default,
-             * to prevent the possible inifinite loop
-             * for example: an sigsegv in the coredump::write()
-             */
-            if (signal_id == SIGSEGV)
-            {
-                signal(SIGSEGV, SIG_DFL);
-            }
-            coredump::write();
-        }
+    namespace dist{
+        extern void register_cluster_scheduler_providers();
     }
 }
-
-# endif
-

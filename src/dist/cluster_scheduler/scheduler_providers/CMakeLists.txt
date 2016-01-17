@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.schedule.providers)
+set(MY_PROJ_NAME dsn.scheduler.providers)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.

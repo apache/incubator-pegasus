@@ -5,7 +5,7 @@ SOURCE_DIR=$(dirname ${BASH_SOURCE})
 
 function prepare_file()
 {
-    wget https://github.com/mcfatealan/test/raw/master/MonitorPack.tar.gz
+    wget https://github.com/mcfatealan/rDSN.Python/tree/master/release/linux/MonitorPack.7z
     tar -cvzf ${SOURCE_DIR}/rdsn-release.tar.gz -C $DSN_ROOT include lib bin
 }
 

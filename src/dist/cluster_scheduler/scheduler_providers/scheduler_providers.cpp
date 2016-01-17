@@ -26,63 +26,40 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     implementations of providers install
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
+ *   
  */
-
-
-# ifndef _WIN32
-
-# include "coredump.h"
-# include <dsn/tool_api.h>
-# include <sys/types.h>
-# include <signal.h>
-
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "coredump"
+#include "scheduler_providers.h"
+#include <dsn/internal/factory_store.h>
 
 namespace dsn {
-    namespace utils {
+    namespace dist {
 
-        static std::string s_dump_dir;
-        static void handle_core_dump(int);
-
-        void coredump::init(const char* dump_dir)
+        static bool register_component_provider(
+                const char * name,
+                ::dsn::dist::cluster_scheduler::factory f)
         {
-            s_dump_dir = dump_dir;
+            return dsn::utils::factory_store<::dsn::dist::cluster_scheduler>::register_factory(
+                    name,
+                    f,
+                    PROVIDER_TYPE_MAIN);
+        }
+        void register_cluster_scheduler_providers()
+        {
 
-            signal(SIGSEGV, handle_core_dump);
+            // register all cluster provider
+            register_component_provider(
+                    "dsn::dist::kubernetes_cluster_scheduler",
+                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::kubernetes_cluster_scheduler>
+                    );
+            register_component_provider(
+                    "dsn::dist::docker_scheduler",
+                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::docker_scheduler>
+                    );
         }
 
-        void coredump::write()
-        {
-            // TODO: not implemented
-            //
-
-            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
-        }
-
-        static void handle_core_dump(int signal_id)
-        {
-            printf("got signal id: %d\n", signal_id);
-            /*
-             * firstly we must set the sig_handler to default,
-             * to prevent the possible inifinite loop
-             * for example: an sigsegv in the coredump::write()
-             */
-            if (signal_id == SIGSEGV)
-            {
-                signal(SIGSEGV, SIG_DFL);
-            }
-            coredump::write();
-        }
     }
 }
-
-# endif
-

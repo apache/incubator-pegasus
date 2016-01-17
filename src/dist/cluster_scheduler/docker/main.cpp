@@ -33,56 +33,32 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+# include "docker_scheduler.h"
 
-# ifndef _WIN32
-
-# include "coredump.h"
-# include <dsn/tool_api.h>
-# include <sys/types.h>
-# include <signal.h>
-
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "coredump"
-
-namespace dsn {
-    namespace utils {
-
-        static std::string s_dump_dir;
-        static void handle_core_dump(int);
-
-        void coredump::init(const char* dump_dir)
-        {
-            s_dump_dir = dump_dir;
-
-            signal(SIGSEGV, handle_core_dump);
-        }
-
-        void coredump::write()
-        {
-            // TODO: not implemented
-            //
-
-            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
-        }
-
-        static void handle_core_dump(int signal_id)
-        {
-            printf("got signal id: %d\n", signal_id);
-            /*
-             * firstly we must set the sig_handler to default,
-             * to prevent the possible inifinite loop
-             * for example: an sigsegv in the coredump::write()
-             */
-            if (signal_id == SIGSEGV)
-            {
-                signal(SIGSEGV, SIG_DFL);
-            }
-            coredump::write();
-        }
+class test_client : public ::dsn::service_app
+{
+public:
+    ::dsn::error_code start(int argc, char** argv)
+    {
+        auto err = _docker.initialize();
+        return err;
     }
+
+    void stop(bool cleanup = false)
+    {
+
+    }
+
+    ::dsn::dist::docker_scheduler _docker;
+};
+
+int main(int argc, char **argv)
+{
+    // register all possible services
+    dsn::register_app<test_client>("client");
+
+    // specify what services and tools will run in config file, then run
+    dsn_run_config("config.ini", true);
+
+    return 0;
 }
-
-# endif
-
