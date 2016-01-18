@@ -121,7 +121,7 @@ namespace dsn {
             }
 
             void bind_looper(io_looper* looper, bool delay = false);
-            void do_read(int sz = 256);
+            virtual void do_read(int sz) override;
 
         private:            
             void do_write(uint64_t signature);

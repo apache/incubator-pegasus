@@ -156,36 +156,6 @@ namespace dsn
         }
     }
     
-    namespace rpc
-    {
-        task_ptr call(
-            ::dsn::rpc_address server,
-            dsn_message_t request,
-            clientlet* svc,
-            rpc_reply_handler callback,
-            int reply_hash
-            )
-        {
-            task_ptr tsk = new safe_task<rpc_reply_handler >(callback);
-
-            if (callback != nullptr)
-                tsk->add_ref(); // released in exec_rpc_response
-
-            auto t = dsn_rpc_create_response_task_ex(
-                request,
-                callback != nullptr ? safe_task<rpc_reply_handler >::exec_rpc_response : nullptr,
-                safe_task<rpc_reply_handler >::on_cancel,
-                (void*)tsk,
-                reply_hash,
-                svc ? svc->tracker() : nullptr
-                );
-            tsk->set_task_info(t);
-            dsn_rpc_call(server.c_addr(), t);
-
-            return tsk;
-        }
-    }
-    
     namespace file
     {
         task_ptr read(

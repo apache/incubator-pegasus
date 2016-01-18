@@ -941,7 +941,7 @@ err:
 }
 #endif
 
-DSN_API void dsn_exit(int code)
+[[noreturn]] DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
     // TODO: do not use std::map above, coz when suspend the other threads, they may stop

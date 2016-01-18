@@ -273,6 +273,7 @@ private:
     perf_counter_ _app_commit_throughput;
     perf_counter_ _app_commit_latency;
     perf_counter_ _app_commit_decree;
+    perf_counter_ _app_req_throughput;
 
 protected:    
     std::atomic<decree> _last_durable_decree;

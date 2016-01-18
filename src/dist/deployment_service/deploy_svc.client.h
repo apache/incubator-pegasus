@@ -46,8 +46,10 @@ public:
                     RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY, 
                     req, 
                     this, 
-                    &deploy_svc_client::end_deploy,
-                    context,
+                    [=](error_code err, deploy_info&& resp)
+                    {
+                        deploy_svc_client::end_deploy(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -56,7 +58,7 @@ public:
 
     virtual void end_deploy(
         ::dsn::error_code err, 
-        const deploy_info& resp,
+        deploy_info&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY err : " << err.to_string() << std::endl;
@@ -65,39 +67,6 @@ public:
             std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<deploy_request> and std::shared_ptr<deploy_info> 
-    ::dsn::task_ptr begin_deploy2(
-        std::shared_ptr<deploy_request>& req,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY, 
-                    req, 
-                    this, 
-                    &deploy_svc_client::end_deploy2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_deploy2(
-        ::dsn::error_code err, 
-        std::shared_ptr<deploy_request>& req, 
-        std::shared_ptr<deploy_info>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ------------
     // - synchronous 
@@ -132,8 +101,10 @@ public:
                     RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY, 
                     service_url, 
                     this, 
-                    &deploy_svc_client::end_undeploy,
-                    context,
+                    [=](error_code err, ::dsn::error_code&& resp)
+                    {
+                        deploy_svc_client::end_undeploy(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -142,7 +113,7 @@ public:
 
     virtual void end_undeploy(
         ::dsn::error_code err, 
-        const ::dsn::error_code& resp,
+        ::dsn::error_code&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY err : " << err.to_string() << std::endl;
@@ -151,39 +122,6 @@ public:
             std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<::dsn::error_code> 
-    ::dsn::task_ptr begin_undeploy2(
-        std::shared_ptr<std::string>& service_url,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY, 
-                    service_url, 
-                    this, 
-                    &deploy_svc_client::end_undeploy2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_undeploy2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& service_url, 
-        std::shared_ptr<::dsn::error_code>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST ------------
     // - synchronous 
@@ -218,8 +156,10 @@ public:
                     RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST, 
                     package_id, 
                     this, 
-                    &deploy_svc_client::end_get_service_list,
-                    context,
+                    [=](error_code err, deploy_info_list&& resp)
+                    {
+                        deploy_svc_client::end_get_service_list(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -228,7 +168,7 @@ public:
 
     virtual void end_get_service_list(
         ::dsn::error_code err, 
-        const deploy_info_list& resp,
+        deploy_info_list&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST err : " << err.to_string() << std::endl;
@@ -237,39 +177,6 @@ public:
             std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<deploy_info_list> 
-    ::dsn::task_ptr begin_get_service_list2(
-        std::shared_ptr<std::string>& package_id,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST, 
-                    package_id, 
-                    this, 
-                    &deploy_svc_client::end_get_service_list2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_get_service_list2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& package_id, 
-        std::shared_ptr<deploy_info_list>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO ------------
     // - synchronous 
@@ -304,8 +211,10 @@ public:
                     RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO, 
                     service_url, 
                     this, 
-                    &deploy_svc_client::end_get_service_info,
-                    context,
+                    [=](error_code err, deploy_info&& resp)
+                    {
+                        deploy_svc_client::end_get_service_info(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -314,7 +223,7 @@ public:
 
     virtual void end_get_service_info(
         ::dsn::error_code err, 
-        const deploy_info& resp,
+        deploy_info&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO err : " << err.to_string() << std::endl;
@@ -323,39 +232,6 @@ public:
             std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<deploy_info> 
-    ::dsn::task_ptr begin_get_service_info2(
-        std::shared_ptr<std::string>& service_url,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO, 
-                    service_url, 
-                    this, 
-                    &deploy_svc_client::end_get_service_info2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_get_service_info2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& service_url, 
-        std::shared_ptr<deploy_info>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST ------------
     // - synchronous 
@@ -390,8 +266,10 @@ public:
                     RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST, 
                     format, 
                     this, 
-                    &deploy_svc_client::end_get_cluster_list,
-                    context,
+                    [=](error_code err, cluster_list&& resp)
+                    {
+                        deploy_svc_client::end_get_cluster_list(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -400,7 +278,7 @@ public:
 
     virtual void end_get_cluster_list(
         ::dsn::error_code err, 
-        const cluster_list& resp,
+        cluster_list&& resp,
         void* context)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST err : " << err.to_string() << std::endl;
@@ -409,39 +287,6 @@ public:
             std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<cluster_list> 
-    ::dsn::task_ptr begin_get_cluster_list2(
-        std::shared_ptr<std::string>& format,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST, 
-                    format, 
-                    this, 
-                    &deploy_svc_client::end_get_cluster_list2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_get_cluster_list2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& format, 
-        std::shared_ptr<cluster_list>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST ok" << std::endl;
-        }
-    }
-    
 
 private:
     ::dsn::rpc_address _server;

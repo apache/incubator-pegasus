@@ -1,6 +1,8 @@
 SET target_dir=%~f1
 SET droot=%DSN_ROOT:/=\%\lib
 SET bin_dir=%~dp0
+SET build_dir=%~f2
+SET build_type=%3
 
 IF "%droot%" EQU "" (
     CALL %bin_dir%\echoc.exe 4 DSN_ROOT not defined
@@ -12,7 +14,7 @@ IF NOT EXIST "%target_dir%" (
     GOTO error
 )
 
-CALL :copy_dll dsn.core %target_dir%%
+copy /Y %build_dir%\bin\%build_type%\dsn.core.* %target_dir%\
 CALL :copy_dll zookeeper_mt %target_dir%%
 CALL :copy_dll dsn.dev.python_helper %target_dir%%
 GOTO exit

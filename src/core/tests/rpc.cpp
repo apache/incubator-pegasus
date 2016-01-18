@@ -101,8 +101,8 @@ TEST(core, group_address_talk_to_others)
 {
     ::dsn::rpc_address addr = build_group();
 
-    std::function<void (error_code, const std::string&, void*)> typed_callback =
-            [addr](error_code err_code, const std::string& result, void*)->void {
+    auto typed_callback =
+            [addr](error_code err_code, const std::string& result)->void {
         EXPECT_EQ(ERR_OK, err_code);
         ::dsn::rpc_address addr_got;
         ddebug("talk to others callback, result: %s", result.c_str());

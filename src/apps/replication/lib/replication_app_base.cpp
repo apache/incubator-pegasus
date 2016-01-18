@@ -171,6 +171,11 @@ void replication_app_base::install_perf_counters()
     ss.str("");
     ss << replica_name() << ".decree#";
     _app_commit_decree.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
+
+    ss.clear();
+    ss.str("");
+    ss << replica_name() << ".req(#/s)";
+    _app_req_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "request throughput for current app");
 }
 
 error_code replication_app_base::open_internal(replica* r, bool create_new)
@@ -237,7 +242,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     ++_last_committed_decree;
 
     _replica->update_commit_statistics(count);
-    _app_commit_throughput.add((uint64_t)count);
+    _app_commit_throughput.add(1);
+    _app_req_throughput.add((uint64_t)count);
     _app_commit_decree.increment();
 
     return ERR_OK;

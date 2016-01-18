@@ -79,9 +79,11 @@ public:
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_ECHO_ECHO_PING, 
                     val, 
-                    this, 
-                    &echo_client::end_ping,
-                    context,
+                    this,
+                    [=](error_code err, std::string&& resp)
+                    {
+                        end_ping(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -92,41 +94,6 @@ public:
         ::dsn::error_code err, 
         const std::string& resp,
         void* context)
-    {
-        if (err != ::dsn::ERR_OK)
-        {
-            //std::cout << "reply RPC_ECHO_ECHO_PING err : " << err.to_string() << std::endl;
-        }
-        else
-        {
-            //std::cout << "reply RPC_ECHO_ECHO_PING ok" << std::endl;
-        }
-    }
-    
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<std::string> 
-    ::dsn::task_ptr begin_ping2(
-        std::shared_ptr<std::string>& val,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_ECHO_ECHO_PING, 
-                    val, 
-                    this, 
-                    &echo_client::end_ping2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_ping2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& val, 
-        std::shared_ptr<std::string>& resp)
     {
         if (err != ::dsn::ERR_OK)
         {
