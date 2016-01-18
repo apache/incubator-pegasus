@@ -12,7 +12,7 @@ namespace dsn
     namespace dist
     {
 
-#define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
+        #define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
