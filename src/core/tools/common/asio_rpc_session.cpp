@@ -94,7 +94,7 @@ namespace dsn {
             {
                 if (!!ec)
                 {
-                    derror("asio read failed: %s", ec.message().c_str());
+                    derror("asio read from %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
                     on_failure();
                 }
                 else
@@ -133,7 +133,7 @@ namespace dsn {
             {
                 if (!!ec)
                 {
-                    derror("asio write failed: %s", ec.message().c_str());
+                    derror("asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
                     on_failure();
                 }
                 else
