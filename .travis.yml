@@ -33,3 +33,5 @@ script:
 after_script:
     - ./run.sh stop_zk
 
+notifications:
+  email: false

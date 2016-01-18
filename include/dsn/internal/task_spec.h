@@ -184,6 +184,7 @@ public:
     grpc_mode_t            grpc_mode; // used when a rpc request is sent to a group address
     dsn_threadpool_code_t  pool_code;
     bool                   allow_inline; // allow task executed in other thread pools or tasks
+    bool                   rpc_allow_throttling; // allow the rpc session being throttled
     bool                   fast_execution_in_network_thread;
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
@@ -232,6 +233,7 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
     CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")
+    CONFIG_FLD(bool, bool, rpc_allow_throttling, false, "whether the request requests can be throttled (only applicable for rpc request codes)")    
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")

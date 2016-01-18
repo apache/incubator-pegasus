@@ -69,15 +69,6 @@ public:
     }
 
     void callback_function3() { ++global_value; }
-    void on_rpc_reply1(error_code ec, std::shared_ptr<std::string>& req, std::shared_ptr<std::string>& resp)
-    {
-        if (ERR_OK == ec)
-            EXPECT_TRUE(req->substr(5) == *resp);
-    }
-
-    void on_rpc_reply2(error_code ec, const std::string& response, void* context) {
-        EXPECT_TRUE(ec == ERR_OK);
-    }
 };
 
 TEST(dev_cpp, clientlet_task)
@@ -119,35 +110,28 @@ TEST(dev_cpp, clientlet_rpc)
     const char* command = "echo hello world";
 
     std::shared_ptr<std::string> str_command(new std::string(command));
-    std::function<void (error_code, std::shared_ptr<std::string>&, std::shared_ptr<std::string>&)> call =
-            std::bind(&test_clientlet::on_rpc_reply1, cl,
-                                              std::placeholders::_1,
-                                              std::placeholders::_2,
-                                              std::placeholders::_3);
-    auto t = rpc::call_typed(addr3, RPC_TEST_STRING_COMMAND, str_command,
-                    cl, call,
-                    0, 0, 0);
+    auto t = rpc::call_typed(
+        addr3,
+        RPC_TEST_STRING_COMMAND,
+        *str_command,
+        cl,
+        [str_command](error_code ec, std::string&& resp)
+        {
+            if (ERR_OK == ec)
+                EXPECT_TRUE(str_command->substr(5) == resp);
+        }
+    );
     task_vec.push_back(t);
-
-    char* buf = new char[32];
-    memset(buf, 0, 32);
-    strcpy(buf, "hello world");
-
-    std::function<void (error_code, const std::string&, void*)> call2 =
-            std::bind(&test_clientlet::on_rpc_reply2, cl,
-                                              std::placeholders::_1,
-                                              std::placeholders::_2,
-                                              std::placeholders::_3);
-
-    t = rpc::call_typed(addr2, RPC_TEST_STRING_COMMAND, std::string(command),
-                    cl, call2,
-                    buf,
-                    0, 0, 0);
-    task_vec.push_back(t);
-
-    t = rpc::call_typed(addr2, RPC_TEST_STRING_COMMAND, std::string(command),
-                    cl, &test_clientlet::on_rpc_reply2, buf,
-                    0, 0, 0);
+    t = rpc::call_typed(
+        addr2,
+        RPC_TEST_STRING_COMMAND,
+        std::string(command),
+        cl,
+        [](error_code ec, std::string&& resp)
+        {
+            EXPECT_TRUE(ec == ERR_OK);
+        }
+    );
     task_vec.push_back(t);
     for (int i=0; i!=task_vec.size(); ++i)
         task_vec[i]->wait();

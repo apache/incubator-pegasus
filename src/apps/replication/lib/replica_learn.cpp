@@ -191,9 +191,13 @@ void replica::init_learn(uint64_t signature)
     _potential_secondary_states.learning_task = rpc::call_typed(
         _config.primary,
         RPC_LEARN,
-        request,
+        *request,
         this,
-        &replica::on_learn_reply,
+        [=] (error_code err, learn_response&& resp)
+        {
+            auto resp_alloc = std::make_shared<learn_response>(std::move(resp));
+            on_learn_reply(err, request, resp_alloc);
+        },
         gpid_to_hash(get_gpid())
         );
 }
@@ -411,8 +415,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
 
 void replica::on_learn_reply(
     error_code err, 
-    std::shared_ptr<learn_request>& req, 
-    std::shared_ptr<learn_response>& resp
+    const std::shared_ptr<learn_request>& req,
+    const std::shared_ptr<learn_response>& resp
     )
 {
     check_hashed_access();
@@ -637,8 +641,8 @@ void replica::on_learn_reply(
 void replica::on_copy_remote_state_completed(
     error_code err,
     size_t size,
-    std::shared_ptr<learn_request> req,
-    std::shared_ptr<learn_response> resp
+    const std::shared_ptr<learn_request> req,
+    const std::shared_ptr<learn_response> resp
     )
 {
     decree old_committed = _app->last_committed_decree();

@@ -54,7 +54,7 @@ public:
 
     virtual void end_<?=$f->name?>(
         ::dsn::error_code err,
-        const <?=$f->get_cpp_return_type()?>& resp,
+        <?=$f->get_cpp_return_type()?>&& resp,
         void* context) override
     {
         end_send_one(context, err);

@@ -63,12 +63,10 @@ public:
         int timeout_milliseconds = 0
         )
     {
-        auto resp_task = ::dsn::replication::replication_app_client_base::read<std::string, std::string>(
+        auto resp_task = ::dsn::replication::replication_app_client_base::read(
             get_key_hash(key),
             RPC_SIMPLE_KV_SIMPLE_KV_READ,
             key,
-            nullptr,
-            nullptr,
             nullptr,
             timeout_milliseconds,
             0,
@@ -90,13 +88,15 @@ public:
         int reply_hash = 0
         )
     {
-        return ::dsn::replication::replication_app_client_base::read<simple_kv_client, std::string, std::string>(
+        return ::dsn::replication::replication_app_client_base::read(
             get_key_hash(key),
             RPC_SIMPLE_KV_SIMPLE_KV_READ, 
             key,
             this,
-            &simple_kv_client::end_read, 
-            context,
+            [=](error_code err, std::string&& resp)
+            {
+                end_read(err, resp, context);
+            },
             timeout_milliseconds,
             reply_hash,
             read_semantic_t::ReadLastUpdate
@@ -115,37 +115,6 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<std::string> 
-    ::dsn::task_ptr begin_read2(
-        std::shared_ptr<std::string>& key,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0
-        )
-    {
-        return ::dsn::replication::replication_app_client_base::read<simple_kv_client, std::string, std::string>(
-            get_key_hash(*key),
-            RPC_SIMPLE_KV_SIMPLE_KV_READ,
-            key,
-            this,
-            &simple_kv_client::end_read2, 
-            timeout_milliseconds,
-            reply_hash,
-            read_semantic_t::ReadLastUpdate
-            );
-    }
-
-    virtual void end_read2(
-        ::dsn::error_code err, 
-        std::shared_ptr<std::string>& key, 
-        std::shared_ptr<std::string>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ ok" << std::endl;
-        }
-    }
-    
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_WRITE ------------
     // - synchronous 
@@ -155,12 +124,10 @@ public:
         int timeout_milliseconds = 0
         )
     {
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<dsn::replication::test::kv_pair, int32_t>(
+        auto resp_task = ::dsn::replication::replication_app_client_base::write(
             get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
-            nullptr,
-            nullptr,
             nullptr,
             timeout_milliseconds
             );
@@ -180,13 +147,15 @@ public:
         int reply_hash = 0
         )
     {
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::test::kv_pair, int32_t>(
+        return ::dsn::replication::replication_app_client_base::write(
             get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE, 
             pr,
             this,
-            &simple_kv_client::end_write, 
-            context,
+            [=](error_code err, int32_t resp)
+            {
+                end_write(err, resp, context);
+            },
             timeout_milliseconds,
             reply_hash
             );
@@ -204,35 +173,6 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<dsn::replication::test::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::task_ptr begin_write2(
-        std::shared_ptr<dsn::replication::test::kv_pair>& pr,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0
-        )
-    {
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::test::kv_pair, int32_t>(
-            get_key_hash(*pr),
-            RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
-            pr,
-            this,
-            &simple_kv_client::end_write2, 
-            timeout_milliseconds,
-            reply_hash
-            );
-    }
-
-    virtual void end_write2( 
-        ::dsn::error_code err, 
-        std::shared_ptr<dsn::replication::test::kv_pair>& pr, 
-        std::shared_ptr<int32_t>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE ok" << std::endl;
-        }
-    }
     
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_APPEND ------------
@@ -243,12 +183,10 @@ public:
         int timeout_milliseconds = 0
         )
     {
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<dsn::replication::test::kv_pair, int32_t>(
+        auto resp_task = ::dsn::replication::replication_app_client_base::write(
             get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,
-            nullptr,
-            nullptr,
             nullptr,
             timeout_milliseconds
             );
@@ -268,13 +206,15 @@ public:
         int reply_hash = 0
         )
     {
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::test::kv_pair, int32_t>(
+        return ::dsn::replication::replication_app_client_base::write(
             get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND, 
             pr,
             this,
-            &simple_kv_client::end_append, 
-            context,
+            [=](error_code err, int32_t resp)
+            {
+                end_append(err, resp, context);
+            },
             timeout_milliseconds,
             reply_hash
             );
@@ -284,36 +224,6 @@ public:
         ::dsn::error_code err, 
         const int32_t& resp,
         void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND ok" << std::endl;
-        }
-    }
-    
-    // - asynchronous with on-heap std::shared_ptr<dsn::replication::test::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::task_ptr begin_append2(
-        std::shared_ptr<dsn::replication::test::kv_pair>& pr,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0
-        )
-    {
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::test::kv_pair, int32_t>(
-            get_key_hash(*pr),
-            RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
-            pr,
-            this,
-            &simple_kv_client::end_append2, 
-            timeout_milliseconds,
-            reply_hash
-            );
-    }
-
-    virtual void end_append2(
-        ::dsn::error_code err, 
-        std::shared_ptr<dsn::replication::test::kv_pair>& pr, 
-        std::shared_ptr<int32_t>& resp)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
         else

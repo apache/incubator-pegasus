@@ -118,9 +118,13 @@ namespace dsn {
                     _primary_states.checkpoint_task = rpc::call_typed(
                         sd,
                         RPC_REPLICA_COPY_LAST_CHECKPOINT,
-                        rc,
+                        *rc,
                         this,
-                        &replica::on_copy_checkpoint_ack,
+                        [=](error_code err_local, learn_response&& response)
+                        {
+                            auto response_alloc = std::make_shared<learn_response>(std::move(response));
+                            on_copy_checkpoint_ack(err_local, rc, response_alloc);
+                        },
                         gpid_to_hash(get_gpid())
                         );
                 }
@@ -187,7 +191,7 @@ namespace dsn {
             }
         }
 
-        void replica::on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp)
+        void replica::on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp)
         {
             check_hashed_access();
 

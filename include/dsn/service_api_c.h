@@ -347,7 +347,7 @@ extern DSN_API bool      dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
-extern DSN_API void dsn_exit(int code);
+[[noreturn]] extern DSN_API void dsn_exit(int code);
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
 extern DSN_API const char* dsn_get_current_app_data_dir();
