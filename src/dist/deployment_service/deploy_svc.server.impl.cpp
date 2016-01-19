@@ -16,31 +16,17 @@ namespace dsn
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
-            if (err == ERR_OK)
-            {
-                writer.String("ok");
-            }
-            else if (err == ERR_INVALID_PARAMETERS)
-            {
-                writer.String("invalid parameters");
-            }
-            else
-            {
-                writer.String("internal error");
-            }
+            writer.String(dsn_error_to_string(err));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const service_status& status)
         {
-            const char* status_name[] = { "prepare resource", "deploying", "running", "failover", "failed", "count", "invalid" };
-            int status_val = (int)status;
-            writer.String(status_name[status_val]);
+            writer.String(enum_to_string(status));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const cluster_type& type)
         {
-            int status_val = (int)type;
-            writer.Int(status_val);
+            writer.String(enum_to_string(type));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& str)
@@ -81,7 +67,7 @@ namespace dsn
             dsn_address_t addr;
             addr.u.value = doc.GetUint64();           
             val = rpc_address(addr);
-            TEST_PARAM(val.is_invalid())
+            TEST_PARAM(!val.is_invalid())
             return ERR_OK;
         }
 
@@ -90,8 +76,6 @@ namespace dsn
           {
             "error": "xx"
           }
-          the above "error" and the field of "error" appears in the following reply is one of the following strings:
-            "ok" | "invalid parameters" | "internal error"
         */
         inline std::string marshall_json(const error_code& err)
         {
@@ -183,8 +167,6 @@ namespace dsn
               }
             ]
           }
-          the above "type" is one of the following strings:
-            "prepare resource" | "deploying" | "running" | "failover" | "failed" | "count" | "invalid"
         */
         inline std::string marshall_json(const cluster_list& clist)
         {
@@ -206,9 +188,11 @@ namespace dsn
 
         inline error_code unmarshall_json(const char* json_str, const char* key, std::string& val)
         {
+            std::string jstr(json_str);
+            std::replace(jstr.begin(), jstr.end(), '\'', '\"');
             rapidjson::Document doc;
 
-            TEST_PARAM(!doc.Parse<0>(json_str).HasParseError())
+            TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError())
             TEST_PARAM(doc.IsObject())
             TEST_PARAM(doc.HasMember(key))
             TEST_PARAM(!unmarshall_json(doc[key], val))
@@ -218,19 +202,22 @@ namespace dsn
 
         inline error_code unmarshall_json(const char* json_str, const char* key, deploy_request& val)
         {
+            std::string jstr(json_str);
+            std::replace(jstr.begin(), jstr.end(), '\'', '\"');
             rapidjson::Document doc;
 
-            TEST_PARAM(!doc.Parse<0>(json_str).HasParseError())
+            TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError())
             TEST_PARAM(doc.IsObject())
-            TEST_PARAM(doc.HasMember("cluster_name"))
+            TEST_PARAM(doc[key].IsObject())
+            TEST_PARAM(doc[key].HasMember("cluster_name"))
             TEST_PARAM(!unmarshall_json(doc[key]["cluster_name"], val.cluster_name))
-            TEST_PARAM(doc.HasMember("name"))
+            TEST_PARAM(doc[key].HasMember("name"))
             TEST_PARAM(!unmarshall_json(doc[key]["name"], val.name))
-            TEST_PARAM(doc.HasMember("package_full_path"))
+            TEST_PARAM(doc[key].HasMember("package_full_path"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_full_path"], val.package_full_path))
-            TEST_PARAM(doc.HasMember("package_id"))
+            TEST_PARAM(doc[key].HasMember("package_id"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_id"], val.package_id))
-            TEST_PARAM(doc.HasMember("package_server"))
+            TEST_PARAM(doc[key].HasMember("package_server"))
             TEST_PARAM(!unmarshall_json(doc[key]["package_server"], val.package_server))
 
             return ERR_OK;
