@@ -78,7 +78,7 @@ public:
     }
     const T& unwrap() const
     {
-        return *reinterpret_cast<const T&>(_data_placeholder);
+        return reinterpret_cast<const T&>(_data_placeholder);
     }
     void reset()
     {
