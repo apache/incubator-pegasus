@@ -591,7 +591,10 @@ namespace dsn {
 
         while (!request->dl.is_alone())
         {
-            dwarn("msg request %s is in sending queue, try to pick out ...");
+            dwarn("msg request %s (%" PRIx64 ") is in sending queue, try to pick out ...",
+                request->header->rpc_name,
+                request->header->rpc_id
+                );
             auto s = request->io_session;
             if (s.get() != nullptr)
             {
