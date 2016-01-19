@@ -203,12 +203,6 @@ protected:
     mutable service::zlock _lock;
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
-
-
-    // subClass can not rewrite these method.
-    virtual void end_ping2(::dsn::error_code err,
-                           std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,
-                           std::shared_ptr< ::dsn::fd::beacon_ack>& resp) override;
 };
 
 }} // end namespace

@@ -62,7 +62,7 @@ private:
 
             // callback
             clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+            std::function<void(error_code, const std::shared_ptr<TRequest>&, const std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters
             int timeout_milliseconds= 0,
@@ -71,14 +71,15 @@ private:
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
         ::marshall(msg, *req);
-
-        task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                 msg,
-                 req,
-                 callback,
-                 reply_hash,
-                 owner
-                 );
+        task_ptr task = dsn::rpc::create_rpc_response_task_typed(
+            msg,
+            owner,
+            [=](error_code ec, TResponse&& resp)
+            {
+                callback(ec, req, std::make_shared<TResponse>(std::move(resp)));
+            },
+            reply_hash
+                );
         rpc::call(
             _meta_servers,
             msg,

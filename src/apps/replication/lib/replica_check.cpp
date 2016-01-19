@@ -116,9 +116,13 @@ void replica::broadcast_group_check()
         dsn::task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
-            request,            
+            *request,            
             this,
-            &replica::on_group_check_reply,
+            [=](error_code err, group_check_response&& resp)
+            {
+                auto alloc = std::make_shared<group_check_response>(std::move(resp));
+                on_group_check_reply(err, request, alloc);
+            },
             gpid_to_hash(get_gpid())
             );
 
@@ -186,7 +190,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     response.learner_signature = _potential_secondary_states.learning_signature;
 }
 
-void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp)
+void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_check_request>& req, const std::shared_ptr<group_check_response>& resp)
 {
     check_hashed_access();
 

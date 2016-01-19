@@ -48,13 +48,13 @@
 # include <set>
 # include <map>
 # include <thread>
+# include <boost/optional.hpp>
 
 namespace dsn 
 {
     typedef std::function<void()> task_handler;
     typedef std::function<void(error_code, size_t)> aio_handler;
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
-    typedef std::function<void(dsn_message_t)> rpc_request_handler;
     class safe_task_handle;
     typedef ::dsn::ref_ptr<safe_task_handle> task_ptr;
     
@@ -144,37 +144,34 @@ namespace dsn
     class safe_task : public safe_task_handle
     {
     public:
-        safe_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+        safe_task(THandler&& h, bool is_timer = false) : _handler(std::move(h)), _is_timer(is_timer)
         {
         }
-
-        safe_task(THandler& h) : _handler(h), _is_timer(false)
+        safe_task(const THandler& h, bool is_timer = false) : _handler(h), _is_timer(is_timer)
         {
         }
 
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
             bool r = safe_task_handle::cancel(wait_until_finished, finished);
-            if (r)
-            {
-                _handler = nullptr;
-            }
             return r;
         }
 
         static void on_cancel(void* task)
         {
             safe_task* t = (safe_task*)task;
+            t->_handler.reset();
             t->release_ref(); // added upon callback exec registration
         }
 
         static void exec(void* task)
         {
             safe_task* t = (safe_task*)task;
-            t->_handler();
+            dbg_dassert(t->_handler, "_handler is missing");
+            (*t->_handler)();
             if (!t->_is_timer)
             {
-                t->_handler = nullptr;
+                t->_handler.reset();
                 t->release_ref(); // added upon callback exec registration
             }
         }
@@ -182,28 +179,23 @@ namespace dsn
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
-            if (t->_handler)
-            {
-                t->_handler(err, req, resp);
-                t->_handler = nullptr;
-            }
+            dbg_dassert(t->_handler, "_handler is missing");
+            (*t->_handler)(err, req, resp);
+            t->_handler.reset();
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
             safe_task* t = (safe_task*)task;
-            if (t->_handler)
-            {
-                t->_handler(err, sz);
-                t->_handler = nullptr;
-            }
+            (*t->_handler)(err, sz);
+            t->_handler.reset();
             t->release_ref(); // added upon callback exec_aio registration
         }
             
     private:
-        bool                 _is_timer;
-        THandler             _handler;
+        bool                         _is_timer;
+        boost::optional<THandler>    _handler;
     };
 
     //

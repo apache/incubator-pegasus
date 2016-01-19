@@ -36,7 +36,9 @@
 # include <dsn/internal/task_queue.h>
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
+# include <dsn/internal/network.h>
 # include <cstdio>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -73,8 +75,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
 
 void task_queue::enqueue_internal(task* task)
 {
-    // only apply admission control on rpc request typed tasks
-    if (TASK_TYPE_RPC_REQUEST == task->spec().type)
+    if (task->spec().rpc_allow_throttling)
     {
         int ac_value = 0;
         if (_enable_virtual_queue_throttling)
@@ -86,62 +87,17 @@ void task_queue::enqueue_internal(task* task)
             ac_value = count();
         }
 
-        _delayer.delay(ac_value);
-
-        //auto controller = _controllers[idx];
-        //if (controller != nullptr)
-        //{
-        //    int i = 0;
-        //    while (!controller->is_task_accepted(t))
-        //    {
-        //        // any customized rejection handler?
-        //        if (t->spec().rejection_handler != nullptr)
-        //        {
-        //            t->spec().rejection_handler(t, controller);
-
-        //            ddebug("task %s (%016llx) is rejected",
-        //                t->spec().name.c_str(),
-        //                t->id()
-        //                );
-
-        //            return;
-        //        }
-
-        //        if (++i % 1000 == 0)
-        //        {
-        //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->count());
-        //        }
-        //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        //    }
-        //}
-        //else if (t->spec().type == TASK_TYPE_RPC_REQUEST
-        //    && _spec.queue_length_throttling_threshold != 0x0FFFFFFFUL)
-        //{
-        //    int i = 0;
-        //    while (q->count() >= _spec.queue_length_throttling_threshold)
-        //    {
-        //        // any customized rejection handler?
-        //        if (t->spec().rejection_handler != nullptr)
-        //        {
-        //            t->spec().rejection_handler(t, controller);
-
-        //            ddebug("task %s (%016llx) is rejected because the target queue is full",
-        //                t->spec().name.c_str(),
-        //                t->id()
-        //                );
-
-        //            return;
-        //        }
-
-        //        if (++i % 1000 == 0)
-        //        {
-        //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->count());
-        //        }
-        //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        //    }
-        //}
+        int dms = _delayer.delay(ac_value);
+        if (dms > 0)
+        {
+            rpc_request_task* rc = dynamic_cast<rpc_request_task*>(task);
+            rpc_session* s = rc->get_request()->io_session.get();
+            if (s != nullptr)
+            {
+                // delay session recv
+                s->delay_rpc_request_rate(dms);
+            }
+        }
     }
 
     increase_count();

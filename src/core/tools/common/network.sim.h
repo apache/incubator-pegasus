@@ -51,6 +51,7 @@ namespace dsn { namespace tools {
 
         virtual void connect();
         virtual void send(uint64_t signature) override;
+        virtual void do_read(int sz) override {}
     };
 
     class sim_server_session : public rpc_session
@@ -66,6 +67,8 @@ namespace dsn { namespace tools {
         virtual void send(uint64_t signature) override;
 
         virtual void connect() {}
+
+        virtual void do_read(int sz) override {}
 
     private:
         rpc_session_ptr _client;

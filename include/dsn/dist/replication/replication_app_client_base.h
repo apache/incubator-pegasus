@@ -72,272 +72,85 @@ namespace dsn { namespace replication {
             );
         ~replication_app_client_base();
 
-        template<typename T, typename TRequest, typename TResponse>
+        template<typename TRequest>
         ::dsn::task_ptr write(
             uint64_t key_hash,
             dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-
-            // callback
-            T* owner,
-            void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-
-            // other specific parameters   
-            int timeout_milliseconds = 0,
-            int reply_hash = 0
-            )
-        {
-            
-            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                req,
-                owner,
-                callback,
-                reply_hash
-                );
-
-            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
-            ::marshall(msg, *req);
-            call(rc);
-            return std::move(task);
-        }
-        
-        template<typename TRequest, typename TResponse>
-        ::dsn::task_ptr write(
-            uint64_t key_hash,
-            dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-
-            // callback
+            TRequest&& req,
             clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
-
-            // other specific parameters   
             int timeout_milliseconds = 0,
-            int reply_hash = 0
-            )
+            int reply_hash = 0)
         {
-            
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                req,
-                callback,
-                reply_hash,
-                owner
-                );
-
+            task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, owner, [](error_code, dsn_message_t, dsn_message_t) {}, reply_hash);
             auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
-            ::marshall(msg, *req);
+            ::marshall(msg, std::forward<TRequest>(req));
             call(rc);
-            return std::move(task);
+            return task;
         }
 
-        template<typename T, typename TRequest, typename TResponse>
+        template<typename TRequest, typename TCallback>
+        //where TCallback = void(error_code, TResponse&&)
+        //  where TResponse = DefaultConstructible + DSNSerializable
         ::dsn::task_ptr write(
             uint64_t key_hash,
             dsn_task_code_t code,
-            const TRequest& req,
-
-            // callback
-            T* owner,
-            void (T::*callback)(error_code, const TResponse&, void*),
-            void* context,
-
-            // other specific parameters   
-            int timeout_milliseconds = 0,
-            int reply_hash = 0
-            )
-        {
-            
-            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                owner,
-                callback,
-                context,
-                reply_hash
-                );
-            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
-            ::marshall(msg, req);
-            call(rc);
-            return std::move(task);
-        }
-
-        template<typename TRequest, typename TResponse>
-        ::dsn::task_ptr write(
-            uint64_t key_hash,
-            dsn_task_code_t code,
-            const TRequest& req,
-
-            // callback
+            TRequest&& req,
             clientlet* owner,
-            std::function<void(error_code, const TResponse&, void*)> callback,
-            void* context,
-
-            // other specific parameters   
+            TCallback&& callback,
             int timeout_milliseconds = 0,
-            int reply_hash = 0
-            )
+            int reply_hash = 0)
         {
-            
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                callback,
-                context,
-                reply_hash,
-                owner
-                );
-
+            task_ptr task = ::dsn::rpc::create_rpc_response_task_typed(msg, owner, std::forward<TCallback>(callback), reply_hash);
             auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
-            ::marshall(msg, req);
+            ::marshall(msg, std::forward<TRequest>(req));
             call(rc);
-            return std::move(task);
+            return task;
         }
 
-        template<typename T, typename TRequest, typename TResponse>
+        template<typename TRequest>
         ::dsn::task_ptr read(
             uint64_t key_hash,
             dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-
-            // callback
-            T* owner,
-            void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-
-            // other specific parameters   
-            int timeout_milliseconds = 0,            
-            int reply_hash = 0,
-            read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
-            )
-        {
-            
-            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                req,
-                owner,
-                callback,
-                reply_hash
-                );
-
-            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
-            ::marshall(msg, *req);
-            call(rc);
-            return std::move(task);
-        }
-
-        template<typename TRequest, typename TResponse>
-        ::dsn::task_ptr read(
-            uint64_t key_hash,
-            dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-
-            // callback
+            TRequest&& req,
             clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
-
-            // other specific parameters   
             int timeout_milliseconds = 0,
             int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                req,
-                callback,
-                reply_hash,
-                owner
-                );
-
+            task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, owner, [](error_code, dsn_message_t, dsn_message_t) {}, reply_hash);
             auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
-            ::marshall(msg, *req);
+            ::marshall(msg, std::forward<TRequest>(req));
             call(rc);
-            return std::move(task);
+            return task;
         }
 
-        template<typename T, typename TRequest, typename TResponse>
+        template<typename TRequest, typename TCallback>
+        //where TCallback = void(error_code, TResponse&&)
+        //  where TResponse = DefaultConstructible + DSNSerializable
         ::dsn::task_ptr read(
             uint64_t key_hash,
             dsn_task_code_t code,
-            const TRequest& req,
-
-            // callback
-            T* owner,
-            void (T::*callback)(error_code, const TResponse&, void*),
-            void* context,
-
-            // other specific parameters   
-            int timeout_milliseconds = 0,
-            int reply_hash = 0,
-            read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
-            )
-        {
-            
-            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                owner,
-                callback,
-                context,
-                reply_hash
-                );
-
-            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
-            ::marshall(msg, req);
-            call(rc);
-            return std::move(task);
-        }
-
-
-        template<typename TRequest, typename TResponse>
-        ::dsn::task_ptr read(
-            uint64_t key_hash,
-            dsn_task_code_t code,
-            const TRequest& req,
-
-            // callback
+            TRequest&& req,
             clientlet* owner,
-            std::function<void(error_code, const TResponse&, void*)> callback,
-            void* context,
+            TCallback&& callback,
 
-            // other specific parameters   
             int timeout_milliseconds = 0,
             int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
-            
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                callback,
-                context,
-                reply_hash,
-                owner
-                );
-
+            task_ptr task = ::dsn::rpc::create_rpc_response_task_typed(msg, owner, std::forward<TCallback>(callback), reply_hash);
             auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
-            ::marshall(msg, req);
+            ::marshall(msg, std::forward<TRequest>(req));
             call(rc);
-            return std::move(task);
+            return task;
         }
 
         ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }

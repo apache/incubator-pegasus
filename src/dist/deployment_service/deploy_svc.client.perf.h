@@ -2,12 +2,10 @@
 
 # include "deploy_svc.client.h"
 
-namespace dsn { namespace dist {  
-
- 
+namespace dsn { namespace dist { 
 class deploy_svc_perf_test_client
-    : public deploy_svc_client, 
-      public ::dsn::service::perf_client_helper 
+    : public deploy_svc_client,
+      public ::dsn::service::perf_client_helper
 {
 public:
     deploy_svc_perf_test_client(
@@ -27,37 +25,37 @@ public:
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
         s.name = "deploy_svc.undeploy";
         s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY";
         s.send_one = [this](int payload_bytes){this->send_one_undeploy(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
         s.name = "deploy_svc.get_service_list";
         s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST";
         s.send_one = [this](int payload_bytes){this->send_one_get_service_list(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
         s.name = "deploy_svc.get_service_info";
         s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO";
         s.send_one = [this](int payload_bytes){this->send_one_get_service_info(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
         s.name = "deploy_svc.get_cluster_list";
         s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST";
         s.send_one = [this](int payload_bytes){this->send_one_get_cluster_list(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
-        
+
         start(suits);
-    }                
+    }
 
     void send_one_deploy(int payload_bytes)
     {
@@ -68,13 +66,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_deploy(req, ctx, _timeout_ms);
     }
 
     virtual void end_deploy(
         ::dsn::error_code err,
-        const deploy_info& resp,
+        deploy_info&& resp,
         void* context) override
     {
         end_send_one(context, err);
@@ -89,13 +87,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_undeploy(req, ctx, _timeout_ms);
     }
 
     virtual void end_undeploy(
         ::dsn::error_code err,
-        const ::dsn::error_code& resp,
+        ::dsn::error_code&& resp,
         void* context) override
     {
         end_send_one(context, err);
@@ -110,13 +108,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_get_service_list(req, ctx, _timeout_ms);
     }
 
     virtual void end_get_service_list(
         ::dsn::error_code err,
-        const deploy_info_list& resp,
+        deploy_info_list&& resp,
         void* context) override
     {
         end_send_one(context, err);
@@ -131,13 +129,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_get_service_info(req, ctx, _timeout_ms);
     }
 
     virtual void end_get_service_info(
         ::dsn::error_code err,
-        const deploy_info& resp,
+        deploy_info&& resp,
         void* context) override
     {
         end_send_one(context, err);
@@ -152,13 +150,13 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        
+
         begin_get_cluster_list(req, ctx, _timeout_ms);
     }
 
     virtual void end_get_cluster_list(
         ::dsn::error_code err,
-        const cluster_list& resp,
+        cluster_list&& resp,
         void* context) override
     {
         end_send_one(context, err);

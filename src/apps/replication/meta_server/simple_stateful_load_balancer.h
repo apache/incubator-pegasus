@@ -58,7 +58,7 @@ public:
 private:
     // meta server => partition server    
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
-    void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
+    void on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp);
     
     void run_lb(partition_configuration& pc);
     ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);

@@ -12,7 +12,7 @@ namespace dsn
     namespace dist
     {
 
-#define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
+        #define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
@@ -24,11 +24,9 @@ namespace dsn
             writer.String(enum_to_string(status));
         };
 
-        const char* cltype_name[] = { "kubernetes", "docker", "bare_medal_linux", "bare_medal_windows", "yarn_on_linux", "yarn_on_windows", "mesos_on_linux", "mesos_on_windows" };
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const cluster_type& type)
         {
-            int type_val = (int)type;
-            writer.String(cltype_name[type_val]);
+            writer.String(enum_to_string(type));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& str)
@@ -78,8 +76,6 @@ namespace dsn
           {
             "error": "xx"
           }
-          the above "error" and the field of "error" appears in the following reply is one of the following strings:
-            "ok" | "invalid parameters" | "internal error"
         */
         inline std::string marshall_json(const error_code& err)
         {
@@ -171,8 +167,6 @@ namespace dsn
               }
             ]
           }
-          the above "type" is one of the following strings:
-            "prepare resource" | "deploying" | "running" | "failover" | "failed" | "count" | "invalid"
         */
         inline std::string marshall_json(const cluster_list& clist)
         {

@@ -177,12 +177,62 @@ namespace dsn
         _message_count -= (int)(_sending_msgs.size());
         return _sending_msgs.size() > 0;
     }
+
+    DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+    
+    void __delayed_rpc_session_read_next__(void* ctx)
+    {
+        rpc_session* s = (rpc_session*)ctx;
+        s->start_read_next();
+        s->release_ref();
+    }
+
+    void rpc_session::start_read_next(int read_next)
+    {
+        // server only
+        if (_matcher == nullptr)
+        {
+            int delay_ms = 0;
+            {
+                utils::auto_lock<utils::ex_lock_nr> l(_lock);
+                if (delay_ms > _delay_server_receive_ms)
+                    _delay_server_receive_ms = delay_ms;
+            }
+
+            // delayed read
+            if (delay_ms > 0)
+            {
+                auto delay_task = dsn_task_create(
+                    LPC_DELAY_RPC_REQUEST_RATE,
+                    __delayed_rpc_session_read_next__,
+                    this
+                    );
+                this->add_ref(); // released in __delayed_rpc_session_read_next__
+                dsn_task_call(delay_task, delay_ms);
+            }
+            else
+            {
+                do_read(read_next);
+            }
+        }
+        else
+        {
+            do_read(read_next);
+        }
+    }
     
     void rpc_session::send_message(message_ex* msg)
     {
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
-
-        _net.delay(_message_count++); // -- in unlink_message
+        auto sp = task_spec::get(msg->local_rpc_code);
+        if (sp->rpc_allow_throttling)
+        {
+            int dms = _net.delay(_message_count++); // -- in unlink_message
+            if (dms > 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(dms));
+            }
+        }
 
         msg->add_ref(); // released in on_send_completed        
         uint64_t sig;
@@ -274,7 +324,8 @@ namespace dsn
         std::shared_ptr<message_parser>& parser,
         bool is_client
         )
-        : _net(net), _remote_addr(remote_addr), _parser(parser)
+        : _net(net), _remote_addr(remote_addr), _parser(parser),
+        _delay_server_receive_ms(0)
     {
         _matcher = nullptr;
         _is_sending_next = false;
@@ -345,8 +396,7 @@ namespace dsn
 
         msg->io_session = this;
         return _net.on_recv_request(msg, delay_ms);
-    }
-       
+    }  
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
