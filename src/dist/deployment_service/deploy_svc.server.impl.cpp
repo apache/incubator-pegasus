@@ -517,6 +517,8 @@ namespace dsn
                 std::string ldir = utils::filesystem::path_combine(_service_dir, ss.str());
                 std::vector<std::string> files;
 
+                svc->local_package_directory = ldir;
+
                 file::copy_remote_files(
                     req.package_server,
                     req.package_full_path,
@@ -732,14 +734,17 @@ namespace dsn
 
             cluster_list clist;
             std::string format;
-            if (argc < 1 || ERR_OK != unmarshall_json(argv[0], "format", format))
+            if (argc > 0)
             {
-                //TODO: need raise error here?
+                error_code err = unmarshall_json(argv[0], "format", format);
+                if (err != ERR_OK)
+                {
+                    //TODO: need raise error here?
+                    format = std::string("");
+                }
             }
-            else
-            {
-                on_get_cluster_list_internal(format, clist);
-            }
+
+            on_get_cluster_list_internal(format, clist);
 
             std::string* resp_json = new std::string();
             *resp_json = marshall_json(clist);
