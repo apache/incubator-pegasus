@@ -14,6 +14,23 @@ namespace dsn
 
         #define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
 
+        inline const char* rm_type_prefix(const char* s)
+        {
+            //the monitor need not know the exact class name of the status code
+            //for example, instead of "cluster_type::docker",
+            //just "docker" would be enough
+            const char* postfix = strchr(s, ':');
+            if (postfix != nullptr)
+            {
+                return postfix + 2;
+            }
+            else
+            {
+                //s might be something like "unknown"
+                return s;
+            }
+        }
+
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
             writer.String(dsn_error_to_string(err));
@@ -21,12 +38,13 @@ namespace dsn
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const service_status& status)
         {
-            writer.String(enum_to_string(status));
+
+            writer.String(rm_type_prefix(enum_to_string(status)));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const cluster_type& type)
         {
-            writer.String(enum_to_string(type));
+            writer.String(rm_type_prefix(enum_to_string(type)));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& str)
@@ -225,7 +243,7 @@ namespace dsn
 
         DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEPLOY_LONG)
 
-        DEFINE_TASK_CODE(LPC_DEPLOY_DOWNLOAD_RESOURCE, TASK_PRIORITY_COMMON, THREAD_POOL_DEPLOY_LONG)
+        DEFINE_TASK_CODE_AIO(LPC_DEPLOY_DOWNLOAD_RESOURCE, TASK_PRIORITY_COMMON, THREAD_POOL_DEPLOY_LONG)
 
         static void __svc_cli_freeer__(dsn_cli_reply reply)
         {
@@ -491,7 +509,7 @@ namespace dsn
             }
 
             // start resource downloading ...
-            if (di.error == ::dsn::ERR_IO_PENDING)
+            if (di.error == ::dsn::ERR_OK)
             {
                 std::stringstream ss;
                 ss << req.package_id << "." << req.name;
