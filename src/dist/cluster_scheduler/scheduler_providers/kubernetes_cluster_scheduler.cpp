@@ -153,10 +153,20 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
     int ret;
     std::ostringstream command;
     command << "./run.sh k8s_deploy ";
-    command << "--image " << name << " -s " << local_package_directory;
+    command << " -s " << local_package_directory;
     ret = system(command.str().c_str());
     if( ret == 0 )
     {
+#ifndef _WIN32
+        FILE * f = popen("kubectl get svc -l app=meta --template '{{(index .items 0).spec.clusterIP}}'","r");
+        char buffer[30];
+        fgets(buffer,30,f);
+        {
+            zauto_lock l(_lock);
+            auto unit = _deploy_map[name];
+            unit->service_url = buffer;
+        }
+#endif
         deployment_callback(ERR_OK,rpc_address());
     }
     else
@@ -201,7 +211,7 @@ void kubernetes_cluster_scheduler::delete_pod(std::string& name,std::function<vo
     int ret;
     std::ostringstream command;
     command << "./run.sh k8s_undeploy ";
-    command << "--image " << name << " -s " << local_package_directory;
+    command << " -s " << local_package_directory;
     ret = system(command.str().c_str());
     dassert( ret == 0, "k8s can't delete pods");
 

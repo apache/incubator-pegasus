@@ -14,12 +14,19 @@ fi
 
 applist="meta replica client client.perf.test"
 echo $applist > $t_dir/applist
-
+echo "simple_kv" > $t_dir/d_unit
 cp $b_dir/bin/dsn.replication.simple_kv/dsn.replication.simple_kv $t_dir/simple_kv
 cp $scripts_dir/deploy/configtool $t_dir/
 cp $DSN_ROOT/lib/libdsn.core.so $t_dir/
-cp $scripts_dir/deploy/genrcyaml.sh $t_dir
-cp $scripts_dir/deploy/gensvcyaml.sh $t_dir
+#cp $scripts_dir/deploy/genrcyaml.sh $t_dir
+#cp $scripts_dir/deploy/gensvcyaml.sh $t_dir
+sed -e "s/{{ placeholder\['deploy_name'\] }}/simple_kv/g" $scripts_dir/deploy/genrcyaml.sh | \
+    sed -e "s/{{ placeholder\['image_name'\] }}/${DOCKER_REPO}\/simple_kv/g" > $t_dir/genrcyaml.sh
+chmod a+x $t_dir/genrcyaml.sh
+
+sed -e "s/{{ placeholder\['deploy_name'\] }}/simple_kv/g" $scripts_dir/deploy/gensvcyaml.sh > $t_dir/gensvcyaml.sh
+chmod a+x $t_dir/gensvcyaml.sh
+
 cp $scripts_dir/deploy/rdsn-rc.yaml.in $t_dir
 cp $scripts_dir/deploy/rdsn-service.yaml.in $t_dir
 cp $scripts_dir/deploy/stop_docker.sh $t_dir/stop.sh

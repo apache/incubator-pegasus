@@ -107,7 +107,6 @@ namespace dsn
             std::string cluster;
             std::string package_id;
             service_status status;
-            rpc_address service_url;
             //cluster_type package_type;
             std::function<void(error_code, rpc_address)> deployment_callback;
             std::function<void(error_code, const std::string&)> failure_notification;
