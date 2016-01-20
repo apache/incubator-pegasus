@@ -32,6 +32,8 @@
  *     2016-01-15, Tianyi Wang, first version
  */
 
+#pragma once
+
 #include <type_traits>
 namespace dsn {
 template <typename T>
