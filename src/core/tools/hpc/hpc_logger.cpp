@@ -139,7 +139,7 @@ namespace dsn
         }
 
         hpc_logger::hpc_logger(const char* log_dir) 
-            : logging_provider(log_dir), _stop_thread(false)
+            : logging_provider(log_dir), _stop_thread(false), _exiting(false)
         {
             _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
@@ -240,6 +240,7 @@ namespace dsn
         {
             std::vector<int> threads;
             hpc_log_manager::instance().get_all_keys(threads);
+            _exiting = true;
 
             for (auto& tid : threads)
             {
@@ -378,7 +379,11 @@ namespace dsn
                     _current_log_file_bytes += new_buffer_info.buffer_size;
                 }                
 
-                free(new_buffer_info.buffer);
+                // do not free the buffer at exit as it may still be written
+                if (!_exiting)
+                {
+                    free(new_buffer_info.buffer);
+                }
             }
             llist.clear();
         }
