@@ -239,7 +239,7 @@ void simple_stateful_load_balancer::on_query_decree_ack(error_code err, const st
 {
     if (err != ERR_OK)
     {
-        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, 1000);
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, std::chrono::seconds(1));
     }
     else
     {

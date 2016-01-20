@@ -140,10 +140,9 @@ void kubernetes_cluster_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
-        auto cb = [this,unit](){
-            create_pod(unit->name,unit->deployment_callback,unit->local_package_directory);
-            };
-        dsn::tasking::enqueue(LPC_K8S_CREATE,this,std::move(cb));
+        dsn::tasking::enqueue(LPC_K8S_CREATE,this, [this, unit]() {
+            create_pod(unit->name, unit->deployment_callback, unit->local_package_directory);
+        });
     }
     
 }
@@ -184,10 +183,9 @@ void kubernetes_cluster_scheduler::unschedule(
         _deploy_map.erase(it);
         _lock.unlock();
 
-        auto cb = [this,unit](){
-            delete_pod(unit->name,unit->deployment_callback,unit->local_package_directory);
-            };
-        dsn::tasking::enqueue(LPC_K8S_DELETE,this,std::move(cb));
+        dsn::tasking::enqueue(LPC_K8S_DELETE,this, [this, unit]() {
+            delete_pod(unit->name, unit->deployment_callback, unit->local_package_directory);
+        });
     }
     else
     {

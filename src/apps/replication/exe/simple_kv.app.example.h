@@ -62,7 +62,7 @@ public:
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client_impl(meta_servers, argv[1]);
-        _timer = ::dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER, this, [this] {on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 

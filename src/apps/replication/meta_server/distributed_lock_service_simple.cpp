@@ -222,13 +222,13 @@ namespace dsn
 
             if (is_new)
             {
-                tasking::enqueue(
+                tasking::enqueue_timer(
                     LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
                     this,
                     [=](){ random_lock_lease_expire(lock_id); },
+                    std::chrono::minutes(5),
                     0,
-                    1000,
-                    1000 * 60 * 5 // every 5 min
+                    std::chrono::seconds(1)
                     );
             }
 

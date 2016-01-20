@@ -67,8 +67,7 @@ simple_kv_client_app::~simple_kv_client_app()
     dsn::tasking::enqueue(
             LPC_SIMPLE_KV_TEST,
             this,
-            std::bind(&simple_kv_client_app::run, this),
-            0, 0, 0);
+            std::bind(&simple_kv_client_app::run, this));
 
     return ::dsn::ERR_OK;
 }

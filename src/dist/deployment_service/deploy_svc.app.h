@@ -50,7 +50,7 @@ public:
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
         _deploy_svc_client = new deploy_svc_client(_server);
-        _timer = ::dsn::tasking::enqueue(LPC_DEPLOY_SVC_TEST_TIMER, this, &deploy_svc_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue_timer(LPC_DEPLOY_SVC_TEST_TIMER, this, [this] {on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 

@@ -261,7 +261,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
             tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
                 std::bind(&replication_app_client_base::call, this, request, false),
                 0,
-                1000
+                std::chrono::seconds(1)
                 );
         }
 
@@ -278,7 +278,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
                         this,
                         std::bind(&replication_app_client_base::on_replica_request_timeout, this, request),
                         0,
-                        timeout_ms
+                        std::chrono::milliseconds(timeout_ms)
                         );
                 }
             }

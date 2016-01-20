@@ -130,14 +130,13 @@ void replica::init_learn(uint64_t signature)
                     else
                     {
                         _potential_secondary_states.learning_round_is_running = true;
-
-                        tasking::enqueue(
-                            &_potential_secondary_states.catchup_with_private_log_task,
+                        _potential_secondary_states.catchup_with_private_log_task = tasking::create_task(
                             LPC_CATCHUP_WITH_PRIVATE_LOGS,
                             this,
                             [this]() { this->catch_up_with_private_logs(PS_POTENTIAL_SECONDARY); },
                             gpid_to_hash(get_gpid())
                             );
+                        _potential_secondary_states.catchup_with_private_log_task->enqueue();
 
                         return; // incomplete
                     }
@@ -451,14 +450,13 @@ void replica::on_learn_reply(
                 name(), req->signature, resp->config.primary.to_string()
                 );
             _potential_secondary_states.learning_round_is_running = false;
-            tasking::enqueue(
-                &_potential_secondary_states.delay_learning_task,
+            _potential_secondary_states.delay_learning_task = tasking::create_task(
                 LPC_DELAY_LEARN,
                 this,
                 std::bind(&replica::init_learn, this, req->signature),
-                gpid_to_hash(get_gpid()),
-                1000
+                gpid_to_hash(get_gpid())
                 );
+            _potential_secondary_states.delay_learning_task->enqueue(std::chrono::seconds(1));
         }
         else
         {
@@ -541,12 +539,12 @@ void replica::on_learn_reply(
         
         if (err != ERR_OK)
         {
-            tasking::enqueue(
-                &_potential_secondary_states.learn_remote_files_task,
+            _potential_secondary_states.learn_remote_files_task = tasking::create_task(
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
                 std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
                 );
+            _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
         }
     }
@@ -599,12 +597,12 @@ void replica::on_learn_reply(
 
         // go to next stage
         _potential_secondary_states.learning_status = LearningWithPrepare;        
-        tasking::enqueue(
-            &_potential_secondary_states.learn_remote_files_task,
+        _potential_secondary_states.learn_remote_files_task = tasking::create_task(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
             );
+        _potential_secondary_states.learn_remote_files_task->enqueue();
     }
    
     else if (resp->state.files.size() > 0)
@@ -629,12 +627,12 @@ void replica::on_learn_reply(
     }
     else
     {
-        tasking::enqueue(
-            &_potential_secondary_states.learn_remote_files_task,
+        _potential_secondary_states.learn_remote_files_task = tasking::create_task(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, ERR_OK, 0, req, resp)
             );
+        _potential_secondary_states.learn_remote_files_task->enqueue();
     }
 }
 
@@ -758,13 +756,13 @@ void replica::on_copy_remote_state_completed(
     // so that we don't have unnecessary failed reconfiguration later due to this non-nullptr in cleanup
     _potential_secondary_states.learn_remote_files_task = nullptr;
     
-    tasking::enqueue(
-        &_potential_secondary_states.learn_remote_files_completed_task,
+    _potential_secondary_states.learn_remote_files_completed_task = tasking::create_task(
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
         std::bind(&replica::on_learn_remote_state_completed, this, err),
         gpid_to_hash(get_gpid())
         );
+    _potential_secondary_states.learn_remote_files_completed_task->enqueue();
 }
 
 void replica::on_learn_remote_state_completed(error_code err)

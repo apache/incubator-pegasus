@@ -799,7 +799,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     task_ptr tsk = nullptr;
     if (callback)
     {
-        tsk = new safe_task<aio_handler>(callback);
+        tsk = new safe_task<aio_handler>(std::move(callback));
         tsk->add_ref(); // released in exec_aio
         dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
             safe_task<aio_handler>::exec_aio,

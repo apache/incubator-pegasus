@@ -75,11 +75,13 @@ error_code failure_detector::start(
     open_service();
 
     // start periodically check job
-    _check_task = tasking::enqueue(LPC_BEACON_CHECK, this,
-                                     &failure_detector::check_all_records,
-                                     -1,
-                                     _check_interval_milliseconds,
-                                     _check_interval_milliseconds);
+    _check_task = tasking::enqueue_timer(
+        LPC_BEACON_CHECK,
+        this,
+        [this] {check_all_records();},
+        std::chrono::milliseconds(_check_interval_milliseconds),
+        -1,
+        std::chrono::milliseconds(_check_interval_milliseconds));
 
     _is_started = true;
     return ERR_OK;
@@ -144,14 +146,12 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
     if (setup_timer)
     {
-        ret.first->second.send_beacon_timer = tasking::enqueue(LPC_BEACON_SEND, this,
+        ret.first->second.send_beacon_timer = tasking::enqueue_timer(LPC_BEACON_SEND, this,
             [this, target]() 
             {
                 this->send_beacon(target, now_ms());
             },
-            -1,
-            1,
-            _beacon_interval_milliseconds
+            std::chrono::milliseconds(_beacon_interval_milliseconds)
             );
     }
 }
@@ -173,14 +173,12 @@ bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address
         it->second.node = to;
         it->second.rejected = false;
         it->second.send_beacon_timer->cancel(true);
-        it->second.send_beacon_timer = tasking::enqueue(LPC_BEACON_SEND, this,
+        it->second.send_beacon_timer = tasking::enqueue_timer(LPC_BEACON_SEND, this,
             [this, to]()
             {
                 this->send_beacon(to, now_ms());
             },
-            -1,
-            1,
-            _beacon_interval_milliseconds
+            std::chrono::milliseconds(_beacon_interval_milliseconds)
             );
 
         _masters.insert(std::make_pair(to, it->second));

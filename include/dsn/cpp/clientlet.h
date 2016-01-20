@@ -72,69 +72,73 @@ namespace dsn
 
     namespace tasking
     {
+        template<typename TCallback>
+        task_ptr create_task(
+            dsn_task_code_t evt,
+            clientlet* svc,
+            TCallback&& callback,
+            int hash = 0)
+        {
+            auto tsk = new safe_task<TCallback>(std::forward<TCallback>(callback));
+            tsk->add_ref(); // released in exec callback
+            auto native_tsk = dsn_task_create_ex(
+                evt,
+                safe_task<TCallback>::exec,
+                safe_task<TCallback>::on_cancel,
+                tsk,
+                hash,
+                svc ? svc->tracker() : nullptr);
+            tsk->set_task_info(native_tsk);
+            return tsk;
+        }
+
+        template<typename TCallback>
+        task_ptr create_timer_task(
+            dsn_task_code_t evt,
+            clientlet* svc,
+            TCallback&& callback,
+            std::chrono::milliseconds timer_interval,
+            int hash = 0)
+        {
+            auto tsk = new safe_task<TCallback>(std::forward<TCallback>(callback));
+            tsk->add_ref(); // released in exec callback
+            auto native_tsk = dsn_task_create_timer_ex(
+                evt,
+                safe_task<TCallback>::exec_timer,
+                safe_task<TCallback>::on_cancel,
+                tsk,
+                hash,
+                static_cast<int>(timer_interval.count()),
+                svc ? svc->tracker() : nullptr);
+            tsk->set_task_info(native_tsk);
+            return tsk;
+        }
+
+        template<typename TCallback>
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,
-            task_handler callback,
+            TCallback&& callback,
             int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0
-            );
-
-        void enqueue(
-            /*our*/ task_ptr* ptask, // null for not returning task handle
-            dsn_task_code_t evt,
-            clientlet* svc,
-            task_handler callback,
-            int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0
-            );
-
-        template<typename T> // where T : public virtual clientlet
-        inline task_ptr enqueue(
-            dsn_task_code_t evt,
-            T* owner,
-            void (T::*callback)(),
-            //TParam param,
-            int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0
-            )
+            std::chrono::milliseconds delay = std::chrono::milliseconds(0))
         {
-            task_handler h = std::bind(callback, owner);
-            return enqueue(
-                evt,
-                owner,
-                h,
-                hash,
-                delay_milliseconds,
-                timer_interval_milliseconds
-                );
+            auto tsk = create_task(evt, svc, std::forward<TCallback>(callback), hash);
+            tsk->enqueue(delay);
+            return tsk;
         }
 
-        template<typename T> // where T : public virtual clientlet
-        inline void enqueue(
-            /*out*/ task_ptr* ptask,
+        template<typename TCallback>
+        task_ptr enqueue_timer(
             dsn_task_code_t evt,
-            T* owner,
-            void (T::*callback)(),
-            //TParam param,
+            clientlet* svc,
+            TCallback&& callback,
+            std::chrono::milliseconds timer_interval,
             int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0
-            )
+            std::chrono::milliseconds delay = std::chrono::milliseconds(0))
         {
-            task_handler h = std::bind(callback, owner);
-            return enqueue(
-                ptask,
-                evt,
-                owner,
-                h,
-                hash,
-                delay_milliseconds,
-                timer_interval_milliseconds
-                );
+            auto tsk = create_timer_task(evt, svc, std::forward<TCallback>(callback), timer_interval, hash);
+            tsk->enqueue(delay);
+            return tsk;
         }
 
         template<typename THandler>

@@ -81,8 +81,8 @@ namespace dsn {
                     _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
-                                                             this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue_timer(::dsn::service::LPC_NFS_REQUEST_TIMER,
+                        this, [this] {on_request_timer();}, std::chrono::milliseconds(1000));
 
                     return ::dsn::ERR_OK;
                 }

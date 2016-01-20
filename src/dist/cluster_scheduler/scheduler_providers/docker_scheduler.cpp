@@ -181,10 +181,9 @@ void docker_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
-        auto cb = [this,&unit](){
-            create_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
-        };
-        dsn::tasking::enqueue(LPC_DOCKER_CREATE,this,cb);
+        dsn::tasking::enqueue(LPC_DOCKER_CREATE,this, [this, unit]() {
+            create_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
+        });
     }
     
 }
@@ -225,11 +224,9 @@ void docker_scheduler::unschedule(
     {
         _deploy_map.erase(it);
         _lock.unlock();
-
-        auto cb = [this,&unit](){
-            delete_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
-        };
-        dsn::tasking::enqueue(LPC_DOCKER_DELETE,this,cb);
+        dsn::tasking::enqueue(LPC_DOCKER_DELETE,this, [this, unit]() {
+            delete_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
+        });
     }
     else
     {
