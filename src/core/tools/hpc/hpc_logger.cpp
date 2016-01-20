@@ -335,6 +335,10 @@ namespace dsn
 
             // print body
             wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
+            if (wn < 0)
+            {
+                wn = snprintf_p(ptr, capacity, "-- log entry is too long ---");
+            }
             *(ptr + wn) = '\n';
             ptr += (wn + 1);
             capacity -= (wn + 1);
@@ -368,9 +372,11 @@ namespace dsn
                     create_log_file();
                 }
 
-                _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
-
-                _current_log_file_bytes += new_buffer_info.buffer_size;
+                if (new_buffer_info.buffer_size > 0)
+                {
+                    _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                    _current_log_file_bytes += new_buffer_info.buffer_size;
+                }                
 
                 free(new_buffer_info.buffer);
             }
