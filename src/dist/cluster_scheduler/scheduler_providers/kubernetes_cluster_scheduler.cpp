@@ -49,23 +49,6 @@ kubernetes_cluster_scheduler::kubernetes_cluster_scheduler()
 {
 
 }
-void kubernetes_cluster_scheduler::get_k8s_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
-{
-    auto k8s = reinterpret_cast<kubernetes_cluster_scheduler*>(context);
-    std::string message = std::string("client info is ") + k8s->_run_path;
-    auto danglingstring = new std::string(message);
-
-    reply->message = danglingstring->c_str();
-    reply->size = danglingstring->size();
-    reply->context = danglingstring;
-}
-void kubernetes_cluster_scheduler::get_k8s_state_cleanup(dsn_cli_reply reply)
-{
-    dassert(reply.context != nullptr, "corrupted cli reply context");
-    auto danglingstring = reinterpret_cast<std::string*>(reply.context);
-    dassert(reply.message == danglingstring->c_str(),"corrupted cli reply message");
-    delete danglingstring;
-}
 
 void kubernetes_cluster_scheduler::deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply)
 {
@@ -111,9 +94,6 @@ void kubernetes_cluster_scheduler::undeploy_k8s_unit_cleanup(dsn_cli_reply reply
 error_code kubernetes_cluster_scheduler::initialize()
 { 
     int ret;
-    _run_path = dsn_config_get_value_string("apps.client","run_path","","");
-    dassert( _run_path != "", "run path is empty");
-    dinfo("run path is %s",_run_path.c_str());
 #ifndef _WIN32    
     ret = system("kubectl version");
     if (ret != 0)
@@ -128,9 +108,6 @@ error_code kubernetes_cluster_scheduler::initialize()
         return ::dsn::dist::ERR_K8S_CLUSTER_NOT_FOUND;
     }
 #endif
-    dassert(_k8s_state_handle == nullptr, "k8s state is initialized twice");
-    _k8s_state_handle = dsn_cli_app_register("info","get info from k8s scheduler","",this,&get_k8s_state,&get_k8s_state_cleanup);
-    dassert(_k8s_state_handle != nullptr, "register cli handler failed");
     
     dassert(_k8s_deploy_handle == nullptr, "k8s deploy is initialized twice");
     _k8s_deploy_handle = dsn_cli_app_register("deploy","deploy onto k8s scheduler","",this,&deploy_k8s_unit,&deploy_k8s_unit_cleanup);
@@ -163,10 +140,10 @@ void kubernetes_cluster_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
-        auto cb = [this,&unit](){
+        auto cb = [this,unit](){
             create_pod(unit->name,unit->deployment_callback,unit->local_package_directory);
             };
-        dsn::tasking::enqueue(LPC_K8S_CREATE,this,cb);
+        dsn::tasking::enqueue(LPC_K8S_CREATE,this,std::move(cb));
     }
     
 }
@@ -207,11 +184,10 @@ void kubernetes_cluster_scheduler::unschedule(
         _deploy_map.erase(it);
         _lock.unlock();
 
-        auto cb = [this,&unit](){
+        auto cb = [this,unit](){
             delete_pod(unit->name,unit->deployment_callback,unit->local_package_directory);
             };
-        dsn::tasking::enqueue(LPC_K8S_DELETE,this,cb);
-//        std::async(&kubernetes_cluster_scheduler::delete_pod,this,std::ref(unit->name),std::ref(unit->deployment_callback),std::ref(unit->local_package_directory));
+        dsn::tasking::enqueue(LPC_K8S_DELETE,this,std::move(cb));
     }
     else
     {

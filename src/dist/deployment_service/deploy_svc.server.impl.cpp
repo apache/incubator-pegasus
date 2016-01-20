@@ -225,7 +225,7 @@ namespace dsn
 
         DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEPLOY_LONG)
 
-        DEFINE_TASK_CODE(LPC_DEPLOY_DOWNLOAD_RESOURCE, TASK_PRIORITY_COMMON, THREAD_POOL_DEPLOY_LONG)
+        DEFINE_TASK_CODE_AIO(LPC_DEPLOY_DOWNLOAD_RESOURCE, TASK_PRIORITY_COMMON, THREAD_POOL_DEPLOY_LONG)
 
         static void __svc_cli_freeer__(dsn_cli_reply reply)
         {
@@ -491,24 +491,33 @@ namespace dsn
             }
 
             // start resource downloading ...
-            if (di.error == ::dsn::ERR_IO_PENDING)
+            if (di.error == ::dsn::ERR_OK)
             {
                 std::stringstream ss;
                 ss << req.package_id << "." << req.name;
 
                 std::string ldir = utils::filesystem::path_combine(_service_dir, ss.str());
-                std::vector<std::string> files;
+                auto pos = req.package_full_path.rfind("/");
+                std::string source_dir = req.package_full_path.substr(0,pos);
+                std::string file = req.package_full_path.substr( pos + 1, std::string::npos);
+                std::vector<std::string> files{file};
+                svc->local_package_directory = ldir;
+
+                dinfo("source dir is %s and file is %s",source_dir.c_str(),file.c_str());
 
                 file::copy_remote_files(
                     req.package_server,
-                    req.package_full_path,
+                    source_dir,
                     files,
                     ldir,
                     true,
                     LPC_DEPLOY_DOWNLOAD_RESOURCE,
                     this,
-                    [this, svc](error_code err, size_t sz)
+                    [this, svc, ldir, file](error_code err, size_t sz)
                 {
+                    std::string command = "7z x " + ldir + '/' + file + " -y -o" + ldir;
+                // decompress when completed
+                    system(command.c_str());
                     this->download_service_resource_completed(err, svc);
                 }
                 );

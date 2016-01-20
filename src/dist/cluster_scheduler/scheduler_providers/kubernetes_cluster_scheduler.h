@@ -81,8 +81,6 @@ namespace dsn
             virtual void register_failure_callback(
                 std::function<void(error_code, std::string)> failure_notification
                 ) override {}
-            static void get_k8s_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
-            static void get_k8s_state_cleanup(dsn_cli_reply reply);
             static void deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
             static void deploy_k8s_unit_cleanup(dsn_cli_reply reply);
             static void undeploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
