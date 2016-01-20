@@ -14,6 +14,23 @@ namespace dsn
 
         #define TEST_PARAM(x) {if(!(x)){return ERR_INVALID_PARAMETERS;}}
 
+        inline const char* rm_type_prefix(const char* s)
+        {
+            //the monitor need not know the exact class name of the status code
+            //for example, instead of "cluster_type::docker",
+            //just "docker" would be enough
+            const char* postfix = strchr(s, ':');
+            if (postfix != nullptr)
+            {
+                return postfix + 2;
+            }
+            else
+            {
+                //s might be something like "unknown"
+                return s;
+            }
+        }
+
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const error_code& err)
         {
             writer.String(dsn_error_to_string(err));
@@ -21,12 +38,13 @@ namespace dsn
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const service_status& status)
         {
-            writer.String(enum_to_string(status));
+
+            writer.String(rm_type_prefix(enum_to_string(status)));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const cluster_type& type)
         {
-            writer.String(enum_to_string(type));
+            writer.String(rm_type_prefix(enum_to_string(type)));
         };
 
         inline void marshall_json(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& str)
@@ -505,6 +523,8 @@ namespace dsn
 
                 dinfo("source dir is %s and file is %s",source_dir.c_str(),file.c_str());
 
+                svc->local_package_directory = ldir;
+
                 file::copy_remote_files(
                     req.package_server,
                     source_dir,
@@ -723,14 +743,17 @@ namespace dsn
 
             cluster_list clist;
             std::string format;
-            if (argc < 1 || ERR_OK != unmarshall_json(argv[0], "format", format))
+            if (argc > 0)
             {
-                //TODO: need raise error here?
+                error_code err = unmarshall_json(argv[0], "format", format);
+                if (err != ERR_OK)
+                {
+                    //TODO: need raise error here?
+                    format = std::string("");
+                }
             }
-            else
-            {
-                on_get_cluster_list_internal(format, clist);
-            }
+
+            on_get_cluster_list_internal(format, clist);
 
             std::string* resp_json = new std::string();
             *resp_json = marshall_json(clist);
