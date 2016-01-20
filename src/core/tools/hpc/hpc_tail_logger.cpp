@@ -318,6 +318,11 @@ namespace dsn
 
             // print body
             wn = std::vsnprintf(ptr, capacity, fmt, args);
+            if (wn < 0)
+            {
+                wn = snprintf_p(ptr, capacity, "-- log entry is too long ---");
+            }
+
             ptr += wn;
             capacity -= wn;
             
