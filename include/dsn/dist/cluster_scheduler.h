@@ -48,7 +48,7 @@ namespace dsn
     namespace dist
     {
         // ---------- cluster_type -------------
-        enum cluster_type
+        enum class cluster_type
         {
             kubernetes = 0,
             docker = 1,
@@ -64,14 +64,14 @@ namespace dsn
         DEFINE_POD_SERIALIZATION(cluster_type);
 
         ENUM_BEGIN(cluster_type, cluster_type::invalid)
-            ENUM_REG(kubernetes)
-            ENUM_REG(docker)
-            ENUM_REG(bare_medal_linux)
-            ENUM_REG(bare_medal_windows)
-            ENUM_REG(yarn_on_linux)
-            ENUM_REG(yarn_on_windows)
-            ENUM_REG(mesos_on_linux)
-            ENUM_REG(mesos_on_windows)
+            ENUM_REG(cluster_type::kubernetes)
+            ENUM_REG(cluster_type::docker)
+            ENUM_REG(cluster_type::bare_medal_linux)
+            ENUM_REG(cluster_type::bare_medal_windows)
+            ENUM_REG(cluster_type::yarn_on_linux)
+            ENUM_REG(cluster_type::yarn_on_windows)
+            ENUM_REG(cluster_type::mesos_on_linux)
+            ENUM_REG(cluster_type::mesos_on_windows)
         ENUM_END(cluster_type)
 
         // ---------- service_status -------------

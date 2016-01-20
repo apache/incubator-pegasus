@@ -523,8 +523,6 @@ namespace dsn
 
                 dinfo("source dir is %s and file is %s",source_dir.c_str(),file.c_str());
 
-                svc->local_package_directory = ldir;
-
                 file::copy_remote_files(
                     req.package_server,
                     source_dir,
