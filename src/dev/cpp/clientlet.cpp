@@ -103,35 +103,24 @@ namespace dsn
         }
     }
 
-    namespace rpc
+    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback, int reply_hash)
     {
-        task_ptr create_rpc_empty_response_task(dsn_message_t request, clientlet* svc, int reply_hash)
-        {
-            auto tsk = new safe_task_handle;
-            //do not add_ref here
-            auto t = dsn_rpc_create_response_task(
-                request,
-                nullptr,
-                nullptr,
-                reply_hash,
-                svc ? svc->tracker() : nullptr
-                );
-            tsk->set_task_info(t);
-            return tsk;
-        }
-
-        task_ptr call(::dsn::rpc_address server, dsn_message_t request, clientlet* svc, int reply_hash)
-        {
-            auto t = create_rpc_empty_response_task(request, svc, reply_hash);
-            dsn_rpc_call(server.c_addr(), t->native_handle());
-            return t;
-        }
+        auto tsk = new safe_task_handle;
+        //do not add_ref here
+        auto t = dsn_rpc_create_response_task(
+            request,
+            nullptr,
+            nullptr,
+            reply_hash,
+            svc ? svc->tracker() : nullptr
+            );
+        tsk->set_task_info(t);
+        return tsk;
     }
-
 
     namespace file
     {
-        task_ptr create_empty_aio_task(dsn_task_code_t callback_code, clientlet* svc, int hash)
+        task_ptr create_aio_task(dsn_task_code_t callback_code, clientlet* svc, empty_callback, int hash)
         {
             auto tsk = new safe_task_handle;
             //do not add_ref here
@@ -143,26 +132,6 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr read(dsn_handle_t fh, char* buffer, int count, uint64_t offset, dsn_task_code_t callback_code, clientlet* svc, int hash)
-        {
-            auto tsk = create_empty_aio_task(callback_code, svc, hash);
-            dsn_file_read(fh, buffer, count, offset, tsk->native_handle());
-            return tsk;
-        }
-
-        task_ptr write(dsn_handle_t fh, const char* buffer, int count, uint64_t offset, dsn_task_code_t callback_code, clientlet* svc, int hash)
-        {
-            auto tsk = create_empty_aio_task(callback_code, svc, hash);
-            dsn_file_write(fh, buffer, count, offset, tsk->native_handle());
-            return tsk;
-        }
-
-        task_ptr write_vector(dsn_handle_t fh, const dsn_file_buffer_t* buffers, int buffer_count, uint64_t offset, dsn_task_code_t callback_code, clientlet* svc, int hash)
-        {
-            auto tsk = create_empty_aio_task(callback_code, svc, hash);
-            dsn_file_write_vector(fh, buffers, buffer_count, offset, tsk->native_handle());
-            return tsk;
-        }
 
         void copy_remote_files_impl(
             ::dsn::rpc_address remote,
@@ -193,22 +162,6 @@ namespace dsn
                     dest_dir.c_str(), overwrite, native_task
                     );
             }
-        }
-
-        task_ptr copy_remote_files(::dsn::rpc_address remote, const std::string& source_dir, std::vector<std::string>& files, const std::string& dest_dir, bool overwrite, dsn_task_code_t callback_code, clientlet* svc, int hash)
-        {
-            auto tsk = create_empty_aio_task(callback_code, svc, hash);
-            copy_remote_files_impl(remote, source_dir, files, dest_dir, overwrite, tsk->native_handle());
-            return tsk;
-        }
-
-        task_ptr copy_remote_directory(::dsn::rpc_address remote, const std::string& source_dir, const std::string& dest_dir, bool overwrite, dsn_task_code_t callback_code, clientlet* svc, int hash)
-        {
-            std::vector<std::string> files;
-            return copy_remote_files(
-                remote, source_dir, files, dest_dir, overwrite,
-                callback_code, svc, hash
-            );
         }
     }
     

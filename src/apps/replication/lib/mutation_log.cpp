@@ -799,14 +799,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     task_ptr tsk = nullptr;
     if (callback)
     {
-        tsk = new safe_task<aio_handler>(std::move(callback));
-        tsk->add_ref(); // released in exec_aio
-        dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-            safe_task<aio_handler>::exec_aio,
-            safe_task<aio_handler>::on_cancel,
-            tsk, hash, callback_host->tracker()
-            );
-        tsk->set_task_info(t);
+        tsk = dsn::file::create_aio_task(callback_code, callback_host, std::move(callback), hash);
         _pending_write_callbacks->push_back(tsk);
     }
 
@@ -1384,7 +1377,7 @@ public:
                 //We hope that this never happens, it would deteriorate performance
                 if (size > writer.total_size())
                 {
-                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr);
+                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, dsn::empty_callback());
                     task->wait();
                     writer.write_empty(task->io_size());
                     _file_dispatched_bytes += task->io_size();
@@ -1405,7 +1398,7 @@ private:
             _current_buffer->_begin = _current_buffer->_end = 0;
             _current_buffer->_file_offset_of_buffer = _file_dispatched_bytes;
             _current_buffer->_have_ongoing_task = true;
-            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr);
+            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, dsn::empty_callback());
             _file_dispatched_bytes += block_size_bytes;
             std::swap(_current_buffer, _next_buffer);
         }
@@ -1777,7 +1770,9 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
             static_cast<uint64_t>(local_offset),
             evt,
             callback_host,
-            hash);
+            dsn::empty_callback(),
+            hash
+            );
     }
     _end_offset += block.size();
     return tsk;

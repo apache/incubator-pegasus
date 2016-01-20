@@ -69,6 +69,7 @@ namespace dsn
     };
 
     // common APIs
+    struct empty_callback {};
 
     namespace tasking
     {
@@ -189,9 +190,10 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr create_rpc_empty_response_task(
+        task_ptr create_rpc_response_task(
             dsn_message_t request,
             clientlet* svc,
+            empty_callback,
             int reply_hash = 0);
 
         template<typename TCallback>
@@ -241,26 +243,20 @@ namespace dsn
             return t;
         }
 
-        task_ptr call(
-            ::dsn::rpc_address server,
-            dsn_message_t request,
-            clientlet* svc,
-            int reply_hash = 0
-        );
-
         template<typename TRequest>
         task_ptr call(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             TRequest&& req,
             clientlet* owner,
+            empty_callback,
             int request_hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0)
         {
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
             ::marshall(msg, std::forward<TRequest>(req));
-            auto task = create_rpc_empty_response_task(msg, owner, reply_hash);
+            auto task = create_rpc_response_task(msg, owner, empty_callback{}, reply_hash);
             dsn_rpc_call(server.c_addr(), task->native_handle());
             return task;
         }
@@ -369,9 +365,10 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr create_empty_aio_task(
+        task_ptr create_aio_task(
             dsn_task_code_t callback_code,
             clientlet* svc,
+            empty_callback,
             int hash);
 
         template<typename TCallback>
@@ -391,16 +388,6 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr read(
-            dsn_handle_t fh,
-            char* buffer,
-            int count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            int hash = 0
-        );
-
         template<typename TCallback>
         task_ptr write(
             dsn_handle_t fh,
@@ -418,16 +405,6 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr write(
-            dsn_handle_t fh,
-            const char* buffer,
-            int count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            int hash = 0
-        );
-
         template<typename TCallback>
         task_ptr write_vector(
             dsn_handle_t fh,
@@ -444,16 +421,6 @@ namespace dsn
             dsn_file_write_vector(fh, buffers, buffer_count, offset, tsk->native_handle());
             return tsk;
         }
-
-        task_ptr write_vector(
-            dsn_handle_t fh,
-            const dsn_file_buffer_t* buffers,
-            int buffer_count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            int hash = 0
-        );
 
         void copy_remote_files_impl(
             ::dsn::rpc_address remote,
@@ -482,17 +449,6 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr copy_remote_files(
-            ::dsn::rpc_address remote,
-            const std::string& source_dir,
-            std::vector<std::string>& files, // empty for all
-            const std::string& dest_dir,
-            bool overwrite,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            int hash = 0
-        );
-
         template<typename TCallback>
         task_ptr copy_remote_directory(
             ::dsn::rpc_address remote,
@@ -511,16 +467,6 @@ namespace dsn
                 callback_code, svc, std::forward<TCallback>(callback), hash
                 );
         }
-
-        task_ptr copy_remote_directory(
-            ::dsn::rpc_address remote,
-            const std::string& source_dir,
-            const std::string& dest_dir,
-            bool overwrite,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            int hash = 0
-        );
     }
 
     // ------------- inline implementation ----------------

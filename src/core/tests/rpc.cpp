@@ -45,6 +45,8 @@
 #include "test_utils.h"
 #include <boost/lexical_cast.hpp>
 
+typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
+
 static ::dsn::rpc_address build_group() {
     ::dsn::rpc_address server_group;
     server_group.assign_group(dsn_group_build("server_group.test"));

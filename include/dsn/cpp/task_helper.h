@@ -53,7 +53,6 @@
 namespace dsn 
 {
     typedef std::function<void(error_code, size_t)> aio_handler;
-    typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     class safe_task_handle;
     typedef ::dsn::ref_ptr<safe_task_handle> task_ptr;
     
@@ -144,9 +143,6 @@ namespace dsn
     class safe_task : public safe_task_handle
     {
     public:
-        //We do not give copy constructor now. User can do a copy explicitly with [=] { callback();}
-        //Remember: Lambda is the most powerful zero-overhead polymorphism in C++
-        static_assert(!std::is_reference<THandler>::value, "please give a rvalue reference to a callback!");
         explicit safe_task(THandler&& h) : _handler(std::move(h))
         {
         }
