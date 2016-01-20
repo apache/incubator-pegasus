@@ -102,6 +102,7 @@ namespace dsn
             //std::string description;
             std::string local_package_directory;
             std::string remote_package_directory;
+            std::string service_url;
             //std::string command_line;
             std::string cluster;
             std::string package_id;

@@ -629,10 +629,12 @@ namespace dsn
             ::dsn::service::zauto_read_lock l(_service_lock);
             for (auto& c : _services)
             {
-                if (c.second->package_id == package_id)
+                if (c.second->package_id == package_id || package_id.size() == 0)
                 {
                     deploy_info di;
                     di.cluster = c.second->cluster;
+                    di.name = c.second->name;
+                    di.service_url = c.second->service_url;
                     di.package_id = c.second->package_id;
                     di.error = ::dsn::ERR_OK;
                     di.status = c.second->status;
@@ -648,14 +650,16 @@ namespace dsn
             deploy_info_list dlist;
             std::string package_id;
 
-            if (argc < 1 || ERR_OK != unmarshall_json(argv[0], "package_id", package_id))
+            if (argc >=1)
             {
-                //TODO: need raise error here?
+                error_code err = unmarshall_json(argv[0], "package_id", package_id);
+                if (err != ERR_OK)
+                {
+                    //TODO: need raise error here?
+                    package_id = std::string("");
+                }
             }
-            else
-            {
-                on_get_service_list_internal(package_id, dlist);
-            }
+            on_get_service_list_internal(package_id, dlist);
 
             std::string* resp_json = new std::string();
             *resp_json = marshall_json(dlist);
