@@ -62,7 +62,7 @@ public:
         auto err = ::dsn::rpc::call_typed_wait(
             &resp_msg, p_server_addr ? *p_server_addr : _server,
             RPC_FD_FAILURE_DETECTOR_PING, beacon,
-            hash, timeout_milliseconds
+            hash, std::chrono::milliseconds(timeout_milliseconds)
             );
         if (err == ::dsn::ERR_OK)
         {
@@ -90,7 +90,7 @@ public:
                         end_ping(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds), 
                     reply_hash
                     );
     }

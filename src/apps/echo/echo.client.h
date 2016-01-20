@@ -58,7 +58,7 @@ public:
     {
         ::dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_ECHO_ECHO_PING, val, hash, timeout_milliseconds);
+            RPC_ECHO_ECHO_PING, val, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -85,7 +85,7 @@ public:
                         end_ping(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }

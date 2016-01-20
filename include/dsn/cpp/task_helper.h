@@ -150,6 +150,9 @@ namespace dsn
         explicit safe_task(THandler&& h) : _handler(std::move(h))
         {
         }
+        explicit safe_task(const THandler& h) : _handler(h)
+        {
+        }
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
             return safe_task_handle::cancel(wait_until_finished, finished);

@@ -232,7 +232,7 @@ void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_d
             on_query_decree_ack(err, query, response);
         }
         ,
-        gpid_to_hash(query->gpid), 3000);
+        gpid_to_hash(query->gpid), std::chrono::seconds(3));
 }
 
 void simple_stateful_load_balancer::on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp)

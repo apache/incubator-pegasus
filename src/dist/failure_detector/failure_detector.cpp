@@ -551,7 +551,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
             }
         },
         0,
-        static_cast<int>(_check_interval_milliseconds),
+        std::chrono::milliseconds(_check_interval_milliseconds),
         0
         );
 }

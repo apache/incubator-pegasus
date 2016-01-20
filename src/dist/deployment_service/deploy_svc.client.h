@@ -24,7 +24,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY, req, hash, timeout_milliseconds);
+            RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY, req, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -51,7 +51,7 @@ public:
                         deploy_svc_client::end_deploy(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }
@@ -79,7 +79,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY, service_url, hash, timeout_milliseconds);
+            RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY, service_url, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -106,7 +106,7 @@ public:
                         deploy_svc_client::end_undeploy(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }
@@ -134,7 +134,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST, package_id, hash, timeout_milliseconds);
+            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST, package_id, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -161,7 +161,7 @@ public:
                         deploy_svc_client::end_get_service_list(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }
@@ -189,7 +189,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO, service_url, hash, timeout_milliseconds);
+            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO, service_url, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -216,7 +216,7 @@ public:
                         deploy_svc_client::end_get_service_info(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }
@@ -244,7 +244,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST, format, hash, timeout_milliseconds);
+            RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST, format, hash, std::chrono::milliseconds(timeout_milliseconds));
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -271,7 +271,7 @@ public:
                         deploy_svc_client::end_get_cluster_list(err, std::move(resp), context);
                     },
                     request_hash, 
-                    timeout_milliseconds, 
+                    std::chrono::milliseconds(timeout_milliseconds),
                     reply_hash
                     );
     }

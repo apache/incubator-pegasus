@@ -1384,7 +1384,7 @@ public:
                 //We hope that this never happens, it would deteriorate performance
                 if (size > writer.total_size())
                 {
-                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr);
                     task->wait();
                     writer.write_empty(task->io_size());
                     _file_dispatched_bytes += task->io_size();
@@ -1405,7 +1405,7 @@ private:
             _current_buffer->_begin = _current_buffer->_end = 0;
             _current_buffer->_file_offset_of_buffer = _file_dispatched_bytes;
             _current_buffer->_have_ongoing_task = true;
-            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr);
             _file_dispatched_bytes += block_size_bytes;
             std::swap(_current_buffer, _next_buffer);
         }
@@ -1757,19 +1757,30 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
             };
     });
 
-    task_ptr task = file::write_vector(
-        _handle,
-        buffer_vector.get(),
-        static_cast<int>(block.data().size()),
-        static_cast<uint64_t>(local_offset),
-        evt,
-        callback_host,
-        callback,
-        hash
-        );
-
+    task_ptr tsk;
+    if (callback) {
+        tsk = file::write_vector(
+            _handle,
+            buffer_vector.get(),
+            static_cast<int>(block.data().size()),
+            static_cast<uint64_t>(local_offset),
+            evt,
+            callback_host,
+            std::move(callback),
+            hash
+            );
+    } else {
+        tsk = file::write_vector(
+            _handle,
+            buffer_vector.get(),
+            static_cast<int>(block.data().size()),
+            static_cast<uint64_t>(local_offset),
+            evt,
+            callback_host,
+            hash);
+    }
     _end_offset += block.size();
-    return task;
+    return tsk;
 }
 
 void log_file::reset_stream()

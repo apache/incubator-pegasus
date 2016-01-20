@@ -88,8 +88,7 @@ TEST(core, rpc)
         server,
         RPC_TEST_HASH,
         req,
-        1,
-        0
+        1
         );
     EXPECT_TRUE(err == ERR_OK);
 
