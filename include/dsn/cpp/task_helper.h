@@ -48,7 +48,7 @@
 # include <set>
 # include <map>
 # include <thread>
-# include <boost/optional.hpp>
+# include <dsn/cpp/optional.h>
 
 namespace dsn 
 {
@@ -167,8 +167,8 @@ namespace dsn
         static void exec(void* task)
         {
             safe_task* t = (safe_task*)task;
-            dbg_dassert(t->_handler, "_handler is missing");
-            (*t->_handler)();
+            dbg_dassert(t->_handler.is_some(), "_handler is missing");
+            t->_handler.unwrap()();
             if (!t->_is_timer)
             {
                 t->_handler.reset();
@@ -179,8 +179,8 @@ namespace dsn
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
-            dbg_dassert(t->_handler, "_handler is missing");
-            (*t->_handler)(err, req, resp);
+            dbg_dassert(t->_handler.is_some(), "_handler is missing");
+            t->_handler.unwrap()(err, req, resp);
             t->_handler.reset();
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
@@ -188,14 +188,15 @@ namespace dsn
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
             safe_task* t = (safe_task*)task;
-            (*t->_handler)(err, sz);
+            dbg_dassert(t->_handler.is_some(), "_handler is missing");
+            t->_handler.unwrap()(err, sz);
             t->_handler.reset();
             t->release_ref(); // added upon callback exec_aio registration
         }
             
     private:
-        bool                         _is_timer;
-        boost::optional<THandler>    _handler;
+        bool                       _is_timer;
+        dsn::optional<THandler>    _handler;
     };
 
     //
