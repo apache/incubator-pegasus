@@ -1,5 +1,4 @@
-#include <dsn/service_api_c.h>
-#include <dsn/dist/replication/client_ddl.h>
+#include "client_ddl.h"
 #include <iostream>
 
 using namespace dsn::replication;

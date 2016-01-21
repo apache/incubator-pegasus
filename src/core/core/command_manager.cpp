@@ -269,7 +269,7 @@ namespace dsn {
                 }
                 else
                 {
-                    dassert(false, "local rpc cli timeout");
+                    dwarn("cli run for %s is too long, timeout", cmd.c_str());
                     return false;
                 }
             }

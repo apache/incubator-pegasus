@@ -84,9 +84,11 @@ public:
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 
-                    this, 
-                    &failure_detector_client::end_ping, 
-                    context,
+                    this,
+                    [=](error_code err, beacon_ack&& resp)
+                    {
+                        end_ping(err, std::move(resp), context);
+                    },
                     request_hash, 
                     timeout_milliseconds, 
                     reply_hash
@@ -104,39 +106,6 @@ public:
             std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING ok" << std::endl;
         }
     }
-    
-    // - asynchronous with on-heap std::shared_ptr< ::dsn::fd::beacon_msg> and std::shared_ptr< ::dsn::fd::beacon_ack> 
-    ::dsn::task_ptr begin_ping2(
-        std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
-    {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    RPC_FD_FAILURE_DETECTOR_PING, 
-                    beacon, 
-                    this, 
-                    &failure_detector_client::end_ping2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_ping2(
-        ::dsn::error_code err, 
-        std::shared_ptr< ::dsn::fd::beacon_msg>& beacon, 
-        std::shared_ptr< ::dsn::fd::beacon_ack>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING ok" << std::endl;
-        }
-    }
-    
 
 private:
     ::dsn::rpc_address _server;

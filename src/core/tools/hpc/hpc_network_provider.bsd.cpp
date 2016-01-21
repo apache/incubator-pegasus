@@ -437,7 +437,7 @@ namespace dsn
                     e.filter 
                     );
 
-                do_read();
+                start_read_next();
             }
         }
 

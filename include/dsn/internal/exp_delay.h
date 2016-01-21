@@ -37,7 +37,6 @@
 
 # include <dsn/internal/singleton.h>
 # include <list>
-# include <thread>
 
 namespace dsn
 {
@@ -71,7 +70,7 @@ namespace dsn
             _threshold = threshold;
         }
 
-        inline void delay(int value)
+        inline int delay(int value)
         {
             if (value >= _threshold)
             {
@@ -88,7 +87,11 @@ namespace dsn
                     delay_milliseconds = _delay[DELAY_COUNT - 1];
                 }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay_milliseconds));
+                return delay_milliseconds;
+            }
+            else
+            {
+                return 0;
             }
         }
 
@@ -116,7 +119,7 @@ namespace dsn
             }
         }
 
-        inline void delay(int value, int threshold)
+        inline int delay(int value, int threshold)
         {
             if (value >= threshold)
             {
@@ -133,7 +136,11 @@ namespace dsn
                     delay_milliseconds = _delay[DELAY_COUNT - 1];
                 }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay_milliseconds));
+                return delay_milliseconds;
+            }
+            else
+            {
+                return 0;
             }
         }
 

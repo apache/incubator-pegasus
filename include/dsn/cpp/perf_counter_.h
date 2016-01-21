@@ -63,8 +63,8 @@ namespace dsn
         void   decrement()  { dsn_perf_counter_decrement(_h); }
         void   add(uint64_t val)  { dsn_perf_counter_add(_h, val); }
         void   set(uint64_t val)  { dsn_perf_counter_set(_h, val); }
-        double get_value()  { dsn_perf_counter_get_value(_h); }
-        double get_percentile(dsn_perf_counter_percentile_type_t type)  { dsn_perf_counter_get_percentile(_h, type); }
+        double get_value()  { return dsn_perf_counter_get_value(_h); }
+        double get_percentile(dsn_perf_counter_percentile_type_t type)  { return dsn_perf_counter_get_percentile(_h, type); }
 
     private:
         dsn_handle_t _h;

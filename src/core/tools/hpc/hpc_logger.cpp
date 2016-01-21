@@ -117,13 +117,13 @@ namespace dsn
         //daemon thread
         void hpc_logger::log_thread()
         {
-            std::list<buffer_info> saved_list;
+            std::vector<buffer_info> saved_list;
 
             while (!_stop_thread)
             {
                 _write_list_lock.lock();
                 _write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
-                saved_list = _write_list;
+                saved_list = std::move(_write_list);
                 _write_list.clear();
                 _write_list_lock.unlock();
                 
@@ -139,7 +139,7 @@ namespace dsn
         }
 
         hpc_logger::hpc_logger(const char* log_dir) 
-            : logging_provider(log_dir), _stop_thread(false)
+            : logging_provider(log_dir), _stop_thread(false), _exiting(false)
         {
             _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
@@ -150,7 +150,7 @@ namespace dsn
                 );
 
             _start_index = 0;
-            _index = 0;
+            _index = 1;
             _current_log_file_bytes = 0;
 
             // check existing log files and decide start_index
@@ -168,7 +168,7 @@ namespace dsn
                     continue;
 
                 int index;
-                if (1 != sscanf(name.c_str(), "log.%d.txt", &index))
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index < 1)
                     continue;
 
                 if (index > _index)
@@ -181,6 +181,8 @@ namespace dsn
 
             if (_start_index == 0)
                 _start_index = _index;
+            else
+                _index++;
 
             _current_log = nullptr;
             create_log_file();
@@ -190,7 +192,7 @@ namespace dsn
         void hpc_logger::create_log_file()
         {
             std::stringstream log;
-            log << _log_dir << "/log." << ++_index << ".txt";
+            log << _log_dir << "/log." << _index++ << ".txt";
             _current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
             _current_log_file_bytes = 0;
 
@@ -238,6 +240,7 @@ namespace dsn
         {
             std::vector<int> threads;
             hpc_log_manager::instance().get_all_keys(threads);
+            _exiting = true;
 
             for (auto& tid : threads)
             {
@@ -293,7 +296,8 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf_p(ptr, capacity, "%s (%" PRIu64 " %04x) ", str, ts, tid);
+            static const char s_level_char[] = "IDWEF";
+            auto wn = snprintf_p(ptr, capacity, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level], str, ts, tid);
             ptr += wn;
             capacity -= wn;
 
@@ -333,6 +337,16 @@ namespace dsn
 
             // print body
             wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
+            if (wn < 0)
+            {
+                wn = snprintf_p(ptr, capacity - 1, "-- cannot printf due to that log entry has error ---");
+            }
+            else if (wn >= capacity)
+            {
+                // log truncated
+                wn = capacity - 1;
+            }
+
             *(ptr + wn) = '\n';
             ptr += (wn + 1);
             capacity -= (wn + 1);
@@ -350,19 +364,13 @@ namespace dsn
 
         void hpc_logger::buffer_push(char* buffer, int size)
         {
-            buffer_info new_buffer_info;
-            new_buffer_info.buffer = buffer;
-            new_buffer_info.buffer_size = size;
-            _write_list.push_back(new_buffer_info);
+            _write_list.emplace_back(buffer, size); 
         }
 
-        void hpc_logger::write_buffer_list(std::list<buffer_info>& llist)
+        void hpc_logger::write_buffer_list(std::vector<buffer_info>& llist)
         {
-            while (!llist.empty())
+            for (auto& new_buffer_info : llist)
             {
-                buffer_info new_buffer_info = llist.front();
-                llist.pop_front();
-
                 if (_current_log_file_bytes + new_buffer_info.buffer_size >= MAX_FILE_SIZE)
                 {
                     _current_log->close();
@@ -372,12 +380,19 @@ namespace dsn
                     create_log_file();
                 }
 
-                _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                if (new_buffer_info.buffer_size > 0)
+                {
+                    _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                    _current_log_file_bytes += new_buffer_info.buffer_size;
+                }                
 
-                _current_log_file_bytes += new_buffer_info.buffer_size;
-
-                free(new_buffer_info.buffer);
+                // do not free the buffer at exit as it may still be written
+                if (!_exiting)
+                {
+                    free(new_buffer_info.buffer);
+                }
             }
+            llist.clear();
         }
     }
 }

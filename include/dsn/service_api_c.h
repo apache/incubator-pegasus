@@ -77,8 +77,10 @@
 
 # ifdef __cplusplus
 # define DEFAULT(value) = value
+# define NORETURN [[noreturn]]
 # else
 # define DEFAULT(value)
+# define NORETURN 
 # endif
 
 # ifdef __cplusplus
@@ -347,7 +349,7 @@ extern DSN_API bool      dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
-extern DSN_API void dsn_exit(int code);
+NORETURN extern DSN_API void dsn_exit(int code);
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
 extern DSN_API const char* dsn_get_current_app_data_dir();
@@ -478,6 +480,8 @@ extern DSN_API int                   dsn_config_get_all_keys(
                                         const char** buffers, 
                                         /*inout*/ int* buffer_count
                                         );
+extern DSN_API void                  dsn_config_dump(const char* file);
+
 // logs with level smaller than this start_level will not be logged
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
 extern DSN_API dsn_log_level_t       dsn_log_get_start_level();

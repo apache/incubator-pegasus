@@ -33,44 +33,32 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+# include "docker_scheduler.h"
 
-# include <dsn/dist/cluster_scheduler.h>
-
-using namespace ::dsn::service;
-
-namespace dsn
+class test_client : public ::dsn::service_app
 {
-    namespace dist
+public:
+    ::dsn::error_code start(int argc, char** argv)
     {
-        class kubernetes_cluster_scheduler 
-            : public cluster_scheduler, public clientlet
-        {
-        public:
-            virtual error_code initialize() override;
-
-            /*
-            * option 1: combined deploy and failure notification service
-            *  failure_notification is specific for this deployment unit
-            */
-            virtual void schedule(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback,
-                std::function<void(error_code, std::string)> failure_notification
-                ) override {}
-
-            /*
-            * option 2: seperated deploy and failure notification service
-            */
-            virtual void deploy(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback
-                ) override {}
-
-            // *  failure_notification is general for all deployment units
-            virtual void register_failure_callback(
-                std::function<void(error_code, std::string)> failure_notification
-                ) override {}
-        };
+        auto err = _docker.initialize();
+        return err;
     }
+
+    void stop(bool cleanup = false)
+    {
+
+    }
+
+    ::dsn::dist::docker_scheduler _docker;
+};
+
+int main(int argc, char **argv)
+{
+    // register all possible services
+    dsn::register_app<test_client>("client");
+
+    // specify what services and tools will run in config file, then run
+    dsn_run_config("config.ini", true);
+
+    return 0;
 }

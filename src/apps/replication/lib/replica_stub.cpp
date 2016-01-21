@@ -124,7 +124,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     _log = new mutation_log(
         log_dir,
         opts.log_shared_batch_buffer_kb,
-        opts.log_file_size_mb
+        opts.log_shared_file_size_mb,
+        opts.log_shared_force_flush
         );
 
     // init rps
@@ -210,7 +211,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         _log = new mutation_log(
             log_dir,
             opts.log_shared_batch_buffer_kb,
-            opts.log_file_size_mb
+            opts.log_shared_file_size_mb,
+            opts.log_shared_force_flush
             );
         auto lerr = _log->open(nullptr);
         dassert(lerr == ERR_OK, "restart log service must succeed");
@@ -781,7 +783,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         _failure_detector->get_servers(),
         msg,
         nullptr,
-        nullptr
+        [](error_code, dsn_message_t, dsn_message_t) {}
         );
 }
 

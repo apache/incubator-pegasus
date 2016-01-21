@@ -201,6 +201,7 @@ void provider_recursively_create_delete_test(const service_creator_func& creator
         &tracker);
     dsn_task_tracker_wait_all(tracker.tracker());
 
+    std::this_thread::sleep_for( std::chrono::seconds(1) );
     deleter(service);
 }
 

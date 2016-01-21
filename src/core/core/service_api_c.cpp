@@ -166,6 +166,11 @@ struct task_code_placeholder { };
 DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
     dsn_task_priority_t pri, dsn_threadpool_code_t pool)
 {
+    dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 
+        "task code '%s' is too long - length must be smaller than %d",
+        name,
+        DSN_MAX_TASK_CODE_NAME_LENGTH
+        );
     auto r = static_cast<dsn_task_code_t>(::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().register_id(name));
     ::dsn::task_spec::register_task_code(r, type, pri, pool);
     return r;
@@ -260,6 +265,13 @@ DSN_API int dsn_config_get_all_keys(const char* section, const char** buffers, /
     }
 
     return kcount;
+}
+
+DSN_API void dsn_config_dump(const char* file)
+{
+    std::ofstream os(file, std::ios::out);
+    dsn_all.config->dump(os);
+    os.close();
 }
 
 DSN_API void dsn_coredump()
@@ -929,7 +941,7 @@ err:
 }
 #endif
 
-DSN_API void dsn_exit(int code)
+NORETURN DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
     // TODO: do not use std::map above, coz when suspend the other threads, they may stop

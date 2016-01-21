@@ -82,7 +82,7 @@ namespace dsn {
             }
         }
 
-        void asio_rpc_session::do_read(size_t sz)
+        void asio_rpc_session::do_read(int sz)
         {
             add_ref();
 
@@ -94,7 +94,7 @@ namespace dsn {
             {
                 if (!!ec)
                 {
-                    derror("asio read failed: %s", ec.message().c_str());
+                    derror("asio read from %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
                     on_failure();
                 }
                 else
@@ -108,7 +108,7 @@ namespace dsn {
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
                      
-                    do_read(read_next);
+                    start_read_next(read_next);
                 }
 
                 release_ref();
@@ -133,7 +133,7 @@ namespace dsn {
             {
                 if (!!ec)
                 {
-                    derror("asio write failed: %s", ec.message().c_str());
+                    derror("asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
                     on_failure();
                 }
                 else
@@ -157,7 +157,7 @@ namespace dsn {
             _socket(socket)
         {
             set_options();
-            if (!is_client) do_read();
+            if (!is_client) start_read_next();
         }
         
         void asio_rpc_session::on_failure()
@@ -198,7 +198,7 @@ namespace dsn {
                         set_options();
                         set_connected();
                         on_send_completed();
-                        do_read();
+                        start_read_next();
                     }
                     else
                     {

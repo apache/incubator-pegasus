@@ -299,7 +299,7 @@ namespace dsn
 
                     this->on_server_session_accepted(s1);
 
-                    s->do_read();
+                    s->do_read(256);
                 }
                 else
                 {
@@ -363,7 +363,7 @@ namespace dsn
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
 
-                    do_read(read_next);
+                    start_read_next(read_next);
                 }
 
                 release_ref();
@@ -532,7 +532,7 @@ namespace dsn
 
                     set_connected();
                     on_send_completed();
-                    do_read();
+                    start_read_next();
                 }
                 this->release_ref(); // added before ConnectEx
             };

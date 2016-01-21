@@ -40,19 +40,22 @@ class test_client : public ::dsn::service_app
 public:
     ::dsn::error_code start(int argc, char** argv)
     {
-        return ::dsn::ERR_OK;
+        auto err = _k8s.initialize();
+        return err;
     }
 
     void stop(bool cleanup = false)
     {
 
     }
+
+    ::dsn::dist::kubernetes_cluster_scheduler _k8s;
 };
 
 int main(int argc, char **argv)
 {
     // register all possible services
-    dsn::register_app<test_client>("test");
+    dsn::register_app<test_client>("client");
 
     // specify what services and tools will run in config file, then run
     dsn_run_config("config.ini", true);

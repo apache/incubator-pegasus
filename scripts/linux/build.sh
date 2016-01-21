@@ -3,6 +3,7 @@
 #
 # Shell Options:
 #    CLEAR          YES|NO
+#    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
@@ -20,13 +21,14 @@
 #    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
 
 ROOT=`pwd`
+REPORT_DIR=$ROOT/test_reports
 BUILD_DIR="$ROOT/builder"
 GCOV_DIR="$ROOT/gcov_report"
 GCOV_TMP="$ROOT/.gcov_tmp"
 GCOV_PATTERN=`find $ROOT/include $ROOT/src -name '*.h' -o -name '*.cpp'`
 TIME=`date --rfc-3339=seconds`
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-MAKE_OPTIONS="$MAKE_OPTIONS -j8"
+MAKE_OPTIONS="$MAKE_OPTIONS -j$JOB_NUM"
 
 if [ "$CLEAR" == "YES" ]
 then
@@ -182,10 +184,15 @@ then
     fi
 fi
 
+if [ ! -d "$REPORT_DIR" ]
+then
+    mkdir -p $REPORT_DIR
+fi
+
 for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     echo "====================== run $MODULE =========================="
     cd $BUILD_DIR/bin/$MODULE
-    ./run.sh
+    REPORT_DIR=$REPORT_DIR ./run.sh
     if [ $? -ne 0 ]
     then
         echo "ERROR: run $MODULE failed"

@@ -26,20 +26,21 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Define kubernetes cluster error code to dsn error code
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-1-6, Guoxi Li(goksyli1990@gmail.com), first version
+ *   
  */
+#pragma once
 
-# include "kubernetes_cluster_scheduler.h"
+#include <dsn/cpp/auto_codes.h>
 
-namespace dsn
-{
-    namespace dist
-    {
-        
-    }
-}
+namespace dsn { namespace dist {
 
+DEFINE_ERR_CODE(ERR_K8S_CLUSTER_NOT_FOUND);
+DEFINE_ERR_CODE(ERR_K8S_KUBECTL_NOT_FOUND);
+DEFINE_ERR_CODE(ERR_K8S_DEPLOY_FAILED);
+DEFINE_ERR_CODE(ERR_K8S_UNDEPLOY_FAILED);
+
+}}

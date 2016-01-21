@@ -267,6 +267,10 @@ namespace dsn {
                         std::ofstream result_f(report.c_str(), std::ios::out);
                         result_f << ss.str() << std::endl;
                         result_f.close();
+
+                        report += ".config.ini";
+                        dsn_config_dump(report.c_str());
+
                         dsn_exit(0);
                     }
 
@@ -282,7 +286,7 @@ namespace dsn {
             cs.timeout_rounds = 0;
             cs.error_rounds = 0;
             cs.max_latency_ns = 0;
-            cs.min_latency_ns = UINT64_MAX;
+            cs.min_latency_ns = std::numeric_limits<uint64_t>::max();
 
             // setup for the case
             _current_case = &cs;

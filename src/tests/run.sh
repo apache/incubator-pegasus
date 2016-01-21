@@ -1,6 +1,8 @@
 #!/bin/bash
 
 ./clear.sh
+output_xml="${REPORT_DIR}/dsn.core.tests.xml"
+export GTEST_OUTPUT="xml:${output_xml}"
 ./dsn.tests config-test.ini
 if [ $? -ne 0 ]; then
     echo "run dsn.tests failed"
@@ -16,4 +18,3 @@ if [ $? -ne 0 ]; then
     fi
     exit -1
 fi
-

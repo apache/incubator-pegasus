@@ -3,6 +3,8 @@
 for test_case in `ls config-test*.ini`; do
     echo "============ run dsn.core.tests $test_case ============"
     ./clear.sh
+    output_xml="${REPORT_DIR}/dsn.core.tests_${test_case/.ini/.xml}"
+    export GTEST_OUTPUT="xml:${output_xml}"
     ./dsn.core.tests ${test_case} <command.txt
     if [ $? -ne 0 ]; then
         echo "run dsn.core.tests $test_case failed"

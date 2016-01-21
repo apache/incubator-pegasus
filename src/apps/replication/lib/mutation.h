@@ -152,7 +152,7 @@ private:
         if (r.get() != nullptr)
         {
             r->release_ref(); // added in add_work        
-            *_pcount--;
+            --(*_pcount);
         }
         return r;
     }
