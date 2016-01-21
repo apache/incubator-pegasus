@@ -94,6 +94,9 @@ namespace dsn {
 
             // current write file            
             std::ofstream *_current_log;
+
+            // only used at exit
+            bool _exiting;
         };
     }
 }
