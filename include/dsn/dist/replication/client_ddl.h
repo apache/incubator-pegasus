@@ -50,36 +50,24 @@ public:
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
 
+    dsn::error_code list_app(const std::string& app_name, /*out*/ int32_t& app_id, /*out*/ std::vector< partition_configuration>& partitions);
+
 private:
     bool static valid_app_char(int c);
 
     void end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp);
 
-    template<typename TRequest, typename TResponse>
+    template<typename TRequest>
     dsn::task_ptr request_meta(
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
-
-            // callback
-            clientlet* owner,
-            std::function<void(error_code, const std::shared_ptr<TRequest>&, const std::shared_ptr<TResponse>&)> callback,
-
-            // other specific parameters
             int timeout_milliseconds= 0,
             int reply_hash = 0
             )
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
+        task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_hash);
         ::marshall(msg, *req);
-        task_ptr task = dsn::rpc::create_rpc_response_task_typed(
-            msg,
-            owner,
-            [=](error_code ec, TResponse&& resp)
-            {
-                callback(ec, req, std::make_shared<TResponse>(std::move(resp)));
-            },
-            reply_hash
-                );
         rpc::call(
             _meta_servers,
             msg,
@@ -94,7 +82,7 @@ private:
             ),
             0
          );
-        return std::move(task);
+        return task;
     }
 
 private:
