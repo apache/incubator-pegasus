@@ -582,6 +582,16 @@ namespace dsn
             auto it = _services.find(service_name);
             if (it != _services.end())
             {
+                auto svc = it->second;
+                auto cluster_name = svc->cluster;
+                auto cluster = get_cluster(cluster_name);
+
+                if( cluster == nullptr )
+                {
+                    err = ::dsn::ERR_CLUSTER_NOT_FOUND;
+                    return;
+                }
+                cluster->scheduler->unschedule(svc);
                 _services.erase(it);
                 err = ::dsn::ERR_OK;
             }

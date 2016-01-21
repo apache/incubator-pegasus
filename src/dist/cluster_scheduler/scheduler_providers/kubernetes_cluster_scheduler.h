@@ -63,7 +63,7 @@ namespace dsn
 
             void unschedule(
                     std::shared_ptr<deployment_unit>& unit
-                    );
+                    )override;
             virtual cluster_type type() const override
             {
                 return cluster_type::kubernetes;

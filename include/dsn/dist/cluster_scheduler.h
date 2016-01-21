@@ -139,6 +139,10 @@ namespace dsn
             virtual void schedule(
                 std::shared_ptr<deployment_unit>& unit
                 ) = 0;
+            
+            virtual void unschedule(
+                std::shared_ptr<deployment_unit>& unit
+                ) = 0;
 
             virtual cluster_type type() const = 0;
 

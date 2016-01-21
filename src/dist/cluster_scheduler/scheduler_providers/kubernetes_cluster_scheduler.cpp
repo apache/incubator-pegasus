@@ -202,7 +202,7 @@ void kubernetes_cluster_scheduler::unschedule(
     else
     {
         _lock.unlock();
-        unit->deployment_callback(ERR_K8S_UNDEPLOY_FAILED,rpc_address());
+//        unit->deployment_callback(ERR_K8S_UNDEPLOY_FAILED,rpc_address());
     }
 }
 
@@ -216,7 +216,7 @@ void kubernetes_cluster_scheduler::delete_pod(std::string& name,std::function<vo
     dassert( ret == 0, "k8s can't delete pods");
 
     // ret == 0
-    deployment_callback(::dsn::ERR_OK,rpc_address()); 
+//    deployment_callback(::dsn::ERR_OK,rpc_address()); 
 }
 
 
