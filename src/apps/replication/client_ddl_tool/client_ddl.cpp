@@ -33,8 +33,8 @@
  */
 
 #include <dsn/dist/replication.h>
-#include <dsn/dist/replication/client_ddl.h>
 #include <dsn/dist/replication/replication_other_types.h>
+#include "client_ddl.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -281,40 +281,6 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
         }
     }
     out << std::endl;
-    return dsn::ERR_OK;
-}
-
-dsn::error_code client_ddl::list_app(const std::string& app_name,
-                                     int32_t& app_id,
-                                     std::vector< partition_configuration>& partitions)
-{
-    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
-
-    std::shared_ptr<configuration_query_by_index_request> req(new configuration_query_by_index_request());
-    req->app_name = app_name;
-
-    auto resp_task = request_meta<configuration_query_by_index_request>(
-            RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
-            req
-    );
-
-    resp_task->wait();
-    if (resp_task->error() != dsn::ERR_OK)
-    {
-        return resp_task->error();
-    }
-
-    dsn::replication::configuration_query_by_index_response resp;
-    ::unmarshall(resp_task->response(), resp);
-    if(resp.err != dsn::ERR_OK)
-    {
-        return resp.err;
-    }
-
-    app_id = resp.app_id;
-    partitions.swap(resp.partitions);
-
     return dsn::ERR_OK;
 }
 

@@ -32,6 +32,8 @@
  *     2015-12-30, xiaotz, first version
  */
 
+#pragma once
+
 #include <cctype>
 #include <dsn/dist/replication.h>
 
@@ -49,8 +51,6 @@ public:
     dsn::error_code list_apps(const dsn::replication::app_status status, const std::string& file_name);
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
-
-    dsn::error_code list_app(const std::string& app_name, /*out*/ int32_t& app_id, /*out*/ std::vector< partition_configuration>& partitions);
 
 private:
     bool static valid_app_char(int c);
