@@ -338,8 +338,14 @@ namespace dsn
             wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
             if (wn < 0)
             {
-                wn = snprintf_p(ptr, capacity - 1, "-- log entry is too long ---");
+                wn = snprintf_p(ptr, capacity - 1, "-- cannot printf due to that log entry has error ---");
             }
+            else if (wn >= capacity)
+            {
+                // log truncated
+                wn = capacity - 1;
+            }
+
             *(ptr + wn) = '\n';
             ptr += (wn + 1);
             capacity -= (wn + 1);
