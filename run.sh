@@ -41,6 +41,8 @@ function usage_build()
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
     echo "   -c|--clear        clear the environment before building"
+    echo "   -j|--jobs <num>"
+    echo "                     the number of jobs to run simultaneously, default 8"
     echo "   -b|--boost_dir <dir>"
     echo "                     specify customized boost directory,"
     echo "                     if not set, then use the system boost"
@@ -57,6 +59,7 @@ function run_build()
 {
     BUILD_TYPE="debug"
     CLEAR=NO
+    JOB_NUM=8
     BOOST_DIR=""
     WARNING_ALL=NO
     ENABLE_GCOV=NO
@@ -75,6 +78,10 @@ function run_build()
                 ;;
             -c|--clear)
                 CLEAR=YES
+                ;;
+            -j|--jobs)
+                JOB_NUM="$2"
+                shift
                 ;;
             -b|--boost_dir)
                 BOOST_DIR="$2"
@@ -114,7 +121,7 @@ function run_build()
         usage_build
         exit -1
     fi
-    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" \
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }
