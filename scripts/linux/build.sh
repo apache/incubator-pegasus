@@ -3,6 +3,7 @@
 #
 # Shell Options:
 #    CLEAR          YES|NO
+#    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
@@ -27,7 +28,7 @@ GCOV_TMP="$ROOT/.gcov_tmp"
 GCOV_PATTERN=`find $ROOT/include $ROOT/src -name '*.h' -o -name '*.cpp'`
 TIME=`date --rfc-3339=seconds`
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-MAKE_OPTIONS="$MAKE_OPTIONS -j8"
+MAKE_OPTIONS="$MAKE_OPTIONS -j$JOB_NUM"
 
 if [ "$CLEAR" == "YES" ]
 then

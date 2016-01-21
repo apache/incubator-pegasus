@@ -69,11 +69,9 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     req->options.success_if_exist = true;
     req->options.app_type = app_type;
 
-    auto resp_task = request_meta<configuration_create_app_request, configuration_create_app_response>(
+    auto resp_task = request_meta<configuration_create_app_request>(
             RPC_CM_CREATE_APP,
-            req,
-            nullptr,
-            nullptr
+            req
     );
     resp_task->wait();
     if (resp_task->error() != dsn::ERR_OK)
@@ -96,11 +94,9 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
         std::shared_ptr<configuration_query_by_index_request> query_req(new configuration_query_by_index_request());
         query_req->app_name = app_name;
 
-        auto query_task = request_meta<configuration_query_by_index_request, configuration_query_by_index_response>(
+        auto query_task = request_meta<configuration_query_by_index_request>(
                     RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
-                    query_req,
-                    nullptr,
-                    nullptr
+                    query_req
                     );
         query_task->wait();
         if (query_task->error() != dsn::ERR_OK)
@@ -144,11 +140,9 @@ dsn::error_code client_ddl::drop_app(const std::string& app_name)
     req->app_name = app_name;
     req->options.success_if_not_exist = true;
 
-    auto resp_task = request_meta<configuration_drop_app_request, configuration_drop_app_response>(
+    auto resp_task = request_meta<configuration_drop_app_request>(
             RPC_CM_DROP_APP,
-            req,
-            nullptr,
-            nullptr
+            req
     );
     resp_task->wait();
     if (resp_task->error() != dsn::ERR_OK)
@@ -170,11 +164,9 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
 
-    auto resp_task = request_meta<configuration_list_apps_request, configuration_list_apps_response>(
+    auto resp_task = request_meta<configuration_list_apps_request>(
             RPC_CM_LIST_APPS,
-            req,
-            nullptr,
-            nullptr
+            req
     );
     resp_task->wait();
     if (resp_task->error() != dsn::ERR_OK)
@@ -229,11 +221,9 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
     std::shared_ptr<configuration_query_by_index_request> req(new configuration_query_by_index_request());
     req->app_name = app_name;
 
-    auto resp_task = request_meta<configuration_query_by_index_request, configuration_query_by_index_response>(
+    auto resp_task = request_meta<configuration_query_by_index_request>(
             RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
-            req,
-            nullptr,
-            nullptr
+            req
     );
 
     resp_task->wait();
@@ -275,7 +265,7 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
             << std::endl;
         for(int i = 0; i < resp.partitions.size(); i++)
         {
-            dsn::replication::partition_configuration p = resp.partitions[i];
+            const dsn::replication::partition_configuration& p = resp.partitions[i];
             out << std::setw(10) << std::left << p.gpid.pidx
                 << std::setw(10) << std::left << p.ballot
                 << std::setw(15) << std::left << p.last_committed_decree
@@ -291,6 +281,40 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
         }
     }
     out << std::endl;
+    return dsn::ERR_OK;
+}
+
+dsn::error_code client_ddl::list_app(const std::string& app_name,
+                                     int32_t& app_id,
+                                     std::vector< partition_configuration>& partitions)
+{
+    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+        return ERR_INVALID_PARAMETERS;
+
+    std::shared_ptr<configuration_query_by_index_request> req(new configuration_query_by_index_request());
+    req->app_name = app_name;
+
+    auto resp_task = request_meta<configuration_query_by_index_request>(
+            RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
+            req
+    );
+
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_query_by_index_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    app_id = resp.app_id;
+    partitions.swap(resp.partitions);
+
     return dsn::ERR_OK;
 }
 
