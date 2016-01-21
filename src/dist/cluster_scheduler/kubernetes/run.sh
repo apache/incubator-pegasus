@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd /home/guoxi/rDSN
+cd $DSN_ROOT/..
 ./run.sh $*
