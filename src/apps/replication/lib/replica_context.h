@@ -41,7 +41,7 @@ namespace dsn { namespace replication {
 
 struct remote_learner_state
 {
-    uint64_t signature;
+    int64_t signature;
     ::dsn::task_ptr timeout_task;
     decree   prepare_start_decree;
 };

@@ -153,7 +153,6 @@ struct group_check_request
     2:dsn.rpc_address       node;
     3:replica_configuration config;
     4:i64                   last_committed_decree;
-    5:i64                   learner_signature;
 }
 
 struct group_check_response
@@ -184,14 +183,15 @@ enum config_type
 
 enum app_status
 {
-    available,
-    creating,
-    creating_failed,
-    dropping,
-    dropping_failed,
-    dropped,
-    all,
-    invalid
+    AS_AVAILABLE,
+    AS_CREATING,
+    AS_CREATE_FAILED,
+    AS_DROPPING,
+    AS_DROP_FAILED,
+    AS_DROPPED,
+
+    AS_ALL,
+    AS_INVALID,
 }
 
 struct app_info
@@ -290,7 +290,7 @@ struct configuration_drop_app_response
 struct configuration_list_apps_response
 {
     1:dsn.error_code       err;
-    2:list<app_info>       info;
+    2:list<app_info>       infos;
 }
 
 struct configuration_query_by_node_response
