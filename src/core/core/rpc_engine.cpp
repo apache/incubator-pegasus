@@ -92,7 +92,7 @@ namespace dsn {
         }
     }
 
-    bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
+    bool rpc_client_matcher::on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms)
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
         
@@ -139,13 +139,13 @@ namespace dsn {
 
             // server address side effect
             auto req = call->get_request();
-            task_spec* sp;
+            auto sp = task_spec::get(req->local_rpc_code);
             if (reply->from_address != req->to_address)
             {
                 switch (req->server_address.type())
                 {
                 case HOST_TYPE_GROUP:
-                    sp = task_spec::get(call->get_request()->local_rpc_code);
+                    
                     switch (sp->grpc_mode)
                     {
                     case GRPC_TO_LEADER:
@@ -163,8 +163,27 @@ namespace dsn {
                 }
             }
 
-            call->set_delay(delay_ms);
-            call->enqueue(err, reply);
+            if (sp->on_rpc_response_enqueue.execute(call, true))
+            {
+                call->set_delay(delay_ms);
+                call->enqueue(err, reply);
+            }
+
+            // release the task when necessary
+            else
+            {
+                dassert(reply->get_count() == 0,
+                    "reply should not be referenced by anybody so far");
+                delete reply;
+
+                // call network failure model implementation to make the above failure real
+                net->inject_drop_message(reply, true, false);
+
+                // because (1) initially, the ref count is zero
+                //         (2) upper apps may call add_ref already
+                call->add_ref();
+                call->release_ref();
+            }
         }
 
         call->release_ref(); // added in on_call
@@ -607,27 +626,6 @@ namespace dsn {
 
         auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header; 
-        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
-        {
-            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
-                request->header->rpc_name,
-                request->header->rpc_id
-                );
-
-            if (call != nullptr)
-            {
-                call->set_delay(hdr.client.timeout_ms);
-                call->enqueue(ERR_TIMEOUT, nullptr);
-            }
-            else
-            {
-                // as ref_count for request may be zero
-                request->add_ref();
-                request->release_ref();
-            }
-            return;
-        }
-
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
         
@@ -641,6 +639,32 @@ namespace dsn {
         {
             hdr.id = message_ex::new_id();
             request->seal(_message_crc_required);
+        }
+
+        // join point and possible fault injection
+        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
+        {
+            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
+                request->header->rpc_name,
+                request->header->rpc_id
+                );
+
+            // call network failure model
+            net->inject_drop_message(request, true, true);
+
+            if (call != nullptr)
+            {
+                call->set_delay(hdr.client.timeout_ms);
+                call->enqueue(ERR_TIMEOUT, nullptr);
+            }
+            else
+            {
+                // as ref_count for request may be zero
+                request->add_ref();
+                request->release_ref();
+            }
+
+            return;
         }
             
         if (call != nullptr)
@@ -657,23 +681,41 @@ namespace dsn {
         response->seal(_message_crc_required);
 
         auto sp = task_spec::get(response->local_rpc_code);
-        if (!sp->on_rpc_reply.execute(task::get_current_task(), response, true))
+        bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
+        
+        auto s = response->io_session.get();
+        if (s != nullptr) 
+        {
+            if (no_fail)
+            {
+                s->send_message(response); 
+            }
+            else
+            {
+                s->net().inject_drop_message(response, false, true);
+            }
+        }
+        else
+        {
+            auto sp = task_spec::get(response->local_rpc_code);
+            auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
+            if (no_fail)
+            {
+                net->send_message(response); 
+            }
+            else
+            {
+                net->inject_drop_message(response, false, true);
+            }
+        }
+
+        if (!no_fail)
         {
             // do not delete following add and release here for cancellation
             // as response may initially have ref_count == 0
             response->add_ref();
             response->release_ref();
             return;
-        }
-        auto s = response->io_session.get();
-        if (s != nullptr) {
-            s->send_message(response);
-        }
-        else
-        {
-            auto sp = task_spec::get(response->local_rpc_code);
-            auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
-            net->send_message(response);
         }
     }
 }

@@ -79,7 +79,7 @@ public:
     //  reply - rpc response message
     //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
     //
-    bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+    bool on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms);
 
 private:
     friend class rpc_timeout_task;
