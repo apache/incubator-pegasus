@@ -195,6 +195,10 @@ namespace dsn {
                 {
                     // do it in next check so we can do expensive things
                     // outside of the lock
+
+                    // call may be eliminated from this container and deleted after its execution
+                    // we therefore add_ref here
+                    call->add_ref();  // released after re-send
                     resend = true;
                 }
             }
@@ -271,6 +275,8 @@ namespace dsn {
                 delete new_timeout_task;
             }
         }
+
+        call->release_ref(); // added inside the first check of resend
     }
     
     void rpc_client_matcher::on_call(message_ex* request, rpc_response_task* call)
