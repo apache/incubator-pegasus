@@ -79,6 +79,8 @@ public:
     //  reply - rpc response message
     //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
     //
+    // we may receive an empty reply to early terminate the rpc
+    //
     bool on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms);
 
 private:

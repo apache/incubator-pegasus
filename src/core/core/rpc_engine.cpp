@@ -93,9 +93,7 @@ namespace dsn {
     }
 
     bool rpc_client_matcher::on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms)
-    {
-        dassert(reply != nullptr, "cannot receive an empty reply message");
-        
+    {       
         rpc_response_task* call;
         task* timeout_task;
         int bucket_index = key % MATCHER_BUCKET_NR;
@@ -112,20 +110,33 @@ namespace dsn {
             }
             else
             {
-                dassert(reply->get_count() == 0, 
-                    "reply should not be referenced by anybody so far");
-                delete reply;
+                if (reply)
+                {
+                    dassert(reply->get_count() == 0,
+                        "reply should not be referenced by anybody so far");
+                    delete reply;
+                }
                 return false;
             }
         }
-
+                
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         if (timeout_task != task::get_current_task())
         {
             timeout_task->cancel(false); // no need to wait
         }
         timeout_task->release_ref(); // added above in the same function
-        
+
+        // if early terminate rpc  w/ empty reply
+        if (nullptr == reply)
+        {
+            call->set_delay(delay_ms);
+            call->enqueue(ERR_TIMEOUT, reply);
+            call->release_ref(); // added in on_call
+            return true;
+        }
+
+        // normal reply        
         if (reply->error() == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;

@@ -112,10 +112,11 @@ namespace dsn
             }
 
             // if not resend, the message's callback will not be invoked until timeout,
-            // it's too slow.
-            // since we don't maintain the callback ptrs here, so we have no idea whether
-            // the callback is already issued or not.
-            // therefore, let's keep this (usually) slow way on failure with non-resend.
+            // it's too slow - let's try to mimic the failure by recving an empty reply
+            else if (is_client())
+            {
+                on_recv_reply(msg->header->id, nullptr, 0);
+            }
 
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
             msg->release_ref();
