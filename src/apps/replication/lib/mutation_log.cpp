@@ -1747,7 +1747,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
     }
     _crc32 = hdr->body_crc;
 
-    std::unique_ptr<dsn_file_buffer_t> buffer_vector(new dsn_file_buffer_t[block.data().size()]);
+    std::unique_ptr<dsn_file_buffer_t[]> buffer_vector(new dsn_file_buffer_t[block.data().size()]);
     std::transform(block.data().begin(), block.data().end(), buffer_vector.get(), [](const blob& bb)
     {
         return dsn_file_buffer_t

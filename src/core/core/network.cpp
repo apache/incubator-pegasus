@@ -280,12 +280,18 @@ namespace dsn
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             if (signature != 0)
             {
-                dassert(_is_sending_next 
-                    && _sending_msgs.size() > 0 
-                    && signature == _message_sent + 1, 
+                dassert(_is_sending_next
+                    && signature == _message_sent + 1,
                     "sent msg must be sending");
+                _is_sending_next = false;
 
-                _is_sending_next = false; 
+                // the _sending_msgs may have been cleared when reading of the rpc_session is failed.
+                if (_sending_msgs.size() == 0)
+                {
+                    dassert(_connect_state == SS_DISCONNECTED,
+                            "assume sending queue is cleared due to session closed");
+                    return;
+                }
                 
                 for (auto& msg : _sending_msgs)
                 {
