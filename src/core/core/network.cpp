@@ -195,8 +195,8 @@ namespace dsn
             int delay_ms = 0;
             {
                 utils::auto_lock<utils::ex_lock_nr> l(_lock);
-                if (delay_ms > _delay_server_receive_ms)
-                    _delay_server_receive_ms = delay_ms;
+                delay_ms = _delay_server_receive_ms;
+                _delay_server_receive_ms = 0;
             }
 
             // delayed read
