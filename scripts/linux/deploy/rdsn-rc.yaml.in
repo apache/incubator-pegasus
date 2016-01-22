@@ -3,21 +3,21 @@ kind: ReplicationController
 metadata:
   name: {{ placeholder['instance_name'] }}-{{ placeholder['rc_name'] }}
   labels:
-    d_unit: {{ placeholder['deploy_name'] }}
-    app: {{ placeholder['app_name'] }}
-    instance: {{ placeholder['instance_name'] }}
+    d_unit: "{{ placeholder['deploy_name'] }}"
+    app: "{{ placeholder['app_name'] }}"
+    instance: "{{ placeholder['instance_name'] }}"
 spec:
   replicas: 1
   selector:
-    app: {{ placeholder['app_name'] }}
+    app: "{{ placeholder['app_name'] }}"
     {{ placeholder['app_name'] }}: "{{ placeholder['num'] }}"
-    instance: {{ placeholder['instance_name'] }}
+    instance: "{{ placeholder['instance_name'] }}"
   template:
     metadata:
       labels:
-        app: {{ placeholder['app_name'] }}
+        app: "{{ placeholder['app_name'] }}"
         {{ placeholder['app_name'] }}: "{{ placeholder['num'] }}"
-        instance: {{ placeholder['instance_name'] }}
+        instance: "{{ placeholder['instance_name'] }}"
     spec:
       containers:
       - name: {{ placeholder['rc_name'] }}

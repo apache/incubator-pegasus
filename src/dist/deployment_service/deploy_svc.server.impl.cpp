@@ -501,10 +501,6 @@ namespace dsn
             {
                 this->on_service_failure(svc, err, err_msg);
             };
-            svc->undeployment_callback = [this, svc](::dsn::error_code err, const std::string& err_msg)
-            {
-                this->on_service_undeployed(svc, err, err_msg);
-            };
 
             // add to service collections
             {
@@ -608,9 +604,18 @@ namespace dsn
                     err = ::dsn::ERR_CLUSTER_NOT_FOUND;
                     return;
                 }
+
+                svc->undeployment_callback = [it, this, svc](::dsn::error_code err, const std::string& err_msg)
+                {
+                    if( err == ::dsn::ERR_OK )
+                    {
+                        ::dsn::service::zauto_write_lock l(_service_lock);
+                        _services.erase(it);
+                    }
+                    this->on_service_undeployed(svc, err, err_msg);
+                };
                 cluster->scheduler->unschedule(svc);
-                _services.erase(it);
-                err = ::dsn::ERR_OK;
+                err = ::dsn::ERR_IO_PENDING;
             }
             else
             {
