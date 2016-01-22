@@ -88,7 +88,7 @@ namespace dsn {
     {
         for (int i = 0; i < MATCHER_BUCKET_NR; i++)
         {
-            dassert(_requests[i].size() == 0, "all rpc enries must be removed before the matcher ends");
+            dassert(_requests[i].size() == 0, "all rpc entries must be removed before the matcher ends");
         }
     }
 
@@ -193,15 +193,33 @@ namespace dsn {
     void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     {
         rpc_response_task* call;
-        int bucket_index = key % MATCHER_BUCKET_NR;
+        int bucket_index = key % MATCHER_BUCKET_NR;        
+        uint64_t timeout_ts_ms;
+        bool resend = false;
 
         {
             utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
             auto it = _requests[bucket_index].find(key);
             if (it != _requests[bucket_index].end())
             {
+                timeout_ts_ms = it->second.timeout_ts_ms;
                 call = it->second.resp_task;
-                _requests[bucket_index].erase(it);
+                if (timeout_ts_ms == 0)
+                {
+                    _requests[bucket_index].erase(it);
+                }
+
+                // resend is enabled
+                else
+                {
+                    // do it in next check so we can do expensive things
+                    // outside of the lock
+
+                    // call may be eliminated from this container and deleted after its execution
+                    // we therefore add_ref here
+                    call->add_ref();  // released after re-send
+                    resend = true;
+                }
             }
             else
             {
@@ -209,10 +227,75 @@ namespace dsn {
             }
         }
 
-        dbg_dassert(call != nullptr, "rpc response task cannot be empty");
-        call->enqueue(ERR_TIMEOUT, nullptr);
+        dbg_dassert(call != nullptr,
+            "rpc response task is missing for rpc request %" PRIu64, key);
 
-        call->release_ref(); // added in on_call
+        // if timeout
+        if (!resend)
+        {
+            call->enqueue(ERR_TIMEOUT, nullptr);
+            call->release_ref(); // added in on_call
+            return;
+        }
+
+        // prepare resend context and check again
+        uint64_t now_ts_ms = dsn_now_ms();
+
+        // resend when timeout is not yet, and the call is not cancelled
+        // TODO: time overflow
+        resend = (now_ts_ms < timeout_ts_ms && call->state() == TASK_STATE_READY);
+
+        // TODO: memory pool for this task
+        task* new_timeout_task = resend ? new rpc_timeout_task(this, key, call->node()) : nullptr;
+
+        {
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto it = _requests[bucket_index].find(key);
+            if (it != _requests[bucket_index].end())
+            {
+                // timeout                
+                if (!resend)
+                {
+                    _requests[bucket_index].erase(it);
+                }
+
+                // resend
+                else
+                {
+                    // reset timeout task
+                    it->second.timeout_task = new_timeout_task;
+                }
+            }
+
+            // response is received
+            else
+            {
+                resend = false;
+            }
+        }
+
+        if (resend)
+        {
+            auto req = call->get_request();
+            dinfo("resend reqeust message for rpc %" PRIx64 ", key = %" PRIu64,
+                req->header->rpc_id, key);
+
+            // resend without handling rpc_matcher and reset rquest id
+            _engine->call_ip(req->to_address, req, nullptr, false);
+
+            // use rest of the timeout to resend once only
+            new_timeout_task->set_delay(timeout_ts_ms - now_ts_ms);
+            new_timeout_task->enqueue();
+        }
+        else
+        {
+            if (new_timeout_task)
+            {
+                delete new_timeout_task;
+            }
+        }
+
+        call->release_ref(); // added inside the first check of resend
     }
     
     void rpc_client_matcher::on_call(message_ex* request, rpc_response_task* call)
@@ -220,19 +303,29 @@ namespace dsn {
         task* timeout_task;
         message_header& hdr = *request->header;
         int bucket_index = hdr.id % MATCHER_BUCKET_NR;
+        auto sp = task_spec::get(request->local_rpc_code);
+        int timeout_ms = hdr.client.timeout_ms;
+        uint64_t timeout_ts_ms = 0;
+        
+        // reset timeout when resend is enabled
+        if (sp->rpc_request_resend_timeout_milliseconds > 0 && 
+            timeout_ms > sp->rpc_request_resend_timeout_milliseconds
+            )
+        {
+            timeout_ts_ms = dsn_now_ms() + timeout_ms; // non-zero for resend
+            timeout_ms = sp->rpc_request_resend_timeout_milliseconds;            
+        }
 
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
 
         {
             utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
-            auto pr = _requests[bucket_index].insert(rpc_requests::value_type(hdr.id, match_entry()));
+            auto pr = _requests[bucket_index].emplace(hdr.id, match_entry { call, timeout_task, timeout_ts_ms });
             dassert (pr.second, "the message is already on the fly!!!");
-            pr.first->second.resp_task = call;
-            pr.first->second.timeout_task = timeout_task;
         }
 
-        timeout_task->set_delay(hdr.client.timeout_ms);
+        timeout_task->set_delay(timeout_ms);
         timeout_task->enqueue();
 
         call->add_ref(); // released in on_rpc_timeout or on_recv_reply

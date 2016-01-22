@@ -91,6 +91,7 @@ private:
     {
         rpc_response_task*    resp_task;
         task*                 timeout_task;
+        uint64_t              timeout_ts_ms; // > 0 for auto-resent msgs
     };
     typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
     rpc_requests                  _requests[MATCHER_BUCKET_NR];
