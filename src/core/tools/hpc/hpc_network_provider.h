@@ -120,6 +120,11 @@ namespace dsn {
 # endif
             }
 
+            virtual void close_on_fault_injection() override
+            {
+                close();
+            }
+
             void bind_looper(io_looper* looper, bool delay = false);
             virtual void do_read(int sz) override;
 

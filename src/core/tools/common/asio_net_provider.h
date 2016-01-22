@@ -80,6 +80,11 @@ namespace dsn {
                 return _address;
             }
 
+            virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send)
+            {
+                // nothing to do for UDP
+            }
+
         private:
             void do_receive();
 
