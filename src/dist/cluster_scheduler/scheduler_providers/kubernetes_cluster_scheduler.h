@@ -87,7 +87,7 @@ namespace dsn
             static void undeploy_k8s_unit_cleanup(dsn_cli_reply reply);
         private:
             void create_pod(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory);
-            void delete_pod(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory);
+            void delete_pod(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory);
             using deploy_map = std::unordered_map<std::string, std::shared_ptr<deployment_unit> >;
             std::string                 _run_path;
             dsn_handle_t                _k8s_state_handle;

@@ -448,6 +448,19 @@ namespace dsn
                 unit->status = ::dsn::dist::service_status::SS_RUNNING;
         }
 
+        void deploy_svc_service_impl::on_service_undeployed(
+            std::shared_ptr<::dsn::dist::deployment_unit> unit,
+            ::dsn::error_code err,
+            const std::string& err_msg
+            )
+        {
+            if (err !=::dsn::ERR_OK)
+                unit->status = ::dsn::dist::service_status::SS_FAILED;
+            else
+                unit->status = ::dsn::dist::service_status::SS_UNDEPLOYED;
+        }
+
+
         void deploy_svc_service_impl::on_deploy_internal(const deploy_request& req, /*out*/ deploy_info& di)
         {
             di.name = req.name;
@@ -487,6 +500,10 @@ namespace dsn
             svc->failure_notification = [this, svc](::dsn::error_code err, const std::string& err_msg)
             {
                 this->on_service_failure(svc, err, err_msg);
+            };
+            svc->undeployment_callback = [this, svc](::dsn::error_code err, const std::string& err_msg)
+            {
+                this->on_service_undeployed(svc, err, err_msg);
             };
 
             // add to service collections

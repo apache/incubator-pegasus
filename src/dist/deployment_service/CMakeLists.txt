@@ -19,7 +19,9 @@ set(MY_PROJ_LIBS
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
-set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini;${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile")
+set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
 
 set(MY_BOOST_PACKAGES "")
 

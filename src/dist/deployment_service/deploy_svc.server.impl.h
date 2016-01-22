@@ -69,6 +69,11 @@ namespace dsn
                 ::dsn::error_code err,
                 const std::string& err_msg
                 );
+            void on_service_undeployed(
+                std::shared_ptr<::dsn::dist::deployment_unit> unit,
+                ::dsn::error_code err,
+                const std::string& err_msg
+                );
 
             void on_deploy_internal(const deploy_request& req, /*out*/ deploy_info& di);
 

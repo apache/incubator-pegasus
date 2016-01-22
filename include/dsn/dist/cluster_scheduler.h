@@ -84,6 +84,8 @@ namespace dsn
             SS_FAILED = 4,
             SS_COUNT = 5,
             SS_INVALID = 6,
+            SS_UNDEPLOYING = 7,
+            SS_UNDEPLOYED = 8
         };
 
         DEFINE_POD_SERIALIZATION(service_status);
@@ -94,6 +96,8 @@ namespace dsn
             ENUM_REG(service_status::SS_RUNNING)
             ENUM_REG(service_status::SS_FAILOVER)
             ENUM_REG(service_status::SS_FAILED)
+            ENUM_REG(service_status::SS_UNDEPLOYING)
+            ENUM_REG(service_status::SS_UNDEPLOYED)
         ENUM_END(service_status)
 
         struct deployment_unit
@@ -110,6 +114,7 @@ namespace dsn
             //cluster_type package_type;
             std::function<void(error_code, rpc_address)> deployment_callback;
             std::function<void(error_code, const std::string&)> failure_notification;
+            std::function<void(error_code, const std::string&)> undeployment_callback;
             // TODO: ...
         };
 
