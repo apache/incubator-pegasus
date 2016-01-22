@@ -183,7 +183,7 @@ namespace dsn {
             auto it = _requests[bucket_index].find(key);
             if (it != _requests[bucket_index].end())
             {
-                timeout_ts_ms = it->second.timeout_ms;
+                timeout_ts_ms = it->second.timeout_ts_ms;
                 call = it->second.resp_task;
                 if (timeout_ts_ms == 0)
                 {
