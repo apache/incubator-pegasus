@@ -142,6 +142,13 @@ namespace dsn
                 _net.send_message(rmsg);
             }
 
+            // if not resend, the message's callback will not be invoked until timeout,
+            // it's too slow - let's try to mimic the failure by recving an empty reply
+            else if (is_client())
+            {
+                on_recv_reply(rmsg->header->id, nullptr, 0);
+            }
+
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
             rmsg->release_ref();
         }
