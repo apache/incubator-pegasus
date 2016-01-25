@@ -555,19 +555,7 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
         reply->add_ref(); // released in dctor
     }
 
-    if (spec().on_rpc_response_enqueue.execute(this, true))
-    {
-        rpc_response_task::enqueue();
-    }
-
-    // release the task when necessary
-    else
-    {   
-        // because (1) initially, the ref count is zero
-        //         (2) upper apps may call add_ref already
-        this->add_ref();
-        this->release_ref();
-    }
+    rpc_response_task::enqueue();
 }
 
 void rpc_response_task::enqueue()

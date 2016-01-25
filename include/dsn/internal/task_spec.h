@@ -189,6 +189,7 @@ public:
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
+    int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
     // ]
 
     task_rejection_handler rejection_handler;
@@ -238,6 +239,7 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
+    CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
 CONFIG_END
 
 struct threadpool_spec

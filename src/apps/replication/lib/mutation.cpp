@@ -292,7 +292,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);
         _pending_mutation = nullptr;
-        *_pcount++;
+        ++(*_pcount);
     }
     
     // get next work item

@@ -125,7 +125,7 @@ namespace dsn {
                         ExInfo.ClientPointers = NULL;
 
                         // write the dump
-                        BOOL bOK = pDump(GetCurrentProcess(), GetCurrentProcessId(), fh, MiniDumpNormal, &ExInfo, NULL, NULL);
+                        BOOL bOK = pDump(GetCurrentProcess(), GetCurrentProcessId(), fh, MiniDumpWithFullMemory, &ExInfo, NULL, NULL);
                         if (bOK)
                         {
                             sprintf(szScratch, "saved dump file to '%s'", szDumpPath);

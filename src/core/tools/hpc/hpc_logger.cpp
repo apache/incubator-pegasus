@@ -139,7 +139,7 @@ namespace dsn
         }
 
         hpc_logger::hpc_logger(const char* log_dir) 
-            : logging_provider(log_dir), _stop_thread(false)
+            : logging_provider(log_dir), _stop_thread(false), _exiting(false)
         {
             _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
@@ -240,6 +240,7 @@ namespace dsn
         {
             std::vector<int> threads;
             hpc_log_manager::instance().get_all_keys(threads);
+            _exiting = true;
 
             for (auto& tid : threads)
             {
@@ -295,7 +296,8 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf_p(ptr, capacity, "%s (%" PRIu64 " %04x) ", str, ts, tid);
+            static const char s_level_char[] = "IDWEF";
+            auto wn = snprintf_p(ptr, capacity, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level], str, ts, tid);
             ptr += wn;
             capacity -= wn;
 
@@ -335,6 +337,16 @@ namespace dsn
 
             // print body
             wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
+            if (wn < 0)
+            {
+                wn = snprintf_p(ptr, capacity - 1, "-- cannot printf due to that log entry has error ---");
+            }
+            else if (wn >= capacity)
+            {
+                // log truncated
+                wn = capacity - 1;
+            }
+
             *(ptr + wn) = '\n';
             ptr += (wn + 1);
             capacity -= (wn + 1);
@@ -368,11 +380,17 @@ namespace dsn
                     create_log_file();
                 }
 
-                _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                if (new_buffer_info.buffer_size > 0)
+                {
+                    _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                    _current_log_file_bytes += new_buffer_info.buffer_size;
+                }                
 
-                _current_log_file_bytes += new_buffer_info.buffer_size;
-
-                free(new_buffer_info.buffer);
+                // do not free the buffer at exit as it may still be written
+                if (!_exiting)
+                {
+                    free(new_buffer_info.buffer);
+                }
             }
             llist.clear();
         }

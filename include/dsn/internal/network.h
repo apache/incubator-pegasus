@@ -92,6 +92,13 @@ namespace dsn {
         //             blobs from message for sending
         //
         virtual void send_message(message_ex* request) = 0;
+
+        //
+        // tools in rDSN may decide to drop this msg,
+        // in this case, the network should implement the appropriate
+        // failure model that makes this failure possible in reality
+        //
+        virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send) = 0;
                 
         //
         // utilities
@@ -154,7 +161,10 @@ namespace dsn {
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void send_message(message_ex* request);
+        virtual void send_message(message_ex* request) override;
+
+        // called by rpc engine
+        virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send) override;
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
@@ -183,6 +193,8 @@ namespace dsn {
             bool is_client
             );
         virtual ~rpc_session();
+
+        virtual void close_on_fault_injection() = 0;
                 
         bool has_pending_out_msgs();
         bool is_client() const { return _matcher != nullptr; }
