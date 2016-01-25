@@ -127,7 +127,7 @@ namespace dsn {
         }
         timeout_task->release_ref(); // added above in the same function
 
-        // if early terminate rpc  w/ empty reply
+        // if rpc is early terminated with empty reply
         if (nullptr == reply)
         {
             call->set_delay(delay_ms);
@@ -142,6 +142,9 @@ namespace dsn {
             rpc_address addr;
             ::unmarshall((dsn_message_t)reply, addr);
             _engine->call_ip(addr, call->get_request(), call, true);
+
+            dassert(reply->get_count() == 0,
+                "reply should not be referenced by anybody so far");
             delete reply;
         }
         else
