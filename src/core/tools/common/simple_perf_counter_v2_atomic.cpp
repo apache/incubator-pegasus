@@ -66,17 +66,17 @@ namespace dsn {
             virtual void   increment()
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_relaxed);
             }
             virtual void   decrement()
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_relaxed);
             }
             virtual void   add(uint64_t val)
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_relaxed);
             }
             virtual void   set(uint64_t val)
             {
@@ -89,6 +89,15 @@ namespace dsn {
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
                 {
                     val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
+                }
+                return val;
+            }
+            virtual uint64_t get_integer_value() 
+            {
+                uint64_t val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    val += _val[i].load(std::memory_order_relaxed);
                 }
                 return val;
             }
@@ -117,17 +126,17 @@ namespace dsn {
             virtual void   increment()
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_relaxed);
             }
             virtual void   decrement()
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_relaxed);
             }
             virtual void   add(uint64_t val)
             {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
-                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_relaxed);
             }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
@@ -152,6 +161,7 @@ namespace dsn {
                 _rate = val / interval;
                 return _rate;
             }
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
@@ -207,7 +217,7 @@ namespace dsn {
             }
 
             virtual double get_value() { dassert(false, "invalid execution flow");  return 0.0; }
-
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {
                 if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT))

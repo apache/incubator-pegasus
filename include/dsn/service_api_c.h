@@ -1057,6 +1057,7 @@ extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val);
 extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
 extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
+extern DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle);
 extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
 //------------------------------------------------------------------------------
 //

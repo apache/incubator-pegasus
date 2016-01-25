@@ -37,6 +37,7 @@
 
 # include <dsn/internal/task.h>
 # include <dsn/internal/exp_delay.h>
+# include <dsn/internal/perf_counter.h>
 
 namespace dsn {
 
@@ -56,7 +57,7 @@ public:
 
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
-    ~task_queue() {}
+    ~task_queue();
     
     virtual void     enqueue(task* task) = 0;
 
@@ -66,9 +67,9 @@ public:
     // returned batch size is stored in parameter batch_size
     virtual task*    dequeue(/*inout*/int& batch_size) = 0;
     
-    int               count() const { return _queue_length.load(std::memory_order_relaxed); }
-    void              decrease_count(int count = 1) { _queue_length.fetch_sub(count, std::memory_order_relaxed); }
-    void              increase_count(int count = 1) { _queue_length.fetch_add(count, std::memory_order_relaxed); }
+    int               count() const { return (int)_queue_length->get_integer_value(); }
+    void              decrease_count(int count = 1) { _queue_length->add((uint64_t)(-count)); }
+    void              increase_count(int count = 1) { _queue_length->add(count); }
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }
@@ -92,7 +93,7 @@ private:
     int                    _index;
     admission_controller*  _controller;
     int                    _worker_count;
-    std::atomic_int        _queue_length;
+    mutable perf_counter_ptr  _queue_length;
     bool                   _enable_virtual_queue_throttling;
     volatile int           _virtual_queue_length;
     exp_delay              _delayer;

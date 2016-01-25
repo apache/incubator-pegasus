@@ -64,6 +64,7 @@ namespace dsn
         void   add(uint64_t val)  { dsn_perf_counter_add(_h, val); }
         void   set(uint64_t val)  { dsn_perf_counter_set(_h, val); }
         double get_value()  { return dsn_perf_counter_get_value(_h); }
+        uint64_t get_integer_value() { return dsn_perf_counter_get_integer_value(_h); }
         double get_percentile(dsn_perf_counter_percentile_type_t type)  { return dsn_perf_counter_get_percentile(_h, type); }
 
     private:
