@@ -72,14 +72,10 @@ private:
             _meta_servers,
             msg,
             this,
-            std::bind(&client_ddl::end_meta_request,
-            this,
-            task,
-            0,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3
-            ),
+            [this, task] (error_code err, dsn_message_t request, dsn_message_t response)
+            {
+                end_meta_request(std::move(task), 0, err, request, response);
+            },
             0
          );
         return task;

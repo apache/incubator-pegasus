@@ -530,7 +530,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
           beacon.from.to_string(), beacon.to.to_string(), time);
 
-    ::dsn::rpc::call_typed(
+    ::dsn::rpc::call(
         target,
         RPC_FD_FAILURE_DETECTOR_PING,
         beacon,

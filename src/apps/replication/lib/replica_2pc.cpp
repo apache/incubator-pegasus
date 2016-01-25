@@ -173,12 +173,10 @@ void replica::send_prepare_message(
     
     mu->remote_tasks()[addr] = rpc::call(addr, msg,
         this,
-        std::bind(&replica::on_prepare_reply, 
-            this,
-            std::make_pair(mu, rconfig.status),
-            std::placeholders::_1, 
-            std::placeholders::_2, 
-            std::placeholders::_3),
+        [=](error_code err, dsn_message_t request, dsn_message_t reply)
+        {
+            on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
+        },
         gpid_to_hash(get_gpid())
         );
 

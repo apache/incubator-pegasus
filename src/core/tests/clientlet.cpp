@@ -110,7 +110,7 @@ TEST(dev_cpp, clientlet_rpc)
     const char* command = "echo hello world";
 
     std::shared_ptr<std::string> str_command(new std::string(command));
-    auto t = rpc::call_typed(
+    auto t = rpc::call(
         addr3,
         RPC_TEST_STRING_COMMAND,
         *str_command,
@@ -122,7 +122,7 @@ TEST(dev_cpp, clientlet_rpc)
         }
     );
     task_vec.push_back(t);
-    t = rpc::call_typed(
+    t = rpc::call(
         addr2,
         RPC_TEST_STRING_COMMAND,
         std::string(command),

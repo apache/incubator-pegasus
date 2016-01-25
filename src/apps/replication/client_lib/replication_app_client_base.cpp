@@ -350,14 +350,10 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
             addr,
             msg,
             this,
-            std::bind(
-            &replication_app_client_base::replica_rw_reply,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3,
-            request
-            )
+            [this, request](error_code err, dsn_message_t req, dsn_message_t resp)
+            {
+                replication_app_client_base::replica_rw_reply(err, req, resp, request);
+            }
         );
     }
 }
@@ -367,7 +363,7 @@ void replication_app_client_base::replica_rw_reply(
     error_code err,
     dsn_message_t request,
     dsn_message_t response,
-    request_context_ptr& rc
+    request_context_ptr rc
     )
 {
     {
@@ -562,13 +558,10 @@ dsn::task_ptr replication_app_client_base::query_partition_config(request_contex
         target,
         msg,
         this,
-        std::bind(&replication_app_client_base::query_partition_configuration_reply,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3,
-            request
-            )
+        [this, request_capture = std::move(request)](error_code err, dsn_message_t req, dsn_message_t resp)
+        {
+            replication_app_client_base::query_partition_configuration_reply(err, req, resp, std::move(request_capture));
+        }
         );
 }
 

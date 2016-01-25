@@ -103,9 +103,9 @@ namespace dsn
         }
     }
 
-    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback, int reply_hash)
+    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_hash)
     {
-        auto tsk = new safe_task_handle;
+        task_ptr tsk = new safe_task_handle;
         //do not add_ref here
         auto t = dsn_rpc_create_response_task(
             request,
@@ -120,9 +120,9 @@ namespace dsn
 
     namespace file
     {
-        task_ptr create_aio_task(dsn_task_code_t callback_code, clientlet* svc, empty_callback, int hash)
+        task_ptr create_aio_task(dsn_task_code_t callback_code, clientlet* svc, empty_callback_t, int hash)
         {
-            auto tsk = new safe_task_handle;
+            task_ptr tsk = new safe_task_handle;
             //do not add_ref here
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 nullptr,

@@ -342,11 +342,10 @@ void replica::update_configuration_on_meta_server(config_type type, ::dsn::rpc_a
         target,
         msg,        
         this,
-        std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
-        std::placeholders::_1,
-        std::placeholders::_2,
-        std::placeholders::_3,
-        request),
+        [=](error_code err, dsn_message_t reqmsg, dsn_message_t response)
+        {
+            on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
+        },
         gpid_to_hash(get_gpid())
         );
 }
@@ -385,11 +384,10 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
                 target,
                 request,
                 this,
-                std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
-                std::placeholders::_1,
-                std::placeholders::_2,
-                std::placeholders::_3,
-                req),
+                [this, req](error_code err, dsn_message_t request, dsn_message_t response)
+                {
+                    on_update_configuration_on_meta_server_reply(err, request, response, std::move(req));
+                },
                 gpid_to_hash(get_gpid())
                 );
             return;

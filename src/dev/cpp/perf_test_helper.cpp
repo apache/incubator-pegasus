@@ -291,7 +291,7 @@ namespace dsn {
             // setup for the case
             _current_case = &cs;
             _name = suit.name;
-            _timeout_ms = cs.timeout_ms;
+            _timeout = std::chrono::milliseconds(cs.timeout_ms);
             _case_start_ts_ns = dsn_now_ns();
             _case_end_ts_ns = _case_start_ts_ns + (uint64_t)cs.seconds * 1000 * 1000 * 1000;
             _quiting_current_case = false;

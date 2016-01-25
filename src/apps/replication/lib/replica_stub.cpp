@@ -610,11 +610,10 @@ void replica_stub::query_configuration_by_node()
         target,
         msg,
         this,
-        std::bind(&replica_stub::on_node_query_reply, this, 
-            std::placeholders::_1, 
-            std::placeholders::_2, 
-            std::placeholders::_3
-            )
+        [this](error_code err, dsn_message_t request, dsn_message_t resp)
+        {
+            on_node_query_reply(err, request, resp);
+        }
         );
 }
 

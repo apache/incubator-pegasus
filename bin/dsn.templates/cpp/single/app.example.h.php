@@ -15,8 +15,7 @@ class <?=$_PROG->name?>_server_app :
     public ::dsn::service_app
 {
 public:
-    <?=$_PROG->name?>_server_app()
-    {}
+    <?=$_PROG->name?>_server_app() {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
@@ -45,12 +44,7 @@ class <?=$_PROG->name?>_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    <?=$_PROG->name?>_client_app() 
-    {
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = nullptr;
-<?php } ?>
-    }
+    <?=$_PROG->name?>_client_app() {}
     
     ~<?=$_PROG->name?>_client_app() 
     {
@@ -64,9 +58,9 @@ public:
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 <?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
+        _<?=$svc->name?>_client = std::make_unique<<?=$svc->name?>_client>(_server);
 <?php } ?>
-        _timer = ::dsn::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue_timer(<?=$_PROG->get_test_task_code()?>, this, [this]{on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -74,11 +68,7 @@ public:
     {
         _timer->cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?> 
-        if (_<?=$svc->name?>_client != nullptr)
-        {
-            delete _<?=$svc->name?>_client;
-            _<?=$svc->name?>_client = nullptr;
-        }
+        _<?=$svc->name?>_client.reset();
 <?php } ?>
     }
 
@@ -91,16 +81,14 @@ foreach ($_PROG->services as $svc)
     foreach ($svc->functions as $f)
 {?>
         {
-            <?=$f->get_first_param()->get_cpp_type()?> req;
 <?php if ($f->is_one_way()) { ?>
             _<?=$svc->name?>_client-><?=$f->name?>(req);
 <?php } else { ?>
             //sync:
-            <?=$f->get_cpp_return_type()?> resp;
-            auto err = _<?=$svc->name?>_client-><?=$f->name?>(req, resp);
-            std::cout << "call <?=$f->get_rpc_code()?> end, return " << err.to_string() << std::endl;
+            auto result = _<?=$svc->name?>_client-><?=$f->name?>({}});
+            std::cout << "call <?=$f->get_rpc_code()?> end, return " << result.first.to_string() << std::endl;
             //async: 
-            //_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
+            //_<?=$svc->name?>_client->begin_<?=$f->name?>({});
 <?php } ?>           
         }
 <?php }    
@@ -113,7 +101,7 @@ private:
     ::dsn::rpc_address _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
-    <?=$svc->name?>_client *_<?=$svc->name?>_client;
+    std::unique_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
 <?php } ?>
 };
 

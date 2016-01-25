@@ -68,9 +68,60 @@ namespace dsn
         dsn_task_tracker_t             _tracker;
     };
 
-    // common APIs
-    struct empty_callback {};
+    //callback function concepts
+    struct empty_callback_t
+    {
+        void operator()()const {}
+    };
+    constexpr empty_callback_t empty_callback{};
 
+    // callback(error_code, dsn_message_t request, dsn_message_t response)
+    template<typename TFunction, class Enable = void> struct is_raw_rpc_callback
+    {
+        constexpr static bool const value = false;
+    };
+    template<typename TFunction>
+    struct is_raw_rpc_callback<TFunction, typename std::enable_if<function_traits<TFunction>::arity == 3>::type>
+    {
+        using inspect_t = function_traits<TFunction>;
+        constexpr static bool const value =
+            std::is_same<typename inspect_t::template arg_t<0>, dsn::error_code>::value
+            && std::is_same<typename inspect_t::template arg_t<1>, dsn_message_t>::value
+            && std::is_same<typename inspect_t::template arg_t<2>, dsn_message_t>::value;
+    };
+
+    // callback(error_code, TResponse&& response)
+    template<typename TFunction, class Enable = void> struct is_typed_rpc_callback
+    {
+        constexpr static bool const value = false;
+    };
+    template<typename TFunction>
+    struct is_typed_rpc_callback<TFunction, typename std::enable_if<function_traits<TFunction>::arity == 2>::type>
+    {
+        //todo: check if response_t is marshallable
+        using inspect_t = function_traits<TFunction>;
+        constexpr static bool const value =
+            std::is_same<typename inspect_t::template arg_t<0>, dsn::error_code>::value
+            && std::is_default_constructible<typename std::decay<typename inspect_t::template arg_t<1>>::type>::value;
+        using response_t = typename std::decay<typename inspect_t::template arg_t<1>>::type;
+    };
+
+    // callback(error_code, int io_size)
+    template<typename TFunction, class Enable = void> struct is_aio_callback
+    {
+        constexpr static bool const value = false;
+    };
+    template<typename TFunction>
+    struct is_aio_callback<TFunction, typename std::enable_if<function_traits<TFunction>::arity == 2>::type>
+    {
+        using inspect_t = function_traits<TFunction>;
+        constexpr static bool const value =
+            std::is_same<typename inspect_t::template arg_t<0>, dsn::error_code>::value
+            && std::is_convertible<typename inspect_t::template arg_t<1>, uint64_t>::value;
+    };
+
+
+    // common APIs
     namespace tasking
     {
         template<typename TCallback>
@@ -166,9 +217,15 @@ namespace dsn
 
     namespace rpc
     {
-        template<typename TCallback>
-        //where TCallback = void(error_code, dsn_message, dsn_message_t)
         task_ptr create_rpc_response_task(
+            dsn_message_t request,
+            clientlet* svc,
+            empty_callback_t,
+            int reply_hash = 0);
+
+        template<typename TCallback>
+        typename std::enable_if<is_raw_rpc_callback<TCallback>::value, task_ptr>::type
+            create_rpc_response_task(
             dsn_message_t request,
             clientlet* svc,
             TCallback&& callback,
@@ -190,35 +247,20 @@ namespace dsn
             return tsk;
         }
 
-        task_ptr create_rpc_response_task(
-            dsn_message_t request,
-            clientlet* svc,
-            empty_callback,
-            int reply_hash = 0);
-
         template<typename TCallback>
-        //where TCallback = void(error_code, TResponse&&)
-        //  where TResponse = DefaultConstructible && DSNSerializable
-        task_ptr create_rpc_response_task_typed(
+        typename std::enable_if<is_typed_rpc_callback<TCallback>::value, task_ptr>::type
+        create_rpc_response_task(
             dsn_message_t request,
             clientlet* svc,
             TCallback&& callback,
             int reply_hash = 0)
         {
-            using callback_inspect_t = dsn::function_traits<TCallback>;
-            static_assert(callback_inspect_t::arity == 2, "invalid callback function");
-            using errcode_t = typename std::decay<typename callback_inspect_t::template arg_t<0>>::type;
-            using response_t = typename std::decay<typename callback_inspect_t::template arg_t<1>>::type;
-
-            static_assert(std::is_same<error_code, errcode_t>::value, "the first argument of callback should be error_code");
-            static_assert(std::is_default_constructible<response_t>::value, "cannot wrap a non-trival-constructible type");
-
             return create_rpc_response_task(
                 request,
                 svc,
                 [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp)
                 {
-                    response_t response;
+                    typename is_typed_rpc_callback<TCallback>::response_t response;
                     if (err == ERR_OK)
                     {
                         ::unmarshall(resp, response);
@@ -229,7 +271,6 @@ namespace dsn
         }
 
         template<typename TCallback>
-        //where TCallback = void(error_code, dsn_message_t, dsn_message_t)
         task_ptr call(
             ::dsn::rpc_address server,
             dsn_message_t request,
@@ -243,27 +284,8 @@ namespace dsn
             return t;
         }
 
-        template<typename TRequest>
-        task_ptr call(
-            ::dsn::rpc_address server,
-            dsn_task_code_t code,
-            TRequest&& req,
-            clientlet* owner,
-            empty_callback,
-            int request_hash = 0,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int reply_hash = 0)
-        {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
-            ::marshall(msg, std::forward<TRequest>(req));
-            auto task = create_rpc_response_task(msg, owner, empty_callback{}, reply_hash);
-            dsn_rpc_call(server.c_addr(), task->native_handle());
-            return task;
-        }
-
         template<typename TRequest, typename TCallback>
-        //where TCallback = void(error_code, TResponse&&)
-        task_ptr call_typed(
+        task_ptr call(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             TRequest&& req,
@@ -273,19 +295,9 @@ namespace dsn
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0)
         {
-            using callback_inspect_t = dsn::function_traits<TCallback>;
-            static_assert(callback_inspect_t::arity == 2, "invalid callback function");
-            using errcode_t = typename std::decay<typename callback_inspect_t::template arg_t<0>>::type;
-            using response_t = typename std::decay<typename callback_inspect_t::template arg_t<1>>::type;
-
-            static_assert(std::is_same<error_code, errcode_t>::value, "the first argument of callback should be error_code");
-            static_assert(std::is_default_constructible<response_t>::value, "cannot wrap a non-trival-constructible type");
-
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
             ::marshall(msg, std::forward<TRequest>(req));
-            auto task = create_rpc_response_task_typed(msg, owner, std::forward<TCallback>(callback), reply_hash);
-            dsn_rpc_call(server.c_addr(), task->native_handle());
-            return task;
+            return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
         }
 
 
@@ -313,9 +325,22 @@ namespace dsn
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }
 
-        template<typename TRequest>
-        ::dsn::error_code call_typed_wait(
-            /*out*/ ::dsn::rpc_read_stream* response,
+
+        template<typename TResponse>
+        std::pair<::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
+        {
+            task->wait();
+            std::pair<::dsn::error_code, TResponse> result;
+            result.first = task->error();
+            if (task->error() == ::dsn::ERR_OK)
+            {
+                ::unmarshall(task->response(), result.second);
+            }
+            return result;
+        }
+
+        template<typename TResponse, typename TRequest>
+        std::pair<::dsn::error_code, TResponse> call_wait(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
@@ -323,27 +348,18 @@ namespace dsn
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0)
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), hash);
-            ::marshall(msg, req);
-
-            auto resp = dsn_rpc_call_wait(server.c_addr(), msg);
-            if (resp != nullptr)
-            {
-                if (response)
-                {
-                    response->set_read_msg(resp);
-                }
-                else
-                    dsn_msg_release_ref(resp);
-                return ::dsn::ERR_OK;
-            }
-            else
-                return ::dsn::ERR_TIMEOUT;
+            return wait_and_unwrap<TResponse>(call(server, code, req, nullptr, empty_callback, hash, timeout));
         }
     }
 
     namespace file
     {
+        task_ptr create_aio_task(
+            dsn_task_code_t callback_code,
+            clientlet* svc,
+            empty_callback_t,
+            int hash);
+
         template<typename TCallback>
         task_ptr create_aio_task(
             dsn_task_code_t callback_code,
@@ -351,6 +367,7 @@ namespace dsn
             TCallback&& callback,
             int hash)
         {
+            //TODO: check if the callback is an aio callback
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
             auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec_aio
@@ -364,12 +381,6 @@ namespace dsn
             tsk->set_task_info(t);
             return tsk;
         }
-
-        task_ptr create_aio_task(
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            empty_callback,
-            int hash);
 
         template<typename TCallback>
         task_ptr read(

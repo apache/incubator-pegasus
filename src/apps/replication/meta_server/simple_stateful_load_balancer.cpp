@@ -221,7 +221,7 @@ void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
 
 void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
 {
-    rpc::call_typed(
+    rpc::call(
         query->node,
         RPC_QUERY_PN_DECREE,
         *query,

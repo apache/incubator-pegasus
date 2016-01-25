@@ -115,7 +115,7 @@ namespace dsn {
                     rpc_address sd = _primary_states.membership.secondaries
                         [dsn_random32(0, (int)_primary_states.membership.secondaries.size() - 1)];
 
-                    _primary_states.checkpoint_task = rpc::call_typed(
+                    _primary_states.checkpoint_task = rpc::call(
                         sd,
                         RPC_REPLICA_COPY_LAST_CHECKPOINT,
                         *rc,

@@ -112,12 +112,12 @@ void docker_scheduler::undeploy_docker_unit_cleanup(dsn_cli_reply reply)
 }
 error_code docker_scheduler::initialize()
 { 
-    int ret;
-    FILE *in;
     _run_path = dsn_config_get_value_string("apps.client","run_path","","");
     dassert( _run_path != "", "run path is empty");
     dinfo("run path is %s",_run_path.c_str());
 #ifndef _WIN32    
+    int ret;
+    FILE *in;
     ret = system("docker version");
     if (ret != 0)
     {

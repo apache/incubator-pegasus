@@ -187,7 +187,7 @@ void replica::init_learn(uint64_t signature)
         enum_to_string(_potential_secondary_states.learning_status)
         );
 
-    _potential_secondary_states.learning_task = rpc::call_typed(
+    _potential_secondary_states.learning_task = rpc::call(
         _config.primary,
         RPC_LEARN,
         *request,

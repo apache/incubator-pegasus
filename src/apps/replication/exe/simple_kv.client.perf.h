@@ -36,124 +36,105 @@
 # pragma once
 # include "simple_kv.client.h"
 
-namespace dsn {
-    namespace replication {
-        namespace application {
+namespace dsn { namespace replication { namespace application {  
 
-            class simple_kv_perf_test_client
-                : public simple_kv_client, 
-                  public ::dsn::service::perf_client_helper
-            {
-            public:
-                simple_kv_perf_test_client(
-                    const std::vector< ::dsn::rpc_address>& meta_servers,
-                    const char* app_name)
-                    : simple_kv_client(meta_servers, app_name)
-                {
-                }
+ 
+class simple_kv_perf_test_client 
+    : public simple_kv_client, 
+      public ::dsn::service::perf_client_helper 
+{
+public:
+    using simple_kv_client::simple_kv_client;
 
-                void start_test()
-                {
-                    perf_test_suite s;
-                    std::vector<perf_test_suite> suits;
-
-                    s.name = "simple_kv.write";
-                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
-                    s.send_one = [this](int payload_bytes){this->send_one_write(payload_bytes); };
-                    s.cases.clear();
-                    load_suite_config(s);
-                    suits.push_back(s);
-
-                    s.name = "simple_kv.append";
-                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
-                    s.send_one = [this](int payload_bytes){this->send_one_append(payload_bytes); };
-                    s.cases.clear();
-                    load_suite_config(s);
-                    suits.push_back(s);
-
-                    s.name = "simple_kv.read";
-                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-                    s.send_one = [this](int payload_bytes){this->send_one_read(payload_bytes); };
-                    s.cases.clear();
-                    load_suite_config(s);
-                    suits.push_back(s);
-
-                    start(suits);
-                }
-
-                virtual uint64_t get_key_hash(const std::string& key) override
-                {
-                    return dsn_crc64_compute(key.c_str(), key.size(), 0);
-                }
-
-                virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
-                {
-                    return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
-                }
-                                
-                void send_one_read(int payload_bytes)
-                {
-                    void* ctx = prepare_send_one();
-                    auto rs = random64(0, 10000000);
-                    std::stringstream ss;
-                    ss << "key." << rs;
-
-                    std::string req = ss.str();
-                    begin_read(req, ctx, _timeout_ms);
-                }
-
-                virtual void end_read(
-                    ::dsn::error_code err,
-                    const std::string& resp,
-                    void* context) override
-                {
-                    end_send_one(context, err);
-                }
-
-                void send_one_write(int payload_bytes)
-                {
-                    void* ctx = prepare_send_one();
-                    auto rs = random64(0, 10000000);
-                    std::stringstream ss;
-                    ss << "key." << rs;
-
-                    kv_pair req;
-                    req.key = ss.str();
-                    req.value = std::string(payload_bytes, 'x');
-
-                    begin_write(req, ctx, _timeout_ms);
-                }
-
-                virtual void end_write(
-                    ::dsn::error_code err,
-                    const int32_t& resp,
-                    void* context) override
-                {
-                    end_send_one(context, err);
-                }
-
-                void send_one_append(int payload_bytes)
-                {
-                    void* ctx = prepare_send_one();
-                    auto rs = random64(0, 10000000);
-                    std::stringstream ss;
-                    ss << "key." << rs;
-
-                    kv_pair req;
-                    req.key = ss.str();
-                    req.value = std::string(payload_bytes, 'x');
-
-                    begin_append(req, ctx, _timeout_ms);
-                }
-
-                virtual void end_append(
-                    ::dsn::error_code err,
-                    const int32_t& resp,
-                    void* context) override
-                {
-                    end_send_one(context, err);
-                }
-            };
-        }
+    virtual uint64_t get_key_hash(const std::string& key) override
+    {
+        return dsn_crc64_compute(key.c_str(), key.size(), 0);
     }
-}
+
+    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
+    {
+        return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
+    }
+
+    void start_test()
+    {
+        perf_test_suite s;
+        std::vector<perf_test_suite> suits;
+
+        s.name = "simple_kv.read";
+        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
+        s.send_one = [this](int payload_bytes){this->send_one_read(payload_bytes); };
+        s.cases.clear();
+        load_suite_config(s);
+        suits.push_back(s);
+        
+        s.name = "simple_kv.write";
+        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
+        s.send_one = [this](int payload_bytes){this->send_one_write(payload_bytes); };
+        s.cases.clear();
+        load_suite_config(s);
+        suits.push_back(s);
+        
+        s.name = "simple_kv.append";
+        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
+        s.send_one = [this](int payload_bytes){this->send_one_append(payload_bytes); };
+        s.cases.clear();
+        load_suite_config(s);
+        suits.push_back(s);
+        
+        start(suits);
+    }                
+
+    void send_one_read(int payload_bytes)
+    {
+        auto rs = random64(0, 10000000);
+        std::stringstream ss;
+        ss << "key." << rs;
+        read(
+            ss.str(),
+            [this, context = prepare_send_one()](error_code err, std::string&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
+    }
+
+
+    void send_one_write(int payload_bytes)
+    {
+        auto rs = random64(0, 10000000);
+        std::stringstream ss;
+        ss << "key." << rs;
+
+        kv_pair req = { ss.str(),  std::string(payload_bytes, 'x') };
+        write(
+            req,
+            [this, context = prepare_send_one()](error_code err, int32_t&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
+    }
+
+
+    void send_one_append(int payload_bytes)
+    {
+        auto rs = random64(0, 10000000);
+        std::stringstream ss;
+        ss << "key." << rs;
+        kv_pair req = { ss.str(), std::string(payload_bytes, 'x') };;
+        append(
+            req,
+            [this, context = prepare_send_one()](error_code err, int32_t&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
+    }
+
+};
+
+} } } 

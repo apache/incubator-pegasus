@@ -112,7 +112,7 @@ void replica::broadcast_group_check()
             enum_to_string(it->second)
         );
 
-        dsn::task_ptr callback_task = rpc::call_typed(
+        dsn::task_ptr callback_task = rpc::call(
             addr,
             RPC_GROUP_CHECK,
             *request,            
