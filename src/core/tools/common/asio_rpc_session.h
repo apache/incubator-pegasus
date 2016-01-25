@@ -56,6 +56,9 @@ namespace dsn {
                 );
             virtual ~asio_rpc_session();
             virtual void send(uint64_t signature) override { return write(signature); }
+            virtual void close_on_fault_injection() override {
+                _socket->close();
+            }
 
         public:
             virtual void connect() override;            

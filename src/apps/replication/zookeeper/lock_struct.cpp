@@ -168,10 +168,21 @@ void lock_struct::on_operation_timeout()
 
 void lock_struct::on_expire()
 {
-    _state = lock_state::expired;
-    remove_lock();
-    __lock_task_bind_and_enqueue(_lease_expire_callback, ERR_EXPIRED, _owner._node_value, _owner._sequence_id);
-    clear();
+    if (lock_state::pending == _state)
+    {
+        on_operation_timeout();
+    }
+    else if (lock_state::locked == _state)
+    {
+        _state = lock_state::expired;
+        remove_lock();
+        __lock_task_bind_and_enqueue(_lease_expire_callback, ERR_EXPIRED, _owner._node_value, _owner._sequence_id);
+        clear();
+    }
+    else
+    {
+        dwarn("ignore zk session event, lock_state: %d", _state);
+    }
 }
 
 int64_t lock_struct::parse_seq_path(const std::string& path)

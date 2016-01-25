@@ -488,7 +488,11 @@ namespace dsn
 
         void hpc_rpc_session::close()
         {
-            closesocket(_socket);
+            if (0 != _socket)
+            {
+                closesocket(_socket);
+                _socket = 0;
+            }
         }
 
         hpc_rpc_session::hpc_rpc_session(

@@ -44,3 +44,9 @@ TEST(core, logging)
     dsn_logf(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "test logging", "in TEST(core, logging)");
     dsn_log(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "test logging");
 }
+
+TEST(core, logging_big_log)
+{
+    std::string big_str(128000, 'x');
+    dsn_logf(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "write big str %s", big_str.c_str());
+}
