@@ -55,11 +55,12 @@ namespace dsn {
                 : perf_counter(app, section, name, type, dsptr), _val(0){}
             ~perf_counter_number(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
-            virtual void   set(uint64_t val) { _val = val; }
-            virtual double get_value() { return static_cast<double>(_val.load()); }
+            virtual void   increment() { _val.fetch_add(1, std::memory_order_relaxed); }
+            virtual void   decrement() { _val.fetch_sub(1, std::memory_order_relaxed); }
+            virtual void   add(uint64_t val) { _val.fetch_add(val, std::memory_order_relaxed); }
+            virtual void   set(uint64_t val) { _val.store(val, std::memory_order_relaxed); }
+            virtual double get_value() { return static_cast<double>(_val.load(std::memory_order_relaxed)); }
+            virtual uint64_t get_integer_value() { return _val.load(std::memory_order_relaxed); }            
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
@@ -78,19 +79,20 @@ namespace dsn {
             }
             ~perf_counter_rate(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
+            virtual void   increment() { _val.fetch_add(1, std::memory_order_relaxed); }
+            virtual void   decrement() { _val.fetch_sub(1, std::memory_order_relaxed); }
+            virtual void   add(uint64_t val) { _val.fetch_add(val, std::memory_order_relaxed); }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
             {
                 uint64_t now = dsn_now_ns();
                 uint64_t interval = now - qts;
-                double val = static_cast<double>(_val.load());
+                double val = static_cast<double>(_val.load(std::memory_order_relaxed));
                 qts = now;
                 _val = 0;
                 return val / interval * 1000 * 1000 * 1000;
             }
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
@@ -136,11 +138,12 @@ namespace dsn {
             virtual void   add(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual void   set(uint64_t val)
             {
-                auto idx = _tail++;
+                auto idx = _tail.fetch_add(1, std::memory_order_relaxed);
                 _samples[idx % MAX_QUEUE_LENGTH] = val;
             }
 
             virtual double get_value() { dassert(false, "invalid execution flow");  return 0.0; }
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
 
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {

@@ -87,6 +87,15 @@ namespace dsn {
                 double val = 0;
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
                 {
+                    val += (double)_val[i];
+                }
+                return val;
+            }
+            virtual uint64_t get_integer_value() 
+            {
+                uint64_t val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
                     val += _val[i];
                 }
                 return val;
@@ -151,6 +160,7 @@ namespace dsn {
                 _rate = val / interval;
                 return _rate;
             }
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
@@ -206,6 +216,7 @@ namespace dsn {
             }
 
             virtual double get_value() { dassert(false, "invalid execution flow");  return 0.0; }
+            virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
 
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {

@@ -343,6 +343,12 @@ void task_worker::loop()
             {                
                 next = task->next;
                 task->next = nullptr;
+
+                if (task->spec().rpc_request_dropped_on_timeout_with_high_possibility)
+                {
+                    q->on_rpc_request_dequeued(((rpc_request_task*)(task))->enqueue_ts_ns());
+                }
+
                 task->exec_internal();                
                 task = next;
 # ifndef NDEBUG
