@@ -36,7 +36,6 @@
 # pragma once
 
 # include <dsn/internal/task.h>
-# include <dsn/internal/exp_delay.h>
 # include <dsn/internal/perf_counter.h>
 
 namespace dsn {
@@ -77,6 +76,7 @@ public:
     task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
     int               index() const { return _index; }
     volatile int*     get_virtual_length_ptr() { return &_virtual_queue_length; }
+    void on_rpc_request_dequeued(uint64_t enqueue_ts_ns);
 
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
@@ -85,7 +85,7 @@ private:
     friend class task_worker_pool;
     void set_owner_worker(task_worker* worker) { _owner_worker = worker; }
     void enqueue_internal(task* task);
-
+    
 private:
     task_worker_pool*      _pool;
     task_worker*           _owner_worker;
@@ -94,9 +94,17 @@ private:
     admission_controller*  _controller;
     int                    _worker_count;
     mutable perf_counter_ptr  _queue_length;
-    bool                   _enable_virtual_queue_throttling;
+    threadpool_spec*       _spec;
     volatile int           _virtual_queue_length;
-    exp_delay              _delayer;
+    std::atomic<uint64_t>  _appro_wait_time_ns;
 };
+
+inline void task_queue::on_rpc_request_dequeued(uint64_t enqueue_ts_ns)
+{
+    uint64_t n2 = _appro_wait_time_ns.load(std::memory_order_relaxed);
+    auto n0 = (double)(dsn_now_ns() - enqueue_ts_ns) * _spec->queue_wait_time_approximation_alpha_on_new
+        + (double)n2 * (1.0 - _spec->queue_wait_time_approximation_alpha_on_new);
+    _appro_wait_time_ns.store((uint64_t)n0, std::memory_order_relaxed);
+}
 
 } // end namespace

@@ -182,17 +182,8 @@ namespace dsn
         }
         
         // added in send_message
-        _message_count -= (int)(_sending_msgs.size());
+        _message_count.fetch_sub((int)_sending_msgs.size(), std::memory_order_relaxed);
         return _sending_msgs.size() > 0;
-    }
-
-    DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-    
-    void __delayed_rpc_session_read_next__(void* ctx)
-    {
-        rpc_session* s = (rpc_session*)ctx;
-        s->start_read_next();
-        s->release_ref();
     }
 
     void rpc_session::start_read_next(int read_next)
@@ -200,27 +191,29 @@ namespace dsn
         // server only
         if (_matcher == nullptr)
         {
-            int delay_ms = 0;
+            auto s = _recv_state.load(std::memory_order_relaxed);
+            switch (s)
             {
-                utils::auto_lock<utils::ex_lock_nr> l(_lock);
-                delay_ms = _delay_server_receive_ms;
-                _delay_server_receive_ms = 0;
-            }
-
-            // delayed read
-            if (delay_ms > 0)
-            {
-                auto delay_task = dsn_task_create(
-                    LPC_DELAY_RPC_REQUEST_RATE,
-                    __delayed_rpc_session_read_next__,
-                    this
-                    );
-                this->add_ref(); // released in __delayed_rpc_session_read_next__
-                dsn_task_call(delay_task, delay_ms);
-            }
-            else
-            {
+            case recv_state::normal:
                 do_read(read_next);
+                break;
+            case recv_state::to_be_paused:
+                if (_recv_state.compare_exchange_strong(s, recv_state::paused))
+                {
+                    // paused
+                }
+                else if (s == recv_state::normal)
+                {
+                    do_read(read_next);
+                }
+                else
+                {
+                    dassert (s == recv_state::paused, "invalid state %d", (int)s);
+                    dassert (false, "invalid execution flow here");
+                }
+                break;
+            default:
+                dassert(false, "invalid state %d", (int)s);
             }
         }
         else
@@ -232,15 +225,7 @@ namespace dsn
     void rpc_session::send_message(message_ex* msg)
     {
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
-        auto sp = task_spec::get(msg->local_rpc_code);
-        if (sp->rpc_allow_throttling)
-        {
-            int dms = _net.delay(_message_count++); // -- in unlink_message
-            if (dms > 0)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(dms));
-            }
-        }
+        _message_count.fetch_add(1, std::memory_order_relaxed); // -- in unlink_message
 
         msg->add_ref(); // released in on_send_completed        
         uint64_t sig;
@@ -339,7 +324,7 @@ namespace dsn
         bool is_client
         )
         : _net(net), _remote_addr(remote_addr), _parser(parser),
-        _delay_server_receive_ms(0)
+        _recv_state(recv_state::normal)
     {
         _matcher = nullptr;
         _is_sending_next = false;

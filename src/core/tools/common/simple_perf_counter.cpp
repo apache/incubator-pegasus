@@ -58,7 +58,7 @@ namespace dsn {
             virtual void   increment() { _val.fetch_add(1, std::memory_order_relaxed); }
             virtual void   decrement() { _val.fetch_sub(1, std::memory_order_relaxed); }
             virtual void   add(uint64_t val) { _val.fetch_add(val, std::memory_order_relaxed); }
-            virtual void   set(uint64_t val) { _val.fetch_sub(val, std::memory_order_relaxed); }
+            virtual void   set(uint64_t val) { _val.store(val, std::memory_order_relaxed); }
             virtual double get_value() { return static_cast<double>(_val.load(std::memory_order_relaxed)); }
             virtual uint64_t get_integer_value() { return _val.load(std::memory_order_relaxed); }            
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }

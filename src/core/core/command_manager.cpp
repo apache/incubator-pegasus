@@ -363,5 +363,60 @@ namespace dsn {
                 return ss.str();
             }
         );
+
+        register_command(
+        { "repeat", "r", "R", "Repeat" },
+            "repeat|Repeat|r|R interval_seconds max_count command - execute command periodically",
+            "repeat|Repeat|r|R interval_seconds max_count command - execute command every interval seconds, to the max count as max_count (0 for infinite)",
+            [this](const std::vector<std::string>& args)
+        {
+            std::stringstream ss;
+
+            if (args.size() < 3)
+            {
+                return "insufficient arguments";
+            }
+
+            int interval_seconds = atoi(args[0].c_str());
+            if (interval_seconds <= 0)
+            {
+                return "invalid interval argument";
+            }
+
+            int max_count = atoi(args[1].c_str());
+            if (max_count < 0)
+            {
+                return "invalid max count";
+            }
+
+            if (max_count == 0)
+            {
+                max_count = std::numeric_limits<int>::max();
+            }
+
+            std::string cmd = args[2];
+            std::vector<std::string> largs;
+            for (int i = 3; i < (int)args.size(); i++)
+            {
+                largs.push_back(args[i]);
+            }
+
+            for (int i = 0; i < max_count; i++)
+            {
+                std::string output;
+                auto r = this->run_command(cmd, largs, output);
+                std::cout << output << std::endl;
+
+                if (!r)
+                {
+                    break;
+                }
+
+                std::this_thread::sleep_for(std::chrono::seconds(interval_seconds));
+            }
+
+            return "repeat command completed";
+        }
+        );
     }
 }
