@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.replication)
+set(MY_PROJ_NAME dsn.replication.meta_server)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -9,7 +9,10 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../client_lib ../../../dist/failure_detector)
+set(MY_PROJ_INC_PATH 
+../client_lib 
+../../failure_detector 
+${RAPIDJSON_INCLUDE_DIR})
 
 set(MY_PROJ_LIBS "")
 
@@ -19,3 +22,4 @@ set(MY_PROJ_LIB_PATH "")
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
+add_dependencies(${MY_PROJ_NAME} rapidjson_header)

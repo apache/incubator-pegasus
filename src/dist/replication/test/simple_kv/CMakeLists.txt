@@ -4,14 +4,14 @@ set(DSN_IN_CORE "TRUE")
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "../../core/dll/core_main.cpp")
+set(MY_PROJ_SRC "../../../../core/dll/core_main.cpp")
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../../apps/replication/client_lib)
+set(MY_PROJ_INC_PATH ../../client_lib)
 
 set(MY_BOOST_PACKAGES system)
 

@@ -2,7 +2,7 @@ set(MY_PROJ_NAME dsn.replication.simple_kv.module)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-ms_find_source_files("CXX" "${CMAKE_CURRENT_SOURCE_DIR}/../exe" "GLOB" MY_PROJ_SRC)
+ms_find_source_files("CXX" "${CMAKE_CURRENT_SOURCE_DIR}/../skv" "GLOB" MY_PROJ_SRC)
 
 add_definitions(-DDSN_RUN_USE_SVCHOST)
 
@@ -11,7 +11,7 @@ add_definitions(-DDSN_RUN_USE_SVCHOST)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../exe")
+set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../skv")
 
 set(MY_BOOST_PACKAGES system)
 

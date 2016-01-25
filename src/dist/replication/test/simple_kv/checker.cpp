@@ -36,16 +36,16 @@
 # include "checker.h"
 # include "case.h"
 
-# include "../../apps/replication/lib/replica.h"
-# include "../../apps/replication/lib/replica_stub.h"
-# include "../../apps/replication/lib/replication_failure_detector.h"
-# include "../../apps/replication/lib/mutation_log.h"
-# include "../../apps/replication/meta_server/meta_service.h"
-# include "../../apps/replication/meta_server/meta_server_failure_detector.h"
-# include "../../apps/replication/meta_server/server_state.h"
-# include "../../apps/replication/client_lib/replication_ds.h"
-# include "../../core/core/service_engine.h"
-# include "../../core/core/rpc_engine.h"
+# include "../../lib/replica.h"
+# include "../../lib/replica_stub.h"
+# include "../../lib/replication_failure_detector.h"
+# include "../../lib/mutation_log.h"
+# include "../../meta_server/meta_service.h"
+# include "../../meta_server/meta_server_failure_detector.h"
+# include "../../meta_server/server_state.h"
+# include "../../client_lib/replication_ds.h"
+# include "../../../../core/core/service_engine.h"
+# include "../../../../core/core/rpc_engine.h"
 
 # include <sstream>
 # include <boost/lexical_cast.hpp>
