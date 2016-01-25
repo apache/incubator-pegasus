@@ -187,6 +187,10 @@ namespace dsn {
                 response.err = ERR_OK;
                 response.last_committed_decree = last_committed_decree();
                 response.base_local_dir = _app->data_dir();
+                for (std::string& file_name: response.state.files)
+                {
+                    file_name = file_name.substr(response.base_local_dir.length() + 1);
+                }
                 response.address = _stub->_primary_address;
             }
         }
