@@ -66,7 +66,7 @@ TEST(core, rpc_perf_test)
                     break;
                 }
             }
-            ::dsn::rpc::call_typed(
+            ::dsn::rpc::call(
                 localhost,
                 RPC_TEST_HASH,
                 0,

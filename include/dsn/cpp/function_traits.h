@@ -35,6 +35,7 @@
 #pragma once
 
 #include <type_traits>
+
 namespace dsn {
 template <typename T>
 struct function_traits
@@ -102,4 +103,5 @@ template <typename T>
 struct function_traits<volatile T&&> : public function_traits<T> {};
 template <typename T>
 struct function_traits<const volatile T&&> : public function_traits<T> {};
+
 }

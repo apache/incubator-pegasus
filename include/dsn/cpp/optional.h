@@ -29,14 +29,17 @@
  *     A naive implementation of optional type. Mainly for avoiding boost dependency.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-01-15, Tianyi Wang, first version
+ *     2016-01-25, Tianyi Wang, add none placeholder
  */
 
 #pragma once
 
 namespace dsn
 {
+struct none_placeholder_t {};
+constexpr none_placeholder_t none{};
+
 template<typename T>
 class optional
 {
@@ -45,18 +48,19 @@ class optional
    
 public:
     optional() : _is_some(false) {}
-    explicit optional(const optional& that) : _is_some(true)
+    /*implicit*/ optional(none_placeholder_t) : optional() {}
+    /*implicit*/ optional(const optional& that) : _is_some(true)
     {
         new (_data_placeholder) T{ reinterpret_cast<const T&>(that._data_placeholder) };
     }
 
-    explicit optional(optional&& that) : _is_some(true)
+    /*implicit*/ optional(optional&& that) : _is_some(true)
     {
         new (_data_placeholder) T{ std::move(reinterpret_cast<T&&>(that._data_placeholder)) };
         that.reset();
     }
     template<typename ...Args>
-    explicit optional(Args&& ... args) : _is_some(true)
+    /*implicit*/ optional(Args&& ... args) : _is_some(true)
     {
         new (_data_placeholder) T{ std::forward<Args>(args)... };
     }
@@ -71,6 +75,17 @@ public:
     bool is_none() const
     {
         return !_is_some;
+    }
+    const T& unwrap_or(const T& def) const
+    {
+        if (_is_some)
+        {
+            return unwrap();
+        }
+        else
+        {
+            return def;
+        }
     }
     T& unwrap()
     {

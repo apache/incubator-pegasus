@@ -266,13 +266,13 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     // gc
     if (false == _options.gc_disabled)
     {
-        _gc_timer_task = tasking::enqueue(
+        _gc_timer_task = tasking::enqueue_timer(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             this,
-            &replica_stub::on_gc,
+            [this] {on_gc();},
+            std::chrono::milliseconds(_options.gc_interval_ms),
             0,
-            random32(0, _options.gc_interval_ms),
-            _options.gc_interval_ms
+            std::chrono::milliseconds(random32(0, _options.gc_interval_ms))
             );
     }
     
@@ -283,13 +283,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
     {
-        _config_sync_timer_task = tasking::enqueue(
+        _config_sync_timer_task = tasking::enqueue_timer(
             LPC_QUERY_CONFIGURATION_ALL,
             this,
-            &replica_stub::query_configuration_by_node,
-            0, 
-            0,
-            _options.config_sync_interval_ms
+            [this] {query_configuration_by_node();},
+            std::chrono::milliseconds(_options.config_sync_interval_ms)
             );
     }
     
@@ -612,11 +610,10 @@ void replica_stub::query_configuration_by_node()
         target,
         msg,
         this,
-        std::bind(&replica_stub::on_node_query_reply, this, 
-            std::placeholders::_1, 
-            std::placeholders::_2, 
-            std::placeholders::_3
-            )
+        [this](error_code err, dsn_message_t request, dsn_message_t resp)
+        {
+            on_node_query_reply(err, request, resp);
+        }
         );
 }
 
@@ -838,9 +835,9 @@ void replica_stub::init_gc_for_test()
     _gc_timer_task = tasking::enqueue(
         LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
         this,
-        &replica_stub::on_gc,
+        [this] {on_gc();},
         0,
-        _options.gc_interval_ms
+        std::chrono::milliseconds(_options.gc_interval_ms)
         );
 }
 
@@ -1045,9 +1042,12 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     if (remove_replica(r))
     {
         task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA, this,
-            std::bind(&replica_stub::close_replica, this, r), 
+            [=]()
+            {
+                close_replica(r);
+            }, 
             0, 
-            r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms
+            std::chrono::milliseconds(r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();

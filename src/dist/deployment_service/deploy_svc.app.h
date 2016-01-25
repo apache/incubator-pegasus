@@ -50,7 +50,7 @@ public:
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
         _deploy_svc_client = new deploy_svc_client(_server);
-        _timer = ::dsn::tasking::enqueue(LPC_DEPLOY_SVC_TEST_TIMER, this, &deploy_svc_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue_timer(LPC_DEPLOY_SVC_TEST_TIMER, this, [this] {on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -69,51 +69,41 @@ public:
     {
         // test for service 'deploy_svc'
         {
-            deploy_request req;
             //sync:
-            deploy_info resp;
-            auto err = _deploy_svc_client->deploy(req, resp);
-            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY end, return " << err.to_string() << std::endl;
+            auto result = _deploy_svc_client->deploy_sync({});
+            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY end, return " << result.first.to_string() << std::endl;
             //async: 
             //_deploy_svc_client->begin_deploy(req);
            
         }
         {
-            std::string req;
             //sync:
-            ::dsn::error_code resp;
-            auto err = _deploy_svc_client->undeploy(req, resp);
-            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY end, return " << err.to_string() << std::endl;
+            auto result = _deploy_svc_client->undeploy_sync({});
+            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY end, return " << result.first.to_string() << std::endl;
             //async: 
             //_deploy_svc_client->begin_undeploy(req);
            
         }
         {
-            std::string req;
             //sync:
-            deploy_info_list resp;
-            auto err = _deploy_svc_client->get_service_list(req, resp);
-            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST end, return " << err.to_string() << std::endl;
+            auto result = _deploy_svc_client->get_service_list_sync({});
+            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST end, return " << result.first.to_string() << std::endl;
             //async: 
             //_deploy_svc_client->begin_get_service_list(req);
            
         }
         {
-            std::string req;
             //sync:
-            deploy_info resp;
-            auto err = _deploy_svc_client->get_service_info(req, resp);
-            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO end, return " << err.to_string() << std::endl;
+            auto result = _deploy_svc_client->get_service_info_sync({});
+            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO end, return " << result.first.to_string() << std::endl;
             //async: 
             //_deploy_svc_client->begin_get_service_info(req);
            
         }
         {
-            std::string req;
             //sync:
-            cluster_list resp;
-            auto err = _deploy_svc_client->get_cluster_list(req, resp);
-            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST end, return " << err.to_string() << std::endl;
+            auto result = _deploy_svc_client->get_cluster_list_sync({});
+            std::cout << "call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST end, return " << result.first.to_string() << std::endl;
             //async: 
             //_deploy_svc_client->begin_get_cluster_list(req);
            

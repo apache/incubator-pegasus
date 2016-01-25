@@ -301,14 +301,10 @@ void client_ddl::end_meta_request(task_ptr callback, int retry_times, error_code
             _meta_servers,
             request,
             this,
-            std::bind(&client_ddl::end_meta_request,
-            this,
-            callback,
-            retry_times + 1,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3
-            ),
+            [=, callback_capture = std::move(callback)](error_code err, dsn_message_t request, dsn_message_t response)
+            {
+                end_meta_request(std::move(callback_capture), retry_times + 1, err, request, response);
+            },
             0
          );
     }

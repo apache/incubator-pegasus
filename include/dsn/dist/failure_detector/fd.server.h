@@ -34,8 +34,7 @@
  */
 
 # pragma once
-# include <dsn/cpp/serverlet.h>
-# include <dsn/dist/failure_detector/fd.code.definition.h>
+# include "fd.code.definition.h"
 # include <iostream>
 
 namespace dsn { namespace fd { 
@@ -49,10 +48,10 @@ public:
 protected:
     // all service handlers to be implemented further
     // RPC_FD_FAILURE_DETECTOR_PING 
-    virtual void on_ping(const ::dsn::fd::beacon_msg& beacon, ::dsn::rpc_replier< ::dsn::fd::beacon_ack>& reply)
+    virtual void on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply)
     {
         std::cout << "... exec RPC_FD_FAILURE_DETECTOR_PING ... (not implemented) " << std::endl;
-        ::dsn::fd::beacon_ack resp;
+        beacon_ack resp;
         reply(resp);
     }
     

@@ -115,7 +115,7 @@ namespace dsn {
                     rpc_address sd = _primary_states.membership.secondaries
                         [dsn_random32(0, (int)_primary_states.membership.secondaries.size() - 1)];
 
-                    _primary_states.checkpoint_task = rpc::call_typed(
+                    _primary_states.checkpoint_task = rpc::call(
                         sd,
                         RPC_REPLICA_COPY_LAST_CHECKPOINT,
                         *rc,
@@ -139,13 +139,12 @@ namespace dsn {
                 if (!_secondary_states.checkpoint_is_running)
                 {
                     _secondary_states.checkpoint_is_running = true;
-                    tasking::enqueue(
-                        &_secondary_states.checkpoint_task,
+                    _secondary_states.checkpoint_task = tasking::create_task(
                         LPC_CHECKPOINT_REPLICA,
                         this,
-                        &replica::background_checkpoint,
-                        gpid_to_hash(get_gpid())
-                        );
+                        [this] {background_checkpoint();},
+                        gpid_to_hash(get_gpid()));
+                    _secondary_states.checkpoint_task->enqueue();
                 }                
             }
         }
@@ -285,8 +284,7 @@ namespace dsn {
 
             if (s == PS_POTENTIAL_SECONDARY)
             {
-                tasking::enqueue(
-                    &_potential_secondary_states.learn_remote_files_completed_task, 
+                _potential_secondary_states.learn_remote_files_completed_task = tasking::create_task(
                     LPC_CHECKPOINT_REPLICA_COMPLETED,
                     this,
                     [this, err]() 
@@ -295,11 +293,11 @@ namespace dsn {
                     },
                     gpid_to_hash(get_gpid())
                     );
+                _potential_secondary_states.learn_remote_files_completed_task->enqueue();
             }
             else
             {
-                tasking::enqueue(
-                    &_secondary_states.checkpoint_completed_task,
+                _secondary_states.checkpoint_completed_task = tasking::create_task(
                     LPC_CHECKPOINT_REPLICA_COMPLETED,
                     this,
                     [this, err]() 
@@ -308,6 +306,7 @@ namespace dsn {
                     },
                     gpid_to_hash(get_gpid())
                     );
+                _secondary_states.checkpoint_completed_task->enqueue();
             }
         }
 
@@ -359,13 +358,13 @@ namespace dsn {
                 // missed ones need to be loaded via private logs
                 else
                 {
-                    tasking::enqueue(
-                        &_secondary_states.catchup_with_private_log_task,
+                    _secondary_states.catchup_with_private_log_task = tasking::create_task(
                         LPC_CATCHUP_WITH_PRIVATE_LOGS,
                         this,
                         [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },
                         gpid_to_hash(get_gpid())
                         );
+                    _secondary_states.catchup_with_private_log_task->enqueue();
                 }
             }
 
