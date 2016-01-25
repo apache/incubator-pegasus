@@ -37,6 +37,7 @@
 
 # include <dsn/dist/cluster_scheduler.h>
 # include <unordered_map>
+# include "machine_pool_mgr.h"
 using namespace ::dsn::service;
 
 namespace dsn
@@ -80,22 +81,24 @@ namespace dsn
             virtual void register_failure_callback(
                 std::function<void(error_code, std::string)> failure_notification
                 ) override {}
-            static void get_docker_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
-            static void get_docker_state_cleanup(dsn_cli_reply reply);
             static void deploy_docker_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
             static void deploy_docker_unit_cleanup(dsn_cli_reply reply);
             static void undeploy_docker_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
             static void undeploy_docker_unit_cleanup(dsn_cli_reply reply);
         private:
             void create_containers(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory, std::string& remote_package_directory);
-            void delete_containers(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory, std::string& remote_package_directory);
+            void delete_containers(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory, std::string& remote_package_directory);
             using deploy_map = std::unordered_map<std::string, std::shared_ptr<deployment_unit> >;
+            using machine_map = std::unordered_map<std::string, std::vector<std::string> >;
             std::string                 _run_path;
             dsn_handle_t                _docker_state_handle;
             dsn_handle_t                _docker_deploy_handle;
             dsn_handle_t                _docker_undeploy_handle;
             deploy_map                  _deploy_map;
             zlock                       _lock;
+            machine_pool_mgr            _mgr;
+            machine_map                 _machine_map;
+
         };
 
     }
