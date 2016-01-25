@@ -38,9 +38,9 @@
 
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
-# include "../../apps/replication/meta_server/server_load_balancer.h"
-# include "../../apps/replication/lib/replica_stub.h"
-# include "../../core/core/service_engine.h"
+# include "../../meta_server/server_load_balancer.h"
+# include "../../lib/replica_stub.h"
+# include "../../../../core/core/service_engine.h"
 
 # include <iostream>
 # include <string>
