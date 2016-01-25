@@ -231,7 +231,7 @@ void fd_test_init()
 bool get_worker_and_master(test_worker* &worker, std::vector<test_master*> &masters)
 {
     started_apps = 0;
-    bool ans = spin_wait_condition( [](){ return started_apps == MCOUNT+1; }, 30);
+    bool ans = spin_wait_condition( [](){ return started_apps = MCOUNT+1; }, 30);
     if (!ans)
         return false;
 
