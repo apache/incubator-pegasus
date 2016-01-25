@@ -31,8 +31,9 @@ foreach ($keys as $k => $v)
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>
+ 
     // ---------- call <?=$f->get_rpc_code()?> ------------
-    // - synchronous 
+    // - synchronous  
     std::pair<::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
@@ -50,7 +51,8 @@ foreach ($keys as $k => $v)
                 )
             );
     }
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?>
+ 
+    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
     template<typename TCallback>
     ::dsn::task_ptr <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,

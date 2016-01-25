@@ -20,7 +20,7 @@ public:
     virtual ~<?=$svc->name?>_client() {}
 
 <?php foreach ($svc->functions as $f) { ?>
-
+ 
     // ---------- call <?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
@@ -54,7 +54,7 @@ public:
             );
     }
     
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
+    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?>  
     template<typename TCallback>
     ::dsn::task_ptr <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
