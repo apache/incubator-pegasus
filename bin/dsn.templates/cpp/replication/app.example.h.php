@@ -101,7 +101,7 @@ public:
         std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
-        _<?=$svc->name?>_client.reset(new <?=$svc->name?>_perf_test_client>(meta_servers, argv[1]));
+        _<?=$svc->name?>_client.reset(new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]));
         _<?=$svc->name?>_client->start_test();
         return ::dsn::ERR_OK;
     }
