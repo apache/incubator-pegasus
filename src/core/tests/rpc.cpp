@@ -45,6 +45,8 @@
 #include "test_utils.h"
 #include <boost/lexical_cast.hpp>
 
+typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
+
 static ::dsn::rpc_address build_group() {
     ::dsn::rpc_address server_group;
     server_group.assign_group(dsn_group_build("server_group.test"));
@@ -79,22 +81,17 @@ static ::dsn::rpc_address dsn_address_from_string(const std::string& str)
 TEST(core, rpc)
 {
     int req = 0;
-    std::string result;
     ::dsn::rpc_address server("localhost", 20101);
 
-    ::dsn::rpc_read_stream response;
-    auto err = ::dsn::rpc::call_typed_wait(
-        &response,
+    auto result = ::dsn::rpc::call_wait<std::string>(
         server,
         RPC_TEST_HASH,
         req,
-        1,
-        0
+        1
         );
-    EXPECT_TRUE(err == ERR_OK);
+    EXPECT_TRUE(result.first == ERR_OK);
 
-    unmarshall(response, result);
-    EXPECT_TRUE(result.substr(0, result.length() - 2) == "server.THREAD_POOL_TEST_SERVER");
+    EXPECT_TRUE(result.second.substr(0, result.second.length() - 2) == "server.THREAD_POOL_TEST_SERVER");
 }
 
 TEST(core, group_address_talk_to_others)
@@ -112,8 +109,8 @@ TEST(core, group_address_talk_to_others)
 
     std::vector<task_ptr> resp_tasks;
     for (unsigned int i=0; i<10; ++i) {
-         ::dsn::task_ptr resp_task = ::dsn::rpc::call_typed(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
-                                          NULL, typed_callback, NULL);
+         ::dsn::task_ptr resp_task = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
+                                          nullptr, typed_callback);
          resp_tasks.push_back(resp_task);
     }
 
@@ -140,14 +137,15 @@ static void rpc_group_callback(
         dsn_group_forward_leader(group_addr.group_handle());
 
         auto req_again = dsn_msg_copy(req);
-        dsn::task_ptr call_again = ::dsn::rpc::call(group_addr, req_again, nullptr,
-                                                    std::bind(&rpc_group_callback,
-                                                              std::placeholders::_1,
-                                                              std::placeholders::_2,
-                                                              std::placeholders::_3,
-                                                              q,
-                                                              action_on_succeed,
-                                                              action_on_failure));
+        auto call_again = ::dsn::rpc::call(
+            group_addr,
+            req_again,
+            nullptr,
+            [=](error_code err, dsn_message_t request, dsn_message_t response)
+            {
+                rpc_group_callback(err, request, response, q, std::move(action_on_succeed), std::move(action_on_failure));
+            }
+        );
         q->enqueue(call_again, 0);
     }
 }
@@ -162,14 +160,15 @@ static void send_message(::dsn::rpc_address addr,
     for (int i=0; i!=repeat_times; ++i) {
         dsn_message_t request = dsn_msg_create_request(RPC_TEST_STRING_COMMAND);
         ::marshall(request, command);
-        dsn::task_ptr resp_task = ::dsn::rpc::call(addr, request, nullptr,
-                                                   std::bind(&rpc_group_callback,
-                                                             std::placeholders::_1,
-                                                             std::placeholders::_2,
-                                                             std::placeholders::_3,
-                                                             &q,
-                                                             action_on_succeed,
-                                                             action_on_failure));
+        dsn::task_ptr resp_task = ::dsn::rpc::call(
+            addr,
+            request,
+            nullptr,
+            [&](error_code err, dsn_message_t request, dsn_message_t response)
+            {
+                rpc_group_callback(err, request, response, &q, action_on_succeed, action_on_failure);
+            }
+        );
         q.enqueue(resp_task, 0);
     }
     while (q.count() != 0) {

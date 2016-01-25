@@ -221,7 +221,7 @@ void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
 
 void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
 {
-    rpc::call_typed(
+    rpc::call(
         query->node,
         RPC_QUERY_PN_DECREE,
         *query,
@@ -232,14 +232,14 @@ void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_d
             on_query_decree_ack(err, query, response);
         }
         ,
-        gpid_to_hash(query->gpid), 3000);
+        gpid_to_hash(query->gpid), std::chrono::seconds(3));
 }
 
 void simple_stateful_load_balancer::on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp)
 {
     if (err != ERR_OK)
     {
-        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, 1000);
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, std::chrono::seconds(1));
     }
     else
     {

@@ -47,9 +47,6 @@ public:
         const char* app_name)
         : simple_kv_client(meta_servers, app_name) {}
     virtual ~simple_kv_client_wrapper() {}
-
-    virtual void end_write(::dsn::error_code err, const int32_t& resp, void* context) override;
-    virtual void end_read(::dsn::error_code err, const std::string& resp, void* context) override;
 };
 
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
@@ -67,7 +64,7 @@ public:
     void begin_write(int id,const std::string& key,const std::string& value, int timeout_ms);
     void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node);
 private:
-    simple_kv_client *_simple_kv_client;
+    std::unique_ptr<simple_kv_client> _simple_kv_client;
 };
 
 }}}

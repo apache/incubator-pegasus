@@ -205,10 +205,8 @@ void meta_service::start_load_balance()
     dassert(_balancer_timer == nullptr, "");
 
     _state->unfree_if_possible_on_start();
-    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 
-        0,
-        1,
-        _opts.lb_interval_ms
+    _balancer_timer = tasking::enqueue_timer(LPC_LBM_RUN, this, [this] {on_load_balance_timer();},
+        std::chrono::milliseconds(_opts.lb_interval_ms)
         );
 
     _started = true;

@@ -43,120 +43,98 @@ class nfs_client
 {
 public:
     nfs_client(::dsn::rpc_address server) { _server = server; }
-    nfs_client() {  }
+    nfs_client() { }
     virtual ~nfs_client() {}
 
 
-    // ---------- call RPC_NFS_COPY ------------
+    // ---------- call RPC_NFS_NFS_COPY ------------
     // - synchronous 
-    ::dsn::error_code copy(
+    std::pair<::dsn::error_code, copy_response> copy_sync(
         const copy_request& request, 
-        /*out*/ copy_response& resp, 
-        int timeout_milliseconds = 0, 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
-        ::dsn::rpc_read_stream response;
-        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_NFS_COPY, request, hash, timeout_milliseconds);
-        if (err == ::dsn::ERR_OK)
-        {
-            unmarshall(response, resp);
-        }
-        return err;
+        return ::dsn::rpc::wait_and_unwrap<copy_response>(
+            ::dsn::rpc::call(
+                server_addr.unwrap_or(_server),
+                RPC_NFS_COPY,
+                request,
+                nullptr,
+                empty_callback,
+                hash,
+                timeout
+                )
+            );
     }
     
     // - asynchronous with on-stack copy_request and copy_response 
-    ::dsn::task_ptr begin_copy(
+    template<typename TCallback>
+    ::dsn::task_ptr copy(
         const copy_request& request, 
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
+        return ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server), 
                     RPC_NFS_COPY, 
                     request, 
                     this,
-                    [=](error_code err, copy_response&& resp)
-                    {
-                        end_copy(err, std::move(resp), context);
-                    },
+                    std::forward<TCallback>(callback),
                     request_hash, 
-                    timeout_milliseconds, 
+                    timeout, 
                     reply_hash
                     );
     }
 
-    virtual void end_copy(
-        ::dsn::error_code err, 
-        const copy_response& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_NFS_COPY ok" << std::endl;
-        }
-    }
-
-    // ---------- call RPC_NFS_GET_FILE_SIZE ------------
+    // ---------- call RPC_NFS_NFS_GET_FILE_SIZE ------------
     // - synchronous 
-    ::dsn::error_code get_file_size(
+    std::pair<::dsn::error_code, get_file_size_response> get_file_size_sync(
         const get_file_size_request& request, 
-        /*out*/ get_file_size_response& resp, 
-        int timeout_milliseconds = 0, 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
-        ::dsn::rpc_read_stream response;
-        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_NFS_GET_FILE_SIZE, request, hash, timeout_milliseconds);
-        if (err == ::dsn::ERR_OK)
-        {
-            unmarshall(response, resp);
-        }
-        return err;
+        return ::dsn::rpc::wait_and_unwrap<get_file_size_response>(
+            ::dsn::rpc::call(
+                server_addr.unwrap_or(_server),
+                RPC_NFS_GET_FILE_SIZE,
+                request,
+                nullptr,
+                empty_callback,
+                hash,
+                timeout
+                )
+            );
     }
     
     // - asynchronous with on-stack get_file_size_request and get_file_size_response 
-    ::dsn::task_ptr begin_get_file_size(
+    template<typename TCallback>
+    ::dsn::task_ptr get_file_size(
         const get_file_size_request& request, 
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
+        return ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server), 
                     RPC_NFS_GET_FILE_SIZE, 
                     request, 
-                    this, 
-                    [=](error_code err, get_file_size_response&& resp)
-                    {
-                        end_get_file_size(err, std::move(resp), context);
-                    },
+                    this,
+                    std::forward<TCallback>(callback),
                     request_hash, 
-                    timeout_milliseconds, 
+                    timeout, 
                     reply_hash
                     );
     }
 
-    virtual void end_get_file_size(
-        ::dsn::error_code err, 
-        const get_file_size_response& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
-        }
-    }
-    
 private:
     ::dsn::rpc_address _server;
 };

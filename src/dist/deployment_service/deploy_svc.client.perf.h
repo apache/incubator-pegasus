@@ -59,107 +59,92 @@ public:
 
     void send_one_deploy(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         deploy_request req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_deploy(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_deploy(
-        ::dsn::error_code err,
-        deploy_info&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        deploy(
+            req,
+            [this, context = prepare_send_one()](error_code err, deploy_info&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 
     void send_one_undeploy(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         std::string req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_undeploy(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_undeploy(
-        ::dsn::error_code err,
-        ::dsn::error_code&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        undeploy(
+            req,
+            [this, context = prepare_send_one()](error_code err, ::dsn::error_code&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 
     void send_one_get_service_list(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         std::string req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_get_service_list(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_get_service_list(
-        ::dsn::error_code err,
-        deploy_info_list&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        get_service_list(
+            req,
+            [this, context = prepare_send_one()](error_code err, deploy_info_list&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 
     void send_one_get_service_info(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         std::string req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_get_service_info(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_get_service_info(
-        ::dsn::error_code err,
-        deploy_info&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        get_service_info(
+            req,
+            [this, context = prepare_send_one()](error_code err, deploy_info&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 
     void send_one_get_cluster_list(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         std::string req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_get_cluster_list(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_get_cluster_list(
-        ::dsn::error_code err,
-        cluster_list&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        get_cluster_list(
+            req,
+            [this, context = prepare_send_one()](error_code err, cluster_list&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 };
 

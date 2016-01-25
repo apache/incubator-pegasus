@@ -34,8 +34,7 @@
  */
 
 # pragma once
-# include <dsn/cpp/clientlet.h>
-# include <dsn/dist/failure_detector/fd.code.definition.h>
+# include "fd.code.definition.h"
 # include <iostream>
 
 
@@ -45,66 +44,53 @@ class failure_detector_client
 {
 public:
     failure_detector_client(::dsn::rpc_address server) { _server = server; }
-    failure_detector_client() {  }
+    failure_detector_client() { }
     virtual ~failure_detector_client() {}
 
 
     // ---------- call RPC_FD_FAILURE_DETECTOR_PING ------------
     // - synchronous 
-    ::dsn::error_code ping(
-        const ::dsn::fd::beacon_msg& beacon, 
-        /*out*/ ::dsn::fd::beacon_ack& resp, 
-        int timeout_milliseconds = 0, 
+    std::pair<::dsn::error_code, beacon_ack> ping_sync(
+        const beacon_msg& beacon, 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        ::dsn::rpc_read_stream resp_msg;
-        auto err = ::dsn::rpc::call_typed_wait(
-            &resp_msg, p_server_addr ? *p_server_addr : _server,
-            RPC_FD_FAILURE_DETECTOR_PING, beacon,
-            hash, timeout_milliseconds
+        return ::dsn::rpc::wait_and_unwrap<beacon_ack>(
+            ::dsn::rpc::call(
+                server_addr.unwrap_or(_server),
+                RPC_FD_FAILURE_DETECTOR_PING,
+                beacon,
+                nullptr,
+                empty_callback,
+                hash,
+                timeout
+                )
             );
-        if (err == ::dsn::ERR_OK)
-        {
-            unmarshall(resp_msg, resp);
-        }
-        return err;
     }
     
-    // - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
-    ::dsn::task_ptr begin_ping(
-        const ::dsn::fd::beacon_msg& beacon, 
-        void* context,
-        int timeout_milliseconds = 0, 
+    // - asynchronous with on-stack beacon_msg and beacon_ack 
+    template<typename TCallback>
+    ::dsn::task_ptr ping(
+        const beacon_msg& beacon, 
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
+        return ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server), 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 
                     this,
-                    [=](error_code err, beacon_ack&& resp)
-                    {
-                        end_ping(err, std::move(resp), context);
-                    },
+                    std::forward<TCallback>(callback),
                     request_hash, 
-                    timeout_milliseconds, 
+                    timeout, 
                     reply_hash
                     );
-    }
-
-    virtual void end_ping(
-        ::dsn::error_code err, 
-        const ::dsn::fd::beacon_ack& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING ok" << std::endl;
-        }
     }
 
 private:

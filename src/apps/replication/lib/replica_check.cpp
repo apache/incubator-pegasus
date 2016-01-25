@@ -53,14 +53,13 @@ void replica::init_group_check()
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
-    _primary_states.group_check_task = tasking::enqueue(
-            LPC_GROUP_CHECK,
-            this,
-            &replica::broadcast_group_check,
-            gpid_to_hash(get_gpid()),
-            0,
-            _options->group_check_interval_ms
-            );
+    _primary_states.group_check_task = tasking::enqueue_timer(
+        LPC_GROUP_CHECK,
+        this,
+        [this] {broadcast_group_check();},
+        std::chrono::milliseconds(_options->group_check_interval_ms),
+        gpid_to_hash(get_gpid())
+        );
 }
 
 void replica::broadcast_group_check()
@@ -113,7 +112,7 @@ void replica::broadcast_group_check()
             enum_to_string(it->second)
         );
 
-        dsn::task_ptr callback_task = rpc::call_typed(
+        dsn::task_ptr callback_task = rpc::call(
             addr,
             RPC_GROUP_CHECK,
             *request,            
@@ -228,12 +227,12 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
     dassert (_options->group_check_disabled, "");
 
     _primary_states.group_check_task = tasking::enqueue(
-            LPC_GROUP_CHECK,
-            this,
-            &replica::broadcast_group_check,
-            gpid_to_hash(get_gpid()),
-            delay_milliseconds
-            );
+        LPC_GROUP_CHECK,
+        this,
+        [this] {broadcast_group_check();},
+        gpid_to_hash(get_gpid()),
+        std::chrono::milliseconds(delay_milliseconds)
+        );
 }
 
 }} // end namepspace

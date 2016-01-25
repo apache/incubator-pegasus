@@ -151,7 +151,7 @@ namespace dsn {
             perf_client_helper(const perf_client_helper&) = delete;
             
         protected:
-            int              _timeout_ms;
+            std::chrono::milliseconds _timeout;
 
         private:
             perf_test_opts   _default_opts;
