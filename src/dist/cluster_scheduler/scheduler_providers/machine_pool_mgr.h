@@ -20,7 +20,7 @@ namespace dsn
         class machine_pool_mgr
         {
         public:
-            machine_pool_mgr(const std::string &spec);
+            machine_pool_mgr(const char* sec);
 
             /*
             * Each string in the forbidden_list is of the format username@hostname.

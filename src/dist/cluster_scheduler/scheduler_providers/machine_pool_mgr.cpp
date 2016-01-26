@@ -12,10 +12,10 @@ namespace dsn
 {
     namespace dist
     {
-        machine_pool_mgr::machine_pool_mgr(const std::string &spec)
+        machine_pool_mgr::machine_pool_mgr(const char* path)
         {
             ::dsn::service::zauto_lock l(_lock);
-            std::string cluster_config_file = dsn_config_get_value_string(spec.c_str(), "node_list_path", "nodes", "the location of the file which lists the host name and user name of all the available machines");
+            std::string cluster_config_file = dsn_config_get_value_string(path, "node_list_path", "nodes", "the location of the file which lists the host name and user name of all the available machines");
             std::vector<std::string> machine_id;
             error_code err = parse_cluster_config_file(cluster_config_file, machine_id);
             dassert(ERR_OK == err, "unable to load the cluster config file, pls check your config file again.");

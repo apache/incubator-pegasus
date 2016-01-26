@@ -45,12 +45,7 @@ kubernetes_cluster_scheduler::kubernetes_cluster_scheduler()
     :_run_path(""),
      _k8s_state_handle(nullptr),
      _k8s_deploy_handle(nullptr),
-     _k8s_undeploy_handle(nullptr),
-     _mgr(std::string(dsn_config_get_value_string(
-                     "kubernetes",
-                     "node_list_path",
-                     "",
-                     ""))
+     _k8s_undeploy_handle(nullptr)
 {
     
 }
@@ -217,7 +212,7 @@ void kubernetes_cluster_scheduler::delete_pod(std::string& name,std::function<vo
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh k8s_undeploy ";
+    command << "./run_k8s.sh k8s_undeploy ";
     command << " -s " << local_package_directory;
     command << " -i " << name;
     ret = system(command.str().c_str());

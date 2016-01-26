@@ -45,11 +45,7 @@ docker_scheduler::docker_scheduler()
      _docker_state_handle(nullptr),
      _docker_deploy_handle(nullptr),
      _docker_undeploy_handle(nullptr),
-     _mgr(dsn_config_get_value_string(
-                 "docker",
-                 "node_list_path",
-                 "",
-                 ""))
+     _mgr("docker")
 {
 
 }
@@ -284,7 +280,7 @@ void docker_scheduler::delete_containers(std::string& name,std::function<void(er
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh stop_and_clean ";
+    command << "./run_docker.sh stop_and_clean ";
     command << " -d " << name << " -s " << local_package_directory;
     command << " -t " << remote_package_directory;
     ret = system(command.str().c_str());

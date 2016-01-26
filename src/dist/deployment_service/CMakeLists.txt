@@ -23,6 +23,7 @@ file(GLOB
     "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
     "${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile"
     "${CMAKE_CURRENT_SOURCE_DIR}/*_nodes"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.sh"
 )
 
 # Extra files that will be installed
