@@ -45,9 +45,14 @@ kubernetes_cluster_scheduler::kubernetes_cluster_scheduler()
     :_run_path(""),
      _k8s_state_handle(nullptr),
      _k8s_deploy_handle(nullptr),
-     _k8s_undeploy_handle(nullptr)
+     _k8s_undeploy_handle(nullptr),
+     _mgr(std::string(dsn_config_get_value_string(
+                     "kubernetes",
+                     "node_list_path",
+                     "",
+                     ""))
 {
-
+    
 }
 
 void kubernetes_cluster_scheduler::deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply)
