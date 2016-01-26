@@ -62,12 +62,12 @@ void task_worker_pool::create()
     int qCount = _spec.partitioned ?  _spec.worker_count : 1;
     for (int i = 0; i < qCount; i++)
     {
-        task_queue* q = factory_store<task_queue>::create(_spec.queue_factory_name.c_str(), PROVIDER_TYPE_MAIN, this, i, nullptr);
+        task_queue* q = factory_store<task_queue>::create(_spec.queue_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, i, nullptr);
         for (auto it = _spec.queue_aspects.begin();
             it != _spec.queue_aspects.end();
             it++)
         {
-            q = factory_store<task_queue>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, i, q);
+            q = factory_store<task_queue>::create(it->c_str(), ::dsn::PROVIDER_TYPE_ASPECT, this, i, q);
         }
         _queues.push_back(q);
 
@@ -96,12 +96,12 @@ void task_worker_pool::create()
     for (int i = 0; i < _spec.worker_count; i++)
     {
         auto q = _queues[qCount == 1 ? 0 : i];
-        task_worker* worker = factory_store<task_worker>::create(_spec.worker_factory_name.c_str(), PROVIDER_TYPE_MAIN, this, q, i, nullptr);
+        task_worker* worker = factory_store<task_worker>::create(_spec.worker_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, q, i, nullptr);
         for (auto it = _spec.worker_aspects.begin();
             it != _spec.worker_aspects.end();
             it++)
         {
-            worker = factory_store<task_worker>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, q, i, worker);
+            worker = factory_store<task_worker>::create(it->c_str(), ::dsn::PROVIDER_TYPE_ASPECT, this, q, i, worker);
         }
         task_worker::on_create.execute(worker);
         q->set_owner_worker(spec().partitioned ? worker : nullptr);

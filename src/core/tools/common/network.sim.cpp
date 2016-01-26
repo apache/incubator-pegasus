@@ -53,9 +53,9 @@ namespace dsn { namespace tools {
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
         ::dsn::rpc_address remote_addr, 
-        std::shared_ptr<message_parser>& parser
+        std::unique_ptr<message_parser>&& parser
         )
-        : rpc_session(net, remote_addr, parser, true)
+        : rpc_session(net, remote_addr, std::move(parser), true)
     {}
 
     void sim_client_session::connect() 
@@ -100,8 +100,8 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    auto parser = _net.new_message_parser();
-                    server_session = new sim_server_session(*rnet, _net.address(), cptr, parser);
+                    server_session = new sim_server_session(*rnet, _net.address(), 
+                        cptr, _net.new_message_parser());
                     rnet->on_server_session_accepted(server_session);
                 }
 
@@ -125,9 +125,9 @@ namespace dsn { namespace tools {
         sim_network_provider& net, 
         ::dsn::rpc_address remote_addr,
         rpc_session_ptr& client,
-        std::shared_ptr<message_parser>& parser
+        std::unique_ptr<message_parser>&& parser
         )
-        : rpc_session(net, remote_addr, parser, false)
+        : rpc_session(net, remote_addr, std::move(parser), false)
     {
         _client = client;
     }
