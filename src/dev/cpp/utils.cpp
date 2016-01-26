@@ -365,8 +365,7 @@ namespace  dsn
 
     void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
     {
-        std::shared_ptr<char> ptr(new char[size], [](char* ptr){ delete []ptr; });
-        bb.assign(ptr, 0, (int)size);
+        bb.assign(std::shared_ptr<char>(new char[size], std::default_delete<char[]>{}), 0, (int)size);
     }
 
     void binary_writer::commit()

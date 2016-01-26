@@ -618,11 +618,10 @@ void replica::on_learn_reply(
                 true,
                 LPC_REPLICATION_COPY_REMOTE_FILES,
                 this,
-                std::bind(&replica::on_copy_remote_state_completed, this,
-                std::placeholders::_1,
-                std::placeholders::_2,
-                req,
-                resp)
+                [this, req, resp] (error_code err, int sz)
+                {
+                    on_copy_remote_state_completed(err, sz, std::move(req), std::move(resp));
+                }
                 );
     }
     else

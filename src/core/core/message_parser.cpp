@@ -51,8 +51,7 @@ namespace dsn {
 
     void message_parser::create_new_buffer(int sz)
     {
-        std::shared_ptr<char> buffer(new char[sz]);
-        _read_buffer.assign(buffer, 0, sz);
+        _read_buffer.assign(std::shared_ptr<char>(new char[sz], std::default_delete<char[]>{}), 0, sz);
         _read_buffer_occupied = 0;
     }
 
