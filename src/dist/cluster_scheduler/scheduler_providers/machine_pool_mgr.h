@@ -16,13 +16,14 @@ namespace dsn
 
         //error code
         DEFINE_ERR_CODE(ERR_RESOURCE_NOT_ENOUGH)
+
         class machine_pool_mgr
         {
         public:
-            machine_pool_mgr();
+            machine_pool_mgr(const std::string &spec);
 
             /*
-            * Each string in the forbidden_list is a hostname of a machine.
+            * Each string in the forbidden_list is of the format username@hostname.
             * Each string in the assign_list is of the format username@hostname.
             * The error_code of ERR_OK indicates a successful get,
             * while an ERR_RESOURCE_NOT_ENOUGH indicate there are not enough machines.
@@ -33,7 +34,7 @@ namespace dsn
                 /*out*/ std::vector<std::string>& assign_list
                 );
 
-            /*each string in the machine_list is a hostname of a machine*/
+            /*each string in the machine_list is at the format username&hostname of a machine*/
             void return_machine(
                 const std::vector<std::string>& machine_list
                 );
@@ -44,15 +45,10 @@ namespace dsn
                 int instance;
             };
 
-            struct machine_identity
-            {
-                std::string host_name;
-                std::string user_name;
-            };
             struct machine_info
             {
                 machine_workload workload;
-                machine_identity id;
+                std::string identity;
                 bool friend operator < (const machine_info &a, const machine_info &b)
                 {
                     return a.workload.instance < b.workload.instance;
@@ -66,7 +62,7 @@ namespace dsn
 
             error_code parse_cluster_config_file(
                 const std::string& cluster_config_file,
-                /*out*/ std::vector<machine_identity> &machine_id
+                /*out*/ std::vector<std::string> &machine_id
                 );
         };
     }
