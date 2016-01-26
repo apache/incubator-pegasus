@@ -46,17 +46,17 @@ public:
 
 protected:
     // all service handlers to be implemented further
-    // RPC_NFS_COPY 
+    // RPC_NFS_NFS_COPY 
     virtual void on_copy(const copy_request& request, ::dsn::rpc_replier<copy_response>& reply)
     {
-        std::cout << "... exec RPC_NFS_COPY ... (not implemented) " << std::endl;
+        std::cout << "... exec RPC_NFS_NFS_COPY ... (not implemented) " << std::endl;
         copy_response resp;
         reply(resp);
     }
-    // RPC_NFS_GET_FILE_SIZE 
+    // RPC_NFS_NFS_GET_FILE_SIZE 
     virtual void on_get_file_size(const get_file_size_request& request, ::dsn::rpc_replier<get_file_size_response>& reply)
     {
-        std::cout << "... exec RPC_NFS_GET_FILE_SIZE ... (not implemented) " << std::endl;
+        std::cout << "... exec RPC_NFS_NFS_GET_FILE_SIZE ... (not implemented) " << std::endl;
         get_file_size_response resp;
         reply(resp);
     }

@@ -36,7 +36,7 @@
 # include "repli.app.h"
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/configuration.h>
-# include "../../apps/replication/lib/mutation_log.h"
+# include "mutation_log.h"
 
 # include <iostream>
 

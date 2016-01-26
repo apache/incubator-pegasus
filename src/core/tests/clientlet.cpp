@@ -38,6 +38,7 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/clientlet.h>
 #include <functional>
+#include <chrono>
 #include "test_utils.h"
 
 DEFINE_TASK_CODE(LPC_TEST_CLIENTLET, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
@@ -75,7 +76,7 @@ TEST(dev_cpp, clientlet_task)
 {
     /* normal lpc*/
     test_clientlet *cl = new test_clientlet();
-    task_ptr t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, &test_clientlet::callback_function1);
+    task_ptr t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, [cl] {cl->callback_function1();});
     EXPECT_TRUE(t != nullptr);
     bool result = t->wait();
     EXPECT_TRUE(result==true);
@@ -85,12 +86,11 @@ TEST(dev_cpp, clientlet_task)
     /* task tracking */
     cl = new test_clientlet();
     std::vector<task_ptr> test_tasks;
-
-    t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, &test_clientlet::callback_function1, 0, 30000);
+    t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, [=] {cl->callback_function1();}, 0, std::chrono::seconds(30));
     test_tasks.push_back(t);
-    t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, &test_clientlet::callback_function2, 0, 30000);
+    t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, [cl] {cl->callback_function1();}, 0, std::chrono::seconds(30));
     test_tasks.push_back(t);
-    t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, &test_clientlet::callback_function3, 0, 30000, 20000);
+    t = tasking::enqueue_timer(LPC_TEST_CLIENTLET, cl, [cl] {cl->callback_function1();}, std::chrono::seconds(20), 0, std::chrono::seconds(30));
     test_tasks.push_back(t);
 
     delete cl;
@@ -110,7 +110,7 @@ TEST(dev_cpp, clientlet_rpc)
     const char* command = "echo hello world";
 
     std::shared_ptr<std::string> str_command(new std::string(command));
-    auto t = rpc::call_typed(
+    auto t = rpc::call(
         addr3,
         RPC_TEST_STRING_COMMAND,
         *str_command,
@@ -122,7 +122,7 @@ TEST(dev_cpp, clientlet_rpc)
         }
     );
     task_vec.push_back(t);
-    t = rpc::call_typed(
+    t = rpc::call(
         addr2,
         RPC_TEST_STRING_COMMAND,
         std::string(command),

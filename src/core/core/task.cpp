@@ -489,7 +489,8 @@ void timer_task::exec()
 rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
     : task(dsn_task_code_t(request->local_rpc_code), nullptr, nullptr, request->header->client.hash, node), 
     _request(request),
-    _handler(h)
+    _handler(h),
+    _recv_ts_ns(0)
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
         "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
@@ -504,6 +505,11 @@ rpc_request_task::~rpc_request_task()
 
 void rpc_request_task::enqueue()
 {
+    if (spec().rpc_request_dropped_on_timeout_with_high_possibility)
+    {
+        _recv_ts_ns = dsn_now_ns();
+    }
+
     spec().on_rpc_request_enqueue.execute(this);
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }

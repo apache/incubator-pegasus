@@ -41,23 +41,20 @@ public:
 
     void send_one_<?=$f->name?>(int payload_bytes)
     {
-        void* ctx = prepare_send_one();
         <?=$f->get_first_param()->get_cpp_type()?> req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-
-        begin_<?=$f->name?>(req, ctx, _timeout_ms);
-    }
-
-    virtual void end_<?=$f->name?>(
-        ::dsn::error_code err,
-        <?=$f->get_cpp_return_type()?>&& resp,
-        void* context) override
-    {
-        end_send_one(context, err);
+        <?=$f->name?>(
+            req,
+            [this, context = prepare_send_one()](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
+            {
+                end_send_one(context, err);
+            },
+            _timeout
+            );
     }
 <?php } ?>
 };

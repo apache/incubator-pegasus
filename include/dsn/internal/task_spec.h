@@ -183,13 +183,14 @@ public:
     dsn_task_priority_t    priority;
     grpc_mode_t            grpc_mode; // used when a rpc request is sent to a group address
     dsn_threadpool_code_t  pool_code;
-    bool                   allow_inline; // allow task executed in other thread pools or tasks
-    bool                   rpc_allow_throttling; // allow the rpc session being throttled
+    bool                   allow_inline; // allow task executed in other thread pools or tasks    
     bool                   fast_execution_in_network_thread;
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
+    bool                   rpc_request_dropped_on_long_queue; // 
+    bool                   rpc_request_dropped_on_timeout_with_high_possibility; // default is false
     // ]
 
     task_rejection_handler rejection_handler;
@@ -233,13 +234,14 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
     CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
-    CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")
-    CONFIG_FLD(bool, bool, rpc_allow_throttling, false, "whether the request requests can be throttled (only applicable for rpc request codes)")    
+    CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")    
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
+    CONFIG_FLD(bool, bool, rpc_request_dropped_on_long_queue, false, "whether the request requests can be dropped on queue length > pool.queue_length_throttling_threshold")
+    CONFIG_FLD(bool, bool, rpc_request_dropped_on_timeout_with_high_possibility, false, "whether to drop a rpc request when it will be timeout with high possibility")
 CONFIG_END
 
 struct threadpool_spec
@@ -251,15 +253,14 @@ struct threadpool_spec
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
     int                     dequeue_batch_size;
-    int                     queue_length_throttling_threshold; // 0x0FFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
     std::string             worker_factory_name;
     std::list<std::string>  queue_aspects;
     std::list<std::string>  worker_aspects;
+    int                     queue_length_throttling_threshold;
     bool                    enable_virtual_queue_throttling;
-    std::list<int>          throttling_delay_vector_milliseconds;
-
+    double                  queue_wait_time_approximation_alpha_on_new;
     std::string             admission_controller_factory_name;
     std::string             admission_controller_arguments;
 
@@ -278,17 +279,14 @@ CONFIG_BEGIN(threadpool_spec)
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
     CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")
-    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 0x0FFFFFFFUL, "base threshold for queue throttling")
     CONFIG_FLD(bool, bool, partitioned, false, "whethe the threads share a single queue(partitioned=false) or not; the latter is usually for workload hash partitioning for avoiding locking")
     CONFIG_FLD_STRING(queue_factory_name, "", "task queue provider name")
     CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")
     CONFIG_FLD_STRING_LIST(queue_aspects, "task queue aspects names, usually for tooling purpose")
-    CONFIG_FLD_STRING_LIST(worker_aspects, "task aspects names, usually for tooling purpose")
-    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "whether to enable throttling with virtual queues")
-    CONFIG_FLD_INT_LIST(throttling_delay_vector_milliseconds, 
-        "how many milliseconds for delay, e.g., 0, 0, 1, 2, 5, 10 as delay milliseconds "
-        "for queue length is queue_length_throttling_threshold * ( 1.0, 1.2, 1.4, 1.6, 1.8, >=2.0 ),"
-        "see dsn_task_queue_virtual_length_ptr() for more information")
+    CONFIG_FLD_STRING_LIST(worker_aspects, "task aspects names, usually for tooling purpose")    
+    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 1000000, "throttling threshold above which rpc requests will be dropped")
+    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "whether to enable throttling with virtual queues")    
+    CONFIG_FLD(double, double, queue_wait_time_approximation_alpha_on_new, 0.8, "wait(N) = alpha*wait(N-1) + (1-alpha)*wait(N-2)")        
     CONFIG_FLD_STRING(admission_controller_factory_name, "", "customized admission controller for the task queues")
     CONFIG_FLD_STRING(admission_controller_arguments, "", "arguments for the cusotmized admission controller")
 CONFIG_END

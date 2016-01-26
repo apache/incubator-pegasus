@@ -52,9 +52,7 @@
 
 namespace dsn 
 {
-    typedef std::function<void()> task_handler;
     typedef std::function<void(error_code, size_t)> aio_handler;
-    typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     class safe_task_handle;
     typedef ::dsn::ref_ptr<safe_task_handle> task_ptr;
     
@@ -68,8 +66,8 @@ namespace dsn
     public:
         safe_task_handle()
         {
-            _task = 0;
-            _rpc_response = 0;
+            _task = nullptr;
+            _rpc_response = nullptr;
         }
 
         virtual ~safe_task_handle()
@@ -86,51 +84,52 @@ namespace dsn
             dsn_task_add_ref(t);
         }
 
-        dsn_task_t native_handle() { return _task; }
+        dsn_task_t native_handle() const
+        { return _task; }
                         
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr)
         {
             return dsn_task_cancel2(_task, wait_until_finished, finished);
         }
 
-        bool wait()
+        bool wait() const
         {
             return dsn_task_wait(_task);
         }
 
-        bool wait(int timeout_millieseconds)
+        bool wait(int timeout_millieseconds) const
         {
             return dsn_task_wait_timeout(_task, timeout_millieseconds);
         }
 
-        ::dsn::error_code error()
+        ::dsn::error_code error() const
         {
             return dsn_task_error(_task);
         }
             
-        size_t io_size()
+        size_t io_size() const
         {
             return dsn_file_get_io_size(_task);
         }
 
-        void enqueue(int delay_milliseconds = 0)
+        void enqueue(std::chrono::milliseconds delay = std::chrono::milliseconds(0)) const
         {
-            dsn_task_call(_task, delay_milliseconds);
+            dsn_task_call(_task, static_cast<int>(delay.count()));
         }
             
-        void enqueue_aio(error_code err, size_t size)
+        void enqueue_aio(error_code err, size_t size) const
         {
             dsn_file_task_enqueue(_task, err.get(), size);
         }
 
         dsn_message_t response()
         {
-            if (_rpc_response == 0)
+            if (_rpc_response == nullptr)
                 _rpc_response = dsn_rpc_get_response(_task);
             return _rpc_response;
         }
 
-        void enqueue_rpc_response(error_code err, dsn_message_t resp)
+        void enqueue_rpc_response(error_code err, dsn_message_t resp) const
         {
             dsn_rpc_enqueue_response(_task, err.get(), resp);
         }
@@ -144,41 +143,43 @@ namespace dsn
     class safe_task : public safe_task_handle
     {
     public:
-        safe_task(THandler&& h, bool is_timer = false) : _handler(std::move(h)), _is_timer(is_timer)
+        explicit safe_task(THandler&& h) : _handler(std::move(h))
         {
         }
-        safe_task(const THandler& h, bool is_timer = false) : _handler(h), _is_timer(is_timer)
+        explicit safe_task(const THandler& h) : _handler(h)
         {
         }
-
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
-            bool r = safe_task_handle::cancel(wait_until_finished, finished);
-            return r;
+            return safe_task_handle::cancel(wait_until_finished, finished);
         }
 
         static void on_cancel(void* task)
         {
-            safe_task* t = (safe_task*)task;
+            auto t = static_cast<safe_task*>(task);
             t->_handler.reset();
             t->release_ref(); // added upon callback exec registration
         }
 
         static void exec(void* task)
         {
-            safe_task* t = (safe_task*)task;
+            auto t = static_cast<safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()();
-            if (!t->_is_timer)
-            {
-                t->_handler.reset();
-                t->release_ref(); // added upon callback exec registration
-            }
+            t->_handler.reset();
+            t->release_ref(); // added upon callback exec registration
+        }
+
+        static void exec_timer(void* task)
+        {
+            auto t = static_cast<safe_task*>(task);
+            dbg_dassert(t->_handler.is_some(), "_handler is missing");
+            t->_handler.unwrap()();
         }
         
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
-            safe_task* t = (safe_task*)task;
+            auto t = static_cast<safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()(err, req, resp);
             t->_handler.reset();
@@ -187,7 +188,7 @@ namespace dsn
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
-            safe_task* t = (safe_task*)task;
+            auto t = static_cast<safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()(err, sz);
             t->_handler.reset();
@@ -195,7 +196,6 @@ namespace dsn
         }
             
     private:
-        bool                       _is_timer;
         dsn::optional<THandler>    _handler;
     };
 

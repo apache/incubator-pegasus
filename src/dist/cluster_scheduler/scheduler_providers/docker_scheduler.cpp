@@ -112,12 +112,12 @@ void docker_scheduler::undeploy_docker_unit_cleanup(dsn_cli_reply reply)
 }
 error_code docker_scheduler::initialize()
 { 
-    int ret;
-    FILE *in;
     _run_path = dsn_config_get_value_string("apps.client","run_path","","");
     dassert( _run_path != "", "run path is empty");
     dinfo("run path is %s",_run_path.c_str());
 #ifndef _WIN32    
+    int ret;
+    FILE *in;
     ret = system("docker version");
     if (ret != 0)
     {
@@ -181,10 +181,9 @@ void docker_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
-        auto cb = [this,&unit](){
-            create_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
-        };
-        dsn::tasking::enqueue(LPC_DOCKER_CREATE,this,cb);
+        dsn::tasking::enqueue(LPC_DOCKER_CREATE,this, [this, unit]() {
+            create_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
+        });
     }
     
 }
@@ -225,11 +224,9 @@ void docker_scheduler::unschedule(
     {
         _deploy_map.erase(it);
         _lock.unlock();
-
-        auto cb = [this,&unit](){
-            delete_containers(unit->name,unit->deployment_callback,unit->local_package_directory,unit->remote_package_directory);
-        };
-        dsn::tasking::enqueue(LPC_DOCKER_DELETE,this,cb);
+        dsn::tasking::enqueue(LPC_DOCKER_DELETE,this, [this, unit]() {
+            delete_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
+        });
     }
     else
     {

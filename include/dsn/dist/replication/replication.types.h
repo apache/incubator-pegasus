@@ -599,7 +599,7 @@ namespace dsn { namespace replication {
     DEFINE_POD_SERIALIZATION(partition_status);
 
     // ---------- read_semantic_t -------------
-    enum read_semantic_t
+    enum class read_semantic_t
     {
         ReadLastUpdate = 0,
         ReadOutdated = 1,

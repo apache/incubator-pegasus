@@ -299,7 +299,7 @@ namespace dsn
 
                     this->on_server_session_accepted(s1);
 
-                    s->do_read(256);
+                    s->start_read_next();
                 }
                 else
                 {

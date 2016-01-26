@@ -42,7 +42,7 @@ namespace dsn {
 
         cli::cli()
         {
-            _timeout_seconds = 10; // 10 seconds by default
+            _timeout = std::chrono::seconds(10); // 10 seconds by default
         }
 
         void usage()
@@ -97,11 +97,11 @@ namespace dsn {
                     {
                         std::string machine = args[1];
                         int port = atoi(args[2].c_str());
-                        _timeout_seconds = atoi(args[3].c_str());
+                        _timeout = std::chrono::seconds(atoi(args[3].c_str()));
 
                         _target.assign_ipv4(machine.c_str(), port);
 
-                        std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" <<std::endl;
+                        std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout.count() << " seconds" <<std::endl;
                         continue;
                     }
                 }
@@ -116,8 +116,9 @@ namespace dsn {
                     }
 
                     std::cout << "CALL " << _target.to_string() << " ..." << std::endl;
+                    error_code err;
                     std::string result;
-                    auto err = _client.call(rcmd, result, _timeout_seconds * 1000, 0, &_target);
+                    std::tie(err, result) = _client.call_sync(rcmd, _timeout, 0, _target);
                     if (err == ERR_OK)
                     {
                         std::cout << result << std::endl;

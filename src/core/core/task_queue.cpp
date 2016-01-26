@@ -37,7 +37,9 @@
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/network.h>
+# include <dsn/internal/perf_counters.h>
 # include <cstdio>
+# include "rpc_engine.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -46,7 +48,7 @@
 
 namespace dsn {
 
-task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr)
+task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr), _appro_wait_time_ns(0)
 {
     char num[30];
     sprintf(num, "%u", index);
@@ -55,30 +57,36 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _name.append(num);
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
-    _queue_length = 0;
+    _queue_length = perf_counters::instance().get_counter(_pool->node()->name(), "engine", (_name + ".queue.length").c_str(), COUNTER_TYPE_NUMBER, "task queue length", true);
     _virtual_queue_length = 0;
-    _enable_virtual_queue_throttling = pool->spec().enable_virtual_queue_throttling;
-    if (pool->spec().throttling_delay_vector_milliseconds.size() > 0)
-    {
-        _delayer.initialize(
-            pool->spec().throttling_delay_vector_milliseconds,
-            pool->spec().queue_length_throttling_threshold
-            );
-    }
-    else
-    {
-        _delayer.initialize(
-            pool->spec().queue_length_throttling_threshold
-            );
-    }
+    _spec = (threadpool_spec*)&pool->spec();
+}
+
+task_queue::~task_queue()
+{
+    perf_counters::instance().remove_counter(_queue_length->full_name());
 }
 
 void task_queue::enqueue_internal(task* task)
 {
-    if (task->spec().rpc_allow_throttling)
+    auto& sp = task->spec();
+    if (sp.rpc_request_dropped_on_timeout_with_high_possibility)
     {
+        rpc_request_task* rc = dynamic_cast<rpc_request_task*>(task);
+
+        // drop incoming 
+        if (_appro_wait_time_ns.load(std::memory_order_relaxed) / 1000000ULL
+            >= (uint64_t)rc->get_request()->header->client.timeout_ms)
+        {
+            task->release_ref(); // added in task::enqueue(pool)
+            return;
+        }
+    }
+
+    if (sp.rpc_request_dropped_on_long_queue)
+    {        
         int ac_value = 0;
-        if (_enable_virtual_queue_throttling)
+        if (_spec->enable_virtual_queue_throttling)
         {
             ac_value = _virtual_queue_length;
         }
@@ -87,16 +95,11 @@ void task_queue::enqueue_internal(task* task)
             ac_value = count();
         }
 
-        int dms = _delayer.delay(ac_value);
-        if (dms > 0)
+        // drop incoming rpc request when task queue is too long
+        if (ac_value > _spec->queue_length_throttling_threshold)
         {
-            rpc_request_task* rc = dynamic_cast<rpc_request_task*>(task);
-            rpc_session* s = rc->get_request()->io_session.get();
-            if (s != nullptr)
-            {
-                // delay session recv
-                s->delay_rpc_request_rate(dms);
-            }
+            task->release_ref(); // added in task::enqueue(pool)
+            return;
         }
     }
 
