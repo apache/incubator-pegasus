@@ -2,11 +2,11 @@
 
 REPO=${REPO:-docker.io}
 SOURCE_DIR=$(dirname ${BASH_SOURCE})
-
+DSN_PYTHON=${DSN_PYTHON:-$HOME/rDSN.Python}
 function prepare_file()
 {
 #    wget https://github.com/mcfatealan/rDSN.Python/tree/master/release/linux/MonitorPack.7z
-    tar -cvzf ${SOURCE_DIR}/MonitorPack.tar.gz -C /home/guoxi/rdsn-python/src apps/rDSN.monitor dev setup.py
+    tar -cvzf ${SOURCE_DIR}/MonitorPack.tar.gz -C ${DSN_PYTHON}/src apps/rDSN.monitor dev setup.py
     tar -cvzf ${SOURCE_DIR}/rdsn-release.tar.gz -C $DSN_ROOT include lib bin
 }
 

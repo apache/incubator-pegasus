@@ -14,12 +14,10 @@ if [ "x$NUM" = "x" ];then
     exit 137
 fi
 
-if [ "x$INSTANCE" = "x" ];then
-    echo "INSTANCE is empty"
-    exit 137
+if [ "x$INSTANCE" -ne "x" ];then
+    INSTANCE=${INSTANCE^^}
 fi
 
-INSTANCE=${INSTANCE^^}
 
 #echo $NAME
 META_HOST=${META_HOST:-`printenv ${INSTANCE}_META_1_SERVICE_HOST`}

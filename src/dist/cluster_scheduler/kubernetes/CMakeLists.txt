@@ -24,6 +24,6 @@ file(GLOB
 
 # Extra files that will be installed
 set(MY_BINPLACES "${INI_FILES}"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
+                 "${CMAKE_CURRENT_SOURCE_DIR}/run_k8s.sh")
 
 dsn_add_executable()

@@ -88,6 +88,10 @@ namespace dsn
         private:
             void create_containers(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory, std::string& remote_package_directory);
             void delete_containers(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory, std::string& remote_package_directory);
+
+            void get_app_list(std::string& ldir, /*out*/std::vector<std::string>& app_list);
+            void write_machine_list(std::string& name, std::string& ldir);
+            void return_machines(std::string& name);
             using deploy_map = std::unordered_map<std::string, std::shared_ptr<deployment_unit> >;
             using machine_map = std::unordered_map<std::string, std::vector<std::string> >;
             std::string                 _run_path;

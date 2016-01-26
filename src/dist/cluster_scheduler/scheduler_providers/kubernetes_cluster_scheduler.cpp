@@ -152,7 +152,7 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh k8s_deploy ";
+    command << "./run_k8s.sh k8s_deploy ";
     command << " -s " << local_package_directory;
     command << " -i " << name;
     ret = system(command.str().c_str());

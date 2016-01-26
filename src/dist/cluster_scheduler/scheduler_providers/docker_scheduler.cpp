@@ -139,11 +139,11 @@ error_code docker_scheduler::initialize()
     return ::dsn::ERR_OK;
 }
 
-void docker_scheduler::get_app_list(std::string& ldir,/*out*/std::vector<std::string>& app_list>)
+void docker_scheduler::get_app_list(std::string& ldir,/*out*/std::vector<std::string>& app_list )
 {
 #ifndef _WIN32
     std::string popen_command = "cat " + ldir + "/applist";
-    File *f = popen(popen_command.c_str(),"r");
+    FILE *f = popen(popen_command.c_str(),"r");
     char buffer[128];
     fgets(buffer,128,f);
     ::dsn::utils::split_args(buffer, app_list, ' ');
@@ -157,7 +157,7 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
 
     get_app_list(ldir,app_list);
 
-    for( auto app& : app_list)
+    for( auto& app : app_list)
     {
         std::string machine_file = ldir + "/" + app + "list";
         std::vector<std::string> machine_list;
@@ -165,8 +165,8 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
         std::vector<std::string> a_list;
         int count = 1;
         _mgr.get_machine( count, f_list, a_list);
-        _machine_map.insert(_machine_map.begin(),a_list.begin(),a_list.end());
-        for( auto machine&: a_list )
+        _machine_map[name].insert(_machine_map[name].begin(),a_list.begin(),a_list.end());
+        for( auto& machine: a_list )
         {
             std::string command = "echo "+ machine +">> " + machine_file; 
             system(command.c_str());
@@ -214,14 +214,17 @@ void docker_scheduler::create_containers(std::string& name,std::function<void(er
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh deploy_and_start ";
+    command << "./run_docker.sh deploy_and_start ";
     command << " -d " << name << " -s " << local_package_directory;
-    command << " -t " << remote_package_directory;
+    if( remote_package_directory == "" )
+        command << " -t " << local_package_directory;
+    else
+        command << " -t " << remote_package_directory;
     ret = system(command.str().c_str());
     if( ret == 0 )
     {
 #ifndef _WIN32
-        std::string popen_command = "IP=`cat "+ remote_package_directory +"/meta`;echo ${IP#*@}";
+        std::string popen_command = "IP=`cat "+ local_package_directory +"/metalist`;echo ${IP#*@}";
         FILE *f = popen(popen_command.c_str(),"r");
         char buffer[30];
         fgets(buffer,30,f);
