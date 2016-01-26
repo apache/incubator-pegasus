@@ -58,8 +58,10 @@ mutation::~mutation()
 {
     for (auto& r : client_requests)
     {
-        if (r.req)
-            dsn_msg_release_ref(r.req);
+        if (r != nullptr)
+        {
+            dsn_msg_release_ref(r);
+        }
     }
 
     if (_prepare_request != nullptr)
@@ -77,8 +79,10 @@ void mutation::copy_from(mutation_ptr& old)
 
     for (auto& r : client_requests)
     {
-        if (r.req)
-            dsn_msg_add_ref(r.req);
+        if (r != nullptr)
+        {
+            dsn_msg_add_ref(r); // release in dctor
+        }
     }
 
     // let's always re-append the mutation to 
@@ -100,12 +104,12 @@ void mutation::copy_from(mutation_ptr& old)
     }
 }
 
-bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
+void mutation::add_client_request(task_code code, dsn_message_t request)
 {
-    client_info ci;
-    ci.code = code;
-    ci.req = request;
-    client_requests.push_back(ci);
+    data.updates.push_back(mutation_update());
+    mutation_update& update = data.updates.back();
+    update.code = code;
+    _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr)
     {
@@ -116,24 +120,23 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
         bool r = dsn_msg_read_next(request, &ptr, &size);
         dassert(r, "payload is not present");
         dsn_msg_read_commit(request, size);
+        update.data.assign((char*)ptr, 0, (int)size);
 
-        blob buffer((char*)ptr, 0, (int)size);
-        data.updates.push_back(buffer);
-
-        _appro_data_bytes += (int)size + sizeof(int);
+        _appro_data_bytes += sizeof(int) + (int)size; // data size
     }   
     else
     {
-        blob bb;
-        data.updates.push_back(bb);
-
-        _appro_data_bytes += sizeof(int);
+        _appro_data_bytes += sizeof(int); // empty data size
     }
 
-    dbg_dassert(client_requests.size() == data.updates.size(), 
-        "size must be equal");
+    client_requests.push_back(request);
 
-    return true;
+    dassert(client_requests.size() == data.updates.size(), "size must be equal");
+}
+
+void mutation::write_to(binary_writer& writer) const
+{
+    marshall(writer, data);
 }
 
 /*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
@@ -141,17 +144,12 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
 
-    for (auto& d : mu->data.updates)
+    for (const mutation_update& update : mu->data.updates)
     {
-        client_info ci; 
-        std::string code_str;
-        unmarshall(reader, code_str);
-
-        ci.code = dsn_task_code_from_string(code_str.c_str(), TASK_CODE_INVALID);
-        dassert(ci.code != TASK_CODE_INVALID, "invalid mutation");
-        ci.req = nullptr;
-        mu->client_requests.push_back(ci);
+        dassert(update.code != TASK_CODE_INVALID, "invalid mutation task code");
     }
+
+    mu->client_requests.resize(mu->data.updates.size());
 
     if (nullptr != from)
     {
@@ -169,55 +167,63 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
     return mu;
 }
 
-void mutation::write_to_scatter(std::function<void(blob)> inserter) const
+void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 {
     {
         binary_writer temp_writer;
         marshall(temp_writer, data.header);
-        marshall(temp_writer, data.updates.size());
-        for (const auto& bb : data.updates)
+        marshall(temp_writer, static_cast<int>(data.updates.size()));
+        for (const mutation_update& update : data.updates)
         {
-            marshall(temp_writer, bb.length());
+            marshall(temp_writer, update.code);
+            marshall(temp_writer, static_cast<int>(update.data.length()));
         }
         inserter(temp_writer.get_buffer());
     }
-    
-    for (const auto& bb : data.updates)
-    {
-        inserter(bb);
-    }
-    {
-        binary_writer temp_writer;
-        for (auto& ci : client_requests)
-        {
-            //std::string code_str(dsn_task_code_to_string(ci.code));
-            //marshall(temp_writer, code_str);
 
-            // to avoid strcpy in std::string
-            const char* cstr = dsn_task_code_to_string(ci.code);
-            int len = static_cast<int>(strlen(cstr));
-            temp_writer.write_pod(len);
-            temp_writer.write(cstr, len);
-        }
-        inserter(temp_writer.get_buffer());
+    for (const mutation_update& update : data.updates)
+    {
+        inserter(update.data);
     }
 }
 
-void mutation::write_to(binary_writer& writer)
+/*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)
 {
-    marshall(writer, data);
-
-    for (auto& ci : client_requests)
+    mutation_ptr mu(new mutation());
+    unmarshall(reader, mu->data.header);
+    int size;
+    unmarshall(reader, size);
+    mu->data.updates.resize(size);
+    std::vector<int> lengths(size, 0);
+    for (int i = 0; i < size; ++i)
     {
-        //std::string code_str(dsn_task_code_to_string(ci.code));
-        //marshall(writer, code_str);
-
-        // to avoid strcpy in std::string
-        const char* cstr = dsn_task_code_to_string(ci.code);
-        int len = static_cast<int>(strlen(cstr));
-        writer.write_pod(len);
-        writer.write(cstr, len);
+        unmarshall(reader, mu->data.updates[i].code);
+        unmarshall(reader, lengths[i]);
     }
+    for (int i = 0; i < size; ++i)
+    {
+        int len = lengths[i];
+        std::shared_ptr<char> holder(new char[len], [](char* ptr){ delete []ptr; });
+        reader.read(holder.get(), len);
+        mu->data.updates[i].data.assign(holder, 0, len);
+    }
+
+    mu->client_requests.resize(mu->data.updates.size());
+
+    if (nullptr != from)
+    {
+        mu->_prepare_request = from;
+        dsn_msg_add_ref(from); // released on dctor
+    }
+
+    snprintf_p(mu->_name, sizeof(mu->_name),
+        "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
+        mu->data.header.gpid.app_id,
+        mu->data.header.gpid.pidx,
+        mu->data.header.ballot,
+        mu->data.header.decree);
+
+    return mu;
 }
 
 int mutation::clear_prepare_or_commit_tasks()
@@ -261,7 +267,7 @@ mutation_queue::mutation_queue(global_partition_id gpid, int max_concurrent_op /
         );
 }
 
-mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r)
+mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, replica* r)
 {
     // batch and add to work queue
     if (!_pending_mutation)

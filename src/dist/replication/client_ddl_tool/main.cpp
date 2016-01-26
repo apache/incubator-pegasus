@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     std::string app_type;
     int partition_count = 4;
     int replica_count = 3;
-    dsn::replication::app_status status = dsn::replication::app_status::all;
+    dsn::replication::app_status status = dsn::replication::AS_ALL;
     bool detailed = false;
     std::string out_file;
 
@@ -70,8 +70,8 @@ int main(int argc, char** argv)
         }
         else if(strcmp(argv[index], "-status") == 0 && argc > index)
         {
-            status = enum_from_string(argv[++index], app_status::invalid);
-            if(status == app_status::invalid)
+            status = enum_from_string(argv[++index], AS_INVALID);
+            if(status == AS_INVALID)
                 usage(argv[0]);
         }
         else if(strcmp(argv[index], "-detailed") == 0)

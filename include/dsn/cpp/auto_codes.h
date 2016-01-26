@@ -110,6 +110,11 @@ namespace dsn
             _internal_code = 0;
         }
 
+        explicit task_code(dsn_task_code_t code)
+        {
+            _internal_code = code;
+        }
+
         task_code(const task_code& r)
         {
             _internal_code = r._internal_code;

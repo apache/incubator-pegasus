@@ -261,7 +261,6 @@ namespace dsn {
         int read(/*out*/ uint64_t& val) { return read_pod(val); }
         int read(/*out*/ bool& val) { return read_pod(val); }
 
-        int read(/*out*/ error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
         int read(/*out*/ std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
@@ -303,7 +302,6 @@ namespace dsn {
         void write(const uint64_t& val) { write_pod(val); }
         void write(const bool& val) { write_pod(val); }
 
-        void write(const error_code& val) { int err = val.get();  write_pod(err); }
         void write(const std::string& val);
         void write(const char* buffer, int sz);
         void write(const blob& val);

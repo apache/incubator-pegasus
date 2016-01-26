@@ -46,7 +46,7 @@
 namespace dsn { namespace replication {
 
 
-void replica::on_client_write(int code, dsn_message_t request)
+void replica::on_client_write(task_code code, dsn_message_t request)
 {
     check_hashed_access();
 
@@ -146,9 +146,9 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    for (auto& ci : mu->client_requests)
+    for (auto& r : mu->client_requests)
     {
-        response_client_message(ci.req, err);
+        response_client_message(r, err);
     }
     return;
 }
