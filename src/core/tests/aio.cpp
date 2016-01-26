@@ -60,7 +60,7 @@ TEST(core, aio)
     // new write
     for (int i = 0; i < 100; i++)
     {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
@@ -76,7 +76,7 @@ TEST(core, aio)
     tasks.clear();
     for (int i = 0; i < 100; i++)
     {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
@@ -98,7 +98,7 @@ TEST(core, aio)
     }
     for (int i = 0; i < 10; i ++)
     {
-        tasks.push_back(::dsn::file::write_vector(fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, nullptr, 0));
+        tasks.push_back(::dsn::file::write_vector(fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback));
         offset += 10 * len;
     }
     for (auto& t : tasks)
@@ -119,7 +119,7 @@ TEST(core, aio)
     tasks.clear();
     for (int i = 0; i < 100; i++)
     {
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
@@ -137,7 +137,7 @@ TEST(core, aio)
     for (int i = 0; i < 200; i++)
     {
         buffer2[0] = 'x';
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         offset += len;
 
         bool r = t->wait();
@@ -179,7 +179,7 @@ TEST(core, operation_failed)
 
     ::dsn::error_code* err = new ::dsn::error_code;
     size_t* count = new size_t;
-    aio_handler io_callback = [err, count](::dsn::error_code e, size_t n) {
+    auto io_callback = [err, count](::dsn::error_code e, size_t n) {
         *err = e;
         *count = n;
     };

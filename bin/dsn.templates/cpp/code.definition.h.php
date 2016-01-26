@@ -18,7 +18,7 @@ foreach ($_PROG->services as $svc)
     {
         echo "    DEFINE_TASK_CODE_RPC(". $f->get_rpc_code() 
             . ", TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)".PHP_EOL;
-    }    
+    }
 }
 echo "    // test timer task code".PHP_EOL; 
 echo "    DEFINE_TASK_CODE(". $_PROG->get_test_task_code() 

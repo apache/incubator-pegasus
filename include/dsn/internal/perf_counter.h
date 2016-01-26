@@ -84,6 +84,7 @@ public:
     virtual void   add(uint64_t val) = 0;
     virtual void   set(uint64_t val) = 0;
     virtual double get_value() = 0;
+    virtual uint64_t get_integer_value() = 0;
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
 
     typedef std::vector<std::pair<uint64_t*, int> > samples_t;

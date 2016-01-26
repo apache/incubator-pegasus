@@ -274,6 +274,7 @@ public:
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
+    uint64_t     enqueue_ts_ns() { return _recv_ts_ns;  }
     virtual void enqueue() override;
 
     virtual void  exec() override
@@ -284,6 +285,7 @@ public:
 protected:
     message_ex      *_request;
     rpc_handler_ptr _handler;
+    uint64_t        _recv_ts_ns;
 };
 
 class rpc_response_task : public task

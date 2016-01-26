@@ -11,7 +11,10 @@ set(MY_PROJ_SRC "../../core/dll/core_main.cpp")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../../apps/replication/client_lib)
+set(MY_PROJ_INC_PATH 
+  ../../dist/replication/client_lib
+  ../../dist/replication/lib
+  )
 
 set(MY_BOOST_PACKAGES system)
 
