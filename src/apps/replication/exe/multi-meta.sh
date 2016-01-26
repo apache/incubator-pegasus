@@ -3,7 +3,7 @@
 exe=dsn.replication.simple_kv
 cfg=config-zk.ini
 start_dir=run
-meta_count=3
+meta_count=1
 replica_count=3
 
 function run_app()
@@ -13,8 +13,11 @@ function run_app()
     if [ ! -d $app_dir ]; then
         mkdir $app_dir
     fi
-    cp $exe $cfg $app_dir
+
     cd $app_dir
+    if [ ! -f $exe ]; then
+        cp ../$exe ../$cfg ./
+    fi
     ./$exe $cfg -app_list $1@$2 > output.log 2>&1 &
     cd ../..
 }
@@ -89,14 +92,19 @@ function random_kill_replica()
     local core_result=0
 
     while [ $core_result == 0 ]; do
+        sleep 30
         random_replica_id=$[ $RANDOM%$replica_count+1 ]
         echo "kill replica $reandom_replica_id"
         kill_app replica $random_replica_id
+        sleep 10
         echo "restart replica $random_replica_id"
         run_app replica $random_replica_id
         core_result=`core_file_detect`
     done
-    echo "core file detect in dir "
+
+    echo "core file detect in dir $core_result"
+    sleep 2
+    stop_all_apps
 }
 
 function poll_core()
@@ -107,10 +115,15 @@ function poll_core()
         core_result=`core_file_detect`
     done
     echo "core file detect in dir: $core_result"
+    sleep 2
+    stop_all_apps
 }
 
 if [ ! -d $start_dir ]; then
     mkdir $start_dir
+fi
+
+if [ ! -f $start_dir/$exe ]; then
     cp $exe $cfg $start_dir
 fi
 
@@ -123,6 +136,8 @@ case $1 in
         rm -rf run ;;
     meta_test)
         round_kill_meta ;;
+    replica_test)
+        random_kill_replica ;;
     start_svc)
         apps_count=$meta_count
         if [ $2 == "replica" ]; then
