@@ -911,7 +911,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         binary_reader reader(state.meta[0]);
         while (!reader.is_eof())
         {
-            auto mu = mutation::read_from(reader, nullptr);
+            auto mu = mutation::read_from_log_file(reader, nullptr);
             auto d = mu->data.header.decree;
             if (d <= plist.last_committed_decree())
                 continue;
