@@ -1,5 +1,8 @@
 #!/bin/bash
 
+if [ -z "${REPORT_DIR}" ]; then
+    REPORT_DIR="."
+fi
 for test_case in `ls config-test*.ini`; do
     echo "============ run dsn.core.tests $test_case ============"
     ./clear.sh

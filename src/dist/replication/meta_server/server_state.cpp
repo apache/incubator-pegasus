@@ -177,7 +177,7 @@ void unmarshall_json(const blob& buf, app_state& app)
     app.app_id = doc["app_id"].GetInt();
     app.app_name = doc["app_name"].GetString();
     app.partition_count = doc["partition_count"].GetInt();
-    app.status = strcmp(doc["status"].GetString(), "available")==0?app_status::available:app_status::dropped;
+    app.status = strcmp(doc["status"].GetString(), "available")==0?AS_AVAILABLE:AS_DROPPED;
     partition_configuration pc;
     pc.app_type = app.app_type;
     pc.ballot = 0;
@@ -286,7 +286,7 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
         if (strcmp(format, "json") == 0)
         {
             blob data;
-            marshall_json(data, snapshot, snapshot.status==app_status::available);
+            marshall_json(data, snapshot, snapshot.status==AS_AVAILABLE);
             file->append_buffer(data);
             for (const partition_configuration& pc: snapshot.partitions)
             {
@@ -507,7 +507,7 @@ error_code server_state::initialize_apps()
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
     app.partition_count = (int)dsn_config_get_value_uint64("replication.app",
         "partition_count", 1, "how many partitions the app should have");
-    app.status = app_status::available;
+    app.status = AS_AVAILABLE;
 
     _apps.push_back(app);
 
@@ -559,7 +559,7 @@ error_code server_state::sync_apps_to_remote_storage()
     {
         //TODO: handling the case when app.partition_count is a large value
         std::shared_ptr<TEntries> entries = _storage->new_transaction_entries(app.partition_count+1);
-        marshall_json(data, app, app.status==app_status::available);
+        marshall_json(data, app, app.status==AS_AVAILABLE);
         entries->create_node(get_app_path(app), data);
         for (const partition_configuration& pc: app.partitions) {
             marshall_json(data, pc);
@@ -846,7 +846,7 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
     }
 
     app_state& app = _apps[index];
-    if ( app.status != app_status::available ) {
+    if ( app.status != AS_AVAILABLE ) {
         response.err = ERR_INVALID_STATE;
         return;
     }
@@ -866,7 +866,7 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
 int32_t server_state::get_app_index(const char *app_name) const
 {
     for (const app_state& app: _apps)
-        if ( strcmp(app.app_name.c_str(), app_name) == 0 && app.status!=app_status::dropped)
+        if ( strcmp(app.app_name.c_str(), app_name) == 0 && app.status!=AS_DROPPED)
             return app.app_id-1;
     return -1;
 }
@@ -908,7 +908,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
         if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
             { 
                 zauto_write_lock l(_lock);
-                app.status = app_status::available;
+                app.status = AS_AVAILABLE;
             }
             dinfo("create app on storage service ok, appname: %s, appid: %" PRId32 "", 
                 app.app_name.c_str(), 
@@ -922,7 +922,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
             dwarn("the storage service is not available currently, just ignore this request");
             {
                 zauto_write_lock l(_lock);
-                app.status = app_status::creating_failed;
+                app.status = AS_CREATE_FAILED;
             }
         }
         else {
@@ -952,12 +952,12 @@ void server_state::create_app(dsn_message_t msg)
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
         /* so we can't store the data on meta_state_service with app_name, but app_id */
-        if (index != -1 && _apps[index].status!=app_status::dropped)
+        if (index != -1 && _apps[index].status!=AS_DROPPED)
         {
             app_state& exist_app = _apps[index];
             switch (exist_app.status)
             {
-            case app_status::available:
+            case AS_AVAILABLE:
                 if (!request.options.success_if_exist || !option_match_check(request.options, exist_app))
                     response.err = ERR_INVALID_PARAMETERS;
                 else {
@@ -965,15 +965,15 @@ void server_state::create_app(dsn_message_t msg)
                     response.appid = exist_app.app_id;
                 }
                 break;
-            case app_status::creating:
+            case AS_CREATING:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case app_status::creating_failed:
-                exist_app.status = app_status::creating;
+            case AS_CREATE_FAILED:
+                exist_app.status = AS_CREATING;
                 will_create_app = true;
                 break;
-            case app_status::dropping:
-            case app_status::dropping_failed:
+            case AS_DROPPING:
+            case AS_DROP_FAILED:
                 response.err = ERR_BUSY_DROPPING;
             default:
                 break;
@@ -1004,7 +1004,7 @@ void server_state::create_app(dsn_message_t msg)
             for (int i=0; i!=app.partitions.size(); ++i)
                 app.partitions[i].gpid.pidx = i;
 
-            app.status = app_status::creating;
+            app.status = AS_CREATING;
         }
     }
 
@@ -1029,7 +1029,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         {
             {
                 zauto_write_lock l(_lock);
-                app.status = app_status::dropped;
+                app.status = AS_DROPPED;
             }
             response.err = ERR_OK;
             reply(msg, response);
@@ -1039,7 +1039,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         {
             dinfo("drop table(id:%d, name:%s) timeout, ignore request", app.app_id, app.app_name.c_str());
             zauto_write_lock l(_lock);
-            app.status = app_status::dropping_failed;
+            app.status = AS_DROP_FAILED;
         }
         else
         {
@@ -1063,22 +1063,22 @@ void server_state::drop_app(dsn_message_t msg)
     {
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
-        if (index == -1 || _apps[index].status == app_status::dropped) {
+        if (index == -1 || _apps[index].status == AS_DROPPED) {
             response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
         }
         else {
             switch (_apps[index].status)
             {
-            case app_status::available:
-            case app_status::dropping_failed:
-            case app_status::creating_failed:
+            case AS_AVAILABLE:
+            case AS_DROP_FAILED:
+            case AS_CREATE_FAILED:
                 do_dropping = true;
-                _apps[index].status = app_status::dropping;
+                _apps[index].status = AS_DROPPING;
                 break;
-            case app_status::creating:
+            case AS_CREATING:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case app_status::dropping:
+            case AS_DROPPING:
                 response.err = ERR_BUSY_DROPPING;
                 break;
             default:
@@ -1102,7 +1102,7 @@ void server_state::list_apps(dsn_message_t msg)
     {
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
-            if ( request.status == app_status::all || request.status == app.status)
+            if ( request.status == AS_ALL || request.status == app.status)
             {
                 dsn::replication::app_info info;
                 info.app_id = app.app_id;

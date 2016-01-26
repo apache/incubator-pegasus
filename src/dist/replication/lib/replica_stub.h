@@ -198,7 +198,7 @@ private:
     perf_counter_    _counter_replicas_learning_success_latency;
     perf_counter_    _counter_replicas_learning_count;
 private:
-    void response_client_error(dsn_message_t request, int error);
+    void response_client_error(dsn_message_t request, error_code error);
 };
 //------------ inline impl ----------------------
 

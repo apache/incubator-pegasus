@@ -367,7 +367,7 @@ namespace dsn
             TCallback&& callback,
             int hash)
         {
-            //TODO: check if the callback is an aio callback
+            static_assert(is_aio_callback<TCallback>::value, "invalid aio callback");
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
             auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec_aio
@@ -436,7 +436,7 @@ namespace dsn
         void copy_remote_files_impl(
             ::dsn::rpc_address remote,
             const std::string& source_dir,
-            std::vector<std::string>& files,  // empty for all
+            const std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
             bool overwrite,
             dsn_task_t native_task
@@ -446,7 +446,7 @@ namespace dsn
         task_ptr copy_remote_files(
             ::dsn::rpc_address remote,
             const std::string& source_dir,
-            std::vector<std::string>& files,  // empty for all
+            const std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
             bool overwrite,
             dsn_task_code_t callback_code,
@@ -472,9 +472,8 @@ namespace dsn
             int hash = 0
             )
         {
-            std::vector<std::string> files;
             return copy_remote_files(
-                remote, source_dir, files, dest_dir, overwrite,
+                remote, source_dir, {}, dest_dir, overwrite,
                 callback_code, svc, std::forward<TCallback>(callback), hash
                 );
         }

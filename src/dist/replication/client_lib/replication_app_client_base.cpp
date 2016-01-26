@@ -133,7 +133,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = -1;
-    rc->write_header.code = dsn_task_code_to_string(code);
+    rc->write_header.code = task_code(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = opts.timeout_ms;
     rc->timeout_ts_us = now_us() + opts.timeout_ms * 1000;
@@ -167,7 +167,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = -1;
-    rc->read_header.code = dsn_task_code_to_string(code);
+    rc->read_header.code = task_code(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;

@@ -51,7 +51,7 @@ public:
 <?php foreach ($_PROG->services as $svc) { ?>
         // test for service <?=$svc->name?>
         using namespace svc_<?=$svc->name?>;
-<? foreach ($svc->functions as $f) {?>
+<?php foreach ($svc->functions as $f) { ?>
         {
             <?=$f->get_first_param()->get_cpp_type()?> req;
 <?php if ($f->is_one_way()) { ?>
@@ -66,9 +66,8 @@ public:
             //_<?=$svc->name?>_client-><?=$f->name?>(req, empty_callback);
 <?php } ?>           
         }
-<?php }    
-}
-?>
+<?php } ?>
+<?php } ?>
     }
 
 private:

@@ -35,7 +35,6 @@
 
 # pragma once
 
-
 # include "replication_common.h"
 # include <list>
 # include <atomic>
@@ -67,7 +66,7 @@ public:
 
     // state change
     void set_id(ballot b, decree c);
-    bool add_client_request(dsn_task_code_t code, dsn_message_t request);
+    void add_client_request(task_code code, dsn_message_t request);
     void copy_from(mutation_ptr& old);
     void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
     unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
@@ -81,21 +80,19 @@ public:
     // >= 1 MB
     bool is_full() const { return _appro_data_bytes >= 1024 * 1024; }
     
-    // reader & writer
-    static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
-    void write_to_scatter(std::function<void(blob)> inserter) const;
-    void write_to(binary_writer& writer);
+    // general reader & writer
+    void write_to(binary_writer& writer) const;
+    static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
+
+    // write-to/read-from mutation log file, for better performance
+    void write_to_log_file(std::function<void(blob)> inserter) const;
+    static mutation_ptr read_from_log_file(binary_reader& reader, dsn_message_t from);
 
     // data
     mutation_data  data;
 
     // user requests
-    struct client_info
-    {
-        int           code;
-        dsn_message_t req;
-    };
-    std::vector<client_info> client_requests;
+    std::vector<dsn_message_t> client_requests;
 
     // used by pending mutation queue only
     mutation*      next;
@@ -137,7 +134,7 @@ public:
             );
     }
 
-    mutation_ptr add_work(int code, dsn_message_t request, replica* r);
+    mutation_ptr add_work(task_code code, dsn_message_t request, replica* r);
 
     void clear();
 

@@ -61,13 +61,6 @@ public:
         perf_test_suite s;
         std::vector<perf_test_suite> suits;
 
-        s.name = "simple_kv.read";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-        s.send_one = [this](int payload_bytes){this->send_one_read(payload_bytes); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-        
         s.name = "simple_kv.write";
         s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
         s.send_one = [this](int payload_bytes){this->send_one_write(payload_bytes); };
@@ -78,6 +71,13 @@ public:
         s.name = "simple_kv.append";
         s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
         s.send_one = [this](int payload_bytes){this->send_one_append(payload_bytes); };
+        s.cases.clear();
+        load_suite_config(s);
+        suits.push_back(s);
+
+        s.name = "simple_kv.read";
+        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
+        s.send_one = [this](int payload_bytes) {this->send_one_read(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
