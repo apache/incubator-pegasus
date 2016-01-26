@@ -159,7 +159,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
 
-    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), PROVIDER_TYPE_MAIN, this));
+    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this));
     if (nullptr == _app)
     {
         derror( "%s: app type %s not found", name(), _app_type.c_str());

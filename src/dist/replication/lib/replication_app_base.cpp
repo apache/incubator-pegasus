@@ -49,7 +49,7 @@ namespace dsn { namespace replication {
 
 void register_replica_provider(replica_app_factory f, const char* name)
 {
-    ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
+    ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, ::dsn::PROVIDER_TYPE_MAIN);
 }
 
 error_code replica_init_info::load(const char* file)

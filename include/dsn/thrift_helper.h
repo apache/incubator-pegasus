@@ -262,7 +262,7 @@ namespace dsn {
     public:
         static void register_parser()
         {
-            ::dsn::tools::register_component_provider<thrift_binary_message_parser>("thrift");
+            ::dsn::tools::register_message_header_parser<thrift_binary_message_parser>(NET_HDR_THRIFT);
         }
 
     private:
