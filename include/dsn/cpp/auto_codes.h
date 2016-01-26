@@ -110,7 +110,7 @@ namespace dsn
             _internal_code = 0;
         }
 
-        task_code(dsn_task_code_t code)
+        explicit task_code(dsn_task_code_t code)
         {
             _internal_code = code;
         }
