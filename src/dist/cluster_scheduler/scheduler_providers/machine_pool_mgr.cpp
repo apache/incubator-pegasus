@@ -1,5 +1,5 @@
 #include "machine_pool_mgr.h"
-
+#include <dsn/internal/task.h>
 #include <fstream>
 
 #ifdef __TITLE__
@@ -12,19 +12,19 @@ namespace dsn
 {
     namespace dist
     {
-        machine_pool_mgr::machine_pool_mgr()
+        machine_pool_mgr::machine_pool_mgr(const std::string &spec)
         {
             ::dsn::service::zauto_lock l(_lock);
-            std::string cluster_config_file = dsn_config_get_value_string("apps.server", "node_list_path", "nodes", "the location of the file which lists the host name and user name of all the available machines");
-            std::vector<machine_identity> machine_id;
+            std::string cluster_config_file = dsn_config_get_value_string(spec.c_str(), "node_list_path", "nodes", "the location of the file which lists the host name and user name of all the available machines");
+            std::vector<std::string> machine_id;
             error_code err = parse_cluster_config_file(cluster_config_file, machine_id);
             dassert(ERR_OK == err, "unable to load the cluster config file, pls check your config file again.");
-            for (std::vector<machine_identity>::iterator i = machine_id.begin(); i != machine_id.end(); i++)
+            for (auto& i : machine_id)
             {
                 machine_info machine;
                 machine.workload.instance = 0;
-                machine.id = *i;
-                _machines[i->host_name] = machine;
+                machine.identity = i;
+                _machines[i] = machine;
             }
         }
 
@@ -44,43 +44,43 @@ namespace dsn
             }
 
             std::set<std::string> forbidden_machines;
-            for (std::vector<std::string>::const_iterator i = forbidden_list.begin(); i != forbidden_list.end(); i++)
+            for (auto& i : forbidden_list)
             {
-                forbidden_machines.insert(*i);
+                forbidden_machines.insert(i);
             }
 
             std::vector<machine_info> candidates;
-            for (std::unordered_map<std::string, machine_info>::iterator i = _machines.begin(); i != _machines.end(); i++)
+            for (auto& i : _machines)
             {
-                if (forbidden_machines.find(i->first) != forbidden_machines.end())
+                if (forbidden_machines.find(i.first) != forbidden_machines.end())
                 {
                     continue;
                 }
-                candidates.push_back(i->second);
+                candidates.push_back(i.second);
             }
 
             sort(candidates.begin(), candidates.end());
             assign_list.clear();
             for (int i = 0; i < count; i++)
             {
-                assign_list.push_back(candidates[i].id.user_name + "@" + candidates[i].id.host_name);
-                _machines[candidates[i].id.host_name].workload.instance += 1;
+                assign_list.push_back(candidates[i].identity);
+                _machines[candidates[i].identity].workload.instance += 1;
             }
         }
 
         void machine_pool_mgr::return_machine(const std::vector<std::string>& machine_list)
         {
             ::dsn::service::zauto_lock l(_lock);
-            for (std::vector<std::string>::const_iterator i = machine_list.begin(); i != machine_list.end(); i++)
+            for (auto& i: machine_list)
             {
-                if (_machines.find(*i) != _machines.end())
+                if (_machines.find(i) != _machines.end())
                 {
-                    _machines[*i].workload.instance -= 1;
+                    _machines[i].workload.instance -= 1;
                 }
             }
         }
 
-        error_code machine_pool_mgr::parse_cluster_config_file(const std::string& cluster_config_file, std::vector<machine_identity> &machine_id)
+        error_code machine_pool_mgr::parse_cluster_config_file(const std::string& cluster_config_file, std::vector<std::string> &machine_id)
         {
             FILE* fd = fopen(cluster_config_file.c_str(), "r");
             if (fd == nullptr)
@@ -88,19 +88,11 @@ namespace dsn
                 return ERR_FILE_OPERATION_FAILED;
             }
             char str[256];
-            char host_name[128];
-            char user_name[128];
 
-            str[255] = host_name[127] = user_name[127] = '\0';
+            str[255] = '\0';
             while (1 == fscanf(fd, "%255s", str))
             {
-                if (2 == sscanf(str, "%127[^@]@%127s", user_name, host_name))
-                {
-                    machine_identity id;
-                    id.host_name = host_name;
-                    id.user_name = user_name;
-                    machine_id.push_back(id);
-                }
+                    machine_id.push_back(std::string(str));
             }
             fclose(fd);
             return ERR_OK;
