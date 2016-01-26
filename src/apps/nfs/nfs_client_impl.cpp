@@ -336,22 +336,19 @@ namespace dsn {
 
             {
                 zauto_lock l(reqc->lock);
-
-                reqc->local_write_task = file::write(
+                auto& reqc_save = *reqc.get();
+                reqc_save.local_write_task = file::write(
                     hfile,
-                    reqc->response.file_content.data(),
-                    reqc->response.size,
-                    reqc->response.offset,
+                    reqc_save.response.file_content.data(),
+                    reqc_save.response.size,
+                    reqc_save.response.offset,
                     LPC_NFS_WRITE,
                     this,
-                    std::bind(
-                    &nfs_client_impl::local_write_callback,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    reqc
-                    ),
-                    0);
+                    [this, reqc_cap = std::move(reqc)] (error_code err, int sz)
+                    {
+                        local_write_callback(err, sz, std::move(reqc_cap));
+                    }
+                );
             }
         }
 

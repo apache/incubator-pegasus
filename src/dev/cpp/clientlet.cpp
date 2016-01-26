@@ -136,7 +136,7 @@ namespace dsn
         void copy_remote_files_impl(
             ::dsn::rpc_address remote,
             const std::string& source_dir,
-            std::vector<std::string>& files,  // empty for all
+            const std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
             bool overwrite,
             dsn_task_t native_task
