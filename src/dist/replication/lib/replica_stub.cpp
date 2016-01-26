@@ -356,32 +356,44 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
 void replica_stub::on_client_write(dsn_message_t request)
 {
     write_request_header hdr;
-    ::unmarshall(request, hdr);    
-    
+    ::unmarshall(request, hdr);
+
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        rep->on_client_write(dsn_task_code_from_string(hdr.code.c_str(), TASK_CODE_INVALID), request);
+        rep->on_client_write(hdr.code, request);
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
 void replica_stub::on_client_read(dsn_message_t request)
 {
-    read_request_header req;
-    ::unmarshall(request, req);
+    read_request_header hdr;
+    ::unmarshall(request, hdr);
 
-    replica_ptr rep = get_replica(req.gpid);
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
+    replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(req, request);
+        rep->on_client_read(hdr, request);
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -823,8 +835,15 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(dsn_message_t request, int error)
+void replica_stub::response_client_error(dsn_message_t request, error_code error)
 {
+    if (nullptr == request)
+    {
+        error.end_tracking();
+        return;
+    }
+
+    ddebug("reply client read/write, err = %s", error.to_string());
     reply(request, error);
 }
 

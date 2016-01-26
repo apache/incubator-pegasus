@@ -47,6 +47,21 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<mutation_header>(&proto, val, &mutation_header::read);
     };
 
+    // ---------- mutation_update -------------
+    inline void marshall(::dsn::binary_writer& writer, const mutation_update& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<mutation_update>(&proto, val, &mutation_update::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_update& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<mutation_update>(&proto, val, &mutation_update::read);
+    };
+
     // ---------- mutation_data -------------
     inline void marshall(::dsn::binary_writer& writer, const mutation_data& val)
     {
@@ -255,21 +270,6 @@ namespace dsn { namespace replication {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<app_info>(&proto, val, &app_info::read);
-    };
-
-    // ---------- meta_request_header -------------
-    inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val)
-    {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<meta_request_header>(&proto, val, &meta_request_header::write);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ meta_request_header& val)
-    {
-        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<meta_request_header>(&proto, val, &meta_request_header::read);
     };
 
     // ---------- meta_response_header -------------
@@ -562,7 +562,7 @@ namespace dsn { namespace replication {
     DEFINE_POD_SERIALIZATION(partition_status);
 
     // ---------- read_semantic_t -------------
-    enum class read_semantic_t
+    enum read_semantic_t
     {
         ReadLastUpdate = 0,
         ReadOutdated = 1,
@@ -672,11 +672,30 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.last_committed_decree);
     };
 
+    // ---------- mutation_update -------------
+    struct mutation_update
+    {
+        ::dsn::task_code code;
+        ::dsn::blob data;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const mutation_update& val)
+    {
+        marshall(writer, val.code);
+        marshall(writer, val.data);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_update& val)
+    {
+        unmarshall(reader, val.code);
+        unmarshall(reader, val.data);
+    };
+
     // ---------- mutation_data -------------
     struct mutation_data
     {
         mutation_header header;
-        std::vector< ::dsn::blob> updates;
+        std::vector< mutation_update> updates;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const mutation_data& val)
@@ -779,7 +798,7 @@ namespace dsn { namespace replication {
     struct read_request_header
     {
         global_partition_id gpid;
-        std::string code;
+        ::dsn::task_code code;
         read_semantic_t semantic;
         int64_t version_decree;
     };
@@ -804,7 +823,7 @@ namespace dsn { namespace replication {
     struct write_request_header
     {
         global_partition_id gpid;
-        std::string code;
+        ::dsn::task_code code;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const write_request_header& val)
@@ -1044,22 +1063,6 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.app_name);
         unmarshall(reader, val.app_id);
         unmarshall(reader, val.partition_count);
-    };
-
-    // ---------- meta_request_header -------------
-    struct meta_request_header
-    {
-        std::string rpc_tag;
-    };
-
-    inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val)
-    {
-        marshall(writer, val.rpc_tag);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ meta_request_header& val)
-    {
-        unmarshall(reader, val.rpc_tag);
     };
 
     // ---------- meta_response_header -------------

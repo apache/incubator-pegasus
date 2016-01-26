@@ -102,18 +102,40 @@ namespace dsn {
     // error_code
     inline void marshall(::dsn::binary_writer& writer, const error_code& val)
     {
-        int err = val.get();
-        marshall(writer, err);
+        // avoid memory copy, equal to writer.write(std::string)
+        const char* cstr = val.to_string();
+        int len = static_cast<int>(strlen(cstr));
+        writer.write((const char*)&len, sizeof(int));
+        if (len > 0) writer.write(cstr, len);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ error_code& val)
     {
-        int err;
-        unmarshall(reader, err);
+        std::string name;
+        reader.read(name);
+        error_code err(dsn_error_from_string(name.c_str(), ERR_UNKNOWN));
         val = err;
     }
 
-    // end point
+    // task_code
+    inline void marshall(::dsn::binary_writer& writer, const task_code& val)
+    {
+        // avoid memory copy, equal to writer.write(std::string)
+        const char* cstr = val.to_string();
+        int len = static_cast<int>(strlen(cstr));
+        writer.write((const char*)&len, sizeof(int));
+        if (len > 0) writer.write(cstr, len);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ task_code& val)
+    {
+        std::string name;
+        reader.read(name);
+        task_code code(dsn_task_code_from_string(name.c_str(), TASK_CODE_INVALID));
+        val = code;
+    }
+
+    // dsn_address_t
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ dsn_address_t& val)
     {
         reader.read_pod(val);
@@ -124,6 +146,7 @@ namespace dsn {
         writer.write_pod(val);
     }
 
+    // rpc_address
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val)
     {
         unmarshall(reader, *val.c_addr_ptr());
@@ -144,10 +167,6 @@ namespace dsn {
     {
         reader.read(val);
     }
-
-    // end point
-    //extern inline void marshall(::dsn::binary_writer& writer, ::dsn::rpc_address val);
-    //extern inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val);
 
     // blob
     inline void marshall(::dsn::binary_writer& writer, const blob& val)

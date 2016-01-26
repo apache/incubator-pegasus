@@ -513,7 +513,7 @@ void mutation_log::internal_write_callback(
         while (!reader->is_eof())
         {
             auto old_size = reader->get_remaining_size();
-            mutation_ptr mu = mutation::read_from(*reader, nullptr);
+            mutation_ptr mu = mutation::read_from_log_file(*reader, nullptr);
             dassert(nullptr != mu, "");
             mu->set_logged();
 
@@ -790,7 +790,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     }
 
     mu->data.header.log_offset = _global_end_offset;
-    mu->write_to_scatter([this](blob bb)
+    mu->write_to_log_file([this](blob bb)
     {
         _pending_write->add(bb);
         _global_end_offset += bb.length();

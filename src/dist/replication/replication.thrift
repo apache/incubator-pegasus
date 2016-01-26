@@ -11,17 +11,23 @@ struct global_partition_id
 
 struct mutation_header
 {
-    1:global_partition_id gpid;
-    2:i64             ballot;
-    3:i64             decree;
-    4:i64             log_offset;
-    5:i64             last_committed_decree;
+    1:global_partition_id  gpid;
+    2:i64                  ballot;
+    3:i64                  decree;
+    4:i64                  log_offset;
+    5:i64                  last_committed_decree;
+}
+
+struct mutation_update
+{
+    1:dsn.task_code  code;
+    2:dsn.blob       data;
 }
 
 struct mutation_data
 {
-    1:mutation_header header;
-    2:list<dsn.blob>  updates;
+    1:mutation_header        header;
+    2:list<mutation_update>  updates;
 }
 
 enum partition_status
@@ -46,8 +52,6 @@ struct partition_configuration
     8:i64                    last_committed_decree;
 }
 
-
-
 struct replica_configuration
 {
     1:global_partition_id gpid;
@@ -67,13 +71,13 @@ enum read_semantic_t
 {
     ReadLastUpdate,
     ReadOutdated,
-    ReadSnapshot
+    ReadSnapshot,
 }
 
 struct read_request_header
 {
     1:global_partition_id gpid;
-    2:string              code;
+    2:dsn.task_code       code;
     3:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
     4:i64                 version_decree = -1;
 }
@@ -81,12 +85,12 @@ struct read_request_header
 struct write_request_header
 {
     1:global_partition_id gpid;
-    2:string              code;
+    2:dsn.task_code       code;
 }
 
 struct rw_response_header
 {
-    1:dsn.error_code     err;
+    1:dsn.error_code      err;
 }
 
 struct prepare_ack
@@ -109,8 +113,8 @@ enum learn_type
 
 struct learn_state
 {
-    1:i64 from_decree_excluded;
-    2:i64 to_decree_included;
+    1:i64            from_decree_excluded;
+    2:i64            to_decree_included;
     3:list<dsn.blob> meta;
     4:list<string>   files;
 }
@@ -122,7 +126,7 @@ enum learner_status
     LearningWithPrepare,
     LearningSucceeded,
     LearningFailed,
-    Learning_INVALID
+    Learning_INVALID,
 }
 
 struct learn_request
@@ -203,14 +207,9 @@ struct app_info
     5:i32           partition_count;
 }
 
-struct meta_request_header
-{
-    1:string rpc_tag;
-}
-
 struct meta_response_header
 {
-    1:dsn.error_code err;
+    1:dsn.error_code   err;
     2:dsn.rpc_address  primary_address;
 }
 
@@ -219,7 +218,7 @@ struct configuration_update_request
 {
     1:partition_configuration  config;
     2:config_type              type = config_type.CT_NONE;
-    3:dsn.rpc_address              node;
+    3:dsn.rpc_address          node;
 }
 
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
@@ -242,7 +241,7 @@ struct configuration_proposal_request
 // client => meta server
 struct configuration_query_by_node_request
 {
-    1:dsn.rpc_address    node;
+    1:dsn.rpc_address  node;
 }
 
 struct create_app_options
@@ -255,8 +254,8 @@ struct create_app_options
 
 struct configuration_create_app_request
 {
-    1:string                     app_name;
-    2:create_app_options         options;
+    1:string                   app_name;
+    2:create_app_options       options;
 }
 
 struct drop_app_options
@@ -284,13 +283,13 @@ struct configuration_create_app_response
 
 struct configuration_drop_app_response
 {
-    1:dsn.error_code       err;
+    1:dsn.error_code   err;
 }
 
 struct configuration_list_apps_response
 {
-    1:dsn.error_code       err;
-    2:list<app_info>       infos;
+    1:dsn.error_code   err;
+    2:list<app_info>   infos;
 }
 
 struct configuration_query_by_node_response
