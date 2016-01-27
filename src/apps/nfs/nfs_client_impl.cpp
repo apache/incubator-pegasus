@@ -51,7 +51,17 @@ namespace dsn {
             req->nfs_task = nfs_task;
             req->is_finished = false;
 
-            begin_get_file_size(req->file_size_req, req, 0, 0, 0, &req->file_size_req.source); // async copy file
+            get_file_size(
+                    req->file_size_req,
+                    [=](error_code err, get_file_size_response&& resp)
+                    {
+                        end_get_file_size(err, std::move(resp), req);
+                    },
+                    std::chrono::milliseconds(0),
+                    0,
+                    0,
+                    req->file_size_req.source
+                    );
         }
 
         void nfs_client_impl::end_get_file_size(
@@ -174,7 +184,16 @@ namespace dsn {
                     if (req->is_valid)
                     {
                         req->add_ref();
-                        req->remote_copy_task = begin_copy(req->copy_req, req.get(), 0, 0, 0, &req->file_ctx->user_req->file_size_req.source);
+                        req->remote_copy_task = copy(
+                            req->copy_req,
+                            [=](error_code err, copy_response&& resp)
+                            {
+                                end_copy(err, std::move(resp), req.get());
+                            },
+                            std::chrono::milliseconds(0),
+                            0,
+                            0,
+                            req->file_ctx->user_req->file_size_req.source);
 
                         if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
                         {
@@ -317,22 +336,19 @@ namespace dsn {
 
             {
                 zauto_lock l(reqc->lock);
-
-                reqc->local_write_task = file::write(
+                auto& reqc_save = *reqc.get();
+                reqc_save.local_write_task = file::write(
                     hfile,
-                    reqc->response.file_content.data(),
-                    reqc->response.size,
-                    reqc->response.offset,
+                    reqc_save.response.file_content.data(),
+                    reqc_save.response.size,
+                    reqc_save.response.offset,
                     LPC_NFS_WRITE,
                     this,
-                    std::bind(
-                    &nfs_client_impl::local_write_callback,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    reqc
-                    ),
-                    0);
+                    [this, reqc_cap = std::move(reqc)] (error_code err, int sz)
+                    {
+                        local_write_callback(err, sz, std::move(reqc_cap));
+                    }
+                );
             }
         }
 

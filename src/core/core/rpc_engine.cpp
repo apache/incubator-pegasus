@@ -93,9 +93,7 @@ namespace dsn {
     }
 
     bool rpc_client_matcher::on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms)
-    {
-        dassert(reply != nullptr, "cannot receive an empty reply message");
-        
+    {       
         rpc_response_task* call;
         task* timeout_task;
         int bucket_index = key % MATCHER_BUCKET_NR;
@@ -112,25 +110,41 @@ namespace dsn {
             }
             else
             {
-                dassert(reply->get_count() == 0, 
-                    "reply should not be referenced by anybody so far");
-                delete reply;
+                if (reply)
+                {
+                    dassert(reply->get_count() == 0,
+                        "reply should not be referenced by anybody so far");
+                    delete reply;
+                }
                 return false;
             }
         }
-
+                
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         if (timeout_task != task::get_current_task())
         {
             timeout_task->cancel(false); // no need to wait
         }
         timeout_task->release_ref(); // added above in the same function
-        
+
+        // if rpc is early terminated with empty reply
+        if (nullptr == reply)
+        {
+            call->set_delay(delay_ms);
+            call->enqueue(ERR_TIMEOUT, reply);
+            call->release_ref(); // added in on_call
+            return true;
+        }
+
+        // normal reply        
         if (reply->error() == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;
             ::unmarshall((dsn_message_t)reply, addr);
             _engine->call_ip(addr, call->get_request(), call, true);
+
+            dassert(reply->get_count() == 0,
+                "reply should not be referenced by anybody so far");
             delete reply;
         }
         else
@@ -408,14 +422,14 @@ namespace dsn {
     {
         const service_spec& spec = service_engine::fast_instance().spec();
         auto net = utils::factory_store<network>::create(
-            netcs.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
+            netcs.factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, nullptr);
         net->reset_parser(netcs.hdr_format, netcs.message_buffer_block_size);
 
         for (auto it = spec.network_aspects.begin();
             it != spec.network_aspects.end();
             it++)
         {
-            net = utils::factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, net);
+            net = utils::factory_store<network>::create(it->c_str(), ::dsn::PROVIDER_TYPE_ASPECT, this, net);
         }
 
         // start the net

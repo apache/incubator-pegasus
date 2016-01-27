@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     dsn::example::echo_client client(server_addr);
     std::string resp;
 
-    client.ping("hihihihihihii", resp);
+    client.ping_sync("hihihihihihii");
 
     return 0;
 }

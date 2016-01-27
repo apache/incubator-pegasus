@@ -52,7 +52,7 @@ namespace dsn {
         private:
             cli_client     _client;
             ::dsn::rpc_address  _target;
-            int            _timeout_seconds;
+            std::chrono::seconds            _timeout;
         };
     }
 }

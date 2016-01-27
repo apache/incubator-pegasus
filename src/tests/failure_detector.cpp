@@ -231,7 +231,7 @@ void fd_test_init()
 bool get_worker_and_master(test_worker* &worker, std::vector<test_master*> &masters)
 {
     started_apps = 0;
-    bool ans = spin_wait_condition( [](){ return started_apps=MCOUNT+1; }, 30);
+    bool ans = spin_wait_condition( [](){ return started_apps = MCOUNT+1; }, 30);
     if (!ans)
         return false;
 
@@ -279,11 +279,11 @@ void master_group_set_leader(std::vector<test_master*>& master_group, int leader
 void worker_set_leader(test_worker* worker, int leader_contact)
 {
     worker->fd()->set_leader_for_test( rpc_address("localhost", MPORT_START+leader_contact) );
-    rpc_read_stream response;
 
     config_master_message msg = { rpc_address("localhost", MPORT_START+leader_contact), true };
-    auto err = rpc::call_typed_wait(
-        &response,
+    error_code err;
+    bool response;
+    std::tie(err, response) = rpc::call_wait<bool>(
         rpc_address("localhost", WPORT),
         dsn_task_code_t(RPC_MASTER_CONFIG),
         msg);
@@ -293,11 +293,11 @@ void worker_set_leader(test_worker* worker, int leader_contact)
 void clear(test_worker* worker, std::vector<test_master*> masters)
 {
     rpc_address leader = dsn_group_get_leader(worker->fd()->get_servers().group_handle());
-    rpc_read_stream response;
 
     config_master_message msg = { leader, false };
-    auto err = rpc::call_typed_wait(
-        &response,
+    error_code err;
+    bool response;
+    std::tie(err, response) = rpc::call_wait<bool>(
         rpc_address("localhost", WPORT),
         dsn_task_code_t(RPC_MASTER_CONFIG),
         msg);

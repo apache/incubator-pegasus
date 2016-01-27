@@ -120,11 +120,13 @@ namespace dsn {
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        std::shared_ptr<message_parser> new_message_parser();
+        std::unique_ptr<message_parser> new_message_parser();
+
+        // for in-place new message parser
+        std::pair<message_parser::factory2, size_t> get_message_parser_info();
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
-        int delay(int len) { return _delayer.delay(len, _send_queue_threshold); }
 
     protected:
         static uint32_t get_local_ipv4();
@@ -134,7 +136,6 @@ namespace dsn {
         network_header_format         _parser_type;
         int                           _message_buffer_block_size;
         int                           _max_buffer_block_count_per_send;
-        shared_exp_delay              _delayer;
         int                           _send_queue_threshold;
 
     private:
@@ -189,7 +190,7 @@ namespace dsn {
         rpc_session(
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
-            std::shared_ptr<message_parser>& parser,
+            std::unique_ptr<message_parser>&& parser,
             bool is_client
             );
         virtual ~rpc_session();
@@ -202,7 +203,8 @@ namespace dsn {
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
         bool cancel(message_ex* request);
-        void delay_rpc_request_rate(int delay_ms);
+        bool pause_recv();
+        void resume_recv();
 
     // for client session
     public:
@@ -215,6 +217,7 @@ namespace dsn {
     // for server session
     public:
         void on_recv_request(message_ex* msg, int delay_ms);
+        void start_read_next(int read_next = 256);
 
     // shared
     protected:        
@@ -225,10 +228,7 @@ namespace dsn {
         //
         virtual void send(uint64_t signature) = 0;
         virtual void do_read(int read_next) = 0;
-
-        friend void __delayed_rpc_session_read_next__(void*);
-        void start_read_next(int read_next = 256);
-
+        
     protected:
         bool try_connecting(); // return true when it is permitted
         void set_connected();
@@ -248,7 +248,7 @@ namespace dsn {
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
         int                                _max_buffer_block_count_per_send;        
-        std::shared_ptr<dsn::message_parser> _parser;
+        std::unique_ptr<dsn::message_parser> _parser;
 
         // messages are currently being sent
         // also locked by _lock later
@@ -272,16 +272,56 @@ namespace dsn {
         bool                               _is_sending_next;
         dlink                              _messages;        
         volatile session_state             _connect_state;
-        uint64_t                           _message_sent;   
-        int                                _delay_server_receive_ms;
+        uint64_t                           _message_sent;
         // ]
+
+        // for throttling
+        enum class recv_state
+        {
+            to_be_paused,
+            paused,
+            normal
+        };
+        std::atomic<recv_state>            _recv_state;
     };
 
     // --------- inline implementation ---------------
-    inline void rpc_session::delay_rpc_request_rate(int delay_ms)
+    inline bool rpc_session::pause_recv()
     {
-        utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (delay_ms > _delay_server_receive_ms)
-            _delay_server_receive_ms = delay_ms;
+        recv_state s = recv_state::normal;
+        return _recv_state.compare_exchange_strong(s, recv_state::to_be_paused, std::memory_order_relaxed);
+    }
+
+    inline void rpc_session::resume_recv()
+    {
+        while (true)
+        {
+            recv_state s = recv_state::paused;
+            if (_recv_state.compare_exchange_strong(s, recv_state::normal, std::memory_order_relaxed))
+            {
+                start_read_next();
+                return;
+            }
+
+            // not paused yet
+            else if (s == recv_state::to_be_paused)
+            {
+                // recover to normal, no real pause is done before
+                if (_recv_state.compare_exchange_strong(s, recv_state::normal, std::memory_order_relaxed))
+                {
+                    return;
+                }
+                else
+                {
+                    // continue the next loop
+                }
+            }
+
+            else
+            {
+                // s == recv_state::normal
+                return;
+            }
+        }        
     }
 }

@@ -20,70 +20,61 @@ public:
     virtual ~<?=$svc->name?>_client() {}
 
 <?php foreach ($svc->functions as $f) { ?>
-
+ 
     // ---------- call <?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        ::dsn::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
+        ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
     }
 <?php    } else { ?>
     // - synchronous 
-    ::dsn::error_code <?=$f->name?>(
+    std::pair<::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        /*out*/ <?=$f->get_cpp_return_type()?>& resp, 
-        int timeout_milliseconds = 0, 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        dsn::rpc_read_stream response;
-        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
-        if (err == ::dsn::ERR_OK)
-        {
-            unmarshall(response, resp);
-        }
-        return err;
+        return ::dsn::rpc::wait_and_unwrap<<?=$f->get_cpp_return_type()?>>(
+            ::dsn::rpc::call(
+                server_addr.unwrap_or(_server),
+                <?=$f->get_rpc_code()?>,
+                <?=$f->get_first_param()->name?>,
+                nullptr,
+                empty_callback,
+                hash,
+                timeout
+                )
+            );
     }
     
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::task_ptr begin_<?=$f->name?>(
+    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?>  
+    template<typename TCallback>
+    ::dsn::task_ptr <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
+        return ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server), 
                     <?=$f->get_rpc_code()?>, 
                     <?=$f->get_first_param()->name?>, 
-                    this, 
-                    [=](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
-                    {
-                        <?=$svc->name?>_client::end_<?=$f->name?>(err, std::move(resp), context);
-                    },
+                    this,
+                    std::forward<TCallback>(callback),
                     request_hash, 
-                    timeout_milliseconds, 
+                    timeout, 
                     reply_hash
                     );
-    }
-
-    virtual void end_<?=$f->name?>(
-        ::dsn::error_code err, 
-        <?=$f->get_cpp_return_type()?>&& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
     }
 <?php    }?>
 <?php } ?>

@@ -103,173 +103,49 @@ namespace dsn
         }
     }
 
-    namespace tasking 
+    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_hash)
     {
-        void enqueue(
-            /*our*/ task_ptr* ptask, // null for not returning task handle
-            dsn_task_code_t evt,
-            clientlet* svc,
-            task_handler callback,
-            int hash/* = 0*/,
-            int delay_milliseconds /*= 0*/,
-            int timer_interval_milliseconds /*= 0*/
-            )
-        {
-            dsn_task_t t;
-            auto tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
-
-            tsk->add_ref(); // released in exec callback
-            if (timer_interval_milliseconds != 0)
-            {
-                t = dsn_task_create_timer_ex(evt,
-                    safe_task<task_handler>::exec,
-                    safe_task<task_handler>::on_cancel,
-                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
-            }
-            else
-            {
-                t = dsn_task_create_ex(evt,
-                    safe_task<task_handler>::exec,
-                    safe_task<task_handler>::on_cancel,
-                    tsk, hash, svc ? svc->tracker() : nullptr);
-            }
-
-            tsk->set_task_info(t);
-
-            if (ptask) *ptask = tsk;
-
-            dsn_task_call(tsk->native_handle(), delay_milliseconds);
-        }
-
-        task_ptr enqueue(
-            dsn_task_code_t evt,
-            clientlet* svc,
-            task_handler callback,
-            int hash /*= 0*/,
-            int delay_milliseconds /*= 0*/,
-            int timer_interval_milliseconds /*= 0*/
-            )
-        {
-            task_ptr t;
-            enqueue(&t, evt, svc, callback, hash, delay_milliseconds, timer_interval_milliseconds);
-            return t;
-        }
+        task_ptr tsk = new safe_task_handle;
+        //do not add_ref here
+        auto t = dsn_rpc_create_response_task(
+            request,
+            nullptr,
+            nullptr,
+            reply_hash,
+            svc ? svc->tracker() : nullptr
+            );
+        tsk->set_task_info(t);
+        return tsk;
     }
-    
+
     namespace file
     {
-        task_ptr read(
-            dsn_handle_t fh,
-            char* buffer,
-            int count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            aio_handler callback,
-            int hash /*= 0*/
-            )
+        task_ptr create_aio_task(dsn_task_code_t callback_code, clientlet* svc, empty_callback_t, int hash)
         {
-            task_ptr tsk = new safe_task<aio_handler>(callback);
-
-            if (callback != nullptr)
-                tsk->add_ref(); // released in exec_aio
-
-            dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-                callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                safe_task<aio_handler>::on_cancel,
-                tsk, hash, svc ? svc->tracker() : nullptr
+            task_ptr tsk = new safe_task_handle;
+            //do not add_ref here
+            dsn_task_t t = dsn_file_create_aio_task(callback_code,
+                nullptr,
+                nullptr, hash, svc ? svc->tracker() : nullptr
                 );
-
             tsk->set_task_info(t);
-
-            dsn_file_read(fh, buffer, count, offset, t);
             return tsk;
         }
 
-        task_ptr write(
-            dsn_handle_t fh,
-            const char* buffer,
-            int count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            aio_handler callback,
-            int hash /*= 0*/
-            )
-        {
-            task_ptr tsk = new safe_task<aio_handler>(callback);
 
-            if (callback != nullptr)
-                tsk->add_ref(); // released in exec_aio
-
-            dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-                callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                safe_task<aio_handler>::on_cancel,
-                tsk, hash, svc ? svc->tracker() : nullptr
-                );
-
-            tsk->set_task_info(t);
-
-            dsn_file_write(fh, buffer, count, offset, t);
-            return tsk;
-        }
-
-        task_ptr write_vector(
-            dsn_handle_t fh,
-            const dsn_file_buffer_t* buffers,
-            int buffer_count,
-            uint64_t offset,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            aio_handler callback,
-            int hash /*= 0*/)
-        {
-            task_ptr tsk = new safe_task<aio_handler>(callback);
-
-            if (callback != nullptr)
-                tsk->add_ref(); // released in exec_aio
-
-            dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-                callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                safe_task<aio_handler>::on_cancel,
-                tsk, hash, svc ? svc->tracker() : nullptr
-                );
-
-            tsk->set_task_info(t);
-
-            dsn_file_write_vector(fh, buffers, buffer_count, offset, t);
-            return tsk;
-        }
-
-        task_ptr copy_remote_files(
+        void copy_remote_files_impl(
             ::dsn::rpc_address remote,
             const std::string& source_dir,
-            std::vector<std::string>& files,  // empty for all
+            const std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
             bool overwrite,
-            dsn_task_code_t callback_code,
-            clientlet* svc,
-            aio_handler callback,
-            int hash /*= 0*/
+            dsn_task_t native_task
             )
         {
-            task_ptr tsk = new safe_task<aio_handler>(callback);
-
-            if (callback != nullptr)
-                tsk->add_ref(); // released in exec_aio
-
-            dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-                callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                safe_task<aio_handler>::on_cancel,
-                tsk, hash, svc ? svc->tracker() : nullptr
-                );
-
-            tsk->set_task_info(t);
-
             if (files.empty())
             {
                 dsn_file_copy_remote_directory(remote.c_addr(), source_dir.c_str(), dest_dir.c_str(),
-                    overwrite, t);
+                    overwrite, native_task);
             }
             else
             {
@@ -283,10 +159,9 @@ namespace dsn
 
                 dsn_file_copy_remote_files(
                     remote.c_addr(), source_dir.c_str(), ptr_base,
-                    dest_dir.c_str(), overwrite, t
+                    dest_dir.c_str(), overwrite, native_task
                     );
             }
-            return tsk;
         }
     }
     

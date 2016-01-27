@@ -45,7 +45,7 @@ class factory_store
 {
 public:
     template<typename TFactory>
-    static bool register_factory(const char* name, TFactory factory, int type)
+    static bool register_factory(const char* name, TFactory factory, ::dsn::provider_type type)
     {
         factory_entry entry;
         entry.dummy = nullptr;
@@ -55,7 +55,7 @@ public:
     }
 
     template<typename TFactory>
-    static TFactory get_factory(const char* name, int type)
+    static TFactory get_factory(const char* name, ::dsn::provider_type type)
     {
         factory_entry entry;
         if (singleton_store<std::string, factory_entry>::instance().get(std::string(name), entry))
@@ -80,7 +80,7 @@ public:
     }
 
     template<typename T1, typename T2, typename T3, typename T4, typename T5>
-    static TResult* create(const char* name, int type, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
+    static TResult* create(const char* name, ::dsn::provider_type type, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
     {
         typedef TResult* (*TFactory)(T1,T2,T3,T4,T5);
         TFactory f = get_factory<TFactory>(name, type);
@@ -88,7 +88,7 @@ public:
     }
 
     template<typename T1, typename T2, typename T3, typename T4>
-    static TResult* create(const char* name, int type, T1 t1, T2 t2, T3 t3, T4 t4)
+    static TResult* create(const char* name, ::dsn::provider_type type, T1 t1, T2 t2, T3 t3, T4 t4)
     {
         typedef TResult* (*TFactory)(T1,T2,T3,T4);
         TFactory f = get_factory<TFactory>(name, type);
@@ -96,7 +96,7 @@ public:
     }
 
     template<typename T1, typename T2, typename T3>
-    static TResult* create(const char* name, int type, T1 t1, T2 t2, T3 t3)
+    static TResult* create(const char* name, ::dsn::provider_type type, T1 t1, T2 t2, T3 t3)
     {
         typedef TResult* (*TFactory)(T1,T2,T3);
         TFactory f = get_factory<TFactory>(name, type);
@@ -104,7 +104,7 @@ public:
     }
 
     template<typename T1, typename T2>
-    static TResult* create(const char* name, int type, T1 t1, T2 t2)
+    static TResult* create(const char* name, ::dsn::provider_type type, T1 t1, T2 t2)
     {
         typedef TResult* (*TFactory)(T1,T2);
         TFactory f = get_factory<TFactory>(name, type);
@@ -112,14 +112,14 @@ public:
     }
 
     template<typename T1>
-    static TResult* create(const char* name, int type, T1 t1)
+    static TResult* create(const char* name, ::dsn::provider_type type, T1 t1)
     {
         typedef TResult* (*TFactory)(T1);
         TFactory f = get_factory<TFactory>(name, type);
         return f ? f(t1) : nullptr;
     }
 
-    static TResult* create(const char* name, int type)
+    static TResult* create(const char* name, ::dsn::provider_type type)
     {
         typedef TResult* (*TFactory)();
         TFactory f = get_factory<TFactory>(name, type);
@@ -127,7 +127,7 @@ public:
     }
 
 private:
-    static void report_error(const char* name, int type)
+    static void report_error(const char* name, ::dsn::provider_type type)
     {
         dlog(LOG_LEVEL_FATAL, "factory.store", "cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 
@@ -150,7 +150,7 @@ private:
     {
         TResult* dummy;
         void*    factory;
-        int      type;
+        ::dsn::provider_type  type;
     };
 };
 

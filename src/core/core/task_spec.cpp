@@ -183,7 +183,6 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec>& specs)
     [threadpool..default]
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    queue_length_throttling_threshold = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx
@@ -195,7 +194,6 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec>& specs)
     run = true
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    queue_length_throttling_threshold = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx

@@ -129,7 +129,7 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
     {
         io.disk = new disk_engine(this);
         aio_provider* aio = factory_store<aio_provider>::create(
-            spec.aio_factory_name.c_str(), PROVIDER_TYPE_MAIN, io.disk, nullptr);
+            spec.aio_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, io.disk, nullptr);
         for (auto it = spec.aio_aspects.begin();
             it != spec.aio_aspects.end();
             it++)
@@ -405,14 +405,14 @@ void service_engine::init_before_toollets(const service_spec& spec)
 
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(
-        spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, spec.dir_log.c_str()
+        spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str()
         );
     _memory = factory_store<memory_provider>::create(
-        spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN
+        spec.memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         );
     perf_counters::instance().register_factory(
         factory_store<perf_counter>::get_factory<perf_counter::factory>(
-        spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN
+        spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         )
         );
 }

@@ -16,12 +16,7 @@ class <?=$_PROG->name?>_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    <?=$_PROG->name?>_client_app()
-    {
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = nullptr;
-<?php } ?>
-    }
+    <?=$_PROG->name?>_client_app() {}
     
     ~<?=$_PROG->name?>_client_app() 
     {
@@ -37,9 +32,9 @@ public:
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
 <?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = new <?=$svc->name?>_client(meta_servers, argv[1]);
+        _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(meta_servers, argv[1]));
 <?php } ?>
-        _timer = ::dsn::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue_timer(<?=$_PROG->get_test_task_code()?>, this, [this]{on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -47,38 +42,32 @@ public:
     {
         _timer->cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?> 
-        if (_<?=$svc->name?>_client != nullptr)
-        {
-            delete _<?=$svc->name?>_client;
-            _<?=$svc->name?>_client = nullptr;
-        }
+        _<?=$svc->name?>_client.reset();
 <?php } ?>
     }
 
     void on_test_timer()
     {
-<?php
-foreach ($_PROG->services as $svc)
-{
-    echo "        // test for service '". $svc->name ."'". PHP_EOL;
-    foreach ($svc->functions as $f)
-{?>
+<?php foreach ($_PROG->services as $svc) { ?>
+        // test for service <?=$svc->name?>
+        using namespace svc_<?=$svc->name?>;
+<?php foreach ($svc->functions as $f) { ?>
         {
             <?=$f->get_first_param()->get_cpp_type()?> req;
 <?php if ($f->is_one_way()) { ?>
             _<?=$svc->name?>_client-><?=$f->name?>(req);
 <?php } else { ?>
             //sync:
+            error_code err;
             <?=$f->get_cpp_return_type()?> resp;
-            auto err = _<?=$svc->name?>_client-><?=$f->name?>(req, resp);
+            std::tie(err, resp) = _<?=$svc->name?>_client-><?=$f->name?>_sync(req);
             std::cout << "call <?=$f->get_rpc_code()?> end, return " << err.to_string() << std::endl;
             //async: 
-            //_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
+            //_<?=$svc->name?>_client-><?=$f->name?>(req, empty_callback);
 <?php } ?>           
         }
-<?php }    
-}
-?>
+<?php } ?>
+<?php } ?>
     }
 
 private:
@@ -86,7 +75,7 @@ private:
     ::dsn::rpc_address _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
-    <?=$svc->name?>_client *_<?=$svc->name?>_client;
+    std::unique_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
 <?php } ?>
 };
 
@@ -96,10 +85,7 @@ class <?=$svc->name?>_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    <?=$svc->name?>_perf_test_client_app()
-    {
-        _<?=$svc->name?>_client = nullptr;
-    }
+    <?=$svc->name?>_perf_test_client_app() {}
 
     ~<?=$svc->name?>_perf_test_client_app()
     {
@@ -114,22 +100,18 @@ public:
         std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
-        _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]);
+        _<?=$svc->name?>_client.reset(new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]));
         _<?=$svc->name?>_client->start_test();
         return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
     {
-        if (_<?=$svc->name?>_client != nullptr)
-        {
-            delete _<?=$svc->name?>_client;
-            _<?=$svc->name?>_client = nullptr;
-        }
+        _<?=$svc->name?>_client.reset();
     }
     
 private:
-    <?=$svc->name?>_perf_test_client *_<?=$svc->name?>_client;
+    std::unique_ptr<<?=$svc->name?>_perf_test_client> _<?=$svc->name?>_client;
 };
 <?php } ?>
 

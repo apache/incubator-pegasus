@@ -65,12 +65,11 @@ TEST(replication, mutation_log_learn)
         {
             writer.write(str);
         }
-        mu->data.updates.push_back(writer.get_buffer());
+        mu->data.updates.push_back(mutation_update());
+        mu->data.updates.back().code = RPC_REPLICATION_CLIENT_READ;
+        mu->data.updates.back().data = writer.get_buffer();
 
-        mutation::client_info ci;
-        ci.code = 100;
-        ci.req = nullptr;
-        mu->client_requests.push_back(ci);
+        mu->client_requests.push_back(nullptr);
 
         mutations.push_back(mu);
     }
@@ -142,13 +141,13 @@ TEST(replication, mutation_log_learn)
                     sizeof(mu->data.header)) == 0
                     );
                 EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-                EXPECT_TRUE(wmu->data.updates[0].length() == mu->data.updates[0].length());
-                EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data(),
-                    (const void*)mu->data.updates[0].data(),
-                    mu->data.updates[0].length()) == 0
+                EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
+                EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data.data(),
+                    (const void*)mu->data.updates[0].data.data(),
+                    mu->data.updates[0].data.length()) == 0
                     );
+                EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
-                EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
 
                 return true;
             },

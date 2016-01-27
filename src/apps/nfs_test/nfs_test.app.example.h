@@ -81,8 +81,8 @@ namespace dsn {
                     _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
-                                                             this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue_timer(::dsn::service::LPC_NFS_REQUEST_TIMER,
+                        this, [this] {on_request_timer();}, std::chrono::milliseconds(1000));
 
                     return ::dsn::ERR_OK;
                 }
@@ -104,15 +104,13 @@ namespace dsn {
                     std::vector<std::string> files; // empty is for all
                     files.push_back("dsn.nfs.test");
                     bool overwrite = true;
-                    
                     file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite,
                         ::dsn::service::LPC_NFS_COPY_FILE, nullptr,
-                        std::bind(&nfs_client_app::internal_copy_callback,
-                        this,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        ++_req_index
-                        ));
+                        [this, index = _req_index.fetch_add(1, std::memory_order_relaxed) + 1](error_code err, int sz)
+                        {
+                            internal_copy_callback(err, sz, index);
+                        }
+                        );
 
                     ddebug("remote file copy request %d started", (int)_req_index);
                 }

@@ -15,15 +15,8 @@ class <?=$svc->name?>_client
     : public ::dsn::replication::replication_app_client_base
 {
 public:
-    <?=$svc->name?>_client(
-        const std::vector< ::dsn::rpc_address>& meta_servers,
-        const char* replicated_app_name)
-        : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name) 
-    {
-    }
-
+    using replication_app_client_base::replication_app_client_base;
     virtual ~<?=$svc->name?>_client() {}
-    
     // from requests to partition index
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
 <?php
@@ -38,88 +31,47 @@ foreach ($keys as $k => $v)
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>
-
+ 
     // ---------- call <?=$f->get_rpc_code()?> ------------
-<?php if ($f->is_one_way()) {?>
-    void <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?><?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 
-        )
-    {
-        ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_key_hash(<?=$f->get_first_param()->name?>),
-            <?=$f->get_rpc_code()?>,
-            <?=$f->get_first_param()->name?>,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?> 
-            );
-    }
-<?php    } else { ?>
-    // - synchronous 
-    ::dsn::error_code <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        /*out*/ <?=$f->get_cpp_return_type()?>& resp, 
-        int timeout_milliseconds = 0<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 
-        )
-    {
-        auto resp_task = ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_key_hash(<?=$f->get_first_param()->name?>),
-            <?=$f->get_rpc_code()?>,
-            <?=$f->get_first_param()->name?>,
-            nullptr,
-            nullptr,
-            nullptr,
-            timeout_milliseconds,
-            0<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?> 
-            );
-        resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_OK)
-        {
-            ::unmarshall(resp_task->response(), resp);
-        }
-        return resp_task->error();
-    }
-    
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::task_ptr begin_<?=$f->name?>(
+    // - synchronous  
+    std::pair<::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0<?=$f->is_write ? "":",  ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
         )
     {
-        return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
+        return dsn::rpc::wait_and_unwrap<<?=$f->get_cpp_return_type()?>>(
+            ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?>(
+                get_key_hash(<?=$f->get_first_param()->name?>),
+                <?=$f->get_rpc_code()?>,
+                <?=$f->get_first_param()->name?>,
+                this,
+                empty_callback,
+                timeout,
+                0<?=$f->is_write ? "":", ". PHP_EOL."                read_semantic"?>
+                )
+            );
+    }
+ 
+    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
+    template<typename TCallback>
+    ::dsn::task_ptr <?=$f->name?>(
+        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int reply_hash = 0<?=$f->is_write ? "":",  ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
+        )
+    {
+        return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?>(
             get_key_hash(<?=$f->get_first_param()->name?>),
-            <?=$f->get_rpc_code()?>, 
+            <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
             this,
-            [=](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
-            {
-                end_<?=$f->name?>(err, std::move(resp), context);
-            },
-            timeout_milliseconds,
-            reply_hash<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?> 
+            std::forward<TCallback>(callback),
+            timeout,
+            reply_hash<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?>
             );
     }
-
-    virtual void end_<?=$f->name?>(
-        ::dsn::error_code err, 
-        <?=$f->get_cpp_return_type()?>&& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
-        {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
-    }
-    
-    
 <?php    }?>
-<?php } ?>
 };
-
 <?php } ?>
 <?=$_PROG->get_cpp_namespace_end()?>

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,9 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Auto generated, do not modify
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
  */
 # pragma once
 # include "echo.code.definition.h"
@@ -49,8 +47,6 @@ protected:
     // RPC_ECHO_ECHO_PING 
     virtual void on_ping(const std::string& val, ::dsn::rpc_replier<std::string>& reply)
     {
-        /*std::cout << "... exec RPC_ECHO_ECHO_PING ... (not implemented) " << std::endl;
-        std::string resp;*/
         reply(val);
     }
     

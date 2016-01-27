@@ -42,69 +42,54 @@ class echo_client
     : public virtual ::dsn::clientlet
 {
 public:
-    echo_client(::dsn::rpc_address server) { _server = server; }    
+    echo_client(::dsn::rpc_address server) { _server = server; }
     echo_client() { }
     virtual ~echo_client() {}
 
 
     // ---------- call RPC_ECHO_ECHO_PING ------------
     // - synchronous 
-    ::dsn::error_code ping(
+    std::pair<::dsn::error_code, std::string> ping_sync(
         const std::string& val, 
-        /*out*/ std::string& resp, 
-        int timeout_milliseconds = 0, 
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
-        ::dsn::rpc_read_stream response;
-        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_ECHO_ECHO_PING, val, hash, timeout_milliseconds);
-        if (err == ::dsn::ERR_OK)
-        {
-            unmarshall(response, resp);
-        }
-        return err;
+        return ::dsn::rpc::wait_and_unwrap<std::string>(
+            ::dsn::rpc::call(
+                server_addr.unwrap_or(_server),
+                RPC_ECHO_ECHO_PING,
+                val,
+                nullptr,
+                empty_callback,
+                hash,
+                timeout
+                )
+            );
     }
     
     // - asynchronous with on-stack std::string and std::string 
-    ::dsn::task_ptr begin_ping(
+    template<typename TCallback>
+    ::dsn::task_ptr ping(
         const std::string& val, 
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
+        TCallback&& callback,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::rpc_address *p_server_addr = nullptr)
+        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        )
     {
-        return ::dsn::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
+        return ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server), 
                     RPC_ECHO_ECHO_PING, 
                     val, 
                     this,
-                    [=](error_code err, std::string&& resp)
-                    {
-                        end_ping(err, std::move(resp), context);
-                    },
+                    std::forward<TCallback>(callback),
                     request_hash, 
-                    timeout_milliseconds, 
+                    timeout, 
                     reply_hash
                     );
     }
-
-    virtual void end_ping(
-        ::dsn::error_code err, 
-        const std::string& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK)
-        {
-            //std::cout << "reply RPC_ECHO_ECHO_PING err : " << err.to_string() << std::endl;
-        }
-        else
-        {
-            //std::cout << "reply RPC_ECHO_ECHO_PING ok" << std::endl;
-        }
-    }
-    
 
 private:
     ::dsn::rpc_address _server;

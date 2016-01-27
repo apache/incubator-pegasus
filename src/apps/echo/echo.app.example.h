@@ -43,8 +43,7 @@ class echo_server_app :
     public ::dsn::service_app
 {
 public:
-    echo_server_app()
-    {}
+    echo_server_app() {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
@@ -67,10 +66,7 @@ class echo_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    echo_client_app() 
-    {
-        _echo_client = nullptr;
-    }
+    echo_client_app() {}
     
     ~echo_client_app() 
     {
@@ -83,8 +79,8 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
-        _echo_client = new echo_client(_server);
-        _timer = ::dsn::tasking::enqueue(LPC_ECHO_TEST_TIMER, this, &echo_client_app::on_test_timer, 0, 0, 1000);
+        _echo_client.reset(new echo_client(_server));
+        _timer = ::dsn::tasking::enqueue_timer(LPC_ECHO_TEST_TIMER, this, [this]{on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -92,22 +88,16 @@ public:
     {
         _timer->cancel(true);
  
-        if (_echo_client != nullptr)
-        {
-            delete _echo_client;
-            _echo_client = nullptr;
-        }
+        _echo_client.reset();
     }
 
     void on_test_timer()
     {
         // test for service 'echo'
         {
-            std::string req;
             //sync:
-            std::string resp;
-            auto err = _echo_client->ping(req, resp);
-            std::cout << "call RPC_ECHO_ECHO_PING end, return " << err.to_string() << std::endl;
+            auto result = _echo_client->ping_sync({});
+            std::cout << "call RPC_ECHO_ECHO_PING end, return " << result.first.to_string() << std::endl;
             //async: 
             //_echo_client->begin_ping(req);
            
@@ -118,7 +108,7 @@ private:
     ::dsn::task_ptr _timer;
     ::dsn::rpc_address _server;
     
-    echo_client *_echo_client;
+    std::unique_ptr<echo_client> _echo_client;
 };
 
 class echo_perf_test_client_app :
