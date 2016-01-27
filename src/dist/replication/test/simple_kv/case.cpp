@@ -930,9 +930,8 @@ bool client_case_line::parse_type_name(const std::string& name)
 }
 
 static const char* s_replica_config_commands[] = {
-    "none", "assign_primary", "upgrade_to_primary", "add_secondary",
-    "downgrade_to_secondary", "downgrade_to_inactive", "remove",
-    "upgrade_to_secondary", nullptr
+    "none", "assign_primary", "upgrade_to_primary", "add_secondary", "upgrade_to_secondary",
+    "downgrade_to_secondary", "downgrade_to_inactive", "remove", nullptr
 };
 
 dsn::replication::config_type client_case_line::parse_config_command(const std::string& command_name) const
@@ -949,7 +948,6 @@ dsn::replication::config_type client_case_line::parse_config_command(const std::
 
 std::string client_case_line::config_command_to_string(dsn::replication::config_type cfg_command) const
 {
-    dassert(cfg_command <= CT_UPGRADE_TO_SECONDARY, "");
     return s_replica_config_commands[cfg_command];
 }
 
