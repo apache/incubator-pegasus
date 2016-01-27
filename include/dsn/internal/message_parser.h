@@ -38,21 +38,30 @@
 
 # include <dsn/ports.h>
 # include <dsn/internal/rpc_message.h>
+# include <dsn/internal/singleton.h>
+# include <vector>
 
 namespace dsn 
 {
     class message_parser
     {
     public:
-        template <typename T> static message_parser* create(int buffer_block_size)
+        template <typename T> static message_parser* create(int buffer_block_size, bool is_write_only)
         {
-            return new T(buffer_block_size);
+            return new T(buffer_block_size, is_write_only);
         }
 
-        typedef message_parser*  (*factory)(int);
+        template <typename T> static message_parser* create2(void* place, int buffer_block_size, bool is_write_only)
+        {
+            return new(place) T(buffer_block_size, is_write_only);
+        }
 
+        typedef message_parser*  (*factory)(int, bool);
+        typedef message_parser*  (*factory2)(void*, int, bool);
+        
     public:
-        message_parser(int buffer_block_size);
+        message_parser(int buffer_block_size, bool is_write_only);
+        virtual ~message_parser() {}
 
         // before read
         void* read_buffer_ptr(int read_next);
@@ -82,6 +91,9 @@ namespace dsn
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) = 0;
 
         virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) = 0;
+
+        // all current read-ed content are discarded
+        virtual void truncate_read() { _read_buffer_occupied = 0; }
         
     protected:
         void create_new_buffer(int sz);
@@ -93,10 +105,36 @@ namespace dsn
         int             _buffer_block_size;
     };
 
+    class message_parser_manager : public utils::singleton<message_parser_manager>
+    {
+    public:
+        struct parser_factory_info
+        {
+            parser_factory_info() : fmt(NET_HDR_DSN) {}
+
+            network_header_format fmt;
+            message_parser::factory factory;
+            message_parser::factory2 factory2;
+            size_t parser_size;
+        };
+
+    public:
+        message_parser_manager();
+
+        // called only during system init, thread-unsafe
+        void register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz);
+
+        message_parser* create_parser(network_header_format fmt, int buffer_blk_size, bool is_write_only);
+        const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
+
+    private:
+        std::vector<parser_factory_info> _factory_vec;
+    };
+
     class dsn_message_parser : public message_parser
     {
     public:
-        dsn_message_parser(int buffer_block_size);
+        dsn_message_parser(int buffer_block_size, bool is_write_only);
 
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
 

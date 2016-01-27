@@ -320,10 +320,10 @@ namespace dsn
     rpc_session::rpc_session(
         connection_oriented_network& net, 
         ::dsn::rpc_address remote_addr,
-        std::shared_ptr<message_parser>& parser,
+        std::unique_ptr<message_parser>&& parser,
         bool is_client
         )
-        : _net(net), _remote_addr(remote_addr), _parser(parser),
+        : _net(net), _remote_addr(remote_addr), _parser(std::move(parser)),
         _recv_state(recv_state::normal)
     {
         _matcher = nullptr;
@@ -430,11 +430,22 @@ namespace dsn
         _engine->matcher()->on_recv_reply(this, msg->header->id, msg, delay_ms);
     }
 
-    std::shared_ptr<message_parser> network::new_message_parser()
+    std::unique_ptr<message_parser> network::new_message_parser()
     {
-        message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.to_string(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);
+        message_parser * parser = message_parser_manager::instance().create_parser(
+            _parser_type,
+            _message_buffer_block_size,
+            false
+            );
         dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.to_string());
-        return std::shared_ptr<message_parser>(parser);
+
+        return std::unique_ptr<message_parser>(parser);
+    }
+
+    std::pair<message_parser::factory2, size_t>  network::get_message_parser_info()
+    {
+        auto& pinfo = message_parser_manager::instance().get(_parser_type);
+        return std::make_pair(pinfo.factory2, pinfo.parser_size);
     }
 
     uint32_t network::get_local_ipv4()

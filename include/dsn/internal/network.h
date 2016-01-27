@@ -120,7 +120,10 @@ namespace dsn {
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        std::shared_ptr<message_parser> new_message_parser();
+        std::unique_ptr<message_parser> new_message_parser();
+
+        // for in-place new message parser
+        std::pair<message_parser::factory2, size_t> get_message_parser_info();
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
@@ -187,7 +190,7 @@ namespace dsn {
         rpc_session(
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
-            std::shared_ptr<message_parser>& parser,
+            std::unique_ptr<message_parser>&& parser,
             bool is_client
             );
         virtual ~rpc_session();
@@ -245,7 +248,7 @@ namespace dsn {
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
         int                                _max_buffer_block_count_per_send;        
-        std::shared_ptr<dsn::message_parser> _parser;
+        std::unique_ptr<dsn::message_parser> _parser;
 
         // messages are currently being sent
         // also locked by _lock later

@@ -105,7 +105,7 @@ namespace dsn {
         public:
             hpc_rpc_session(
                 socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser,
+                std::unique_ptr<message_parser>&& parser,
                 connection_oriented_network& net,
                 ::dsn::rpc_address remote_addr,
                 bool is_client

@@ -67,7 +67,7 @@ namespace dsn {
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
             register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
             
-            register_message_header_parser<dsn_message_parser>("NET_HDR_DSN");
+            register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);
 #if defined(_WIN32)
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
 #elif defined(__linux__)

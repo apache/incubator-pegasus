@@ -165,8 +165,6 @@ namespace dsn
 
         rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto parser = new_message_parser();
-
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = INADDR_ANY;
@@ -174,7 +172,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
+            auto client = new hpc_rpc_session(sock, new_message_parser(), *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper, true);
             return c;
@@ -191,8 +189,7 @@ namespace dsn
                 {
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
-                    auto parser = new_message_parser();
-                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr, false);
+                    auto rs = new hpc_rpc_session(s, new_message_parser(), *this, client_addr, false);
                     rpc_session_ptr s1(rs);
 
                     rs->bind_looper(_looper);
@@ -435,12 +432,12 @@ namespace dsn
 
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser,
+            std::unique_ptr<message_parser>&& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
             bool is_client
             )
-            : rpc_session(net, remote_addr, parser, is_client),
+            : rpc_session(net, remote_addr, std::move(parser), is_client),
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");

@@ -191,6 +191,7 @@ public:
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
     bool                   rpc_request_dropped_on_long_queue; // 
     bool                   rpc_request_dropped_on_timeout_with_high_possibility; // default is false
+    double                 rpc_request_queue_wait_time_approximation_weight;
     // ]
 
     task_rejection_handler rejection_handler;
@@ -240,8 +241,9 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
-    CONFIG_FLD(bool, bool, rpc_request_dropped_on_long_queue, false, "whether the request requests can be dropped on queue length > pool.queue_length_throttling_threshold")
-    CONFIG_FLD(bool, bool, rpc_request_dropped_on_timeout_with_high_possibility, false, "whether to drop a rpc request when it will be timeout with high possibility")
+    CONFIG_FLD(bool, bool, rpc_request_dropped_on_long_queue, false, "throttling: whether the request requests can be dropped on queue length > pool.queue_length_throttling_threshold")
+    CONFIG_FLD(bool, bool, rpc_request_dropped_on_timeout_with_high_possibility, false, "throttling: whether to drop a rpc request when it will be timeout with high possibility")
+    CONFIG_FLD(double, double, rpc_request_queue_wait_time_approximation_weight, 1.0, "throttling: wait(N) = weight*wait(N-1) + (1-weight)*wait(N-2)")
 CONFIG_END
 
 struct threadpool_spec
@@ -260,7 +262,6 @@ struct threadpool_spec
     std::list<std::string>  worker_aspects;
     int                     queue_length_throttling_threshold;
     bool                    enable_virtual_queue_throttling;
-    double                  queue_wait_time_approximation_alpha_on_new;
     std::string             admission_controller_factory_name;
     std::string             admission_controller_arguments;
 
@@ -284,9 +285,8 @@ CONFIG_BEGIN(threadpool_spec)
     CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")
     CONFIG_FLD_STRING_LIST(queue_aspects, "task queue aspects names, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(worker_aspects, "task aspects names, usually for tooling purpose")    
-    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 1000000, "throttling threshold above which rpc requests will be dropped")
-    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "whether to enable throttling with virtual queues")    
-    CONFIG_FLD(double, double, queue_wait_time_approximation_alpha_on_new, 0.8, "wait(N) = alpha*wait(N-1) + (1-alpha)*wait(N-2)")        
+    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 1000000, "throttling: throttling threshold above which rpc requests will be dropped")
+    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "throttling: whether to enable throttling with virtual queues")        
     CONFIG_FLD_STRING(admission_controller_factory_name, "", "customized admission controller for the task queues")
     CONFIG_FLD_STRING(admission_controller_arguments, "", "arguments for the cusotmized admission controller")
 CONFIG_END
