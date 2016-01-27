@@ -158,8 +158,8 @@ private:
     /////////////////////////////////////////////////////////////////
     // learning    
     void init_learn(uint64_t signature);
-    void on_learn_reply(error_code err, const std::shared_ptr<learn_request>& req, const  std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, size_t size, const std::shared_ptr<learn_request> req, const std::shared_ptr<learn_response> resp);
+    void on_learn_reply(error_code err, learn_request&& req, learn_response&& resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, learn_request&& req, learn_response&& resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
