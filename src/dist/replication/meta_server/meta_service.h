@@ -82,6 +82,7 @@ private:
     void on_create_app(dsn_message_t req);
     void on_drop_app(dsn_message_t req);
     void on_list_apps(dsn_message_t req);
+    void on_list_nodes(dsn_message_t req);
 
     // load balance actions
     void start_load_balance();

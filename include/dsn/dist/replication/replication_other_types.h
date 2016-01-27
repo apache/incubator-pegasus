@@ -72,7 +72,6 @@ namespace dsn {
         class mutation_log;
         typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
 
-
         ENUM_BEGIN(partition_status, PS_INVALID)
             ENUM_REG(PS_INACTIVE)
             ENUM_REG(PS_ERROR)
@@ -81,13 +80,19 @@ namespace dsn {
             ENUM_REG(PS_POTENTIAL_SECONDARY)
         ENUM_END(partition_status)
 
-        ENUM_BEGIN(learn_type, LT_NONE)
+        ENUM_BEGIN(read_semantic, ReadInvalid)
+            ENUM_REG(ReadLastUpdate)
+            ENUM_REG(ReadOutdated)
+            ENUM_REG(ReadSnapshot)
+        ENUM_END(read_semantic)
+
+        ENUM_BEGIN(learn_type, LT_INVALID)
             ENUM_REG(LT_CACHE)
             ENUM_REG(LT_APP)
             ENUM_REG(LT_LOG)
         ENUM_END(learn_type)
 
-        ENUM_BEGIN(learner_status, Learning_INVALID)
+        ENUM_BEGIN(learner_status, LearningInvalid)
             ENUM_REG(LearningWithoutPrepare)
             ENUM_REG(LearningWithPrepareTransient)
             ENUM_REG(LearningWithPrepare)
@@ -95,25 +100,31 @@ namespace dsn {
             ENUM_REG(LearningFailed)
         ENUM_END(learner_status)
 
-        ENUM_BEGIN(config_type, CT_NONE)
+        ENUM_BEGIN(config_type, CT_INVALID)
             ENUM_REG(CT_ASSIGN_PRIMARY)
             ENUM_REG(CT_UPGRADE_TO_PRIMARY)
             ENUM_REG(CT_ADD_SECONDARY)
+            ENUM_REG(CT_UPGRADE_TO_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)
             ENUM_REG(CT_REMOVE)
-            ENUM_REG(CT_UPGRADE_TO_SECONDARY)
         ENUM_END(config_type)
 
         ENUM_BEGIN(app_status, AS_INVALID)
+            ENUM_REG(AS_ALL)
             ENUM_REG(AS_AVAILABLE)
             ENUM_REG(AS_CREATING)
             ENUM_REG(AS_CREATE_FAILED)
             ENUM_REG(AS_DROPPING)
             ENUM_REG(AS_DROP_FAILED)
             ENUM_REG(AS_DROPPED)
-            ENUM_REG(AS_ALL)
         ENUM_END(app_status)
+
+        ENUM_BEGIN(node_status, NS_INVALID)
+            ENUM_REG(NS_ALL)
+            ENUM_REG(NS_ALIVE)
+            ENUM_REG(NS_UNALIVE)
+        ENUM_END(node_status)
 
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {

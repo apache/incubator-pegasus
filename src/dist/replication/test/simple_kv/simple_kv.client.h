@@ -52,7 +52,7 @@ public:
     std::pair<::dsn::error_code, std::string> read_sync(
         const std::string& key, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate 
+        ::dsn::replication::read_semantic read_semantic = ::dsn::replication::read_semantic::ReadLastUpdate
         )
     {
         return dsn::rpc::wait_and_unwrap<std::string>(
@@ -76,7 +76,7 @@ public:
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,  
-        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate 
+        ::dsn::replication::read_semantic read_semantic = ::dsn::replication::read_semantic::ReadLastUpdate
         )
     {
         return ::dsn::replication::replication_app_client_base::read(

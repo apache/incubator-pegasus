@@ -1102,6 +1102,7 @@ void server_state::list_apps(dsn_message_t msg)
     {
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
+        {
             if ( request.status == AS_ALL || request.status == app.status)
             {
                 dsn::replication::app_info info;
@@ -1112,6 +1113,30 @@ void server_state::list_apps(dsn_message_t msg)
                 info.partition_count = app.partition_count;
                 response.infos.push_back(info);
             }
+        }
+        response.err = dsn::ERR_OK;
+    }
+    reply(msg, response);
+}
+
+void server_state::list_nodes(dsn_message_t msg)
+{
+    configuration_list_nodes_request request;
+    configuration_list_nodes_response response;
+    ::unmarshall(msg, request);
+    {
+        zauto_read_lock l(_lock);
+        for (auto& node: _nodes)
+        {
+            node_status status = node.second.is_alive ? NS_ALIVE : NS_UNALIVE;
+            if (request.status == NS_ALL || request.status == status)
+            {
+                dsn::replication::node_info info;
+                info.status = status;
+                info.address = node.first;
+                response.infos.push_back(info);
+            }
+        }
         response.err = dsn::ERR_OK;
     }
     reply(msg, response);

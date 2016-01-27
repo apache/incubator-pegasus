@@ -272,6 +272,21 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<app_info>(&proto, val, &app_info::read);
     };
 
+    // ---------- node_info -------------
+    inline void marshall(::dsn::binary_writer& writer, const node_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<node_info>(&proto, val, &node_info::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ node_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<node_info>(&proto, val, &node_info::read);
+    };
+
     // ---------- meta_response_header -------------
     inline void marshall(::dsn::binary_writer& writer, const meta_response_header& val)
     {
@@ -422,6 +437,21 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::read);
     };
 
+    // ---------- configuration_list_nodes_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::read);
+    };
+
     // ---------- configuration_create_app_response -------------
     inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_response& val)
     {
@@ -465,6 +495,21 @@ namespace dsn { namespace replication {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::read);
+    };
+
+    // ---------- configuration_list_nodes_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::write);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::read);
     };
 
     // ---------- configuration_query_by_node_response -------------
@@ -551,30 +596,31 @@ namespace dsn { namespace replication {
     // ---------- partition_status -------------
     enum partition_status
     {
-        PS_INACTIVE = 0,
-        PS_ERROR = 1,
-        PS_PRIMARY = 2,
-        PS_SECONDARY = 3,
-        PS_POTENTIAL_SECONDARY = 4,
-        PS_INVALID = 5,
+        PS_INVALID = 0,
+        PS_INACTIVE = 1,
+        PS_ERROR = 2,
+        PS_PRIMARY = 3,
+        PS_SECONDARY = 4,
+        PS_POTENTIAL_SECONDARY = 5,
     };
 
     DEFINE_POD_SERIALIZATION(partition_status);
 
-    // ---------- read_semantic_t -------------
-    enum read_semantic_t
+    // ---------- read_semantic -------------
+    enum read_semantic
     {
-        ReadLastUpdate = 0,
-        ReadOutdated = 1,
-        ReadSnapshot = 2,
+        ReadInvalid = 0,
+        ReadLastUpdate = 1,
+        ReadOutdated = 2,
+        ReadSnapshot = 3,
     };
 
-    DEFINE_POD_SERIALIZATION(read_semantic_t);
+    DEFINE_POD_SERIALIZATION(read_semantic);
 
     // ---------- learn_type -------------
     enum learn_type
     {
-        LT_NONE = 0,
+        LT_INVALID = 0,
         LT_CACHE = 1,
         LT_APP = 2,
         LT_LOG = 3,
@@ -585,12 +631,12 @@ namespace dsn { namespace replication {
     // ---------- learner_status -------------
     enum learner_status
     {
-        LearningWithoutPrepare = 0,
-        LearningWithPrepareTransient = 1,
-        LearningWithPrepare = 2,
-        LearningSucceeded = 3,
-        LearningFailed = 4,
-        Learning_INVALID = 5,
+        LearningInvalid = 0,
+        LearningWithoutPrepare = 1,
+        LearningWithPrepareTransient = 2,
+        LearningWithPrepare = 3,
+        LearningSucceeded = 4,
+        LearningFailed = 5,
     };
 
     DEFINE_POD_SERIALIZATION(learner_status);
@@ -598,14 +644,14 @@ namespace dsn { namespace replication {
     // ---------- config_type -------------
     enum config_type
     {
-        CT_NONE = 0,
+        CT_INVALID = 0,
         CT_ASSIGN_PRIMARY = 1,
         CT_UPGRADE_TO_PRIMARY = 2,
         CT_ADD_SECONDARY = 3,
-        CT_DOWNGRADE_TO_SECONDARY = 4,
-        CT_DOWNGRADE_TO_INACTIVE = 5,
-        CT_REMOVE = 6,
-        CT_UPGRADE_TO_SECONDARY = 7,
+        CT_UPGRADE_TO_SECONDARY = 4,
+        CT_DOWNGRADE_TO_SECONDARY = 5,
+        CT_DOWNGRADE_TO_INACTIVE = 6,
+        CT_REMOVE = 7,
     };
 
     DEFINE_POD_SERIALIZATION(config_type);
@@ -613,17 +659,28 @@ namespace dsn { namespace replication {
     // ---------- app_status -------------
     enum app_status
     {
-        AS_AVAILABLE = 0,
-        AS_CREATING = 1,
-        AS_CREATE_FAILED = 2,
-        AS_DROPPING = 3,
-        AS_DROP_FAILED = 4,
-        AS_DROPPED = 5,
-        AS_ALL = 6,
-        AS_INVALID = 7,
+        AS_INVALID = 0,
+        AS_ALL = 1,
+        AS_AVAILABLE = 2,
+        AS_CREATING = 3,
+        AS_CREATE_FAILED = 4,
+        AS_DROPPING = 5,
+        AS_DROP_FAILED = 6,
+        AS_DROPPED = 7,
     };
 
     DEFINE_POD_SERIALIZATION(app_status);
+
+    // ---------- node_status -------------
+    enum node_status
+    {
+        NS_INVALID = 0,
+        NS_ALL = 1,
+        NS_ALIVE = 2,
+        NS_UNALIVE = 3,
+    };
+
+    DEFINE_POD_SERIALIZATION(node_status);
 
     // ---------- global_partition_id -------------
     struct global_partition_id
@@ -799,7 +856,7 @@ namespace dsn { namespace replication {
     {
         global_partition_id gpid;
         ::dsn::task_code code;
-        read_semantic_t semantic;
+        read_semantic semantic;
         int64_t version_decree;
     };
 
@@ -1065,6 +1122,25 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.partition_count);
     };
 
+    // ---------- node_info -------------
+    struct node_info
+    {
+        node_status status;
+        ::dsn::rpc_address address;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const node_info& val)
+    {
+        marshall(writer, val.status);
+        marshall(writer, val.address);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ node_info& val)
+    {
+        unmarshall(reader, val.status);
+        unmarshall(reader, val.address);
+    };
+
     // ---------- meta_response_header -------------
     struct meta_response_header
     {
@@ -1264,6 +1340,22 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.status);
     };
 
+    // ---------- configuration_list_nodes_request -------------
+    struct configuration_list_nodes_request
+    {
+        node_status status;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_request& val)
+    {
+        marshall(writer, val.status);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_request& val)
+    {
+        unmarshall(reader, val.status);
+    };
+
     // ---------- configuration_create_app_response -------------
     struct configuration_create_app_response
     {
@@ -1313,6 +1405,25 @@ namespace dsn { namespace replication {
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_response& val)
+    {
+        unmarshall(reader, val.err);
+        unmarshall(reader, val.infos);
+    };
+
+    // ---------- configuration_list_nodes_response -------------
+    struct configuration_list_nodes_response
+    {
+        ::dsn::error_code err;
+        std::vector< node_info> infos;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_response& val)
+    {
+        marshall(writer, val.err);
+        marshall(writer, val.infos);
+    };
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_response& val)
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.infos);
