@@ -50,7 +50,7 @@ client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
 
 dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
 {
-    if((partition_count < 0) || ((partition_count & (partition_count -1)) != 0))
+    if(partition_count < 1)
         return ERR_INVALID_PARAMETERS;
 
     if(replica_count < 3)

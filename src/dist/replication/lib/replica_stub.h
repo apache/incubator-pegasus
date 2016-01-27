@@ -120,7 +120,6 @@ public:
     //
     // common routines for inquiry
     //
-    const std::string& dir() const { return _dir; }
     replica_ptr get_replica(global_partition_id gpid, bool new_when_possible = false, const char* app_type = nullptr);
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
@@ -130,6 +129,8 @@ public:
 
     static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
     static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
+
+    std::string get_replica_dir(const char* app_type, global_partition_id gpid) const;
 
 private:    
     enum replica_node_state
@@ -169,7 +170,6 @@ private:
     closing_replicas            _closing_replicas;
     
     mutation_log_ptr            _log;
-    std::string                 _dir;
     ::dsn::rpc_address          _primary_address;
 
     replication_failure_detector *_failure_detector;

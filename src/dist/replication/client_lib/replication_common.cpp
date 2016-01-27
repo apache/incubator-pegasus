@@ -119,6 +119,48 @@ void replication_options::read_meta_servers()
 
 void replication_options::initialize()
 {
+    dsn_app_info app_info;
+    bool r = dsn_get_current_app_info(&app_info);
+    dassert(r, "get current app info failed");
+    app_name = app_info.name;
+    app_dir = app_info.data_dir;
+
+    // slog_dir:
+    // - if config[slog_dir] is empty: "app_dir/slog"
+    // - else: "config[slog_dir]/app_name/slog"
+    slog_dir = dsn_config_get_value_string("replication", "slog_dir", "", "shared log directory");
+    if (slog_dir.empty())
+    {
+        slog_dir = app_dir;
+    }
+    else
+    {
+        slog_dir = utils::filesystem::path_combine(slog_dir, app_name);
+    }
+    slog_dir = utils::filesystem::path_combine(slog_dir, "slog");
+
+    // data_dirs
+    // - if config[data_dirs] is empty: "app_dir/reps"
+    // - else: "config[data_dirs]/app_name/reps"
+    std::string dirs_str = dsn_config_get_value_string("replication", "data_dirs", "", "replica directory list");
+    std::vector<std::string> dirs;
+    ::dsn::utils::split_args(dirs_str.c_str(), dirs, ',');
+    if (dirs.empty())
+    {
+        dirs.push_back(app_dir);
+    }
+    else
+    {
+        for (auto& dir : dirs)
+        {
+            dir = utils::filesystem::path_combine(dir, app_name);
+        }
+    }
+    for (auto& dir : dirs)
+    {
+        data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+    }
+
     prepare_timeout_ms_for_secondaries =
         (int)dsn_config_get_value_uint64("replication", 
         "prepare_timeout_ms_for_secondaries", 
