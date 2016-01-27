@@ -449,15 +449,30 @@ namespace dsn
         }
 
         void deploy_svc_service_impl::on_service_undeployed(
-            std::shared_ptr<::dsn::dist::deployment_unit> unit,
+            std::string service_name,
             ::dsn::error_code err,
             const std::string& err_msg
             )
         {
-            if (err !=::dsn::ERR_OK)
-                unit->status = ::dsn::dist::service_status::SS_FAILED;
-            else
-                unit->status = ::dsn::dist::service_status::SS_UNDEPLOYED;
+            ::dsn::service::zauto_write_lock l(_service_lock);
+            auto it = _services.find(service_name);
+            if (it != _services.end())
+            {
+                if (err == ::dsn::ERR_OK)
+                {
+                    _services.erase(service_name);
+                }
+                else
+                {
+                    //TODO: undeploy failded doesn't means that service failed,
+                    //      this status code need to be explicitly discussed.
+                    //      for example: if service failed on deployment,
+                    //      the scheduler will simply erase it, and report FAILED when
+                    //      called to undeploy it, which makes it impossible for user to delete it.
+                    auto svc = it->second;
+                    svc->status = ::dsn::dist::service_status::SS_FAILED;
+                }
+            }
         }
 
 
@@ -599,21 +614,17 @@ namespace dsn
                 auto cluster_name = svc->cluster;
                 auto cluster = get_cluster(cluster_name);
 
-                if( cluster == nullptr )
+                if (cluster == nullptr)
                 {
                     err = ::dsn::ERR_CLUSTER_NOT_FOUND;
                     return;
                 }
 
-                svc->undeployment_callback = [it, this, svc](::dsn::error_code err, const std::string& err_msg)
+                svc->undeployment_callback = [service_name, this](::dsn::error_code err, const std::string& err_msg)
                 {
-                    if( err == ::dsn::ERR_OK )
-                    {
-                        ::dsn::service::zauto_write_lock l(_service_lock);
-                        _services.erase(it);
-                    }
-                    this->on_service_undeployed(svc, err, err_msg);
+                    this->on_service_undeployed(service_name, err, err_msg);
                 };
+                svc->status = service_status::SS_UNDEPLOYING;
                 cluster->scheduler->unschedule(svc);
                 err = ::dsn::ERR_IO_PENDING;
             }

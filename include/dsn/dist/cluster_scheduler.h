@@ -47,6 +47,10 @@ namespace dsn
 {
     namespace dist
     {
+        
+        // ---------- thread pool for scheduler -------------
+        DEFINE_THREAD_POOL_CODE(THREAD_POOL_SCHEDULER_LONG)
+
         // ---------- cluster_type -------------
         enum class cluster_type
         {

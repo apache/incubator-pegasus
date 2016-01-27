@@ -70,7 +70,7 @@ namespace dsn
                 const std::string& err_msg
                 );
             void on_service_undeployed(
-                std::shared_ptr<::dsn::dist::deployment_unit> unit,
+                std::string service_name,
                 ::dsn::error_code err,
                 const std::string& err_msg
                 );
