@@ -446,7 +446,7 @@ namespace dsn
             ::dsn::rpc_address remote_addr,
             bool is_client
             )
-            : rpc_session(net, remote_addr, parser, is_client),
+            : rpc_session(net, remote_addr, std::move(parser), is_client),
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
