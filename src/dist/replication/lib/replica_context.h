@@ -112,7 +112,7 @@ public:
     potential_secondary_context() :
         learning_signature(0),
         learning_round_is_running(false),
-        learning_status(learner_status::Learning_INVALID),
+        learning_status(learner_status::LearningInvalid),
         learning_start_prepare_decree(invalid_decree)
     {}
 

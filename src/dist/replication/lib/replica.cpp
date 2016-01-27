@@ -117,7 +117,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
         return;
     }
 
-    if (meta.semantic == read_semantic_t::ReadLastUpdate)
+    if (meta.semantic == read_semantic::ReadLastUpdate)
     {
         if (status() != PS_PRIMARY ||
             last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
