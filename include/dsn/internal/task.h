@@ -130,6 +130,7 @@ public:
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
     bool                    is_empty() const { return _is_null; }
+    uint64_t                enqueue_ts_ns() { return _recv_ts_ns; }
 
     // static helper utilities
     static task*            get_current_task();
@@ -176,6 +177,7 @@ private:
     service_node           *_node;
     trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
     dsn_task_cancelled_handler_t _on_cancel;
+    uint64_t               _recv_ts_ns;
 
 public:
     // used by task queue only
@@ -274,7 +276,6 @@ public:
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
-    uint64_t     enqueue_ts_ns() { return _recv_ts_ns;  }
     virtual void enqueue() override;
 
     virtual void  exec() override
@@ -285,7 +286,6 @@ public:
 protected:
     message_ex      *_request;
     rpc_handler_ptr _handler;
-    uint64_t        _recv_ts_ns;
 };
 
 class rpc_response_task : public task
