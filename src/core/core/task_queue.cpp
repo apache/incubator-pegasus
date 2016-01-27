@@ -48,7 +48,7 @@
 
 namespace dsn {
 
-task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr), _appro_wait_time_ns(0)
+task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr)
 {
     char num[30];
     sprintf(num, "%u", index);
@@ -60,6 +60,11 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _queue_length = perf_counters::instance().get_counter(_pool->node()->name(), "engine", (_name + ".queue.length").c_str(), COUNTER_TYPE_NUMBER, "task queue length", true);
     _virtual_queue_length = 0;
     _spec = (threadpool_spec*)&pool->spec();
+
+    for (int i = 0; i < TASK_PRIORITY_COUNT; i++)
+    {
+        _appro_wait_time_ns[i].store(0);
+    }
 }
 
 task_queue::~task_queue()
@@ -75,9 +80,10 @@ void task_queue::enqueue_internal(task* task)
         rpc_request_task* rc = dynamic_cast<rpc_request_task*>(task);
 
         // drop incoming 
-        if (_appro_wait_time_ns.load(std::memory_order_relaxed) / 1000000ULL
+        if (_appro_wait_time_ns[sp.priority].load(std::memory_order_relaxed) / 1000000ULL
             >= (uint64_t)rc->get_request()->header->client.timeout_ms)
         {
+            // TODO: reply busy
             task->release_ref(); // added in task::enqueue(pool)
             return;
         }
@@ -98,6 +104,7 @@ void task_queue::enqueue_internal(task* task)
         // drop incoming rpc request when task queue is too long
         if (ac_value > _spec->queue_length_throttling_threshold)
         {
+            // TODO: reply busy
             task->release_ref(); // added in task::enqueue(pool)
             return;
         }
