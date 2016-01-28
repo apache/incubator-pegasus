@@ -448,6 +448,34 @@ namespace dsn
                 unit->status = ::dsn::dist::service_status::SS_RUNNING;
         }
 
+        void deploy_svc_service_impl::on_service_undeployed(
+            std::string service_name,
+            ::dsn::error_code err,
+            const std::string& err_msg
+            )
+        {
+            ::dsn::service::zauto_write_lock l(_service_lock);
+            auto it = _services.find(service_name);
+            if (it != _services.end())
+            {
+                if (err == ::dsn::ERR_OK)
+                {
+                    _services.erase(service_name);
+                }
+                else
+                {
+                    //TODO: undeploy failded doesn't means that service failed,
+                    //      this status code need to be explicitly discussed.
+                    //      for example: if service failed on deployment,
+                    //      the scheduler will simply erase it, and report FAILED when
+                    //      called to undeploy it, which makes it impossible for user to delete it.
+                    auto svc = it->second;
+                    svc->status = ::dsn::dist::service_status::SS_FAILED;
+                }
+            }
+        }
+
+
         void deploy_svc_service_impl::on_deploy_internal(const deploy_request& req, /*out*/ deploy_info& di)
         {
             di.name = req.name;
@@ -582,8 +610,23 @@ namespace dsn
             auto it = _services.find(service_name);
             if (it != _services.end())
             {
-                _services.erase(it);
-                err = ::dsn::ERR_OK;
+                auto svc = it->second;
+                auto cluster_name = svc->cluster;
+                auto cluster = get_cluster(cluster_name);
+
+                if (cluster == nullptr)
+                {
+                    err = ::dsn::ERR_CLUSTER_NOT_FOUND;
+                    return;
+                }
+
+                svc->undeployment_callback = [service_name, this](::dsn::error_code err, const std::string& err_msg)
+                {
+                    this->on_service_undeployed(service_name, err, err_msg);
+                };
+                svc->status = service_status::SS_UNDEPLOYING;
+                cluster->scheduler->unschedule(svc);
+                err = ::dsn::ERR_IO_PENDING;
             }
             else
             {
@@ -629,10 +672,12 @@ namespace dsn
             ::dsn::service::zauto_read_lock l(_service_lock);
             for (auto& c : _services)
             {
-                if (c.second->package_id == package_id)
+                if (c.second->package_id == package_id || package_id.size() == 0)
                 {
                     deploy_info di;
                     di.cluster = c.second->cluster;
+                    di.name = c.second->name;
+                    di.service_url = c.second->service_url;
                     di.package_id = c.second->package_id;
                     di.error = ::dsn::ERR_OK;
                     di.status = c.second->status;
@@ -648,14 +693,16 @@ namespace dsn
             deploy_info_list dlist;
             std::string package_id;
 
-            if (argc < 1 || ERR_OK != unmarshall_json(argv[0], "package_id", package_id))
+            if (argc >=1)
             {
-                //TODO: need raise error here?
+                error_code err = unmarshall_json(argv[0], "package_id", package_id);
+                if (err != ERR_OK)
+                {
+                    //TODO: need raise error here?
+                    package_id = std::string("");
+                }
             }
-            else
-            {
-                on_get_service_list_internal(package_id, dlist);
-            }
+            on_get_service_list_internal(package_id, dlist);
 
             std::string* resp_json = new std::string();
             *resp_json = marshall_json(dlist);

@@ -43,8 +43,8 @@ namespace dsn
 {
     namespace dist
     {
-        DEFINE_TASK_CODE(LPC_K8S_CREATE,TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-        DEFINE_TASK_CODE(LPC_K8S_DELETE,TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+        DEFINE_TASK_CODE(LPC_K8S_CREATE,TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
+        DEFINE_TASK_CODE(LPC_K8S_DELETE,TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
 
         class kubernetes_cluster_scheduler 
             : public cluster_scheduler, public clientlet
@@ -63,7 +63,7 @@ namespace dsn
 
             void unschedule(
                     std::shared_ptr<deployment_unit>& unit
-                    );
+                    )override;
             virtual cluster_type type() const override
             {
                 return cluster_type::kubernetes;
@@ -87,7 +87,7 @@ namespace dsn
             static void undeploy_k8s_unit_cleanup(dsn_cli_reply reply);
         private:
             void create_pod(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory);
-            void delete_pod(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory);
+            void delete_pod(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory);
             using deploy_map = std::unordered_map<std::string, std::shared_ptr<deployment_unit> >;
             std::string                 _run_path;
             dsn_handle_t                _k8s_state_handle;
