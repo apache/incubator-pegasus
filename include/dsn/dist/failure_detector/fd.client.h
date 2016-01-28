@@ -50,11 +50,11 @@ public:
 
     // ---------- call RPC_FD_FAILURE_DETECTOR_PING ------------
     // - synchronous 
-    std::pair<::dsn::error_code, beacon_ack> ping_sync(
+    std::pair< ::dsn::error_code, beacon_ack> ping_sync(
         const beacon_msg& beacon, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::wait_and_unwrap<beacon_ack>(
@@ -78,7 +78,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(

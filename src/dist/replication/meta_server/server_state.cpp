@@ -1066,13 +1066,14 @@ void server_state::create_app(dsn_message_t msg)
     int32_t index;
     ::unmarshall(msg ,request);
     
-    ddebug("create app request, name(%s), type(%s), partition_count(%d)",
+    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d)",
            request.app_name.c_str(),
            request.options.app_type.c_str(),
-           request.options.partition_count);
+           request.options.partition_count,
+           request.options.replica_count);
 
     auto option_match_check = [](const create_app_options& opt, const app_state& exist_app) {
-        return opt.partition_count==exist_app.partition_count && 
+        return opt.partition_count==exist_app.partition_count &&
                opt.app_type==exist_app.app_type;
     };
 

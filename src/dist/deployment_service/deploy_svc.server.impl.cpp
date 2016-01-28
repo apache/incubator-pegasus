@@ -411,7 +411,7 @@ namespace dsn
         }
 
         void deploy_svc_service_impl::on_service_failure(
-            std::shared_ptr<::dsn::dist::deployment_unit> unit,
+            std::shared_ptr< ::dsn::dist::deployment_unit> unit,
             ::dsn::error_code err,
             const std::string& err_msg
             )
@@ -421,7 +421,7 @@ namespace dsn
         }
 
 
-        void deploy_svc_service_impl::download_service_resource_completed(error_code err, std::shared_ptr<::dsn::dist::deployment_unit> svc)
+        void deploy_svc_service_impl::download_service_resource_completed(error_code err, std::shared_ptr< ::dsn::dist::deployment_unit> svc)
         {
             if (err != ::dsn::ERR_OK)
             {
@@ -437,7 +437,7 @@ namespace dsn
         }
 
         void deploy_svc_service_impl::on_service_deployed(
-            std::shared_ptr<::dsn::dist::deployment_unit> unit,
+            std::shared_ptr< ::dsn::dist::deployment_unit> unit,
             ::dsn::error_code err,
             ::dsn::rpc_address addr
             )
@@ -502,7 +502,7 @@ namespace dsn
                     di.error = ::dsn::ERR_OK.to_string();
                     di.status = service_status::SS_PREPARE_RESOURCE;
                     _services.insert(
-                        std::unordered_map<std::string, std::shared_ptr<::dsn::dist::deployment_unit> >::value_type(
+                        std::unordered_map<std::string, std::shared_ptr< ::dsn::dist::deployment_unit> >::value_type(
                         req.name, svc
                         ));
                 }
@@ -770,7 +770,7 @@ namespace dsn
             reply(clist);
         }
 
-        std::shared_ptr<::dsn::dist::deployment_unit> deploy_svc_service_impl::get_service(const std::string& name)
+        std::shared_ptr< ::dsn::dist::deployment_unit> deploy_svc_service_impl::get_service(const std::string& name)
         {
             ::dsn::service::zauto_read_lock l(_service_lock);
             auto it = _services.find(name);

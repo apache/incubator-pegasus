@@ -15,11 +15,11 @@ public:
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY ------------
     // - synchronous 
-    std::pair<::dsn::error_code, deploy_info> deploy_sync(
+    std::pair< ::dsn::error_code, deploy_info> deploy_sync(
         const deploy_request& req, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<deploy_info>(
             ::dsn::rpc::call(
@@ -42,7 +42,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
@@ -59,13 +59,13 @@ public:
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ------------
     // - synchronous 
-    std::pair<::dsn::error_code, ::dsn::error_code> undeploy_sync(
+    std::pair< ::dsn::error_code, ::dsn::error_code> undeploy_sync(
         const std::string& service_url, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
-        return ::dsn::rpc::wait_and_unwrap<::dsn::error_code>(
+        return ::dsn::rpc::wait_and_unwrap< ::dsn::error_code>(
             ::dsn::rpc::call(
                 server_addr.unwrap_or(_server),
                 RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY,
@@ -86,7 +86,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
@@ -103,11 +103,11 @@ public:
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST ------------
     // - synchronous 
-    std::pair<::dsn::error_code, deploy_info_list> get_service_list_sync(
+    std::pair< ::dsn::error_code, deploy_info_list> get_service_list_sync(
         const std::string& package_id, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<deploy_info_list>(
             ::dsn::rpc::call(
@@ -130,7 +130,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
@@ -147,11 +147,11 @@ public:
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO ------------
     // - synchronous 
-    std::pair<::dsn::error_code, deploy_info> get_service_info_sync(
+    std::pair< ::dsn::error_code, deploy_info> get_service_info_sync(
         const std::string& service_url, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<deploy_info>(
             ::dsn::rpc::call(
@@ -174,7 +174,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
@@ -191,11 +191,11 @@ public:
 
     // ---------- call RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST ------------
     // - synchronous 
-    std::pair<::dsn::error_code, cluster_list> get_cluster_list_sync(
+    std::pair< ::dsn::error_code, cluster_list> get_cluster_list_sync(
         const std::string& format, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<cluster_list>(
             ::dsn::rpc::call(
@@ -218,7 +218,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(

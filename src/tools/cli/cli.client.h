@@ -50,11 +50,11 @@ public:
 
     // ---------- call RPC_CLI_CLI_CALL ------------
     // - synchronous 
-    std::pair<::dsn::error_code, std::string> call_sync(
+    std::pair< ::dsn::error_code, std::string> call_sync(
         const command& c, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<std::string>(
             ::dsn::rpc::call(
@@ -77,7 +77,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
