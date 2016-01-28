@@ -154,29 +154,16 @@ namespace dsn {
             // server address side effect
             auto req = call->get_request();
             auto sp = task_spec::get(req->local_rpc_code);
-            if (reply->from_address != req->to_address)
+            // TODO(qinzuoyan): because current rpc forward is fake (resend from client), we cannot
+            // determine forward by "reply->from_address != req->to_address"
+            if (req->server_address.type() == HOST_TYPE_GROUP
+                    && sp->grpc_mode == GRPC_TO_LEADER
+                    && req->server_address.group_address()->possible_leader() != reply->from_address)
             {
-                switch (req->server_address.type())
-                {
-                case HOST_TYPE_GROUP:
-                    
-                    switch (sp->grpc_mode)
-                    {
-                    case GRPC_TO_LEADER:
-                        if (err == ERR_OK)
-                        {
-                            req->server_address.group_address()->set_leader(reply->from_address);
-                        }
-                        break;
-                        // TODO:
-                    }
-                    break;
-                case HOST_TYPE_URI:
-                    // TODO:
-                    break;
-                }
+                req->server_address.group_address()->set_leader(reply->from_address);
             }
 
+            // injector
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
