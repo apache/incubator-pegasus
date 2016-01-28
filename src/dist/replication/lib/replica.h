@@ -203,7 +203,7 @@ private:
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp);
-    void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp);
+    void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp, const std::string &chk_dir);
 
 private:
     friend class ::dsn::replication::replication_checker;

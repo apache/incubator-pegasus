@@ -371,7 +371,7 @@ void meta_state_service_zookeeper::on_zoo_session_evt(ref_this _this, int zoo_st
 
     if (ZOO_CONNECTING_STATE == zoo_state) {
         //TODO: support the switch of zookeeper session
-        dassert(false, "");
+        dwarn("the zk session is reconnecting");
     }
     else if (_this->_first_call && ZOO_CONNECTED_STATE==zoo_state)
     {

@@ -52,6 +52,9 @@
 
 # include "dump_file.h"
 
+int32_t server_state::_default_max_replica_count = 3;
+
+/// misc functions for server state
 void marshall(binary_writer& writer, const app_state& val)
 {
     marshall(writer, val.status);
@@ -61,7 +64,6 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partition_count);
     marshall(writer, val.partitions);
 }
-
 /**
  * app_state:
  * {
@@ -112,7 +114,7 @@ partition_status get_partition_status(const char* status_str)
  *  "entries": [{"addr": "xxx.xxx.xxx.xxx:12345", "partition_status": "primary"},
  *              {"addr": "xxx.xxx.xxx.xxb:23424", "partition_status": "secondary"}
  *             ]}
- * type of role: primary/secondary/potential primary/potential secondary/inactive
+ * type of role: primary/secondary/inactive
  **/
 void marshall_json(blob& output, const partition_configuration& pc)
 {
@@ -166,6 +168,18 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.partitions);
 }
 
+void init_partition_configuration(/*out*/partition_configuration& pc, /*in*/const app_state& app, int32_t max_replica_count)
+{
+    pc.app_type = app.app_type;
+    pc.ballot = 0;
+    pc.gpid.app_id = app.app_id;
+    pc.last_committed_decree = 0;
+    pc.max_replica_count = max_replica_count;
+    pc.primary.set_invalid();
+    pc.secondaries.clear();
+    pc.last_drops.clear();
+}
+
 void unmarshall_json(const blob& buf, app_state& app)
 {
     rapidjson::Document doc;
@@ -179,15 +193,7 @@ void unmarshall_json(const blob& buf, app_state& app)
     app.partition_count = doc["partition_count"].GetInt();
     app.status = strcmp(doc["status"].GetString(), "available")==0?AS_AVAILABLE:AS_DROPPED;
     partition_configuration pc;
-    pc.app_type = app.app_type;
-    pc.ballot = 0;
-    pc.gpid.app_id = app.app_id;
-    pc.last_committed_decree = 0;
-    pc.max_replica_count = 3;
-    pc.primary.set_invalid();
-    pc.secondaries.clear();
-    pc.last_drops.clear();
-
+    init_partition_configuration(pc, app, server_state::_default_max_replica_count);
     app.partitions.assign(app.partition_count, pc);
     for (unsigned int i=0; i!=app.partition_count; ++i)
         app.partitions[i].gpid.pidx = i;
@@ -229,6 +235,52 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
     }
 }
 
+void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
+{
+    auto it = std::find(drops.begin(), drops.end(), node);
+    if (is_add)
+    {
+        if (it != drops.end())
+            drops.erase(it);
+    }
+    else
+    {
+        if (it == drops.end())
+        {
+            drops.push_back(node);
+            if (drops.size() > 3)
+                drops.erase(drops.begin());
+        }
+        else
+        {
+            dassert(false, "the node cannot be in drops set before this update", node.to_string());
+        }
+    }
+}
+
+inline bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2)
+{
+    // last_drops is not considered into equality check
+    return pc1.ballot == pc2.ballot &&
+           pc1.gpid.app_id == pc2.gpid.app_id &&
+           pc1.gpid.pidx == pc2.gpid.pidx &&
+           pc1.app_type == pc2.app_type &&
+           pc1.max_replica_count == pc2.max_replica_count &&
+           pc1.primary == pc2.primary &&
+           pc1.secondaries == pc2.secondaries &&
+           pc1.last_committed_decree == pc2.last_committed_decree;
+}
+
+std::string join_path(const std::string& input1, const std::string& input2)
+{
+    size_t pos1 = input1.size(); // last_valid_pos + 1
+    while (pos1 > 0 && input1[pos1-1] == '/') pos1--;
+    size_t pos2 = 0; // first non '/' position
+    while (pos2 < input2.size() && input2[pos2] == '/') pos2++;
+    return input1.substr(0, pos1) + "/" + input2.substr(pos2);
+}
+
+/// server state member functions
 server_state::server_state()
     : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
@@ -283,6 +335,12 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
             zauto_read_lock l(_lock);
             snapshot = _apps[i];
         }
+        if (snapshot.status != AS_AVAILABLE)
+        {
+            snapshot.partition_count = 0;
+            snapshot.partitions.clear();
+        }
+
         if (strcmp(format, "json") == 0)
         {
             blob data;
@@ -329,9 +387,11 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
             dassert(ans != -1, "read file failed");
             if (ans == 0) //file end
                 break;
+
             _apps.push_back( app_state() );
             app_state& app = _apps.back();
             unmarshall_json(data, app);
+
             app.partitions.resize(app.partition_count);
             for (unsigned int i=0; i!=app.partition_count; ++i)
             {
@@ -364,6 +424,12 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
     {
         ec = sync_apps_to_remote_storage();
     }
+
+    for (const app_state& app: _apps)
+    {
+        while (app.status!=AS_DROPPED && app.available_partitions.load() != app.partition_count)
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     return ec;
 }
 
@@ -371,6 +437,12 @@ DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_
 
 error_code server_state::initialize()
 {
+    _default_max_replica_count = (int32_t)dsn_config_get_value_uint64(
+        "meta_server",
+        "default_max_replica_count",
+        3,
+        "the default value of max_replica_count for all apps");
+
     const char* cluster_root = dsn_config_get_value_string(
         "meta_server",
         "cluster_root",
@@ -464,15 +536,6 @@ error_code server_state::on_become_leader()
     return err;
 }
 
-std::string server_state::join_path(const std::string& input1, const std::string& input2)
-{
-    size_t pos1 = input1.size(); // last_valid_pos + 1
-    while (pos1 > 0 && input1[pos1-1] == '/') pos1--;
-    size_t pos2 = 0; // first non '/' position
-    while (pos2 < input2.size() && input2[pos2] == '/') pos2++;
-    return input1.substr(0, pos1) + "/" + input2.substr(pos2);
-}
-
 std::string server_state::get_app_path(const app_state &app) const
 {
     return _apps_root + "/" + boost::lexical_cast<std::string>(app.app_id);
@@ -507,18 +570,13 @@ error_code server_state::initialize_apps()
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
     app.partition_count = (int)dsn_config_get_value_uint64("replication.app",
         "partition_count", 1, "how many partitions the app should have");
-    app.status = AS_AVAILABLE;
-
+    app.status = AS_CREATING;
+    app.available_partitions.store(0);
     _apps.push_back(app);
 
     partition_configuration pc;
-    pc.app_type = app.app_type;
-    pc.ballot = 0;
-    pc.gpid.app_id = app.app_id;
-    pc.last_committed_decree = 0;
-    pc.last_drops.clear(); pc.secondaries.clear();
-    pc.primary.set_invalid();
-    pc.max_replica_count = dsn_config_get_value_uint64("replication.app", "max_replica_count", 3, "max replica count in app");
+    init_partition_configuration(pc, app,
+        dsn_config_get_value_uint64("replication.app", "max_replica_count", 3, "max replica count in app"));
 
     std::vector<partition_configuration>& partitions = _apps.back().partitions;
     partitions.resize(app.partition_count, pc);
@@ -541,7 +599,7 @@ error_code server_state::sync_apps_to_remote_storage()
     error_code err;
     auto t = _storage->create_node(apps_path, LPC_META_STATE_SVC_CALLBACK,
         [&err](error_code ec)
-        {err = ec; }
+        { err = ec; }
     );
     t->wait();
 
@@ -552,33 +610,43 @@ error_code server_state::sync_apps_to_remote_storage()
         return err;
     }
 
-    typedef dsn::dist::meta_state_service::transaction_entries TEntries;
-    dsn::blob data;
-
+    // the caller of sync_apps_to_remote_storage must ensure the
+    // app_status is creating
+    err = ERR_OK;
+    clientlet tracker(1);
     for (const app_state& app: _apps)
     {
-        //TODO: handling the case when app.partition_count is a large value
-        std::shared_ptr<TEntries> entries = _storage->new_transaction_entries(app.partition_count+1);
-        marshall_json(data, app, app.status==AS_AVAILABLE);
-        entries->create_node(get_app_path(app), data);
-        for (const partition_configuration& pc: app.partitions) {
-            marshall_json(data, pc);
-            entries->create_node(get_partition_path(pc.gpid), data);
-        }
-        error_code ec;
-        task_ptr tsk = _storage->submit_transaction(
-            entries,
+        std::string path = get_app_path(app);
+        blob value;
+        marshall_json(value, app, true);
+        _storage->create_node(path,
             LPC_META_STATE_SVC_CALLBACK,
-            [&err](error_code e) { err = e; });
-        dassert(tsk->wait(), "");
-        if (ec == ERR_NODE_ALREADY_EXIST)
-        {
-            dwarn("ignore the sync as the node exist in remote storage");
-        }
-        else if (ec != ERR_OK)
-        {
-            return ec;
-        }
+            [&err, path](error_code ec)
+            {
+                if (ec != ERR_OK && ec != ERR_NODE_ALREADY_EXIST)
+                {
+                    dwarn("create app node failed, path(%s) reason(%s)", path.c_str(), ec.to_string());
+                    err = ec;
+                }
+                else
+                {
+                    ddebug("create app node %s ok", path.c_str());
+                }
+            },
+            value,
+            &tracker);
+    }
+
+    dsn_task_tracker_wait_all(tracker.tracker());
+    if (err != ERR_OK)
+        return err;
+
+    for (app_state& app: _apps)
+    {
+        if (app.status == AS_DROPPED)
+            continue;
+        for (unsigned int i=0; i!=app.partition_count; ++i)
+            init_app_partition_node(app.app_id, i);
     }
     return ERR_OK;
 }
@@ -611,14 +679,26 @@ error_code server_state::sync_apps_from_remote_storage()
                             unmarshall_json(value, state);
                             int app_id = state.app_id;
                             dassert(app_id != 0, "invalid app id");
+
                             {
                                 zauto_write_lock l(_lock);
                                 if (app_id > _apps.size())
                                 {
                                     _apps.resize(app_id);
                                 }
-                                _apps[app_id - 1] = state;
-                                _apps[app_id - 1].partitions.resize(state.partition_count);
+
+                                if (state.status == AS_DROPPED)
+                                {
+                                    _apps[app_id - 1].status = AS_DROPPED;
+                                    return;
+                                }
+                                else
+                                {
+                                    state.status = AS_CREATING;
+                                    state.available_partitions.store(0);
+                                    _apps[app_id - 1] = state;
+                                    _apps[app_id - 1].partitions.resize(state.partition_count);
+                                }
                             }
 
                             // get partition info
@@ -637,11 +717,20 @@ error_code server_state::sync_apps_from_remote_storage()
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                             dassert(pc.gpid.app_id == app_id && pc.gpid.pidx == i, "invalid partition config");
+
+                                            _apps[app_id -1].available_partitions++;
+                                        }
+                                        else if (ec == ERR_OBJECT_NOT_FOUND)
+                                        {
+                                            dwarn("partition node %s not exist on remote storage, may half create before", par_path.c_str());
+                                            init_partition_configuration(_apps[app_id - 1].partitions[i],
+                                                _apps[app_id - 1],
+                                                _default_max_replica_count);
+                                            init_app_partition_node(app_id, i);
                                         }
                                         else
                                         {
-                                            derror("get partition info from meta state service failed, path = %s, err = %s",
-                                                par_path.c_str(), ec.to_string());
+                                            derror("get partition node failed, reason(%s)", ec.to_string());
                                             err = ec;
                                         }
                                     },
@@ -677,6 +766,15 @@ error_code server_state::sync_apps_from_remote_storage()
     {
         if (_apps.size() == 0)
             return ERR_OBJECT_NOT_FOUND;
+
+        //all the app is creating right now
+        for (app_state& app: _apps)
+        {
+            if (app.available_partitions == app.partition_count)
+            {
+                app.status = AS_AVAILABLE;
+            }
+        }
 
         for (app_state& app: _apps) 
         {
@@ -873,49 +971,67 @@ int32_t server_state::get_app_index(const char *app_name) const
 
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
 
-void server_state::initialize_app(app_state& app, dsn_message_t msg)
+void server_state::init_app_partition_node(int app_id, int pidx)
 {
-    typedef dist::meta_state_service::transaction_entries TEntries;
-
-    //we need to create entry for the root and for each partition
-    std::shared_ptr<TEntries> entries = _storage->new_transaction_entries(app.partition_count + 1);
-    std::string app_dir = get_app_path(app);
-    blob value;
-
-    marshall_json(value, app, true);
-    entries->create_node(app_dir, value);
-
-    std::vector<partition_configuration>& partitions = app.partitions;
-    for (unsigned int i = 0; i != partitions.size(); ++i)
+    auto on_create_app_partition = [this, app_id, pidx](error_code ec)
     {
-        marshall_json(value, partitions[i]);
-        entries->create_node( get_partition_path(app, i), value);
-    }
-
-    dsn_msg_add_ref(msg);
-    auto after_create_tree = [msg, this, &app](error_code ec) {
-        /*
-         * handling of storage return error code: 
-         * 1. OK, this is the normal case
-         * 2. Operation timeout, various ways to handle this. But generally 
-         *    speaking, retry is a very gross way. As it usually lead to useless
-         *    operation and waste CPU cycle. So let's just ignore it and wait the
-         *    client to do the retry
-         * 3. The storage-data already exist, which we should also regard it as 
-         *    success
-         */
-        configuration_create_app_response resp;
-        if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
-            { 
+        app_state& app = _apps[app_id - 1];
+        if (ERR_OK==ec || ERR_NODE_ALREADY_EXIST==ec)
+        {
+            int avail_count = ++app.available_partitions;
+            if (avail_count == app.partition_count)
+            {
+                ddebug("partition init finished, the app(name:%s, id:%d) is available", app.app_name.c_str(), app.app_id);
                 zauto_write_lock l(_lock);
                 app.status = AS_AVAILABLE;
             }
-            dinfo("create app on storage service ok, appname: %s, appid: %" PRId32 "", 
-                app.app_name.c_str(), 
-                app.app_id);
+            else
+            {
+                dinfo("available partition are %d, add partition node gpid(%d.%d) ok", avail_count, app_id, pidx);
+            }
+        }
+        else if (ERR_TIMEOUT == ec)
+        {
+            dwarn("create partition node failed, gpid(%d.%d), retry later", app_id, pidx);
+            //TODO: add parameter of the retry time interval in config file
+            tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+                             this,
+                             std::bind(&server_state::init_app_partition_node, this, app_id, pidx),
+                             0,
+                             std::chrono::milliseconds(1000));
+        }
+        else
+        {
+            dassert(false, "we can't handle this error in init app partition nodes err(%s), gpid(%d.%d)", ec.to_string(), app_id, pidx);
+        }
+    };
+
+    app_state& app = _apps[app_id - 1];
+    std::string app_partition_path = get_partition_path(app, pidx);
+    blob value;
+    marshall_json(value, app.partitions[pidx]);
+    _storage->create_node(app_partition_path,
+        LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+        on_create_app_partition,
+        value);
+}
+
+void server_state::initialize_app(app_state& app, dsn_message_t msg)
+{
+    dsn_msg_add_ref(msg);
+    auto on_create_app_root = [this, msg, &app](error_code ec)
+    {
+        configuration_create_app_response resp;
+        if (ERR_OK==ec || ERR_NODE_ALREADY_EXIST==ec)
+        {
+            dinfo("create app on storage service ok, name: %s, appid %" PRId32 "", app.app_name.c_str(), app.app_id);
             resp.appid = app.app_id;
             resp.err = ERR_OK;
             reply(msg, resp);
+            for (unsigned int i=0; i!=app.partition_count; ++i)
+            {
+                init_app_partition_node(app.app_id, i);
+            }
         }
         else if (ERR_TIMEOUT == ec)
         {
@@ -925,14 +1041,21 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
                 app.status = AS_CREATE_FAILED;
             }
         }
-        else {
-            dassert(false, "storage internal error, we can't handle this, ec(%s)", ec.to_string());
+        else
+        {
+            dassert(false, "we can't handle this right now, err(%s)", ec.to_string());
         }
         dsn_msg_release_ref(msg);
     };
-    _storage->submit_transaction(entries,
-        LPC_META_SERVER_STATE_UPDATE_CALLBACK, 
-        after_create_tree);
+
+    blob value;
+    std::string app_dir = get_app_path(app);
+    marshall_json(value, app, true);
+    _storage->create_node(
+        app_dir,
+        LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+        on_create_app_root,
+        value);
 }
 
 void server_state::create_app(dsn_message_t msg)
@@ -943,6 +1066,11 @@ void server_state::create_app(dsn_message_t msg)
     int32_t index;
     ::unmarshall(msg ,request);
     
+    ddebug("create app request, name(%s), type(%s), partition_count(%d)",
+           request.app_name.c_str(),
+           request.options.app_type.c_str(),
+           request.options.partition_count);
+
     auto option_match_check = [](const create_app_options& opt, const app_state& exist_app) {
         return opt.partition_count==exist_app.partition_count && 
                opt.app_type==exist_app.app_type;
@@ -990,6 +1118,7 @@ void server_state::create_app(dsn_message_t msg)
             app.app_name = request.app_name;
             app.app_type = request.options.app_type;
             app.partition_count = request.options.partition_count;
+            app.available_partitions.store(0);
 
             partition_configuration pc;
             pc.app_type = app.app_type;
@@ -1025,7 +1154,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
     dsn_msg_add_ref(msg);
     auto after_set_app_dropped = [this, &app, msg](error_code ec) {
         configuration_drop_app_response response;
-        if (ERR_OK == ec)
+        if (ERR_OK == ec || ERR_OBJECT_NOT_FOUND == ec)
         {
             {
                 zauto_write_lock l(_lock);
@@ -1060,6 +1189,9 @@ void server_state::drop_app(dsn_message_t msg)
     int32_t index;
     bool do_dropping = false;
     ::unmarshall(msg, request);
+
+    ddebug("drop app request, name(%s)", request.app_name.c_str());
+
     {
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
@@ -1099,6 +1231,8 @@ void server_state::list_apps(dsn_message_t msg)
     configuration_list_apps_request request;
     configuration_list_apps_response response;
     ::unmarshall(msg, request);
+
+    ddebug("list app request, status(%d)", request.status);
     {
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
@@ -1142,6 +1276,52 @@ void server_state::list_nodes(dsn_message_t msg)
     reply(msg, response);
 }
 
+void server_state::update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi)
+{
+    std::string partition_path = get_partition_path(wi->req->config.gpid);
+    blob config;
+    marshall_json(config, wi->req->config);
+    _storage->set_data(
+        partition_path,
+        config,
+        LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+        [this, wi](error_code ec)
+        {
+            global_partition_id gpid = wi->req->config.gpid;
+            if (ec == ERR_OK)
+            {
+                {
+                    zauto_lock l(_pending_requests_lock);
+                    _pending_requests[gpid][wi->ballot] = *wi;
+                }
+                exec_pending_requests(gpid);
+            }
+            else if (ec == ERR_TIMEOUT)
+            {
+                // well, if we have message need to resposne,
+                // we just ignore it. After all, the sender will
+                // resend it
+                if (wi->msg)
+                {
+                    dsn_msg_release_ref(wi->msg);
+                }
+                else
+                {
+                    tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+                        this,
+                        std::bind(&server_state::update_configuration_on_remote, this, wi),
+                        0,
+                        std::chrono::milliseconds(1000));
+                }
+            }
+            else
+            {
+                dassert(false, "we can't handle this, err(%s)", ec.to_string());
+            }
+        }
+        );
+}
+
 void server_state::update_configuration(
     std::shared_ptr<configuration_update_request>& req,
     dsn_message_t request_msg, 
@@ -1149,7 +1329,6 @@ void server_state::update_configuration(
 {
     bool write;
     configuration_update_response response; 
-    std::string partition_path;
 
     {
         zauto_read_lock l(_lock);
@@ -1175,7 +1354,6 @@ void server_state::update_configuration(
         else
         {
             write = true;
-            partition_path = get_partition_path(old.gpid);
             req->config.last_drops = old.last_drops;
         }
     }
@@ -1212,31 +1390,12 @@ void server_state::update_configuration(
             break;
         }
 
-        blob new_config_blob;
-        marshall_json(new_config_blob, req->config);
-        _storage->set_data(
-            partition_path,
-            new_config_blob,
-            LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-            [this, new_config_blob, req, request_msg, callback](error_code ec)
-            {
-                // TODO: should check error_code first
-
-                global_partition_id gpid = req->config.gpid;
-                storage_work_item wi;
-                wi.ballot = req->config.ballot;
-                wi.req = req;
-                wi.msg = request_msg;
-                wi.callback = callback;
-
-                {
-                    zauto_lock l(_pending_requests_lock);
-                    _pending_requests[gpid][wi.ballot] = wi;
-                }
-
-                exec_pending_requests(gpid);
-            }
-        );
+        std::shared_ptr<storage_work_item> wi(new storage_work_item());
+        wi->ballot = req->config.ballot;
+        wi->req = req;
+        wi->msg = request_msg;
+        wi->callback = callback;
+        update_configuration_on_remote(wi);
     }
 }
 
@@ -1283,29 +1442,6 @@ void server_state::exec_pending_requests(global_partition_id gpid)
             wi.callback();
         }
     } while (true);
-}
-
-/*static*/ void server_state::maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
-{
-    auto it = std::find(drops.begin(), drops.end(), node);
-    if (is_add)
-    {
-        if (it != drops.end())
-            drops.erase(it);
-    }
-    else
-    {        
-        if (it == drops.end())
-        {
-            drops.push_back(node);
-            if (drops.size() > 3)
-                drops.erase(drops.begin());
-        }
-        else
-        {
-            dassert(false, "the node cannot be in drops set before this update", node.to_string());
-        }
-    }
 }
 
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
@@ -1464,19 +1600,6 @@ void server_state::check_consistency(global_partition_id gpid)
             lc++;
     }    
     dassert(_node_live_count == lc, "");
-}
-
-bool server_state::partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2)
-{
-    // last_drops is not considered into equality check
-    return pc1.ballot == pc2.ballot &&
-           pc1.gpid.app_id == pc2.gpid.app_id &&
-           pc1.gpid.pidx == pc2.gpid.pidx &&
-           pc1.app_type == pc2.app_type &&
-           pc1.max_replica_count == pc2.max_replica_count &&
-           pc1.primary == pc2.primary &&
-           pc1.secondaries == pc2.secondaries &&
-           pc1.last_committed_decree == pc2.last_committed_decree;
 }
 
 void server_state::json_state(std::stringstream& out) const
