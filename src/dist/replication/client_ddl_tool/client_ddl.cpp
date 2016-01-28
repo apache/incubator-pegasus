@@ -110,21 +110,22 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
         {
             return resp.err;
         }
-        bool ready = true;
         dassert(partition_count == query_resp.partition_count, "partition count not equal");
+        int ready_count = 0;
         for(int i =0; i < partition_count; i++)
         {
             partition_configuration pc = query_resp.partitions[i];
-            if(pc.primary.is_invalid() || ((pc.secondaries.size() * 2 + 2) < replica_count))
+            if (!pc.primary.is_invalid() && (pc.secondaries.size() >= replica_count / 2))
             {
-                ready = false;
-                break;
+                ready_count++;
             }
         }
-
-        if(ready)
+        if(ready_count == partition_count)
+        {
             break;
-        std::cout << app_name << " not ready yet, still waiting." << std::endl;
+        }
+        std::cout << app_name << " not ready yet, still waiting... ("
+                  << ready_count << "/" << partition_count << ")" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
     }
     std::cout << app_name << " is ready now!" << std::endl;
