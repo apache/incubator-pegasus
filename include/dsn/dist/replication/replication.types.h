@@ -660,13 +660,12 @@ namespace dsn { namespace replication {
     enum app_status
     {
         AS_INVALID = 0,
-        AS_ALL = 1,
-        AS_AVAILABLE = 2,
-        AS_CREATING = 3,
-        AS_CREATE_FAILED = 4,
-        AS_DROPPING = 5,
-        AS_DROP_FAILED = 6,
-        AS_DROPPED = 7,
+        AS_AVAILABLE = 1,
+        AS_CREATING = 2,
+        AS_CREATE_FAILED = 3,
+        AS_DROPPING = 4,
+        AS_DROP_FAILED = 5,
+        AS_DROPPED = 6,
     };
 
     DEFINE_POD_SERIALIZATION(app_status);
@@ -675,9 +674,8 @@ namespace dsn { namespace replication {
     enum node_status
     {
         NS_INVALID = 0,
-        NS_ALL = 1,
-        NS_ALIVE = 2,
-        NS_UNALIVE = 3,
+        NS_ALIVE = 1,
+        NS_UNALIVE = 2,
     };
 
     DEFINE_POD_SERIALIZATION(node_status);

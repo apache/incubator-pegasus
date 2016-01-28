@@ -82,7 +82,8 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         rpc_address next = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
         if (next != ack.this_node) {
             dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
-            switch_master(ack.this_node, next);
+            // do not start next send_beacon() immediately to avoid send rpc too frequently
+            switch_master(ack.this_node, next, 1000);
         }
     }
     else {
@@ -93,12 +94,14 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
             rpc_address next = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
             if (next != ack.this_node) {
                 dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
-                switch_master(ack.this_node, next);
+                // do not start next send_beacon() immediately to avoid send rpc too frequently
+                switch_master(ack.this_node, next, 1000);
             }
         }
         else {
             dsn_group_set_leader(_meta_servers.group_handle(), ack.primary_node.c_addr());
-            switch_master(ack.this_node, ack.primary_node);
+            // start next send_beacon() immediately because the leader is possibly right.
+            switch_master(ack.this_node, ack.primary_node, 0);
         }
     }
 }
