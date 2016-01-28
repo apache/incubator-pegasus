@@ -105,7 +105,7 @@ public:
 
     void register_master(::dsn::rpc_address target);
 
-    bool switch_master(::dsn::rpc_address from, ::dsn::rpc_address to);
+    bool switch_master(::dsn::rpc_address from, ::dsn::rpc_address to, uint32_t delay_milliseconds);
 
     bool unregister_master( ::dsn::rpc_address node);
 
