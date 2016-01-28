@@ -106,6 +106,7 @@ struct app_state
         partition_count=other.partition_count;
         partitions=other.partitions;
         available_partitions.store(other.available_partitions.load());
+        return *this;
     }
     app_state& operator = (app_state &&other)
     {
@@ -116,6 +117,7 @@ struct app_state
         partition_count = other.partition_count;
         partitions = std::move(other.partitions);
         available_partitions.store(other.available_partitions.load());
+        return *this;
     }
 };
 
