@@ -60,7 +60,7 @@ void simple_stateful_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
-        if (app.status != app_status::available)
+        if (app.status != AS_AVAILABLE)
             continue;
         for (int j = 0; j < app.partition_count; j++)
         {
@@ -81,7 +81,7 @@ void simple_stateful_load_balancer::run(global_partition_id gpid)
 
 void simple_stateful_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
 {
-    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_NONE)
+    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_INVALID)
     {
         derror("invalid params");
         return;

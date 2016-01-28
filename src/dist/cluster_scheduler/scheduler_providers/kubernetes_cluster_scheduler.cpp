@@ -93,8 +93,8 @@ void kubernetes_cluster_scheduler::undeploy_k8s_unit_cleanup(dsn_cli_reply reply
 }
 error_code kubernetes_cluster_scheduler::initialize()
 { 
-    int ret;
 #ifndef _WIN32    
+    int ret;
     ret = system("kubectl version");
     if (ret != 0)
     {

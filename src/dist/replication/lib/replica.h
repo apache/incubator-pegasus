@@ -82,7 +82,7 @@ public:
     //
     //    requests from clients
     // 
-    void on_client_write(int code, dsn_message_t request);
+    void on_client_write(task_code code, dsn_message_t request);
     void on_client_read(const read_request_header& meta, dsn_message_t request);
 
     //

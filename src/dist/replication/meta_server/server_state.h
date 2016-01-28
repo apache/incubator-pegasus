@@ -71,7 +71,7 @@ struct app_state
     std::atomic_int                      available_partitions;
     DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions)
 
-    app_state() : status(app_status::dropped), app_type(), app_name(), app_id(0), partitions(), partition_count(0)
+    app_state() : status(AS_DROPPED), app_type(), app_name(), app_id(0), partitions(), partition_count(0)
     {
         available_partitions.store(0);
     }
@@ -180,6 +180,8 @@ public:
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
     void list_apps(dsn_message_t msg);
+
+    void list_nodes(dsn_message_t msg);
 
     void unfree_if_possible_on_start();
 

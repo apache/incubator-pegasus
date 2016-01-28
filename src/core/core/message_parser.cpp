@@ -43,16 +43,18 @@
 
 namespace dsn {
 
-    message_parser::message_parser(int buffer_block_size)
+    message_parser::message_parser(int buffer_block_size, bool is_write_only)
         : _buffer_block_size(buffer_block_size)
     {
-        create_new_buffer(buffer_block_size);
+        if (!is_write_only)
+        {
+            create_new_buffer(buffer_block_size);
+        }
     }
 
     void message_parser::create_new_buffer(int sz)
     {
-        std::shared_ptr<char> buffer(new char[sz]);
-        _read_buffer.assign(buffer, 0, sz);
+        _read_buffer.assign(std::shared_ptr<char>(new char[sz], std::default_delete<char[]>{}), 0, sz);
         _read_buffer_occupied = 0;
     }
 
@@ -94,13 +96,39 @@ namespace dsn {
         return _read_buffer.length() - _read_buffer_occupied;
     }
 
-    //-------------------- dsn message --------------------
-
-    dsn_message_parser::dsn_message_parser(int buffer_block_size)
-        : message_parser(buffer_block_size)
+    //-------------------- msg parser manager --------------------
+    message_parser_manager::message_parser_manager()
     {
+        _factory_vec.resize(network_header_format::max_value());
     }
 
+    void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
+    {
+        if (fmt >= _factory_vec.size())
+        {
+            _factory_vec.resize(fmt + 1);
+        }
+
+        parser_factory_info& info = _factory_vec[fmt];
+        info.fmt = fmt;
+        info.factory = f;
+        info.factory2 = f2;
+        info.parser_size = sz;
+    }
+
+    message_parser* message_parser_manager::create_parser(network_header_format fmt, int buffer_blk_size, bool is_write_only)
+    {
+        parser_factory_info& info = _factory_vec[fmt];
+        return info.factory(buffer_blk_size, is_write_only);
+    }
+
+    //-------------------- dsn message --------------------
+
+    dsn_message_parser::dsn_message_parser(int buffer_block_size, bool is_write_only)
+        : message_parser(buffer_block_size, is_write_only)
+    {
+    }
+    
     message_ex* dsn_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
     {
         mark_read(read_length);

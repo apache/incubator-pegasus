@@ -253,7 +253,7 @@ private:
     friend class replica_stub;
     error_code open_internal(replica* r, bool create_new);
     error_code write_internal(mutation_ptr& mu);
-    void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
+    void       dispatch_rpc_call(dsn_task_code_t code, binary_reader& reader, dsn_message_t response);
     const replica_init_info& init_info() const { return _info; }
     error_code update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
 
@@ -263,7 +263,7 @@ private:
     std::string _dir_data; // ${replica_dir}/data
     std::string _dir_learn;
     replica*    _replica;
-    std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
+    std::unordered_map<dsn_task_code_t, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
     replica_init_info    _info;

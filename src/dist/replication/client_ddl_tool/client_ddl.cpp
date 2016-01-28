@@ -50,7 +50,7 @@ client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
 
 dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
 {
-    if((partition_count < 0) || ((partition_count & (partition_count -1)) != 0))
+    if(partition_count < 1)
         return ERR_INVALID_PARAMETERS;
 
     if(replica_count < 3)
@@ -207,6 +207,54 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
             << std::setw(20) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
             << std::setw(10) << std::left << info.partition_count
+            << std::endl;
+    }
+    out << std::endl << std::flush;
+    return dsn::ERR_OK;
+}
+
+dsn::error_code client_ddl::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+{
+    std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
+    req->status = status;
+
+    auto resp_task = request_meta<configuration_list_nodes_request>(
+            RPC_CM_LIST_NODES,
+            req
+    );
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_list_nodes_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_list_nodes_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    out << std::setw(25) << std::left << "address"
+        << std::setw(20) << std::left << "status"
+        << std::endl;
+    for(int i = 0; i < resp.infos.size(); i++)
+    {
+        dsn::replication::node_info info = resp.infos[i];
+        out << std::setw(25) << std::left << info.address.to_string()
+            << std::setw(20) << std::left << enum_to_string(info.status)
             << std::endl;
     }
     out << std::endl << std::flush;

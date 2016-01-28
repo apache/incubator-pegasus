@@ -68,10 +68,7 @@ error_code replica::initialize_on_new()
 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
 {
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
-    std::string dir = utils::filesystem::path_combine(stub->dir(), buffer);
-
+    std::string dir = stub->get_replica_dir(app_type, gpid);
     replica* rep = new replica(stub, gpid, app_type, dir.c_str());
     error_code err = rep->initialize_on_new();
     if (err == ERR_OK)
@@ -159,7 +156,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
 
-    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), PROVIDER_TYPE_MAIN, this));
+    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this));
     if (nullptr == _app)
     {
         derror( "%s: app type %s not found", name(), _app_type.c_str());

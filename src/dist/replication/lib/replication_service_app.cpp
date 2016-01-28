@@ -57,7 +57,7 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize();    
+    opts.initialize();
 
     _stub->initialize(opts);
     _stub->open_service();

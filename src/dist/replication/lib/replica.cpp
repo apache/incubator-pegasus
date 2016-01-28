@@ -117,7 +117,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
         return;
     }
 
-    if (meta.semantic == read_semantic_t::ReadLastUpdate)
+    if (meta.semantic == read_semantic::ReadLastUpdate)
     {
         if (status() != PS_PRIMARY ||
             last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
@@ -130,8 +130,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
     dassert (_app != nullptr, "");
 
     rpc_read_stream reader(request);
-    _app->dispatch_rpc_call(dsn_task_code_from_string(meta.code.c_str(), TASK_CODE_INVALID),
-                            reader, dsn_msg_create_response(request));
+    _app->dispatch_rpc_call(meta.code, reader, dsn_msg_create_response(request));
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)
@@ -142,7 +141,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
         return;
     }   
 
-    ddebug("%s: reply client write, err = %s", name(), error.to_string());
+    ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
     reply(request, error);
 }
 

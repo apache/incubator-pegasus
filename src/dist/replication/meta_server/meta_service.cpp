@@ -162,6 +162,12 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_LIST_APPS",
         &meta_service::on_list_apps
         );
+
+    register_rpc_handler(
+        RPC_CM_LIST_NODES,
+        "RPC_CM_LIST_NODES",
+        &meta_service::on_list_nodes
+        );
 }
 
 void meta_service::stop()
@@ -276,6 +282,21 @@ void meta_service::on_list_apps(dsn_message_t req)
     }
 
     _state->list_apps(req);
+}
+
+void meta_service::on_list_nodes(dsn_message_t req)
+{
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_list_nodes_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    _state->list_nodes(req);
 }
 
 // partition server & client => meta server

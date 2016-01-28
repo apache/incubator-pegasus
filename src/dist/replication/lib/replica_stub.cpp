@@ -89,67 +89,92 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
-    error_code err = ERR_OK;
     //zauto_lock l(_replicas_lock);
-
-    // init dirs
     set_options(opts);
-    _dir = std::string(dsn_get_current_app_data_dir());
     _primary_address = primary_address();
-    
+
+    // clear dirs if need
     if (clear)
     {
-        if (!dsn::utils::filesystem::remove_path(_dir))
+        if (!dsn::utils::filesystem::remove_path(_options.slog_dir))
         {
-            dassert(false, "Fail to remove %s.", _dir.c_str());
+            dassert(false, "Fail to remove %s.", _options.slog_dir.c_str());
+        }
+        for (auto& dir : _options.data_dirs)
+        {
+            if (!dsn::utils::filesystem::remove_path(dir))
+            {
+                dassert(false, "Fail to remove %s.", dir.c_str());
+            }
         }
     }
 
-    if (!dsn::utils::filesystem::create_directory(_dir))
+    // init dirs
+    if (!dsn::utils::filesystem::create_directory(_options.slog_dir))
     {
-        dassert(false, "Fail to create directory %s.", _dir.c_str());
+        dassert(false, "Fail to create directory %s.", _options.slog_dir.c_str());
+    }
+    std::string cdir;
+    if (!dsn::utils::filesystem::get_absolute_path(_options.slog_dir, cdir))
+    {
+        dassert(false, "Fail to get absolute path from %s.", _options.slog_dir.c_str());
+    }
+    _options.slog_dir = cdir;
+    ddebug("app[%s]: slog_dir=%s", _options.app_name.c_str(), _options.slog_dir.c_str());
+    int count = 0;
+    for (auto& dir : _options.data_dirs)
+    {
+        if (!dsn::utils::filesystem::create_directory(dir))
+        {
+            dassert(false, "Fail to create directory %s.", dir.c_str());
+        }
+        std::string cdir;
+        if (!dsn::utils::filesystem::get_absolute_path(dir, cdir))
+        {
+            dassert(false, "Fail to get absolute path from %s.", dir.c_str());
+        }
+        dir = cdir;
+        ddebug("app[%s]: data_dirs[%d]=%s", _options.app_name.c_str(), count, dir.c_str());
+        count++;
     }
 
-    std::string temp;
-    if (!dsn::utils::filesystem::get_absolute_path(_dir, temp))
-    {
-        dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
-    }
-    _dir = temp;
-    std::string log_dir = dsn::utils::filesystem::path_combine(_dir, "slog");
-    if (!dsn::utils::filesystem::create_directory(log_dir))
-    {
-        dassert(false, "Fail to create directory %s.", log_dir.c_str());
-    }
     _log = new mutation_log(
-        log_dir,
-        opts.log_shared_batch_buffer_kb,
-        opts.log_shared_file_size_mb,
-        opts.log_shared_force_flush
+        _options.slog_dir,
+        _options.log_shared_batch_buffer_kb,
+        _options.log_shared_file_size_mb,
+        _options.log_shared_force_flush
         );
 
     // init rps
     replicas rps;
     std::vector<std::string> dir_list;
 
-    if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
+    for (auto& dir : _options.data_dirs)
     {
-        dassert(false, "Fail to get subdirectories in %s.", dir().c_str());
+        std::vector<std::string> tmp_list;
+        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
+        {
+            dassert(false, "Fail to get subdirectories in %s.", dir.c_str());
+        }
+        dir_list.insert(dir_list.end(), tmp_list.begin(), tmp_list.end());
     }
 
-    for (auto& name : dir_list)
+    for (auto& dir : dir_list)
     {
-        if (name.length() >= 4 &&
-            (name.substr(name.length() - 4) == "slog" || name.substr(name.length() - 4) == ".err"))
+        if (dir.length() >= 4 && dir.substr(dir.length() - 4) == ".err")
             continue;
 
-        auto r = replica::load(this, name.c_str());
+        auto r = replica::load(this, dir.c_str());
         if (r != nullptr)
         {
+            if (rps.find(r->get_gpid()) != rps.end())
+            {
+                dassert(false, "conflict replica dir: %s <--> %s", r->dir().c_str(), rps[r->get_gpid()]->dir().c_str());
+            }
             ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
                 r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
-                name.c_str(),
+                dir.c_str(),
                 r->last_durable_decree(),
                 r->last_committed_decree(),
                 r->last_prepared_decree()
@@ -160,7 +185,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     dir_list.clear();
 
     // init shared prepare log
-    err = _log->open(
+    error_code err = _log->open(
         [&rps](mutation_ptr& mu)
         {
             auto it = rps.find(mu->data.header.gpid);
@@ -204,12 +229,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         // restart log service
         _log->close();
         _log = nullptr;
-        if (!utils::filesystem::remove_path(log_dir))
+        if (!utils::filesystem::remove_path(_options.slog_dir))
         {
-            dassert(false, "remove directory %s failed", log_dir.c_str());
+            dassert(false, "remove directory %s failed", _options.slog_dir.c_str());
         }
         _log = new mutation_log(
-            log_dir,
+            _options.slog_dir,
             opts.log_shared_batch_buffer_kb,
             opts.log_shared_file_size_mb,
             opts.log_shared_force_flush
@@ -356,32 +381,44 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
 void replica_stub::on_client_write(dsn_message_t request)
 {
     write_request_header hdr;
-    ::unmarshall(request, hdr);    
-    
+    ::unmarshall(request, hdr);
+
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        rep->on_client_write(dsn_task_code_from_string(hdr.code.c_str(), TASK_CODE_INVALID), request);
+        rep->on_client_write(hdr.code, request);
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
 void replica_stub::on_client_read(dsn_message_t request)
 {
-    read_request_header req;
-    ::unmarshall(request, req);
+    read_request_header hdr;
+    ::unmarshall(request, hdr);
 
-    replica_ptr rep = get_replica(req.gpid);
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
+    replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(req, request);
+        rep->on_client_read(hdr, request);
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -823,8 +860,15 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(dsn_message_t request, int error)
+void replica_stub::response_client_error(dsn_message_t request, error_code error)
 {
+    if (nullptr == request)
+    {
+        error.end_tracking();
+        return;
+    }
+
+    ddebug("reply client read/write, err = %s", error.to_string());
     reply(request, error);
 }
 
@@ -876,9 +920,14 @@ void replica_stub::on_gc()
     
     // gc on-disk rps
     std::vector<std::string> sub_list;
-    if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
+    for (auto& dir : _options.data_dirs)
     {
-        dassert(false, "Fail to get subdirectories in %s.", _dir.c_str());
+        std::vector<std::string> tmp_list;
+        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
+        {
+            dassert(false, "Fail to get subdirectories in %s.", dir.c_str());
+        }
+        sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
     std::string ext = ".err";
     for (auto& fpath : sub_list)
@@ -986,14 +1035,10 @@ void replica_stub::on_gc()
 
 void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type.c_str());
+    std::string dir = get_replica_dir(app_type.c_str(), gpid);
+    dwarn("open replica '%s'", dir.c_str());
 
-    std::string dr = dir() + "/" + buffer;
-
-    dwarn("open replica '%s'", dr.c_str());
-
-    replica_ptr rep = replica::load(this, dr.c_str());
+    replica_ptr rep = replica::load(this, dir.c_str());
 
     if (rep == nullptr)
     {
@@ -1212,7 +1257,36 @@ void replica_stub::close()
         _log->close();
         _log = nullptr;
     }
+}
 
+std::string replica_stub::get_replica_dir(const char* app_type, global_partition_id gpid) const
+{
+    char buffer[256];
+    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
+    std::string ret_dir;
+    for (auto& dir : _options.data_dirs)
+    {
+        std::string cur_dir = utils::filesystem::path_combine(dir, buffer);
+        if (utils::filesystem::directory_exists(cur_dir))
+        {
+            if (!ret_dir.empty())
+            {
+                dassert(false, "replica dir conflict: %s <--> %s", cur_dir.c_str(), ret_dir.c_str());
+            }
+            ret_dir = cur_dir;
+        }
+    }
+    if (ret_dir.empty())
+    {
+        /*
+        int r = dsn_random32(0, _options.data_dirs.size() - 1);
+        ret_dir = utils::filesystem::path_combine(_options.data_dirs[r], buffer);
+        */
+        static std::atomic<int> next_id;
+        int pos = (next_id++) % _options.data_dirs.size();
+        ret_dir = utils::filesystem::path_combine(_options.data_dirs[pos], buffer);
+    }
+    return ret_dir;
 }
 
 }} // namespace

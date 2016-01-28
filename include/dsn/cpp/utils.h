@@ -111,14 +111,22 @@ namespace dsn {
     class blob
     {
     public:
-        blob() { _buffer = _data = 0;  _length = 0; }
+        blob() : _buffer(nullptr), _data(nullptr), _length(0) {}
 
-        blob(std::shared_ptr<char>& buffer, int length)
-            : _holder(buffer), _buffer(buffer.get()), _data(buffer.get()), _length(length)
+        blob(const std::shared_ptr<char>& buffer, int length)
+            : _holder(buffer), _buffer(_holder.get()), _data(_holder.get()), _length(length)
         {}
 
-        blob(std::shared_ptr<char>& buffer, int offset, int length)
-            : _holder(buffer), _buffer(buffer.get()), _data(buffer.get() + offset), _length(length)
+        blob(std::shared_ptr<char>&& buffer, int length)
+            : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get()), _length(length)
+        {}
+
+        blob(const std::shared_ptr<char>& buffer, int offset, int length)
+            : _holder(buffer), _buffer(_holder.get()), _data(_holder.get() + offset), _length(length)
+        {}
+
+        blob(std::shared_ptr<char>&& buffer, int offset, int length)
+            : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get() + offset), _length(length)
         {}
 
         blob(const char* buffer, int offset, int length)
@@ -129,12 +137,49 @@ namespace dsn {
             : _holder(source._holder), _buffer(source._buffer), _data(source._data), _length(source._length)
         {}
 
-        void assign(std::shared_ptr<char>& buffer, int offset, int length)
+        blob(blob&& source)
+            : _holder(std::move(source._holder)), _buffer(source._buffer), _data(source._data), _length(source._length)
+        {
+            source._buffer = nullptr;
+            source._data = nullptr;
+            source._length = 0;
+        }
+
+        blob& operator = (const blob& that)
+        {
+            _holder = that._holder;
+            _buffer = that._buffer;
+            _data = that._data;
+            _length = that._length;
+            return *this;
+        }
+        
+        blob& operator = (blob&& that)
+        {
+            _holder = std::move(that._holder);
+            _buffer = that._buffer;
+            _data = that._data;
+            _length = that._length;
+            that._buffer = nullptr;
+            that._data = nullptr;
+            that._length = 0;
+            return *this;
+        }
+
+        void assign(const std::shared_ptr<char>& buffer, int offset, int length)
         {
             _holder = buffer;
-            _buffer = (buffer.get());
-            _data = (buffer.get() + offset);
-            _length = (length);
+            _buffer = _holder.get();
+            _data = _holder.get() + offset;
+            _length = length;
+        }
+
+        void assign(std::shared_ptr<char>&& buffer, int offset, int length)
+        {
+            _holder = std::move(buffer);
+            _buffer = (_holder.get());
+            _data = (_holder.get() + offset);
+            _length = length;
         }
 
         void assign(const char* buffer, int offset, int length)
@@ -142,14 +187,14 @@ namespace dsn {
             _holder = nullptr;
             _buffer = buffer;
             _data = buffer + offset;
-            _length = (length);
+            _length = length;
         }
 
         const char* data() const { return _data; }
 
         int   length() const { return _length; }
 
-        std::shared_ptr<char> buffer() { return _holder; }
+        std::shared_ptr<char> buffer() const { return _holder; }
 
         bool has_holder() const { return _holder.get() != nullptr; }
 
@@ -216,7 +261,6 @@ namespace dsn {
         int read(/*out*/ uint64_t& val) { return read_pod(val); }
         int read(/*out*/ bool& val) { return read_pod(val); }
 
-        int read(/*out*/ error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
         int read(/*out*/ std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
@@ -258,7 +302,6 @@ namespace dsn {
         void write(const uint64_t& val) { write_pod(val); }
         void write(const bool& val) { write_pod(val); }
 
-        void write(const error_code& val) { int err = val.get();  write_pod(err); }
         void write(const std::string& val);
         void write(const char* buffer, int sz);
         void write(const blob& val);

@@ -133,7 +133,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = -1;
-    rc->write_header.code = dsn_task_code_to_string(code);
+    rc->write_header.code = task_code(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = opts.timeout_ms;
     rc->timeout_ts_us = now_us() + opts.timeout_ms * 1000;
@@ -151,7 +151,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     dsn_task_code_t code,
     dsn_message_t request,
     ::dsn::task_ptr& callback,
-    read_semantic_t read_semantic,
+    read_semantic read_semantic,
     decree snapshot_decree, // only used when ReadSnapshot
     int reply_hash
     )
@@ -167,7 +167,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = -1;
-    rc->read_header.code = dsn_task_code_to_string(code);
+    rc->read_header.code = task_code(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
@@ -566,9 +566,9 @@ dsn::task_ptr replication_app_client_base::query_partition_config(request_contex
 }
 
 /*search in cache*/
-dsn::rpc_address replication_app_client_base::get_address(bool is_write, read_semantic_t semantic, const partition_configuration& config)
+dsn::rpc_address replication_app_client_base::get_address(bool is_write, read_semantic semantic, const partition_configuration& config)
 {
-    if (is_write || semantic == read_semantic_t::ReadLastUpdate)
+    if (is_write || semantic == read_semantic::ReadLastUpdate)
         return config.primary;
 
     // readsnapshot or readoutdated, using random
@@ -595,7 +595,7 @@ dsn::rpc_address replication_app_client_base::get_address(bool is_write, read_se
 //ERR_OBJECT_NOT_FOUND  not in cache.
 //ERR_IO_PENDING        in cache but invalid, remove from cache.
 //ERR_OK                in cache and valid
-error_code replication_app_client_base::get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, read_semantic semantic)
 {
     partition_configuration config;
     {

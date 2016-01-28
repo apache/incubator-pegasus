@@ -51,7 +51,7 @@ namespace dsn {
                 asio_network_provider& net,
                 ::dsn::rpc_address remote_addr,
                 std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                std::shared_ptr<message_parser>& parser,
+                std::unique_ptr<message_parser>&& parser,
                 bool is_client
                 );
             virtual ~asio_rpc_session();

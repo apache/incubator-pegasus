@@ -41,7 +41,7 @@ namespace dsn { namespace replication {
 
 struct remote_learner_state
 {
-    uint64_t signature;
+    int64_t signature;
     ::dsn::task_ptr timeout_task;
     decree   prepare_start_decree;
 };
@@ -112,7 +112,7 @@ public:
     potential_secondary_context() :
         learning_signature(0),
         learning_round_is_running(false),
-        learning_status(learner_status::Learning_INVALID),
+        learning_status(learner_status::LearningInvalid),
         learning_start_prepare_decree(invalid_decree)
     {}
 

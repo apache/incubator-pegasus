@@ -85,9 +85,15 @@ __pragma(warning(disable:4127))
 // common utilities
 # include <atomic>
 
-// common macros
-#define PROVIDER_TYPE_MAIN 0
-#define PROVIDER_TYPE_ASPECT 1
+// common macros and data structures
+namespace dsn 
+{
+    enum provider_type
+    {
+        PROVIDER_TYPE_MAIN = 0,
+        PROVIDER_TYPE_ASPECT = 1
+    };
+}
 
 # ifndef TIME_MS_MAX
 # define TIME_MS_MAX UINT_MAX
