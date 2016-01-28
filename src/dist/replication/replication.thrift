@@ -187,7 +187,6 @@ enum config_type
 enum app_status
 {
     AS_INVALID,
-    AS_ALL,
     AS_AVAILABLE,
     AS_CREATING,
     AS_CREATE_FAILED,
@@ -208,7 +207,6 @@ struct app_info
 enum node_status
 {
     NS_INVALID,
-    NS_ALL,
     NS_ALIVE,
     NS_UNALIVE,
 }
@@ -283,12 +281,12 @@ struct configuration_drop_app_request
 
 struct configuration_list_apps_request
 {
-    1:app_status               status = app_status.AS_ALL;
+    1:app_status               status = app_status.AS_INVALID;
 }
 
 struct configuration_list_nodes_request
 {
-    1:node_status              status = node_status.NS_ALL;
+    1:node_status              status = node_status.NS_INVALID;
 }
 
 // meta server => client

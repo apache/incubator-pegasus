@@ -116,27 +116,27 @@ int main(int argc, char** argv)
             std::cout << "drop app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_apps") {
-        dsn::replication::app_status s = dsn::replication::AS_ALL;
-        if (!status.empty()) {
+        dsn::replication::app_status s = dsn::replication::AS_INVALID;
+        if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "AS_" + status;
             s = enum_from_string(status.c_str(), dsn::replication::AS_INVALID);
+            if(s == dsn::replication::AS_INVALID)
+                usage(argv[0]);
         }
-        if(s == dsn::replication::AS_INVALID)
-            usage(argv[0]);
         dsn::error_code err = client.list_apps(s, out_file);
         if(err != dsn::ERR_OK)
             std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_nodes") {
-        dsn::replication::node_status s = dsn::replication::NS_ALL;
-        if (!status.empty()) {
+        dsn::replication::node_status s = dsn::replication::NS_INVALID;
+        if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "NS_" + status;
             s = enum_from_string(status.c_str(), dsn::replication::NS_INVALID);
+            if(s == dsn::replication::NS_INVALID)
+                usage(argv[0]);
         }
-        if(s == dsn::replication::NS_INVALID)
-            usage(argv[0]);
         dsn::error_code err = client.list_nodes(s, out_file);
         if(err != dsn::ERR_OK)
             std::cout << "list nodes failed, error=" << dsn_error_to_string(err) << std::endl;

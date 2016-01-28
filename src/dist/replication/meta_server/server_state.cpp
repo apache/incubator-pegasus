@@ -1103,7 +1103,7 @@ void server_state::list_apps(dsn_message_t msg)
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
         {
-            if ( request.status == AS_ALL || request.status == app.status)
+            if ( request.status == AS_INVALID || request.status == app.status)
             {
                 dsn::replication::app_info info;
                 info.app_id = app.app_id;
@@ -1129,7 +1129,7 @@ void server_state::list_nodes(dsn_message_t msg)
         for (auto& node: _nodes)
         {
             node_status status = node.second.is_alive ? NS_ALIVE : NS_UNALIVE;
-            if (request.status == NS_ALL || request.status == status)
+            if (request.status == NS_INVALID || request.status == status)
             {
                 dsn::replication::node_info info;
                 info.status = status;
