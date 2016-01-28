@@ -340,6 +340,9 @@ namespace dsn
     {
         if (is_client())
         {
+            /* TODO(qinzuoyan): now that we will always call on_recv_reply() to notice the failure,
+             * there is no need to reconnect, which may cause problem when using the same socket.
+             *
             // still connecting, let's retry
             if (is_connecting() && ++_reconnect_count_after_last_success < 3)
             {
@@ -347,6 +350,7 @@ namespace dsn
                 connect();
                 return false;
             }
+            */
 
             set_disconnected();
             rpc_session_ptr sp = this;
@@ -363,7 +367,10 @@ namespace dsn
             // is only possible when we can always *successfully* connect while fail on send, this should be
             // very rare. so here we still use the old way but keep this mark here for future fix.
             //
-            clear(++_reconnect_count_after_last_success < 3);
+            // @qinzuoyan: now that we will always call on_recv_reply() to notice the failure,
+            // there is no need to reconnect.
+            //clear(++_reconnect_count_after_last_success < 3);
+            clear(false);
         }
         
         else
