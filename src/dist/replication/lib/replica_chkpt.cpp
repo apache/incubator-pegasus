@@ -261,7 +261,6 @@ namespace dsn {
             check_hashed_access();
 
             // TODO: dealing with the error
-            dassert(ERR_OK == err, "we can't handle copy failed right now");
             if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
                 // we must give the app the full path of the check point

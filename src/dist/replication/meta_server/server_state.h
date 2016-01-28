@@ -65,7 +65,58 @@ struct app_state
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
-    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions);
+
+    // used only for creating app, to count the number of partitions whose node
+    // has been ready on the remote storage
+    std::atomic_int                      available_partitions;
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions)
+
+    app_state() : status(app_status::dropped), app_type(), app_name(), app_id(0), partitions(), partition_count(0)
+    {
+        available_partitions.store(0);
+    }
+
+    app_state(const app_state& other):
+        status(other.status),
+        app_type(other.app_type),
+        app_name(other.app_name),
+        app_id(other.app_id),
+        partition_count(other.partition_count),
+        partitions(other.partitions)
+    {
+        available_partitions.store(other.available_partitions.load());
+    }
+
+    app_state(app_state&& other):
+        status(other.status),
+        app_type(std::move(other.app_type)),
+        app_name(std::move(other.app_name)),
+        app_id(other.app_id),
+        partition_count(other.partition_count),
+        partitions(std::move(other.partitions))
+    {
+        available_partitions.store(other.available_partitions.load());
+    }
+    app_state& operator = (const app_state &other)
+    {
+        status = other.status;
+        app_type=other.app_type;
+        app_name=other.app_name;
+        app_id=other.app_id;
+        partition_count=other.partition_count;
+        partitions=other.partitions;
+        available_partitions.store(other.available_partitions.load());
+    }
+    app_state& operator = (app_state &&other)
+    {
+        status = other.status;
+        app_type = std::move(other.app_type);
+        app_name = std::move(other.app_name);
+        app_id = other.app_id;
+        partition_count = other.partition_count;
+        partitions = std::move(other.partitions);
+        available_partitions.store(other.available_partitions.load());
+    }
 };
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
@@ -142,13 +193,15 @@ public:
     error_code dump_from_remote_storage(const char* format, const char* local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage);
 
+public:
+    static int32_t _default_max_replica_count;
+
 private:
     // initialize apps in local cache and in remote storage
     error_code initialize_apps();
 
-    // synchronize the state to meta state server
+    // synchronize the state from/to meta state server(i.e., _storage)
     error_code sync_apps_to_remote_storage();
-    // synchronize the latest state from meta state server (i.e., _storage)
     error_code sync_apps_from_remote_storage();
 
     // check consistency of memory state, between _nodes, _apps, _node_live_count
@@ -160,16 +213,12 @@ private:
     // execute all pending requests according to ballot order
     void exec_pending_requests(global_partition_id gpid);
 
-    // compute drop out collection
-    void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
-
-    // check equality of two partition configurations, not take last_drops into account
-    bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
-
     void initialize_app(app_state& app, dsn_message_t msg);
     void do_app_drop(app_state& app, dsn_message_t msg);
-    // join path
-    static std::string join_path(const std::string& input1, const std::string& input2);
+    void init_app_partition_node(int app_id, int pidx);
+
+    struct storage_work_item;
+    void update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi);
 
     // get the application_id from name, -1 for app doesn't exist
     int32_t get_app_index(const char* app_name) const;
@@ -189,7 +238,7 @@ private:
         ::dsn::rpc_address            address;
         std::set<global_partition_id> primaries;
         std::set<global_partition_id> partitions;
-        DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions);
+        DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions)
     };
 
     friend class simple_stateful_load_balancer;
@@ -231,6 +280,7 @@ private:
 
     dsn_handle_t                      _cli_json_state_handle;
     dsn_handle_t                      _cli_dump_handle;
+
 public:
     void json_state(std::stringstream& out) const;
     static void static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
