@@ -327,10 +327,10 @@ namespace dsn
 
 
         template<typename TResponse>
-        std::pair<::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
+        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
         {
             task->wait();
-            std::pair<::dsn::error_code, TResponse> result;
+            std::pair< ::dsn::error_code, TResponse> result;
             result.first = task->error();
             if (task->error() == ::dsn::ERR_OK)
             {
@@ -340,7 +340,7 @@ namespace dsn
         }
 
         template<typename TResponse, typename TRequest>
-        std::pair<::dsn::error_code, TResponse> call_wait(
+        std::pair< ::dsn::error_code, TResponse> call_wait(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,

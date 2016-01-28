@@ -42,7 +42,7 @@ namespace dsn {
                 const char * name,
                 ::dsn::dist::cluster_scheduler::factory f)
         {
-            return dsn::utils::factory_store<::dsn::dist::cluster_scheduler>::register_factory(
+            return dsn::utils::factory_store< ::dsn::dist::cluster_scheduler>::register_factory(
                     name,
                     f,
                     PROVIDER_TYPE_MAIN);
@@ -53,11 +53,11 @@ namespace dsn {
             // register all cluster provider
             register_component_provider(
                     "dsn::dist::kubernetes_cluster_scheduler",
-                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::kubernetes_cluster_scheduler>
+                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::kubernetes_cluster_scheduler>
                     );
             register_component_provider(
                     "dsn::dist::docker_scheduler",
-                    ::dsn::dist::cluster_scheduler::create<::dsn::dist::docker_scheduler>
+                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::docker_scheduler>
                     );
         }
 

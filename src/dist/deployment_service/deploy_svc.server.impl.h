@@ -34,12 +34,12 @@ namespace dsn
 
         private:
             mutable ::dsn::service::zrwlock_nr _service_lock;
-            std::unordered_map<std::string, std::shared_ptr<::dsn::dist::deployment_unit> > _services;
+            std::unordered_map<std::string, std::shared_ptr< ::dsn::dist::deployment_unit> > _services;
 
             struct cluster_ex
             {
                 cluster_info cluster;
-                std::unique_ptr<::dsn::dist::cluster_scheduler> scheduler;
+                std::unique_ptr< ::dsn::dist::cluster_scheduler> scheduler;
             };
 
             mutable ::dsn::service::zrwlock_nr _cluster_lock;
@@ -54,18 +54,18 @@ namespace dsn
             dsn_handle_t _cli_get_cluster_list;
 
         private:
-            void download_service_resource_completed(error_code err, std::shared_ptr<::dsn::dist::deployment_unit> svc);
-            std::shared_ptr<::dsn::dist::deployment_unit> get_service(const std::string& name);
+            void download_service_resource_completed(error_code err, std::shared_ptr< ::dsn::dist::deployment_unit> svc);
+            std::shared_ptr< ::dsn::dist::deployment_unit> get_service(const std::string& name);
             std::shared_ptr<cluster_ex> get_cluster(const std::string& name);
 
             void on_service_deployed(
-                std::shared_ptr<::dsn::dist::deployment_unit> unit,
+                std::shared_ptr< ::dsn::dist::deployment_unit> unit,
                 ::dsn::error_code err,
                 ::dsn::rpc_address addr
                 );
 
             void on_service_failure(
-                std::shared_ptr<::dsn::dist::deployment_unit> unit,
+                std::shared_ptr< ::dsn::dist::deployment_unit> unit,
                 ::dsn::error_code err,
                 const std::string& err_msg
                 );
