@@ -68,10 +68,7 @@ error_code replica::initialize_on_new()
 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
 {
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
-    std::string dir = utils::filesystem::path_combine(stub->dir(), buffer);
-
+    std::string dir = stub->get_replica_dir(app_type, gpid);
     replica* rep = new replica(stub, gpid, app_type, dir.c_str());
     error_code err = rep->initialize_on_new();
     if (err == ERR_OK)

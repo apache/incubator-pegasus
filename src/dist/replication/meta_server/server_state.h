@@ -130,6 +130,8 @@ public:
     void drop_app(dsn_message_t msg);
     void list_apps(dsn_message_t msg);
 
+    void list_nodes(dsn_message_t msg);
+
     void unfree_if_possible_on_start();
 
     // if is freezed

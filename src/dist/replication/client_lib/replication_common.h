@@ -66,6 +66,11 @@ class replication_options
 public:
     std::vector< ::dsn::rpc_address> meta_servers;
 
+    std::string app_name;
+    std::string app_dir;
+    std::string slog_dir;
+    std::vector<std::string> data_dirs;
+
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
         

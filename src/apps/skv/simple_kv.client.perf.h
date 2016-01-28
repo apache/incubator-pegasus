@@ -89,7 +89,8 @@ public:
     {
         auto rs = random64(0, 10000000);
         std::stringstream ss;
-        ss << "key." << rs;
+        ss << "key." << rs << "." << std::string(payload_bytes, 'x');
+
         read(
             ss.str(),
             [this, context = prepare_send_one()](error_code err, std::string&& resp)

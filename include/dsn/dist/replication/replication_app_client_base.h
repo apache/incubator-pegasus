@@ -103,7 +103,7 @@ namespace dsn { namespace replication {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0,
-            read_semantic_t read_semantic = read_semantic_t::ReadOutdated,
+            read_semantic read_semantic = read_semantic::ReadOutdated,
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
@@ -170,7 +170,7 @@ namespace dsn { namespace replication {
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
-            dsn::replication::read_semantic_t read_semantic = read_semantic_t::ReadOutdated,
+            dsn::replication::read_semantic read_semantic = read_semantic::ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot
             int reply_hash = 0
             );
@@ -186,8 +186,8 @@ namespace dsn { namespace replication {
 
     private:
         // local routines
-        dsn::rpc_address get_address(bool is_write, read_semantic_t semantic, const partition_configuration& config);
-        error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic_t semantic);
+        dsn::rpc_address get_address(bool is_write, read_semantic semantic, const partition_configuration& config);
+        error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic semantic);
         void clear_all_pending_tasks();
 
         // with replica
