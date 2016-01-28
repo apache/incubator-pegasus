@@ -36,6 +36,8 @@
 # include "docker_scheduler.h"
 # include "docker_error.h"
 # include <stdlib.h>
+# include <fstream>
+
 namespace dsn
 {
 namespace dist
@@ -165,13 +167,17 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
         std::vector<std::string> f_list;
         std::vector<std::string> a_list;
         int count = 1;
+        //TODO: handle error if machine not enough
         _mgr.get_machine( count, f_list, a_list);
         _machine_map[name].insert(_machine_map[name].begin(),a_list.begin(),a_list.end());
+        std::ofstream fd;
+        fd.open(machine_file.c_str(), std::ios_base::app);
+        //TODO: handle error if file open failed
         for( auto& machine: a_list )
         {
-            std::string command = "echo "+ machine +">> " + machine_file; 
-            system(command.c_str());
+            fd << machine << std::endl;
         }
+        fd.close();
     }
 }
 
@@ -281,8 +287,19 @@ void docker_scheduler::delete_containers(std::string& name,std::function<void(er
     std::ostringstream command;
     command << "./run_docker.sh stop_and_clean ";
     command << " -d " << name << " -s " << local_package_directory;
-    command << " -t " << remote_package_directory;
+    if (remote_package_directory == "")
+    {
+        command << " -t " << local_package_directory;
+    }
+    else
+    {
+        command << " -t " << remote_package_directory;
+    }
+    puts("docker_scheduler delete_containers before system call");
     ret = system(command.str().c_str());
+    puts("docker_scheduler delete_containers after system call");
+
+    // TODO: deal with this error or notice the dev server
     dassert( ret == 0, "docker can't delete pods");
 
     // ret == 0

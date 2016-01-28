@@ -66,6 +66,7 @@ namespace dsn
                 assign_list.push_back(candidates[i].identity);
                 _machines[candidates[i].identity].workload.instance += 1;
             }
+            return ERR_OK;
         }
 
         void machine_pool_mgr::return_machine(const std::vector<std::string>& machine_list)
