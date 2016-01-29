@@ -81,7 +81,7 @@ void simple_stateful_load_balancer::run(global_partition_id gpid)
 
 void simple_stateful_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
 {
-    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_NONE)
+    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_INVALID)
     {
         derror("invalid params");
         return;

@@ -51,16 +51,28 @@ client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
 dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
 {
     if(partition_count < 1)
+    {
+        std::cout << "create app " << app_name << " failed: partition_count should >= 1" << std::endl;
         return ERR_INVALID_PARAMETERS;
+    }
 
     if(replica_count < 3)
+    {
+        std::cout << "create app " << app_name << " failed: replica_count should >= 3" << std::endl;
         return ERR_INVALID_PARAMETERS;
+    }
 
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    {
+        std::cout << "create app " << app_name << " failed: invalid app_name" << std::endl;
         return ERR_INVALID_PARAMETERS;
+    }
 
     if(app_type.empty() || !std::all_of(app_type.cbegin(),app_type.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    {
+        std::cout << "create app " << app_name << " failed: invalid app_type" << std::endl;
         return ERR_INVALID_PARAMETERS;
+    }
 
     std::shared_ptr<configuration_create_app_request> req(new configuration_create_app_request());
     req->app_name = app_name;
@@ -76,6 +88,7 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     resp_task->wait();
     if (resp_task->error() != dsn::ERR_OK)
     {
+        std::cout << "create app " << app_name << " failed: [create] call server error: " << resp_task->error().to_string() << std::endl;
         return resp_task->error();
     }
 
@@ -83,14 +96,17 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     ::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
+        std::cout << "create app " << app_name << " failed: [create] received server error: " << resp.err.to_string() << std::endl;
         return resp.err;
     }
 
-    std::cout << "create app " << app_name << " succeed, waiting for app ready." << std::endl;
+    std::cout << "create app " << app_name << " succeed, waiting for app ready" << std::endl;
 
     int sleep_sec = 2;
     while(true)
     {
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
+
         std::shared_ptr<configuration_query_by_index_request> query_req(new configuration_query_by_index_request());
         query_req->app_name = app_name;
 
@@ -99,33 +115,41 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
                     query_req
                     );
         query_task->wait();
+        if (query_task->error() == ERR_INVALID_STATE)
+        {
+            std::cout << app_name << " not ready yet, still waiting..." << std::endl;
+            continue;
+        }
+
         if (query_task->error() != dsn::ERR_OK)
         {
-            return dsn::ERR_IO_PENDING;
+            std::cout << "create app " << app_name << " failed: [query] call server error: " << query_task->error().to_string() << std::endl;
+            return query_task->error();
         }
 
         dsn::replication::configuration_query_by_index_response query_resp;
         ::unmarshall(query_task->response(), query_resp);
         if(query_resp.err != dsn::ERR_OK)
         {
-            return resp.err;
+            std::cout << "create app " << app_name << " failed: [query] received server error: " << query_resp.err.to_string() << std::endl;
+            return query_resp.err;
         }
-        bool ready = true;
         dassert(partition_count == query_resp.partition_count, "partition count not equal");
-        for(int i =0; i < partition_count; i++)
+        int ready_count = 0;
+        for(int i = 0; i < partition_count; i++)
         {
-            partition_configuration pc = query_resp.partitions[i];
-            if(pc.primary.is_invalid() || ((pc.secondaries.size() * 2 + 2) < replica_count))
+            const partition_configuration& pc = query_resp.partitions[i];
+            if (!pc.primary.is_invalid() && (pc.secondaries.size() >= replica_count / 2))
             {
-                ready = false;
-                break;
+                ready_count++;
             }
         }
-
-        if(ready)
+        std::cout << app_name << " not ready yet, still waiting... ("
+                  << ready_count << "/" << partition_count << ")" << std::endl;
+        if(ready_count == partition_count)
+        {
             break;
-        std::cout << app_name << " not ready yet, still waiting." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
+        }
     }
     std::cout << app_name << " is ready now!" << std::endl;
     return dsn::ERR_OK;
@@ -213,6 +237,54 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
     return dsn::ERR_OK;
 }
 
+dsn::error_code client_ddl::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+{
+    std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
+    req->status = status;
+
+    auto resp_task = request_meta<configuration_list_nodes_request>(
+            RPC_CM_LIST_NODES,
+            req
+    );
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_list_nodes_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_list_nodes_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    out << std::setw(25) << std::left << "address"
+        << std::setw(20) << std::left << "status"
+        << std::endl;
+    for(int i = 0; i < resp.infos.size(); i++)
+    {
+        dsn::replication::node_info info = resp.infos[i];
+        out << std::setw(25) << std::left << info.address.to_string()
+            << std::setw(20) << std::left << enum_to_string(info.status)
+            << std::endl;
+    }
+    out << std::endl << std::flush;
+    return dsn::ERR_OK;
+}
+
 dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
@@ -251,15 +323,15 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
     }
     std::ostream out(buf);
 
-    out << "app name:" << app_name << std::endl
-        << "app id:" << resp.app_id << std::endl
-        << "app partition count:" << resp.partition_count << std::endl;
+    out << "app_name: " << app_name << std::endl
+        << "app_id: " << resp.app_id << std::endl
+        << "partition_count: " << resp.partition_count << std::endl;
     if(detailed)
     {
         out << "details:" << std::endl
             << std::setw(10) << std::left << "pidx"
             << std::setw(10) << std::left << "ballot"
-            << std::setw(15) << std::left << "commmitdecree"
+            << std::setw(20) << std::left << "max_replica_count"
             << std::setw(25) << std::left << "primary"
             << std::setw(40) << std::left << "secondaries"
             << std::endl;
@@ -268,7 +340,7 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
             const dsn::replication::partition_configuration& p = resp.partitions[i];
             out << std::setw(10) << std::left << p.gpid.pidx
                 << std::setw(10) << std::left << p.ballot
-                << std::setw(15) << std::left << p.last_committed_decree
+                << std::setw(20) << std::left << p.max_replica_count
                 << std::setw(25) << std::left << p.primary.to_std_string()
                 << std::left<< p.secondaries.size() << ":[";
             for(int j = 0; j < p.secondaries.size(); j++)

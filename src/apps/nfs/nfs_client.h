@@ -49,11 +49,11 @@ public:
 
     // ---------- call RPC_NFS_NFS_COPY ------------
     // - synchronous 
-    std::pair<::dsn::error_code, copy_response> copy_sync(
+    std::pair< ::dsn::error_code, copy_response> copy_sync(
         const copy_request& request, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<copy_response>(
             ::dsn::rpc::call(
@@ -76,7 +76,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
@@ -93,11 +93,11 @@ public:
 
     // ---------- call RPC_NFS_NFS_GET_FILE_SIZE ------------
     // - synchronous 
-    std::pair<::dsn::error_code, get_file_size_response> get_file_size_sync(
+    std::pair< ::dsn::error_code, get_file_size_response> get_file_size_sync(
         const get_file_size_request& request, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<get_file_size_response>(
             ::dsn::rpc::call(
@@ -120,7 +120,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(

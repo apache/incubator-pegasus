@@ -876,7 +876,7 @@ bool client_case_line::parse(const std::string& params)
         _config_receiver = node_to_address(kv_map["receiver"]);
         _config_type = parse_config_command(kv_map["type"]);
         _config_node = node_to_address(kv_map["node"]);
-        if (_config_receiver.is_invalid() || _config_type == CT_NONE || _config_node.is_invalid())
+        if (_config_receiver.is_invalid() || _config_type == CT_INVALID || _config_node.is_invalid())
             parse_ok = false;
         break;
     }
@@ -930,9 +930,8 @@ bool client_case_line::parse_type_name(const std::string& name)
 }
 
 static const char* s_replica_config_commands[] = {
-    "none", "assign_primary", "upgrade_to_primary", "add_secondary",
-    "downgrade_to_secondary", "downgrade_to_inactive", "remove",
-    "upgrade_to_secondary", nullptr
+    "none", "assign_primary", "upgrade_to_primary", "add_secondary", "upgrade_to_secondary",
+    "downgrade_to_secondary", "downgrade_to_inactive", "remove", nullptr
 };
 
 dsn::replication::config_type client_case_line::parse_config_command(const std::string& command_name) const
@@ -944,12 +943,11 @@ dsn::replication::config_type client_case_line::parse_config_command(const std::
             return (dsn::replication::config_type)i;
         }
     }
-    return CT_NONE;
+    return CT_INVALID;
 }
 
 std::string client_case_line::config_command_to_string(dsn::replication::config_type cfg_command) const
 {
-    dassert(cfg_command <= CT_UPGRADE_TO_SECONDARY, "");
     return s_replica_config_commands[cfg_command];
 }
 

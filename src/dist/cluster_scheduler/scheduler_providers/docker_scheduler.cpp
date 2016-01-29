@@ -36,7 +36,8 @@
 # include "docker_scheduler.h"
 # include "docker_error.h"
 # include <stdlib.h>
-# include <future>
+# include <fstream>
+
 namespace dsn
 {
 namespace dist
@@ -45,26 +46,10 @@ docker_scheduler::docker_scheduler()
     :_run_path(""),
      _docker_state_handle(nullptr),
      _docker_deploy_handle(nullptr),
-     _docker_undeploy_handle(nullptr)
+     _docker_undeploy_handle(nullptr),
+     _mgr("docker")
 {
 
-}
-void docker_scheduler::get_docker_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
-{
-    auto docker = reinterpret_cast<docker_scheduler*>(context);
-    std::string message = std::string("client info is ") + docker->_run_path;
-    auto danglingstring = new std::string(message);
-
-    reply->message = danglingstring->c_str();
-    reply->size = danglingstring->size();
-    reply->context = danglingstring;
-}
-void docker_scheduler::get_docker_state_cleanup(dsn_cli_reply reply)
-{
-    dassert(reply.context != nullptr, "corrupted cli reply context");
-    auto danglingstring = reinterpret_cast<std::string*>(reply.context);
-    dassert(reply.message == danglingstring->c_str(),"corrupted cli reply message");
-    delete danglingstring;
 }
 
 void docker_scheduler::deploy_docker_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply)
@@ -97,7 +82,7 @@ void docker_scheduler::undeploy_docker_unit(void* context, int argc, const char*
         std::string name = argv[0];
         std::string ldir = argv[1];
         std::string rdir = argv[2];
-        std::function<void(error_code,rpc_address)> cb = [](error_code err,rpc_address addr){
+        std::function<void(error_code,const std::string&)> cb = [](error_code err,const std::string& err_msg){
             dinfo("deploy err %s",err.to_string());
         };
         docker->delete_containers(name,cb,ldir,rdir);
@@ -146,9 +131,6 @@ error_code docker_scheduler::initialize()
     }
     pclose(in);
 #endif
-    dassert(_docker_state_handle == nullptr, "docker state is initialized twice");
-    _docker_state_handle = dsn_cli_app_register("info","get info from docker scheduler","",this,&get_docker_state,&get_docker_state_cleanup);
-    dassert(_docker_state_handle != nullptr, "register cli handler failed");
     
     dassert(_docker_deploy_handle == nullptr, "docker deploy is initialized twice");
     _docker_deploy_handle = dsn_cli_app_register("deploy","deploy onto docker scheduler","",this,&deploy_docker_unit,&deploy_docker_unit_cleanup);
@@ -159,6 +141,51 @@ error_code docker_scheduler::initialize()
     dassert(_docker_undeploy_handle != nullptr, "register cli handler failed");
     return ::dsn::ERR_OK;
 }
+
+void docker_scheduler::get_app_list(std::string& ldir,/*out*/std::vector<std::string>& app_list )
+{
+#ifndef _WIN32
+    std::string popen_command = "cat " + ldir + "/applist";
+    FILE *f = popen(popen_command.c_str(),"r");
+    char buffer[128];
+    fgets(buffer,128,f);
+    ::dsn::utils::split_args(buffer, app_list, ' ');
+#endif
+}
+
+
+void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
+{
+    std::vector<std::string> app_list;
+
+    get_app_list(ldir,app_list);
+
+    for( auto& app : app_list)
+    {
+        std::string machine_file = ldir + "/" + app + "list";
+        std::vector<std::string> machine_list;
+        std::vector<std::string> f_list;
+        std::vector<std::string> a_list;
+        int count = 1;
+        //TODO: handle error if machine not enough
+        _mgr.get_machine( count, f_list, a_list);
+        _machine_map[name].insert(_machine_map[name].begin(),a_list.begin(),a_list.end());
+        std::ofstream fd;
+        fd.open(machine_file.c_str(), std::ios_base::app);
+        //TODO: handle error if file open failed
+        for( auto& machine: a_list )
+        {
+            fd << machine << std::endl;
+        }
+        fd.close();
+    }
+}
+
+void docker_scheduler::return_machines(std::string& name)
+{
+    _mgr.return_machine(_machine_map[name]);
+}
+
 
 void docker_scheduler::schedule(
                 std::shared_ptr<deployment_unit>& unit
@@ -177,10 +204,12 @@ void docker_scheduler::schedule(
     }
     else
     {
+        write_machine_list(unit->name, unit->local_package_directory);
         {
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
+
         dsn::tasking::enqueue(LPC_DOCKER_CREATE,this, [this, unit]() {
             create_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
         });
@@ -192,16 +221,31 @@ void docker_scheduler::create_containers(std::string& name,std::function<void(er
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh deploy_and_start ";
+    command << "./run_docker.sh deploy_and_start ";
     command << " -d " << name << " -s " << local_package_directory;
-    command << " -t " << remote_package_directory;
+    if( remote_package_directory == "" )
+        command << " -t " << local_package_directory;
+    else
+        command << " -t " << remote_package_directory;
     ret = system(command.str().c_str());
     if( ret == 0 )
     {
+#ifndef _WIN32
+        std::string popen_command = "IP=`cat "+ local_package_directory +"/metalist`;echo ${IP#*@}";
+        FILE *f = popen(popen_command.c_str(),"r");
+        char buffer[30];
+        fgets(buffer,30,f);
+        {
+            zauto_lock l(_lock);
+            auto unit = _deploy_map[name];
+            unit->service_url = buffer;
+        }
+#endif
         deployment_callback(ERR_OK,rpc_address());
     }
     else
     {
+        return_machines(name);
         {
             zauto_lock l(_lock);
             _deploy_map.erase(name);
@@ -222,31 +266,44 @@ void docker_scheduler::unschedule(
     
     if( found )
     {
+        return_machines(unit->name);
         _deploy_map.erase(it);
         _lock.unlock();
+
         dsn::tasking::enqueue(LPC_DOCKER_DELETE,this, [this, unit]() {
-            delete_containers(unit->name, unit->deployment_callback, unit->local_package_directory, unit->remote_package_directory);
+            delete_containers(unit->name, unit->undeployment_callback, unit->local_package_directory, unit->remote_package_directory);
         });
     }
     else
     {
         _lock.unlock();
-        unit->deployment_callback(ERR_DOCKER_UNDEPLOY_FAILED,rpc_address());
+        unit->undeployment_callback(ERR_DOCKER_UNDEPLOY_FAILED,std::string());
     }
 }
 
-void docker_scheduler::delete_containers(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory, std::string& remote_package_directory)
+void docker_scheduler::delete_containers(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory, std::string& remote_package_directory)
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh stop_and_clean ";
+    command << "./run_docker.sh stop_and_clean ";
     command << " -d " << name << " -s " << local_package_directory;
-    command << " -t " << remote_package_directory;
+    if (remote_package_directory == "")
+    {
+        command << " -t " << local_package_directory;
+    }
+    else
+    {
+        command << " -t " << remote_package_directory;
+    }
+    puts("docker_scheduler delete_containers before system call");
     ret = system(command.str().c_str());
+    puts("docker_scheduler delete_containers after system call");
+
+    // TODO: deal with this error or notice the dev server
     dassert( ret == 0, "docker can't delete pods");
 
     // ret == 0
-    deployment_callback(::dsn::ERR_OK,rpc_address()); 
+    undeployment_callback(::dsn::ERR_OK,std::string()); 
 }
 
 

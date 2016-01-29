@@ -14,7 +14,7 @@ find . -name '*.h' \
     | grep -v '^\./\.' \
     | grep -v '^\./builder' \
     | grep -v '^\./scripts/.*/format.sh' \
-    | xargs grep -n '	'
+    | xargs grep -n '	\|<::'
 
 if [ $? -eq 0 ]; then
     echo "ERROR: check format failed"

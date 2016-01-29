@@ -14,15 +14,20 @@ if [ "x$NUM" = "x" ];then
     exit 137
 fi
 
+if [ "x$INSTANCE" -ne "x" ];then
+    INSTANCE=${INSTANCE^^}
+fi
+
+
 #echo $NAME
-META_HOST=${META_HOST:-`printenv META_1_SERVICE_HOST`}
+META_HOST=${META_HOST:-`printenv ${INSTANCE}_META_1_SERVICE_HOST`}
 
 case $NAME in
     meta)       
-        HOST=${HOST:-`printenv ${NAME^^}_${NUM}_SERVICE_HOST`}
+        HOST=${HOST:-`printenv ${INSTANCE}_${NAME^^}_${NUM}_SERVICE_HOST`}
         ;;
     replica)
-        HOST=${HOST:-`printenv ${NAME^^}_${NUM}_SERVICE_HOST`}
+        HOST=${HOST:-`printenv ${INSTANCE}_${NAME^^}_${NUM}_SERVICE_HOST`}
         ;;
     client)
         HOST=${HOST:-"localhost"}

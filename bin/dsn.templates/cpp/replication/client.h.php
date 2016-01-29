@@ -34,7 +34,7 @@ foreach ($keys as $k => $v)
  
     // ---------- call <?=$f->get_rpc_code()?> ------------
     // - synchronous  
-    std::pair<::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
+    std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
         )

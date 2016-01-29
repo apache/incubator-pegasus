@@ -2,7 +2,7 @@
 
 set -e
 
-cd /home/guoxi/rDSN
+cd $DSN_ROOT/..
 
 case $1 in
     deploy_and_start)

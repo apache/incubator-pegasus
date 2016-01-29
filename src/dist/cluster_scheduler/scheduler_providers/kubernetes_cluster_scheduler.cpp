@@ -47,7 +47,7 @@ kubernetes_cluster_scheduler::kubernetes_cluster_scheduler()
      _k8s_deploy_handle(nullptr),
      _k8s_undeploy_handle(nullptr)
 {
-
+    
 }
 
 void kubernetes_cluster_scheduler::deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply)
@@ -78,7 +78,7 @@ void kubernetes_cluster_scheduler::undeploy_k8s_unit(void* context, int argc, co
     {
         std::string name = argv[0];
         std::string directory = argv[1];
-        std::function<void(error_code,rpc_address)> cb = [](error_code err,rpc_address addr){
+        std::function<void(error_code,const std::string&)> cb = [](error_code err,const std::string err_msg){
             dinfo("deploy err %s",err.to_string());
         };
         k8s->delete_pod(name,cb,directory);
@@ -140,6 +140,7 @@ void kubernetes_cluster_scheduler::schedule(
             zauto_lock l(_lock);
             _deploy_map.insert(std::make_pair(unit->name,unit));
         }
+
         dsn::tasking::enqueue(LPC_K8S_CREATE,this, [this, unit]() {
             create_pod(unit->name, unit->deployment_callback, unit->local_package_directory);
         });
@@ -151,11 +152,23 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh k8s_deploy ";
-    command << "--image " << name << " -s " << local_package_directory;
+    command << "./run_k8s.sh k8s_deploy ";
+    command << " -s " << local_package_directory;
+    command << " -i " << name;
     ret = system(command.str().c_str());
     if( ret == 0 )
     {
+#ifndef _WIN32
+        std::string popen_command = "kubectl get svc -l app=meta -l instance=" + name + " --template '{{(index .items 0).spec.clusterIP}}'";
+        FILE * f = popen(popen_command.c_str(),"r");
+        char buffer[30];
+        fgets(buffer,30,f);
+        {
+            zauto_lock l(_lock);
+            auto unit = _deploy_map[name];
+            unit->service_url = buffer;
+        }
+#endif
         deployment_callback(ERR_OK,rpc_address());
     }
     else
@@ -184,27 +197,28 @@ void kubernetes_cluster_scheduler::unschedule(
         _lock.unlock();
 
         dsn::tasking::enqueue(LPC_K8S_DELETE,this, [this, unit]() {
-            delete_pod(unit->name, unit->deployment_callback, unit->local_package_directory);
+            delete_pod(unit->name, unit->undeployment_callback, unit->local_package_directory);
         });
     }
     else
     {
         _lock.unlock();
-        unit->deployment_callback(ERR_K8S_UNDEPLOY_FAILED,rpc_address());
+        unit->undeployment_callback(ERR_K8S_UNDEPLOY_FAILED,std::string());
     }
 }
 
-void kubernetes_cluster_scheduler::delete_pod(std::string& name,std::function<void(error_code, rpc_address)>& deployment_callback, std::string& local_package_directory)
+void kubernetes_cluster_scheduler::delete_pod(std::string& name,std::function<void(error_code, const std::string&)>& undeployment_callback, std::string& local_package_directory)
 {
     int ret;
     std::ostringstream command;
-    command << "./run.sh k8s_undeploy ";
-    command << "--image " << name << " -s " << local_package_directory;
+    command << "./run_k8s.sh k8s_undeploy ";
+    command << " -s " << local_package_directory;
+    command << " -i " << name;
     ret = system(command.str().c_str());
     dassert( ret == 0, "k8s can't delete pods");
 
     // ret == 0
-    deployment_callback(::dsn::ERR_OK,rpc_address()); 
+    undeployment_callback(::dsn::ERR_OK,std::string()); 
 }
 
 

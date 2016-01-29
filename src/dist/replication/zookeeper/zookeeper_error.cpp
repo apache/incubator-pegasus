@@ -45,7 +45,7 @@ error_code from_zerror(int zerr)
         return ERR_OK;
     if (ZBADARGUMENTS == zerr || ZNOTEMPTY == zerr)
         return ERR_INVALID_PARAMETERS;
-    if (ZCONNECTIONLOSS == zerr || ZOPERATIONTIMEOUT == zerr)
+    if (ZCONNECTIONLOSS == zerr || ZOPERATIONTIMEOUT == zerr || ZINVALIDSTATE == zerr)
         return ERR_TIMEOUT;
     if (ZNONODE == zerr)
         return ERR_OBJECT_NOT_FOUND;

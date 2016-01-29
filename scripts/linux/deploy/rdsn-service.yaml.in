@@ -1,10 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ placeholder['server_name'] }}
+  name: {{ placeholder['instance_name'] }}-{{ placeholder['server_name'] }}
+  labels:
+    d_unit: "{{ placeholder['deploy_name'] }}"
+    app: "{{ placeholder['app_name'] }}"
+    instance: "{{ placeholder['instance_name'] }}"
 spec:
   selector:
-    app: {{ placeholder['app_name'] }}
+    app: "{{ placeholder['app_name'] }}"
     {{ placeholder['app_name'] }}: "{{ placeholder['num'] }}"
   ports:
   - name: {{ placeholder['app_name'] }}-tcp

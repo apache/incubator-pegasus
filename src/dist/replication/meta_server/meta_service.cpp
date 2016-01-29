@@ -162,6 +162,12 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_LIST_APPS",
         &meta_service::on_list_apps
         );
+
+    register_rpc_handler(
+        RPC_CM_LIST_NODES,
+        "RPC_CM_LIST_NODES",
+        &meta_service::on_list_nodes
+        );
 }
 
 void meta_service::stop()
@@ -236,6 +242,7 @@ void meta_service::on_create_app(dsn_message_t req)
 
     if (!_started)
     {
+        ddebug("create app request, meta server not active");
         configuration_create_app_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
@@ -251,6 +258,7 @@ void meta_service::on_drop_app(dsn_message_t req)
         return;
     if (!_started)
     {
+        ddebug("drop app request, meta server not active");
         configuration_drop_app_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
@@ -266,6 +274,7 @@ void meta_service::on_list_apps(dsn_message_t req)
         return;
     if (!_started)
     {
+        dinfo("list app request, meta server not active");
         configuration_list_apps_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
@@ -273,6 +282,21 @@ void meta_service::on_list_apps(dsn_message_t req)
     }
 
     _state->list_apps(req);
+}
+
+void meta_service::on_list_nodes(dsn_message_t req)
+{
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_list_nodes_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    _state->list_nodes(req);
 }
 
 // partition server & client => meta server
@@ -283,6 +307,7 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 
     if (!_started)
     {
+        dinfo("query node configuration request, meta server not active");
         configuration_query_by_node_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(msg, response);
@@ -303,6 +328,7 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 
     if (!_started)
     {
+        dinfo("create app request, meta server not active");
         configuration_query_by_index_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(msg, response);
@@ -350,6 +376,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
     if (!_started)
     {
+        ddebug("update configuration request, meta server not active");
         configuration_update_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);

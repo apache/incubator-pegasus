@@ -8,7 +8,8 @@ void usage(char* exe)
     std::cout << "Usage:" << std::endl;
     std::cout << "\t" << exe << " <config.ini> create_app -name <app_name> -type <app_type> [-pc partition_count] [-rc replication_count]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> drop_app -name <app_name>" << std::endl;
-    std::cout << "\t" << exe << " <config.ini> list_apps [-status <available|creating|creating_failed|dropping|dropping_failed|dropped>] [-o <out_file>]" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> list_apps [-status <all|available|creating|creating_failed|dropping|dropping_failed|dropped>] [-o <out_file>]" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> list_nodes [-status <all|alive|unalive>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_app -name <app_name> [-detailed] [-o <out_file>]" << std::endl;
     std::cout << "\t\tpartition count must be a power of 2" << std::endl;
     std::cout << "\t\tapp_name and app_type shoud be composed of a-z, 0-9 and underscore" << std::endl;
@@ -42,7 +43,7 @@ int main(int argc, char** argv)
     std::string app_type;
     int partition_count = 4;
     int replica_count = 3;
-    dsn::replication::app_status status = dsn::replication::AS_ALL;
+    std::string status;
     bool detailed = false;
     std::string out_file;
 
@@ -70,9 +71,8 @@ int main(int argc, char** argv)
         }
         else if(strcmp(argv[index], "-status") == 0 && argc > index)
         {
-            status = enum_from_string(argv[++index], AS_INVALID);
-            if(status == AS_INVALID)
-                usage(argv[0]);
+            status.assign(argv[++index]);
+            std::cout << "status:" << status <<std::endl;
         }
         else if(strcmp(argv[index], "-detailed") == 0)
         {
@@ -116,18 +116,42 @@ int main(int argc, char** argv)
             std::cout << "drop app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_apps") {
-        dsn::error_code err = client.list_apps(status, out_file);
+        dsn::replication::app_status s = dsn::replication::AS_INVALID;
+        if (!status.empty() && status != "all") {
+            std::transform(status.begin(), status.end(), status.begin(), ::toupper);
+            status = "AS_" + status;
+            s = enum_from_string(status.c_str(), dsn::replication::AS_INVALID);
+            if(s == dsn::replication::AS_INVALID)
+                usage(argv[0]);
+        }
+        dsn::error_code err = client.list_apps(s, out_file);
         if(err != dsn::ERR_OK)
-            std::cout << "list apps:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
+            std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
+    }
+    else if(command == "list_nodes") {
+        dsn::replication::node_status s = dsn::replication::NS_INVALID;
+        if (!status.empty() && status != "all") {
+            std::transform(status.begin(), status.end(), status.begin(), ::toupper);
+            status = "NS_" + status;
+            s = enum_from_string(status.c_str(), dsn::replication::NS_INVALID);
+            if(s == dsn::replication::NS_INVALID)
+                usage(argv[0]);
+        }
+        dsn::error_code err = client.list_nodes(s, out_file);
+        if(err != dsn::ERR_OK)
+            std::cout << "list nodes failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_app") {
         if(app_name.empty())
             usage(argv[0]);
-
         dsn::error_code err = client.list_app(app_name, detailed, out_file);
         if(err == dsn::ERR_OK)
             std::cout << "list app:" << app_name << " succeed" << std::endl;
         else
             std::cout << "list app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
+    }
+    else {
+        std::cout << "invalid command:" << command << std::endl;
+        usage(argv[0]);
     }
 }

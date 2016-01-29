@@ -26,7 +26,7 @@ public:
     void <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
@@ -34,11 +34,11 @@ public:
     }
 <?php    } else { ?>
     // - synchronous 
-    std::pair<::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
+    std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::wait_and_unwrap<<?=$f->get_cpp_return_type()?>>(
@@ -62,7 +62,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(

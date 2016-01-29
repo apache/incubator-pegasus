@@ -186,6 +186,15 @@ namespace dsn {
                 response.err = ERR_OK;
                 response.last_committed_decree = last_committed_decree();
                 response.base_local_dir = _app->data_dir();
+
+                // the state.files is returned whether with full_path or only-filename depends
+                // on the app impl, we'd better handle with it
+                for (std::string& file_name: response.state.files)
+                {
+                    std::size_t last_splitter = file_name.find_last_of("/\\");
+                    if (last_splitter != std::string::npos)
+                        file_name = file_name.substr(last_splitter+1);
+                }
                 response.address = _stub->_primary_address;
             }
         }
@@ -239,20 +248,27 @@ namespace dsn {
                 false,
                 LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
                 this,
-                [this, resp](error_code err, size_t sz)
+                [this, resp, ldir](error_code err, size_t sz)
                 {
-                    this->on_copy_checkpoint_file_completed(err, sz, resp);
+                    this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
                 },
                 gpid_to_hash(get_gpid())
                 );
         }
 
-        void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
+        void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp, const std::string& chk_dir)
         {
             check_hashed_access();
 
+            // TODO: dealing with the error
             if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
+                // we must give the app the full path of the check point
+                for (std::string& filename: resp->state.files)
+                {
+                    dassert(filename.find_last_of("/\\")==std::string::npos, "invalid file name");
+                    filename = utils::filesystem::path_combine(chk_dir, filename);
+                }
                 _app->apply_checkpoint(resp->state, CHKPT_COPY);
             }
 

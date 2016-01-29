@@ -160,7 +160,7 @@ namespace dsn {
 
         void asio_udp_provider::do_receive()
         {
-            std::shared_ptr<::boost::asio::ip::udp::endpoint> send_endpoint(new ::boost::asio::ip::udp::endpoint);
+            std::shared_ptr< ::boost::asio::ip::udp::endpoint> send_endpoint(new ::boost::asio::ip::udp::endpoint);
 
             _recv_parser->truncate_read();
             auto buffer_ptr = _recv_parser->read_buffer_ptr(max_udp_packet_size);

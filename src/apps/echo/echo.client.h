@@ -49,11 +49,11 @@ public:
 
     // ---------- call RPC_ECHO_ECHO_PING ------------
     // - synchronous 
-    std::pair<::dsn::error_code, std::string> ping_sync(
+    std::pair< ::dsn::error_code, std::string> ping_sync(
         const std::string& val, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<std::string>(
             ::dsn::rpc::call(
@@ -76,7 +76,7 @@ public:
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
         int request_hash = 0,
-        dsn::optional<::dsn::rpc_address> server_addr = dsn::none
+        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
