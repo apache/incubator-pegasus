@@ -149,16 +149,21 @@ namespace dsn {
         }
         else
         {
+            // @qinzuoyan: actually, the reply->error() can only be ERR_OK here
+            // dassert(reply->error() == ERR_OK, "");
             auto err = reply->error();
 
             // server address side effect
             auto req = call->get_request();
             auto sp = task_spec::get(req->local_rpc_code);
             // TODO(qinzuoyan): because current rpc forward is fake (resend from client), we cannot
-            // determine forward by "reply->from_address != req->to_address"
-            if (req->server_address.type() == HOST_TYPE_GROUP
-                    && sp->grpc_mode == GRPC_TO_LEADER
-                    && req->server_address.group_address()->possible_leader() != reply->from_address)
+            // determine forward by "reply->from_address != req->to_address", beacuse we always
+            // set "request->to_address = addr" in rpc_engine::call_ip(), which makes reply->from_address
+            // always equals to req->to_address.
+            if (err == ERR_OK &&
+                req->server_address.type() == HOST_TYPE_GROUP &&
+                sp->grpc_mode == GRPC_TO_LEADER &&
+                req->server_address.group_address()->possible_leader() != reply->from_address)
             {
                 req->server_address.group_address()->set_leader(reply->from_address);
             }
