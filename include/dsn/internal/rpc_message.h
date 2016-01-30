@@ -122,6 +122,7 @@ namespace dsn
         static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
         message_ex* create_response();
         message_ex* copy();
+        message_ex* copy_and_prepare_send();
 
         //
         // routines for buffer management
@@ -129,7 +130,7 @@ namespace dsn
         void write_next(void** ptr, size_t* size, size_t min_size);
         void write_commit(size_t size);
         bool read_next(void** ptr, size_t* size);
-        void read_commit(size_t size);
+        void read_commit(size_t size);        
         size_t body_size() { return (size_t)header->body_length; }
         void* rw_ptr(size_t offset_begin);
         void seal(bool crc_required);

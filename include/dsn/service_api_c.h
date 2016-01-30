@@ -291,10 +291,12 @@ typedef struct dsn_address_t
 typedef union dsn_msg_context_t
 {
     struct {
+        uint64_t is_request : 1;
+        uint64_t is_forwarded : 1;
         uint64_t write_replication : 1;
         uint64_t read_replication : 1;
         uint64_t read_semantic : 2;
-        uint64_t unused : 10;
+        uint64_t unused : 8;
         uint64_t parameter : 50; // parameter for the flags, e.g., snapshort decree for replication read
     } u;
     uint64_t context;

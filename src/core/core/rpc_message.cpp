@@ -361,6 +361,21 @@ message_ex* message_ex::copy()
     return msg;
 }
 
+message_ex* message_ex::copy_and_prepare_send()
+{
+    auto copy = this->copy();
+
+    if (_is_read)
+    {
+        dassert(buffers.size() == 1, "there must be only one buffer for read msg");
+        dassert((char*)header + sizeof(message_header) == (char*)buffers[0].data(), "header and content must be contigous");
+
+        copy->buffers[0] = copy->buffers[0].range(-sizeof(message_header));
+    }
+
+    return copy;
+}
+
 message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
 {
     message_ex* msg = new message_ex();
@@ -387,6 +402,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     strncpy(hdr.rpc_name, dsn_task_code_to_string(rpc_code), sizeof(hdr.rpc_name));
 
     hdr.id = new_id();
+    hdr.context.u.is_request = true;
 
     msg->local_rpc_code = (uint16_t)rpc_code;
     return msg;
@@ -404,6 +420,7 @@ message_ex* message_ex::create_response()
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
     hdr.body_length = 0;
     strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
+    hdr.context.u.is_request = false;
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     msg->from_address = to_address;

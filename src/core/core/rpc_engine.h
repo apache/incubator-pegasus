@@ -45,6 +45,8 @@ namespace dsn {
 class service_node;
 class rpc_engine;
 
+#define MAX_CLIENT_PORT 1023
+
 //
 // client matcher for matching RPC request and RPC response, and handling timeout
 // (1) the whole network may share a single client matcher,
@@ -143,6 +145,7 @@ public:
     void call(message_ex* request, rpc_response_task* call);    
     void on_recv_request(message_ex* msg, int delay_ms);
     void reply(message_ex* response, error_code err = ERR_OK);
+    void forward(message_ex* request, rpc_address address);
 
     //
     // information inquery

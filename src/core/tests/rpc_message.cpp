@@ -44,6 +44,13 @@ DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL
 
 TEST(core, message_ex)
 {
+    dsn_msg_context_t ctx0, ctx1;
+    ctx0.context = 0;
+    ctx0.u.is_request = true;
+
+    ctx1.context = 0;
+    ctx1.u.is_request = false;
+
     { // create_request
         uint64_t next_id = message_ex::new_id() + 1;
         message_ex* m = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
@@ -58,7 +65,7 @@ TEST(core, message_ex)
         ASSERT_EQ(0, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
         ASSERT_EQ(0, h.vnid);
-        ASSERT_EQ(0, h.context.context);
+        ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
         ASSERT_EQ(1, h.client.hash);
         ASSERT_EQ(0, h.client.port);
@@ -93,7 +100,7 @@ TEST(core, message_ex)
         ASSERT_EQ(request->header->rpc_id, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);
         ASSERT_EQ(0, h.vnid);
-        ASSERT_EQ(0, h.context.context);
+        ASSERT_EQ(ctx1.context, h.context.context);
         ASSERT_EQ(0, h.server.error);
 
         ASSERT_EQ(1u, response->buffers.size());
