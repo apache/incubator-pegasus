@@ -97,6 +97,7 @@ namespace dsn {
                         c.id = ++_case_count;
                         c.seconds = opt.perf_test_seconds;
                         c.payload_bytes = bytes;
+                        c.key_space_size = opt.perf_test_key_space_size;
                         c.timeout_ms = opt.perf_test_timeouts_ms[i];
                         c.concurrency = cc;
                         s.cases.push_back(c);
@@ -168,15 +169,15 @@ namespace dsn {
             if (_current_case->concurrency == 0)
             {
                 // exponentially increase
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes);
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
+                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
             }
             else
             {
                 // maintain fixed concurrent number
                 while (!_quiting_current_case && _live_rpc_count <= _current_case->concurrency)
                 {
-                    _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                    _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
                 }
             }
         }
@@ -305,7 +306,7 @@ namespace dsn {
             dwarn(ss.str().c_str());
 
             // start
-            suit.send_one(_current_case->payload_bytes);
+            suit.send_one(_current_case->payload_bytes, _current_case->key_space_size);
         }
     }
 }

@@ -63,21 +63,21 @@ public:
 
         s.name = "simple_kv.write";
         s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
-        s.send_one = [this](int payload_bytes){this->send_one_write(payload_bytes); };
+        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_write(payload_bytes, key_space_size); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
         
         s.name = "simple_kv.append";
         s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
-        s.send_one = [this](int payload_bytes){this->send_one_append(payload_bytes); };
+        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_append(payload_bytes, key_space_size); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
 
         s.name = "simple_kv.read";
         s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-        s.send_one = [this](int payload_bytes) {this->send_one_read(payload_bytes); };
+        s.send_one = [this](int payload_bytes, int key_space_size) {this->send_one_read(payload_bytes, key_space_size); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
@@ -85,9 +85,9 @@ public:
         start(suits);
     }                
 
-    void send_one_read(int payload_bytes)
+    void send_one_read(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000);
+        auto rs = random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs << "." << std::string(payload_bytes, 'x');
 
@@ -102,9 +102,9 @@ public:
     }
 
 
-    void send_one_write(int payload_bytes)
+    void send_one_write(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000);
+        auto rs = random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs;
 
@@ -120,9 +120,9 @@ public:
     }
 
 
-    void send_one_append(int payload_bytes)
+    void send_one_append(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000);
+        auto rs = random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs;
         kv_pair req = { ss.str(), std::string(payload_bytes, 'x') };;
