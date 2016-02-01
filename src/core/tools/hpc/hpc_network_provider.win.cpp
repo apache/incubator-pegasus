@@ -523,7 +523,7 @@ namespace dsn
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("ConnectEx failed, err = %d", err);
-                    this->on_failure();
+                    this->on_failure(true);
                 }
                 else
                 {
@@ -560,7 +560,7 @@ namespace dsn
                 dwarn("ConnectEx failed, err = %d", ::WSAGetLastError());
                 this->release_ref();
 
-                on_failure();
+                on_failure(true);
             }
         }
 

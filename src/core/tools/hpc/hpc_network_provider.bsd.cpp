@@ -544,7 +544,7 @@ namespace dsn
                 }
 
                 derror("(s = %d) connect failed (in epoll), err = %s", _socket, strerror(err));
-                on_failure();
+                on_failure(true);
             }
         }
 
@@ -582,7 +582,7 @@ namespace dsn
             if (rt == -1 && err != EINPROGRESS)
             {
                 dwarn("(s = %d) connect failed, err = %s", _socket, strerror(err));
-                on_failure();
+                on_failure(true);
                 return;
             }
 

@@ -206,7 +206,7 @@ namespace dsn {
                             _remote_addr.to_string(),
                             ec.message().c_str()
                             );
-                        on_failure();
+                        on_failure(true);
                     }
                     release_ref();
                 });
