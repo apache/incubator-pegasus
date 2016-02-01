@@ -136,12 +136,37 @@ namespace dsn {
             return true;
         }
 
-        // normal reply        
-        if (reply->error() == ERR_FORWARD_TO_OTHERS)
+        // normal reply      
+        auto err = reply->error();
+        auto req = call->get_request();
+        auto sp = task_spec::get(req->local_rpc_code);
+
+        if (err == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;
             ::unmarshall((dsn_message_t)reply, addr);
-            _engine->call_ip(addr, call->get_request(), call, true);
+
+            // server address side effect
+            switch (req->server_address.type())
+            {
+            case HOST_TYPE_GROUP:
+                switch (sp->grpc_mode)
+                {
+                case GRPC_TO_LEADER:
+                    req->server_address.group_address()->set_leader(addr);
+                    break;
+                case GRPC_TO_ANY:
+                case GRPC_TO_ALL:
+                    break;
+                }
+                break;
+            case HOST_TYPE_URI:
+                dassert(false, "not implemented");
+                break;
+            }
+
+            // do forwarding
+            _engine->call_ip(addr, req, call, true);
 
             dassert(reply->get_count() == 0,
                 "reply should not be referenced by anybody so far");
@@ -149,23 +174,29 @@ namespace dsn {
         }
         else
         {
-            // @qinzuoyan: actually, the reply->error() can only be ERR_OK here
-            // dassert(reply->error() == ERR_OK, "");
-            auto err = reply->error();
-
             // server address side effect
-            auto req = call->get_request();
-            auto sp = task_spec::get(req->local_rpc_code);
-            // TODO(qinzuoyan): because current rpc forward is fake (resend from client), we cannot
-            // determine forward by "reply->from_address != req->to_address", beacuse we always
-            // set "request->to_address = addr" in rpc_engine::call_ip(), which makes reply->from_address
-            // always equals to req->to_address.
-            if (err == ERR_OK &&
-                req->server_address.type() == HOST_TYPE_GROUP &&
-                sp->grpc_mode == GRPC_TO_LEADER &&
-                req->server_address.group_address()->possible_leader() != reply->from_address)
+            if (reply->header->context.u.is_forwarded)
             {
-                req->server_address.group_address()->set_leader(reply->from_address);
+                switch (req->server_address.type())
+                {
+                case HOST_TYPE_GROUP:
+                    switch (sp->grpc_mode)
+                    {
+                    case GRPC_TO_LEADER:
+                        if (err == ERR_OK)
+                        {
+                            req->server_address.group_address()->set_leader(reply->from_address);
+                        }
+                        break;
+                    case GRPC_TO_ANY:
+                    case GRPC_TO_ALL:
+                        break;
+                    }
+                    break;
+                case HOST_TYPE_URI:
+                    dassert(false, "not implemented");
+                    break;
+                }
             }
 
             // injector
@@ -290,7 +321,7 @@ namespace dsn {
             _engine->call_ip(req->to_address, req, nullptr, false);
 
             // use rest of the timeout to resend once only
-            new_timeout_task->set_delay(timeout_ts_ms - now_ts_ms);
+            new_timeout_task->set_delay(static_cast<int>(timeout_ts_ms - now_ts_ms));
             new_timeout_task->enqueue();
         }
         else
@@ -669,6 +700,7 @@ namespace dsn {
             );
         request->seal(_message_crc_required);
         
+        request->from_address = primary_address();
         switch (request->server_address.type())
         {
         case HOST_TYPE_IPV4:
@@ -705,7 +737,8 @@ namespace dsn {
     void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
         dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
-        dbg_dassert(addr.port() >= 1024, "only server address can be called");
+        dbg_dassert(addr.port() > MAX_CLIENT_PORT, "only server address can be called");
+        dassert(!request->from_address.is_invalid(), "from address must be set before call call_ip");
 
         while (!request->dl.is_alone())
         {
@@ -719,8 +752,7 @@ namespace dsn {
                 s->cancel(request);
             }
         }
-        
-        request->from_address = primary_address();
+                
         request->to_address = addr;
 
         auto sp = task_spec::get(request->local_rpc_code);
@@ -783,24 +815,62 @@ namespace dsn {
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
         
         auto s = response->io_session.get();
-        if (s != nullptr) 
+
+        // connetion oriented network, we have bound session
+        if (s != nullptr)
         {
-            if (no_fail)
+            // not forwarded
+            if (!response->header->context.u.is_forwarded)
             {
-                s->send_message(response); 
+                if (no_fail)
+                {
+                    s->send_message(response);
+                }
+                else
+                {
+                    s->net().inject_drop_message(response, false, true);
+                }
             }
+
+            // request is forwarded, we cannot use the original rpc session
             else
             {
-                s->net().inject_drop_message(response, false, true);
-            }
+                dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT, 
+                    "target address must have named port in this case");
+
+                auto sp = task_spec::get(response->local_rpc_code);
+                auto& hdr = *response->header;
+                auto& named_nets = _client_nets[sp->rpc_call_header_format];
+                network* net = named_nets[sp->rpc_call_channel];
+
+                dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
+                    sp->rpc_call_channel.to_string(),
+                    sp->rpc_call_header_format.to_string(),
+                    hdr.rpc_name
+                    );
+
+                if (no_fail)
+                {
+                    net->send_message(response);
+                }
+                else
+                {
+                    net->inject_drop_message(response, false, true);
+                }
+            }            
         }
+
+        // not connetion oriented network, we always use the named network to send msgs
         else
         {
+            dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
+                "target address must have named port in this case");
+
             auto sp = task_spec::get(response->local_rpc_code);
             auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
             if (no_fail)
             {
-                net->send_message(response); 
+                net->send_message(response);
             }
             else
             {
@@ -815,6 +885,28 @@ namespace dsn {
             response->add_ref();
             response->release_ref();
             return;
+        }
+    }
+
+    void rpc_engine::forward(message_ex * request, rpc_address address)
+    {
+        // msg is from pure client (no server port assigned)
+        // in this case, we have no way to directly post a message
+        // to it but reusing the current server connection
+        // we therefore cannot really do the forwarding but fake it
+        if (request->from_address.port() <= MAX_CLIENT_PORT)
+        {
+            auto resp = request->create_response();
+            ::marshall(resp, address);
+            ::dsn::task::get_current_rpc()->reply(resp, ::dsn::ERR_FORWARD_TO_OTHERS);
+        }
+
+        // do real forwarding
+        else
+        {
+            auto copied_request = request->copy_and_prepare_send();
+            copied_request->header->context.u.is_forwarded = true;
+            call_ip(address, copied_request, nullptr, false);
         }
     }
 }

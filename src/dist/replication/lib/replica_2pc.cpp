@@ -387,19 +387,31 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
-            this,
+            nullptr,
             [this, mu](error_code err, size_t size)
-        {
-            dinfo("%s: append private log completed for mutation %s, size = %u, err = %s",
-                  name(), mu->name(), size, err.to_string());
-
-            if (err != ERR_OK)
             {
-                derror("%s: append private log failed for mutation %s, err = %s",
-                       name(), mu->name(), err.to_string());
-                handle_local_failure(err);
-            }
-        },
+                //
+                // DO NOT CHANGE THIS CALLBACK HERE UNLESS
+                // YOU FULLY UNDERSTAND WHAT WE DO HERE
+                // 
+                // AS PRIVATE LOG IS BATCHED, WE ONLY EXECUTE
+                // THE FIRST CALLBACK IF THERE IS FAILURE TO
+                // NOTIFY FAILURE. ALL OTHER TASKS ARE SIMPLY
+                // CANCELLED!!!
+                //
+                // TODO: we do not need so many callbacks
+                //
+
+                dinfo("%s: append private log completed for mutation %s, size = %u, err = %s",
+                      name(), mu->name(), size, err.to_string());
+
+                if (err != ERR_OK)
+                {
+                    derror("%s: append private log failed for mutation %s, err = %s",
+                           name(), mu->name(), err.to_string());
+                    handle_local_failure(err);
+                }
+            },
             gpid_to_hash(get_gpid())
             );
     }

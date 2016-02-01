@@ -395,6 +395,8 @@ namespace dsn
 
     void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
+        dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
+
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
         msg->from_address = remote_address();
         msg->from_address.c_addr_ptr()->u.v4.port = msg->header->client.port;

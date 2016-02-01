@@ -451,7 +451,9 @@ void task::enqueue(task_worker_pool* pool)
             _spec->name.c_str()
             );
 
-        _recv_ts_ns = dsn_now_ns();
+        // disable this for the time being
+        //_recv_ts_ns = dsn_now_ns();
+
         pool->enqueue(this);
     }
 }
