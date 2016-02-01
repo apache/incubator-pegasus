@@ -134,6 +134,8 @@ namespace dsn
                     break;
 
                 msg->remove();
+
+                _message_count.fetch_sub(1, std::memory_order_relaxed);
             }
                         
             auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
