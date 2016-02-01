@@ -327,7 +327,7 @@ namespace dsn
                     if (err != EAGAIN && err != EWOULDBLOCK)
                     {
                         derror("(s = %d) sendmsg failed, err = %s", _socket, strerror(err));
-                        on_failure();                        
+                        on_failure(true);
                     }
                     else
                     {
@@ -544,10 +544,10 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_session::on_failure()
+        void hpc_rpc_session::on_failure(bool is_write)
         {
             _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event);
-            if (on_disconnected())
+            if (on_disconnected(is_write))
                 close();            
         }
 

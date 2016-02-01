@@ -131,7 +131,7 @@ namespace dsn {
         private:            
             void do_write(uint64_t signature);
             void close();
-            void on_failure();
+            void on_failure(bool is_write = false);
             void on_read_completed(message_ex* msg)
             {
                 if (msg->header->context.u.is_request)

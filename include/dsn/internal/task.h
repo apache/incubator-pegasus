@@ -83,6 +83,7 @@ struct __tls_dsn__
     nfs_node      *nfs;
     timer_service *tsvc;
 
+    int           last_worker_queue_size;
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     uint32_t      last_lower32_task_id; // 32bits
 

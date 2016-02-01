@@ -88,6 +88,7 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
                 );
         }
 
+        tls_dsn.last_worker_queue_size = -1;
         tls_dsn.node = node;
         tls_dsn.worker = worker;
         tls_dsn.worker_index = worker ? worker->index() : -1;

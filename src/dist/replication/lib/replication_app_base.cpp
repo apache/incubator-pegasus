@@ -220,11 +220,11 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             binary_reader reader(update.data);
             dsn_message_t resp = (req ? dsn_msg_create_response(req) : nullptr);
 
-            uint64_t now = dsn_now_ns();
+            //uint64_t now = dsn_now_ns();
             dispatch_rpc_call(update.code, reader, resp);
-            now = dsn_now_ns() - now;
+            //now = dsn_now_ns() - now;
 
-            _app_commit_latency.set(now);
+            //_app_commit_latency.set(now);
         }
         else
         {
@@ -272,7 +272,7 @@ void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader
             // replication layer error
             ::marshall(response, ERR_OK);
         }
-        it->second(reader, response);
+        it->second.first(this, it->second.second, reader, response);
     }
     else
     {

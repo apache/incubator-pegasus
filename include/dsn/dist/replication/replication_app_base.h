@@ -263,7 +263,9 @@ private:
     std::string _dir_data; // ${replica_dir}/data
     std::string _dir_learn;
     replica*    _replica;
-    std::unordered_map<dsn_task_code_t, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
+
+    typedef void (*local_rpc_handler)(replication_app_base*, void* cb, binary_reader&, dsn_message_t);
+    std::unordered_map<dsn_task_code_t, std::pair<local_rpc_handler, void*> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
     replica_init_info    _info;
@@ -296,13 +298,16 @@ inline void replication_app_base::register_async_rpc_handler(
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
     )
 {
-    _handlers[code] = std::bind(
-        &replication_app_base::internal_rpc_handler<T, TRequest, TResponse>,
-        this,
-        std::placeholders::_1,
-        std::placeholders::_2,
-        callback
-        );
+    _handlers[code] = { [](replication_app_base* this_, void* cb, binary_reader& reader, dsn_message_t response)
+            {
+                TRequest req;
+                unmarshall(reader, req);
+
+                typedef void (T::*callback_t)(const TRequest&, rpc_replier<TResponse>&);
+                callback_t callback = *(callback_t*)&cb;
+                rpc_replier<TResponse> replier(response);
+                (static_cast<T*>(this_)->*callback)(req, replier);
+            }, *(void**)&callback };
 }
 
 inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
@@ -310,17 +315,5 @@ inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
     _handlers.erase(code);
 }
 
-template<typename T, typename TRequest, typename TResponse>
-inline void replication_app_base::internal_rpc_handler(
-    binary_reader& reader, 
-    dsn_message_t response, 
-    void (T::*callback)(const TRequest&, rpc_replier<TResponse>&))
-{
-    TRequest req;
-    unmarshall(reader, req);
-
-    rpc_replier<TResponse> replier(response);
-    (static_cast<T*>(this)->*callback)(req, replier);
-}
 
 }} // namespace

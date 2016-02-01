@@ -48,7 +48,7 @@
 
 namespace dsn {
 
-task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr)
+task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr), _queue_length(0)
 {
     char num[30];
     sprintf(num, "%u", index);
@@ -57,7 +57,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _name.append(num);
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
-    _queue_length = perf_counters::instance().get_counter(_pool->node()->name(), "engine", (_name + ".queue.length").c_str(), COUNTER_TYPE_NUMBER, "task queue length", true);
+    _queue_length_counter = perf_counters::instance().get_counter(_pool->node()->name(), "engine", (_name + ".queue.length").c_str(), COUNTER_TYPE_NUMBER, "task queue length", true);
     _virtual_queue_length = 0;
     _spec = (threadpool_spec*)&pool->spec();
 
@@ -69,7 +69,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
 
 task_queue::~task_queue()
 {
-    perf_counters::instance().remove_counter(_queue_length->full_name());
+    perf_counters::instance().remove_counter(_queue_length_counter->full_name());
 }
 
 void task_queue::enqueue_internal(task* task)
@@ -110,7 +110,7 @@ void task_queue::enqueue_internal(task* task)
         }
     }
 
-    increase_count();
+    tls_dsn.last_worker_queue_size = increase_count();
     enqueue(task);
 }
 

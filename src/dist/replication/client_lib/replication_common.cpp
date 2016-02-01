@@ -74,7 +74,7 @@ replication_options::replication_options()
 
     log_private_disabled = false;
     log_private_file_size_mb = 32;
-    log_private_batch_buffer_kb = 4;
+    log_private_batch_buffer_kb = 512;
     log_private_force_flush = true;
 
     log_shared_file_size_mb = 32;
