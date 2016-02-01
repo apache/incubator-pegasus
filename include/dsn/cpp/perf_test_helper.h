@@ -54,6 +54,7 @@ namespace dsn {
         struct perf_test_opts
         {
             int  perf_test_seconds;
+            int  perf_test_key_space_size;
             // perf_test_concurrency:
             //   - if perf_test_concurrency == 0, means concurrency grow exponentially.
             //   - if perf_test_concurrency >  0, means concurrency maintained to a fixed number.            
@@ -64,6 +65,7 @@ namespace dsn {
 
         CONFIG_BEGIN(perf_test_opts)
             CONFIG_FLD(int, uint64, perf_test_seconds, 10, "how long for each test case")
+            CONFIG_FLD(int, uint64, perf_test_key_space_size, 1000, "how large is the key space size for the test")
             CONFIG_FLD_INT_LIST(perf_test_concurrency, "concurrency list: 0 for expotentially growing concurrenty, >0 for fixed")
             CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "size list: byte size of each rpc request test")
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout list: timeout (ms) for each rpc call")
@@ -79,6 +81,7 @@ namespace dsn {
                 int  id;
                 int  seconds;
                 int  payload_bytes;
+                int  key_space_size;
                 int  concurrency;
                 int  timeout_ms;
 
@@ -98,6 +101,7 @@ namespace dsn {
                     id = r.id;
                     seconds = r.seconds;
                     payload_bytes = r.payload_bytes;
+                    key_space_size = r.key_space_size;
                     timeout_ms = r.timeout_ms;
                     concurrency = r.concurrency;
 
@@ -122,7 +126,8 @@ namespace dsn {
 
                 perf_test_case() : id(0), seconds(0), payload_bytes(0), concurrency(0),
                     timeout_ms(0), timeout_rounds(0), error_rounds(0), succ_rounds(0),
-                    succ_latency_avg_ns(0), succ_qps(0), succ_throughput_MB_s(0)
+                    succ_latency_avg_ns(0), succ_qps(0), succ_throughput_MB_s(0),
+                    key_space_size(1000)
                 {}
             };
 
@@ -130,7 +135,7 @@ namespace dsn {
             {
                 const char* name;
                 const char* config_section;
-                std::function<void(int)> send_one;
+                std::function<void(int, int)> send_one;
                 std::vector<perf_test_case> cases;
             };
 
