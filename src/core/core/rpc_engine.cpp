@@ -441,6 +441,7 @@ namespace dsn {
         else
         {
             // mem leak, don't care as it halts the program
+            dassert(false, "create network failed, error_code: %s", ret.to_string());
             return nullptr;
         }   
     }
