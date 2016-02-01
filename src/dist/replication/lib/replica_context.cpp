@@ -210,6 +210,7 @@ bool potential_secondary_context::cleanup(bool force)
     CLEANUP_TASK(catchup_with_private_log_task, force)
     
     learning_signature = 0;
+    learning_start_ts_ns = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
     learning_status = LearningInvalid;
