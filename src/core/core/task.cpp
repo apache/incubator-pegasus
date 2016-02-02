@@ -138,7 +138,6 @@ task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
     _is_null = false;
-    _on_cancel = nullptr;    
     next = nullptr;
     _recv_ts_ns = 0;
     
@@ -376,6 +375,8 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
 
         spec().on_task_cancelled.execute(this);
         signal_waiters();
+
+        _error.end_tracking();
     }
 
     if (finished)
