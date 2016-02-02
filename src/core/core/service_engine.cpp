@@ -444,6 +444,7 @@ void service_engine::register_system_rpc_handler(
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
+    h->add_ref();
 
     if (port == -1)
     {
@@ -452,7 +453,10 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : n.second->ios())
             {
                 if (io.rpc)
+                {
+                    h->add_ref();
                     io.rpc->register_rpc_handler(h, 0);
+                }   
             }
         }
     }
@@ -464,7 +468,10 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : it->second->ios())
             {
                 if (io.rpc)
+                {
+                    h->add_ref();
                     io.rpc->register_rpc_handler(h, 0);
+                }   
             }
         }
         else
@@ -472,6 +479,9 @@ void service_engine::register_system_rpc_handler(
             dwarn("cannot find service node with port %d", port);
         }
     }
+
+    if (1 == h->release_ref())
+        delete h;
 }
 
 service_node* service_engine::start_node(service_app_spec& app_spec)
