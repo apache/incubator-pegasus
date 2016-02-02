@@ -372,7 +372,6 @@ namespace dsn
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
         if (reply != nullptr)
         {
-            reply->from_address = remote_address();
             reply->to_address = _net.address();
         }
 
@@ -383,9 +382,6 @@ namespace dsn
     {
         dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
 
-        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
-        msg->from_address = remote_address();
-        msg->from_address.c_addr_ptr()->u.v4.port = msg->header->client.port;
         msg->to_address = _net.address();
 
         msg->io_session = this;
@@ -489,7 +485,7 @@ namespace dsn
         rpc_session_ptr s = msg->io_session.get();
         if (nullptr == s)
         {
-            rpc_address peer_addr = is_send ? msg->to_address : msg->from_address;
+            rpc_address peer_addr = is_send ? msg->to_address : msg->header->from_address;
             if (is_client)
             {
                 utils::auto_read_lock l(_clients_lock);

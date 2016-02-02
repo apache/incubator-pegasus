@@ -583,7 +583,7 @@ void event_on_rpc::init(message_ex* msg, task* tsk)
         sprintf(buf, "%016lx", msg->header->rpc_id);
         _rpc_id = buf;
         _rpc_name = msg->header->rpc_name;
-        _from = address_to_node(msg->from_address);
+        _from = address_to_node(msg->from_addr());
         _to = address_to_node(msg->to_address);
     }
 }
