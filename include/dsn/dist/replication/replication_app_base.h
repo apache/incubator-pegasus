@@ -264,8 +264,17 @@ private:
     std::string _dir_learn;
     replica*    _replica;
 
-    typedef void (*local_rpc_handler)(replication_app_base*, void* cb, binary_reader&, dsn_message_t);
-    std::unordered_map<dsn_task_code_t, std::pair<local_rpc_handler, void*> > _handlers;
+    typedef void(*local_rpc_handler)(replication_app_base*, void* cb, binary_reader&, dsn_message_t);
+    struct local_rpc_handler_info 
+    {
+        std::atomic<int> ref_count;
+        local_rpc_handler callback;
+        void* inner_callback;
+    };
+    
+    std::unordered_map<dsn_task_code_t, local_rpc_handler_info* > _handlers;
+    mutable utils::rw_lock_nr     _handlers_lock;
+
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
     replica_init_info    _info;
@@ -298,21 +307,40 @@ inline void replication_app_base::register_async_rpc_handler(
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
     )
 {
-    _handlers[code] = { [](replication_app_base* this_, void* cb, binary_reader& reader, dsn_message_t response)
-            {
-                TRequest req;
-                unmarshall(reader, req);
+    local_rpc_handler_info* h = new local_rpc_handler_info;    
+    h->ref_count = 0;
+    h->inner_callback = *(void**)&callback;
+    h->callback = [](replication_app_base* this_, void* cb, binary_reader& reader, dsn_message_t response)
+    {
+        TRequest req;
+        unmarshall(reader, req);
 
-                typedef void (T::*callback_t)(const TRequest&, rpc_replier<TResponse>&);
-                callback_t callback = *(callback_t*)&cb;
-                rpc_replier<TResponse> replier(response);
-                (static_cast<T*>(this_)->*callback)(req, replier);
-            }, *(void**)&callback };
+        typedef void (T::*callback_t)(const TRequest&, rpc_replier<TResponse>&);
+        callback_t callback = *(callback_t*)&cb;
+        rpc_replier<TResponse> replier(response);
+        (static_cast<T*>(this_)->*callback)(req, replier);
+    };
+
+    h->ref_count.fetch_add(1, std::memory_order_relaxed);
+    _handlers[code] = h;
 }
 
 inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
 {
-    _handlers.erase(code);
+    local_rpc_handler_info* h = nullptr;
+    {
+        utils::auto_write_lock l(_handlers_lock);
+        auto it = _handlers.find(code);
+        if (it == _handlers.end())
+            return;
+        h = it->second;
+        _handlers.erase(it);
+    }
+
+    if (1 == h->ref_count.fetch_sub(1, std::memory_order_release))
+    {
+        delete h;
+    }
 }
 
 

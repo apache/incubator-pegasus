@@ -249,23 +249,32 @@ struct rpc_handler_info
     }
     ~rpc_handler_info() { }
 
+    void add_ref()
+    {
+        running_count.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    int release_ref()
+    {
+        return running_count.fetch_sub(1, std::memory_order_release);
+    }
+
     void run(dsn_message_t req)
     {
-        running_count++;
         if (!unregistered)
         {
             c_handler(req, parameter);
         }
-        running_count--;
+        
+        if (1 == release_ref())
+        {
+            delete this;
+        }
     }
 
     void unregister()
     {
         unregistered = true;
-        while (running_count.load(std::memory_order_relaxed) != 0)
-        {
-            // TODO: nop
-        }
     }
 };
 
@@ -273,7 +282,7 @@ class service_node;
 class rpc_request_task : public task
 {
 public:
-    rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node);
+    rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node);
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
@@ -286,7 +295,7 @@ public:
 
 protected:
     message_ex      *_request;
-    rpc_handler_ptr _handler;
+    rpc_handler_info* _handler;
 };
 
 class rpc_response_task : public task

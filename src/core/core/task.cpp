@@ -88,7 +88,6 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
                 );
         }
 
-        tls_dsn.last_worker_queue_size = -1;
         tls_dsn.node = node;
         tls_dsn.worker = worker;
         tls_dsn.worker_index = worker ? worker->index() : -1;
@@ -491,10 +490,12 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
-    : task(dsn_task_code_t(request->local_rpc_code), nullptr, nullptr, request->header->client.hash, node), 
+rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
+    : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
+        [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
+        request->header->client.hash, node),
     _request(request),
-    _handler(h)
+    _handler(std::move(h))
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
         "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");

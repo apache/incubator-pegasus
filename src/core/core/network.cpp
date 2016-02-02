@@ -49,9 +49,13 @@ namespace dsn
 {
     rpc_session::~rpc_session()
     {
-        utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
-        dassert(0 == _message_count.load(), "sending queue is not cleared yet");
+        clear_send_queue(false);
+
+        {
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
+            dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
+            dassert(0 == _message_count.load(), "sending queue is not cleared yet");
+        }
     }
 
     bool rpc_session::try_connecting()

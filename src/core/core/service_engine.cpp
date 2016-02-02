@@ -62,7 +62,7 @@ service_node::service_node(service_app_spec& app_spec)
     _app_context_ptr = nullptr;
 }
 
-bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
+bool service_node::rpc_register_handler(rpc_handler_info* handler, uint64_t vnid)
 {
     for (auto& io : _ios)
     {
@@ -76,9 +76,9 @@ bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
     return true;
 }
 
-rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
 {
-    rpc_handler_ptr ret = nullptr;
+    rpc_handler_info* ret = nullptr;
     for (auto& io : _ios)
     {
         if (io.rpc)
@@ -440,7 +440,7 @@ void service_engine::register_system_rpc_handler(
     int port /*= -1*/
     ) // -1 for all node
 {
-    ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
+    ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;

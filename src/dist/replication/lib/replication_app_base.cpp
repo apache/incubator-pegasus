@@ -264,21 +264,36 @@ error_code replication_app_base::update_init_info(replica* r, int64_t shared_log
 
 void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader& reader, dsn_message_t response)
 {
-    auto it = _handlers.find(code);
-    if (it != _handlers.end())
+    local_rpc_handler_info* h = nullptr;
+    {
+        utils::auto_read_lock l(_handlers_lock);
+        auto it = _handlers.find(code);
+        if (it != _handlers.end())
+        {
+            h = it->second;
+            h->ref_count.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+    
+    if (h)
     {
         if (response)
         {
             // replication layer error
             ::marshall(response, ERR_OK);
         }
-        it->second.first(this, it->second.second, reader, response);
+
+        h->callback(this, h->inner_callback, reader, response);
+        if (1 == h->ref_count.fetch_sub(1, std::memory_order_release))
+        {
+            delete h;
+        }
     }
     else
     {
-        dassert(false, "cannot find handler for rpc code %s in %s",
-                dsn_task_code_to_string(code), data_dir().c_str());
-    }
+        dwarn("cannot find handler for rpc code %s in %s",
+            dsn_task_code_to_string(code), data_dir().c_str());
+    }    
 }
 
 }} // end namespace
