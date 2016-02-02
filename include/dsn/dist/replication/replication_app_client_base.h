@@ -103,13 +103,13 @@ namespace dsn { namespace replication {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0,
-            read_semantic read_semantic = read_semantic::ReadOutdated,
+            read_semantic semantic = read_semantic::ReadOutdated,
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, static_cast<int>(timeout.count()), 0);
             task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, owner, std::forward<TCallback>(callback), reply_hash);
-            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(key_hash, code, msg, task, semantic, snapshot_decree, reply_hash);
             ::marshall(msg, std::forward<TRequest>(req));
             call(rc);
             return task;
@@ -170,7 +170,7 @@ namespace dsn { namespace replication {
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
-            dsn::replication::read_semantic read_semantic = read_semantic::ReadOutdated,
+            dsn::replication::read_semantic semantic = read_semantic::ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot
             int reply_hash = 0
             );

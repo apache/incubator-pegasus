@@ -49,8 +49,7 @@ public:
     void on_test_timer()
     {
 <?php foreach ($_PROG->services as $svc) { ?>
-        // test for service <?=$svc->name?>
-        using namespace svc_<?=$svc->name?>;
+        // test for service <?=$svc->name.PHP_EOL?>
 <?php foreach ($svc->functions as $f) { ?>
         {
             <?=$f->get_first_param()->get_cpp_type()?> req;

@@ -383,6 +383,10 @@ namespace dsn
 
     bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
+        // both rpc server session and rpc client session can receive rpc reply,
+        // specially, rpc client session can receive general rpc reply,
+        // and rpc server session can receive forwarded rpc reply
+
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
         if (reply != nullptr)
         {

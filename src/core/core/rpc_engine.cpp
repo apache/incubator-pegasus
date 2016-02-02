@@ -141,6 +141,8 @@ namespace dsn {
         auto req = call->get_request();
         auto sp = task_spec::get(req->local_rpc_code);
 
+        // if this is pure client (no server port assigned), we can only do fake forwarding,
+        // in this case, the server will return ERR_FORWARD_TO_OTHERS
         if (err == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;
@@ -752,7 +754,7 @@ namespace dsn {
                 s->cancel(request);
             }
         }
-                
+
         request->to_address = addr;
 
         auto sp = task_spec::get(request->local_rpc_code);
