@@ -369,7 +369,7 @@ namespace dsn {
     }
 
     //----------------------------------------------------------------------------------------------
-    bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_ptr& handler)
+    bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
     {
         auto name = std::string(dsn_task_code_to_string(handler->code));
 
@@ -379,7 +379,7 @@ namespace dsn {
         if (it == _handlers.end() && it2 == _handlers.end())
         {
             _handlers[name] = handler;
-            _handlers[handler->name] = handler;
+            _handlers[handler->name] = handler;            
             return true;
         }
         else
@@ -389,34 +389,40 @@ namespace dsn {
         }
     }
 
-    rpc_handler_ptr rpc_server_dispatcher::unregister_rpc_handler(dsn_task_code_t rpc_code)
+    rpc_handler_info* rpc_server_dispatcher::unregister_rpc_handler(dsn_task_code_t rpc_code)
     {
-        utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
-        if (it == _handlers.end())
-            return nullptr;
+        rpc_handler_info* ret;
+        {
+            utils::auto_write_lock l(_handlers_lock);
+            auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
+            if (it == _handlers.end())
+                return nullptr;
 
-        auto ret = it->second;
-        std::string name = it->second->name;
-        _handlers.erase(it);
-        _handlers.erase(name);
+            ret = it->second;
+            std::string name = it->second->name;
+            _handlers.erase(it);
+            _handlers.erase(name);
+        }
 
+        ret->unregister();
         return ret;
     }
 
     rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
     {
-        rpc_request_task* tsk = nullptr;
+        rpc_handler_info* handler = nullptr;
         {
             utils::auto_read_lock l(_handlers_lock);
             auto it = _handlers.find(msg->header->rpc_name);
             if (it != _handlers.end())
             {
                 msg->local_rpc_code = (uint16_t)it->second->code;
-                tsk = new rpc_request_task(msg, it->second, node);
+                handler = it->second;
+                handler->add_ref();
             }
         }
-        return tsk;
+
+        return handler ? new rpc_request_task(msg, handler, node) : nullptr;
     }
 
     //----------------------------------------------------------------------------------------------
@@ -600,7 +606,7 @@ namespace dsn {
         return ERR_OK;
     }
 
-    bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid)
+    bool rpc_engine::register_rpc_handler(rpc_handler_info* handler, uint64_t vnid)
     {
         if (0 == vnid)
         {
@@ -624,7 +630,7 @@ namespace dsn {
         }
     }
 
-    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+    rpc_handler_info* rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid)
     {
         if (0 == vnid)
         {

@@ -49,7 +49,13 @@ namespace dsn
 {
     rpc_session::~rpc_session()
     {
-        clear(false);
+        clear_send_queue(false);
+
+        {
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
+            dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
+            dassert(0 == _message_count.load(), "sending queue is not cleared yet");
+        }
     }
 
     bool rpc_session::try_connecting()
@@ -82,7 +88,7 @@ namespace dsn
         _connect_state = SS_DISCONNECTED;
     }
 
-    void rpc_session::clear(bool resend_msgs)
+    void rpc_session::clear_send_queue(bool resend_msgs)
     {
         //
         // - in concurrent case, resending _sending_msgs and _messages
@@ -132,6 +138,8 @@ namespace dsn
                     break;
 
                 msg->remove();
+
+                _message_count.fetch_sub(1, std::memory_order_relaxed);
             }
                         
             auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
@@ -336,41 +344,13 @@ namespace dsn
         _matcher = is_client ? _net.engine()->matcher() : nullptr;
     }
 
-    bool rpc_session::on_disconnected()
+    bool rpc_session::on_disconnected(bool is_write)
     {
         if (is_client())
         {
-            /* TODO(qinzuoyan): now that we will always call on_recv_reply() to notice the failure,
-             * there is no need to reconnect, which may cause problem when using the same socket.
-             *
-            // still connecting, let's retry
-            if (is_connecting() && ++_reconnect_count_after_last_success < 3)
-            {
-                set_disconnected();
-                connect();
-                return false;
-            }
-            */
-
             set_disconnected();
             rpc_session_ptr sp = this;
             _net.on_client_session_disconnected(sp);
-
-            // reconnect with new socket
-            //
-            // TODO(qinzuoyan): because '_reconnect_count_after_last_success' is a session scoped value,
-            // depending on it may cause endless resending, so we may always clear without resending:
-            //   clear(false);
-            //
-            // @imzhenyu: if we use clear(false), when there is a failure on established-connection, 
-            // the pending messages will be lost, this is considered harmful. the case for endless reconnecting
-            // is only possible when we can always *successfully* connect while fail on send, this should be
-            // very rare. so here we still use the old way but keep this mark here for future fix.
-            //
-            // @qinzuoyan: now that we will always call on_recv_reply() to notice the failure,
-            // there is no need to reconnect.
-            //clear(++_reconnect_count_after_last_success < 3);
-            clear(false);
         }
         
         else
@@ -378,6 +358,12 @@ namespace dsn
             rpc_session_ptr sp = this;
             _net.on_server_session_disconnected(sp);
         }
+
+        if (is_write)
+        {
+            clear_send_queue(false);
+        }
+
         return true;
     }
 

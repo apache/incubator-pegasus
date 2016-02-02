@@ -105,8 +105,8 @@ private:
 class rpc_server_dispatcher
 {
 public:
-    bool  register_rpc_handler(rpc_handler_ptr& handler);
-    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code);
+    bool  register_rpc_handler(rpc_handler_info* handler);
+    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code);
     rpc_request_task* on_request(message_ex* msg, service_node* node);
     int handler_count() const 
     {
@@ -115,7 +115,7 @@ public:
     }
 
 private:
-    typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
+    typedef std::unordered_map<std::string, rpc_handler_info*> rpc_handlers;
     rpc_handlers                  _handlers;
     mutable utils::rw_lock_nr     _handlers_lock;
 };
@@ -136,8 +136,8 @@ public:
     //
     // rpc registrations
     //
-    bool  register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid);
-    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
+    bool  register_rpc_handler(rpc_handler_info* handler, uint64_t vnid);
+    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
 
     //
     // rpc routines
