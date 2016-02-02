@@ -198,7 +198,7 @@ namespace dsn {
         virtual void close_on_fault_injection() = 0;
                 
         bool has_pending_out_msgs();
-        bool is_client() const { return _matcher != nullptr; }
+        bool is_client() const { return _is_client; }
         ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
@@ -256,8 +256,8 @@ namespace dsn {
         std::vector<message_ex*>              _sending_msgs;
 
     private:
-        std::atomic<int>                   _reconnect_count_after_last_success;
-        rpc_client_matcher                 *_matcher; // client used only
+        volatile bool                      _is_client;
+        rpc_client_matcher                 *_matcher;
 
         enum session_state
         {

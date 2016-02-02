@@ -70,7 +70,6 @@ namespace dsn
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(_connect_state == SS_CONNECTING, "session must be connecting");
             _connect_state = SS_CONNECTED;
-            _reconnect_count_after_last_success = 0;
         }
 
         dinfo("client session connected to %s", remote_address().to_string());
@@ -189,7 +188,7 @@ namespace dsn
     void rpc_session::start_read_next(int read_next)
     {
         // server only
-        if (_matcher == nullptr)
+        if (!is_client())
         {
             auto s = _recv_state.load(std::memory_order_relaxed);
             switch (s)
@@ -323,17 +322,18 @@ namespace dsn
         std::unique_ptr<message_parser>&& parser,
         bool is_client
         )
-        : _net(net), _remote_addr(remote_addr), _parser(std::move(parser)),
+        : _net(net),
+        _remote_addr(remote_addr),
+        _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
+        _parser(std::move(parser)),
+        _is_client(is_client),
+        _matcher(_net.engine()->matcher()),
+        _message_count(0),
+        _is_sending_next(false),
+        _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
+        _message_sent(0),
         _recv_state(recv_state::normal)
     {
-        _matcher = nullptr;
-        _is_sending_next = false;
-        _message_count = 0;
-        _connect_state = is_client ? SS_DISCONNECTED : SS_CONNECTED;
-        _reconnect_count_after_last_success = 0;
-        _message_sent = 0;
-        _max_buffer_block_count_per_send = net.max_buffer_block_count_per_send();
-        _matcher = is_client ? _net.engine()->matcher() : nullptr;
     }
 
     bool rpc_session::on_disconnected()
