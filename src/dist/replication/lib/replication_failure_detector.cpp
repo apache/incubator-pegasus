@@ -77,7 +77,10 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
     if ( !failure_detector::end_ping_internal(err, ack) )
         return;
 
-    dassert(ack.this_node==dsn_group_get_leader(_meta_servers.group_handle()), "");
+    dassert(ack.this_node == dsn_group_get_leader(_meta_servers.group_handle()),
+            "ack.this_node[%s] vs meta_servers.leader[%s]",
+            ack.this_node.to_string(), dsn_address_to_string(dsn_group_get_leader(_meta_servers.group_handle())));
+
     if ( ERR_OK != err ) {
         rpc_address next = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
         if (next != ack.this_node) {
