@@ -269,7 +269,7 @@ private:
     {
         std::atomic<int> ref_count;
         local_rpc_handler callback;
-        void* inner_callback;
+        char inner_callback[16]; // max method size
     };
     
     std::unordered_map<dsn_task_code_t, local_rpc_handler_info* > _handlers;
@@ -309,14 +309,16 @@ inline void replication_app_base::register_async_rpc_handler(
 {
     local_rpc_handler_info* h = new local_rpc_handler_info;    
     h->ref_count = 0;
-    h->inner_callback = *(void**)&callback;
+    static_assert (sizeof(h->inner_callback) >= sizeof(callback), "");
+    memcpy(h->inner_callback, (const void*)&callback, sizeof(callback));
     h->callback = [](replication_app_base* this_, void* cb, binary_reader& reader, dsn_message_t response)
     {
         TRequest req;
         unmarshall(reader, req);
 
         typedef void (T::*callback_t)(const TRequest&, rpc_replier<TResponse>&);
-        callback_t callback = *(callback_t*)&cb;
+        callback_t callback;
+        memcpy((void*)&callback, (const void*)cb, sizeof(callback_t));
         rpc_replier<TResponse> replier(response);
         (static_cast<T*>(this_)->*callback)(req, replier);
     };
