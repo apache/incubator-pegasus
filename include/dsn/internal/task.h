@@ -42,6 +42,7 @@
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/link.h>
+# include <dsn/internal/callocator.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 
@@ -185,7 +186,7 @@ public:
     task*                  next;
 };
 
-class task_c : public task
+class task_c : public task, public transient_object
 {
 public:
     task_c(
@@ -282,7 +283,7 @@ struct rpc_handler_info
 };
 
 class service_node;
-class rpc_request_task : public task
+class rpc_request_task : public task, public transient_object
 {
 public:
     rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node);
@@ -301,7 +302,7 @@ protected:
     rpc_handler_info* _handler;
 };
 
-class rpc_response_task : public task
+class rpc_response_task : public task, public transient_object
 {
 public:
     rpc_response_task(
@@ -368,7 +369,7 @@ public:
     virtual ~disk_aio(){}
 };
 
-class aio_task : public task
+class aio_task : public task, public transient_object
 {
 public:
     aio_task(
