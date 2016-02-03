@@ -91,6 +91,7 @@ namespace dsn {
             int _index;
             int _per_thread_buffer_bytes;
             int _current_log_file_bytes;
+            int _max_number_of_log_files_on_disk;
 
             // current write file            
             std::ofstream *_current_log;
