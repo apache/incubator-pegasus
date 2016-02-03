@@ -258,7 +258,7 @@ namespace dsn
             return create_rpc_response_task(
                 request,
                 svc,
-                [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp)
+                [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp) mutable
                 {
                     typename is_typed_rpc_callback<TCallback>::response_t response;
                     if (err == ERR_OK)
@@ -298,6 +298,35 @@ namespace dsn
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
             ::marshall(msg, std::forward<TRequest>(req));
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
+        }
+
+        struct rpc_message_helper
+        {
+        public:
+            explicit rpc_message_helper(dsn_message_t request) : request(request) {}
+            template<typename TCallback>
+            task_ptr call(
+                ::dsn::rpc_address server,
+                clientlet* owner,
+                TCallback&& callback,
+                int reply_hash = 0)
+            {
+                return ::dsn::rpc::call(server, request, owner, std::forward<TCallback>(callback), reply_hash);
+            }
+        private:
+            dsn_message_t request;
+        };
+
+        template<typename TRequest>
+        rpc_message_helper create_message(
+            dsn_task_code_t code,
+            TRequest&& req,
+            int request_hash = 0,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0))
+        {
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
+            ::marshall(msg, std::forward<TRequest>(req));
+            return rpc_message_helper(msg);
         }
 
 
