@@ -109,7 +109,7 @@ namespace dsn { namespace tools {
                 {
                     node_scoper ns(rnet->node());
 
-                    server_session->on_recv_request(recv_msg,
+                    server_session->on_recv_message(recv_msg,
                         recv_msg->to_address == recv_msg->header->from_address ?
                         0 : rnet->net_delay_milliseconds()
                         );
@@ -140,7 +140,7 @@ namespace dsn { namespace tools {
             {
                 node_scoper ns(_client->net().node());
 
-                _client->on_recv_reply(recv_msg->header->id, recv_msg,
+                _client->on_recv_message(recv_msg,
                     recv_msg->to_address == recv_msg->header->from_address ?
                     0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
                     );

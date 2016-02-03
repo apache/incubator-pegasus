@@ -134,10 +134,7 @@ namespace dsn {
             void on_failure(bool is_write = false);
             void on_read_completed(message_ex* msg)
             {
-                if (msg->header->context.u.is_request)
-                    on_recv_request(msg, 0); 
-                else
-                    on_recv_reply(msg->header->id, msg, 0);
+                on_recv_message(msg, 0);
             }
             
         protected:

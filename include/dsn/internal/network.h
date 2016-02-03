@@ -113,7 +113,7 @@ namespace dsn {
         //
         //
         //
-        void on_recv_reply(message_ex* msg, int delay_ms);
+        void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
         
         //
         // create a message parser for
@@ -205,10 +205,10 @@ namespace dsn {
         bool cancel(message_ex* request);
         bool pause_recv();
         void resume_recv();
+        void on_recv_message(message_ex* msg, int delay_ms);
 
     // for client session
     public:
-        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         // return true if the socket should be closed
         bool on_disconnected(bool is_write);
                
@@ -216,7 +216,6 @@ namespace dsn {
         
     // for server session
     public:
-        void on_recv_request(message_ex* request, int delay_ms);
         void start_read_next(int read_next = 256);
 
     // shared
