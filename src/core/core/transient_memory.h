@@ -55,49 +55,11 @@ namespace dsn
     extern void tls_trans_mem_init(size_t default_per_block_bytes);
     extern void tls_trans_mem_alloc(size_t min_size);
 
-    inline void tls_trans_mem_next(void** ptr, size_t* sz, size_t min_size)
-    {
-        if (tls_trans_memory.magic != 0xdeadbeef)
-            tls_trans_mem_alloc(min_size);
-        else
-        {
-            dassert(tls_trans_memory.committed == true, 
-                "tls_trans_mem_next and tls_trans_mem_commit must be called in pair");
+    extern void tls_trans_mem_next(void** ptr, size_t* sz, size_t min_size);
+    extern void tls_trans_mem_commit(size_t use_size);
 
-            if (min_size > tls_trans_memory.remain_bytes)
-                tls_trans_mem_alloc(min_size);
-        }
+    extern blob tls_trans_mem_alloc_blob(size_t sz);
 
-        *ptr = (void*)tls_trans_memory.next;
-        *sz = tls_trans_memory.remain_bytes;
-        tls_trans_memory.committed = false;
-    }
-
-    inline void tls_trans_mem_commit(size_t use_size)
-    {
-        dbg_dassert(tls_trans_memory.magic == 0xdeadbeef
-            && !tls_trans_memory.committed
-            && use_size <= tls_trans_memory.remain_bytes,
-            "invalid use or parameter of tls_trans_mem_commit");
-
-        tls_trans_memory.next += use_size;
-        tls_trans_memory.remain_bytes -= use_size;
-        tls_trans_memory.committed = true;
-    }
-
-    inline blob tls_trans_mem_alloc_blob(size_t sz)
-    {
-        void* ptr;
-        size_t sz2;
-        tls_trans_mem_next(&ptr, &sz2, sz);
-
-        ::dsn::blob buffer(
-            (*::dsn::tls_trans_memory.block),
-            (int)((char*)(ptr)-::dsn::tls_trans_memory.block->get()),
-            (int)sz
-            );
-
-        tls_trans_mem_commit(sz);
-        return buffer;
-    }
+    extern void* tls_trans_malloc(size_t sz);
+    extern void tls_trans_free(void* ptr);
 }

@@ -759,6 +759,8 @@ extern DSN_API dsn_address_t dsn_primary_address();
 //
 // when timeout_milliseconds == 0,  [task.%rpc_code%] rpc_timeout_milliseconds is used.
 // 
+extern DSN_API void*         dsn_transient_malloc(uint32_t size);
+extern DSN_API void          dsn_transient_free(void* ptr);
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),

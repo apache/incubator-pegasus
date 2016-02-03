@@ -39,6 +39,7 @@
 # include <dsn/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
+# include <dsn/internal/callocator.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/address.h>
 # include <dsn/internal/link.h>
@@ -81,7 +82,8 @@ namespace dsn
 
     class message_ex : 
         public ref_counter, 
-        public extensible_object<message_ex, 4>
+        public extensible_object<message_ex, 4>,
+        public transient_object
     {
     public:
         message_header         *header;
