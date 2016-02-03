@@ -51,7 +51,6 @@ public:
             _timeout
             );
     }
-
 <?php } ?>
 };
 <?php } ?>

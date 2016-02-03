@@ -17,6 +17,7 @@ class <?=$svc->name?>_client
 public:
     using replication_app_client_base::replication_app_client_base;
     virtual ~<?=$svc->name?>_client() {}
+
     // from requests to partition index
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
 <?php
@@ -27,16 +28,16 @@ foreach ($svc->functions as $f)
     
 foreach ($keys as $k => $v)
 {
-    echo "    virtual uint64_t get_key_hash(const ".$k."& key) = 0;".PHP_EOL;
+    echo "    virtual uint64_t get_key_hash(const ".$k."& key) { return 0; }".PHP_EOL;
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>
- 
+
     // ---------- call <?=$f->get_rpc_code()?> ------------
     // - synchronous  
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)<?=$f->is_write ? PHP_EOL:",".PHP_EOL."        ::dsn::replication::read_semantic semantic = ::dsn::replication::read_semantic::ReadLastUpdate".PHP_EOL?>
         )
     {
         return dsn::rpc::wait_and_unwrap<<?=$f->get_cpp_return_type()?>>(
@@ -47,7 +48,7 @@ foreach ($keys as $k => $v)
                 this,
                 empty_callback,
                 timeout,
-                0<?=$f->is_write ? "":", ". PHP_EOL."                read_semantic"?>
+                0<?=$f->is_write ? PHP_EOL:",".PHP_EOL."                semantic".PHP_EOL?>
                 )
             );
     }
@@ -58,7 +59,7 @@ foreach ($keys as $k => $v)
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0<?=$f->is_write ? "":",  ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?>
+        int reply_hash = 0<?=$f->is_write ? PHP_EOL:",".PHP_EOL."        ::dsn::replication::read_semantic semantic = ::dsn::replication::read_semantic::ReadLastUpdate".PHP_EOL?>
         )
     {
         return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?>(
@@ -68,7 +69,7 @@ foreach ($keys as $k => $v)
             this,
             std::forward<TCallback>(callback),
             timeout,
-            reply_hash<?=$f->is_write ? "":", ". PHP_EOL."            read_semantic"?>
+            reply_hash<?=$f->is_write ? PHP_EOL:",".PHP_EOL."            semantic".PHP_EOL?>
             );
     }
 <?php    }?>

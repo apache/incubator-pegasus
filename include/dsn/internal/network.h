@@ -98,7 +98,7 @@ namespace dsn {
         // in this case, the network should implement the appropriate
         // failure model that makes this failure possible in reality
         //
-        virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send) = 0;
+        virtual void inject_drop_message(message_ex* msg, bool is_send) = 0;
                 
         //
         // utilities
@@ -165,18 +165,18 @@ namespace dsn {
         virtual void send_message(message_ex* request) override;
 
         // called by rpc engine
-        virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send) override;
+        virtual void inject_drop_message(message_ex* msg, bool is_send) override;
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
         
     protected:
         typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> client_sessions;
-        client_sessions               _clients;
+        client_sessions               _clients; // to_address => rpc_session
         utils::rw_lock_nr             _clients_lock;
 
         typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> server_sessions;
-        server_sessions               _servers;
+        server_sessions               _servers; // from_address => rpc_session
         utils::rw_lock_nr             _servers_lock;
     };
 
@@ -198,7 +198,7 @@ namespace dsn {
         virtual void close_on_fault_injection() = 0;
                 
         bool has_pending_out_msgs();
-        bool is_client() const { return _matcher != nullptr; }
+        bool is_client() const { return _is_client; }
         ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
@@ -216,7 +216,7 @@ namespace dsn {
         
     // for server session
     public:
-        void on_recv_request(message_ex* msg, int delay_ms);
+        void on_recv_request(message_ex* request, int delay_ms);
         void start_read_next(int read_next = 256);
 
     // shared
@@ -256,8 +256,8 @@ namespace dsn {
         std::vector<message_ex*>              _sending_msgs;
 
     private:
-        std::atomic<int>                   _reconnect_count_after_last_success;
-        rpc_client_matcher                 *_matcher; // client used only
+        const bool                         _is_client;
+        rpc_client_matcher                 *_matcher;
 
         enum session_state
         {

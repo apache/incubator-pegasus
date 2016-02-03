@@ -524,7 +524,6 @@ rpc_request_task::~rpc_request_task()
 
 void rpc_request_task::enqueue()
 {
-    spec().on_rpc_request_enqueue.execute(this);
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
