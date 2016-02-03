@@ -210,7 +210,7 @@ namespace dsn {
     public:
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         // return true if the socket should be closed
-        bool on_disconnected();
+        bool on_disconnected(bool is_write);
                
         virtual void connect() = 0;
         
@@ -241,7 +241,7 @@ namespace dsn {
     private:
         // return whether there are messages for sending; should always be called in lock
         bool unlink_message_for_send();
-        void clear(bool resend_msgs);
+        void clear_send_queue(bool resend_msgs);
 
     protected:
         // constant info

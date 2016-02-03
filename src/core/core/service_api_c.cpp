@@ -584,18 +584,34 @@ DSN_API dsn_address_t dsn_primary_address()
 
 DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
 {
-    ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
+    ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
 
-    return ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+    h->add_ref();
+    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+    if (!r)
+    {
+        delete h;
+    }      
+
+    return r;
 }
 
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, 0);
-    return (h != nullptr) ? h->parameter : nullptr;
+    void* param = nullptr;
+
+    if (nullptr != h)
+    {
+        param = h->parameter;
+        if (1 == h->release_ref())
+            delete h;
+    }
+
+    return param;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, 

@@ -471,7 +471,10 @@ timer_task::timer_task(
     _interval_milliseconds(interval_milliseconds),
     _cb(cb)
 {
-    dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task, please use DEFINE_TASK_CODE to define the task code");
+    dassert (TASK_TYPE_COMPUTE == spec().type,
+        "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
+        spec().name.c_str()
+        );
 
     // enable timer randomization to avoid lots of timers execution simultaneously
     set_delay(dsn_random32(0, interval_milliseconds));
@@ -490,13 +493,17 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
-    : task(dsn_task_code_t(request->local_rpc_code), nullptr, nullptr, request->header->client.hash, node), 
+rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
+    : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
+        [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
+        request->header->client.hash, node),
     _request(request),
     _handler(h)
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
-        "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
+        "%s is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
+        spec().name.c_str()
+        );
 
     _request->add_ref(); // released in dctor
 }
@@ -529,7 +536,9 @@ rpc_response_task::rpc_response_task(
     set_error_code(ERR_IO_PENDING);
 
     dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, 
-        "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
+        "%s is not of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code",
+        spec().name.c_str()
+        );
 
     _request = request;
     _response = nullptr;
@@ -588,7 +597,10 @@ aio_task::aio_task(
     _cb = cb;
     _is_null = (_cb == nullptr);
 
-    dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
+    dassert (TASK_TYPE_AIO == spec().type, 
+        "%s is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
+        spec().name.c_str()
+        );
     set_error_code(ERR_IO_PENDING);
 
     auto disk = task::get_current_disk();

@@ -66,7 +66,7 @@ namespace dsn {
         private:
             virtual void do_read(int sz) override;
             void write(uint64_t signature);
-            void on_failure();
+            void on_failure(bool is_write = false);
             void set_options();  
             void on_message_read(message_ex* msg)
             {

@@ -181,7 +181,6 @@ namespace dsn {
                             derror("invalid udp packet");
                         }
                     
-                        message->from_address.assign_ipv4(send_endpoint->address().to_v4().to_ulong(), send_endpoint->port());
                         message->to_address = address();
 
                         if (!_is_client)
