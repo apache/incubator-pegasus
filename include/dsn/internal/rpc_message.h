@@ -67,7 +67,7 @@ namespace dsn
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
                                         // generally, it is the from_node's primary address, except the
-                                        // case described in message_ex::create_response()'s TODO.
+                                        // case described in message_ex::create_response()'s ATTENTION comment.
                                         // the from_address is always the orignal client's address, it will
                                         // not be changed in forwarding request.
 

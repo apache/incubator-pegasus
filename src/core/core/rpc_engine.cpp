@@ -120,10 +120,6 @@ namespace dsn {
             }
         }
 
-        // TODO(qinzuoyan) need to check if the call have been finished by timeout.
-        // bad case: if not check, and forwarding circulation exist (such as two nodes
-        // always do forwarding to each other), then will enter endless forwarding loop.
-
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         if (timeout_task != task::get_current_task())
         {
@@ -177,6 +173,7 @@ namespace dsn {
             }
 
             // do fake forwarding, reset request_id
+            // TODO(qinzuoyan): reset timeout to new value
             _engine->call_ip(addr, req, call, true);
 
             dassert(reply->get_count() == 0,

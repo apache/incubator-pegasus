@@ -176,7 +176,7 @@ namespace dsn {
         utils::rw_lock_nr             _clients_lock;
 
         typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> server_sessions;
-        server_sessions               _servers; // remote_address => rpc_session
+        server_sessions               _servers; // from_address => rpc_session
         utils::rw_lock_nr             _servers_lock;
     };
 

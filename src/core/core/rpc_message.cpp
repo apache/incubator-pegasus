@@ -422,7 +422,7 @@ message_ex* message_ex::create_response()
     hdr.context.u.is_request = false;
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
-    // TODO(qinzuoyan): the from_address may not be the primary address of this node
+    // ATTENTION: the from_address may not be the primary address of this node
     // if there are more than one ports listened and the to_address is not equal to
     // the primary address.
     msg->header->from_address = to_address;
