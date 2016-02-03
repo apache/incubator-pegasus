@@ -106,7 +106,7 @@ DSN_API void dsn_msg_release_ref(dsn_message_t msg)
 
 DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex*)msg)->from_address.c_addr();
+    return ((::dsn::message_ex*)msg)->header->from_address.c_addr();
 }
 
 DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
@@ -336,7 +336,6 @@ message_ex* message_ex::create_receive_message(const blob& data)
 message_ex* message_ex::copy()
 {
     message_ex* msg = new message_ex();
-    msg->from_address = from_address;
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
     msg->buffers = buffers;
@@ -423,8 +422,8 @@ message_ex* message_ex::create_response()
     hdr.context.u.is_request = false;
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
-    msg->from_address = to_address;
-    msg->to_address = from_address;
+    msg->header->from_address = to_address;
+    msg->to_address = header->from_address;
     msg->io_session = io_session;
 
     // join point 

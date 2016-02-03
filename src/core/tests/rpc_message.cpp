@@ -68,7 +68,7 @@ TEST(core, message_ex)
         ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
         ASSERT_EQ(1, h.client.hash);
-        ASSERT_EQ(0, h.client.port);
+        ASSERT_EQ(0, h.from_address.port());
 
         ASSERT_EQ(1u, m->buffers.size());
         ASSERT_EQ((int)RPC_CODE_FOR_TEST, m->local_rpc_code);
@@ -85,7 +85,7 @@ TEST(core, message_ex)
 
     { // create_response
         message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
-        request->from_address = rpc_address("127.0.0.1", 8080);
+        request->header->from_address = rpc_address("127.0.0.1", 8080);
         request->to_address = rpc_address("127.0.0.1", 9090);
         request->header->rpc_id = 123456;
 
@@ -105,8 +105,8 @@ TEST(core, message_ex)
 
         ASSERT_EQ(1u, response->buffers.size());
         ASSERT_EQ((int)RPC_CODE_FOR_TEST_ACK, response->local_rpc_code);
-        ASSERT_EQ(request->from_address, response->to_address);
-        ASSERT_EQ(request->to_address, response->from_address);
+        ASSERT_EQ(request->header->from_address, response->to_address);
+        ASSERT_EQ(request->to_address, response->header->from_address);
 
         ASSERT_TRUE(response->is_right_header());
         ASSERT_TRUE(response->is_right_body(true));
@@ -208,7 +208,7 @@ TEST(core, message_ex)
 
         dsn_msg_set_options(request, &opts, DSN_MSGM_CONTEXT | DSN_MSGM_VNID);
         message_ex* m = (message_ex*)request;
-        m->from_address = rpc_address("127.0.0.1", 8080);
+        m->header->from_address = rpc_address("127.0.0.1", 8080);
         m->to_address = rpc_address("127.0.0.1", 9090);
 
         dsn_msg_get_options(request, &opts);

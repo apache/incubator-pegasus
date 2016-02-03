@@ -65,12 +65,12 @@ namespace dsn
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
         uint64_t       vnid; // virtual node id
         dsn_msg_context_t context;
+        rpc_address       from_address;   // always ipv4/v6 address
 
         struct
         {
             int32_t  timeout_ms;
             int32_t  hash;
-            uint16_t port;                        
         } client;
 
         struct
@@ -89,10 +89,9 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        rpc_session_ptr        io_session;     // send/recv session
-        ::dsn::rpc_address     from_address;   // always ipv4/v6 address
-        ::dsn::rpc_address     to_address;     // always ipv4/v6 address
-        ::dsn::rpc_address     server_address; // used by requests, and may be of uri/group address
+        rpc_session_ptr        io_session;     // send/recv session        
+        rpc_address            to_address;     // always ipv4/v6 address
+        rpc_address            server_address; // used by requests, and may be of uri/group address
         uint16_t               local_rpc_code;
 
         // by message queuing
@@ -107,7 +106,8 @@ namespace dsn
         //
         bool is_right_header() const;
         bool is_right_body(bool is_write_msg) const;
-        error_code error() const { return header->server.error; }        
+        error_code error() const { return header->server.error; }    
+        rpc_address from_addr() const { return header->from_address; }
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
         static int  get_body_length(char* hdr)

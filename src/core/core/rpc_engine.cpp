@@ -185,7 +185,7 @@ namespace dsn {
                     case GRPC_TO_LEADER:
                         if (err == ERR_OK)
                         {
-                            req->server_address.group_address()->set_leader(reply->from_address);
+                            req->server_address.group_address()->set_leader(reply->from_addr());
                         }
                         break;
                     case GRPC_TO_ANY:
@@ -686,7 +686,7 @@ namespace dsn {
             dwarn(
                 "recv unknown message with type %s from %s, rpc_id = %016llx",
                 msg->header->rpc_name,
-                msg->from_address.to_string(),
+                msg->from_addr().to_string(),
                 msg->header->rpc_id
                 );
 
@@ -699,14 +699,13 @@ namespace dsn {
         auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header;
 
-        hdr.client.port = primary_address().port();
+        hdr.from_address = primary_address();
         hdr.rpc_id = dsn_random64(
             std::numeric_limits<decltype(hdr.rpc_id)>::min(),
             std::numeric_limits<decltype(hdr.rpc_id)>::max()
             );
         request->seal(_message_crc_required);
-        
-        request->from_address = primary_address();
+
         switch (request->server_address.type())
         {
         case HOST_TYPE_IPV4:
@@ -744,7 +743,7 @@ namespace dsn {
     {
         dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
         dbg_dassert(addr.port() > MAX_CLIENT_PORT, "only server address can be called");
-        dassert(!request->from_address.is_invalid(), "from address must be set before call call_ip");
+        dassert(!request->from_addr().is_invalid(), "from address must be set before call call_ip");
 
         while (!request->dl.is_alone())
         {
@@ -873,7 +872,7 @@ namespace dsn {
                 "target address must have named port in this case");
 
             auto sp = task_spec::get(response->local_rpc_code);
-            auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
+            auto &net = _server_nets[response->from_addr().port()][sp->rpc_call_channel];
             if (no_fail)
             {
                 net->send_message(response);
@@ -896,11 +895,13 @@ namespace dsn {
 
     void rpc_engine::forward(message_ex * request, rpc_address address)
     {
+        dassert(request->header->context.u.is_request, "only rpc request can be forwarded");
+
         // msg is from pure client (no server port assigned)
         // in this case, we have no way to directly post a message
         // to it but reusing the current server connection
         // we therefore cannot really do the forwarding but fake it
-        if (request->from_address.port() <= MAX_CLIENT_PORT)
+        if (request->from_addr().port() <= MAX_CLIENT_PORT)
         {
             auto resp = request->create_response();
             ::marshall(resp, address);
