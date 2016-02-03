@@ -148,6 +148,12 @@ namespace dsn
                 64 * 1024, // 64 KB by default
                 "buffer size for per-thread logging"
                 );
+            _max_number_of_log_files_on_disk = dsn_config_get_value_uint64(
+                "tools.hpc_logger",
+                "max_number_of_log_files_on_disk",
+                20,
+                "max number of log files reserved on disk, older logs are auto deleted"
+                );
 
             _start_index = 0;
             _index = 1;
@@ -197,7 +203,7 @@ namespace dsn
             _current_log_file_bytes = 0;
 
             // TODO: move gc out of criticial path
-            while (_index - _start_index > 20)
+            while (_index - _start_index > _max_number_of_log_files_on_disk)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
