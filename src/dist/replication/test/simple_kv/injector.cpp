@@ -135,14 +135,14 @@ static bool inject_on_rpc_call(task* caller, message_ex* req, rpc_response_task*
     return test_case::instance().on_event(&event);
 }
 
-static void inject_on_rpc_request_enqueue(rpc_request_task* callee)
+static bool inject_on_rpc_request_enqueue(rpc_request_task* callee)
 {
-    if (!test_checker::s_inited) return;
+    if (!test_checker::s_inited) return true;
 
     event_on_rpc_request_enqueue event;
     event.init(callee);
 
-    test_case::instance().on_event(&event);
+    return test_case::instance().on_event(&event);
 }
 
 static bool inject_on_rpc_reply(task* caller, message_ex* msg)
@@ -155,14 +155,14 @@ static bool inject_on_rpc_reply(task* caller, message_ex* msg)
     return test_case::instance().on_event(&event);
 }
 
-static void inject_on_rpc_response_enqueue(rpc_response_task* resp)
+static bool inject_on_rpc_response_enqueue(rpc_response_task* resp)
 {
-    if (!test_checker::s_inited) return;
+    if (!test_checker::s_inited) return true;
 
     event_on_rpc_response_enqueue event;
     event.init(resp);
 
-    test_case::instance().on_event(&event);
+    return test_case::instance().on_event(&event);
 }
 
 void test_injector::install(service_spec& svc_spec)
@@ -184,9 +184,9 @@ void test_injector::install(service_spec& svc_spec)
         spec->on_aio_call.put_native(inject_on_aio_call);
         spec->on_aio_enqueue.put_back(inject_on_aio_enqueue, "test_injector");
         spec->on_rpc_call.put_native(inject_on_rpc_call);
-        spec->on_rpc_request_enqueue.put_back(inject_on_rpc_request_enqueue, "test_injector");
+        spec->on_rpc_request_enqueue.put_native(inject_on_rpc_request_enqueue);
         spec->on_rpc_reply.put_native(inject_on_rpc_reply);
-        spec->on_rpc_response_enqueue.put_back(inject_on_rpc_response_enqueue, "test_injector");
+        spec->on_rpc_response_enqueue.put_native(inject_on_rpc_response_enqueue);
     }
 
     //ddebug("=== test_injector installed");

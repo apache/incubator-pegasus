@@ -377,19 +377,20 @@ namespace dsn
         if (reply != nullptr)
         {
             reply->to_address = _net.address();
+            reply->io_session = this;
         }
 
         return _matcher->on_recv_reply(&_net, key, reply, delay_ms);
     }
 
-    void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
+    void rpc_session::on_recv_request(message_ex* request, int delay_ms)
     {
         dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
 
-        msg->to_address = _net.address();
+        request->to_address = _net.address();
+        request->io_session = this;
 
-        msg->io_session = this;
-        return _net.on_recv_request(msg, delay_ms);
+        return _net.on_recv_request(request, delay_ms);
     }  
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -417,7 +418,7 @@ namespace dsn
 
     void network::on_recv_request(message_ex* msg, int delay_ms)
     {
-        return _engine->on_recv_request(msg, delay_ms);
+        return _engine->on_recv_request(this, msg, delay_ms);
     }
 
     void network::on_recv_reply(message_ex* msg, int delay_ms)
@@ -484,33 +485,25 @@ namespace dsn
     {        
     }
 
-    void connection_oriented_network::inject_drop_message(message_ex* msg, bool is_client, bool is_send)
+    void connection_oriented_network::inject_drop_message(message_ex* msg, bool is_send)
     {
-        rpc_session_ptr s = msg->io_session.get();
-        if (nullptr == s)
+        rpc_session_ptr s = msg->io_session;
+        if (s == nullptr)
         {
-            rpc_address peer_addr = is_send ? msg->to_address : msg->header->from_address;
-            if (is_client)
+            // - if io_session == nulltr, there must be is_send == true;
+            // - but if is_send == true, there may be is_session != nullptr, when it is a
+            //   normal (not forwarding) reply message from server to client, in which case
+            //   the io_session has also been set.
+            dassert(is_send, "received message should always has io_session set");
+            utils::auto_read_lock l(_clients_lock);
+            auto it = _clients.find(msg->to_address);
+            if (it != _clients.end())
             {
-                utils::auto_read_lock l(_clients_lock);
-                auto it = _clients.find(peer_addr);
-                if (it != _clients.end())
-                {
-                    s = it->second;
-                }
-            }
-            else
-            {
-                utils::auto_read_lock l(_servers_lock);
-                auto it = _servers.find(peer_addr);
-                if (it != _servers.end())
-                {
-                    s = it->second;
-                }
+                s = it->second;
             }
         }
-        
-        if (nullptr != s)
+
+        if (s != nullptr)
         {
             s->close_on_fault_injection();
         }

@@ -143,7 +143,7 @@ public:
     // rpc routines
     //
     void call(message_ex* request, rpc_response_task* call);    
-    void on_recv_request(message_ex* msg, int delay_ms);
+    void on_recv_request(network* net, message_ex* msg, int delay_ms);
     void reply(message_ex* response, error_code err = ERR_OK);
     void forward(message_ex* request, rpc_address address);
 
@@ -155,7 +155,7 @@ public:
     rpc_client_matcher* matcher() { return &_rpc_matcher; }
 
     // call with ip address only
-    void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
+    void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false, bool set_forwarded = false);
 
 private:
     network* create_network(

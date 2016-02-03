@@ -65,7 +65,11 @@ namespace dsn
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
         uint64_t       vnid; // virtual node id
         dsn_msg_context_t context;
-        rpc_address       from_address;   // always ipv4/v6 address
+        rpc_address       from_address; // always ipv4/v6 address,
+                                        // generally, it is the from_node's primary address, except the
+                                        // case described in message_ex::create_response()'s TODO.
+                                        // the from_address is always the orignal client's address, it will
+                                        // not be changed in forwarding request.
 
         struct
         {
@@ -90,7 +94,7 @@ namespace dsn
 
         // by rpc and network
         rpc_session_ptr        io_session;     // send/recv session        
-        rpc_address            to_address;     // always ipv4/v6 address
+        rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
         uint16_t               local_rpc_code;
 
@@ -106,8 +110,7 @@ namespace dsn
         //
         bool is_right_header() const;
         bool is_right_body(bool is_write_msg) const;
-        error_code error() const { return header->server.error; }    
-        rpc_address from_addr() const { return header->from_address; }
+        error_code error() const { return header->server.error; }
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
         static int  get_body_length(char* hdr)

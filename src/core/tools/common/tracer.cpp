@@ -72,7 +72,7 @@ namespace dsn {
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->from_addr().to_string(),
+                    tsk->get_request()->header->from_address.to_string(),
                     tsk->get_request()->to_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
@@ -85,7 +85,7 @@ namespace dsn {
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->to_address.to_string(),
-                    tsk->get_request()->from_addr().to_string(),
+                    tsk->get_request()->header->from_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -154,7 +154,7 @@ namespace dsn {
             ddebug(
                 "%s RPC.CALL: %s => %s, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
-                req->from_addr().to_string(),
+                req->header->from_address.to_string(),
                 req->to_address.to_string(),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
@@ -168,7 +168,7 @@ namespace dsn {
                 callee->spec().name.c_str(),
                 callee,
                 callee->id(),
-                callee->get_request()->from_addr().to_string(),
+                callee->get_request()->header->from_address.to_string(),
                 callee->get_request()->to_address.to_string(),
                 callee->get_request()->header->rpc_id,
                 tls_dsn.last_worker_queue_size
@@ -183,7 +183,7 @@ namespace dsn {
             ddebug(
                 "%s RPC.REPLY: %s => %s, rpc_id = %016llx",
                 hdr.rpc_name,
-                msg->from_addr().to_string(),
+                msg->header->from_address.to_string(),
                 msg->to_address.to_string(),
                 hdr.rpc_id
                 );
@@ -195,7 +195,7 @@ namespace dsn {
                 resp->spec().name.c_str(),
                 resp->id(),
                 resp->get_request()->to_address.to_string(),
-                resp->get_request()->from_addr().to_string(),
+                resp->get_request()->header->from_address.to_string(),
                 resp->get_request()->header->rpc_id,
                 tls_dsn.last_worker_queue_size
                 );
