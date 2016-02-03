@@ -476,9 +476,17 @@ timer_task::timer_task(
         "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
         spec().name.c_str()
         );
+}
 
+void timer_task::enqueue()
+{
     // enable timer randomization to avoid lots of timers execution simultaneously
-    set_delay(dsn_random32(0, interval_milliseconds));
+    if (delay_milliseconds() == 0 && spec().randomize_timer_delay_if_zero)
+    {
+        set_delay(dsn_random32(0, _interval_milliseconds));
+    }
+    
+    return task::enqueue();
 }
 
 void timer_task::exec()

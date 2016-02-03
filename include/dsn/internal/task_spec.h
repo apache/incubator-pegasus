@@ -184,6 +184,7 @@ public:
     dsn_threadpool_code_t  pool_code;
     bool                   allow_inline; // allow task executed in other thread pools or tasks    
     bool                   fast_execution_in_network_thread;
+    bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
@@ -236,6 +237,7 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
     CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")    
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
+    CONFIG_FLD(bool, bool, randomize_timer_delay_if_zero, false, "whether to randomize the timer delay to random(0, timer_interval), if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    

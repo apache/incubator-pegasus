@@ -225,8 +225,11 @@ public:
         int hash = 0, 
         service_node* node = nullptr
         );
+
     virtual void exec();
     
+    virtual void enqueue();
+
 private:
     uint32_t           _interval_milliseconds;
     dsn_task_handler_t _cb;
