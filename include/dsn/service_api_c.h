@@ -731,6 +731,8 @@ extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t ep);
 extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
 extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API bool          dsn_group_is_update_leader_on_rpc_forward(dsn_group_t g);
+extern DSN_API void          dsn_group_set_update_leader_on_rpc_forward(dsn_group_t g, bool v);
 extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
 extern DSN_API void          dsn_group_destroy(dsn_group_t g);

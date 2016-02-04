@@ -106,12 +106,13 @@ namespace dsn {
         service_node* node() const;
 
         //
-        // called when network received a complete message
+        // called when network received a complete request message
         //
         void on_recv_request(message_ex* msg, int delay_ms);
 
         //
-        //
+        // called when network received a complete reply message or network failed,
+        // if network failed, the 'msg' will be nullptr
         //
         void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
         

@@ -149,10 +149,10 @@ namespace dsn
 
     private:
         // by msg read & write
-        int                    _rw_index;
-        int                    _rw_offset;
-        bool                   _rw_committed;
-        bool                   _is_read;
+        int                    _rw_index;     // current buffer index
+        int                    _rw_offset;    // current buffer offset
+        bool                   _rw_committed; // mark if it is in middle state of reading/writing
+        bool                   _is_read;      // is for read(recv) or write(send)
     };
 
 } // end namespace
