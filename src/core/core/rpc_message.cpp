@@ -378,7 +378,8 @@ message_ex* message_ex::copy_and_prepare_send()
         // the message_header is hidden ahead of the buffer, expose it to buffer
         dassert(buffers.size() == 1, "there must be only one buffer for read msg");
         dassert((char*)header + sizeof(message_header) == (char*)buffers[0].data(), "header and content must be contigous");
-        copy->buffers[0] = copy->buffers[0].range(-sizeof(message_header));
+
+        copy->buffers[0] = copy->buffers[0].range(-(int)sizeof(message_header));
 
         // switch the flag
         copy->_is_read = false;
