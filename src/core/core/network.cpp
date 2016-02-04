@@ -118,9 +118,10 @@ namespace dsn
 
             // if not resend, the message's callback will not be invoked until timeout,
             // it's too slow - let's try to mimic the failure by recving an empty reply
-            else if (is_client())
+            else if (msg->header->context.u.is_request 
+                && !msg->header->context.u.is_forwarded)
             {
-                on_recv_reply(msg->header->id, nullptr, 0);
+                _net.on_recv_reply(msg->header->id, nullptr, 0);
             }
 
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
@@ -151,9 +152,10 @@ namespace dsn
 
             // if not resend, the message's callback will not be invoked until timeout,
             // it's too slow - let's try to mimic the failure by recving an empty reply
-            else if (is_client())
+            else if (rmsg->header->context.u.is_request
+                && !rmsg->header->context.u.is_forwarded)
             {
-                on_recv_reply(rmsg->header->id, nullptr, 0);
+                _net.on_recv_reply(rmsg->header->id, nullptr, 0);
             }
 
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
@@ -367,32 +369,27 @@ namespace dsn
         return true;
     }
 
-    bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
+    void rpc_session::on_recv_message(message_ex* msg, int delay_ms)
     {
-        // both rpc server session and rpc client session can receive rpc reply,
-        // specially, rpc client session can receive general rpc reply,
-        // and rpc server session can receive forwarded rpc reply
+        msg->to_address = _net.address();
+        msg->io_session = this;
 
-        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
-        if (reply != nullptr)
+        if (msg->header->context.u.is_request)
         {
-            reply->to_address = _net.address();
-            reply->io_session = this;
+            dbg_dassert(!is_client(), 
+                "only rpc server session can recv rpc requests");
+            _net.on_recv_request(msg, delay_ms);
         }
 
-        return _matcher->on_recv_reply(&_net, key, reply, delay_ms);
+        // both rpc server session and rpc client session can receive rpc reply
+        // specially, rpc client session can receive general rpc reply,  
+        // and rpc server session can receive forwarded rpc reply  
+        else
+        {
+            _matcher->on_recv_reply(&_net, msg->header->id, msg, delay_ms);
+        }
     }
-
-    void rpc_session::on_recv_request(message_ex* request, int delay_ms)
-    {
-        dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
-
-        request->to_address = _net.address();
-        request->io_session = this;
-
-        return _net.on_recv_request(request, delay_ms);
-    }  
-
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
         : _engine(srv), _parser_type(NET_HDR_DSN)
@@ -421,9 +418,9 @@ namespace dsn
         return _engine->on_recv_request(this, msg, delay_ms);
     }
 
-    void network::on_recv_reply(message_ex* msg, int delay_ms)
+    void network::on_recv_reply(uint64_t id, message_ex* msg, int delay_ms)
     {
-        _engine->matcher()->on_recv_reply(this, msg->header->id, msg, delay_ms);
+        _engine->matcher()->on_recv_reply(this, id, msg, delay_ms);
     }
 
     std::unique_ptr<message_parser> network::new_message_parser()
