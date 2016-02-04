@@ -246,6 +246,7 @@ private:
     };
 
     friend class simple_stateful_load_balancer;
+    friend class naive_load_balancer;
     std::string                                         _cluster_root;
 
     //_cluster_root + "/apps"
