@@ -131,6 +131,7 @@ namespace dsn {
         if (nullptr == reply)
         {
             call->set_delay(delay_ms);
+            // TODO(qinzuoyan): maybe set err as ERR_NETWORK_FAILURE to differ with ERR_TIMEOUT
             call->enqueue(ERR_TIMEOUT, reply);
             call->release_ref(); // added in on_call
             return true;
@@ -157,7 +158,7 @@ namespace dsn {
                 switch (sp->grpc_mode)
                 {
                 case GRPC_TO_LEADER:
-                    if (req->server_address.group_address()->update_leader_on_rpc_forward())
+                    if (req->server_address.group_address()->is_update_leader_on_rpc_forward())
                     {
                         req->server_address.group_address()->set_leader(addr);
                     }
@@ -191,7 +192,7 @@ namespace dsn {
                     switch (sp->grpc_mode)
                     {
                     case GRPC_TO_LEADER:
-                        if (err == ERR_OK && req->server_address.group_address()->update_leader_on_rpc_forward())
+                        if (err == ERR_OK && req->server_address.group_address()->is_update_leader_on_rpc_forward())
                         {
                             req->server_address.group_address()->set_leader(reply->header->from_address);
                         }
