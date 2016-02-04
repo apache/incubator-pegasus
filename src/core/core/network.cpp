@@ -376,9 +376,14 @@ namespace dsn
 
         if (msg->header->context.u.is_request)
         {
-            dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
+            dbg_dassert(!is_client(), 
+                "only rpc server session can recv rpc requests");
             _net.on_recv_request(msg, delay_ms);
         }
+
+        // both rpc server session and rpc client session can receive rpc reply
+        // specially, rpc client session can receive general rpc reply,  
+        // and rpc server session can receive forwarded rpc reply  
         else
         {
             _matcher->on_recv_reply(&_net, msg->header->id, msg, delay_ms);
