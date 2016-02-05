@@ -394,6 +394,16 @@ namespace dsn {
     }
 
     //----------------------------------------------------------------------------------------------
+    rpc_server_dispatcher::rpc_server_dispatcher()
+    {
+        _vhandlers.resize(dsn_task_code_max() + 1);
+        for (auto& h : _vhandlers)
+        {
+            h = new std::pair<rpc_handler_info*, utils::rw_lock_nr>();
+            h->first = nullptr;
+        }
+    }
+
     bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
     {
         auto name = std::string(dsn_task_code_to_string(handler->code));
@@ -404,7 +414,12 @@ namespace dsn {
         if (it == _handlers.end() && it2 == _handlers.end())
         {
             _handlers[name] = handler;
-            _handlers[handler->name] = handler;            
+            _handlers[handler->name] = handler;   
+
+            {
+                utils::auto_write_lock l(_vhandlers[handler->code]->second);
+                _vhandlers[handler->code]->first = handler;
+            }
             return true;
         }
         else
@@ -427,6 +442,11 @@ namespace dsn {
             std::string name = it->second->name;
             _handlers.erase(it);
             _handlers.erase(name);
+
+            {
+                utils::auto_write_lock l(_vhandlers[rpc_code]->second);
+                _vhandlers[rpc_code]->first = nullptr;
+            }
         }
 
         ret->unregister();
@@ -436,6 +456,20 @@ namespace dsn {
     rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
     {
         rpc_handler_info* handler = nullptr;
+        if (msg->header->rpc_name_fast.local_binary_hash == message_ex::s_local_binary_hash)
+        {
+            msg->local_rpc_code = (uint16_t)msg->header->rpc_name_fast.local_rpc_id;
+
+            {
+                utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+                handler = _vhandlers[msg->local_rpc_code]->first;
+                if (nullptr != handler)
+                {
+                    handler->add_ref();
+                }
+            }
+        }
+        else
         {
             utils::auto_read_lock l(_handlers_lock);
             auto it = _handlers.find(msg->header->rpc_name);

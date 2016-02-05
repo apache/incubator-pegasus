@@ -105,6 +105,7 @@ private:
 class rpc_server_dispatcher
 {
 public:
+    rpc_server_dispatcher();
     bool  register_rpc_handler(rpc_handler_info* handler);
     rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code);
     rpc_request_task* on_request(message_ex* msg, service_node* node);
@@ -118,6 +119,8 @@ private:
     typedef std::unordered_map<std::string, rpc_handler_info*> rpc_handlers;
     rpc_handlers                  _handlers;
     mutable utils::rw_lock_nr     _handlers_lock;
+
+    std::vector<std::pair<rpc_handler_info*, utils::rw_lock_nr>*  > _vhandlers;
 };
 
 class rpc_engine
