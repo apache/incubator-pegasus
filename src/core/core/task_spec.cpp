@@ -131,13 +131,25 @@ bool task_spec::init()
 
         if (!read_config(section_name.c_str(), *spec, &default_spec))
             return false;
-        
-        spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE
-            && spec->type != TASK_TYPE_RPC_REQUEST
-            && spec->allow_inline);
-        spec->fast_execution_in_network_thread =
-            (spec->type <= TASK_TYPE_RPC_RESPONSE
-            && spec->fast_execution_in_network_thread);
+
+        dassert(spec->rpc_request_delays_milliseconds.size() == 0
+            || spec->rpc_request_delays_milliseconds.size() == 6,
+            "invalid length of rpc_request_delays_milliseconds, must be of length 6");
+        if (spec->rpc_request_delays_milliseconds.size() > 0)
+        {
+            spec->rpc_request_delayer.initialize(spec->rpc_request_delays_milliseconds);
+        }
+
+        if (spec->rpc_request_throttling_mode != TM_NONE)
+        {
+            if (spec->type != TASK_TYPE_RPC_REQUEST)
+            {
+                derror("%s: only rpc request type can have non TM_NONE throttling_mode",
+                    spec->name.c_str()
+                    );
+                return false;
+            }
+        }
     }
 
     ::dsn::register_command("task-code", 

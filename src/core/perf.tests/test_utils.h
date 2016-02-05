@@ -49,6 +49,7 @@ using namespace ::dsn;
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
@@ -72,8 +73,8 @@ public:
 
     void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
     {
-        std::string r = ::dsn::task::get_current_worker()->name();
-        replier(r);
+        std::string r = dsn_get_current_app_data_dir();
+        replier(std::move(r));
     }
 
     void on_rpc_string_test(dsn_message_t message) {

@@ -60,11 +60,6 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _queue_length_counter = perf_counters::instance().get_counter(_pool->node()->name(), "engine", (_name + ".queue.length").c_str(), COUNTER_TYPE_NUMBER, "task queue length", true);
     _virtual_queue_length = 0;
     _spec = (threadpool_spec*)&pool->spec();
-
-    for (int i = 0; i < TASK_PRIORITY_COUNT; i++)
-    {
-        _appro_wait_time_ns[i].store(0);
-    }
 }
 
 task_queue::~task_queue()
@@ -75,21 +70,8 @@ task_queue::~task_queue()
 void task_queue::enqueue_internal(task* task)
 {
     auto& sp = task->spec();
-    if (sp.rpc_request_dropped_on_timeout_with_high_possibility)
-    {
-        rpc_request_task* rc = dynamic_cast<rpc_request_task*>(task);
-
-        // drop incoming 
-        if (_appro_wait_time_ns[sp.priority].load(std::memory_order_relaxed) / 1000000ULL
-            >= (uint64_t)rc->get_request()->header->client.timeout_ms)
-        {
-            // TODO: reply busy
-            task->release_ref(); // added in task::enqueue(pool)
-            return;
-        }
-    }
-
-    if (sp.rpc_request_dropped_on_long_queue)
+    auto throttle_mode = sp.rpc_request_throttling_mode;
+    if (throttle_mode != TM_NONE)
     {        
         int ac_value = 0;
         if (_spec->enable_virtual_queue_throttling)
@@ -100,13 +82,41 @@ void task_queue::enqueue_internal(task* task)
         {
             ac_value = count();
         }
-
-        // drop incoming rpc request when task queue is too long
-        if (ac_value > _spec->queue_length_throttling_threshold)
+               
+        if (throttle_mode == TM_DELAY)
         {
-            // TODO: reply busy
-            task->release_ref(); // added in task::enqueue(pool)
-            return;
+            int delay_ms = sp.rpc_request_delayer.delay(ac_value, _spec->queue_length_throttling_threshold);
+            if (delay_ms > 0)
+            {
+                auto rtask = static_cast<rpc_request_task*>(task);
+                rtask->get_request()->io_session->delay_recv(delay_ms);
+
+                dwarn("too many pending tasks (%d), delay traffic from %s for %d milliseconds",
+                    ac_value,
+                    rtask->get_request()->header->from_address.to_string(),
+                    delay_ms
+                    );
+            }
+        }
+        else
+        {
+            dbg_dassert(TM_REJECT == throttle_mode, "unknow mode %d", (int)throttle_mode);
+
+            if (ac_value > _spec->queue_length_throttling_threshold)
+            {
+                auto rtask = static_cast<rpc_request_task*>(task);
+                auto resp = rtask->get_request()->create_response();
+                task::get_current_rpc()->reply(resp, ERR_BUSY);
+
+                dwarn("too many pending tasks (%d), reject message from %s with rpc_id = %" PRIx64,
+                    ac_value,
+                    rtask->get_request()->header->from_address.to_string(),
+                    rtask->get_request()->header->rpc_id
+                    );
+
+                task->release_ref(); // added in task::enqueue(pool)
+                return;
+            }
         }
     }
 

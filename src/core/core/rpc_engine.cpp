@@ -212,7 +212,18 @@ namespace dsn {
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
-                call->enqueue(err, reply);
+
+                if (ERR_OK == err)
+                    call->enqueue(err, reply);
+                else
+                {
+                    call->enqueue(err, nullptr);
+
+                    // because (1) initially, the ref count is zero
+                    //         (2) upper apps may call add_ref already
+                    call->add_ref();
+                    call->release_ref();
+                }
             }
 
             // release the task when necessary

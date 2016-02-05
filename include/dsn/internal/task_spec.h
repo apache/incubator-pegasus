@@ -45,6 +45,7 @@
 # include <dsn/internal/join_point.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/configuration.h>
+# include <dsn/internal/exp_delay.h>
 
 ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
     ENUM_REG(LOG_LEVEL_INFORMATION)
@@ -135,6 +136,20 @@ ENUM_BEGIN(grpc_mode_t, GRPC_TARGET_INVALID)
     ENUM_REG(GRPC_TO_ANY)
 ENUM_END(grpc_mode_t)
 
+typedef enum throttling_mode_t
+{
+    TM_NONE,    // no throttling applied
+    TM_REJECT,  // reject the incoming request 
+    TM_DELAY,   // delay network receive ops to reducing incoming rate
+    TM_INVALID
+} throttling_mode_t;
+
+ENUM_BEGIN(throttling_mode_t, TM_INVALID)
+    ENUM_REG(TM_NONE)
+    ENUM_REG(TM_REJECT)
+    ENUM_REG(TM_DELAY)
+ENUM_END(throttling_mode_t)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
@@ -176,22 +191,26 @@ public:
     dsn_task_type_t        type;
     std::string            name;    
     dsn_task_code_t        rpc_paired_code;
+    shared_exp_delay       rpc_request_delayer;
     // ]
 
     // configurable [
     dsn_task_priority_t    priority;
     grpc_mode_t            grpc_mode; // used when a rpc request is sent to a group address
     dsn_threadpool_code_t  pool_code;
-    bool                   allow_inline; // allow task executed in other thread pools or tasks    
-    bool                   fast_execution_in_network_thread;
+
+    // allow task executed in other thread pools or tasks    
+    // for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site
+    // for other tasks - allow-inline allows a task being execution in io-thread
+    bool                   allow_inline;
     bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
-    bool                   rpc_request_dropped_on_long_queue; // 
-    bool                   rpc_request_dropped_on_timeout_with_high_possibility; // default is false
-    double                 rpc_request_queue_wait_time_approximation_weight;
+    throttling_mode_t      rpc_request_throttling_mode; // 
+    std::vector<int>       rpc_request_delays_milliseconds; // see exp_delay for delaying recving
+    bool                   rpc_request_dropped_before_execution_when_timeout;
     // ]
 
     task_rejection_handler rejection_handler;
@@ -235,16 +254,19 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
     CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
-    CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")    
-    CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
+    CONFIG_FLD(bool, bool, allow_inline, false, 
+        "allow task executed in other thread pools or tasks "
+        "for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site "
+        "for other tasks - allow-inline allows a task being execution in io-thread "        
+        )
     CONFIG_FLD(bool, bool, randomize_timer_delay_if_zero, false, "whether to randomize the timer delay to random(0, timer_interval), if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
-    CONFIG_FLD(bool, bool, rpc_request_dropped_on_long_queue, false, "throttling: whether the request requests can be dropped on queue length > pool.queue_length_throttling_threshold")
-    CONFIG_FLD(bool, bool, rpc_request_dropped_on_timeout_with_high_possibility, false, "throttling: whether to drop a rpc request when it will be timeout with high possibility")
-    CONFIG_FLD(double, double, rpc_request_queue_wait_time_approximation_weight, 1.0, "throttling: wait(N) = weight*wait(N-1) + (1-weight)*wait(N-2)")
+    CONFIG_FLD_ENUM(throttling_mode_t, rpc_request_throttling_mode, TM_NONE, TM_INVALID, false, "throttling mode for rpc requets: TM_NONE, TM_REJECT, TM_DELAY when queue length > pool.queue_length_throttling_threshold")
+    CONFIG_FLD_INT_LIST(rpc_request_delays_milliseconds, "how many milliseconds to delay recving rpc session for when queue length ~= [1.0, 1.2, 1.4, 1.6, 1.8, >=2.0] x pool.queue_length_throttling_threshold, e.g., 0, 0, 1, 2, 5, 10")
+    CONFIG_FLD(bool, bool, rpc_request_dropped_before_execution_when_timeout, false, "whether to drop a request right before execution when its queueing time is already greater than its timeout value")    
 CONFIG_END
 
 struct threadpool_spec

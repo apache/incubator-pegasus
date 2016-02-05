@@ -76,7 +76,6 @@ public:
     task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
     int               index() const { return _index; }
     volatile int*     get_virtual_length_ptr() { return &_virtual_queue_length; }
-    void              on_task_dequeued(task* task);
 
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
@@ -97,17 +96,6 @@ private:
     mutable perf_counter_ptr  _queue_length_counter;
     threadpool_spec*       _spec;
     volatile int           _virtual_queue_length;
-    std::atomic<uint64_t>  _appro_wait_time_ns[TASK_PRIORITY_COUNT];
 };
-
-inline void task_queue::on_task_dequeued(task* task)
-{
-    auto& sp = task->spec();
-    uint64_t n2 = _appro_wait_time_ns[sp.priority].load(std::memory_order_relaxed);
-    auto n0 = (double)(dsn_now_ns() - task->enqueue_ts_ns()) * sp.rpc_request_queue_wait_time_approximation_weight
-        + (double)n2 * (1.0 - sp.rpc_request_queue_wait_time_approximation_weight);
-
-    _appro_wait_time_ns[sp.priority].store((uint64_t)n0, std::memory_order_relaxed);
-}
 
 } // end namespace
