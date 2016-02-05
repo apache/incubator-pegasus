@@ -292,12 +292,18 @@ public:
 
     virtual void  exec() override
     {
-        _handler->run(_request);
+        if (0 == _enqueue_ts_ns
+            || dsn_now_ns() - _enqueue_ts_ns < 
+            (uint64_t)_request->header->client.timeout_ms * 1000000ULL)
+        {
+            _handler->run(_request);
+        }
     }
 
 protected:
     message_ex      *_request;
     rpc_handler_info* _handler;
+    uint64_t         _enqueue_ts_ns;
 };
 
 class rpc_response_task : public task, public transient_object
