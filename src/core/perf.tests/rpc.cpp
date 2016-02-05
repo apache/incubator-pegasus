@@ -97,7 +97,7 @@ TEST(core, rpc_perf_test_sync)
     std::chrono::steady_clock clock;
     auto tic = clock.now();
 
-    int round = 1000000;
+    int round = 100000;
     int concurrency = 10;
     int total_query_count = round * concurrency;
 
