@@ -12,39 +12,33 @@ namespace dsn
 {
     namespace dist
     {
-        machine_pool_mgr::machine_pool_mgr(const char* path)
+        machine_pool_mgr::machine_pool_mgr(const char* sec)
         {
             ::dsn::service::zauto_lock l(_lock);
-            std::string cluster_config_file = dsn_config_get_value_string(path, "node_list_path", "nodes", "the location of the file which lists the host name and user name of all the available machines");
+            std::string cluster_config_file = dsn_config_get_value_string(sec, "machine", "nodes", "the location of the file which lists the host name and user name of all the available machines");
             std::vector<std::string> machine_id;
             error_code err = parse_cluster_config_file(cluster_config_file, machine_id);
             dassert(ERR_OK == err, "unable to load the cluster config file, pls check your config file again.");
             for (auto& i : machine_id)
             {
                 machine_info machine;
-                machine.workload.instance = 0;
+                machine.workload.instance_count = 0;
                 machine.identity = i;
                 _machines[i] = machine;
             }
         }
 
-        error_code machine_pool_mgr::get_machine(int count, const std::vector<std::string>& forbidden_list, std::vector<std::string>& assign_list)
+        error_code machine_pool_mgr::get_machine(const alloca_options& opt, /* out */ std::vector<std::string>& assign_list)
         {
             ::dsn::service::zauto_lock l(_lock);
 
-            if (count <= 0)
+            if (opt.slot_count <= 0)
             {
                 return ERR_INVALID_PARAMETERS;
             }
 
-            if (_machines.size() < count + forbidden_list.size())
-            {
-                //machines not enough
-                return ERR_RESOURCE_NOT_ENOUGH;
-            }
-
             std::set<std::string> forbidden_machines;
-            for (auto& i : forbidden_list)
+            for (auto& i : opt.forbidden_machines)
             {
                 forbidden_machines.insert(i);
             }
@@ -61,10 +55,22 @@ namespace dsn
 
             sort(candidates.begin(), candidates.end());
             assign_list.clear();
-            for (int i = 0; i < count; i++)
+            do {
+                for (size_t i = 0; i < candidates.size() && assign_list.size() < opt.slot_count; i++)
+                {
+                    assign_list.push_back(candidates[i].identity);
+                }
+            } while (opt.allow_same_machine_slots && assign_list.size() < opt.slot_count);
+
+            if (!opt.allow_partial_allocation && assign_list.size() < opt.slot_count)
             {
-                assign_list.push_back(candidates[i].identity);
-                _machines[candidates[i].identity].workload.instance += 1;
+                assign_list.clear();
+                return ERR_RESOURCE_NOT_ENOUGH;
+            }
+
+            for (auto& i : assign_list)
+            {
+                _machines[i].workload.instance_count++;
             }
             return ERR_OK;
         }
@@ -76,7 +82,7 @@ namespace dsn
             {
                 if (_machines.find(i) != _machines.end())
                 {
-                    _machines[i].workload.instance -= 1;
+                    _machines[i].workload.instance_count -= 1;
                 }
             }
         }

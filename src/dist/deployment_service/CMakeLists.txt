@@ -24,12 +24,12 @@ file(GLOB
     "${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile"
     "${CMAKE_CURRENT_SOURCE_DIR}/*_nodes"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cmd"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../scripts/windows/echoc.exe"
 )
 
 # Extra files that will be installed
 set(MY_BINPLACES ${RES_FILES})
-
-set(MY_BOOST_PACKAGES "")
 
 dsn_add_executable()
 
