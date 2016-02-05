@@ -28,9 +28,17 @@ namespace dsn
             * The error_code of ERR_OK indicates a successful get,
             * while an ERR_RESOURCE_NOT_ENOUGH indicate there are not enough machines.
             */
+
+            struct alloca_options
+            {
+                int  slot_count; // how many slots to be allocated
+                bool allow_same_machine_slots;
+                bool allow_partial_allocation;
+                std::vector<std::string> forbidden_machines;
+            };
+
             error_code get_machine(
-                int count,
-                const std::vector<std::string>& forbidden_list,
+                const alloca_options& opt,
                 /*out*/ std::vector<std::string>& assign_list
                 );
 
@@ -42,7 +50,7 @@ namespace dsn
         private:
             struct machine_workload
             {
-                int instance;
+                int instance_count;
             };
 
             struct machine_info
@@ -51,7 +59,7 @@ namespace dsn
                 std::string identity;
                 bool friend operator < (const machine_info &a, const machine_info &b)
                 {
-                    return a.workload.instance < b.workload.instance;
+                    return a.workload.instance_count < b.workload.instance_count;
                 }
             };
 
