@@ -14,10 +14,10 @@ find . -name '*.h' \
     | grep -v '^\./\.' \
     | grep -v '^\./builder' \
     | grep -v '^\./scripts/.*/format.sh' \
-    | xargs grep -n '	'
+    | xargs grep -n '	\|<::'
 
 if [ $? -eq 0 ]; then
-    echo "ERROR: check format failed"
+    echo "ERROR: check format failed: should not contain tab character or '<::'"
     exit -1
 else
     echo "Check format succeed"

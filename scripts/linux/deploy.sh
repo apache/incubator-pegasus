@@ -13,6 +13,7 @@ CMD=$1
 shift
 
 while [ $# -gt 0 ];do
+#TODO: this may cause infinit loop when parameters are invalid
     key=$1
     case $key in
         -h|--help)

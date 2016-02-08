@@ -138,7 +138,6 @@ task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
     _is_null = false;
-    _on_cancel = nullptr;    
     next = nullptr;
     
     if (node != nullptr)
@@ -375,6 +374,8 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
 
         spec().on_task_cancelled.execute(this);
         signal_waiters();
+
+        _error.end_tracking();
     }
 
     if (finished)
@@ -419,39 +420,48 @@ void task::enqueue(task_worker_pool* pool)
     {
         dassert (_node == task::get_current_node(), "");
         exec_internal();
+        return;
     }
-    else if (_spec->fast_execution_in_network_thread)
+    else if (_spec->allow_inline)
     {
-        if (_node != task::get_current_node())
+        // inlined
+        // warning - this may lead to deadlocks, e.g., allow_inlined
+        // task tries to get a non-recursive lock that is already hold
+        // by the caller task
+        if (_spec->type == TASK_TYPE_COMPUTE)
         {
-            tools::node_scoper ns(_node);
-            exec_internal();
+            if (_node != task::get_current_node())
+            {
+                tools::node_scoper ns(_node);
+                exec_internal();
+            }
+            else
+            {
+                exec_internal();
+            }
+            return;
         }
-        else
+
+        // io tasks only inlined in io threads
+        else if (task::get_current_worker2() == nullptr)
         {
+            dassert(_node == task::get_current_node(), "");
             exec_internal();
+            return;
         }
-    }
-    else if (_spec->allow_inline && !task::get_current_worker2() /*in io-thread*/ )
-    {
-        dassert(_node == task::get_current_node(), "");
-        exec_internal();
     }
 
     // normal path
-    else
-    {
-        dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
-            "(1). thread pool not designatd in '[%s] pools'; "
-            "(2). the caller is executed in io threads "
-            "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",            
-            dsn_threadpool_code_to_string(_spec->pool_code),
-            _node->spec().config_section.c_str(),
-            _spec->name.c_str()
-            );
+    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
+        "(1). thread pool not designatd in '[%s] pools'; "
+        "(2). the caller is executed in io threads "
+        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
+        dsn_threadpool_code_to_string(_spec->pool_code),
+        _node->spec().config_section.c_str(),
+        _spec->name.c_str()
+        );
 
-        pool->enqueue(this);
-    }
+    pool->enqueue(this);
 }
 
 timer_task::timer_task(
@@ -467,10 +477,21 @@ timer_task::timer_task(
     _interval_milliseconds(interval_milliseconds),
     _cb(cb)
 {
-    dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task, please use DEFINE_TASK_CODE to define the task code");
+    dassert (TASK_TYPE_COMPUTE == spec().type,
+        "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
+        spec().name.c_str()
+        );
+}
 
+void timer_task::enqueue()
+{
     // enable timer randomization to avoid lots of timers execution simultaneously
-    set_delay(dsn_random32(0, interval_milliseconds));
+    if (delay_milliseconds() == 0 && spec().randomize_timer_delay_if_zero)
+    {
+        set_delay(dsn_random32(0, _interval_milliseconds));
+    }
+    
+    return task::enqueue();
 }
 
 void timer_task::exec()
@@ -486,13 +507,18 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
-    : task(dsn_task_code_t(request->local_rpc_code), nullptr, nullptr, request->header->client.hash, node), 
+rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
+    : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
+        [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
+        request->header->client.hash, node),
     _request(request),
-    _handler(h)
+    _handler(h),
+    _enqueue_ts_ns(0)
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
-        "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
+        "%s is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
+        spec().name.c_str()
+        );
 
     _request->add_ref(); // released in dctor
 }
@@ -504,7 +530,10 @@ rpc_request_task::~rpc_request_task()
 
 void rpc_request_task::enqueue()
 {
-    spec().on_rpc_request_enqueue.execute(this);
+    if (spec().rpc_request_dropped_before_execution_when_timeout)
+    {
+        _enqueue_ts_ns = dsn_now_ns();
+    }
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
@@ -525,7 +554,9 @@ rpc_response_task::rpc_response_task(
     set_error_code(ERR_IO_PENDING);
 
     dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, 
-        "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
+        "%s is not of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code",
+        spec().name.c_str()
+        );
 
     _request = request;
     _response = nullptr;
@@ -555,19 +586,7 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
         reply->add_ref(); // released in dctor
     }
 
-    if (spec().on_rpc_response_enqueue.execute(this, true))
-    {
-        rpc_response_task::enqueue();
-    }
-
-    // release the task when necessary
-    else
-    {   
-        // because (1) initially, the ref count is zero
-        //         (2) upper apps may call add_ref already
-        this->add_ref();
-        this->release_ref();
-    }
+    rpc_response_task::enqueue();
 }
 
 void rpc_response_task::enqueue()
@@ -596,7 +615,10 @@ aio_task::aio_task(
     _cb = cb;
     _is_null = (_cb == nullptr);
 
-    dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
+    dassert (TASK_TYPE_AIO == spec().type, 
+        "%s is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
+        spec().name.c_str()
+        );
     set_error_code(ERR_IO_PENDING);
 
     auto disk = task::get_current_disk();

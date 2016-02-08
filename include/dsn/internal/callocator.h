@@ -35,11 +35,12 @@
 
 # pragma once
 
+# include <dsn/service_api_c.h>
 # include <memory>
 
 namespace dsn {
 
-    typedef void* (*t_allocate)(size_t);
+    typedef void* (*t_allocate)(uint32_t);
     typedef void  (*t_deallocate)(void*);
 
     template <t_allocate a, t_deallocate d>
@@ -48,7 +49,7 @@ namespace dsn {
     public:
         void* operator new(size_t size)
         {
-            return a(size);
+            return a((uint32_t)size);
         }
 
         void operator delete(void* p)
@@ -58,7 +59,7 @@ namespace dsn {
 
         void* operator new[](size_t size)
         {
-            return a(size);
+            return a((uint32_t)size);
         }
 
         void operator delete[](void* p)
@@ -66,6 +67,8 @@ namespace dsn {
             d(p);
         }
     };
+
+    typedef callocator_object<dsn_transient_malloc, dsn_transient_free> transient_object;
 
     template <typename T, t_allocate a, t_deallocate d>
     class callocator : public std::allocator<T>
@@ -83,7 +86,7 @@ namespace dsn {
 
         pointer allocate(size_type n, const void *hint = 0)
         {
-            return a(n);
+            return a((uint32_t)n);
         }
 
         void deallocate(pointer p, size_type n)

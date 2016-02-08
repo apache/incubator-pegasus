@@ -53,9 +53,9 @@ namespace dsn { namespace tools {
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
         ::dsn::rpc_address remote_addr, 
-        std::shared_ptr<message_parser>& parser
+        std::unique_ptr<message_parser>&& parser
         )
-        : rpc_session(net, remote_addr, parser, true)
+        : rpc_session(net, remote_addr, std::move(parser), true)
     {}
 
     void sim_client_session::connect() 
@@ -77,7 +77,6 @@ namespace dsn { namespace tools {
 
         blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
         message_ex* recv_msg = message_ex::create_receive_message(bb);
-        recv_msg->from_address = msg->from_address;
         recv_msg->to_address = msg->to_address;
         return recv_msg;
     }
@@ -100,8 +99,8 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    auto parser = _net.new_message_parser();
-                    server_session = new sim_server_session(*rnet, _net.address(), cptr, parser);
+                    server_session = new sim_server_session(*rnet, _net.address(), 
+                        cptr, _net.new_message_parser());
                     rnet->on_server_session_accepted(server_session);
                 }
 
@@ -110,8 +109,8 @@ namespace dsn { namespace tools {
                 {
                     node_scoper ns(rnet->node());
 
-                    server_session->on_recv_request(recv_msg,
-                        recv_msg->to_address == recv_msg->from_address ?
+                    server_session->on_recv_message(recv_msg,
+                        recv_msg->to_address == recv_msg->header->from_address ?
                         0 : rnet->net_delay_milliseconds()
                         );
                 }
@@ -125,9 +124,9 @@ namespace dsn { namespace tools {
         sim_network_provider& net, 
         ::dsn::rpc_address remote_addr,
         rpc_session_ptr& client,
-        std::shared_ptr<message_parser>& parser
+        std::unique_ptr<message_parser>&& parser
         )
-        : rpc_session(net, remote_addr, parser, false)
+        : rpc_session(net, remote_addr, std::move(parser), false)
     {
         _client = client;
     }
@@ -141,8 +140,8 @@ namespace dsn { namespace tools {
             {
                 node_scoper ns(_client->net().node());
 
-                _client->on_recv_reply(recv_msg->header->id, recv_msg,
-                    recv_msg->to_address == recv_msg->from_address ?
+                _client->on_recv_message(recv_msg,
+                    recv_msg->to_address == recv_msg->header->from_address ?
                     0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
                     );
             }

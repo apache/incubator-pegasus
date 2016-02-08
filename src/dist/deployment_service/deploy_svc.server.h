@@ -20,7 +20,7 @@ protected:
         reply(resp);
     }
     // RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY 
-    virtual void on_undeploy(const std::string& service_url, ::dsn::rpc_replier<::dsn::error_code>& reply)
+    virtual void on_undeploy(const std::string& service_url, ::dsn::rpc_replier< ::dsn::error_code>& reply)
     {
         std::cout << "... exec RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY ... (not implemented) " << std::endl;
         ::dsn::error_code resp;

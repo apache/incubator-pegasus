@@ -59,25 +59,6 @@ GTEST_API_ int main(int argc, char **argv)
     {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-
-    // set host app for the non-in-rDSN-thread api calls
-    dsn_mimic_app("client", 1);
-
-    // run out-rDSN tests in Main thread
-    std::cout << "=========================================================== " << std::endl;
-    std::cout << "================== run in Main thread ===================== " << std::endl;
-    std::cout << "=========================================================== " << std::endl;
-    exec_tests();
-
-    // run out-rDSN tests in other threads
-    std::cout << "=========================================================== " << std::endl;
-    std::cout << "================== run in non-rDSN threads ================ " << std::endl;
-    std::cout << "=========================================================== " << std::endl;
-    std::thread t([](){
-        dsn_mimic_app("client", 1);
-        exec_tests();
-    });
-    t.join();
     
     // exit without any destruction
     dsn_exit(0);

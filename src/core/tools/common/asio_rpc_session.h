@@ -51,11 +51,14 @@ namespace dsn {
                 asio_network_provider& net,
                 ::dsn::rpc_address remote_addr,
                 std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                std::shared_ptr<message_parser>& parser,
+                std::unique_ptr<message_parser>&& parser,
                 bool is_client
                 );
             virtual ~asio_rpc_session();
             virtual void send(uint64_t signature) override { return write(signature); }
+            virtual void close_on_fault_injection() override {
+                _socket->close();
+            }
 
         public:
             virtual void connect() override;            
@@ -63,14 +66,11 @@ namespace dsn {
         private:
             virtual void do_read(int sz) override;
             void write(uint64_t signature);
-            void on_failure();
+            void on_failure(bool is_write = false);
             void set_options();  
             void on_message_read(message_ex* msg)
             {
-                if (is_client())
-                    on_recv_reply(msg->header->id, msg, 0);
-                else
-                    on_recv_request(msg, 0);
+                on_recv_message(msg, 0);
             }
 
         private:

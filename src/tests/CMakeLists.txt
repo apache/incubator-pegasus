@@ -13,10 +13,10 @@ message(STATUS "GTEST_INCLUDE_DIR = ${GTEST_INCLUDE_DIR}")
 set(MY_PROJ_INC_PATH
     ${GTEST_INCLUDE_DIR} 
     ../dist/failure_detector 
-    ../apps/replication/client_lib 
-    ../apps/replication/lib 
-    ../apps/replication/meta_server
-    ../apps/replication/zookeeper
+    ../dist/replication/client_lib 
+    ../dist/replication/lib 
+    ../dist/replication/meta_server
+    ../dist/replication/zookeeper
     )
 
 if (UNIX)

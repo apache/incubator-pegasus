@@ -62,7 +62,7 @@ service_node::service_node(service_app_spec& app_spec)
     _app_context_ptr = nullptr;
 }
 
-bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
+bool service_node::rpc_register_handler(rpc_handler_info* handler, uint64_t vnid)
 {
     for (auto& io : _ios)
     {
@@ -76,9 +76,9 @@ bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
     return true;
 }
 
-rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
 {
-    rpc_handler_ptr ret = nullptr;
+    rpc_handler_info* ret = nullptr;
     for (auto& io : _ios)
     {
         if (io.rpc)
@@ -129,7 +129,7 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
     {
         io.disk = new disk_engine(this);
         aio_provider* aio = factory_store<aio_provider>::create(
-            spec.aio_factory_name.c_str(), PROVIDER_TYPE_MAIN, io.disk, nullptr);
+            spec.aio_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, io.disk, nullptr);
         for (auto it = spec.aio_aspects.begin();
             it != spec.aio_aspects.end();
             it++)
@@ -405,14 +405,14 @@ void service_engine::init_before_toollets(const service_spec& spec)
 
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(
-        spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, spec.dir_log.c_str()
+        spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str()
         );
     _memory = factory_store<memory_provider>::create(
-        spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN
+        spec.memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         );
     perf_counters::instance().register_factory(
         factory_store<perf_counter>::get_factory<perf_counter::factory>(
-        spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN
+        spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         )
         );
 }
@@ -440,10 +440,11 @@ void service_engine::register_system_rpc_handler(
     int port /*= -1*/
     ) // -1 for all node
 {
-    ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
+    ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
+    h->add_ref();
 
     if (port == -1)
     {
@@ -452,7 +453,10 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : n.second->ios())
             {
                 if (io.rpc)
+                {
+                    h->add_ref();
                     io.rpc->register_rpc_handler(h, 0);
+                }   
             }
         }
     }
@@ -464,7 +468,10 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : it->second->ios())
             {
                 if (io.rpc)
+                {
+                    h->add_ref();
                     io.rpc->register_rpc_handler(h, 0);
+                }   
             }
         }
         else
@@ -472,6 +479,9 @@ void service_engine::register_system_rpc_handler(
             dwarn("cannot find service node with port %d", port);
         }
     }
+
+    if (1 == h->release_ref())
+        delete h;
 }
 
 service_node* service_engine::start_node(service_app_spec& app_spec)

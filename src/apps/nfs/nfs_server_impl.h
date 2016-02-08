@@ -45,8 +45,11 @@ namespace dsn {
             nfs_service_impl(nfs_opts& opts) :
                 ::dsn::serverlet<nfs_service_impl>("nfs"), _opts(opts)
             {
-                _file_close_timer = ::dsn::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, 
-                    this, &nfs_service_impl::close_file, 0, 0, opts.file_close_timer_interval_ms_on_server);
+                _file_close_timer = ::dsn::tasking::enqueue_timer(
+                    LPC_NFS_FILE_CLOSE_TIMER, 
+                    this,
+                    [this] {close_file();},
+                    std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
             }
             virtual ~nfs_service_impl() {}
 
@@ -67,7 +70,7 @@ namespace dsn {
                 uint32_t size;
                 rpc_replier<copy_response> replier;
 
-                callback_para(rpc_replier<copy_response>& r) : hfile(nullptr), offset(0), size(0), replier(r){}
+                callback_para(const rpc_replier<copy_response>& r) : hfile(nullptr), offset(0), size(0), replier(r){}
             };
 
             struct file_handle_info_on_server
@@ -79,7 +82,7 @@ namespace dsn {
                 file_handle_info_on_server() : file_handle(nullptr), file_access_count(0), last_access_time(0) {}
             };
 
-            void internal_read_callback(error_code err, size_t sz, std::shared_ptr<callback_para> cp);
+            void internal_read_callback(error_code err, size_t sz, callback_para cp);
 
             void close_file();
 

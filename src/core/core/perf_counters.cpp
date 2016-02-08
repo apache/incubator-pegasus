@@ -48,6 +48,7 @@ DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* na
     c->add_ref();
     return c.get();
 }
+
 DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
 {
     auto sptr = reinterpret_cast<dsn::perf_counter*>(handle);
@@ -79,6 +80,10 @@ DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val)
 DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle)
 {
     return reinterpret_cast<dsn::perf_counter*>(handle)->get_value();
+}
+DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle)
+{
+    return reinterpret_cast<dsn::perf_counter*>(handle)->get_integer_value();
 }
 DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type)
 {

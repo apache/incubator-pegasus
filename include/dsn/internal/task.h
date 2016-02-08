@@ -42,6 +42,7 @@
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/link.h>
+# include <dsn/internal/callocator.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 
@@ -83,6 +84,7 @@ struct __tls_dsn__
     nfs_node      *nfs;
     timer_service *tsvc;
 
+    int           last_worker_queue_size;
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     uint32_t      last_lower32_task_id; // 32bits
 
@@ -182,7 +184,7 @@ public:
     task*                  next;
 };
 
-class task_c : public task
+class task_c : public task, public transient_object
 {
 public:
     task_c(
@@ -222,8 +224,11 @@ public:
         int hash = 0, 
         service_node* node = nullptr
         );
+
     virtual void exec();
     
+    virtual void enqueue();
+
 private:
     uint32_t           _interval_milliseconds;
     dsn_task_handler_t _cb;
@@ -246,31 +251,40 @@ struct rpc_handler_info
     }
     ~rpc_handler_info() { }
 
+    void add_ref()
+    {
+        running_count.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    int release_ref()
+    {
+        return running_count.fetch_sub(1, std::memory_order_release);
+    }
+
     void run(dsn_message_t req)
     {
-        running_count++;
         if (!unregistered)
         {
             c_handler(req, parameter);
         }
-        running_count--;
+        
+        if (1 == release_ref())
+        {
+            delete this;
+        }
     }
 
     void unregister()
     {
         unregistered = true;
-        while (running_count.load(std::memory_order_relaxed) != 0)
-        {
-            // TODO: nop
-        }
     }
 };
 
 class service_node;
-class rpc_request_task : public task
+class rpc_request_task : public task, public transient_object
 {
 public:
-    rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node);
+    rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node);
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
@@ -278,15 +292,21 @@ public:
 
     virtual void  exec() override
     {
-        _handler->run(_request);
+        if (0 == _enqueue_ts_ns
+            || dsn_now_ns() - _enqueue_ts_ns < 
+            (uint64_t)_request->header->client.timeout_ms * 1000000ULL)
+        {
+            _handler->run(_request);
+        }
     }
 
 protected:
     message_ex      *_request;
-    rpc_handler_ptr _handler;
+    rpc_handler_info* _handler;
+    uint64_t         _enqueue_ts_ns;
 };
 
-class rpc_response_task : public task
+class rpc_response_task : public task, public transient_object
 {
 public:
     rpc_response_task(
@@ -353,7 +373,7 @@ public:
     virtual ~disk_aio(){}
 };
 
-class aio_task : public task
+class aio_task : public task, public transient_object
 {
 public:
     aio_task(

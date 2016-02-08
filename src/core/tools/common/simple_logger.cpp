@@ -156,6 +156,13 @@ namespace dsn {
             dassert(_stderr_start_level != LOG_LEVEL_INVALID,
                     "invalid [tools.simple_logger] stderr_start_level specified");
 
+            _max_number_of_log_files_on_disk = dsn_config_get_value_uint64(
+                "tools.simple_logger",
+                "max_number_of_log_files_on_disk",
+                20,
+                "max number of log files reserved on disk, older logs are auto deleted"
+                );
+
             // check existing log files
             std::vector<std::string> sub_list;
             if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false))
@@ -204,7 +211,7 @@ namespace dsn {
             _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
-            while (_index - _start_index > 20)
+            while (_index - _start_index > _max_number_of_log_files_on_disk)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";

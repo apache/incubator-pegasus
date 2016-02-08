@@ -15,3 +15,8 @@ struct error_code
 {
 }
 
+// place holder
+struct task_code
+{
+}
+

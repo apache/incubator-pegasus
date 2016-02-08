@@ -47,10 +47,11 @@ namespace dsn {
 
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
-            ddebug("%s ENQUEUE, task_id = %016llx, delay = %d ms",
+            ddebug("%s ENQUEUE, task_id = %016llx, delay = %d ms, queue size = %d",
                 callee->spec().name.c_str(),
                 callee->id(),
-                callee->delay_milliseconds()
+                callee->delay_milliseconds(),
+                tls_dsn.last_worker_queue_size
                 );
         }
 
@@ -71,7 +72,7 @@ namespace dsn {
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->from_address.to_string(),
+                    tsk->get_request()->header->from_address.to_string(),
                     tsk->get_request()->to_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
@@ -84,7 +85,7 @@ namespace dsn {
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->to_address.to_string(),
-                    tsk->get_request()->from_address.to_string(),
+                    tsk->get_request()->header->from_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -129,17 +130,20 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void tracer_on_aio_call(task* caller, aio_task* callee)
         {
-            ddebug("%s AIO.CALL, task_id = %016llx",
+            ddebug("%s AIO.CALL, task_id = %016llx, offset = %" PRIu64 ", size = %d",
                 callee->spec().name.c_str(),
-                callee->id()
+                callee->id(),
+                callee->aio()->file_offset,
+                callee->aio()->buffer_size
                 );
         }
 
         static void tracer_on_aio_enqueue(aio_task* this_)
         {
-            ddebug("%s AIO.ENQUEUE, task_id = %016llx",
+            ddebug("%s AIO.ENQUEUE, task_id = %016llx, queue size = %d",
                 this_->spec().name.c_str(),
-                this_->id()
+                this_->id(),
+                tls_dsn.last_worker_queue_size
                 );
         }
 
@@ -150,7 +154,7 @@ namespace dsn {
             ddebug(
                 "%s RPC.CALL: %s => %s, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
-                req->from_address.to_string(),
+                req->header->from_address.to_string(),
                 req->to_address.to_string(),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
@@ -160,13 +164,14 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, rpc_id = %016llx",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, rpc_id = %016llx, queue size = %d",
                 callee->spec().name.c_str(),
                 callee,
                 callee->id(),
-                callee->get_request()->from_address.to_string(),
+                callee->get_request()->header->from_address.to_string(),
                 callee->get_request()->to_address.to_string(),
-                callee->get_request()->header->rpc_id
+                callee->get_request()->header->rpc_id,
+                tls_dsn.last_worker_queue_size
                 );
         }
 
@@ -178,7 +183,7 @@ namespace dsn {
             ddebug(
                 "%s RPC.REPLY: %s => %s, rpc_id = %016llx",
                 hdr.rpc_name,
-                msg->from_address.to_string(),
+                msg->header->from_address.to_string(),
                 msg->to_address.to_string(),
                 hdr.rpc_id
                 );
@@ -186,12 +191,13 @@ namespace dsn {
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, rpc_id = %016llx",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, rpc_id = %016llx, queue size = %d",
                 resp->spec().name.c_str(),
                 resp->id(),
                 resp->get_request()->to_address.to_string(),
-                resp->get_request()->from_address.to_string(),
-                resp->get_request()->header->rpc_id
+                resp->get_request()->header->from_address.to_string(),
+                resp->get_request()->header->rpc_id,
+                tls_dsn.last_worker_queue_size
                 );
         }
 

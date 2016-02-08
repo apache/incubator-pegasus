@@ -243,15 +243,13 @@ namespace dsn
 
         rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto parser = new_message_parser();
-
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = INADDR_ANY;
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
+            auto client = new hpc_rpc_session(sock, new_message_parser(), *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper);
             return c;
@@ -292,14 +290,13 @@ namespace dsn
 
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
-                    auto parser = new_message_parser();
-                    auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr, false);
+                    auto s = new hpc_rpc_session(_accept_sock, new_message_parser(), *this, client_addr, false);
                     rpc_session_ptr s1(s);
                     s->bind_looper(_looper);
 
                     this->on_server_session_accepted(s1);
 
-                    s->do_read(256);
+                    s->start_read_next();
                 }
                 else
                 {
@@ -409,7 +406,7 @@ namespace dsn
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("WSASend failed, err = %d", err);
-                    on_failure();
+                    on_failure(true);
                 }
                 else
                 {
@@ -480,7 +477,7 @@ namespace dsn
             {
                 dwarn("WSASend failed, err = %d", ::WSAGetLastError());
                 release_ref();
-                on_failure();
+                on_failure(true);
             }
             
             //dinfo("WSASend called, err = %d", rt);
@@ -488,26 +485,30 @@ namespace dsn
 
         void hpc_rpc_session::close()
         {
-            closesocket(_socket);
+            if (0 != _socket)
+            {
+                closesocket(_socket);
+                _socket = 0;
+            }
         }
 
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser,
+            std::unique_ptr<message_parser>&& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
             bool is_client
             )
-            : rpc_session(net, remote_addr, parser, is_client),
+            : rpc_session(net, remote_addr, std::move(parser), is_client),
             _socket(sock)
         {
             _sending_signature = 0;
             _sending_buffer_start_index = 0;
         }
         
-        void hpc_rpc_session::on_failure()
+        void hpc_rpc_session::on_failure(bool is_write)
         {
-            if (on_disconnected())
+            if (on_disconnected(is_write))
                 close();
         }
 
@@ -522,7 +523,7 @@ namespace dsn
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("ConnectEx failed, err = %d", err);
-                    this->on_failure();
+                    this->on_failure(true);
                 }
                 else
                 {
@@ -559,7 +560,7 @@ namespace dsn
                 dwarn("ConnectEx failed, err = %d", ::WSAGetLastError());
                 this->release_ref();
 
-                on_failure();
+                on_failure(true);
             }
         }
 

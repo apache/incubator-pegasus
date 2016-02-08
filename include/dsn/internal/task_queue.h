@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/internal/task.h>
-# include <dsn/internal/exp_delay.h>
+# include <dsn/internal/perf_counter.h>
 
 namespace dsn {
 
@@ -56,7 +56,7 @@ public:
 
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
-    ~task_queue() {}
+    ~task_queue();
     
     virtual void     enqueue(task* task) = 0;
 
@@ -67,8 +67,8 @@ public:
     virtual task*    dequeue(/*inout*/int& batch_size) = 0;
     
     int               count() const { return _queue_length.load(std::memory_order_relaxed); }
-    void              decrease_count(int count = 1) { _queue_length.fetch_sub(count, std::memory_order_relaxed); }
-    void              increase_count(int count = 1) { _queue_length.fetch_add(count, std::memory_order_relaxed); }
+    int               decrease_count(int count = 1) { _queue_length_counter->add((uint64_t)(-count));  return _queue_length.fetch_sub(1, std::memory_order_relaxed) - 1;}
+    int               increase_count(int count = 1) { _queue_length_counter->add(count);  return _queue_length.fetch_add(1, std::memory_order_relaxed) + 1;}
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }
@@ -84,7 +84,7 @@ private:
     friend class task_worker_pool;
     void set_owner_worker(task_worker* worker) { _owner_worker = worker; }
     void enqueue_internal(task* task);
-
+    
 private:
     task_worker_pool*      _pool;
     task_worker*           _owner_worker;
@@ -92,10 +92,10 @@ private:
     int                    _index;
     admission_controller*  _controller;
     int                    _worker_count;
-    std::atomic_int        _queue_length;
-    bool                   _enable_virtual_queue_throttling;
+    std::atomic<int>       _queue_length;
+    mutable perf_counter_ptr  _queue_length_counter;
+    threadpool_spec*       _spec;
     volatile int           _virtual_queue_length;
-    exp_delay              _delayer;
 };
 
 } // end namespace

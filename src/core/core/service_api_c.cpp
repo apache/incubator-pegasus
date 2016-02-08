@@ -439,12 +439,12 @@ DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
     if (recursive)
     {
         ::dsn::lock_provider* last = ::dsn::utils::factory_store< ::dsn::lock_provider>::create(
-            ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+            ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
         for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_aspects)
         {
-            last = ::dsn::utils::factory_store< ::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+            last = ::dsn::utils::factory_store< ::dsn::lock_provider>::create(s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
         }
 
         return (dsn_handle_t)dynamic_cast< ::dsn::ilock*>(last);
@@ -452,12 +452,12 @@ DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
     else
     {
         ::dsn::lock_nr_provider* last = ::dsn::utils::factory_store< ::dsn::lock_nr_provider>::create(
-            ::dsn::service_engine::fast_instance().spec().lock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+            ::dsn::service_engine::fast_instance().spec().lock_nr_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
         for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_nr_aspects)
         {
-            last = ::dsn::utils::factory_store< ::dsn::lock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+            last = ::dsn::utils::factory_store< ::dsn::lock_nr_provider>::create(s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
         }
 
         return (dsn_handle_t)dynamic_cast< ::dsn::ilock*>(last);
@@ -495,12 +495,12 @@ DSN_API void dsn_exlock_unlock(dsn_handle_t l)
 DSN_API dsn_handle_t dsn_rwlock_nr_create()
 {
     ::dsn::rwlock_nr_provider* last = ::dsn::utils::factory_store< ::dsn::rwlock_nr_provider>::create(
-        ::dsn::service_engine::fast_instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+        ::dsn::service_engine::fast_instance().spec().rwlock_nr_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto& s : ::dsn::service_engine::fast_instance().spec().rwlock_nr_aspects)
     {
-        last = ::dsn::utils::factory_store< ::dsn::rwlock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+        last = ::dsn::utils::factory_store< ::dsn::rwlock_nr_provider>::create(s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
     }
     return (dsn_handle_t)(last);
 }
@@ -538,13 +538,13 @@ DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l)
 DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {
     ::dsn::semaphore_provider* last = ::dsn::utils::factory_store< ::dsn::semaphore_provider>::create(
-        ::dsn::service_engine::fast_instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, initial_count, nullptr);
+        ::dsn::service_engine::fast_instance().spec().semaphore_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, initial_count, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto& s : ::dsn::service_engine::fast_instance().spec().semaphore_aspects)
     {
         last = ::dsn::utils::factory_store< ::dsn::semaphore_provider>::create(
-            s.c_str(), PROVIDER_TYPE_ASPECT, initial_count, last);
+            s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, initial_count, last);
     }
     return (dsn_handle_t)(last);
 }
@@ -584,18 +584,34 @@ DSN_API dsn_address_t dsn_primary_address()
 
 DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
 {
-    ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
+    ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
 
-    return ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+    h->add_ref();
+    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+    if (!r)
+    {
+        delete h;
+    }      
+
+    return r;
 }
 
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, 0);
-    return (h != nullptr) ? h->parameter : nullptr;
+    void* param = nullptr;
+
+    if (nullptr != h)
+    {
+        param = h->parameter;
+        if (1 == h->release_ref())
+            delete h;
+    }
+
+    return param;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, 
@@ -668,10 +684,7 @@ DSN_API void dsn_rpc_reply(dsn_message_t response)
 
 DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
 {
-    // TODO: enable real forwarding
-    auto resp = dsn_msg_create_response(request);
-    ::marshall(resp, addr);
-    ::dsn::task::get_current_rpc()->reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
+    ::dsn::task::get_current_rpc()->forward((::dsn::message_ex*)(request), ::dsn::rpc_address(addr));
 }
 
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
@@ -1178,7 +1191,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     dsn::utils::filesystem::create_directory(spec.dir_log);
     
     // init tools
-    dsn_all.tool = ::dsn::utils::factory_store< ::dsn::tools::tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
+    dsn_all.tool = ::dsn::utils::factory_store< ::dsn::tools::tool_app>::create(spec.tool.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.tool.c_str());
     dsn_all.tool->install(spec);
 
     // init app specs
@@ -1190,7 +1203,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     // init tool memory
     dsn_all.memory = ::dsn::utils::factory_store< ::dsn::memory_provider>::create(
-        spec.tools_memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
+        spec.tools_memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN);
 
     // prepare minimum necessary
     ::dsn::service_engine::fast_instance().init_before_toollets(spec);
@@ -1201,7 +1214,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it)
     {
-        auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0);
+        auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), ::dsn::PROVIDER_TYPE_MAIN);
         dassert(tlet, "toolet not found");
         tlet->install(spec);
     }

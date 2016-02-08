@@ -92,6 +92,13 @@ namespace dsn {
         //             blobs from message for sending
         //
         virtual void send_message(message_ex* request) = 0;
+
+        //
+        // tools in rDSN may decide to drop this msg,
+        // in this case, the network should implement the appropriate
+        // failure model that makes this failure possible in reality
+        //
+        virtual void inject_drop_message(message_ex* msg, bool is_send) = 0;
                 
         //
         // utilities
@@ -99,25 +106,28 @@ namespace dsn {
         service_node* node() const;
 
         //
-        // called when network received a complete message
+        // called when network received a complete request message
         //
         void on_recv_request(message_ex* msg, int delay_ms);
 
         //
+        // called when network received a complete reply message or network failed,
+        // if network failed, the 'msg' will be nullptr
         //
-        //
-        void on_recv_reply(message_ex* msg, int delay_ms);
+        void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
         
         //
         // create a message parser for
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        std::shared_ptr<message_parser> new_message_parser();
+        std::unique_ptr<message_parser> new_message_parser();
+
+        // for in-place new message parser
+        std::pair<message_parser::factory2, size_t> get_message_parser_info();
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
-        int delay(int len) { return _delayer.delay(len, _send_queue_threshold); }
 
     protected:
         static uint32_t get_local_ipv4();
@@ -127,7 +137,6 @@ namespace dsn {
         network_header_format         _parser_type;
         int                           _message_buffer_block_size;
         int                           _max_buffer_block_count_per_send;
-        shared_exp_delay              _delayer;
         int                           _send_queue_threshold;
 
     private:
@@ -154,18 +163,21 @@ namespace dsn {
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void send_message(message_ex* request);
+        virtual void send_message(message_ex* request) override;
+
+        // called by rpc engine
+        virtual void inject_drop_message(message_ex* msg, bool is_send) override;
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
         
     protected:
         typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> client_sessions;
-        client_sessions               _clients;
+        client_sessions               _clients; // to_address => rpc_session
         utils::rw_lock_nr             _clients_lock;
 
         typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> server_sessions;
-        server_sessions               _servers;
+        server_sessions               _servers; // from_address => rpc_session
         utils::rw_lock_nr             _servers_lock;
     };
 
@@ -179,30 +191,32 @@ namespace dsn {
         rpc_session(
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
-            std::shared_ptr<message_parser>& parser,
+            std::unique_ptr<message_parser>&& parser,
             bool is_client
             );
         virtual ~rpc_session();
+
+        virtual void close_on_fault_injection() = 0;
                 
         bool has_pending_out_msgs();
-        bool is_client() const { return _matcher != nullptr; }
+        bool is_client() const { return _is_client; }
         ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
         bool cancel(message_ex* request);
-        void delay_rpc_request_rate(int delay_ms);
+        void delay_recv(int delay_ms);
+        void on_recv_message(message_ex* msg, int delay_ms);
 
     // for client session
     public:
-        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         // return true if the socket should be closed
-        bool on_disconnected();
+        bool on_disconnected(bool is_write);
                
         virtual void connect() = 0;
         
     // for server session
     public:
-        void on_recv_request(message_ex* msg, int delay_ms);
+        void start_read_next(int read_next = 256);
 
     // shared
     protected:        
@@ -213,10 +227,7 @@ namespace dsn {
         //
         virtual void send(uint64_t signature) = 0;
         virtual void do_read(int read_next) = 0;
-
-        friend void __delayed_rpc_session_read_next__(void*);
-        void start_read_next(int read_next = 256);
-
+        
     protected:
         bool try_connecting(); // return true when it is permitted
         void set_connected();
@@ -229,14 +240,14 @@ namespace dsn {
     private:
         // return whether there are messages for sending; should always be called in lock
         bool unlink_message_for_send();
-        void clear(bool resend_msgs);
+        void clear_send_queue(bool resend_msgs);
 
     protected:
         // constant info
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
         int                                _max_buffer_block_count_per_send;        
-        std::shared_ptr<dsn::message_parser> _parser;
+        std::unique_ptr<dsn::message_parser> _parser;
 
         // messages are currently being sent
         // also locked by _lock later
@@ -244,8 +255,8 @@ namespace dsn {
         std::vector<message_ex*>              _sending_msgs;
 
     private:
-        std::atomic<int>                   _reconnect_count_after_last_success;
-        rpc_client_matcher                 *_matcher; // client used only
+        const bool                         _is_client;
+        rpc_client_matcher                 *_matcher;
 
         enum session_state
         {
@@ -260,13 +271,13 @@ namespace dsn {
         bool                               _is_sending_next;
         dlink                              _messages;        
         volatile session_state             _connect_state;
-        uint64_t                           _message_sent;   
+        uint64_t                           _message_sent;
         int                                _delay_server_receive_ms;
         // ]
     };
 
-    // --------- inline implementation ---------------
-    inline void rpc_session::delay_rpc_request_rate(int delay_ms)
+    // --------- inline implementation --------------
+    inline void rpc_session::delay_recv(int delay_ms)
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (delay_ms > _delay_server_receive_ms)

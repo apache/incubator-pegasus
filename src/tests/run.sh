@@ -1,6 +1,9 @@
 #!/bin/bash
 
 ./clear.sh
+if [ -z "${REPORT_DIR}" ]; then
+    REPORT_DIR="."
+fi
 output_xml="${REPORT_DIR}/dsn.core.tests.xml"
 export GTEST_OUTPUT="xml:${output_xml}"
 ./dsn.tests config-test.ini

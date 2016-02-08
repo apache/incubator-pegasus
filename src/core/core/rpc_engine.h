@@ -45,6 +45,8 @@ namespace dsn {
 class service_node;
 class rpc_engine;
 
+#define MAX_CLIENT_PORT 1023
+
 //
 // client matcher for matching RPC request and RPC response, and handling timeout
 // (1) the whole network may share a single client matcher,
@@ -79,7 +81,9 @@ public:
     //  reply - rpc response message
     //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
     //
-    bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+    // we may receive an empty reply to early terminate the rpc
+    //
+    bool on_recv_reply(network* net, uint64_t key, message_ex* reply, int delay_ms);
 
 private:
     friend class rpc_timeout_task;
@@ -91,6 +95,7 @@ private:
     {
         rpc_response_task*    resp_task;
         task*                 timeout_task;
+        uint64_t              timeout_ts_ms; // > 0 for auto-resent msgs
     };
     typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
     rpc_requests                  _requests[MATCHER_BUCKET_NR];
@@ -100,8 +105,9 @@ private:
 class rpc_server_dispatcher
 {
 public:
-    bool  register_rpc_handler(rpc_handler_ptr& handler);
-    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code);
+    rpc_server_dispatcher();
+    bool  register_rpc_handler(rpc_handler_info* handler);
+    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code);
     rpc_request_task* on_request(message_ex* msg, service_node* node);
     int handler_count() const 
     {
@@ -110,9 +116,11 @@ public:
     }
 
 private:
-    typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
+    typedef std::unordered_map<std::string, rpc_handler_info*> rpc_handlers;
     rpc_handlers                  _handlers;
     mutable utils::rw_lock_nr     _handlers_lock;
+
+    std::vector<std::pair<rpc_handler_info*, utils::rw_lock_nr>*  > _vhandlers;
 };
 
 class rpc_engine
@@ -131,15 +139,16 @@ public:
     //
     // rpc registrations
     //
-    bool  register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid);
-    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
+    bool  register_rpc_handler(rpc_handler_info* handler, uint64_t vnid);
+    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
 
     //
     // rpc routines
     //
     void call(message_ex* request, rpc_response_task* call);    
-    void on_recv_request(message_ex* msg, int delay_ms);
+    void on_recv_request(network* net, message_ex* msg, int delay_ms);
     void reply(message_ex* response, error_code err = ERR_OK);
+    void forward(message_ex* request, rpc_address address);
 
     //
     // information inquery
@@ -149,7 +158,7 @@ public:
     rpc_client_matcher* matcher() { return &_rpc_matcher; }
 
     // call with ip address only
-    void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
+    void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false, bool set_forwarded = false);
 
 private:
     network* create_network(

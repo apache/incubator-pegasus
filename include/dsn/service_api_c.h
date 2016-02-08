@@ -291,10 +291,12 @@ typedef struct dsn_address_t
 typedef union dsn_msg_context_t
 {
     struct {
+        uint64_t is_request : 1;
+        uint64_t is_forwarded : 1;
         uint64_t write_replication : 1;
         uint64_t read_replication : 1;
         uint64_t read_semantic : 2;
-        uint64_t unused : 10;
+        uint64_t unused : 8;
         uint64_t parameter : 50; // parameter for the flags, e.g., snapshort decree for replication read
     } u;
     uint64_t context;
@@ -729,6 +731,8 @@ extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t ep);
 extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
 extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API bool          dsn_group_is_update_leader_on_rpc_forward(dsn_group_t g);
+extern DSN_API void          dsn_group_set_update_leader_on_rpc_forward(dsn_group_t g, bool v);
 extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
 extern DSN_API void          dsn_group_destroy(dsn_group_t g);
@@ -757,6 +761,8 @@ extern DSN_API dsn_address_t dsn_primary_address();
 //
 // when timeout_milliseconds == 0,  [task.%rpc_code%] rpc_timeout_milliseconds is used.
 // 
+extern DSN_API void*         dsn_transient_malloc(uint32_t size);
+extern DSN_API void          dsn_transient_free(void* ptr);
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
@@ -1057,6 +1063,7 @@ extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val);
 extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
 extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
+extern DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle);
 extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
 //------------------------------------------------------------------------------
 //

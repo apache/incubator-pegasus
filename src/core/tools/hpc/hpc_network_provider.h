@@ -105,7 +105,7 @@ namespace dsn {
         public:
             hpc_rpc_session(
                 socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser,
+                std::unique_ptr<message_parser>&& parser,
                 connection_oriented_network& net,
                 ::dsn::rpc_address remote_addr,
                 bool is_client
@@ -120,19 +120,21 @@ namespace dsn {
 # endif
             }
 
+            virtual void close_on_fault_injection() override
+            {
+                close();
+            }
+
             void bind_looper(io_looper* looper, bool delay = false);
             virtual void do_read(int sz) override;
 
         private:            
             void do_write(uint64_t signature);
             void close();
-            void on_failure();
+            void on_failure(bool is_write = false);
             void on_read_completed(message_ex* msg)
             {
-                if (is_client())
-                    on_recv_reply(msg->header->id, msg, 0);
-                else
-                    on_recv_request(msg, 0);
+                on_recv_message(msg, 0);
             }
             
         protected:

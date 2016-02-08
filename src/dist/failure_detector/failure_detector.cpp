@@ -75,11 +75,13 @@ error_code failure_detector::start(
     open_service();
 
     // start periodically check job
-    _check_task = tasking::enqueue(LPC_BEACON_CHECK, this,
-                                     &failure_detector::check_all_records,
-                                     -1,
-                                     _check_interval_milliseconds,
-                                     _check_interval_milliseconds);
+    _check_task = tasking::enqueue_timer(
+        LPC_BEACON_CHECK,
+        this,
+        [this] {check_all_records();},
+        std::chrono::milliseconds(_check_interval_milliseconds),
+        -1,
+        std::chrono::milliseconds(_check_interval_milliseconds));
 
     _is_started = true;
     return ERR_OK;
@@ -144,19 +146,17 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
     if (setup_timer)
     {
-        ret.first->second.send_beacon_timer = tasking::enqueue(LPC_BEACON_SEND, this,
+        ret.first->second.send_beacon_timer = tasking::enqueue_timer(LPC_BEACON_SEND, this,
             [this, target]() 
             {
                 this->send_beacon(target, now_ms());
             },
-            -1,
-            1,
-            _beacon_interval_milliseconds
+            std::chrono::milliseconds(_beacon_interval_milliseconds)
             );
     }
 }
 
-bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to)
+bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to, uint32_t delay_milliseconds)
 {
     /* the caller of switch master shoud lock necessarily to protect _masters */
     auto it = _masters.find(from);
@@ -173,14 +173,14 @@ bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address
         it->second.node = to;
         it->second.rejected = false;
         it->second.send_beacon_timer->cancel(true);
-        it->second.send_beacon_timer = tasking::enqueue(LPC_BEACON_SEND, this,
+        it->second.send_beacon_timer = tasking::enqueue_timer(LPC_BEACON_SEND, this,
             [this, to]()
             {
                 this->send_beacon(to, now_ms());
             },
-            -1,
-            1,
-            _beacon_interval_milliseconds
+            std::chrono::milliseconds(_beacon_interval_milliseconds),
+            0,
+            std::chrono::milliseconds(delay_milliseconds)
             );
 
         _masters.insert(std::make_pair(to, it->second));
@@ -315,10 +315,10 @@ bool failure_detector::remove_from_allow_list( ::dsn::rpc_address node)
 
 void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack)
 {
-    ack.is_master = true;
+    ack.time = beacon.time;
     ack.this_node = beacon.to;
     ack.primary_node = primary_address();
-    ack.time = beacon.time;
+    ack.is_master = true;
     ack.allowed = true;
 
     zauto_lock l(_lock);
@@ -532,7 +532,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
           beacon.from.to_string(), beacon.to.to_string(), time);
 
-    ::dsn::rpc::call_typed(
+    ::dsn::rpc::call(
         target,
         RPC_FD_FAILURE_DETECTOR_PING,
         beacon,
@@ -542,8 +542,10 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
             if (err != ::dsn::ERR_OK)
             {
                 beacon_ack ack;
-                ack.this_node = beacon.to;
                 ack.time = beacon.time;
+                ack.this_node = beacon.to;
+                ack.primary_node.set_invalid();
+                ack.is_master = false;
                 ack.allowed = true;
                 end_ping(err, ack, nullptr);
             }
@@ -553,7 +555,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
             }
         },
         0,
-        static_cast<int>(_check_interval_milliseconds),
+        std::chrono::milliseconds(_check_interval_milliseconds),
         0
         );
 }
