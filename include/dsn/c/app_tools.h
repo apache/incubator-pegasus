@@ -26,7 +26,8 @@
 
 /*
  * Description:
- *     cpp development library atop of zion's c service api
+ *     the tracer toollets traces all the asynchonous execution flow
+ *     in the system through the join-point mechanism
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
@@ -35,15 +36,39 @@
 
 # pragma once
 
-# include <dsn/service_api_c.h>
-//# include <dsn/internal/ports.h>
-# include <dsn/cpp/auto_codes.h>
-# include <dsn/cpp/config_helper.h>
-# include <dsn/cpp/serialization.h>
-# include <dsn/cpp/rpc_stream.h>
-# include <dsn/cpp/zlocks.h>
-# include <dsn/cpp/clientlet.h>
-# include <dsn/cpp/serverlet.h>
-# include <dsn/cpp/service_app.h>
-# include <dsn/cpp/address.h>
-# include <dsn/cpp/perf_test_helper.h>
+# include <dsn/c/app_model.h>
+
+# ifdef __cplusplus
+extern "C" {
+# endif
+
+
+/*!
+\defgroup app-checker global checker
+\ingroup service-api-c
+@{
+*/
+
+/*!
+\brief global checker (assertion) on state across nodes
+
+rDSN allows global assert across many apps in the same process
+the global assertions are called checkers.
+*/
+typedef void*       (*dsn_checker_create)( ///< return a checker
+    const char*,    ///< checker name
+    dsn_app_info*,  ///< apps available to the checker
+    int             ///< apps count
+    );
+typedef void(*dsn_checker_apply)(void*); ///< run the given checker
+
+extern DSN_API void      dsn_register_app_checker(
+    const char* name,
+    dsn_checker_create create,
+    dsn_checker_apply apply
+    );
+/*@}*/
+
+# ifdef __cplusplus
+}
+# endif

@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/global_config.h>
 # include <dsn/cpp/auto_codes.h>
@@ -56,6 +56,22 @@ class task_worker_pool;
 class timer_service;
 class aio_provider;
 
+
+//
+//
+//
+class app_node
+{
+public:
+    
+
+private:
+    uint64_t _vnid;
+};
+
+//
+//
+//
 class service_node
 {
 public:

@@ -261,28 +261,28 @@ static bool build_server_network_confs(
     return true;
 }
 
-service_app_spec::service_app_spec(const service_app_spec& r)
-{
-    index = r.index;
-    id = r.id;
-    config_section = r.config_section;
-    role_name = r.role_name;
-    name = r.name;
-    role = r.role;
-    type = r.type;
-    arguments = r.arguments;
-    ports = r.ports;
-    pools = r.pools;
-    delay_seconds = r.delay_seconds;
-    ports_gap = r.ports_gap;
-    run = r.run;
-    dmodule = r.dmodule;
-    dmodule_bridge_arguments = r.dmodule_bridge_arguments;
-    network_client_confs = r.network_client_confs;
-    network_server_confs = r.network_server_confs;
-    count = r.count;
-    data_dir = r.data_dir;
-}
+//service_app_spec::service_app_spec(const service_app_spec& r)
+//{
+//    index = r.index;
+//    id = r.id;
+//    config_section = r.config_section;
+//    role_name = r.role_name;
+//    name = r.name;
+//    role = r.role;
+//    type = r.type;
+//    arguments = r.arguments;
+//    ports = r.ports;
+//    pools = r.pools;
+//    delay_seconds = r.delay_seconds;
+//    ports_gap = r.ports_gap;
+//    run = r.run;
+//    dmodule = r.dmodule;
+//    dmodule_bridge_arguments = r.dmodule_bridge_arguments;
+//    network_client_confs = r.network_client_confs;
+//    network_server_confs = r.network_server_confs;
+//    count = r.count;
+//    data_dir = r.data_dir;
+//}
 
 bool service_app_spec::init(
     const char* section, 
@@ -453,11 +453,14 @@ static void mimic_app_destroy(void* ctx, bool clean_up)
 bool service_spec::init_app_specs()
 {
     // register mimic app
-    dsn_register_app_role(
-        mimic_app_role_name,
-        mimic_app_create,
-        mimic_app_start,
-        mimic_app_destroy
+    dsn_app dapp;
+    strcpy(dapp.type_name, mimic_app_role_name);
+    dapp.create = mimic_app_create;
+    dapp.destroy = mimic_app_destroy;
+    dapp.start = mimic_app_start;
+    dsn_register_app(
+        DSN_APP_MASK_DEFAULT,
+        &dapp
         );
 
     // init service apps
@@ -526,8 +529,8 @@ bool service_spec::init_app_specs()
                 break;
             }
 
-            auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
-            ::dsn::service_app_role role;
+            auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
+            dsn_app* role;
             if (!store.get(app.type, role))
             {
                 printf("service type '%s' not registered\n", app.type.c_str());

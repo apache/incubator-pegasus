@@ -102,7 +102,13 @@ namespace dsn
     template<typename TServiceApp>
     void register_app(const char* type_name)
     {
-        dsn_register_app_role(type_name, service_app::app_create<TServiceApp>, service_app::app_start, service_app::app_destroy);
+        dsn_app app;
+        strncpy(app.type_name, type_name, sizeof(app.type_name));
+        app.create = service_app::app_create<TServiceApp>;
+        app.start = service_app::app_start;
+        app.destroy = service_app::app_destroy;
+
+        dsn_register_app(DSN_APP_MASK_DEFAULT, &app);
     }
 } // end namespace dsn::service
 

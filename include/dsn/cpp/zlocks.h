@@ -36,7 +36,6 @@
 #pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
 # include <atomic>
 
 namespace dsn { namespace service {

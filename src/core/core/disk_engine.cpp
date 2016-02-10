@@ -108,7 +108,8 @@ disk_file::disk_file(dsn_handle_t handle)
 
 void disk_file::ctrl(dsn_ctrl_code_t code, int param)
 {
-
+    // TODO: 
+    dassert(false, "NOT IMPLEMENTED");
 }
 
 aio_task* disk_file::read(aio_task* tsk)
