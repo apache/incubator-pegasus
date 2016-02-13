@@ -26,11 +26,10 @@
 
 /*
  * Description:
- *     the tracer toollets traces all the asynchonous execution flow
- *     in the system through the join-point mechanism
+ *     task and execution model 
  *
  * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -42,41 +41,177 @@
 extern "C" {
 # endif
 
+/*!
+@defgroup exec-model Programming Model
+@ingroup layer1-dev-models
 
-// all computation in rDSN are as tasks or events, 
-// i.e., in event-driven programming
-// all kinds of task callbacks, see dsn_task_type_t below
-typedef void(*dsn_task_handler_t)(void*); // void* context
-typedef void(*dsn_rpc_request_handler_t)(
-    dsn_message_t,  // incoming request
-    void*           // handler context registered
-    );
-typedef void(*dsn_rpc_response_handler_t)(
-    dsn_error_t,    // usually, it is ok, or timeout, or busy
-    dsn_message_t,  // sent rpc request
-    dsn_message_t,  // incoming rpc response
-    void*           // context when rpc is called
-    );
-typedef void(*dsn_aio_handler_t)(
-    dsn_error_t,    //
-    size_t,         // transferred io size
-    void*           // context when rd/wt is called
-    );
+The programming and execution model for rDSN applications.
 
+rDSN adopts the event-driven programming model, where all computations are 
+represented as a task/event, which is the execution of a sequential piece of code in one thread.
+Specifically, rDSN categorizes the tasks into four types, as defined in \ref dsn_task_type_t.
 
+Unlike the traditional event-driven programming, rDSN enhances the model in the following ways,
+with which they control the application in many aspects in a declarative approach.
+
+- each task is labeled with a task code, with which developers can configure many aspects in config files. 
+  Developers can define new task code using \ref DEFINE_TASK_CODE, or \ref dsn_task_code_register.
+
+  <PRE>
+  [task..default]
+  ; allow task executed in other thread pools or tasks 
+  ; for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site 
+  ; for other tasks - allow-inline allows a task being execution in io-thread
+  allow_inline = false
+
+  ; group rpc mode with group address: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY
+  grpc_mode = GRPC_TO_LEADER
+
+  ; when toollet profiler is enabled
+  is_profile = true
+
+  ; when toollet tracer is enabled
+  is_trace = true
+
+  ; thread pool to execute the task
+  pool_code = THREAD_POOL_DEFAULT
+
+  ; task priority
+  priority = TASK_PRIORITY_COMMON
+
+  ; whether to randomize the timer delay to random(0, timer_interval), 
+  ; if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)
+  randomize_timer_delay_if_zero = false
+
+  ; what kind of network channel for this kind of rpc calls
+  rpc_call_channel = RPC_CHANNEL_TCP
+
+  ; what kind of header format for this kind of rpc calls
+  rpc_call_header_format = NET_HDR_DSN
+
+  ; how many milliseconds to delay recving rpc session for 
+  ; when queue length ~= [1.0, 1.2, 1.4, 1.6, 1.8, >=2.0] x pool.queue_length_throttling_threshold,
+  ; e.g., 0, 0, 1, 2, 5, 10
+  rpc_request_delays_milliseconds = 0, 0, 1, 2, 5, 10
+
+  ; whether to drop a request right before execution when its queueing time 
+  ; is already greater than its timeout value
+  rpc_request_dropped_before_execution_when_timeout = false
+
+  ; for how long (ms) the request will be resent if no response 
+  ; is received yet, 0 for disable this feature
+  rpc_request_resend_timeout_milliseconds = 0
+
+  ; throttling mode for rpc requets: TM_NONE, TM_REJECT, TM_DELAY when 
+  ; queue length > pool.queue_length_throttling_threshold
+  rpc_request_throttling_mode = TM_NONE
+
+  ; what is the default timeout (ms) for this kind of rpc calls
+  rpc_timeout_milliseconds = 5000
+
+  [task.LPC_AIO_IMMEDIATE_CALLBACK]
+  ; override the option in [task..default]
+  allow_inline = true
+  </PRE>
+
+- each task code is bound to a thread pool, which can be customized as follows.
+  Developers can define new thread pools using \ref DEFINE_THREAD_POOL_CODE, or \ref dsn_threadpool_code_register.
+
+  <PRE>
+  [threadpool..default]
+
+  ; how many tasks (if available) should be returned for
+  ; one dequeue call for best batching performance
+  dequeue_batch_size = 5
+
+  ; throttling: whether to enable throttling with virtual queues
+  enable_virtual_queue_throttling = false
+
+  ; thread pool name
+  name = THREAD_POOL_INVALID
+
+  ; whethe the threads share a single queue(partitioned=false) or not;
+  ; the latter is usually for workload hash partitioning for avoiding locking
+  partitioned = false
+
+  ; task queue aspects names, usually for tooling purpose
+  queue_aspects =
+
+  ; task queue provider name
+  queue_factory_name = dsn::tools::hpc_concurrent_task_queue
+
+  ; throttling: throttling threshold above which rpc requests will be dropped
+  queue_length_throttling_threshold = 1000000
+
+  ; what CPU cores are assigned to this pool, 0 for all
+  worker_affinity_mask = 0
+
+  ; task aspects names, usually for tooling purpose
+  worker_aspects =
+
+  ; thread/worker count
+  worker_count = 2
+
+  ; task worker provider name
+  worker_factory_name =
+
+  ; thread priority
+  worker_priority = THREAD_xPRIORITY_NORMAL
+
+  ; whether the threads share all assigned cores
+  worker_share_core = true
+  
+  [threadpool.THREAD_POOL_DEFAULT]
+  ; override default options in [threadpool..default]
+  dequeue_batch_size = 5
+
+  </PRE>
+- 
+
+@{
+ */
+
+/*! task/event type definition */
 typedef enum dsn_task_type_t
 {
-    TASK_TYPE_RPC_REQUEST,   // task handling rpc request
-    TASK_TYPE_RPC_RESPONSE,  // task handling rpc response or timeout
-    TASK_TYPE_COMPUTE,       // async calls or timers
-    TASK_TYPE_AIO,           // callback for file read and write
-    TASK_TYPE_CONTINUATION,  // above tasks are seperated into several continuation
-                             // tasks by thread-synchronization operations.
-                             // so that each "task" is non-blocking
+    TASK_TYPE_RPC_REQUEST,   ///< task handling rpc request
+    TASK_TYPE_RPC_RESPONSE,  ///< task handling rpc response or timeout
+    TASK_TYPE_COMPUTE,       ///< async calls or timers
+    TASK_TYPE_AIO,           ///< callback for file read and write
+    TASK_TYPE_CONTINUATION,  ///< above tasks are seperated into several continuation
+                             ///< tasks by thread-synchronization operations.
+                             ///< so that each "task" is non-blocking
     TASK_TYPE_COUNT,
     TASK_TYPE_INVALID,
 } dsn_task_type_t;
 
+/*! callback prototype for \ref TASK_TYPE_COMPUTE */
+typedef void(*dsn_task_handler_t)(
+    void* ///< void* context
+    );
+
+/*! callback prototype for \ref TASK_TYPE_RPC_REQUEST */
+typedef void(*dsn_rpc_request_handler_t)(
+    dsn_message_t,  ///< incoming request
+    void*           ///< handler context registered
+    );
+
+/*! callback prototype for \ref TASK_TYPE_RPC_RESPONSE */
+typedef void(*dsn_rpc_response_handler_t)(
+    dsn_error_t,    ///< usually, it is ok, or timeout, or busy
+    dsn_message_t,  ///< sent rpc request
+    dsn_message_t,  ///< incoming rpc response
+    void*           ///< context when rpc is called
+    );
+
+/*! callback prototype for \ref TASK_TYPE_AIO */
+typedef void(*dsn_aio_handler_t)(
+    dsn_error_t,    ///< error code for the io operation
+    size_t,         ///< transferred io size
+    void*           ///< context when rd/wt is called
+    );
+
+/*! task priority */
 typedef enum dsn_task_priority_t
 {
     TASK_PRIORITY_LOW,
@@ -86,36 +221,23 @@ typedef enum dsn_task_priority_t
     TASK_PRIORITY_INVALID,
 } dsn_task_priority_t;
 
+/*!
+ callback prototype for task cancellation (called on task-being-cancelled)
+ 
+ in rDSN, tasks can be cancelled. For languages such as C++, when there are explicit resource
+ release operations (e.g., ::free, release_ref()) in the task handlers, cancellation will
+ cause resource leak due to not-executed task handleers. in order to support such scenario,
+ rDSN provides dsn_task_cancelled_handler_t which is executed when a task is cancelled. Note
+ this callback does not have thread affinity similar to task handlers above (which are
+ configured to be executed in certain thread pools or even a fixed thread). Therefore, it is
+ developers' resposibility to ensure this cancallation callback only does thread-insensitive
+ operations (e.g., release_ref()).
+ */
+typedef void(*dsn_task_cancelled_handler_t)(
+    void* ///< shared with the task handler callbacks, e.g., in \ref dsn_task_handler_t
+    );
 
-//
-// tasks can be cancelled. For languages such as C++, when there are explicit
-// resource release operations (e.g., ::free, release_ref()) in the task handlers,
-// cancellation will cause resource leak due to not-executed task handleers.
-// in order to support such scenario, rdsn provide dsn_task_cancelled_handler_t which
-// is executed when a task is cancelled. Note this callback does not have thread affinity
-// similar to task handlers above (which are configured to be executed in certain thread
-// pools or even a fixed thread). Therefore, it is developers' resposibility to ensure
-// this cancallation callback only does thread-insensitive operations (e.g., release_ref()).
-//
-// the void* context is shared with the context to the task handlers above
-//
-typedef void(*dsn_task_cancelled_handler_t)(void*);
-
-//------------------------------------------------------------------------------
-//
-// common utilities
-//
-//------------------------------------------------------------------------------
-extern DSN_API dsn_error_t           dsn_error_register(const char* name);
-extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
-extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_error_t default_err);
-// apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
-// the length of a vitual queue (bound to current code + hash) to 
-// enable customized throttling, see spec of thread pool for more information
-extern DSN_API volatile int*         dsn_task_queue_virtual_length_ptr(
-                                        dsn_task_code_t code,
-                                        int hash DEFAULT(0)
-                                        );
+/*! define a new thread pool with a given name */
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name);
 extern DSN_API const char*           dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code);
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
@@ -124,6 +246,8 @@ extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
                                         );
 extern DSN_API int                   dsn_threadpool_code_max();
 extern DSN_API int                   dsn_threadpool_get_current_tid();
+
+/*! register a new task code */
 extern DSN_API dsn_task_code_t       dsn_task_code_register(
                                         const char* name,          // task code name
                                         dsn_task_type_t type,
@@ -146,120 +270,18 @@ extern DSN_API dsn_task_code_t       dsn_task_code_from_string(const char* s, ds
 extern DSN_API int                   dsn_task_code_max();
 extern DSN_API const char*           dsn_task_type_to_string(dsn_task_type_t tt);
 extern DSN_API const char*           dsn_task_priority_to_string(dsn_task_priority_t tt);
-extern DSN_API bool                  dsn_task_is_running_inside(dsn_task_t t); // is inside given task
 
+/*!
+apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
+the length of a vitual queue (bound to current code + hash) to
+enable customized throttling, see spec of thread pool for more information
+*/
+extern DSN_API volatile int*         dsn_task_queue_virtual_length_ptr(
+                                        dsn_task_code_t code,
+                                        int hash DEFAULT(0)
+                                        );
 
-//------------------------------------------------------------------------------
-//
-// tasking - asynchronous tasks and timers tasks executed in target thread pools
-//
-// use the config-dump command in rDSN cli for detailed configurations for
-// each kind of task
-//
-// all returned dsn_task_t are NOT add_ref by rDSN,
-// so you DO NOT need to call task_release_ref to release the tasks.
-// the decision is made for easier programming, and you may consider the later
-// dsn_rpc_xxx calls do the resource gc work for you.
-//
-// however, before you emit the tasks (e.g., via dsn_task_call, dsn_rpc_call),
-// AND you want to hold the task handle further after the emit API,
-// you need to call dsn_task_add_ref to ensure the handle is 
-// still valid, and also call dsn_task_release_ref later to 
-// release the handle.
-//
-extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
-extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
-extern DSN_API int         dsn_task_get_ref(dsn_task_t task);
-
-//
-// task trackers are used to track task context
-//
-// when a task executes, it usually accesses certain context
-// when the context is gone, all tasks accessing this context needs 
-// to be cancelled automatically to avoid invalid context access
-// 
-// to release this burden from developers, rDSN provides 
-// task tracker which can be embedded into a context, and
-// destroyed when the context is gone
-//
-extern DSN_API dsn_task_tracker_t dsn_task_tracker_create(int task_bucket_count);
-extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tracker);
-extern DSN_API void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
-extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
-
-// create a common asynchronous task
-// - code defines the thread pool which executes the callback
-//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
-// - hash defines the thread with index hash % worker_count in the threadpool
-//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
-//   
-extern DSN_API dsn_task_t  dsn_task_create(
-                            dsn_task_code_t code,               // task label
-                            dsn_task_handler_t cb,              // callback function
-                            void* context,                      // context to the callback
-                            int hash DEFAULT(0), // hash to callback
-                            dsn_task_tracker_t tracker DEFAULT(nullptr)
-                            );
-extern DSN_API dsn_task_t  dsn_task_create_timer(
-                            dsn_task_code_t code, 
-                            dsn_task_handler_t cb, 
-                            void* context, 
-                            int hash,
-                            int interval_milliseconds,         // timer period
-                            dsn_task_tracker_t tracker DEFAULT(nullptr)
-                            );
-// repeated declarations later in correpondent rpc and file sections
-//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
-//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
-
-//
-// task create api with on_cancel callback, see comments for 
-// dsn_task_cancelled_handler_t for details.
-//
-extern DSN_API dsn_task_t  dsn_task_create_ex(
-    dsn_task_code_t code,               // task label
-    dsn_task_handler_t cb,              // callback function
-    dsn_task_cancelled_handler_t on_cancel, 
-    void* context,                      // context to the two callbacks above
-    int hash DEFAULT(0), // hash to callback
-    dsn_task_tracker_t tracker DEFAULT(nullptr)
-    );
-extern DSN_API dsn_task_t  dsn_task_create_timer_ex(
-    dsn_task_code_t code,
-    dsn_task_handler_t cb,
-    dsn_task_cancelled_handler_t on_cancel,
-    void* context,
-    int hash,
-    int interval_milliseconds,         // timer period
-    dsn_task_tracker_t tracker DEFAULT(nullptr)
-    );
-// repeated declarations later in correpondent rpc and file sections
-//extern DSN_API dsn_task_t  dsn_rpc_create_response_task_ex(...);
-//extern DSN_API dsn_task_t  dsn_file_create_aio_task_ex(...);
-
-//
-// common task 
-// - task: must be created by dsn_task_create or dsn_task_create_timer
-// - tracker: can be null. 
-//
-extern DSN_API void        dsn_task_call(
-                                dsn_task_t task,                                 
-                                int delay_milliseconds DEFAULT(0)
-                                );
-extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
-extern DSN_API bool        dsn_task_cancel2(
-                                dsn_task_t task, 
-                                bool wait_until_finished, 
-                                /*out*/ bool* finished
-                                );
-extern DSN_API void        dsn_task_cancel_current_timer();
-extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
-extern DSN_API bool        dsn_task_wait_timeout(
-                                dsn_task_t task,
-                                int timeout_milliseconds
-                                );
-extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
-
+/*@}*/
 
 # ifdef __cplusplus
 }

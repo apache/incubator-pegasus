@@ -42,17 +42,79 @@ extern "C" {
 # endif
 
 /*!
-\defgroup app-cli application command-line interface
-\ingroup service-api-c
-@{
+@defgroup layer1-dev-utilities Utility API
+@ingroup layer1-dev
+
+ Commonly used utility API for building distributed systems.
 */
+    
+/*!
+@defgroup error-t Error Code
+@ingroup layer1-dev-utilities
+
+ Error code registration and translation between string and integer. 
+
+ See \ref error_code for more details.
+ @{
+ */
 
 /*!
-\brief built-in command-line interface 
+register error code
 
-rDSN allows apps/tools to register commands into its command line interface,
-which can be further probed via local/remote console, and also http services.
+\param name error code in string format
+
+\return interger value representing this error.  
+
+ For the same input string, rDSN returns the same interger error code.
 */
+extern DSN_API dsn_error_t           dsn_error_register(const char* name);
+
+/*!
+ translate interger error code to a string
+
+ \param err integer error code
+
+ \return string format of the error code
+ */
+extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
+
+/*!
+ parse string error code into integer code
+
+ \param s           the input error in string format
+ \param default_err to-be-returned error code if the string is not registered.
+
+ \return integer format of error code
+ */
+extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_error_t default_err);
+/*@}*/
+
+/*!
+@defgroup app-cli Command-Line Interface (cli)
+@ingroup layer1-dev-utilities
+
+ Built-in command line interface that can be accessed via local/tcp/http consoles.
+
+ @{
+ */
+
+/*!
+ run a given cli command
+
+ \param command_line given command line.
+
+ \return null if it fails, else execution response
+ */
+extern DSN_API const char* dsn_cli_run(const char* command_line);
+
+/*!
+ free memory occupied by cli response
+
+ \param command_output result from \ref dsn_cli_run
+ */
+extern DSN_API void        dsn_cli_free(const char* command_output);
+
+/*! cli response definition */
 typedef struct dsn_cli_reply
 {
     const char* message;  ///< zero-ended reply message
@@ -60,18 +122,29 @@ typedef struct dsn_cli_reply
     void* context;        ///< context for free_handler
 } dsn_cli_reply;
 
+/*! cli request handler definition */
 typedef void(*dsn_cli_handler)(
-    void* context,              ///< context registered by dsn_cli_register
+    void* context,              ///< context registered by \ref dsn_cli_register
     int argc,                   ///< argument count
     const char** argv,          ///< arguments
     /*out*/dsn_cli_reply* reply ///< reply message
     );
+
+/*! cli response resource gc handler definition */
 typedef void(*dsn_cli_free_handler)(dsn_cli_reply reply);
 
-extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
-extern DSN_API void        dsn_cli_free(const char* command_output);
+/*!
+ register a customized cli command handler
 
-// return value: Handle (the handle of this registered command)
+ \param command       command name
+ \param help_one_line one line help information
+ \param help_long     long help information
+ \param context       context used by \ref cmd_handler
+ \param cmd_handler   command handler
+ \param output_freer  command result resource free handler
+
+ \return the handle of this registered command
+ */
 extern DSN_API dsn_handle_t dsn_cli_register(
                             const char* command,
                             const char* help_one_line,
@@ -80,41 +153,42 @@ extern DSN_API dsn_handle_t dsn_cli_register(
                             dsn_cli_handler cmd_handler,
                             dsn_cli_free_handler output_freer
                             );
-// return value: Handle (the handle of this registered command)
-// or NULL (We did no find a service_node, probably you call this function from a non-rdsn thread)
+
+/*!
+ same as \ref dsn_cli_register, except that the command
+ name is auto-augmented by rDSN as $app_full_name.$command
+ */
 extern DSN_API dsn_handle_t dsn_cli_app_register(
-                            const char* command,   // auto-augmented by rDSN as $app_full_name.$command
+                            const char* command,
                             const char* help_one_line,
                             const char* help_long,
-                            void* context,         // context to be forwareded to cmd_handler
+                            void* context,
                             dsn_cli_handler cmd_handler,
                             dsn_cli_free_handler output_freer
                             );
 
-// remove a cli handler, parameter: return value of dsn_cli_register or dsn_cli_app_register
+/*!
+ remove a cli handler
+
+ \param cli_handle handle of the cli returned from \ref dsn_cli_register or \ref dsn_cli_app_register
+ */
 extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
 /*@}*/
 
-
 /*!
-\defgroup config configuration
-\ingroup service-api-c
+@defgroup config Configuration Service
+@ingroup layer1-dev-utilities
+
+ Configuration Service (e.g., config.ini)
+
 @{
 */
 
-/*!
-\brief configuration
-
-Configuration provides an convenient way for developers to config their apps.
-Note developers can change the underneath logging provider using rDSN's tool API so
-that logs can be processed in a way that people are familiar with.
-*/
-
 extern DSN_API const char*           dsn_config_get_value_string(
-                                        const char* section,       // [section]
-                                        const char* key,           // key = value
-                                        const char* default_value, // if [section] key is not present
-                                        const char* dsptr          // what it is for, as help-info in config
+                                        const char* section,       ///< [section]
+                                        const char* key,           ///< key = value
+                                        const char* default_value, ///< if [section] key is not present
+                                        const char* dsptr          ///< what it is for, as help-info in config
                                         );
 extern DSN_API bool                  dsn_config_get_value_bool(
                                         const char* section, 
@@ -144,16 +218,17 @@ extern DSN_API void                  dsn_config_dump(const char* file);
 /*@}*/
 
 /*!
-\defgroup logging logging facilities
-\ingroup service-api-c
+@defgroup logging Logging Service
+@ingroup layer1-dev-utilities
+
+ Logging Service
+
+ Note developers can plug into rDSN their own logging libraryS
+ implementation, so as to integrate rDSN logs into
+ their own cluster operation systems.
 @{
 */
 
-/*!
-\brief logging facilities
-
-Logging provides several macros for
-*/
 typedef enum dsn_log_level_t
 {
     LOG_LEVEL_INFORMATION,
@@ -218,13 +293,14 @@ extern DSN_API void                  dsn_coredump();
 /*@}*/
 
 
+/*!
+@defgroup checksum Checksum
+@ingroup layer1-dev-utilities
 
-//------------------------------------------------------------------------------
-//
-// checksum using crc
-//
-//------------------------------------------------------------------------------
+Checksum
 
+@{
+*/
 extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc);
 
 //
@@ -266,14 +342,20 @@ extern DSN_API uint64_t              dsn_crc64_concatenate(
                                         uint64_t y_init,
                                         uint64_t y_final,
                                         size_t y_size);
+/*@}*/
 
 
-//------------------------------------------------------------------------------
-//
-// perf counters
-//
-//------------------------------------------------------------------------------
+/*!
+@defgroup perf-counter Performance Counters
+@ingroup layer1-dev-utilities
 
+Performance Counters
+
+Note developers can plug into rDSN their own performance counter 
+implementation, so as to integrate rDSN performance counters into
+their own cluster operation systems.
+@{
+*/
 typedef enum dsn_perf_counter_type_t
 {
     COUNTER_TYPE_NUMBER,
@@ -304,6 +386,24 @@ extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
 extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
 extern DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle);
 extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
+/*@}*/
+
+/*!
+@defgroup memory Memory Management
+@ingroup layer1-dev-utilities
+
+Memory Management
+
+@{
+*/
+
+/*! high-performance malloc for transient objects, i.e., their life-time is short */
+extern DSN_API void*         dsn_transient_malloc(uint32_t size);
+
+/*! high-performance free for transient objects, paired with \ref dsn_transient_malloc */
+extern DSN_API void          dsn_transient_free(void* ptr);
+
+/*@}*/
 
 # ifdef __cplusplus
 }

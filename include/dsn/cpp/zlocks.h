@@ -40,6 +40,10 @@
 
 namespace dsn { namespace service {
 
+/*!
+@addtogroup sync-exlock
+@{
+*/
 class zlock
 {
 public:
@@ -58,7 +62,12 @@ private:
     zlock& operator=(const zlock& source);
     zlock(const zlock& source);
 };
+/*@}*/
 
+/*!
+@addtogroup sync-rwlock
+@{
+*/
 class zrwlock_nr
 {
 public:
@@ -79,7 +88,12 @@ private:
     zrwlock_nr& operator=(const zrwlock_nr& source);
     zrwlock_nr(const zrwlock_nr& source);
 };
+/*@}*/
 
+/*!
+@addtogroup sync-sema
+@{
+*/
 class zsemaphore
 {
 public:  
@@ -132,6 +146,7 @@ private:
     zevent& operator=(const zevent& source);
     zevent(const zevent& source);
 };
+/*@}*/
 
 class zauto_lock
 {

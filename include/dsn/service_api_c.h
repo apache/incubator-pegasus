@@ -66,10 +66,17 @@
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version in cpp
  *     July, 2015, @imzhenyu (Zhenyu Guo), refactor and refined in c
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), decompose into several files for V1 release
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once  
+# pragma once 
+
+/*!
+ @defgroup layer1-dev Write Applications in rDSN
+
+ How to build applications using rDSN (layer 1)
+ */
 
 // common data structures and macros
 # include <dsn/c/api_common.h>

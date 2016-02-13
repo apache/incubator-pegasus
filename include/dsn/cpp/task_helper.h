@@ -93,7 +93,7 @@ namespace dsn
             return dsn_task_cancel2(_task, wait_until_finished, finished);
         }
 
-        bool wait() const
+        void wait() const
         {
             return dsn_task_wait(_task);
         }

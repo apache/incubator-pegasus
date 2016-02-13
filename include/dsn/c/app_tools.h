@@ -26,11 +26,10 @@
 
 /*
  * Description:
- *     the tracer toollets traces all the asynchonous execution flow
- *     in the system through the join-point mechanism
+ *     app-specific dev tools
  *
  * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -41,27 +40,43 @@
 # ifdef __cplusplus
 extern "C" {
 # endif
+/*!
+@defgroup tools Integrated Dev & Op Process
 
+Integrated development and operation tools & services for rDSN applications
+*/
 
 /*!
-\defgroup app-checker global checker
-\ingroup service-api-c
+@defgroup app-checker Global Checker
+@ingroup tools
+
+ Global checker (assertion) on state across nodes
+
+ rDSN allows global assert across many apps in the same process.
+ The global assertions are called checkers.
+
 @{
 */
 
-/*!
-\brief global checker (assertion) on state across nodes
-
-rDSN allows global assert across many apps in the same process
-the global assertions are called checkers.
-*/
-typedef void*       (*dsn_checker_create)( ///< return a checker
+/*! create a checker, return context used by \ref dsn_checker_apply */
+typedef void*       (*dsn_checker_create)(
     const char*,    ///< checker name
     dsn_app_info*,  ///< apps available to the checker
     int             ///< apps count
     );
-typedef void(*dsn_checker_apply)(void*); ///< run the given checker
 
+/*! execute the checker */
+typedef void(*dsn_checker_apply)(
+    void* ///< returned from \ref dsn_checker_create
+    );
+
+/*!
+ register application checker (global assertion)
+
+ \param name   the name.
+ \param create callback to create the checker
+ \param apply  callback to execute the checker
+ */
 extern DSN_API void      dsn_register_app_checker(
     const char* name,
     dsn_checker_create create,

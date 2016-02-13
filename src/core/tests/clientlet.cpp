@@ -78,8 +78,7 @@ TEST(dev_cpp, clientlet_task)
     test_clientlet *cl = new test_clientlet();
     task_ptr t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, [cl] {cl->callback_function1();});
     EXPECT_TRUE(t != nullptr);
-    bool result = t->wait();
-    EXPECT_TRUE(result==true);
+    t->wait();
     EXPECT_TRUE(cl->str == "after called");
     delete cl;
 

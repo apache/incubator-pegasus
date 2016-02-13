@@ -454,14 +454,13 @@ bool service_spec::init_app_specs()
 {
     // register mimic app
     dsn_app dapp;
+    memset(&dapp, 0, sizeof(dapp));
+    dapp.mask = DSN_APP_MASK_DEFAULT;
     strcpy(dapp.type_name, mimic_app_role_name);
-    dapp.create = mimic_app_create;
-    dapp.destroy = mimic_app_destroy;
-    dapp.start = mimic_app_start;
-    dsn_register_app(
-        DSN_APP_MASK_DEFAULT,
-        &dapp
-        );
+    dapp.layer1.create = mimic_app_create;
+    dapp.layer1.destroy = mimic_app_destroy;
+    dapp.layer1.start = mimic_app_start;
+    dsn_register_app(&dapp);
 
     // init service apps
     service_app_spec default_app;

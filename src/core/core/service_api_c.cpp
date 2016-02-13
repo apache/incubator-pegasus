@@ -163,8 +163,12 @@ DSN_API int dsn_threadpool_get_current_tid()
 }
 
 struct task_code_placeholder { };
-DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
-    dsn_task_priority_t pri, dsn_threadpool_code_t pool)
+DSN_API dsn_task_code_t dsn_task_code_register(
+    const char* name, 
+    dsn_task_type_t type,
+    dsn_task_priority_t pri,
+    dsn_threadpool_code_t pool
+    )
 {
     dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 
         "task code '%s' is too long - length must be smaller than %d",
@@ -414,9 +418,13 @@ DSN_API void dsn_task_cancel_current_timer()
     }
 }
 
-DSN_API bool dsn_task_wait(dsn_task_t task)
+DSN_API void dsn_task_wait(dsn_task_t task)
 {
-    return ((::dsn::task*)(task))->wait();
+    auto r = ((::dsn::task*)(task))->wait();
+    dassert(r, 
+        "task wait without timeout must succeeds (%" PRIx64 ")",
+        ((::dsn::task*)(task))->id()
+        );
 }
 
 DSN_API bool dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds)
@@ -876,9 +884,7 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app(
-    uint32_t app_mask,
-    dsn_app* app_type)
+DSN_API bool dsn_register_app(dsn_app* app_type)
 {
     dsn_app* app;
     auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
