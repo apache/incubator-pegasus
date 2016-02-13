@@ -36,7 +36,7 @@
 # pragma once
 
 # include <atomic>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/callocator.h>

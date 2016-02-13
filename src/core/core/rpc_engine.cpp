@@ -61,7 +61,7 @@ namespace dsn {
     
     DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-    class rpc_timeout_task : public task
+    class rpc_timeout_task : public task, public transient_object
     {
     public:
         rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 

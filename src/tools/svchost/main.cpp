@@ -47,7 +47,7 @@
 // 
 // dsn_run will load all these *dmodule*s which automatically
 // register their correspondent app roles into the system
-// using dsn_register_app_role, and run them as specified.
+// using dsn_register_app, and run them as specified.
 //
 
 int main(int argc, char** argv)

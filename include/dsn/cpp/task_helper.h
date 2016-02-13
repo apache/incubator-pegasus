@@ -36,7 +36,6 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/rpc_stream.h>
@@ -94,7 +93,7 @@ namespace dsn
             return dsn_task_cancel2(_task, wait_until_finished, finished);
         }
 
-        bool wait() const
+        void wait() const
         {
             return dsn_task_wait(_task);
         }

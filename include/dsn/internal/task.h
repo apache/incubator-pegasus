@@ -36,7 +36,7 @@
 
 # pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>

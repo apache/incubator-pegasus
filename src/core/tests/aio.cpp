@@ -67,8 +67,7 @@ TEST(core, aio)
 
     for (auto& t : tasks)
     {
-        bool r = t->wait();
-        EXPECT_TRUE(r);
+        t->wait();
     }
 
     // overwrite 
@@ -83,8 +82,7 @@ TEST(core, aio)
 
     for (auto& t : tasks)
     {
-        bool r = t->wait();
-        EXPECT_TRUE(r);
+        t->wait();
         EXPECT_TRUE(t->io_size() == (size_t)len);
     }
 
@@ -103,8 +101,7 @@ TEST(core, aio)
     }
     for (auto& t : tasks)
     {
-        bool r = t->wait();
-        EXPECT_TRUE(r);
+        t->wait();
         EXPECT_TRUE(t->io_size() == 10 * len);
     }
     auto err = dsn_file_close(fp);
@@ -126,8 +123,7 @@ TEST(core, aio)
 
     for (auto& t : tasks)
     {
-        bool r = t->wait();
-        EXPECT_TRUE(r);
+        t->wait();
         EXPECT_TRUE(t->io_size() == (size_t)len);
     }
 
@@ -140,8 +136,7 @@ TEST(core, aio)
         auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         offset += len;
 
-        bool r = t->wait();
-        EXPECT_TRUE(r);
+        t->wait();
         EXPECT_TRUE(t->io_size() == (size_t)len);
         EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
     }

@@ -244,7 +244,7 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
 
 dsn_error_t service_node::start_app(int argc, char** argv)
 {    
-    return _app_spec.role.start(_app_context_ptr, argc, argv);
+    return _app_spec.role->layer1.start(_app_context_ptr, argc, argv);
 }
 
 error_code service_node::start()
@@ -300,7 +300,7 @@ error_code service_node::start()
     // create app
     {
         ::dsn::tools::node_scoper scoper(this);
-        _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+        _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name);
     }
 
     return err;

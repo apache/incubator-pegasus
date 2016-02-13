@@ -35,7 +35,7 @@
 
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 
 # include <dsn/tool/simulator.h>
 # include <dsn/tool/nativerun.h>

@@ -26,24 +26,64 @@
 
 /*
  * Description:
- *     cpp development library atop of zion's c service api
+ *     app-specific dev tools
  *
  * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
 # pragma once
 
-# include <dsn/service_api_c.h>
-//# include <dsn/internal/ports.h>
-# include <dsn/cpp/auto_codes.h>
-# include <dsn/cpp/config_helper.h>
-# include <dsn/cpp/serialization.h>
-# include <dsn/cpp/rpc_stream.h>
-# include <dsn/cpp/zlocks.h>
-# include <dsn/cpp/clientlet.h>
-# include <dsn/cpp/serverlet.h>
-# include <dsn/cpp/service_app.h>
-# include <dsn/cpp/address.h>
-# include <dsn/cpp/perf_test_helper.h>
+# include <dsn/c/app_model.h>
+
+# ifdef __cplusplus
+extern "C" {
+# endif
+/*!
+@defgroup tools Integrated Dev & Op Process
+
+Integrated development and operation tools & services for rDSN applications
+*/
+
+/*!
+@defgroup app-checker Global Checker
+@ingroup tools
+
+ Global checker (assertion) on state across nodes
+
+ rDSN allows global assert across many apps in the same process.
+ The global assertions are called checkers.
+
+@{
+*/
+
+/*! create a checker, return context used by \ref dsn_checker_apply */
+typedef void*       (*dsn_checker_create)(
+    const char*,    ///< checker name
+    dsn_app_info*,  ///< apps available to the checker
+    int             ///< apps count
+    );
+
+/*! execute the checker */
+typedef void(*dsn_checker_apply)(
+    void* ///< returned from \ref dsn_checker_create
+    );
+
+/*!
+ register application checker (global assertion)
+
+ \param name   the name.
+ \param create callback to create the checker
+ \param apply  callback to execute the checker
+ */
+extern DSN_API void      dsn_register_app_checker(
+    const char* name,
+    dsn_checker_create create,
+    dsn_checker_apply apply
+    );
+/*@}*/
+
+# ifdef __cplusplus
+}
+# endif

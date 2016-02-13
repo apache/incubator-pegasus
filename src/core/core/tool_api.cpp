@@ -88,7 +88,7 @@ namespace dsn {
             }
             else
             {
-                sp.role.destroy(_node->get_app_context_ptr(), _cleanup);
+                sp.role->layer1.destroy(_node->get_app_context_ptr(), _cleanup);
             }
         }
 

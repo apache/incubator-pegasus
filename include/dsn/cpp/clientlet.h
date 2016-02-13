@@ -39,11 +39,11 @@
 # include <dsn/cpp/function_traits.h>
 
 namespace dsn
-{
-    //
-    // clientlet is the base class for RPC service and client
-    // there can be multiple clientlet in the system
-    //
+{ 
+    /*
+    clientlet is the base class for RPC service and client
+    there can be multiple clientlet in the system
+    */
     class clientlet
     {
     public:
@@ -121,7 +121,10 @@ namespace dsn
     };
 
 
-    // common APIs
+    /*!
+    @addtogroup tasking
+    @{
+    */
     namespace tasking
     {
         template<typename TCallback>
@@ -214,7 +217,12 @@ namespace dsn
             return tsk;
         }
     }
+    /*@}*/
 
+    /*!
+    @addtogroup rpc-client
+    @{
+    */
     namespace rpc
     {
         task_ptr create_rpc_response_task(
@@ -380,7 +388,12 @@ namespace dsn
             return wait_and_unwrap<TResponse>(call(server, code, req, nullptr, empty_callback, hash, timeout));
         }
     }
+    /*@}*/
 
+    /*!
+    @addtogroup file
+    @{
+    */
     namespace file
     {
         task_ptr create_aio_task(
@@ -507,7 +520,7 @@ namespace dsn
                 );
         }
     }
-
+    /*@}*/
     // ------------- inline implementation ----------------
 
 } // end namespace

@@ -138,7 +138,7 @@ private:
 };
 
 /*!
-\brief ExtensionHelper
+ExtensionHelper
 
 steps to use an ExtensionHelper
 - implement an ExtensionHelper class, e.g. 

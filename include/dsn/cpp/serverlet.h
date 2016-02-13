@@ -40,6 +40,11 @@
 
 namespace dsn 
 {
+    /*!
+    @addtogroup rpc-server
+    @{
+    */
+    
     //
     // for TRequest/TResponse, we assume that the following routines are defined:
     //    marshall(binary_writer& writer, const T& val); 
@@ -231,6 +236,8 @@ namespace dsn
         ::marshall(msg, resp);
         dsn_rpc_reply(msg);
     }
+
+    /*@}*/
 } // end namespace
 
 

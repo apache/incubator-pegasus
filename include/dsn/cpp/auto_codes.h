@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/cpp/autoref_ptr.h>
 # include <memory>
 
@@ -97,6 +97,10 @@ namespace dsn
         bool  _is_owner;
     };
 
+    /*! 
+      @addtogroup exec-model 
+      @{
+     */
     class task_code
     {
     public:
@@ -150,14 +154,13 @@ namespace dsn
         dsn_task_code_t _internal_code;
     };
 
-    // task code with explicit name
     #define DEFINE_NAMED_TASK_CODE(x, name, pri, pool) __selectany const ::dsn::task_code x(#name, TASK_TYPE_COMPUTE, pri, pool);
     #define DEFINE_NAMED_TASK_CODE_AIO(x, name, pri, pool) __selectany const ::dsn::task_code x(#name, TASK_TYPE_AIO, pri, pool);
     #define DEFINE_NAMED_TASK_CODE_RPC(x, name, pri, pool) \
         __selectany const ::dsn::task_code x(#name, TASK_TYPE_RPC_REQUEST, pri, pool); \
         __selectany const ::dsn::task_code x##_ACK(#name"_ACK", TASK_TYPE_RPC_RESPONSE, pri, pool);
 
-    // auto name version
+    /*! define a new task code with TASK_TYPE_COMPUTATION */
     #define DEFINE_TASK_CODE(x, pri, pool) DEFINE_NAMED_TASK_CODE(x, x, pri, pool)
     #define DEFINE_TASK_CODE_AIO(x, pri, pool) DEFINE_NAMED_TASK_CODE_AIO(x, x, pri, pool)
     #define DEFINE_TASK_CODE_RPC(x, pri, pool) DEFINE_NAMED_TASK_CODE_RPC(x, x, pri, pool)
@@ -210,13 +213,19 @@ namespace dsn
         dsn_threadpool_code_t _internal_code;
     };
 
+    /*! define a new thread pool named x*/
     #define DEFINE_THREAD_POOL_CODE(x) __selectany const ::dsn::threadpool_code x(#x);
     
     DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
     DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
     // define default task code
     DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+    /*@}*/
 
+    /*!
+     @addtogroup error-t
+     @{
+     */
     class error_code
     {
     public:
@@ -385,6 +394,6 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_CLUSTER_NOT_FOUND)
 
     DEFINE_ERR_CODE(ERR_CLUSTER_ALREADY_EXIST)
-
+/*@}*/
 } // end namespace
 
