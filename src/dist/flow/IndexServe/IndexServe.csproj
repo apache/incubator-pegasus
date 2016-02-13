@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7C8DD3F4-A8FD-4F5D-B320-CDF93A7CA6E3}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>rDSN.Tron.App</RootNamespace>
+    <AssemblyName>IndexServe</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Bond">
+      <HintPath>..\external\bond\amd64\Microsoft.Bond.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bond.Interfaces">
+      <HintPath>..\external\bond\amd64\Microsoft.Bond.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bond.Rpc">
+      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rpc.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bond.Rules">
+      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rules.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bond.TypeProvider">
+      <HintPath>..\external\bond\amd64\Microsoft.Bond.TypeProvider.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextTemplating">
+      <HintPath>..\external\bond\amd64\Microsoft.VisualStudio.TextTemplating.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTrace">
+      <HintPath>..\external\bond\amd64\NetTrace.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="WebAnswer.Tron.Composition, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\WebAnswer\WebAnswer.Tron.Composition.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Compiler\Compiler.csproj">
+      <Project>{9bb0bf7e-b256-4fd2-9350-b15472a34d4d}</Project>
+      <Name>Compiler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Contract\Contract.csproj">
+      <Project>{67c7d246-a7a7-4d54-aa03-b8d516055c01}</Project>
+      <Name>Contract</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ServiceCommon\ServiceCommon.csproj">
+      <Project>{fc277792-21b9-40fb-9e75-65d220b5a886}</Project>
+      <Name>ServiceCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Utility\Utility.csproj">
+      <Project>{6085924d-81db-4f1e-abf8-021b92738b0d}</Project>
+      <Name>Utility</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

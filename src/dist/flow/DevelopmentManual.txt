@@ -1,0 +1,25 @@
+
+==== Preliminaries ====
+
+- Tron.exe is a helper tool that you can use for both development and cluster operation.
+
+==== How to register a new primitive service? ====
+
+1. Write your implementation for this service, and put everything into a directory for service running on a remote machine
+
+2. Run 'Tron.exe PublishPackage %dir' to publish the service implementation to the service store.
+
+==== How to build a composed service? ====
+
+1. Run 'Tron.exe gc $packageName' to get the composition stub dll for the given package $packageName (repeat this when you need multiple base services)
+
+2. Write your composed services using these composition stub dlls
+
+3. Run your composed service to generate a package for your composed service
+
+4. Run 'Tron.exe PublishPackage %dir' to publish the composed service to the service store
+
+
+
+
+

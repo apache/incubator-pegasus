@@ -1,0 +1,313 @@
+﻿<#@ template language="C#" debug="true" inherits="XidlGenerator" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ Assembly Name="System.Xml.dll" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Xml.Serialization" #>
+<#@ Assembly name="Microsoft.Bond.Rules.dll" #>
+<#@ import namespace="Microsoft.AdCenter.Cyprus.XIDL"#>
+
+<#@ include file="bondc.exe#StandardFileHeader.tt" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Utils.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Impl.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Enum.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_GetRuntimeSchema.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Properties.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_CtorDtor.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Write.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Read.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Comparison.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Clone.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_ToString.TT" #>
+
+<#@ parameter name="ProjectName" Processor="ParameterProcessor" type="System.String" required="true" BaseClassProp="true"#>
+<#@ parameter name="ProjectType" Processor="ParameterProcessor" type="System.String" required="false" BaseClassProp="true"#>
+<#@ parameter name="IsCyprusType" Processor="ParameterProcessor" type="System.Boolean" required="true"#>
+<#@ parameter name="RootNamespace" Processor="ParameterProcessor" type="System.String" required="false" BaseClassProp="true"#>
+<#@ parameter name="OneFilePerType" Processor="ParameterProcessor" type="System.Boolean" required="false"#>
+<#@ parameter name="Using" Processor="ParameterProcessor" type="System.String" required="false"#>
+
+<#
+
+Extension.Instance = new CsExtension(this.RootNamespace, this.Using);
+
+base.AddRules(
+	new BondCSharpTronRule(ProjectName)   
+);
+
+base.Generate();
+#>
+
+
+<#+
+public class BondCSharpTronRule : BondCSharpRpcRule
+{
+    public BondCSharpTronRule(string projectName) : base(projectName, "_csql.cs")
+    {
+        NamespaceRule nsRule = new NamespaceRule();
+        AddRules(nsRule);
+    }
+}
+
+public class BondCSharpRpcRule : Microsoft.AdCenter.Cyprus.XIDL.XidlDataRule
+{
+    public BondCSharpRpcRule(string projectName, string fileSuffix)
+    {
+        OneFilePerType = false;
+        OutputFileName = projectName + fileSuffix;
+    }
+
+    public override void FileBegin(CyprusData ast)
+    {
+        StandardFileHeader header = new StandardFileHeader();
+        header.OutputHeader(Options, OutputFileName);
+#>
+
+using global::BondTransport;
+using global::BondNetlibTransport;
+using global::Microsoft.Bond;
+using global::System;
+using global::System.Collections.Generic;
+
+using rDSN.Tron.Compiler;
+using rDSN.Tron.Contract;
+
+<#+
+    }
+
+
+    internal class NamespaceRule : XidlNamespaceRule
+    {
+        public NamespaceRule()
+        {
+            AddRules(new CsqlRule());
+			AddRules(new BondClass_CtorDtor2());
+        }
+
+        public override void NamespaceBegin(Namespace o)
+        {
+#>
+namespace <#= o.Name #>
+{
+<#+
+        }
+
+        public override void NamespaceEnd(Namespace o)
+        {
+#>
+} // namespace <#= o.Name #>
+<#+
+        }
+    } // ~class TheNamespaceRule
+
+    static class RpcUtils
+    {
+        internal static string GenerateTemplateParamsString(ServiceDef serviceDef)
+        {
+            string templateParams = "";
+            if (serviceDef.TypeParams != null)
+            {
+                templateParams += "<";
+                int i = 0;
+                foreach (string param in serviceDef.TypeParams)
+                {
+                    if (i++ > 0)
+                    {
+                        templateParams += ", ";
+                    }
+                    templateParams += param;
+                }
+                templateParams += ">";
+            }
+            return templateParams;
+        }
+
+        public static string MakeCsqlClassName(ServiceDef service)
+        {
+            return service.Name + "_Svc";
+        }
+
+        public static string MakeMethodHelperName(MethodField method)
+        {
+            return method.Name + "Helper";
+        }
+
+        public static string GetParamType(MethodParameterField param)
+        {
+            if (IsVoid(param))
+            {
+                return "Microsoft.Bond.Void";
+            }
+            return Utils.GetManagedType(param.Item);
+        }
+
+
+        public static string MakeWireServiceName(ServiceDef service)
+        {
+            string serviceName = null;
+            foreach(CustomAttribute ca in service.UserAttributes)
+            {
+                if (ca.Name == "service_id")
+                {
+                    serviceName = ca.Value;
+                    break;
+                }
+            }
+
+            if (serviceName == null)
+            {
+                string fullNamespace = service.Parent.GetFullNamespaceMafiaRpc();
+                serviceName = '\"'+fullNamespace + "." + service.Name+'\"';
+            }
+            return serviceName;
+        }
+
+
+        public static string MakeWireMethodName(MethodField method)
+        {
+            string methodName = null;
+            foreach(CustomAttribute ca in method.UserAttributes)
+            {
+                if (ca.Name == "method_id")
+                {
+                    methodName = ca.Value;
+                    break;
+                }
+            }
+
+            if (methodName == null)
+            {
+                methodName = '\"'+method.Name+'\"';
+            }
+            return methodName;
+        }
+
+
+        public static bool IsVoid(MethodParameterField param)
+        {
+            return (param == null || param.Item == null);
+        }
+    }
+
+    internal class CsqlRule : XidlServiceRule
+    {
+
+        public override void ServiceBegin(ServiceDef service)
+        {
+            string templateParams = RpcUtils.GenerateTemplateParamsString(service);
+            string comment = string.IsNullOrEmpty(service.Description)
+                                                ? service.Name + templateParams
+                                                : service.Description;
+
+            string name = RpcUtils.MakeCsqlClassName(service);
+
+            string serviceWireName = RpcUtils.MakeWireServiceName(service);
+
+            GenServiceBegin(name, templateParams, serviceWireName, comment);
+            GenConstructor(service, name, serviceWireName);
+
+            foreach (MethodField method in service.Items)
+            {
+                GenMethod(service, method);
+            }
+
+            GenServiceEnd(name);
+        }
+
+        void GenServiceBegin(string name, string templateParams, string serviceWireName, string comment)
+        {
+#>
+
+///<summary>
+/// <#=comment#>
+///</summary>
+[System.CodeDom.Compiler.GeneratedCode("bondc.exe", null)]
+public sealed class <#=name#><#=templateParams#> : rDSN.Tron.Contract.Service<<#=name#><#=templateParams#>>
+{
+<#+
+
+        }    // GenServiceBegin()
+
+        void GenServiceEnd(string name)
+        {
+#>
+}    // ~ <#=name#>
+<#+
+        }    // GenServiceEnd()
+
+        void GenConstructor(ServiceDef service, string name, string serviceWireName)
+        {
+#>
+    public <#=name#>(string serviceURI) : base(serviceURI, "<#=service.Parent.GetFullNamespaceMafiaRpc() + "." + service.Name#>")
+    {
+    }
+<#+
+        }    // GenConstructor()
+
+
+
+        void GenMethod(ServiceDef service, MethodField method)
+        {
+            string helperName = RpcUtils.MakeMethodHelperName(method);
+            string methodName = method.Name;
+            string argType = RpcUtils.GetParamType(method.ParameterType);
+            string retType = RpcUtils.GetParamType(method.ReturnType);
+
+#>
+
+	public <#=retType#> <#=methodName#>(<#=argType#> request)
+	{
+		throw new NotImplementedException();
+	}
+	
+<#+
+        }
+
+    } // ~class CsqlRule
+};
+#>
+
+<#+
+    // This produces Ctor, Dtor and Reset methods.
+
+    internal class BondClass_CtorDtor2
+        : XidlStructRule
+    {
+        string m_structName;
+        
+        public override void Visit(StructDef structDef)
+        {
+            if (!structDef.isLatestMinorVersion)
+            {
+                return;
+            }
+            
+            m_structName = structDef.Name;
+            
+            base.Visit(structDef);
+        }
+        
+        public override void StructBegin(StructDef structDef)
+        {
+            string virtMethodAttrib = structDef.HasBase ? "override" : "virtual";
+            string protectedMethAttrib = structDef.HasBase ? "new" : "";
+            string callBaseReset = structDef.HasBase ? "base.Reset(name, qualifiedName);" : "";
+            string callReset = structDef.HasBase ? "" : "Reset();";
+#>
+
+public partial class <#= structDef.Name #> 
+{
+    public <#= structDef.Name #>(<#= structDef.Name #> orig)
+    {
+        orig.CopyTo(this);
+    }
+}
+<#+
+        } // StructBegin
+    }; // class BondClass_CtorDtor2
+#>

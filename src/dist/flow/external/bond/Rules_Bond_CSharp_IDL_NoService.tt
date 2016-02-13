@@ -1,0 +1,370 @@
+<#@ template language="C#" debug="true" inherits="XidlGenerator" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ Assembly Name="System.Xml.dll" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Xml.Serialization" #>
+<#@ Assembly name="Microsoft.Bond.Rules.dll" #>
+<#@ import namespace="Microsoft.AdCenter.Cyprus.XIDL"#>
+
+<#@ include file="bondc.exe#StandardFileHeader.tt" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Utils.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Impl.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Enum.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_GetRuntimeSchema.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Properties.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_CtorDtor.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Write.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Read.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Comparison.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_Clone.TT" #>
+<#@ include file="Microsoft.Bond.Rules.dll#Rules_Bond_CSharp_ToString.TT" #>
+
+<#@ parameter name="ProjectName" Processor="ParameterProcessor" type="System.String" required="true" BaseClassProp="true"#>
+<#@ parameter name="ProjectType" Processor="ParameterProcessor" type="System.String" required="false" BaseClassProp="true"#>
+<#@ parameter name="IsCyprusType" Processor="ParameterProcessor" type="System.Boolean" required="true"#>
+<#@ parameter name="RootNamespace" Processor="ParameterProcessor" type="System.String" required="false" BaseClassProp="true"#>
+<#@ parameter name="OneFilePerType" Processor="ParameterProcessor" type="System.Boolean" required="false"#>
+<#@ parameter name="Using" Processor="ParameterProcessor" type="System.String" required="false"#>
+
+<#
+
+Extension.Instance = new CsExtension(this.RootNamespace, this.Using);
+
+base.AddRules(
+	new BondCSharpTronRule(ProjectName)   
+);
+
+base.Generate();
+#>
+
+
+<#+
+public class BondCSharpTronRule : BondCSharpRpcRule
+{
+    public BondCSharpTronRule(string projectName) : base(projectName, "_IDL_NoService.cs")
+    {
+        NamespaceRule nsRule = new NamespaceRule();
+        AddRules(nsRule);
+    }
+}
+
+public class BondCSharpRpcRule : Microsoft.AdCenter.Cyprus.XIDL.XidlDataRule
+{
+    public BondCSharpRpcRule(string projectName, string fileSuffix)
+    {  
+		Console.WriteLine(projectName);
+        OneFilePerType = false;
+        OutputFileName = projectName + fileSuffix;
+    }
+
+    public override void FileBegin(CyprusData ast)
+    {
+		/*
+		Console.WriteLine("FileBegin");
+		Console.WriteLine(ast.Items[0]);
+		Console.WriteLine(ast.Imports[0]);
+		foreach(TypeBase t in ast.AllTypes())
+		{
+			Console.WriteLine(t.Name);
+		}
+		string importFileName = ast.Imports[0];
+		CyprusData importedXidls = this.Generator.LoadXidls(new List<string>() {importFileName}, new List<Stream>(){});
+		*/
+        StandardFileHeader header = new StandardFileHeader();
+        header.OutputHeader(Options, OutputFileName);
+#>
+
+
+
+using global::System;
+using global::System.Collections.Generic;
+using Microsoft.Tron.Contract;
+
+<#+
+    }
+
+
+    internal class NamespaceRule : XidlNamespaceRule
+    {
+        public NamespaceRule()
+        {
+            AddRules(new BondServiceParser());
+			AddRules(new BondStructParser());
+			AddRules(new BondEnumParser());
+        }
+
+        public override void NamespaceBegin(Namespace o)
+        {
+#>
+namespace <#= o.Name #>
+{
+<#+
+        }
+
+        public override void NamespaceEnd(Namespace o)
+        {
+#>
+
+} // namespace <#= o.Name #>
+<#+
+        }
+    } // ~class TheNamespaceRule
+
+    static class RpcUtils
+    {
+        internal static string GenerateTemplateParamsString(ServiceDef obj)
+        {
+            string templateParams = "";
+            if (obj.TypeParams != null)
+            {
+                templateParams += "<";
+                int i = 0;
+                foreach (string param in obj.TypeParams)
+                {
+                    if (i++ > 0)
+                    {
+                        templateParams += ", ";
+                    }
+                    templateParams += param;
+                }
+                templateParams += ">";
+            }
+            return templateParams;
+        }
+		internal static string GenerateTemplateParamsString(StructDef obj)
+        {
+            string templateParams = "";
+            if (obj.TypeParams != null)
+            {
+                templateParams += "<";
+                int i = 0;
+                foreach (string param in obj.TypeParams)
+                {
+                    if (i++ > 0)
+                    {
+                        templateParams += ", ";
+                    }
+                    templateParams += param;
+                }
+                templateParams += ">";
+            }
+            return templateParams;
+        }
+
+        
+
+        public static string GetParamType(MethodParameterField param)
+        {
+            if (IsVoid(param))
+            {
+                return "";
+            }
+            return Utils.GetManagedType(param.Item);
+        }
+
+
+       
+
+
+        public static bool IsVoid(MethodParameterField param)
+        {
+            return (param == null || param.Item == null);
+        }
+    }
+
+    internal class BondServiceParser : XidlServiceRule
+    {
+
+        public override void ServiceBegin(ServiceDef service)
+        {
+			GenServiceBegin(service);
+            
+            foreach (MethodField method in service.Items)
+            {
+                GenMethod(service, method);
+            }
+
+            GenServiceEnd(service);
+        }
+
+        void GenServiceBegin(ServiceDef service)
+        {
+			string name = service.Name;
+#>
+// NOT USED
+[IDL.Schema("bond", "3.0.1")]
+public interface <#=name#>
+{
+<#+
+
+        }    // GenServiceBegin()
+
+        void GenServiceEnd(ServiceDef service)
+        {
+			string name = service.Name;
+#>
+}    // ~ <#=name#>
+<#+
+        }    // GenServiceEnd()
+
+        void GenMethod(ServiceDef service, MethodField method)
+        {
+            string methodName = method.Name;
+			MethodParameterField p = method.ParameterType;
+            string arg = RpcUtils.GetParamType(p) + (RpcUtils.IsVoid(p) ? "" : " " + p.Item.Name);
+            string retType = RpcUtils.GetParamType(method.ReturnType);
+			retType = retType == "" ? "void" : retType;
+
+#>
+	<#=retType#> <#=methodName#>(<#=arg#>);
+
+<#+
+        }
+
+    } 
+
+
+
+    
+
+    internal class BondStructParser : XidlStructRule
+    {
+        private string quote = "\"";
+        
+        public override void StructBegin(StructDef structDef)
+        {
+            GenStructBegin(structDef);
+			foreach(FieldBase field in structDef.Items)
+			{
+				GenField(structDef, field);
+			}
+			
+
+		}
+
+		void GenStructBegin(StructDef structDef)
+		{
+			string optInheritance = "";
+			if (structDef.HasBase)
+			{
+				optInheritance += ": " + structDef.GetBaseType();
+			}
+			string typeParams = RpcUtils.GenerateTemplateParamsString(structDef);
+			
+#>
+
+[IDL.Schema("bond", "3.0.1")]
+public class <#= structDef.Name #><#= typeParams #> <#= optInheritance #>
+{   
+<#+
+        } // GenStructBegin
+
+
+		void GenField(StructDef structDef, FieldBase field)
+		{
+			string modifier = quote + field.Modifier.ToString().ToLower() + quote;
+			string fieldId = field.FieldID.ToString();
+            List<string> args = new List<string>();
+            args.Add(fieldId);
+            args.Add(modifier);
+            if (field.HasDefault)
+            {
+                args.Add(quote + field.DefaultAsString + quote);
+
+            }
+            string argsString = string.Join(", ", args.ToArray());
+
+
+			
+#>
+	[IDL.Field(<#= argsString #>)]
+	public <#= field.GetFieldType() #> <#= field.Name #>;   
+
+<#+		
+			
+		}
+
+		public override void StructEnd(StructDef structDef)
+		{
+#>
+}   
+<#+
+
+		}
+    }; // BondStructParser
+
+    
+    internal class BondEnumParser : XidlEnumRule
+    {
+        private string quote = "\"";
+        
+        public override void EnumBegin(EnumDef enumDef)
+        {
+			GenEnumBegin(enumDef);
+			foreach(EnumDefEnumValue field in enumDef.Items)
+			{
+				GenField(enumDef, field);
+			}
+		}
+
+		public override void EnumEnd(EnumDef enumDef)
+		{
+#>
+}   
+<#+
+		}
+
+		void GenEnumBegin(EnumDef enumDef)
+		{
+			
+#>
+
+[IDL.Schema("bond", "3.0.1")]
+public enum <#= enumDef.Name #> 
+{   
+<#+
+        } // GenEnumBegin
+
+
+		void GenField(EnumDef enumDef, EnumDefEnumValue field)
+		{
+			int size = enumDef.Items.Length;
+			string optComma = ",";
+			if (size > 0 && enumDef.Items[size - 1] == field)
+			{
+				optComma = "";
+			}
+
+            string fieldId = field.Index.ToString();
+            string value = field.Value;
+            string modifier = "\"required\"";
+            List<string> args = new List<string>();
+            args.Add(fieldId);
+            args.Add(modifier);  // placeholder for enum field
+            if (!string.IsNullOrEmpty(value))
+            {
+                args.Add(quote + value + quote);
+            }
+
+            string argsString = string.Join(", ", args.ToArray());
+
+			
+#>
+    [IDL.Field(<#= argsString #>)]
+	<#= field.Name #><#= optComma #>
+
+<#+		
+			
+		}
+		
+    }; // class BondEnumParser
+
+
+};
+#>

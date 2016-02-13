@@ -1,0 +1,47 @@
+﻿
+import "..\Contract\contract.bond"
+
+namespace rDSN.Tron
+
+struct ServiceListResponse
+{
+	1:  vector<RpcResponse<ServiceInfoEx>> Services;
+}
+
+struct ServerListRequest
+{
+	1:  vector<NodeAddress> Nodes;
+}
+
+struct ServerListResponse
+{
+	1:  vector<RpcResponse<AppServerInfo>> Servers;
+}
+
+struct ServerList
+{
+	1:  vector<AppServerInfo> Servers;
+}
+
+struct ServerListResponse2
+{
+	1:  vector<RpcResponse<ServerList>> Servers;
+}
+
+struct ServicePlaceRequest
+{
+	1:  ServicePartitionInfo Partition;
+	2:  ServicePartitionAction Act = PUT;
+}
+
+service MetaServer
+{
+	RpcError CreateService(ServiceInfo request); 
+	RpcError RemoveService(Name request);
+	RpcResponse<ServiceListResponse> QueryServices(NameList request);
+	RpcResponse<ServerListResponse> QueryServersByAddress(ServerListRequest request);
+
+	RpcResponse<ServerListResponse2> QueryServersByName(NameList request);
+	RpcResponse<ServicePartitionInfo> PlaceService(ServicePlaceRequest request);
+}
+
