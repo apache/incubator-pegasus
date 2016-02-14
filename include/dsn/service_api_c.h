@@ -72,12 +72,6 @@
 
 # pragma once 
 
-/*!
- @defgroup layer1-dev Write Applications in rDSN
-
- How to build applications using rDSN (layer 1)
- */
-
 // common data structures and macros
 # include <dsn/c/api_common.h>
 
