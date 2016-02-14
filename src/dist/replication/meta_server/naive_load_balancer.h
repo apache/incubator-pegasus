@@ -64,12 +64,14 @@ private:
     bool run_lb(partition_configuration& pc);
 
     void naive_balancer(int total_replicas);
-    void ideal_primary_balancer(int total_replicas);
+    void greedy_primary_balancer(int total_replicas);
     void load_balancer_decision(const std::vector<dsn::rpc_address>& node_list,
                                 const std::unordered_map<dsn::rpc_address, int>& node_id,
                                 std::vector< std::vector<int> >& original_network,
                                 const std::vector< std::vector<int> >& residual_network
                                 );
+    void walk_through_primary(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>);
+    void walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>);
 
     void reassign_primary(global_partition_id gpid);
     void add_new_secondary(global_partition_id gpid, dsn::rpc_address target);

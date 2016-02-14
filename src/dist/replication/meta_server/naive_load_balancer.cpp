@@ -149,24 +149,66 @@ void naive_load_balancer::load_balancer_decision(const std::vector<dsn::rpc_addr
                                                  std::vector< std::vector<int> >& original_network,
                                                  const std::vector< std::vector<int> >& residual_network)
 {
-    for (size_t i=0; i!=original_network.size(); ++i)
-        for (size_t j=0; j!=original_network[i].size(); ++j)
-            if (original_network[i][j] > 0)
+    int total_nodes = original_network.size() - 2;
+    for (size_t i=1; i<=total_nodes; ++i)
+        for (size_t j=1; j<=total_nodes; ++j)
+            if ( original_network[i][j]>0 )
                 original_network[i][j] -= residual_network[i][j];
 
-    //TODO: add control for the load balancer degree
-    for (const auto& iter: _state->_nodes)
+    for (const auto& pair: _state->_nodes)
     {
-        server_state::node_state& ns = iter->second;
+        server_state::node_state& ns = pair.second;
+        int from_id = node_id[ ns.address ];
+        for (const global_partition_id& gpid: ns.primaries)
+        {
+            const partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+            for (const auto& addr: pc.secondaries)
+            {
+                int to_id = node_id[addr];
+                if ( original_network[from_id][to_id] > 0 ) {
+                    reassign_primary(gpid, addr);
+                }
+            }
+        }
     }
 }
 
-/* the primary balancer based on ford-fulkerson method */
-void naive_load_balancer::ideal_primary_balancer(int total_replicas)
+/* utils function for walk through */
+bool naive_load_balancer::walk_through_primary(const rpc_address &addr, const std::function<bool (partition_configuration &)> func)
+{
+    auto iter = _state->_nodes.find(addr);
+    if (iter == _state->_nodes.end() )
+        return false;
+    server_state::node_state& ns = iter->second;
+    for (const global_partition_id& gpid: ns.primaries)
+    {
+        partition_configuration& pc = _state->_apps[gpid.app_id - 1][gpid.pidx];
+        if ( !func(pc) )
+            return false;
+    }
+    return true;
+}
+
+/* utils function for walk through */
+bool naive_load_balancer::walk_through_partitions(const rpc_address &addr, const std::function<bool (partition_configuration &)> func)
+{
+    auto iter = _state->_nodes.find(addr);
+    if (iter == _state->_nodes.end() )
+        return false;
+    server_state::node_state& ns = iter->second;
+    for (const global_partition_id& gpid: ns.partitions)
+    {
+        partition_configuration& pc = _state->_apps[gpid.app_id - 1][gpid.pidx];
+        if ( !func(pc) )
+            return false;
+    }
+    return true;
+}
+
+void naive_load_balancer::greedy_primary_balancer(int total_replicas)
 {
     size_t graph_nodes = _state->_node_live_count + 2;
-    std::vector< std::vector<int> > residual_network(graph_nodes, std::vector<int>(graph_node, 0));
-    std::vector< std::vector<int> > original_network(graph_nodes, std::vector<int>(graph_nodes, 0));
+    std::vector< std::vector<int> > network(graph_nodes, std::vector<int>(graph_nodes, 0));
     std::unordered_map<dsn::rpc_address, int> node_id;
     std::vector<dsn::rpc_address> node_list(graph_nodes);
 
@@ -186,90 +228,57 @@ void naive_load_balancer::ideal_primary_balancer(int total_replicas)
     // make graph
     for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
     {
-        server_state::node_state& view = iter->second;
-        if ( !view.is_alive )
+        if ( !iter->second.is_alive )
             continue;
-
-        dassert(node_id.find(iter->first)!=node_id.end(), "each alive node should be assigned with an id");
         int from = node_id[iter->first];
-        for (auto gpid_ptr=view.primaries.begin(); gpid_ptr!=view.primaries.end(); ++gpid_ptr)
-        {
-            const partition_configuration& pc = _state->_apps[ gpid_ptr->app_id-1 ].partitions[gpid_ptr->pidx];
-            for (auto &target: pc.secondaries)
+        walk_through_primary(iter->first, [this, &](partition_configuration& replica_in_primary){
+            for (auto& target: replica_in_primary.secondaries)
             {
-                auto iter = node_id.find(target);
-                if ( iter != node_id.end() )
-                {
-                    residual_network[from][ iter->second ]++;
-                    original_network[from][ iter->second ]++;
-                }
+                auto i = node_id.find(target);
+                if ( i != node_id.end() )
+                    network[from][ i->second ]++;
             }
-        }
+        } );
 
         // add flow for source
-        if (view.primaries.size() > average_replicas) {
-            original_network[0][from] = residual_network[0][from] = view.primaries.size() - average_replicas;
-        }
-        // add flow for destination
-        if (view.primaries.size() < average_replicas)
-            origin_network[from][graph_nodes - 1] = residual_network[from][graph_nodes-1] = average_replicas - view.primaries.size();
+        int primaries_count = iter->second.primaries.size();
+        if (primaries_count > average_replicas)
+            network[0][from] = primaries_count - average_replicas;
+        else
+            network[from][graph_nodes - 1] = average_replicas - primaries_count;
     }
 
-    std::vector<bool> visit(graph_nodes);
-    std::vector<int> flow(graph_nodes);
+    std::vector<bool> visit(graph_nodes, false);
+    std::vector<int> flow(graph_nodes, -1);
     std::vector<int> prev(graph_nodes);
 
-    // ford-fulkerson
-    int max_iter = 20000000;
-    while (max_iter >= 0)
+    while ( !visit[graph_nodes - 1] )
     {
-        visit.assign(graph_nodes, false);
-        flow.assign(graph_nodes, 0);
-        prev.assign(graph_node, -1);
-
-        flow[0] = LONG_MAX;
-        // Dijkstra
-        while ( !visit[graph_nodes - 1] )
+        int max_flow_pos = -1, max_flow_value = 0;
+        for (int i=0; i!=graph_nodes; ++i)
         {
-            int max_flow_pos = -1, max_flow_value = 0;
-            for (int i=0; i!=graph_nodes; ++i)
+            if (visit[i]==false && flow[i]>max_flow_value)
             {
-                if (visit[i]==false && flow[i]>max_flow_value)
-                {
-                    max_flow_pos = i;
-                    max_flow_value = flow[i];
-                }
+                max_flow_pos = i;
+                max_flow_value = flow[i];
             }
-            max_iter -= graph_nodes;
-
-            if (max_flow_pos == -1)
-                break;
-
-            visit[max_flow_pos] = true;
-            for (int i=0; i!=graph_nodes; ++i)
-            {
-                if (!visit[i] && min(flow[max_flow_pos], residual_network[max_flow_pos][i])>flow[i])
-                {
-                    flow[i] = min(flow[max_flow_pos], residual_network[max_flow_pos][i]);
-                    prev[i] = max_flow_pos;
-                }
-            }
-            max_iter -= graph_nodes;
         }
+        max_iter -= graph_nodes;
 
-        if (flow[graph_nodes - 1] == 0)
+        if (max_flow_pos == -1)
             break;
 
-        int dest = graph_nodes - 1;
-        while (prev[dest] != -1)
+        visit[max_flow_pos] = true;
+        for (int i=0; i!=graph_nodes; ++i)
         {
-            residual_network[ prev[dest] ][ dest ] -= flow[graph_nodes - 1];
-            residual_network[ dest ][ prev[dest] ] += flow[graph_nodes - 1];
+            if (!visit[i] && min(flow[max_flow_pos], residual_network[max_flow_pos][i])>flow[i])
+            {
+                flow[i] = min(flow[max_flow_pos], residual_network[max_flow_pos][i]);
+                prev[i] = max_flow_pos;
+            }
         }
+        max_iter -= graph_nodes;
     }
-
-    //make decision
-    load_balancer_decision(node_id, node_list, original_network, residual_network);
 }
 
 void naive_load_balancer::reset_balance_pq()
