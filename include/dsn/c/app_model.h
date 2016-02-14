@@ -269,6 +269,7 @@ typedef void(*dsn_app_destroy)(
 # define DSN_APP_L2_REPLICATION  0x2 ///< whether replication is supported
 # define DSN_APP_L2_STATEFUL     0x4 ///< whether the app is stateful
 
+# pragma pack(push, 4)
 /*!
   developers define the following dsn_app data structure, and passes it
   to rDSN through \ref dsn_register_app so that the latter can manage 
@@ -276,7 +277,7 @@ typedef void(*dsn_app_destroy)(
  */
 typedef struct dsn_app
 {
-    uint32_t        mask; ///< application capability mask
+    uint64_t        mask; ///< application capability mask
     char            type_name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< type 
 
     /*! layer 1 app definition, mask = DSN_APP_MASK_DEFAULT */
@@ -290,15 +291,18 @@ typedef struct dsn_app
     /*! TODO: layer 2 app definition */
     struct layer2_callbacks
     {
-        
+        uint64_t dump; // C requires that a struct has at least one member
     } layer2;
 
     /*! TODO: layer 3 app definition */
     struct layer3_callbacks
     {
+        uint64_t dump; // C requires that a struct has at least one member
     } layer3;
 } dsn_app;
+# pragma pack(pop)
 
+# pragma pack(push, 4)
 /*! application information retrived at runtime */
 typedef struct dsn_app_info
 {
@@ -310,6 +314,7 @@ typedef struct dsn_app_info
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app full name
     char  data_dir[DSN_MAX_PATH];             ///< app data directory
 } dsn_app_info;
+# pragma pack(pop)
 
 /*!
  register application into rDSN runtime
