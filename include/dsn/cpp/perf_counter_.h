@@ -39,6 +39,10 @@
 
 namespace dsn 
 {
+    /*!
+    @addtogroup perf-counter
+    @{
+    */
     class perf_counter_
     {
     public:
@@ -70,4 +74,5 @@ namespace dsn
     private:
         dsn_handle_t _h;
     };
+    /*@}*/
 } // end namespace

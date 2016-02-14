@@ -95,10 +95,6 @@ namespace dsn
     };
 }
 
-# ifndef TIME_MS_MAX
-# define TIME_MS_MAX UINT_MAX
-# endif
-
 # ifndef FIELD_OFFSET
 # define FIELD_OFFSET(s, field)  (((size_t)&((s *)(10))->field) - 10)
 # endif

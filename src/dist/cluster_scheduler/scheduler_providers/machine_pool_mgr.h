@@ -1,38 +1,3 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 # pragma once
 
 # include <dsn/service_api_cpp.h>
@@ -63,9 +28,17 @@ namespace dsn
             * The error_code of ERR_OK indicates a successful get,
             * while an ERR_RESOURCE_NOT_ENOUGH indicate there are not enough machines.
             */
+
+            struct alloca_options
+            {
+                int  slot_count; // how many slots to be allocated
+                bool allow_same_machine_slots;
+                bool allow_partial_allocation;
+                std::vector<std::string> forbidden_machines;
+            };
+
             error_code get_machine(
-                int count,
-                const std::vector<std::string>& forbidden_list,
+                const alloca_options& opt,
                 /*out*/ std::vector<std::string>& assign_list
                 );
 
@@ -77,7 +50,7 @@ namespace dsn
         private:
             struct machine_workload
             {
-                int instance;
+                int instance_count;
             };
 
             struct machine_info
@@ -86,7 +59,7 @@ namespace dsn
                 std::string identity;
                 bool friend operator < (const machine_info &a, const machine_info &b)
                 {
-                    return a.workload.instance < b.workload.instance;
+                    return a.workload.instance_count < b.workload.instance_count;
                 }
             };
 

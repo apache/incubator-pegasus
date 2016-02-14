@@ -36,7 +36,7 @@
 
 # pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
@@ -132,7 +132,6 @@ public:
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
     bool                    is_empty() const { return _is_null; }
-    uint64_t                enqueue_ts_ns() { return _recv_ts_ns; }
 
     // static helper utilities
     static task*            get_current_task();
@@ -179,7 +178,6 @@ private:
     service_node           *_node;
     trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
     dsn_task_cancelled_handler_t _on_cancel;
-    uint64_t               _recv_ts_ns;
 
 public:
     // used by task queue only
@@ -294,12 +292,18 @@ public:
 
     virtual void  exec() override
     {
-        _handler->run(_request);
+        if (0 == _enqueue_ts_ns
+            || dsn_now_ns() - _enqueue_ts_ns < 
+            (uint64_t)_request->header->client.timeout_ms * 1000000ULL)
+        {
+            _handler->run(_request);
+        }
     }
 
 protected:
     message_ex      *_request;
     rpc_handler_info* _handler;
+    uint64_t         _enqueue_ts_ns;
 };
 
 class rpc_response_task : public task, public transient_object

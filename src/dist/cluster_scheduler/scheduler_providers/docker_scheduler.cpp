@@ -144,6 +144,8 @@ error_code docker_scheduler::initialize()
 
 void docker_scheduler::get_app_list(std::string& ldir,/*out*/std::vector<std::string>& app_list )
 {
+    //TODO : 1. Use std file stream instead of command and
+    //       2. buffer size set to be 128?
 #ifndef _WIN32
     std::string popen_command = "cat " + ldir + "/applist";
     FILE *f = popen(popen_command.c_str(),"r");
@@ -168,8 +170,15 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
         std::vector<std::string> a_list;
         int count = 1;
         //TODO: handle error if machine not enough
-        _mgr.get_machine( count, f_list, a_list);
-        _machine_map[name].insert(_machine_map[name].begin(),a_list.begin(),a_list.end());
+        machine_pool_mgr::alloca_options opt;
+        opt.allow_partial_allocation = false;
+        opt.allow_same_machine_slots = true;
+        opt.slot_count = (int)app_list.size();
+        _mgr.get_machine(opt, a_list);
+        {
+            zlock(_lock);
+            _machine_map[name].insert(_machine_map[name].begin(), a_list.begin(), a_list.end());
+        }
         std::ofstream fd;
         fd.open(machine_file.c_str(), std::ios_base::app);
         //TODO: handle error if file open failed
@@ -204,6 +213,7 @@ void docker_scheduler::schedule(
     }
     else
     {
+        //TODO : How about writting machine list failed?
         write_machine_list(unit->name, unit->local_package_directory);
         {
             zauto_lock l(_lock);
@@ -245,9 +255,10 @@ void docker_scheduler::create_containers(std::string& name,std::function<void(er
     }
     else
     {
-        return_machines(name);
         {
             zauto_lock l(_lock);
+            return_machines(name);
+            _machine_map.erase(name);
             _deploy_map.erase(name);
         }
         deployment_callback(::dsn::dist::ERR_DOCKER_DEPLOY_FAILED,rpc_address());
@@ -267,6 +278,7 @@ void docker_scheduler::unschedule(
     if( found )
     {
         return_machines(unit->name);
+        _machine_map.erase(unit->name);
         _deploy_map.erase(it);
         _lock.unlock();
 
@@ -295,9 +307,7 @@ void docker_scheduler::delete_containers(std::string& name,std::function<void(er
     {
         command << " -t " << remote_package_directory;
     }
-    puts("docker_scheduler delete_containers before system call");
     ret = system(command.str().c_str());
-    puts("docker_scheduler delete_containers after system call");
 
     // TODO: deal with this error or notice the dev server
     dassert( ret == 0, "docker can't delete pods");

@@ -35,7 +35,6 @@
 
 # pragma once
 
-# include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <functional>
 

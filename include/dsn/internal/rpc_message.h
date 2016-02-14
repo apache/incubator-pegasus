@@ -36,7 +36,7 @@
 # pragma once
 
 # include <atomic>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/callocator.h>
@@ -55,6 +55,12 @@ namespace dsn
         char          *buffer;
     } dsn_buffer_t;
 
+    struct fast_rpc_name
+    {
+        uint64_t local_rpc_id : 16;
+        uint64_t local_binary_hash : 48;
+    };
+
     typedef struct message_header
     {
         int32_t        hdr_crc32;
@@ -64,6 +70,7 @@ namespace dsn
         uint64_t       id;      // sequence id, can be used to track source
         uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
+        fast_rpc_name  rpc_name_fast;
         uint64_t       vnid; // virtual node id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
@@ -149,10 +156,13 @@ namespace dsn
 
     private:
         // by msg read & write
-        int                    _rw_index;
-        int                    _rw_offset;
-        bool                   _rw_committed;
-        bool                   _is_read;
+        int                    _rw_index;     // current buffer index
+        int                    _rw_offset;    // current buffer offset
+        bool                   _rw_committed; // mark if it is in middle state of reading/writing
+        bool                   _is_read;      // is for read(recv) or write(send)
+
+    public:
+        static uint64_t s_local_binary_hash;  // used by fast_rpc_name
     };
 
 } // end namespace

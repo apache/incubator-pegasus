@@ -139,7 +139,6 @@ task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_
     _wait_for_cancel = false;
     _is_null = false;
     next = nullptr;
-    _recv_ts_ns = 0;
     
     if (node != nullptr)
     {
@@ -421,42 +420,48 @@ void task::enqueue(task_worker_pool* pool)
     {
         dassert (_node == task::get_current_node(), "");
         exec_internal();
+        return;
     }
-    else if (_spec->fast_execution_in_network_thread)
+    else if (_spec->allow_inline)
     {
-        if (_node != task::get_current_node())
+        // inlined
+        // warning - this may lead to deadlocks, e.g., allow_inlined
+        // task tries to get a non-recursive lock that is already hold
+        // by the caller task
+        if (_spec->type == TASK_TYPE_COMPUTE)
         {
-            tools::node_scoper ns(_node);
-            exec_internal();
+            if (_node != task::get_current_node())
+            {
+                tools::node_scoper ns(_node);
+                exec_internal();
+            }
+            else
+            {
+                exec_internal();
+            }
+            return;
         }
-        else
+
+        // io tasks only inlined in io threads
+        else if (task::get_current_worker2() == nullptr)
         {
+            dassert(_node == task::get_current_node(), "");
             exec_internal();
+            return;
         }
-    }
-    else if (_spec->allow_inline && !task::get_current_worker2() /*in io-thread*/ )
-    {
-        dassert(_node == task::get_current_node(), "");
-        exec_internal();
     }
 
     // normal path
-    else
-    {
-        dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
-            "(1). thread pool not designatd in '[%s] pools'; "
-            "(2). the caller is executed in io threads "
-            "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",            
-            dsn_threadpool_code_to_string(_spec->pool_code),
-            _node->spec().config_section.c_str(),
-            _spec->name.c_str()
-            );
+    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
+        "(1). thread pool not designatd in '[%s] pools'; "
+        "(2). the caller is executed in io threads "
+        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
+        dsn_threadpool_code_to_string(_spec->pool_code),
+        _node->spec().config_section.c_str(),
+        _spec->name.c_str()
+        );
 
-        // disable this for the time being
-        //_recv_ts_ns = dsn_now_ns();
-
-        pool->enqueue(this);
-    }
+    pool->enqueue(this);
 }
 
 timer_task::timer_task(
@@ -507,7 +512,8 @@ rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, ser
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
         request->header->client.hash, node),
     _request(request),
-    _handler(h)
+    _handler(h),
+    _enqueue_ts_ns(0)
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
         "%s is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
@@ -524,6 +530,10 @@ rpc_request_task::~rpc_request_task()
 
 void rpc_request_task::enqueue()
 {
+    if (spec().rpc_request_dropped_before_execution_when_timeout)
+    {
+        _enqueue_ts_ns = dsn_now_ns();
+    }
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 

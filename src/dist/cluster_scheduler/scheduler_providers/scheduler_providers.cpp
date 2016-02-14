@@ -59,6 +59,10 @@ namespace dsn {
                     "dsn::dist::docker_scheduler",
                     ::dsn::dist::cluster_scheduler::create< ::dsn::dist::docker_scheduler>
                     );
+            register_component_provider(
+                    "dsn::dist::windows_cluster_scheduler",
+                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::windows_cluster_scheduler>
+            );
         }
 
     }

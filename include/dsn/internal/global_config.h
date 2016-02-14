@@ -75,14 +75,6 @@ struct network_server_config
 // <port,channel> => config
 typedef std::map<network_server_config, network_server_config> network_server_configs;
 
-typedef struct service_app_role
-{
-    std::string     type_name;
-    dsn_app_create  create;
-    dsn_app_start   start;
-    dsn_app_destroy destroy;
-} service_app_role;
-
 // Terms used in rDSN:
 //  - app_id
 //  - app_name/role_name
@@ -118,13 +110,13 @@ struct service_app_spec
     // app types and factories.
     //
     std::string          dmodule_bridge_arguments; 
-    service_app_role     role;
+    dsn_app              *role;
 
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
 
-    service_app_spec() {}
-    service_app_spec(const service_app_spec& r);
+    service_app_spec() : role(nullptr) {}
+    /*service_app_spec(const service_app_spec& r);*/
     bool init(const char* section, 
         const char* role_name_,
         service_app_spec* default_value,
@@ -134,7 +126,7 @@ struct service_app_spec
 };
 
 CONFIG_BEGIN(service_app_spec)
-    CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app_role")
+    CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
     CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
     CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
     CONFIG_FLD_STRING(dmodule_bridge_arguments, "",

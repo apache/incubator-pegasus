@@ -57,7 +57,7 @@ namespace dsn
         rpc_address leader() const { alr_t l(_lock);  return _leader_index >= 0 ? _members[_leader_index] : _invalid; }
         void leader_forward();
         rpc_address possible_leader();
-        bool update_leader_on_rpc_forward() const { return _update_leader_on_rpc_forward; }
+        bool is_update_leader_on_rpc_forward() const { return _update_leader_on_rpc_forward; }
         void set_update_leader_on_rpc_forward(bool value) { _update_leader_on_rpc_forward = value; }
         const char* name() const { return _name.c_str(); }
         rpc_address address() const { return _group_address; }

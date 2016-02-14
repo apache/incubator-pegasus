@@ -61,7 +61,7 @@ namespace dsn {
     
     DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-    class rpc_timeout_task : public task
+    class rpc_timeout_task : public task, public transient_object
     {
     public:
         rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 
@@ -131,6 +131,7 @@ namespace dsn {
         if (nullptr == reply)
         {
             call->set_delay(delay_ms);
+            // TODO(qinzuoyan): maybe set err as ERR_NETWORK_FAILURE to differ with ERR_TIMEOUT
             call->enqueue(ERR_TIMEOUT, reply);
             call->release_ref(); // added in on_call
             return true;
@@ -157,7 +158,7 @@ namespace dsn {
                 switch (sp->grpc_mode)
                 {
                 case GRPC_TO_LEADER:
-                    if (req->server_address.group_address()->update_leader_on_rpc_forward())
+                    if (req->server_address.group_address()->is_update_leader_on_rpc_forward())
                     {
                         req->server_address.group_address()->set_leader(addr);
                     }
@@ -191,7 +192,7 @@ namespace dsn {
                     switch (sp->grpc_mode)
                     {
                     case GRPC_TO_LEADER:
-                        if (err == ERR_OK && req->server_address.group_address()->update_leader_on_rpc_forward())
+                        if (err == ERR_OK && req->server_address.group_address()->is_update_leader_on_rpc_forward())
                         {
                             req->server_address.group_address()->set_leader(reply->header->from_address);
                         }
@@ -211,7 +212,18 @@ namespace dsn {
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
-                call->enqueue(err, reply);
+
+                if (ERR_OK == err)
+                    call->enqueue(err, reply);
+                else
+                {
+                    call->enqueue(err, nullptr);
+
+                    // because (1) initially, the ref count is zero
+                    //         (2) upper apps may call add_ref already
+                    call->add_ref();
+                    call->release_ref();
+                }
             }
 
             // release the task when necessary
@@ -382,6 +394,16 @@ namespace dsn {
     }
 
     //----------------------------------------------------------------------------------------------
+    rpc_server_dispatcher::rpc_server_dispatcher()
+    {
+        _vhandlers.resize(dsn_task_code_max() + 1);
+        for (auto& h : _vhandlers)
+        {
+            h = new std::pair<rpc_handler_info*, utils::rw_lock_nr>();
+            h->first = nullptr;
+        }
+    }
+
     bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
     {
         auto name = std::string(dsn_task_code_to_string(handler->code));
@@ -392,7 +414,12 @@ namespace dsn {
         if (it == _handlers.end() && it2 == _handlers.end())
         {
             _handlers[name] = handler;
-            _handlers[handler->name] = handler;            
+            _handlers[handler->name] = handler;   
+
+            {
+                utils::auto_write_lock l(_vhandlers[handler->code]->second);
+                _vhandlers[handler->code]->first = handler;
+            }
             return true;
         }
         else
@@ -415,6 +442,11 @@ namespace dsn {
             std::string name = it->second->name;
             _handlers.erase(it);
             _handlers.erase(name);
+
+            {
+                utils::auto_write_lock l(_vhandlers[rpc_code]->second);
+                _vhandlers[rpc_code]->first = nullptr;
+            }
         }
 
         ret->unregister();
@@ -424,6 +456,20 @@ namespace dsn {
     rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
     {
         rpc_handler_info* handler = nullptr;
+        if (msg->header->rpc_name_fast.local_binary_hash == message_ex::s_local_binary_hash)
+        {
+            msg->local_rpc_code = (uint16_t)msg->header->rpc_name_fast.local_rpc_id;
+
+            {
+                utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+                handler = _vhandlers[msg->local_rpc_code]->first;
+                if (nullptr != handler)
+                {
+                    handler->add_ref();
+                }
+            }
+        }
+        else
         {
             utils::auto_read_lock l(_handlers_lock);
             auto it = _handlers.find(msg->header->rpc_name);

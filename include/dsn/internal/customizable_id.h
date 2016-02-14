@@ -40,7 +40,7 @@
 # include <string>
 # include <map>
 # include <vector>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 
 namespace dsn { namespace utils {
 

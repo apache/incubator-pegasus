@@ -106,14 +106,15 @@ namespace dsn {
         service_node* node() const;
 
         //
-        // called when network received a complete message
+        // called when network received a complete request message
         //
         void on_recv_request(message_ex* msg, int delay_ms);
 
         //
+        // called when network received a complete reply message or network failed,
+        // if network failed, the 'msg' will be nullptr
         //
-        //
-        void on_recv_reply(message_ex* msg, int delay_ms);
+        void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
         
         //
         // create a message parser for
@@ -203,12 +204,11 @@ namespace dsn {
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
         bool cancel(message_ex* request);
-        bool pause_recv();
-        void resume_recv();
+        void delay_recv(int delay_ms);
+        void on_recv_message(message_ex* msg, int delay_ms);
 
     // for client session
     public:
-        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         // return true if the socket should be closed
         bool on_disconnected(bool is_write);
                
@@ -216,7 +216,6 @@ namespace dsn {
         
     // for server session
     public:
-        void on_recv_request(message_ex* request, int delay_ms);
         void start_read_next(int read_next = 256);
 
     // shared
@@ -273,55 +272,15 @@ namespace dsn {
         dlink                              _messages;        
         volatile session_state             _connect_state;
         uint64_t                           _message_sent;
+        int                                _delay_server_receive_ms;
         // ]
-
-        // for throttling
-        enum class recv_state
-        {
-            to_be_paused,
-            paused,
-            normal
-        };
-        std::atomic<recv_state>            _recv_state;
     };
 
-    // --------- inline implementation ---------------
-    inline bool rpc_session::pause_recv()
+    // --------- inline implementation --------------
+    inline void rpc_session::delay_recv(int delay_ms)
     {
-        recv_state s = recv_state::normal;
-        return _recv_state.compare_exchange_strong(s, recv_state::to_be_paused, std::memory_order_relaxed);
-    }
-
-    inline void rpc_session::resume_recv()
-    {
-        while (true)
-        {
-            recv_state s = recv_state::paused;
-            if (_recv_state.compare_exchange_strong(s, recv_state::normal, std::memory_order_relaxed))
-            {
-                start_read_next();
-                return;
-            }
-
-            // not paused yet
-            else if (s == recv_state::to_be_paused)
-            {
-                // recover to normal, no real pause is done before
-                if (_recv_state.compare_exchange_strong(s, recv_state::normal, std::memory_order_relaxed))
-                {
-                    return;
-                }
-                else
-                {
-                    // continue the next loop
-                }
-            }
-
-            else
-            {
-                // s == recv_state::normal
-                return;
-            }
-        }        
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        if (delay_ms > _delay_server_receive_ms)
+            _delay_server_receive_ms = delay_ms;
     }
 }

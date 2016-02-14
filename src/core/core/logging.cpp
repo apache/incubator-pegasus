@@ -26,6 +26,7 @@
 
 /*
  * Description:
+ * Description:
  *     What is this file about?
  *
  * Revision history:

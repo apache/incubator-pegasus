@@ -26,6 +26,7 @@
 
 /*
  * Description:
+ * Description:
  *     Rpc performance test
  *
  * Revision history:
@@ -88,4 +89,89 @@ TEST(core, rpc_perf_test)
             << " throughput = " << total_query_count * 1000000llu / time_us << "call/sec" << std::endl;
     }
 
+}
+
+TEST(core, rpc_perf_test_sync)
+{
+    ::dsn::rpc_address localhost("localhost", 20101);
+
+    std::chrono::steady_clock clock;
+    auto tic = clock.now();
+
+    int round = 100000;
+    int concurrency = 10;
+    int total_query_count = round * concurrency;
+
+    std::vector<task_ptr> tasks;
+    for (int i = 0; i < round; i++)
+    {
+        for (int j = 0; j < concurrency; j++)
+        {
+            int req = 0;
+            auto task = ::dsn::rpc::call(
+                localhost,
+                RPC_TEST_HASH,
+                req,
+                nullptr,
+                [](error_code err, std::string&& result) 
+                {
+                    // nothing to do
+                }
+                );
+
+            tasks.push_back(task);
+        }
+
+        for (auto& t : tasks)
+            t->wait();
+
+        tasks.clear();
+    }
+
+    auto toc = clock.now();
+    auto time_us = std::chrono::duration_cast<std::chrono::microseconds>(toc - tic).count();
+    std::cout << "rpc-sync perf test: throughput = " 
+        << total_query_count * 1000000llu / time_us << " #/s, avg latency = "
+        << time_us / total_query_count 
+        << " us"<< std::endl;
+}
+
+TEST(core, lpc_perf_test_sync)
+{
+    std::chrono::steady_clock clock;
+    auto tic = clock.now();
+
+    int round = 1000000;
+    int concurrency = 10;
+    int total_query_count = round * concurrency;
+    std::vector<task_ptr> tasks;
+    std::vector<std::string> results;
+    for (int i = 0; i < round; i++)
+    {
+        results.resize(concurrency);
+        for (int j = 0; j < concurrency; j++)
+        {
+            auto task = ::dsn::tasking::enqueue(
+                LPC_TEST_HASH,
+                nullptr,
+                [&results, j]() {
+                    std::string r = dsn_get_current_app_data_dir();
+                    results[j] = std::move(r);
+                }
+                );
+            tasks.push_back(task);
+        }
+        
+        for (auto& t : tasks)
+            t->wait();
+
+        tasks.clear();
+    }
+
+    auto toc = clock.now();
+    auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(toc - tic).count();
+    std::cout << "lpc-sync perf test: throughput = "
+        << total_query_count * 1000000000llu / time_ns << " #/s, avg latency = "
+        << time_ns / total_query_count
+        << " ns" << std::endl;
 }

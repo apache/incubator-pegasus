@@ -36,7 +36,7 @@
 
 #pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/singleton.h>
 # include <vector>
