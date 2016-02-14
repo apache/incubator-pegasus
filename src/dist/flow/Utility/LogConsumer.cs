@@ -57,7 +57,7 @@ namespace rDSN.Tron.Utility
                     break;
 
                 case ConsumerType.Network:
-                    ServiceNode.Instance().SendLog(message);
+                    //ServiceNode.Instance().SendLog(message);
                     break;
             }
         }

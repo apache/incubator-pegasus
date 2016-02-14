@@ -69,6 +69,10 @@
     <Compile Include="MetaServer_services.cs" />
     <Compile Include="MetaServer_types.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="replication.client.cs" />
+    <Compile Include="replication.code.definition.cs" />
+    <Compile Include="replication.types.cs" />
+    <Compile Include="replication.types.serialization.cs" />
     <Compile Include="ServiceClient.cs" />
     <Compile Include="ServiceMesh.cs" />
     <Compile Include="ServiceStore_proxies.cs" />
@@ -78,6 +82,10 @@
     <Compile Include="ValueOperators.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\dev\csharp\dsn.dev.csharp.csproj">
+      <Project>{41e40377-e430-42f8-910e-155053ee64e3}</Project>
+      <Name>dsn.dev.csharp</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Contract\Contract.csproj">
       <Project>{67c7d246-a7a7-4d54-aa03-b8d516055c01}</Project>
       <Name>Contract</Name>

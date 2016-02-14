@@ -406,6 +406,88 @@ namespace dsn.dev.csharp
                 writer.Write(val);
             }
         }
+
+        public static void Read(this Stream rs, out TaskCode val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = new TaskCode(reader.ReadInt32());
+            }
+        }
+
+        public static void Write(this Stream ws, TaskCode val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write((Int32)val);
+            }
+        }
+
+        public static void Read(this Stream rs, out RpcAddress val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = new RpcAddress(reader.ReadUInt64());
+            }
+        }
+
+        public static void Write(this Stream ws, RpcAddress val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write((UInt64)val);
+            }
+        }
+
+        public static void Read(this Stream rs, out List<RpcAddress> val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                int c = reader.ReadInt32();
+                val = new List<RpcAddress>();
+                for (int i = 0; i < c; i++)
+                {
+                    val.Add(new RpcAddress(reader.ReadUInt64()));
+                }
+            }
+        }
+
+        public static void Write(this Stream ws, List<RpcAddress> val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write((Int32)val.Count);
+                foreach (var addr in val)
+                {
+                    writer.Write((UInt64)addr);
+                }
+            }
+        }
+
+        public static void Read(this Stream rs, out List<Int32> val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                int c = reader.ReadInt32();
+                val = new List<int>();
+                for (int i = 0; i < c; i++)
+                {
+                    val.Add(reader.ReadInt32());
+                }
+            }
+        }
+
+        public static void Write(this Stream ws, List<Int32> val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write((Int32)val.Count);
+                foreach (var v in val)
+                {
+                    writer.Write(v);
+                }
+            }
+        }
     }
 
 }
