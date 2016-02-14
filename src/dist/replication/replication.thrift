@@ -361,6 +361,8 @@ service replica_s
 
 service meta_s
 {
+    configuration_create_app_response create_app(1:configuration_create_app_request req);
+    configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
     configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
     configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
     configuration_update_response update_configuration(1:configuration_update_request update);
