@@ -70,7 +70,7 @@ namespace dsn
             virtual void run() = 0;
 
             // load balancing for single partition
-            virtual void run(global_partition_id gpid) = 0;
+            virtual void run(global_partition_id gpid, std::shared_ptr<configuration_update_request> req) = 0;
 
             // this method is for testing
             virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) = 0;

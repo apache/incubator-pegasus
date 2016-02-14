@@ -70,7 +70,7 @@ void simple_stateful_load_balancer::run()
     }
 }
 
-void simple_stateful_load_balancer::run(global_partition_id gpid)
+void simple_stateful_load_balancer::run(global_partition_id gpid, std::shared_ptr<configuration_update_request>)
 {
     if (s_disable_lb) return;
 

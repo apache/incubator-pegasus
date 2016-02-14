@@ -50,7 +50,7 @@ public:
     ~simple_stateful_load_balancer();
 
     virtual void run() override;
-    virtual void run(global_partition_id gpid) override;
+    virtual void run(global_partition_id gpid, std::shared_ptr<configuration_update_request> request) override;
 
     // this method is for testing
     virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) override;

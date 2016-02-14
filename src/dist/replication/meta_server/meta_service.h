@@ -87,7 +87,7 @@ private:
     // load balance actions
     void start_load_balance();
     void on_load_balance_timer();
-    void on_config_changed(global_partition_id gpid);
+    void on_config_changed(global_partition_id gpid, std::shared_ptr<configuration_update_request> request);
 
     // common routines
     bool check_primary(dsn_message_t req);

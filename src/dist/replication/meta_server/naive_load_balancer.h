@@ -41,6 +41,28 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
+enum migration_type
+{
+    mt_move_primary, //downgrade current primary to secondary, and update another secondary to primary
+    mt_copy_primary, //add a new learner and make it primary
+    mt_copy_secondary //add a new learner and make it secondary
+};
+
+struct migration_proposal
+{
+    global_partition_id _gpid;
+    migration_type _type;
+    rpc_address _from;
+    rpc_address _to;
+
+    migration_proposal(){}
+    migration_proposal(global_partition_id id, migration_type t, dsn::rpc_address from, dsn::rpc_address to):
+        _type(t), _from(from), _to(to)
+    {
+        memcpy(&_gpid, &id, sizeof(id));
+    }
+};
+
 class naive_load_balancer
     : public dsn::dist::server_load_balancer,
       public serverlet<naive_load_balancer>
@@ -50,7 +72,7 @@ public:
     ~naive_load_balancer();
 
     virtual void run() override;
-    virtual void run(global_partition_id gpid) override;
+    virtual void run(global_partition_id gpid, std::shared_ptr<configuration_update_request> request) override;
 
     // this method is for testing
     virtual void explictly_send_proposal(global_partition_id gpid,
@@ -63,52 +85,20 @@ private:
                              const std::shared_ptr<query_replica_decree_response>& resp);
     bool run_lb(partition_configuration& pc);
 
-    void naive_balancer(int total_replicas);
-    void greedy_primary_balancer(int total_replicas);
-    void load_balancer_decision(const std::vector<dsn::rpc_address>& node_list,
-                                const std::unordered_map<dsn::rpc_address, int>& node_id,
-                                std::vector< std::vector<int> >& original_network,
-                                const std::vector< std::vector<int> >& residual_network
-                                );
-    void walk_through_primary(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>);
-    void walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>);
+    void greedy_copy_primary();
+    void greedy_move_primary(const std::vector<dsn::rpc_address>& node_list,
+                             const std::vector<int>& prev,
+                             int flows);
+    void greedy_balancer(int total_replicas);
 
-    void reassign_primary(global_partition_id gpid);
-    void add_new_secondary(global_partition_id gpid, dsn::rpc_address target);
-    void reset_balance_pq();
+    void walk_through_primary(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
+    void walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
 
+    void recommend_primary(partition_configuration& pc);
     dsn::rpc_address random_find_machine(dsn::rpc_address excluded);
-    int primaries_now(const dsn::rpc_address& addr) const
-    {
-        auto iter = _state->_nodes.find(addr);
-        if (iter != _state->_nodes.end())
-            return iter->second.primaries.size();
-        return 0;
-    }
-
-    int replicas_now(const dsn::rpc_address& addr) const
-    {
-        auto iter = _state->_nodes.find(addr);
-        if (iter != _state->_nodes.end())
-            return iter->second.partitions.size();
-        return 0;
-    }
-
-    int primaries_expected(const dsn::rpc_address& addr) const
-    {
-        int result = primaries_now(addr);
-        auto iter = _future_primary.find(addr);
-        if ( iter != _future_primary.end() )
-            return result + iter->second;
-        return result;
-    }
 private:
     server_state *_state;
 
-    typedef std::function<bool (const dsn::rpc_address&, const dsn::rpc_address&)> load_comparator;
-    std::set<dsn::rpc_address, load_comparator> _pq_now_primary;
-    std::set<dsn::rpc_address, load_comparator> _pq_expect_primary;
-
-    std::unordered_map<dsn::rpc_address, int> _future_primary;
     std::unordered_map<global_partition_id, dsn::rpc_address> _primary_recommender;
+    std::unordered_map<global_partition_id, migration_proposal> _migration_proposals_map;
 };

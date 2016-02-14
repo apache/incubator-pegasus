@@ -652,6 +652,7 @@ namespace dsn { namespace replication {
         CT_DOWNGRADE_TO_SECONDARY = 5,
         CT_DOWNGRADE_TO_INACTIVE = 6,
         CT_REMOVE = 7,
+        CT_ADD_SECONDARY_FOR_LB = 8,
     };
 
     DEFINE_POD_SERIALIZATION(config_type);

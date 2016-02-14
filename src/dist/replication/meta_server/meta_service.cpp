@@ -398,10 +398,10 @@ void meta_service::on_update_configuration(dsn_message_t req)
     }
   
     global_partition_id gpid = request->config.gpid;
-    _state->update_configuration(request, req, [this, gpid](){
+    _state->update_configuration(request, req, [this, gpid, request](){
         if (_started)
         {
-            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
+            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid, request));
         }
     });
 }
@@ -409,11 +409,11 @@ void meta_service::on_update_configuration(dsn_message_t req)
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
     global_partition_id gpid = update->config.gpid;
-    _state->update_configuration(update, nullptr, [this, gpid](){
+    _state->update_configuration(update, nullptr, [this, gpid, update](){
         if (_started)
         {
-            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
-        }  
+            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid, update));
+        }
     });
 }
 
@@ -432,7 +432,7 @@ void meta_service::on_load_balance_timer()
     }
 }
 
-void meta_service::on_config_changed(global_partition_id gpid)
+void meta_service::on_config_changed(global_partition_id gpid, std::shared_ptr<configuration_update_request> request)
 {
     if (_failure_detector->is_primary())
     {
