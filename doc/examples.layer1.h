@@ -332,32 +332,32 @@ rDSN provides a fault injector together with the simulator to systematically tes
 ```C++
 void on_test_timer()
 {
-	int32_t resp2, resp1;
-	::dsn::error_code err1, err2;
-	
-	// test for service 'counter'
-	{
-		count_op req = {"counter1", 1};
-		//sync:
-		err1 = _counter_client->add(req, resp1);
-		std::cout << "call RPC_COUNTER_COUNTER_ADD end, return " << resp1 << ", err = " << err1.to_string() << std::endl;
-		//async: 
-		//_counter_client->begin_add(req);
-	   
-	}
-	{
-		std::string req = "counter1";
-		//sync:
-		err2 = _counter_client->read(req, resp2);
-		std::cout << "call RPC_COUNTER_COUNTER_READ end, return " << resp2 << ", err = " << err2.to_string() << std::endl;
-		//async: 
-		//_counter_client->begin_read(req);
-	   
-	}
-	if (err1 == 0 && err2 == 0)
-	{
-		assert (resp2 == resp1);
-	}
+    int32_t resp2, resp1;
+    ::dsn::error_code err1, err2;
+    
+    // test for service 'counter'
+    {
+        count_op req = {"counter1", 1};
+        //sync:
+        err1 = _counter_client->add(req, resp1);
+        std::cout << "call RPC_COUNTER_COUNTER_ADD end, return " << resp1 << ", err = " << err1.to_string() << std::endl;
+        //async: 
+        //_counter_client->begin_add(req);
+       
+    }
+    {
+        std::string req = "counter1";
+        //sync:
+        err2 = _counter_client->read(req, resp2);
+        std::cout << "call RPC_COUNTER_COUNTER_READ end, return " << resp2 << ", err = " << err2.to_string() << std::endl;
+        //async: 
+        //_counter_client->begin_read(req);
+       
+    }
+    if (err1 == 0 && err2 == 0)
+    {
+        assert (resp2 == resp1);
+    }
 }
 ```
 
