@@ -1,5 +1,5 @@
 /*!
- @defgroup tools An Enhanced Engineering Process
+ @defgroup tools An Integrated Engineering Process
 
  Seamlessly integrated tools and services in development and operation process
 

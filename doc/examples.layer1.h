@@ -154,8 +154,8 @@ You may already feel strange that we don't start a client and a server separatel
 int main(int argc, char** argv)
 {
   // register all possible service apps
-  dsn::service::system::register_service<::dsn::example::counter_server_app>("counter_server");
-  dsn::service::system::register_service<::dsn::example::counter_client_app>("counter_client");
+  dsn::service::system::register_service< ::dsn::example::counter_server_app>("counter_server");
+  dsn::service::system::register_service< ::dsn::example::counter_client_app>("counter_client");
   
   // register all possible tools and toollets
   dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -443,8 +443,8 @@ You probably already notice that there is a configuration above like "[core] log
  11 int main(int argc, char** argv)
  12 {
  13     // register all possible service apps
- 14     dsn::service::system::register_service<::dsn::example::counter_server_app>("counter_server");
- 15     dsn::service::system::register_service<::dsn::example::counter_client_app>("counter_client");
+ 14     dsn::service::system::register_service< ::dsn::example::counter_server_app>("counter_server");
+ 15     dsn::service::system::register_service< ::dsn::example::counter_client_app>("counter_client");
  16
  17     // register all possible tools and toollets
  18     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");

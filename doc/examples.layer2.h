@@ -60,7 +60,7 @@ We register the new service implementation to rDSN in main (done by code generat
 
 ```C++
 // register replication application provider
-dsn::replication::register_replica_provider<::dsn::example::counter_service_impl>("counter");
+dsn::replication::register_replica_provider< ::dsn::example::counter_service_impl>("counter");
 ```
 
 Note on windows, we still need to specify where are the boost header files and libraries, etc. 
