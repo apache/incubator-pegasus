@@ -63,9 +63,6 @@ namespace dsn
         rpc_address address() const { return _group_address; }
 
     private:
-        rpc_address random_member_internal() const { return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
-
-    private:
         typedef std::vector<rpc_address> members_t;        
         typedef ::dsn::utils::auto_read_lock alr_t;
         typedef ::dsn::utils::auto_write_lock alw_t;
@@ -134,10 +131,11 @@ namespace dsn
     inline rpc_address rpc_group_address::possible_leader()
     {
         alr_t l(_lock);
+        if (_members.empty())
+            return _invalid;
         if (_leader_index == -1)
-            return random_member_internal();
-        else
-            return _members[_leader_index];
+            _leader_index = dsn_random32(0, (uint32_t)_members.size() - 1);
+        return _members[_leader_index];
     }
 
     inline bool rpc_group_address::remove(rpc_address addr)
@@ -164,13 +162,15 @@ namespace dsn
     inline rpc_address rpc_group_address::next(rpc_address current) const
     {
         alr_t l(_lock);
+        if (_members.empty())
+            return _invalid;
         if (current.is_invalid())
-            return random_member_internal();
+            return _members[dsn_random32(0, (uint32_t)_members.size() - 1)];
         else
         {
             auto it = std::find(_members.begin(), _members.end(), current);
             if (it == _members.end())
-                return random_member_internal();
+                return _members[dsn_random32(0, (uint32_t)_members.size() - 1)];
             else
             {
                 it++;
