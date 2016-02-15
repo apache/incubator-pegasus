@@ -39,7 +39,7 @@
 
 /*!
 @defgroup profiler Profiler
-@ingroup tools
+@ingroup tools-perf tools-operate
 
 Profiler toollet
 

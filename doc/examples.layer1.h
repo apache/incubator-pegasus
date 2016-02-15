@@ -1,6 +1,6 @@
 /*!
  @defgroup example-layer1 Example
- @ingroup layer1-dev
+ @ingroup dev-layer1
  
   Quickly build a counter service with built-in tools
   

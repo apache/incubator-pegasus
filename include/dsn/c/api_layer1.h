@@ -43,9 +43,9 @@ extern "C" {
 # endif
 
 /*!
- @defgroup layer1-dev-c Core API
+ @defgroup dev-layer1-c Core API
 
- @ingroup layer1-dev
+ @ingroup dev-layer1
     
   Core API in rDSN for building distributed systems.
     

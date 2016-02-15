@@ -1,6 +1,6 @@
 /*!
  @defgroup example-layer2 Example
- @ingroup layer2-dev
+ @ingroup dev-layer2
  
 Build a scalable and reliable counter service with built-in replication support
 

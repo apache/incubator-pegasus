@@ -783,7 +783,13 @@ WARN_LOGFILE           =
 
 INPUT                  = intro.h \
                          install.h \
-                         dev.layer1.h \
+                         dev.h \                         
+                         examples.layer1.h \
+                         examples.layer2.h \
+                         tools.h \     
+                         examples.complexity.h \
+                         extensions.h \
+                         examples.network.h \
                          ../include/dsn/c/app_model.h \
                          ../include/dsn/service_api_c.h \
                          ../include/dsn/c/api_task.h \
@@ -799,12 +805,7 @@ INPUT                  = intro.h \
                          ../include/dsn/cpp/serverlet.h \
                          ../include/dsn/cpp/service_app.h \
                          ../include/dsn/cpp/task_helper.h \
-                         ../include/dsn/cpp/zlocks.h \
-                         examples.layer1.h \
-                         dev.layer2.h \
-                         examples.layer2.h \
-                         dev.layer3.h \
-                         tools.h \                         
+                         ../include/dsn/cpp/zlocks.h \                         
                          ../include/dsn/toollet/explorer.h \
                          ../include/dsn/toollet/fault_injector.h \
                          ../include/dsn/toollet/profiler.h \
@@ -812,10 +813,8 @@ INPUT                  = intro.h \
                          ../include/dsn/tool/fastrun.h \
                          ../include/dsn/tool/nativerun.h \
                          ../include/dsn/tool/simulator.h \
-                         ../include/dsn/tool_api.h \
-                         examples.complexity.h \
-                         extensions.h \
-                         examples.network.h
+                         ../include/dsn/tool_api.h 
+                         
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

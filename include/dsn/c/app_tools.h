@@ -42,7 +42,7 @@ extern "C" {
 # endif
 /*!
 @defgroup app-checker Global Checker
-@ingroup tools
+@ingroup tools-test
 
  Global checker (assertion) on state across nodes
 
