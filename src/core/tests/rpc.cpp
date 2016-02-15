@@ -99,7 +99,7 @@ TEST(core, group_address_talk_to_others)
     ::dsn::rpc_address addr = build_group();
 
     auto typed_callback =
-            [addr](error_code err_code, const std::string& result)->void {
+            [addr](error_code err_code, const std::string& result) {
         EXPECT_EQ(ERR_OK, err_code);
         ::dsn::rpc_address addr_got;
         ddebug("talk to others callback, result: %s", result.c_str());
@@ -124,7 +124,7 @@ TEST(core, group_address_change_leader)
     ::dsn::rpc_address addr = build_group();
 
     auto typed_callback =
-            [addr](error_code err_code, const std::string& result)->void {
+            [addr](error_code err_code, const std::string& result) {
         EXPECT_EQ(ERR_OK, err_code);
         ::dsn::rpc_address addr_got;
         ddebug("talk to others callback, result: %s", result.c_str());
@@ -228,7 +228,7 @@ TEST(core, group_address_no_response_2)
         }
     };
 
-    send_message(addr, std::string("expect_no_reply"), 10, action_on_succeed, action_on_failure);
+    send_message(addr, std::string("expect_no_reply"), 1, action_on_succeed, action_on_failure);
     destroy_group(addr);
 }
 
@@ -247,6 +247,6 @@ TEST(core, send_to_invalid_address)
         EXPECT_TRUE(err != ERR_OK);
     };
 
-    send_message(group, std::string("echo hehehe"), 10, action_on_succeed, action_on_failure);
+    send_message(group, std::string("echo hehehe"), 1, action_on_succeed, action_on_failure);
     destroy_group(group);
 }
