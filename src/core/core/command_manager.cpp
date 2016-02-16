@@ -365,7 +365,7 @@ namespace dsn {
         );
 
         register_command(
-        { "repeat", "r", "R", "Repeat" },
+            { "repeat", "r", "R", "Repeat" },
             "repeat|Repeat|r|R interval_seconds max_count command - execute command periodically",
             "repeat|Repeat|r|R interval_seconds max_count command - execute command every interval seconds, to the max count as max_count (0 for infinite)",
             [this](const std::vector<std::string>& args)
@@ -405,7 +405,6 @@ namespace dsn {
             {
                 std::string output;
                 auto r = this->run_command(cmd, largs, output);
-                std::cout << output << std::endl;
 
                 if (!r)
                 {
@@ -417,6 +416,30 @@ namespace dsn {
 
             return "repeat command completed";
         }
+        );
+
+        register_command(
+            { "command-list" },
+            "command-list - query command list",
+            "",
+            [this](const std::vector<std::string>& args)
+            {
+                std::set<std::string> cmds;
+                {
+                    utils::auto_read_lock l(_lock);
+                    for (auto& h : _handlers)
+                    {
+                        cmds.insert(h.second->help_short);
+                    }
+                }
+
+                std::stringstream ss;
+                for (auto& c : cmds)
+                {
+                    ss << "    " << c << std::endl;
+                }
+                return ss.str();
+            }
         );
     }
 }
