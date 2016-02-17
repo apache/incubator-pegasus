@@ -64,8 +64,13 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
 }
 
 replica_stub::~replica_stub(void)
-{    
-    close();
+{
+    // this replica may not be opened
+    // or is already closed by calling tool_app::stop_all_apps()
+    if(_cli_replica_stub_json_state_handle != nullptr)
+    {
+        close();
+    }
 }
 
 void replica_stub::install_perf_counters()
@@ -1216,14 +1221,18 @@ void replica_stub::close()
         while (_closing_replicas.empty() == false)
         {
             task_ptr task = _closing_replicas.begin()->second.first;
+            global_partition_id tmp_gpid = _closing_replicas.begin()->first;
             _replicas_lock.unlock();
 
             task->wait();
 
-
             _counter_replicas_closing_count.decrement();
             _replicas_lock.lock();
-            _closing_replicas.erase(_closing_replicas.begin());
+            // task will automatically remove this replica from _closing_replicas
+            if(false == _closing_replicas.empty())
+            {
+                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%u.%u' should be removed from _closing_replicas, gpid", tmp_gpid.app_id, tmp_gpid.pidx);
+            }
         }
 
         while (_opening_replicas.empty() == false)
