@@ -925,7 +925,8 @@ void replica_stub::on_gc()
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
         {
-            dassert(false, "Fail to get subdirectories in %s.", dir.c_str());
+            dwarn("on_gc(): failed to get subdirectories in %s", dir.c_str());
+            return;
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
@@ -940,14 +941,15 @@ void replica_stub::on_gc()
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt))
             {
-                dassert(false, "Fail to get last write time of %s.", fpath.c_str());
+                dwarn("on_gc(): failed to get last write time of %s", fpath.c_str());
+                continue;
             }
 
             if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds)
             {
                 if (!dsn::utils::filesystem::remove_path(fpath))
                 {
-                    dassert(false, "Fail to delete directory %s.", fpath.c_str());
+                    dwarn("on_gc(): failed to delete directory %s", fpath.c_str());
                 }
             }
         }

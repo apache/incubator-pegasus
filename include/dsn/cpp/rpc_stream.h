@@ -41,6 +41,10 @@
 
 namespace dsn
 {
+    /*!
+    @addtogroup rpc-msg
+    @{
+    */
     class rpc_read_stream;
     class rpc_write_stream;
     typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
@@ -142,4 +146,5 @@ namespace dsn
         bool          _last_write_next_committed;
         int           _last_write_next_total_size;
     };
+    /*@}*/
 }

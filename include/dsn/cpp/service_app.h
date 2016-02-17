@@ -43,6 +43,11 @@
 
 namespace dsn 
 {
+    /*!
+    @addtogroup app-model
+    @{
+    */
+
     class service_app
     {
     public:
@@ -99,10 +104,21 @@ namespace dsn
         }
     };
 
+    /*! C++ wrapper of the \ref dsn_register_app function for layer 1 */
     template<typename TServiceApp>
     void register_app(const char* type_name)
     {
-        dsn_register_app_role(type_name, service_app::app_create<TServiceApp>, service_app::app_start, service_app::app_destroy);
+        dsn_app app;
+        memset(&app, 0, sizeof(app));
+        app.mask = DSN_APP_MASK_DEFAULT;
+        strncpy(app.type_name, type_name, sizeof(app.type_name));
+        app.layer1.create = service_app::app_create<TServiceApp>;
+        app.layer1.start = service_app::app_start;
+        app.layer1.destroy = service_app::app_destroy;
+
+        dsn_register_app(&app);
     }
+
+    /*@}*/
 } // end namespace dsn::service
 

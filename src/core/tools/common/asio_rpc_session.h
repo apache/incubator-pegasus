@@ -66,14 +66,11 @@ namespace dsn {
         private:
             virtual void do_read(int sz) override;
             void write(uint64_t signature);
-            void on_failure();
+            void on_failure(bool is_write = false);
             void set_options();  
             void on_message_read(message_ex* msg)
             {
-                if (is_client())
-                    on_recv_reply(msg->header->id, msg, 0);
-                else
-                    on_recv_request(msg, 0);
+                on_recv_message(msg, 0);
             }
 
         private:

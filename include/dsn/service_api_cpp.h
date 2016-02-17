@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
+//# include <dsn/internal/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/config_helper.h>
 # include <dsn/cpp/serialization.h>

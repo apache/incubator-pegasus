@@ -36,7 +36,8 @@
 # pragma once
 
 # include <dsn/internal/singleton.h>
-# include <list>
+# include <vector>
+# include <cassert>
 
 namespace dsn
 {
@@ -53,7 +54,7 @@ namespace dsn
             _threshold = 0x0fffffff;
         }
 
-        void initialize(const std::list<int>& delays, int threshold)
+        void initialize(const std::vector<int>& delays, int threshold)
         {
             assert((int)delays.size() == DELAY_COUNT);
             
@@ -108,7 +109,7 @@ namespace dsn
             memcpy((void*)_delay, (const void*)s_default_delay, sizeof(_delay));
         }
 
-        void initialize(const std::list<int>& delays)
+        void initialize(const std::vector<int>& delays)
         {
             assert((int)delays.size() == DELAY_COUNT);
 

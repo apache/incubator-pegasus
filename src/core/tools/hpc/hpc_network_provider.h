@@ -131,13 +131,10 @@ namespace dsn {
         private:            
             void do_write(uint64_t signature);
             void close();
-            void on_failure();
+            void on_failure(bool is_write = false);
             void on_read_completed(message_ex* msg)
             {
-                if (is_client())
-                    on_recv_reply(msg->header->id, msg, 0);
-                else
-                    on_recv_request(msg, 0);
+                on_recv_message(msg, 0);
             }
             
         protected:

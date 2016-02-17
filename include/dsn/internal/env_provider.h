@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/cpp/utils.h>
 #include <random>
 

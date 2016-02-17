@@ -82,13 +82,13 @@ foreach ($_PROG->services as $svc)
 {?>
         {
 <?php if ($f->is_one_way()) { ?>
-            _<?=$svc->name?>_client-><?=$f->name?>(req);
+            _<?=$svc->name?>_client-><?=$f->name?>({});
 <?php } else { ?>
             //sync:
-            auto result = _<?=$svc->name?>_client-><?=$f->name?>({}});
+            auto result = _<?=$svc->name?>_client-><?=$f->name?>_sync({});
             std::cout << "call <?=$f->get_rpc_code()?> end, return " << result.first.to_string() << std::endl;
             //async: 
-            //_<?=$svc->name?>_client->begin_<?=$f->name?>({});
+            //_<?=$svc->name?>_client-><?=$f->name?>({});
 <?php } ?>           
         }
 <?php }    

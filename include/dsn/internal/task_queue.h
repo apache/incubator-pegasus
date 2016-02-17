@@ -66,9 +66,9 @@ public:
     // returned batch size is stored in parameter batch_size
     virtual task*    dequeue(/*inout*/int& batch_size) = 0;
     
-    int               count() const { return (int)_queue_length->get_integer_value(); }
-    void              decrease_count(int count = 1) { _queue_length->add((uint64_t)(-count)); }
-    void              increase_count(int count = 1) { _queue_length->add(count); }
+    int               count() const { return _queue_length.load(std::memory_order_relaxed); }
+    int               decrease_count(int count = 1) { _queue_length_counter->add((uint64_t)(-count));  return _queue_length.fetch_sub(1, std::memory_order_relaxed) - 1;}
+    int               increase_count(int count = 1) { _queue_length_counter->add(count);  return _queue_length.fetch_add(1, std::memory_order_relaxed) + 1;}
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }
@@ -76,7 +76,6 @@ public:
     task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
     int               index() const { return _index; }
     volatile int*     get_virtual_length_ptr() { return &_virtual_queue_length; }
-    void              on_task_dequeued(task* task);
 
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
@@ -93,20 +92,10 @@ private:
     int                    _index;
     admission_controller*  _controller;
     int                    _worker_count;
-    mutable perf_counter_ptr  _queue_length;
+    std::atomic<int>       _queue_length;
+    mutable perf_counter_ptr  _queue_length_counter;
     threadpool_spec*       _spec;
     volatile int           _virtual_queue_length;
-    std::atomic<uint64_t>  _appro_wait_time_ns[TASK_PRIORITY_COUNT];
 };
-
-inline void task_queue::on_task_dequeued(task* task)
-{
-    auto& sp = task->spec();
-    uint64_t n2 = _appro_wait_time_ns[sp.priority].load(std::memory_order_relaxed);
-    auto n0 = (double)(dsn_now_ns() - task->enqueue_ts_ns()) * sp.rpc_request_queue_wait_time_approximation_weight
-        + (double)n2 * (1.0 - sp.rpc_request_queue_wait_time_approximation_weight);
-
-    _appro_wait_time_ns[sp.priority].store((uint64_t)n0, std::memory_order_relaxed);
-}
 
 } // end namespace

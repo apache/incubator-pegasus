@@ -37,6 +37,59 @@
 
 #include <dsn/tool_api.h>
 
+ /*!
+ @defgroup fault-injector Fault Injector
+ @ingroup tools-test
+
+ Fault Injector toollet
+
+ This toollet injects faults to mimic various failures in production environments,
+ as configed below.
+
+ <PRE>
+
+ [core]
+
+ toollets = fault_injector
+
+ [task..default]
+ ; whether enable fault injection
+ fault_injection_enabled = true
+
+ ; maximum disk operation delay (ms)
+ disk_io_delay_ms_max = 12
+
+ ; miminum disk operation delay (ms)
+ disk_io_delay_ms_min = 1
+
+ ; failure ratio for disk read operations
+ disk_read_fail_ratio = 0.000001
+
+ ; failure ratio for disk write operations
+ disk_write_fail_ratio = 0.000001
+
+ ; extra execution time delay (us) for this task
+ execution_extra_delay_us_max = 0
+ 
+ ; maximum message delay (ms) for rpc messages
+ rpc_message_delay_ms_max = 1000
+
+ ; miminum message delay (ms) for rpc messages
+ rpc_message_delay_ms_min = 0
+
+
+ ; drop ratio for rpc request messages
+ rpc_request_drop_ratio = 0.000100
+
+
+ ; drop ratio for rpc response messages
+ rpc_response_drop_ratio = 0.001000
+
+ [task.RPC_PING]
+ fault_injection_enabled = false
+
+ </PRE>
+ */
 namespace dsn {
     namespace tools {
 

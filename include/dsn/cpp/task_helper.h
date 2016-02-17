@@ -36,7 +36,6 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/rpc_stream.h>
@@ -45,6 +44,7 @@
 # include <dsn/cpp/autoref_ptr.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/link.h>
+# include <dsn/internal/callocator.h>
 # include <set>
 # include <map>
 # include <thread>
@@ -61,7 +61,8 @@ namespace dsn
     // which manages the task handle
     // and the interaction with task context manager, clientlet
     //        
-    class safe_task_handle : public ::dsn::ref_counter
+    class safe_task_handle : 
+        public ::dsn::ref_counter
     {
     public:
         safe_task_handle()
@@ -92,7 +93,7 @@ namespace dsn
             return dsn_task_cancel2(_task, wait_until_finished, finished);
         }
 
-        bool wait() const
+        void wait() const
         {
             return dsn_task_wait(_task);
         }
@@ -140,13 +141,15 @@ namespace dsn
     };
 
     template<typename THandler>
-    class safe_task : public safe_task_handle
+    class transient_safe_task : 
+        public safe_task_handle,
+        public transient_object
     {
     public:
-        explicit safe_task(THandler&& h) : _handler(std::move(h))
+        explicit transient_safe_task(THandler&& h) : _handler(std::move(h))
         {
         }
-        explicit safe_task(const THandler& h) : _handler(h)
+        explicit transient_safe_task(const THandler& h) : _handler(h)
         {
         }
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
@@ -156,30 +159,23 @@ namespace dsn
 
         static void on_cancel(void* task)
         {
-            auto t = static_cast<safe_task*>(task);
+            auto t = static_cast<transient_safe_task*>(task);
             t->_handler.reset();
             t->release_ref(); // added upon callback exec registration
         }
 
         static void exec(void* task)
         {
-            auto t = static_cast<safe_task*>(task);
+            auto t = static_cast<transient_safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()();
             t->_handler.reset();
             t->release_ref(); // added upon callback exec registration
         }
-
-        static void exec_timer(void* task)
-        {
-            auto t = static_cast<safe_task*>(task);
-            dbg_dassert(t->_handler.is_some(), "_handler is missing");
-            t->_handler.unwrap()();
-        }
         
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
-            auto t = static_cast<safe_task*>(task);
+            auto t = static_cast<transient_safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()(err, req, resp);
             t->_handler.reset();
@@ -188,13 +184,47 @@ namespace dsn
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
-            auto t = static_cast<safe_task*>(task);
+            auto t = static_cast<transient_safe_task*>(task);
             dbg_dassert(t->_handler.is_some(), "_handler is missing");
             t->_handler.unwrap()(err, sz);
             t->_handler.reset();
             t->release_ref(); // added upon callback exec_aio registration
         }
             
+    private:
+        dsn::optional<THandler>    _handler;
+    };
+
+    template<typename THandler>
+    class timer_safe_task :
+        public safe_task_handle
+    {
+    public:
+        explicit timer_safe_task(THandler&& h) : _handler(std::move(h))
+        {
+        }
+        explicit timer_safe_task(const THandler& h) : _handler(h)
+        {
+        }
+        virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
+        {
+            return safe_task_handle::cancel(wait_until_finished, finished);
+        }
+
+        static void on_cancel(void* task)
+        {
+            auto t = static_cast<timer_safe_task*>(task);
+            t->_handler.reset();
+            t->release_ref(); // added upon callback exec registration
+        }
+        
+        static void exec_timer(void* task)
+        {
+            auto t = static_cast<timer_safe_task*>(task);
+            dbg_dassert(t->_handler.is_some(), "_handler is missing");
+            t->_handler.unwrap()();
+        }
+        
     private:
         dsn::optional<THandler>    _handler;
     };

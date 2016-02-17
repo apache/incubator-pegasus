@@ -39,11 +39,11 @@
 # include <dsn/cpp/function_traits.h>
 
 namespace dsn
-{
-    //
-    // clientlet is the base class for RPC service and client
-    // there can be multiple clientlet in the system
-    //
+{ 
+    /*
+    clientlet is the base class for RPC service and client
+    there can be multiple clientlet in the system
+    */
     class clientlet
     {
     public:
@@ -121,7 +121,10 @@ namespace dsn
     };
 
 
-    // common APIs
+    /*!
+    @addtogroup tasking
+    @{
+    */
     namespace tasking
     {
         template<typename TCallback>
@@ -132,12 +135,12 @@ namespace dsn
             int hash = 0)
         {
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
-            auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
+            auto tsk = new transient_safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec callback
             auto native_tsk = dsn_task_create_ex(
                 evt,
-                safe_task<callback_storage_t>::exec,
-                safe_task<callback_storage_t>::on_cancel,
+                transient_safe_task<callback_storage_t>::exec,
+                transient_safe_task<callback_storage_t>::on_cancel,
                 tsk,
                 hash,
                 svc ? svc->tracker() : nullptr);
@@ -154,12 +157,12 @@ namespace dsn
             int hash = 0)
         {
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
-            auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
+            auto tsk = new timer_safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec callback
             auto native_tsk = dsn_task_create_timer_ex(
                 evt,
-                safe_task<callback_storage_t>::exec_timer,
-                safe_task<callback_storage_t>::on_cancel,
+                timer_safe_task<callback_storage_t>::exec_timer,
+                timer_safe_task<callback_storage_t>::on_cancel,
                 tsk,
                 hash,
                 static_cast<int>(timer_interval.count()),
@@ -214,7 +217,12 @@ namespace dsn
             return tsk;
         }
     }
+    /*@}*/
 
+    /*!
+    @addtogroup rpc-client
+    @{
+    */
     namespace rpc
     {
         task_ptr create_rpc_response_task(
@@ -232,13 +240,13 @@ namespace dsn
             int reply_hash = 0)
         {
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
-            auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
+            auto tsk = new transient_safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec_rpc_response
 
             auto t = dsn_rpc_create_response_task_ex(
                 request,
-                safe_task<callback_storage_t >::exec_rpc_response,
-                safe_task<callback_storage_t >::on_cancel,
+                transient_safe_task<callback_storage_t >::exec_rpc_response,
+                transient_safe_task<callback_storage_t >::on_cancel,
                 tsk,
                 reply_hash,
                 svc ? svc->tracker() : nullptr
@@ -258,7 +266,7 @@ namespace dsn
             return create_rpc_response_task(
                 request,
                 svc,
-                [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp)
+                [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp) mutable
                 {
                     typename is_typed_rpc_callback<TCallback>::response_t response;
                     if (err == ERR_OK)
@@ -300,6 +308,35 @@ namespace dsn
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
         }
 
+        struct rpc_message_helper
+        {
+        public:
+            explicit rpc_message_helper(dsn_message_t request) : request(request) {}
+            template<typename TCallback>
+            task_ptr call(
+                ::dsn::rpc_address server,
+                clientlet* owner,
+                TCallback&& callback,
+                int reply_hash = 0)
+            {
+                return ::dsn::rpc::call(server, request, owner, std::forward<TCallback>(callback), reply_hash);
+            }
+        private:
+            dsn_message_t request;
+        };
+
+        template<typename TRequest>
+        rpc_message_helper create_message(
+            dsn_task_code_t code,
+            TRequest&& req,
+            int request_hash = 0,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0))
+        {
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
+            ::marshall(msg, std::forward<TRequest>(req));
+            return rpc_message_helper(msg);
+        }
+
 
         //
         // for TRequest/TResponse, we assume that the following routines are defined:
@@ -327,10 +364,10 @@ namespace dsn
 
 
         template<typename TResponse>
-        std::pair<::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
+        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
         {
             task->wait();
-            std::pair<::dsn::error_code, TResponse> result;
+            std::pair< ::dsn::error_code, TResponse> result;
             result.first = task->error();
             if (task->error() == ::dsn::ERR_OK)
             {
@@ -340,7 +377,7 @@ namespace dsn
         }
 
         template<typename TResponse, typename TRequest>
-        std::pair<::dsn::error_code, TResponse> call_wait(
+        std::pair< ::dsn::error_code, TResponse> call_wait(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
@@ -351,7 +388,12 @@ namespace dsn
             return wait_and_unwrap<TResponse>(call(server, code, req, nullptr, empty_callback, hash, timeout));
         }
     }
+    /*@}*/
 
+    /*!
+    @addtogroup file
+    @{
+    */
     namespace file
     {
         task_ptr create_aio_task(
@@ -369,12 +411,12 @@ namespace dsn
         {
             static_assert(is_aio_callback<TCallback>::value, "invalid aio callback");
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
-            auto tsk = new safe_task<callback_storage_t>(std::forward<TCallback>(callback));
+            auto tsk = new transient_safe_task<callback_storage_t>(std::forward<TCallback>(callback));
             tsk->add_ref(); // released in exec_aio
 
             dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
-                safe_task<callback_storage_t>::exec_aio,
-                safe_task<callback_storage_t>::on_cancel,
+                transient_safe_task<callback_storage_t>::exec_aio,
+                transient_safe_task<callback_storage_t>::on_cancel,
                 tsk, hash, svc ? svc->tracker() : nullptr
                 );
 
@@ -478,7 +520,7 @@ namespace dsn
                 );
         }
     }
-
+    /*@}*/
     // ------------- inline implementation ----------------
 
 } // end namespace

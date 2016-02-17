@@ -364,7 +364,7 @@ struct event_type_helper
         add(event_type::aio_call, "on_aio_call", true);
         add(event_type::aio_enqueue, "on_aio_enqueue", false);
         add(event_type::rpc_call, "on_rpc_call", true);
-        add(event_type::rpc_request_enqueue, "on_rpc_request_enqueue", false);
+        add(event_type::rpc_request_enqueue, "on_rpc_request_enqueue", true);
         add(event_type::rpc_reply, "on_rpc_reply", true);
         add(event_type::rpc_response_enqueue, "on_rpc_response_enqueue", true);
     }
@@ -583,7 +583,7 @@ void event_on_rpc::init(message_ex* msg, task* tsk)
         sprintf(buf, "%016lx", msg->header->rpc_id);
         _rpc_id = buf;
         _rpc_name = msg->header->rpc_name;
-        _from = address_to_node(msg->from_address);
+        _from = address_to_node(msg->header->from_address);
         _to = address_to_node(msg->to_address);
     }
 }

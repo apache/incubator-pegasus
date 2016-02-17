@@ -54,9 +54,11 @@ namespace dsn
         const std::vector<rpc_address>& members() const { return _members; }
         rpc_address random_member() const { alr_t l(_lock);  return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
         rpc_address next(rpc_address current) const;
-        rpc_address leader() const { alr_t l(_lock);  return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
+        rpc_address leader() const { alr_t l(_lock);  return _leader_index >= 0 ? _members[_leader_index] : _invalid; }
         void leader_forward();
         rpc_address possible_leader();
+        bool is_update_leader_on_rpc_forward() const { return _update_leader_on_rpc_forward; }
+        void set_update_leader_on_rpc_forward(bool value) { _update_leader_on_rpc_forward = value; }
         const char* name() const { return _name.c_str(); }
         rpc_address address() const { return _group_address; }
 
@@ -71,6 +73,7 @@ namespace dsn
         mutable ::dsn::utils::rw_lock_nr _lock;
         members_t   _members;
         int         _leader_index;
+        bool        _update_leader_on_rpc_forward;
         std::string _name;
         rpc_address _group_address;
         static const rpc_address _invalid;
@@ -82,6 +85,7 @@ namespace dsn
     {
         _name = name;
         _leader_index = -1;
+        _update_leader_on_rpc_forward = true;
         _group_address.assign_group(handle());
     }
 

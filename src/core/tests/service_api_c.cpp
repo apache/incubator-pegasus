@@ -250,7 +250,7 @@ TEST(core, dsn_file)
         ASSERT_NE(nullptr, tin);
         ASSERT_EQ(1, dsn_task_get_ref(tin));
         dsn_file_read(fin, buffer, 1024, offset, tin);
-        ASSERT_TRUE(dsn_task_wait(tin));
+        dsn_task_wait(tin);
         ASSERT_EQ(rin.err, dsn_task_error(tin));
         if (rin.err != ERR_OK)
         {
@@ -278,7 +278,7 @@ TEST(core, dsn_file)
         dsn_task_add_ref(tout);
         ASSERT_NE(nullptr, tout);
         dsn_file_write(fout, buffer, rin.sz, offset, tout);
-        ASSERT_TRUE(dsn_task_wait(tout));
+        dsn_task_wait(tout);
         ASSERT_EQ(ERR_OK, rout.err);
         ASSERT_EQ(ERR_OK, dsn_task_error(tout));
         ASSERT_EQ(rin.sz, rout.sz);

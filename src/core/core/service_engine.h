@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/global_config.h>
 # include <dsn/cpp/auto_codes.h>
@@ -56,6 +56,22 @@ class task_worker_pool;
 class timer_service;
 class aio_provider;
 
+
+//
+//
+//
+class app_node
+{
+public:
+    
+
+private:
+    uint64_t _vnid;
+};
+
+//
+//
+//
 class service_node
 {
 public:
@@ -104,8 +120,8 @@ public:
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
 
-    bool  rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid);
-    rpc_handler_ptr rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid);
+    bool  rpc_register_handler(rpc_handler_info* handler, uint64_t vnid);
+    rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid);
 
 private:
     void*            _app_context_ptr; // app start returns this value and used by app stop

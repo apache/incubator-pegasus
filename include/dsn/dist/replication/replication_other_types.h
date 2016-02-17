@@ -111,7 +111,6 @@ namespace dsn {
         ENUM_END(config_type)
 
         ENUM_BEGIN(app_status, AS_INVALID)
-            ENUM_REG(AS_ALL)
             ENUM_REG(AS_AVAILABLE)
             ENUM_REG(AS_CREATING)
             ENUM_REG(AS_CREATE_FAILED)
@@ -121,7 +120,6 @@ namespace dsn {
         ENUM_END(app_status)
 
         ENUM_BEGIN(node_status, NS_INVALID)
-            ENUM_REG(NS_ALL)
             ENUM_REG(NS_ALIVE)
             ENUM_REG(NS_UNALIVE)
         ENUM_END(node_status)

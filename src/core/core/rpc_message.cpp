@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
 # include "task_engine.h"
@@ -106,7 +106,7 @@ DSN_API void dsn_msg_release_ref(dsn_message_t msg)
 
 DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex*)msg)->from_address.c_addr();
+    return ((::dsn::message_ex*)msg)->header->from_address.c_addr();
 }
 
 DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
@@ -162,7 +162,16 @@ DSN_API void dsn_msg_get_options(
 
 namespace dsn {
 
+static uint64_t get_local_binary_hash()
+{
+    const char* last_compile_time = __DATE__ __TIME__;
+    uint64_t crc = dsn_crc64_compute(last_compile_time, strlen(last_compile_time), 0);
+    crc = ((crc << 16) >> 16) ^ (crc >> 16);
+    return crc;
+}
+
 std::atomic<uint64_t> message_ex::_id(0);
+uint64_t message_ex::s_local_binary_hash = get_local_binary_hash();
 
 message_ex::message_ex()
 {
@@ -326,6 +335,7 @@ message_ex* message_ex::create_receive_message(const blob& data)
     message_ex* msg = new message_ex();
     msg->header = (message_header*)data.data();
     msg->_is_read = true;
+    // the message_header is hidden ahead of the buffer
     auto data2 = data.range((int)sizeof(message_header));
     msg->buffers.push_back(data2);
 
@@ -335,30 +345,56 @@ message_ex* message_ex::create_receive_message(const blob& data)
 
 message_ex* message_ex::copy()
 {
+    dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
+
+    // ATTENTION:
+    // - if this message is a send message, set copied message's write pointer to the end, then you
+    //   can continue to append data to the copied message.
+    // - if this message is a received message, set copied message's read pointer to the beginning,
+    //   then you can read data from the beginning.
+
     message_ex* msg = new message_ex();
-    msg->from_address = from_address;
+    msg->header = header; // header is within the buffer
+    msg->buffers = buffers;
+    // TODO(qinzuoyan): should io_session also be copied ?
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
-    msg->buffers = buffers;
     msg->_is_read = _is_read;
 
     // received message
     if (this->_is_read)
     {
-        // header is within buffer
-        msg->header = header;
+        // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
     }
-
     // send message
     else
     {
-        // header is within buffer
-        msg->header = header;
-
         msg->server_address = server_address;
+        // copy the orignal value, pointing to the end of the buffer
+        msg->_rw_index = _rw_index;
+        msg->_rw_offset = _rw_offset;
     }
 
     return msg;
+}
+
+message_ex* message_ex::copy_and_prepare_send()
+{
+    auto copy = this->copy();
+
+    if (_is_read)
+    {
+        // the message_header is hidden ahead of the buffer, expose it to buffer
+        dassert(buffers.size() == 1, "there must be only one buffer for read msg");
+        dassert((char*)header + sizeof(message_header) == (char*)buffers[0].data(), "header and content must be contigous");
+
+        copy->buffers[0] = copy->buffers[0].range(-(int)sizeof(message_header));
+
+        // switch the flag
+        copy->_is_read = false;
+    }
+
+    return copy;
 }
 
 message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
@@ -385,8 +421,11 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     }
 
     strncpy(hdr.rpc_name, dsn_task_code_to_string(rpc_code), sizeof(hdr.rpc_name));
+    hdr.rpc_name_fast.local_rpc_id = (uint16_t)rpc_code;
+    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
 
     hdr.id = new_id();
+    hdr.context.u.is_request = true;
 
     msg->local_rpc_code = (uint16_t)rpc_code;
     return msg;
@@ -404,10 +443,17 @@ message_ex* message_ex::create_response()
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
     hdr.body_length = 0;
     strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
+    hdr.context.u.is_request = false;
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
-    msg->from_address = to_address;
-    msg->to_address = from_address;
+    hdr.rpc_name_fast.local_rpc_id = msg->local_rpc_code;
+    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
+
+    // ATTENTION: the from_address may not be the primary address of this node
+    // if there are more than one ports listened and the to_address is not equal to
+    // the primary address.
+    msg->header->from_address = to_address;
+    msg->to_address = header->from_address;
     msg->io_session = io_session;
 
     // join point 

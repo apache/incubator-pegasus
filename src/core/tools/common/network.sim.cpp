@@ -77,7 +77,6 @@ namespace dsn { namespace tools {
 
         blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
         message_ex* recv_msg = message_ex::create_receive_message(bb);
-        recv_msg->from_address = msg->from_address;
         recv_msg->to_address = msg->to_address;
         return recv_msg;
     }
@@ -110,8 +109,8 @@ namespace dsn { namespace tools {
                 {
                     node_scoper ns(rnet->node());
 
-                    server_session->on_recv_request(recv_msg,
-                        recv_msg->to_address == recv_msg->from_address ?
+                    server_session->on_recv_message(recv_msg,
+                        recv_msg->to_address == recv_msg->header->from_address ?
                         0 : rnet->net_delay_milliseconds()
                         );
                 }
@@ -141,8 +140,8 @@ namespace dsn { namespace tools {
             {
                 node_scoper ns(_client->net().node());
 
-                _client->on_recv_reply(recv_msg->header->id, recv_msg,
-                    recv_msg->to_address == recv_msg->from_address ?
+                _client->on_recv_message(recv_msg,
+                    recv_msg->to_address == recv_msg->header->from_address ?
                     0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
                     );
             }

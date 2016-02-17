@@ -81,7 +81,7 @@ namespace dsn {
                 return _address;
             }
 
-            virtual void inject_drop_message(message_ex* msg, bool is_client, bool is_send)
+            virtual void inject_drop_message(message_ex* msg, bool is_send) override
             {
                 // nothing to do for UDP
             }

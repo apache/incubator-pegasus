@@ -57,25 +57,28 @@ namespace dsn {
             // RPC_SIMPLE_KV_READ
             void simple_kv_service_impl::on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply)
             {
-                zauto_lock l(_lock);
-                
-                auto it = _store.find(key);
-                if (it == _store.end())
+                std::string r;
                 {
-                    reply("");
+                    zauto_lock l(_lock);
+
+                    auto it = _store.find(key);
+                    if (it != _store.end())
+                    {
+                        r = it->second;
+                    }
                 }
-                else
-                {
-                    dinfo("read %s, decree = %" PRId64 "\n", it->second.c_str(), last_committed_decree());
-                    reply(it->second);
-                }
+             
+                dinfo("read %s, decree = %" PRId64 "\n", r.c_str(), last_committed_decree());
+                reply(r);
             }
 
             // RPC_SIMPLE_KV_WRITE
             void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
             {
-                zauto_lock l(_lock);
-                _store[pr.key] = pr.value;
+                {
+                    zauto_lock l(_lock);
+                    _store[pr.key] = pr.value;
+                }                
 
                 dinfo("write %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
@@ -84,12 +87,14 @@ namespace dsn {
             // RPC_SIMPLE_KV_APPEND
             void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
             {
-                zauto_lock l(_lock);
-                auto it = _store.find(pr.key);
-                if (it != _store.end())
-                    it->second.append(pr.value);
-                else
-                    _store[pr.key] = pr.value;
+                {
+                    zauto_lock l(_lock);
+                    auto it = _store.find(pr.key);
+                    if (it != _store.end())
+                        it->second.append(pr.value);
+                    else
+                        _store[pr.key] = pr.value;
+                }
 
                 dinfo("append %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);

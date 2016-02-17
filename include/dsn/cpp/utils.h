@@ -35,7 +35,6 @@
 
 # pragma once
 
-# include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <functional>
 
@@ -200,6 +199,7 @@ namespace dsn {
 
         const char* buffer_ptr() const { return _holder.get(); }
 
+        // offset can be negative for buffer dereference
         blob range(int offset) const
         {
             dassert(offset <= _length, "offset cannot exceed the current length value");

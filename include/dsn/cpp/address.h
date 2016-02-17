@@ -47,6 +47,10 @@
 
 namespace dsn
 {
+    /*!
+    @addtogroup rpc-addr
+    @{
+    */
     class rpc_group_address;
     typedef ref_ptr<rpc_group_address> address_group_ptr;
     
@@ -240,6 +244,7 @@ namespace dsn
             return true;
         }
     }
+    /*@}*/
 }
 
 namespace std

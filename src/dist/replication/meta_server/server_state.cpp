@@ -1066,13 +1066,14 @@ void server_state::create_app(dsn_message_t msg)
     int32_t index;
     ::unmarshall(msg ,request);
     
-    ddebug("create app request, name(%s), type(%s), partition_count(%d)",
+    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d)",
            request.app_name.c_str(),
            request.options.app_type.c_str(),
-           request.options.partition_count);
+           request.options.partition_count,
+           request.options.replica_count);
 
     auto option_match_check = [](const create_app_options& opt, const app_state& exist_app) {
-        return opt.partition_count==exist_app.partition_count && 
+        return opt.partition_count==exist_app.partition_count &&
                opt.app_type==exist_app.app_type;
     };
 
@@ -1237,7 +1238,7 @@ void server_state::list_apps(dsn_message_t msg)
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
         {
-            if ( request.status == AS_ALL || request.status == app.status)
+            if ( request.status == AS_INVALID || request.status == app.status)
             {
                 dsn::replication::app_info info;
                 info.app_id = app.app_id;
@@ -1263,7 +1264,7 @@ void server_state::list_nodes(dsn_message_t msg)
         for (auto& node: _nodes)
         {
             node_status status = node.second.is_alive ? NS_ALIVE : NS_UNALIVE;
-            if (request.status == NS_ALL || request.status == status)
+            if (request.status == NS_INVALID || request.status == status)
             {
                 dsn::replication::node_info info;
                 info.status = status;

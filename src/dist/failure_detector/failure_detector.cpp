@@ -156,7 +156,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
     }
 }
 
-bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to)
+bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to, uint32_t delay_milliseconds)
 {
     /* the caller of switch master shoud lock necessarily to protect _masters */
     auto it = _masters.find(from);
@@ -178,7 +178,9 @@ bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address
             {
                 this->send_beacon(to, now_ms());
             },
-            std::chrono::milliseconds(_beacon_interval_milliseconds)
+            std::chrono::milliseconds(_beacon_interval_milliseconds),
+            0,
+            std::chrono::milliseconds(delay_milliseconds)
             );
 
         _masters.insert(std::make_pair(to, it->second));
@@ -313,10 +315,10 @@ bool failure_detector::remove_from_allow_list( ::dsn::rpc_address node)
 
 void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack)
 {
-    ack.is_master = true;
+    ack.time = beacon.time;
     ack.this_node = beacon.to;
     ack.primary_node = primary_address();
-    ack.time = beacon.time;
+    ack.is_master = true;
     ack.allowed = true;
 
     zauto_lock l(_lock);
@@ -540,8 +542,10 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
             if (err != ::dsn::ERR_OK)
             {
                 beacon_ack ack;
-                ack.this_node = beacon.to;
                 ack.time = beacon.time;
+                ack.this_node = beacon.to;
+                ack.primary_node.set_invalid();
+                ack.is_master = false;
                 ack.allowed = true;
                 end_ping(err, ack, nullptr);
             }

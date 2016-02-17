@@ -50,7 +50,7 @@ namespace dsn {
         {                                   \
             bool finished;                  \
             t->cancel(force, &finished);    \
-            if (!finished && !dsn_task_current(task_->native_handle()))   \
+            if (!finished && !dsn_task_is_running_inside(task_->native_handle()))   \
                 return false;               \
             task_ = nullptr;                \
         }                                   \
@@ -63,7 +63,7 @@ namespace dsn {
         {                                   \
             bool finished;                  \
             t->cancel(false, &finished);    \
-   dassert (finished || dsn_task_current(task_->native_handle()), "task must be finished at this point"); \
+   dassert (finished || dsn_task_is_running_inside(task_->native_handle()), "task must be finished at this point"); \
             task_ = nullptr;                \
         }                                   \
     }
@@ -210,6 +210,7 @@ bool potential_secondary_context::cleanup(bool force)
     CLEANUP_TASK(catchup_with_private_log_task, force)
     
     learning_signature = 0;
+    learning_start_ts_ns = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
     learning_status = LearningInvalid;

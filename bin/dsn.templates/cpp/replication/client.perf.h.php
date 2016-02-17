@@ -24,7 +24,7 @@ public:
 <?php foreach ($svc->functions as $f) { ?>
         s.name = "<?=$svc->name?>.<?=$f->name?>";
         s.config_section = "task.<?=$f->get_rpc_code()?>";
-        s.send_one = [this](int payload_bytes){this->send_one_<?=$f->name?>(payload_bytes); };
+        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_<?=$f->name?>(payload_bytes, key_space_size); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
@@ -34,11 +34,11 @@ public:
     }                
 <?php foreach ($svc->functions as $f) { ?>
 
-    void send_one_<?=$f->name?>(int payload_bytes)
+    void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
     {
         <?=$f->get_first_param()->get_cpp_type()?> req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -51,7 +51,6 @@ public:
             _timeout
             );
     }
-
 <?php } ?>
 };
 <?php } ?>

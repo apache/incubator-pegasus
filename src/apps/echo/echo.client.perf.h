@@ -55,7 +55,7 @@ public:
 
         s.name = "echo.ping";
         s.config_section = "task.RPC_ECHO_ECHO_PING";
-        s.send_one = [this](int payload_bytes){this->send_one_ping(payload_bytes); };
+        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_ping(payload_bytes, key_space_size); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
@@ -63,7 +63,7 @@ public:
         start(suits);
     }
 
-    void send_one_ping(int payload_bytes)
+    void send_one_ping(int payload_bytes, int key_space_size)
     {
         std::string req;
         // TODO: randomize the value of req

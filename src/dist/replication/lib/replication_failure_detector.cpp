@@ -55,6 +55,9 @@ replication_failure_detector::replication_failure_detector(
 
     dsn_group_set_leader(_meta_servers.group_handle(),
         meta_servers[random32(0, (uint32_t)meta_servers.size() - 1)].c_addr());
+    // ATTENTION: here we disable update_leader_on_rpc_forward to avoid failure detecting
+    // logic affected by rpc forwarding.
+    dsn_group_set_update_leader_on_rpc_forward(_meta_servers.group_handle(), false);
 }
 
 replication_failure_detector::~replication_failure_detector(void)
@@ -77,12 +80,16 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
     if ( !failure_detector::end_ping_internal(err, ack) )
         return;
 
-    dassert(ack.this_node==dsn_group_get_leader(_meta_servers.group_handle()), "");
+    dassert(ack.this_node == dsn_group_get_leader(_meta_servers.group_handle()),
+            "ack.this_node[%s] vs meta_servers.leader[%s]",
+            ack.this_node.to_string(), dsn_address_to_string(dsn_group_get_leader(_meta_servers.group_handle())));
+
     if ( ERR_OK != err ) {
         rpc_address next = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
         if (next != ack.this_node) {
             dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
-            switch_master(ack.this_node, next);
+            // do not start next send_beacon() immediately to avoid send rpc too frequently
+            switch_master(ack.this_node, next, 1000);
         }
     }
     else {
@@ -93,12 +100,14 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
             rpc_address next = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
             if (next != ack.this_node) {
                 dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
-                switch_master(ack.this_node, next);
+                // do not start next send_beacon() immediately to avoid send rpc too frequently
+                switch_master(ack.this_node, next, 1000);
             }
         }
         else {
             dsn_group_set_leader(_meta_servers.group_handle(), ack.primary_node.c_addr());
-            switch_master(ack.this_node, ack.primary_node);
+            // start next send_beacon() immediately because the leader is possibly right.
+            switch_master(ack.this_node, ack.primary_node, 0);
         }
     }
 }

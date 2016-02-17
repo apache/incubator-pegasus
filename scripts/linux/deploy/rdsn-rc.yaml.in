@@ -1,17 +1,23 @@
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: {{ placeholder['rc_name'] }}
+  name: {{ placeholder['instance_name'] }}-{{ placeholder['rc_name'] }}
+  labels:
+    d_unit: "{{ placeholder['deploy_name'] }}"
+    app: "{{ placeholder['app_name'] }}"
+    instance: "{{ placeholder['instance_name'] }}"
 spec:
   replicas: 1
   selector:
-    app: {{ placeholder['app_name'] }}
+    app: "{{ placeholder['app_name'] }}"
     {{ placeholder['app_name'] }}: "{{ placeholder['num'] }}"
+    instance: "{{ placeholder['instance_name'] }}"
   template:
     metadata:
       labels:
-        app: {{ placeholder['app_name'] }}
+        app: "{{ placeholder['app_name'] }}"
         {{ placeholder['app_name'] }}: "{{ placeholder['num'] }}"
+        instance: "{{ placeholder['instance_name'] }}"
     spec:
       containers:
       - name: {{ placeholder['rc_name'] }}
@@ -21,6 +27,8 @@ spec:
           value: "{{ placeholder['app_name'] }}"
         - name: NUM
           value: "{{ placeholder['num'] }}"
+        - name : INSTANCE
+          value: "{{ placeholder['instance_name'] }}" 
         volumeMounts:
         - name: {{ placeholder['app_data'] }}
           mountPath: /home/rdsn/data
@@ -28,6 +36,4 @@ spec:
         hostname: srgssd-04
       volumes:
       - name: {{ placeholder['app_data'] }}
-        hostPath:
-          path: /home/guoxi/data/{{ placeholder['app_name'] }}{{ placeholder['num'] }}
-
+        emptyDir: {}

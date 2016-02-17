@@ -38,6 +38,8 @@
 #include "kubernetes_cluster_scheduler.h"
 #include "docker_error.h"
 #include "docker_scheduler.h"
+#include "windows_cluster_error.h"
+#include "windows_cluster_scheduler.h"
 
 namespace dsn {
     namespace dist{

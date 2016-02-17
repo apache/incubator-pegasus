@@ -38,6 +38,68 @@
 
 #include <dsn/tool_api.h>
 
+/*!
+@defgroup tracer Tracer
+@ingroup tools-debug tools-operate
+
+Tracer toollet
+
+This toollet logs all task operations for the specified tasks,
+as configed below.
+
+<PRE>
+
+[core]
+
+toollets = tracer
+
+[task..default]
+is_trace = true
+
+; whether to trace when an aio task is called
+tracer::on_aio_call = true
+
+; whether to trace when an aio task is enqueued
+tracer::on_aio_enqueue = true
+
+; whether to trace when a rpc is made
+tracer::on_rpc_call = true
+
+; whether to trace when reply a rpc request
+tracer::on_rpc_reply = true
+
+; whether to trace when a rpc request task is enqueued
+tracer::on_rpc_request_enqueue = true
+
+; whetehr to trace when a rpc response task is enqueued
+tracer::on_rpc_response_enqueue = true
+
+; whether to trace when a task begins
+tracer::on_task_begin = true
+
+; whether to trace when a task is cancel post
+tracer::on_task_cancel_post = true
+
+; whether to trace when a task is cancelled
+tracer::on_task_cancelled = true
+
+; whether to trace when a task ends
+tracer::on_task_end = true
+
+; whether to trace when a timer or async task is enqueued
+tracer::on_task_enqueue = true
+
+; whether to trace when a task is wait post
+tracer::on_task_wait_post = true
+
+; whether to trace when a task is to be wait
+tracer::on_task_wait_pre = true
+
+[task.RPC_PING]
+is_trace = false
+
+</PRE>
+*/
 namespace dsn {
     namespace tools {
 

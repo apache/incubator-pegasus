@@ -77,8 +77,7 @@ TEST(tools_hpc, aio)
     callback->aio()->type = ::dsn::AIO_Write;
     ::dsn::task::get_current_disk()->write(callback);
 
-    bool ret = dsn_task_wait(callback);
-    EXPECT_TRUE(ret == true);
+    dsn_task_wait(callback);
 
     dsn_error_t err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
@@ -103,8 +102,8 @@ TEST(tools_hpc, aio)
     callback_read->aio()->type = ::dsn::AIO_Read;
     ::dsn::task::get_current_disk()->read(callback_read);
 
-    ret = dsn_task_wait(callback_read);
-    EXPECT_TRUE(ret == true);
+    dsn_task_wait(callback_read);
+
     EXPECT_STREQ(buffer, buffer_read);
     err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
@@ -148,8 +147,7 @@ TEST(tools_hpc, aio_invalid_type)
     ::dsn::task::get_current_disk()->write(callback);
 
 
-    bool ret = dsn_task_wait(callback);
-    EXPECT_TRUE(ret == true);
+    dsn_task_wait(callback);
 
     dsn_error_t err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);

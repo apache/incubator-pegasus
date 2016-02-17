@@ -111,6 +111,7 @@ class potential_secondary_context
 public:
     potential_secondary_context() :
         learning_signature(0),
+        learning_start_ts_ns(0),
         learning_round_is_running(false),
         learning_status(learner_status::LearningInvalid),
         learning_start_prepare_decree(invalid_decree)
@@ -118,9 +119,11 @@ public:
 
     bool cleanup(bool force);
     bool is_cleaned();
+    uint64_t duration_ms() const { return (dsn_now_ns() - learning_start_ts_ns) / 1000000; }
 
 public:
     uint64_t        learning_signature;
+    uint64_t        learning_start_ts_ns;
     learner_status  learning_status;
     volatile bool   learning_round_is_running;
     decree          learning_start_prepare_decree;

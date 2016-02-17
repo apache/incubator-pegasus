@@ -471,9 +471,29 @@ void mutation_log::internal_write_callback(
         }
     }
 
-    for (auto& cb : *callbacks)
+    if (!_is_private)
     {
-        cb->enqueue_aio(err, size);
+        for (auto& cb : *callbacks)
+        {
+            cb->enqueue_aio(err, size);
+        }
+    }
+    else
+    {
+        for (auto& cb : *callbacks)
+        {
+            if (err == ERR_OK)
+            {
+                bool r = cb->cancel(false);
+                dassert(r, "cancel must success as the task has never been enqueued yet");
+            }
+            else
+            {
+                cb->enqueue_aio(err, size);
+                err = ERR_OK; // to cancel further callbacks as one callback is enough
+                              // to notify the failure
+            }
+        }
     }
 }
 

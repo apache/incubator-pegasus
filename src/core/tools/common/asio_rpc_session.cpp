@@ -38,7 +38,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "net.boost.asio"
+# define __TITLE__ "asio.rpc.session"
 
 namespace dsn {
     namespace tools {
@@ -134,7 +134,7 @@ namespace dsn {
                 if (!!ec)
                 {
                     derror("asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
-                    on_failure();
+                    on_failure(true);
                 }
                 else
                 {
@@ -160,9 +160,9 @@ namespace dsn {
             if (!is_client) start_read_next();
         }
         
-        void asio_rpc_session::on_failure()
+        void asio_rpc_session::on_failure(bool is_write)
         {
-            if (on_disconnected())
+            if (on_disconnected(is_write))
             {
                 try {
                     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
@@ -206,7 +206,7 @@ namespace dsn {
                             _remote_addr.to_string(),
                             ec.message().c_str()
                             );
-                        on_failure();
+                        on_failure(true);
                     }
                     release_ref();
                 });

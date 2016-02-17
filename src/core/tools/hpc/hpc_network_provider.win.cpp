@@ -406,7 +406,7 @@ namespace dsn
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("WSASend failed, err = %d", err);
-                    on_failure();
+                    on_failure(true);
                 }
                 else
                 {
@@ -477,7 +477,7 @@ namespace dsn
             {
                 dwarn("WSASend failed, err = %d", ::WSAGetLastError());
                 release_ref();
-                on_failure();
+                on_failure(true);
             }
             
             //dinfo("WSASend called, err = %d", rt);
@@ -506,9 +506,9 @@ namespace dsn
             _sending_buffer_start_index = 0;
         }
         
-        void hpc_rpc_session::on_failure()
+        void hpc_rpc_session::on_failure(bool is_write)
         {
-            if (on_disconnected())
+            if (on_disconnected(is_write))
                 close();
         }
 
@@ -523,7 +523,7 @@ namespace dsn
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("ConnectEx failed, err = %d", err);
-                    this->on_failure();
+                    this->on_failure(true);
                 }
                 else
                 {
@@ -560,7 +560,7 @@ namespace dsn
                 dwarn("ConnectEx failed, err = %d", ::WSAGetLastError());
                 this->release_ref();
 
-                on_failure();
+                on_failure(true);
             }
         }
 
