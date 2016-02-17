@@ -13,7 +13,7 @@ void usage(char* exe)
     std::cout << "\t" << exe << " <config.ini> list_app -name <app_name> [-detailed] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> stop_migration" << std::endl;
     std::cout << "\t" << exe << " <config.ini> start_migration" << std::endl;
-    std::cout << "\t" << exe << " <config.ini> balancer -gpid <appid.pidx> -type <m_pri|c_pri|c_sec> -from <from_address> -to <to_address>" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> balancer -gpid <appid.pidx> -type <move_pri|copy_pri|copy_sec> -from <from_address> -to <to_address>" << std::endl;
     std::cout << "\t\tpartition count must be a power of 2" << std::endl;
     std::cout << "\t\tapp_name and app_type shoud be composed of a-z, 0-9 and underscore" << std::endl;
     std::cout << "\t\twithout -o option, program will print status on screen" << std::endl;
@@ -169,9 +169,9 @@ int main(int argc, char** argv)
             }
             else if (strcmp(argv[i], "-type") == 0){
                 std::map<std::string, dsn::replication::balancer_type> mapper = {
-                    {"m_pri", BT_MOVE_PRIMARY},
-                    {"c_pri", BT_COPY_PRIMARY},
-                    {"c_sec", BT_COPY_SECONDARY}
+                    {"move_pri", BT_MOVE_PRIMARY},
+                    {"copy_pri", BT_COPY_PRIMARY},
+                    {"copy_sec", BT_COPY_SECONDARY}
                 };
                 if (mapper.find(argv[i+1]) == mapper.end()) {
                     usage(argv[0]);
