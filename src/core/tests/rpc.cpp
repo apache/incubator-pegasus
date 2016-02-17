@@ -123,13 +123,17 @@ TEST(core, group_address_change_leader)
 {
     ::dsn::rpc_address addr = build_group();
 
+    error_code rpc_err;
     auto typed_callback =
-            [addr](error_code err_code, const std::string& result)->void {
-        EXPECT_EQ(ERR_OK, err_code);
-        ::dsn::rpc_address addr_got;
-        ddebug("talk to others callback, result: %s", result.c_str());
-        EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
-        EXPECT_EQ(TEST_PORT_END, addr_got.port());
+            [addr, &rpc_err](error_code err_code, const std::string& result)->void {
+        rpc_err = err_code;
+        if (ERR_OK == err_code)
+        {
+            ::dsn::rpc_address addr_got;
+            ddebug("talk to others callback, result: %s", result.c_str());
+            EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
+            EXPECT_EQ(TEST_PORT_END, addr_got.port());
+        }
     };
 
     ::dsn::task_ptr resp_task;
@@ -140,8 +144,10 @@ TEST(core, group_address_change_leader)
     resp_task = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
                                  nullptr, typed_callback);
     resp_task->wait();
-    EXPECT_EQ(::dsn::rpc_address("localhost", TEST_PORT_BEGIN), ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())));
-
+    if (rpc_err == ERR_OK)
+    {
+        EXPECT_EQ(::dsn::rpc_address("localhost", TEST_PORT_BEGIN), ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())));
+    }
     // update leader on forwarding
     addr.group_address()->set_update_leader_on_rpc_forward(true);
     dsn_group_set_leader(addr.group_handle(), ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
@@ -149,8 +155,10 @@ TEST(core, group_address_change_leader)
                                  nullptr, typed_callback);
     resp_task->wait();
     ddebug("addr.leader=%s", ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())).to_string());
-    EXPECT_EQ(TEST_PORT_END, ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())).port());
-
+    if (rpc_err == ERR_OK)
+    {
+        EXPECT_EQ(TEST_PORT_END, ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())).port());
+    }
     destroy_group(addr);
 }
 
