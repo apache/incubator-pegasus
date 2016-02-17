@@ -93,6 +93,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         assign_primary(proposal);
         break;
     case CT_ADD_SECONDARY:
+    case CT_ADD_SECONDARY_FOR_LB:
         add_potential_secondary(proposal);
         break;
     case CT_DOWNGRADE_TO_SECONDARY:
@@ -156,6 +157,24 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
+
+    int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
+    if (potential_secondaries_count == _primary_states.membership.max_replica_count - 1)
+    {
+        if (proposal.type == CT_ADD_SECONDARY)
+        {
+            dinfo("name(%s): already have enough secondaries, ignore add secondary command", name());
+            return;
+        }
+        else if (proposal.type == CT_ADD_SECONDARY_FOR_LB)
+        {
+            dinfo("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+        }
+        else
+        {
+            dassert(false, "");
+        }
+    }
 
     remote_learner_state state;
     state.prepare_start_decree = invalid_decree;

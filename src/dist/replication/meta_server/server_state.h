@@ -53,6 +53,9 @@ namespace dsn {
             class test_checker;
         }
     }
+    namespace dist{
+        class server_load_balancer;
+    }
 }
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
@@ -232,6 +235,13 @@ private:
     std::string get_partition_path(const global_partition_id& gpid) const;
     std::string get_partition_path(const app_state& app, int partition_id) const;
 
+    bool set_freeze() const
+    {
+        //TODO: make this value configurable in config.ini
+        if (_nodes.size() < 3)
+            return true;
+        return _node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size());
+    }
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -245,8 +255,10 @@ private:
         DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions)
     };
 
+    friend class dsn::dist::server_load_balancer;
     friend class simple_stateful_load_balancer;
-    friend class naive_load_balancer;
+    friend class greedy_load_balancer;
+
     std::string                                         _cluster_root;
 
     //_cluster_root + "/apps"

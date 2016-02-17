@@ -332,6 +332,37 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
     return dsn::ERR_OK;
 }
 
+dsn::error_code client_ddl::control_meta_balancer_migration(bool start)
+{
+    std::shared_ptr<control_balancer_migration_request> req(new control_balancer_migration_request());
+    req->enable_migration = start;
+
+    auto response_task = request_meta<control_balancer_migration_request>(
+        RPC_CM_CONTROL_BALANCER_MIGRATION,
+        req);
+    response_task->wait();
+    if ( response_task->error() != dsn::ERR_OK)
+        return response_task->error();
+    dsn::replication::control_balancer_migration_response resp;
+    ::unmarshall(response_task->response(), resp);
+    return resp.err;
+}
+
+dsn::error_code client_ddl::send_balancer_proposal(const balancer_proposal_request &request)
+{
+    std::shared_ptr<balancer_proposal_request> req(new balancer_proposal_request(request));
+
+    auto response_task = request_meta<balancer_proposal_request>(
+        RPC_CM_BALANCER_PROPOSAL,
+        req);
+    response_task->wait();
+    if ( response_task->error() != dsn::ERR_OK)
+        return response_task->error();
+    dsn::replication::balancer_proposal_response resp;
+    ::unmarshall(response_task->response(), resp);
+    return resp.err;
+}
+
 bool client_ddl::valid_app_char(int c)
 {
     return (bool)std::isalnum(c) || c == '_' || c == '.';

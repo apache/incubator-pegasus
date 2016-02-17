@@ -108,6 +108,7 @@ namespace dsn {
             ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)
             ENUM_REG(CT_REMOVE)
+            ENUM_REG(CT_ADD_SECONDARY_FOR_LB)
         ENUM_END(config_type)
 
         ENUM_BEGIN(app_status, AS_INVALID)
@@ -125,6 +126,12 @@ namespace dsn {
             ENUM_REG(NS_ALIVE)
             ENUM_REG(NS_UNALIVE)
         ENUM_END(node_status)
+
+        ENUM_BEGIN(balancer_type, BT_INVALID)
+            ENUM_REG(BT_MOVE_PRIMARY)
+            ENUM_REG(BT_COPY_PRIMARY)
+            ENUM_REG(BT_COPY_SECONDARY)
+        ENUM_END(balancer_type)
 
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {
@@ -148,7 +155,18 @@ namespace dsn {
         {
             out << "\"" << enum_to_string(status) << "\"";
         }
-
+        inline bool is_partition_config_equal(const partition_configuration& pc1, const partition_configuration& pc2)
+        {
+            // last_drops is not considered into equality check
+            return pc1.ballot == pc2.ballot &&
+                   pc1.gpid.app_id == pc2.gpid.app_id &&
+                   pc1.gpid.pidx == pc2.gpid.pidx &&
+                   pc1.app_type == pc2.app_type &&
+                   pc1.max_replica_count == pc2.max_replica_count &&
+                   pc1.primary == pc2.primary &&
+                   pc1.secondaries == pc2.secondaries &&
+                   pc1.last_committed_decree == pc2.last_committed_decree;
+        }
     }
 
     inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)

@@ -84,10 +84,14 @@ private:
     void on_list_apps(dsn_message_t req);
     void on_list_nodes(dsn_message_t req);
 
+    // balacer rpc
+    void on_control_balancer_migration(dsn_message_t req);
+    void on_balancer_proposal(dsn_message_t req);
+
     // load balance actions
     void start_load_balance();
     void on_load_balance_timer();
-    void on_config_changed(global_partition_id gpid, std::shared_ptr<configuration_update_request> request);
+    void on_config_changed(global_partition_id gpid);
 
     // common routines
     bool check_primary(dsn_message_t req);

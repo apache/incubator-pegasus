@@ -41,9 +41,9 @@
 # endif
 # define __TITLE__ "load.balancer"
 
-simple_stateful_load_balancer::simple_stateful_load_balancer(server_state* state)
-: _state(state), ::dsn::dist::server_load_balancer(state),
-  serverlet<simple_stateful_load_balancer>("simple_stateful_load_balancer")
+simple_stateful_load_balancer::simple_stateful_load_balancer(server_state* state):
+    ::dsn::dist::server_load_balancer(state),
+    serverlet<simple_stateful_load_balancer>("simple_stateful_load_balancer")
 {
 }
 
@@ -70,43 +70,13 @@ void simple_stateful_load_balancer::run()
     }
 }
 
-void simple_stateful_load_balancer::run(global_partition_id gpid, std::shared_ptr<configuration_update_request>)
+void simple_stateful_load_balancer::run(global_partition_id gpid)
 {
     if (s_disable_lb) return;
 
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
     run_lb(pc);
-}
-
-void simple_stateful_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
-{
-    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_INVALID)
-    {
-        derror("invalid params");
-        return;
-    }
-
-    configuration_update_request req;
-    {
-        zauto_read_lock l(_state->_lock);
-        if (gpid.app_id > _state->_apps.size())
-        {
-            derror("invalid params");
-            return;
-        }
-        app_state& app = _state->_apps[gpid.app_id-1];
-        if (gpid.pidx>=app.partition_count)
-        {
-            derror("invalid params");
-            return;
-        }
-        req.config = app.partitions[gpid.pidx];
-    }
-
-    req.type = type;
-    req.node = node;
-    send_proposal(receiver, req);
 }
 
 ::dsn::rpc_address simple_stateful_load_balancer::find_minimal_load_machine(bool primaryOnly)
