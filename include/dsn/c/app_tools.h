@@ -41,14 +41,8 @@
 extern "C" {
 # endif
 /*!
-@defgroup tools Integrated Dev & Op Process
-
-Integrated development and operation tools & services for rDSN applications
-*/
-
-/*!
 @defgroup app-checker Global Checker
-@ingroup tools
+@ingroup tools-test
 
  Global checker (assertion) on state across nodes
 

@@ -43,13 +43,13 @@ extern "C" {
 
 
 /*!
-@defgroup layer1-dev-models Overview
-@ingroup layer1-dev
+@defgroup dev-layer1-models Overview
+@ingroup dev-layer1
 */
 
 /*!
   @defgroup app-model Application Model
-  @ingroup layer1-dev-models
+  @ingroup dev-layer1-models
 
   Application and deployment model for rDSN applications.
 
