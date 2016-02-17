@@ -1226,7 +1226,6 @@ void replica_stub::close()
 
             task->wait();
 
-            _counter_replicas_closing_count.decrement();
             _replicas_lock.lock();
             // task will automatically remove this replica from _closing_replicas
             if(false == _closing_replicas.empty())
