@@ -64,16 +64,7 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partition_count);
     marshall(writer, val.partitions);
 }
-/**
- * app_state:
- * {
- *   "app_type": "whatever",
- *   "app_id": 11,
- *   "app_name": "you like",
- *   "partition_count": 2323,
- *   "status": "available"/"dropped"
- * }
- */
+
 void marshall_json(blob& output, const app_state& app, bool available_status)
 {
     rapidjson::StringBuffer buffer;
@@ -92,70 +83,14 @@ void marshall_json(blob& output, const app_state& app, bool available_status)
     output.assign(outptr, 0, buffer.GetSize());
 }
 
-static const char* partition_status_str[] = {
-    "inactive", "error", "primary", "secondary",
-    "potential_secondary", "invalid", nullptr
-};
-const char* get_partition_status_string(partition_status ps)
-{
-    return partition_status_str[ps];
-}
-partition_status get_partition_status(const char* status_str)
-{
-    for (int i=0; partition_status_str[i]!=nullptr; ++i)
-        if (strcmp(partition_status_str[i], status_str)==0)
-            return (partition_status)i;
-    return PS_INVALID;
-}
-/**
- * Example partition config:
- * {"app_type":"whatever", "gpid": "1.0", 
- *  "ballot": 1, "last_committed_decree": 2, "max_replica_count": 3,
- *  "entries": [{"addr": "xxx.xxx.xxx.xxx:12345", "partition_status": "primary"},
- *              {"addr": "xxx.xxx.xxx.xxb:23424", "partition_status": "secondary"}
- *             ]}
- * type of role: primary/secondary/inactive
- **/
 void marshall_json(blob& output, const partition_configuration& pc)
 {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-
-    auto end_point_gen_json = [&writer](const ::dsn::rpc_address& ep, partition_status ps) {
-        if (ep.is_invalid())
-            return;
-        writer.StartObject();
-        writer.String("addr"); writer.String( ep.to_string() );
-        writer.String("partition_status"); writer.String( get_partition_status_string(ps) );
-        writer.EndObject();
-    };
-
-    writer.StartObject();
-
-    writer.String("app_type"); writer.String(pc.app_type.c_str());
-
-    std::stringstream gpid;
-    gpid << pc.gpid.app_id << "." << pc.gpid.pidx;
-    writer.String("gpid"); writer.String( gpid.str().c_str() );
-
-    writer.String("ballot"); writer.Int64(pc.ballot);
-    writer.String("max_replica_count"); writer.Int(pc.max_replica_count);
-    writer.String("last_committed_decree"); writer.Int64(pc.last_committed_decree);
-
-    writer.String("entries");
-    writer.StartArray();
-    end_point_gen_json(pc.primary, PS_PRIMARY);
-    for (unsigned int i=0; i!=pc.secondaries.size(); ++i)
-        end_point_gen_json(pc.secondaries[i], PS_SECONDARY);
-    for (unsigned int i=0; i!=pc.last_drops.size(); ++i)
-        end_point_gen_json(pc.last_drops[i], PS_INACTIVE);
-    writer.EndArray();
-
-    writer.EndObject();
-
-    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
-    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
-    output.assign(outptr, 0, buffer.GetSize());
+    std::stringstream out;
+    json_encode(out, pc);
+    std::string buffer = out.str();
+    std::shared_ptr<char> outptr(new char[buffer.size()], std::default_delete<char[]>{});
+    memcpy(outptr.get(), buffer.c_str(), buffer.size());
+    output.assign(outptr, 0, buffer.size());
 }
 
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
@@ -209,30 +144,22 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
         return;
 
     pc.app_type = doc["app_type"].GetString();
-    sscanf(doc["gpid"].GetString(), "%d.%d", &pc.gpid.app_id, &pc.gpid.pidx);
+    pc.gpid.app_id = doc["gpid"]["app_id"].GetInt();
+    pc.gpid.pidx = doc["gpid"]["pidx"].GetInt();
     pc.ballot = doc["ballot"].GetInt64();
     pc.max_replica_count = doc["max_replica_count"].GetInt();
     pc.last_committed_decree = doc["last_committed_decree"].GetInt();
-    pc.primary.set_invalid();
 
-    rapidjson::Value& entries = doc["entries"];
-    for (rapidjson::SizeType i=0; i<entries.Size(); ++i) {
-        rapidjson::Value& val = entries[i];
-        ::dsn::rpc_address ep;
-        ep.from_string_ipv4(val["addr"].GetString());
-        partition_status ps = get_partition_status(val["partition_status"].GetString());
-        switch (ps) {
-        case PS_PRIMARY:
-            pc.primary = ep;
-            break;
-        case PS_SECONDARY:
-            pc.secondaries.push_back(ep);
-            break;
-        default:
-            pc.last_drops.push_back(ep);
-            break;
-        }
-    }
+    pc.primary.set_invalid();
+    pc.primary.from_string_ipv4(doc["primary"].GetString());
+
+    pc.secondaries.resize( doc["secondaries"].Size() );
+    for (unsigned int i=0; i!=pc.secondaries.size(); ++i)
+        pc.secondaries[i].from_string_ipv4(doc["secondaries"][i].GetString());
+
+    pc.last_drops.resize( doc["last_drops"].Size() );
+    for (unsigned int i=0; i!=pc.last_drops.size(); ++i)
+        pc.last_drops[i].from_string_ipv4(doc["last_drops"][i].GetString());
 }
 
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
@@ -256,19 +183,6 @@ void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address
             dassert(false, "the node cannot be in drops set before this update", node.to_string());
         }
     }
-}
-
-inline bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2)
-{
-    // last_drops is not considered into equality check
-    return pc1.ballot == pc2.ballot &&
-           pc1.gpid.app_id == pc2.gpid.app_id &&
-           pc1.gpid.pidx == pc2.gpid.pidx &&
-           pc1.app_type == pc2.app_type &&
-           pc1.max_replica_count == pc2.max_replica_count &&
-           pc1.primary == pc2.primary &&
-           pc1.secondaries == pc2.secondaries &&
-           pc1.last_committed_decree == pc2.last_committed_decree;
 }
 
 std::string join_path(const std::string& input1, const std::string& input2)
@@ -726,6 +640,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                             init_partition_configuration(_apps[app_id - 1].partitions[i],
                                                 _apps[app_id - 1],
                                                 _default_max_replica_count);
+                                            _apps[app_id - 1].partitions[i].gpid.pidx = i;
                                             init_app_partition_node(app_id, i);
                                         }
                                         else
@@ -882,7 +797,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
 
     if (_node_live_count != old_lc)
     {
-        _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
+        _freeze = set_freeze();
         dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
     }
 }
@@ -898,7 +813,7 @@ void server_state::apply_cache_nodes()
 void server_state::unfree_if_possible_on_start()
 {
     zauto_write_lock l(_lock);
-    _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
+    _freeze = set_freeze();
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
@@ -1122,13 +1037,7 @@ void server_state::create_app(dsn_message_t msg)
             app.available_partitions.store(0);
 
             partition_configuration pc;
-            pc.app_type = app.app_type;
-            pc.ballot = 0;
-            pc.gpid.app_id = app.app_id;
-            pc.last_committed_decree = 0;
-            pc.max_replica_count = request.options.replica_count;
-            pc.primary.set_invalid();
-            pc.secondaries.clear();
+            init_partition_configuration(pc, app, request.options.replica_count);
 
             app.partitions.resize(app.partition_count, pc);
             for (int i=0; i!=app.partitions.size(); ++i)
@@ -1335,7 +1244,7 @@ void server_state::update_configuration(
         zauto_read_lock l(_lock);
         app_state& app = _apps[req->config.gpid.app_id - 1];
         partition_configuration& old = app.partitions[req->config.gpid.pidx];
-        if (partition_configuration_equal(old, req->config))
+        if (is_partition_config_equal(old, req->config))
         {
             // duplicate request
             dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
@@ -1387,7 +1296,9 @@ void server_state::update_configuration(
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
-            maintain_drops(req->config.last_drops, req->node, false);
+            //only maintain last drops for primary
+            if (req->config.primary.is_invalid())
+                maintain_drops(req->config.last_drops, req->node, false);
             break;
         }
 
@@ -1527,7 +1438,8 @@ void server_state::update_configuration_internal(const configuration_update_requ
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
-            maintain_drops(drops, request.node, false);
+            if (request.config.primary.is_invalid())
+                maintain_drops(drops, request.node, false);
             break;
         }
         

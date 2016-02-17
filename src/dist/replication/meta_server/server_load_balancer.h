@@ -63,7 +63,7 @@ namespace dsn
             typedef server_load_balancer* (*factory)(server_state* state);
             
         public:
-            server_load_balancer(server_state* state) {}
+            server_load_balancer(server_state* state): _state(state) {}
             virtual ~server_load_balancer() {}
 
             // load balancing for all
@@ -72,12 +72,22 @@ namespace dsn
             // load balancing for single partition
             virtual void run(global_partition_id gpid) = 0;
 
-            // this method is for testing
-            virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) = 0;
+            // actions when config is changed
+            virtual void on_config_changed(std::shared_ptr<configuration_update_request>) {}
 
+            // do migration according to external command
+            virtual void on_balancer_proposal(/*in*/const balancer_proposal_request& request, /*out*/balancer_proposal_response& response) {}
+
+            // control replica migration
+            virtual void on_control_migration(/*in*/const control_balancer_migration_request& request,
+                                              /*out*/control_balancer_migration_response& response) {}
+
+            void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
         protected:
             void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
 
+        protected:
+            server_state* _state;
         public:
             // switchs for replication test
             static bool s_disable_lb;

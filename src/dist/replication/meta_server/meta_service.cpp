@@ -36,6 +36,7 @@
 #include "meta_service.h"
 #include "server_state.h"
 #include "meta_server_failure_detector.h"
+#include "greedy_load_balancer.h"
 #include <sys/stat.h>
 #include <dsn/internal/factory_store.h>
 
@@ -168,6 +169,16 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_LIST_NODES",
         &meta_service::on_list_nodes
         );
+
+    register_rpc_handler(
+        RPC_CM_CONTROL_BALANCER_MIGRATION,
+        "RPC_CM_CONTROL_BALANCER_MIGRATION",
+        &meta_service::on_control_balancer_migration);
+
+    register_rpc_handler(
+        RPC_CM_BALANCER_PROPOSAL,
+        "RPC_CM_BALANCER_PROPOSAL",
+        &meta_service::on_balancer_proposal);
 }
 
 void meta_service::stop()
@@ -180,6 +191,8 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
     unregister_rpc_handler(RPC_CM_CREATE_APP);
     unregister_rpc_handler(RPC_CM_DROP_APP);
+    unregister_rpc_handler(RPC_CM_CONTROL_BALANCER_MIGRATION);
+    unregister_rpc_handler(RPC_CM_BALANCER_PROPOSAL);
 
     if (_balancer_timer != nullptr)
     {
@@ -234,88 +247,53 @@ bool meta_service::check_primary(dsn_message_t req)
     return true;
 }
 
+#define META_STATUS_CHECK_ON_RPC(dsn_msg, response_struct)\
+    dinfo("rpc %s called", __FUNCTION__);\
+    if ( !check_primary(dsn_msg) )\
+        return;\
+    if ( !_started )\
+    {\
+        response_struct.err = ERR_SERVICE_NOT_ACTIVE;\
+        reply(dsn_msg, response_struct);\
+        return;\
+    }\
+
 // table operations
 void meta_service::on_create_app(dsn_message_t req)
 {
-    if (!check_primary(req))
-        return;
-
-    if (!_started)
-    {
-        ddebug("create app request, meta server not active");
-        configuration_create_app_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-
+    configuration_create_app_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
     _state->create_app(req);
 }
 
 void meta_service::on_drop_app(dsn_message_t req)
 {
-    if (!check_primary(req))
-        return;
-    if (!_started)
-    {
-        ddebug("drop app request, meta server not active");
-        configuration_drop_app_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-
+    configuration_drop_app_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
     _state->drop_app(req);
 }
 
 void meta_service::on_list_apps(dsn_message_t req)
 {
-    if (!check_primary(req))
-        return;
-    if (!_started)
-    {
-        dinfo("list app request, meta server not active");
-        configuration_list_apps_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-
+    configuration_list_apps_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
     _state->list_apps(req);
 }
 
 void meta_service::on_list_nodes(dsn_message_t req)
 {
-    if (!check_primary(req))
-        return;
-    if (!_started)
-    {
-        configuration_list_nodes_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-
+    configuration_list_nodes_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
     _state->list_nodes(req);
 }
 
 // partition server & client => meta server
 void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 {
-    if (!check_primary(msg))
-        return;
-
-    if (!_started)
-    {
-        dinfo("query node configuration request, meta server not active");
-        configuration_query_by_node_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(msg, response);
-        return;
-    }
-
-    configuration_query_by_node_response response;
     configuration_query_by_node_request request;
+    configuration_query_by_node_response response;
+    META_STATUS_CHECK_ON_RPC(msg, response);
+
     ::unmarshall(msg, request);
     _state->query_configuration_by_node(request, response);
     reply(msg, response);    
@@ -323,20 +301,10 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 
 void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 {
-    if (!check_primary(msg))
-        return;
-
-    if (!_started)
-    {
-        dinfo("create app request, meta server not active");
-        configuration_query_by_index_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(msg, response);
-        return;
-    }
-        
-    configuration_query_by_index_response response;
     configuration_query_by_index_request request;
+    configuration_query_by_index_response response;
+    META_STATUS_CHECK_ON_RPC(msg, response);
+
     ::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
@@ -346,15 +314,6 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
 {
     if (!check_primary(req))
         return;
-
-    // TODO: implement modify config with reply
-    if (!_started)
-    {
-        configuration_query_by_index_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
 
     global_partition_id gpid;
     rpc_address receiver;
@@ -371,36 +330,25 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
 
 void meta_service::on_update_configuration(dsn_message_t req)
 {
-    if (!check_primary(req))
-        return;
+    configuration_update_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
 
-    if (!_started)
-    {
-        ddebug("update configuration request, meta server not active");
-        configuration_update_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-    
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     ::unmarshall(req, *request);
 
     if (_state->freezed())
     {
-        configuration_update_response response;
-        
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request->config.gpid, response.config);
-
         reply(req, response);
         return;
     }
   
     global_partition_id gpid = request->config.gpid;
-    _state->update_configuration(request, req, [this, gpid](){
+    _state->update_configuration(request, req, [this, gpid, request](){
         if (_started)
         {
+            _balancer->on_config_changed(request);
             tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
         }
     });
@@ -409,12 +357,40 @@ void meta_service::on_update_configuration(dsn_message_t req)
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
     global_partition_id gpid = update->config.gpid;
-    _state->update_configuration(update, nullptr, [this, gpid](){
+    _state->update_configuration(update, nullptr, [this, gpid, update](){
         if (_started)
         {
+            _balancer->on_config_changed(update);
             tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
-        }  
+        }
     });
+}
+
+void meta_service::on_control_balancer_migration(dsn_message_t req)
+{
+    control_balancer_migration_request request;
+    control_balancer_migration_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
+
+    ::unmarshall(req, request);
+    _balancer->on_control_migration(request, response);
+    reply(req, response);
+}
+
+void meta_service::on_balancer_proposal(dsn_message_t req)
+{
+    balancer_proposal_request request;
+    balancer_proposal_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
+
+    ::unmarshall(req, request);
+    dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
+          request.gpid.app_id, request.gpid.pidx,
+          enum_to_string(request.type),
+          request.from.to_string(),
+          request.to.to_string());
+    _balancer->on_balancer_proposal(request, response);
+    reply(req, response);
 }
 
 // local timers

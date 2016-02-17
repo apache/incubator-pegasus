@@ -182,6 +182,7 @@ enum config_type
     CT_DOWNGRADE_TO_SECONDARY,
     CT_DOWNGRADE_TO_INACTIVE,
     CT_REMOVE,
+    CT_ADD_SECONDARY_FOR_LB,
 }
 
 enum app_status
@@ -294,6 +295,38 @@ struct configuration_create_app_response
 {
     1:dsn.error_code   err;
     2:i32              appid;
+}
+
+// load balancer control
+struct control_balancer_migration_request
+{
+    1:bool             enable_migration;
+}
+
+struct control_balancer_migration_response
+{
+    1:dsn.error_code   err;
+}
+
+enum balancer_type
+{
+    BT_INVALID,
+    BT_MOVE_PRIMARY,
+    BT_COPY_PRIMARY,
+    BT_COPY_SECONDARY
+}
+
+struct balancer_proposal_request
+{
+    1:global_partition_id gpid;
+    2:balancer_type       type;
+    3:dsn.rpc_address     from;
+    4:dsn.rpc_address     to;
+}
+
+struct balancer_proposal_response
+{
+    1:dsn.error_code   err;
 }
 
 struct configuration_drop_app_response
