@@ -176,7 +176,7 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
         opt.slot_count = (int)app_list.size();
         _mgr.get_machine(opt, a_list);
         {
-            zlock(_lock);
+            zauto_lock l(_lock);
             _machine_map[name].insert(_machine_map[name].begin(), a_list.begin(), a_list.end());
         }
         std::ofstream fd;
