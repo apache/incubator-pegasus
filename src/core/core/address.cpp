@@ -56,7 +56,7 @@
 
 # endif
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/address.h>
 # include <dsn/internal/task.h>

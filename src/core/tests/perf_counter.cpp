@@ -106,7 +106,7 @@ static void test_perf_counter(perf_counter::factory f)
     for (auto& count: gen_numbers) {
         for (unsigned int i=0; i!=count; ++i)
             counter->set(rand()%10000);
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
+        //std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
         for (int i=0; i!=COUNTER_PERCENTILE_COUNT; ++i)
             ddebug("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }

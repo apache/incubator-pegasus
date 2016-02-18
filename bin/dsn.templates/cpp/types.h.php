@@ -34,14 +34,14 @@ foreach ($_PROG->structs as $s)
     echo "        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));".PHP_EOL;
     echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
     echo "        ::dsn::marshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::write);".PHP_EOL;
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
     echo "    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ". $s->get_cpp_name() . "& val)".PHP_EOL;
     echo "    {".PHP_EOL;
     echo "        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));".PHP_EOL;
     echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
     echo "        ::dsn::unmarshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::read);".PHP_EOL;
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
 }
 
@@ -91,14 +91,14 @@ foreach ($_PROG->structs as $s)
     foreach ($s->fields as $fld) {
         echo "        marshall(writer, val." .$fld->name .");" .PHP_EOL;
     }
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
     echo "    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ". $s->get_cpp_name() . "& val)".PHP_EOL;
     echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
         echo "        unmarshall(reader, val." .$fld->name .");" .PHP_EOL;
     }
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
 }
 

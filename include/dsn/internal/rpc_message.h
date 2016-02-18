@@ -36,7 +36,7 @@
 # pragma once
 
 # include <atomic>
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/callocator.h>
@@ -57,8 +57,10 @@ namespace dsn
 
     struct fast_rpc_name
     {
-        uint64_t local_rpc_id : 16;
-        uint64_t local_binary_hash : 48;
+        uint32_t local_rpc_id;
+        uint32_t local_hash; // same hash from two processes indicates that
+                             // the mapping of rpc string and id are consistent, which
+                             // we leverage for optimization (fast rpc handler lookup)
     };
 
     typedef struct message_header
@@ -105,7 +107,7 @@ namespace dsn
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
-        uint16_t               local_rpc_code;
+        uint32_t               local_rpc_code;
 
         // by message queuing
         dlink                  dl;
@@ -162,7 +164,7 @@ namespace dsn
         bool                   _is_read;      // is for read(recv) or write(send)
 
     public:
-        static uint64_t s_local_binary_hash;  // used by fast_rpc_name
+        static uint32_t s_local_hash;  // used by fast_rpc_name
     };
 
 } // end namespace

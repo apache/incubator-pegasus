@@ -163,8 +163,12 @@ DSN_API int dsn_threadpool_get_current_tid()
 }
 
 struct task_code_placeholder { };
-DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
-    dsn_task_priority_t pri, dsn_threadpool_code_t pool)
+DSN_API dsn_task_code_t dsn_task_code_register(
+    const char* name, 
+    dsn_task_type_t type,
+    dsn_task_priority_t pri,
+    dsn_threadpool_code_t pool
+    )
 {
     dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 
         "task code '%s' is too long - length must be smaller than %d",
@@ -225,7 +229,7 @@ DSN_API const char* dsn_task_priority_to_string(dsn_task_priority_t tt)
     return enum_to_string(tt);
 }
 
-DSN_API bool dsn_task_current(dsn_task_t t)
+DSN_API bool dsn_task_is_running_inside(dsn_task_t t)
 {
     return ::dsn::task::get_current_task() == (::dsn::task*)(t);
 }
@@ -414,9 +418,13 @@ DSN_API void dsn_task_cancel_current_timer()
     }
 }
 
-DSN_API bool dsn_task_wait(dsn_task_t task)
+DSN_API void dsn_task_wait(dsn_task_t task)
 {
-    return ((::dsn::task*)(task))->wait();
+    auto r = ((::dsn::task*)(task))->wait();
+    dassert(r, 
+        "task wait without timeout must succeeds (%" PRIx64 ")",
+        ((::dsn::task*)(task))->id()
+        );
 }
 
 DSN_API bool dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds)
@@ -876,15 +884,21 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy)
+DSN_API bool dsn_register_app(dsn_app* app_type)
 {
-    auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
-    ::dsn::service_app_role role;
-    role.type_name = std::string(type_name);
-    role.create = create;
-    role.start = start;
-    role.destroy = destroy;
-    return store.put(role.type_name, role);
+    dsn_app* app;
+    auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
+    if (store.get(app_type->type_name, app))
+    {
+        dassert(false, "app type %s is already registered", app_type->type_name);
+        return false;
+    }
+    
+    app = new dsn_app();
+    *app = *app_type;
+    auto r = store.put(app_type->type_name, app);
+    dassert(r, "app type %s is already registered", app_type->type_name);
+    return r;
 }
 
 static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list);

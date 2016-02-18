@@ -93,6 +93,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         assign_primary(proposal);
         break;
     case CT_ADD_SECONDARY:
+    case CT_ADD_SECONDARY_FOR_LB:
         add_potential_secondary(proposal);
         break;
     case CT_DOWNGRADE_TO_SECONDARY:
@@ -156,6 +157,24 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
+
+    int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
+    if (potential_secondaries_count == _primary_states.membership.max_replica_count - 1)
+    {
+        if (proposal.type == CT_ADD_SECONDARY)
+        {
+            dinfo("name(%s): already have enough secondaries, ignore add secondary command", name());
+            return;
+        }
+        else if (proposal.type == CT_ADD_SECONDARY_FOR_LB)
+        {
+            dinfo("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+        }
+        else
+        {
+            dassert(false, "");
+        }
+    }
 
     remote_learner_state state;
     state.prepare_start_decree = invalid_decree;
@@ -557,6 +576,16 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         {
             if (!_secondary_states.cleanup(false))
             {
+                dsn_task_t native_handle;
+                if (_secondary_states.checkpoint_task)
+                    native_handle = _secondary_states.checkpoint_task->native_handle();
+                else if (_secondary_states.checkpoint_completed_task)
+                    native_handle = _secondary_states.checkpoint_completed_task->native_handle();
+                else if (_secondary_states.catchup_with_private_log_task)
+                    native_handle = _secondary_states.catchup_with_private_log_task->native_handle();
+                else
+                    native_handle = nullptr;
+
                 dwarn(
                     "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
                     name(),
@@ -564,7 +593,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
                     old_ballot,
                     enum_to_string(config.status),
                     config.ballot,
-                    _secondary_states.checkpoint_task->native_handle()
+                    native_handle
                     );
                 return false;
             }

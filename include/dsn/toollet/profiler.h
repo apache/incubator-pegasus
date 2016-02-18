@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     profiler toollet definition
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -37,6 +37,30 @@
 
 #include <dsn/tool_api.h>
 
+/*!
+@defgroup profiler Profiler
+@ingroup tools-perf tools-operate
+
+Profiler toollet
+
+This toollet collects many performance counter values for the specified tasks,
+as configed below.
+
+<PRE>
+
+[core]
+
+toollets = profiler
+
+[task..default]
+is_profile = true
+
+[task.RPC_PING]
+is_profile = false
+
+</PRE>
+*/
+ 
 namespace dsn {
     namespace tools {
 

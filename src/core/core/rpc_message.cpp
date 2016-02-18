@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/ports.h>
+# include <dsn/internal/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
 # include "task_engine.h"
@@ -162,16 +162,8 @@ DSN_API void dsn_msg_get_options(
 
 namespace dsn {
 
-static uint64_t get_local_binary_hash()
-{
-    const char* last_compile_time = __DATE__ __TIME__;
-    uint64_t crc = dsn_crc64_compute(last_compile_time, strlen(last_compile_time), 0);
-    crc = ((crc << 16) >> 16) ^ (crc >> 16);
-    return crc;
-}
-
 std::atomic<uint64_t> message_ex::_id(0);
-uint64_t message_ex::s_local_binary_hash = get_local_binary_hash();
+uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
 {
@@ -421,13 +413,13 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     }
 
     strncpy(hdr.rpc_name, dsn_task_code_to_string(rpc_code), sizeof(hdr.rpc_name));
-    hdr.rpc_name_fast.local_rpc_id = (uint16_t)rpc_code;
-    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
+    hdr.rpc_name_fast.local_rpc_id = (uint32_t)rpc_code;
+    hdr.rpc_name_fast.local_hash = s_local_hash;
 
     hdr.id = new_id();
     hdr.context.u.is_request = true;
 
-    msg->local_rpc_code = (uint16_t)rpc_code;
+    msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;
 }
 
@@ -447,7 +439,7 @@ message_ex* message_ex::create_response()
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     hdr.rpc_name_fast.local_rpc_id = msg->local_rpc_code;
-    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
+    hdr.rpc_name_fast.local_hash = s_local_hash;
 
     // ATTENTION: the from_address may not be the primary address of this node
     // if there are more than one ports listened and the to_address is not equal to

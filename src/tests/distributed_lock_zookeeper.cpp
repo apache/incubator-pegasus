@@ -210,7 +210,6 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     );
     
     tsk->wait();
-    ASSERT_TRUE(cb_pair2.first->wait());
 }
 
 void lock_test_init()

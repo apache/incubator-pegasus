@@ -244,7 +244,7 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
 
 dsn_error_t service_node::start_app(int argc, char** argv)
 {    
-    return _app_spec.role.start(_app_context_ptr, argc, argv);
+    return _app_spec.role->layer1.start(_app_context_ptr, argc, argv);
 }
 
 error_code service_node::start()
@@ -300,7 +300,7 @@ error_code service_node::start()
     // create app
     {
         ::dsn::tools::node_scoper scoper(this);
-        _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+        _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name);
     }
 
     return err;
@@ -414,6 +414,16 @@ void service_engine::init_before_toollets(const service_spec& spec)
         factory_store<perf_counter>::get_factory<perf_counter::factory>(
         spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         )
+        );
+
+    // init common for all per-node providers
+    message_ex::s_local_hash = (uint32_t)dsn_config_get_value_uint64(
+        "core",
+        "local_hash",
+        0,
+        "a same hash value from two processes indicate the rpc code are registered in the same order, "
+        "and therefore the mapping between rpc code string and integer is the same, which we leverage "
+        "for fast rpc handler lookup optimization"
         );
 }
 
