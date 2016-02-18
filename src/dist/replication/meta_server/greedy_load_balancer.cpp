@@ -348,7 +348,7 @@ void greedy_load_balancer::greedy_copy_secondary()
         execute_balancer_proposal();
 }
 
-// load balancer based on fulkson-ford
+// load balancer based on ford-fulkerson
 void greedy_load_balancer::greedy_balancer(int total_replicas)
 {
     if ( !_balancer_proposals_map.empty() )

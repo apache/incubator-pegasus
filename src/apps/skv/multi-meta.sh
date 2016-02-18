@@ -161,4 +161,6 @@ case $1 in
             kill_app $2 $3
         fi
         ;;
+    list)
+        ps aux | grep $exe | grep $cfg
 esac
