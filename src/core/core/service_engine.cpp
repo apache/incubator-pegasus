@@ -415,6 +415,16 @@ void service_engine::init_before_toollets(const service_spec& spec)
         spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         )
         );
+
+    // init common for all per-node providers
+    message_ex::s_local_hash = (uint32_t)dsn_config_get_value_uint64(
+        "core",
+        "local-hash",
+        0,
+        "a same hash value from two processes indicate the rpc code are registered in the same order, "
+        "and therefore the mapping between rpc code string and integer is the same, which we leverage "
+        "for fast rpc handler lookup optimization"
+        );
 }
 
 void service_engine::init_after_toollets()
