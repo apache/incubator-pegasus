@@ -65,12 +65,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
 
 replica_stub::~replica_stub(void)
 {
-    // this replica may not be opened
-    // or is already closed by calling tool_app::stop_all_apps()
-    if(_cli_replica_stub_json_state_handle != nullptr)
-    {
-        close();
-    }
+    close();
 }
 
 void replica_stub::install_perf_counters()
@@ -1193,7 +1188,14 @@ void replica_stub::open_service()
 
 void replica_stub::close()
 {
-    dassert(_cli_replica_stub_json_state_handle != nullptr, "unable to find registered cli command, close before initialize?");
+    // this replica may not be opened
+    // or is already closed by calling tool_app::stop_all_apps()
+    // in this case, just return
+    if(_cli_replica_stub_json_state_handle == nullptr)
+    {
+        return;
+    }
+
     dsn_cli_deregister(_cli_replica_stub_json_state_handle);
     _cli_replica_stub_json_state_handle = nullptr;
 
