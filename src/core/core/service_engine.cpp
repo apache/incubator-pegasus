@@ -419,7 +419,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
     // init common for all per-node providers
     message_ex::s_local_hash = (uint32_t)dsn_config_get_value_uint64(
         "core",
-        "local-hash",
+        "local_hash",
         0,
         "a same hash value from two processes indicate the rpc code are registered in the same order, "
         "and therefore the mapping between rpc code string and integer is the same, which we leverage "
