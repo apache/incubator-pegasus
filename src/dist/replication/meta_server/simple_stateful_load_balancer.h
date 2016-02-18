@@ -47,13 +47,10 @@ class simple_stateful_load_balancer
 {
 public:
     simple_stateful_load_balancer(server_state* state);
-    ~simple_stateful_load_balancer();
+    virtual ~simple_stateful_load_balancer() override;
 
     virtual void run() override;
     virtual void run(global_partition_id gpid) override;
-
-    // this method is for testing
-    virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) override;
 
 private:
     // meta server => partition server    
@@ -62,8 +59,5 @@ private:
     
     void run_lb(partition_configuration& pc);
     ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
-
-private:
-    server_state *_state;
 };
 

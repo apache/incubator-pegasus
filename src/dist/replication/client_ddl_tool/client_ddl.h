@@ -54,6 +54,9 @@ public:
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
 
+    dsn::error_code control_meta_balancer_migration(bool start);
+
+    dsn::error_code send_balancer_proposal(const dsn::replication::balancer_proposal_request& request);
 private:
     bool static valid_app_char(int c);
 

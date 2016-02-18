@@ -467,6 +467,66 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::read);
     }
 
+    // ---------- control_balancer_migration_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::read);
+    }
+
+    // ---------- control_balancer_migration_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::read);
+    }
+
+    // ---------- balancer_proposal_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::read);
+    }
+
+    // ---------- balancer_proposal_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::read);
+    }
+
     // ---------- configuration_drop_app_response -------------
     inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_response& val)
     {
@@ -697,6 +757,7 @@ namespace dsn { namespace replication {
         CT_DOWNGRADE_TO_SECONDARY = 5,
         CT_DOWNGRADE_TO_INACTIVE = 6,
         CT_REMOVE = 7,
+        CT_ADD_SECONDARY_FOR_LB = 8,
     };
 
     DEFINE_POD_SERIALIZATION(config_type);
@@ -724,6 +785,17 @@ namespace dsn { namespace replication {
     };
 
     DEFINE_POD_SERIALIZATION(node_status);
+
+    // ---------- balancer_type -------------
+    enum balancer_type
+    {
+        BT_INVALID = 0,
+        BT_MOVE_PRIMARY = 1,
+        BT_COPY_PRIMARY = 2,
+        BT_COPY_SECONDARY = 3,
+    };
+
+    DEFINE_POD_SERIALIZATION(balancer_type);
 
     // ---------- global_partition_id -------------
     struct global_partition_id
@@ -1416,6 +1488,79 @@ namespace dsn { namespace replication {
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.appid);
+    }
+
+    // ---------- control_balancer_migration_request -------------
+    struct control_balancer_migration_request
+    {
+        bool enable_migration;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_request& val)
+    {
+        marshall(writer, val.enable_migration);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_request& val)
+    {
+        unmarshall(reader, val.enable_migration);
+    }
+
+    // ---------- control_balancer_migration_response -------------
+    struct control_balancer_migration_response
+    {
+        ::dsn::error_code err;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_response& val)
+    {
+        marshall(writer, val.err);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_response& val)
+    {
+        unmarshall(reader, val.err);
+    }
+
+    // ---------- balancer_proposal_request -------------
+    struct balancer_proposal_request
+    {
+        global_partition_id gpid;
+        balancer_type type;
+        ::dsn::rpc_address from;
+        ::dsn::rpc_address to;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_request& val)
+    {
+        marshall(writer, val.gpid);
+        marshall(writer, val.type);
+        marshall(writer, val.from);
+        marshall(writer, val.to);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_request& val)
+    {
+        unmarshall(reader, val.gpid);
+        unmarshall(reader, val.type);
+        unmarshall(reader, val.from);
+        unmarshall(reader, val.to);
+    }
+
+    // ---------- balancer_proposal_response -------------
+    struct balancer_proposal_response
+    {
+        ::dsn::error_code err;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_response& val)
+    {
+        marshall(writer, val.err);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_response& val)
+    {
+        unmarshall(reader, val.err);
     }
 
     // ---------- configuration_drop_app_response -------------
