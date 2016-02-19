@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.cli)
+set(MY_PROJ_NAME dsn.cli.tool)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.

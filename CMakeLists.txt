@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 2.8.7)
+
+add_definitions(-DDSN_NOT_USE_DEFAULT_SERIALIZATION)
+
 include(bin/dsn.cmake)
 #cmake_policy(SET CMP0048 NEW)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)

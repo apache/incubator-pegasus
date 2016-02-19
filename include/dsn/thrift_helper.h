@@ -35,7 +35,6 @@
 
 # pragma once
 
-# include <dsn/service_api_cpp.h>
 # include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
 
@@ -102,14 +101,14 @@ namespace dsn {
     };
 
     #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
-        inline int write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
+        inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
         {\
-            int xfer = proto->writeFieldBegin("val", ::apache::thrift::protocol::TType::T_##TTag, 0); \
+            uint32_t xfer = proto->writeFieldBegin("val", ::apache::thrift::protocol::TType::T_##TTag, 0); \
             xfer += proto->write##TMethod(val); \
             xfer += proto->writeFieldEnd(); \
             return xfer;\
         }\
-        inline int read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val, ::apache::thrift::protocol::TType ftype)\
+        inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val, ::apache::thrift::protocol::TType ftype)\
         {\
             if (ftype == ::apache::thrift::protocol::TType::T_##TTag) return proto->read##TMethod(val); \
             else return proto->skip(ftype);\
@@ -123,6 +122,92 @@ namespace dsn {
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)        
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
+    template<typename T>
+    uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
+    template<typename T>
+    uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, T& val);
+
+    template<typename T>
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oprot, const std::vector<T>& val)
+    {
+        uint32_t xfer = oprot->writeFieldBegin("val", ::apache::thrift::protocol::T_LIST, 0);
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(val.size()));
+        for (auto iter = val.begin(); iter!=val.end(); ++iter)
+        {
+            marshall_base(oprot, *iter);
+        }
+        xfer += oprot->writeListEnd();
+        xfer += oprot->writeFieldEnd();
+    }
+
+    template <typename T>
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iprot, std::vector<T>& val, ::apache::thrift::protocol::TType ftype)
+    {
+        uint32_t xfer = 0;
+        if (ftype == ::apache::thrift::protocol::T_LIST)
+        {
+            val.clear();
+            uint32_t size;
+            ::apache::thrift::protocol::TType element_type;
+            xfer += iprot->readListBegin(element_type, size);
+            val.resize(size);
+            for (uint32_t i=0; i!=size; ++i)
+            {
+                xfer += unmarshall_base(iprot, val[i]);
+            }
+        }
+        else
+            xfer += iprot->skip(ftype);
+        return xfer;
+    }
+
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const error_code& val)
+    {
+
+    }
+
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, error_code& val, apache::thrift::protocol::TType ftype)
+    {
+
+    }
+
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const task_code& val)
+    {
+
+    }
+
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, task_code& val, apache::thrift::protocol::TType ftype)
+    {
+
+    }
+
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const rpc_address& val)
+    {
+
+    }
+
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, rpc_address& val, apache::thrift::protocol::TType ftype)
+    {
+
+    }
+
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const blob& val)
+    {
+
+    }
+
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, blob& val, apache::thrift::protocol::TType ftype)
+    {
+
+    }
+
+    inline const char* to_string(const rpc_address& addr) { return ""; }
+    inline const char* to_string(const blob& blob) { return ""; }
+    inline const char* to_string(const task_code& code) { return ""; }
+    inline const char* to_string(const error_code& ec) { return ""; }
+
+    //TODO: the write_base and read_base of set, map, unordered_map
+
     template<typename TName>
     inline uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const TName& val)
     {
@@ -133,7 +218,7 @@ namespace dsn {
         xfer += oproto->writeStructEnd();
         return xfer;
     }
-        
+
     template<typename TName>
     inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
     {
@@ -186,73 +271,44 @@ namespace dsn {
         unmarshall_base<T>(&proto, val);
     }
 
-    template<typename T>
-    uint32_t marshall_rpc_args(
-        ::apache::thrift::protocol::TProtocol* oprot,
-        const T& val,
-        uint32_t(T::*writer)(::apache::thrift::protocol::TProtocol*) const
-        )
+    inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     {
-        uint32_t xfer = 0;
-        oprot->incrementRecursionDepth();
-        xfer += oprot->writeStructBegin("rpc_message");
 
-        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
-
-        xfer += (val.*writer)(oprot);
-
-        xfer += oprot->writeFieldEnd();
-
-        xfer += oprot->writeFieldStop();
-        xfer += oprot->writeStructEnd();
-        oprot->decrementRecursionDepth();
-        return xfer;
     }
 
-    template<typename T>
-    uint32_t unmarshall_rpc_args(
-        ::apache::thrift::protocol::TProtocol* iprot,
-        /*out*/ T& val,
-        uint32_t(T::*reader)(::apache::thrift::protocol::TProtocol*)
-        )
+    inline uint32_t rpc_address::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        uint32_t xfer = 0;
-        std::string fname;
-        ::apache::thrift::protocol::TType ftype;
-        int16_t fid;
 
-        xfer += iprot->readStructBegin(fname);
+    }
 
-        using ::apache::thrift::protocol::TProtocolException;
+    inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
+    {
 
-        while (true)
-        {
-            xfer += iprot->readFieldBegin(fname, ftype, fid);
-            if (ftype == ::apache::thrift::protocol::T_STOP) {
-                break;
-            }
-            switch (fid)
-            {
-            case 1:
-                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-                    xfer += (val.*reader)(iprot);
-                }
-                else {
-                    xfer += iprot->skip(ftype);
-                }
-                break;
-            default:
-                xfer += iprot->skip(ftype);
-                break;
-            }
-            xfer += iprot->readFieldEnd();
-        }
+    }
 
-        xfer += iprot->readStructEnd();
+    inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) const
+    {
 
-        iprot->readMessageEnd();
-        iprot->getTransport()->readEnd();
-        return xfer;
+    }
+
+    inline uint32_t blob::read(apache::thrift::protocol::TProtocol *iprot)
+    {
+
+    }
+
+    inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
+    {
+
+    }
+
+    inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
+    {
+
+    }
+
+    inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) const
+    {
+
     }
 
     DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT);
@@ -270,12 +326,18 @@ namespace dsn {
         char _write_buffer_for_header[512];
 
     public:
-        thrift_binary_message_parser(int buffer_block_size)
-            : message_parser(buffer_block_size)
+        thrift_binary_message_parser(int buffer_block_size, bool is_write_only)
+            : message_parser(buffer_block_size, is_write_only)
         {
         }
 
-        virtual void prepare_buffers_for_send(dsn_message_t msg, /*out*/ std::vector<blob>& buffers)
+        //fixme
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override
+        {
+            return 0;
+        }
+
+        int prepare_buffers_on_send(message_ex* msg, /*out*/ std::vector<blob>& buffers)
         {
             // prepare head
             blob bb(_write_buffer_for_header, 0, 512);
@@ -283,13 +345,14 @@ namespace dsn {
             boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
-            auto sp = task_spec::get(msg->header().local_rpc_code);
+            // FIXME:
+            auto sp = task_spec::get(msg->header->rpc_id);
 
-            proto.writeMessageBegin(msg->header().rpc_name,
+            proto.writeMessageBegin(msg->header->rpc_name,
                 sp->type == TASK_TYPE_RPC_REQUEST ?
                 ::apache::thrift::protocol::T_CALL :
                 ::apache::thrift::protocol::T_REPLY,
-                (int32_t)msg->header().id
+                (int32_t)msg->header->id
                 );
 
             // patched end (writeMessageEnd)
@@ -297,7 +360,8 @@ namespace dsn {
 
             // finalize
             std::vector<blob> lbuffers;
-            msg->writer().get_buffers(lbuffers);
+            //FIXME:
+            //msg->writer().get_buffers(lbuffers);
             if (lbuffers[0].length() == sizeof(message_header))
             {
                 lbuffers[0] = writer.get_buffer();
@@ -321,9 +385,17 @@ namespace dsn {
                     }
                 }
             }
+
+            //FIXME:
+            return 0;
         }
 
-        virtual dsn_message_t get_message_on_receive(int read_length, /*out*/ int& read_next)
+        virtual int get_send_buffers_count_and_total_length(message_ex *msg, int *total_length)
+        {
+            return 0;
+        }
+
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override
         {
             mark_read(read_length);
 
@@ -362,10 +434,10 @@ namespace dsn {
                 // msg done
                 int msg_sz = _read_buffer_occupied - reader.get_remaining_size() - hdr_sz;
                 auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
-                dsn_message_t msg = new message(msg_bb, false);
-                msg->header().id = msg->header().rpc_id = rseqid;
-                strncpy(msg->header().rpc_name, fname.c_str(), sizeof(msg->header().rpc_name));
-                msg->header().body_length = msg_sz;
+                message_ex* msg = message_ex::create_receive_message(msg_bb);
+                msg->header->id = msg->header->rpc_id = rseqid;
+                strncpy(msg->header->rpc_name, fname.c_str(), sizeof(msg->header->rpc_name));
+                msg->header->body_length = msg_sz;
 
                 _read_buffer = _read_buffer.range(msg_sz + hdr_sz);
                 _read_buffer_occupied -= (msg_sz + hdr_sz);
@@ -379,7 +451,6 @@ namespace dsn {
             }
         }
     };
-
 }
 
 /*

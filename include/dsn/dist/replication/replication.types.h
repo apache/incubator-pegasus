@@ -16,20 +16,2543 @@
 # include <dsn/thrift_helper.h>
 # include "replication_types.h" 
 
+namespace dsn {
+    // ---------- global_partition_id -------------
+    template<>
+    inline uint32_t marshall_base<service::global_partition_id>(::apache::thrift::protocol::TProtocol* oprot, const service::global_partition_id& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::global_partition_id>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::global_partition_id& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- mutation_header -------------
+    template<>
+    inline uint32_t marshall_base<service::mutation_header>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_header& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::mutation_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_header& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- mutation_update -------------
+    template<>
+    inline uint32_t marshall_base<service::mutation_update>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_update& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::mutation_update>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_update& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- mutation_data -------------
+    template<>
+    inline uint32_t marshall_base<service::mutation_data>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_data& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::mutation_data>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_data& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- partition_configuration -------------
+    template<>
+    inline uint32_t marshall_base<service::partition_configuration>(::apache::thrift::protocol::TProtocol* oprot, const service::partition_configuration& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::partition_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::partition_configuration& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- replica_configuration -------------
+    template<>
+    inline uint32_t marshall_base<service::replica_configuration>(::apache::thrift::protocol::TProtocol* oprot, const service::replica_configuration& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::replica_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::replica_configuration& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- prepare_msg -------------
+    template<>
+    inline uint32_t marshall_base<service::prepare_msg>(::apache::thrift::protocol::TProtocol* oprot, const service::prepare_msg& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::prepare_msg>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::prepare_msg& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- read_request_header -------------
+    template<>
+    inline uint32_t marshall_base<service::read_request_header>(::apache::thrift::protocol::TProtocol* oprot, const service::read_request_header& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::read_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::read_request_header& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- write_request_header -------------
+    template<>
+    inline uint32_t marshall_base<service::write_request_header>(::apache::thrift::protocol::TProtocol* oprot, const service::write_request_header& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::write_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::write_request_header& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- rw_response_header -------------
+    template<>
+    inline uint32_t marshall_base<service::rw_response_header>(::apache::thrift::protocol::TProtocol* oprot, const service::rw_response_header& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::rw_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::rw_response_header& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- prepare_ack -------------
+    template<>
+    inline uint32_t marshall_base<service::prepare_ack>(::apache::thrift::protocol::TProtocol* oprot, const service::prepare_ack& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::prepare_ack>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::prepare_ack& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- learn_state -------------
+    template<>
+    inline uint32_t marshall_base<service::learn_state>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_state& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::learn_state>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_state& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- learn_request -------------
+    template<>
+    inline uint32_t marshall_base<service::learn_request>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::learn_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- learn_response -------------
+    template<>
+    inline uint32_t marshall_base<service::learn_response>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::learn_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- group_check_request -------------
+    template<>
+    inline uint32_t marshall_base<service::group_check_request>(::apache::thrift::protocol::TProtocol* oprot, const service::group_check_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::group_check_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::group_check_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- group_check_response -------------
+    template<>
+    inline uint32_t marshall_base<service::group_check_response>(::apache::thrift::protocol::TProtocol* oprot, const service::group_check_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::group_check_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::group_check_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- app_info -------------
+    template<>
+    inline uint32_t marshall_base<service::app_info>(::apache::thrift::protocol::TProtocol* oprot, const service::app_info& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::app_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::app_info& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- node_info -------------
+    template<>
+    inline uint32_t marshall_base<service::node_info>(::apache::thrift::protocol::TProtocol* oprot, const service::node_info& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::node_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::node_info& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- meta_response_header -------------
+    template<>
+    inline uint32_t marshall_base<service::meta_response_header>(::apache::thrift::protocol::TProtocol* oprot, const service::meta_response_header& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::meta_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::meta_response_header& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_update_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_update_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_update_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_update_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_update_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_update_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_update_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_update_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_update_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_update_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_proposal_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_proposal_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_proposal_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_query_by_node_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_node_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_node_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- create_app_options -------------
+    template<>
+    inline uint32_t marshall_base<service::create_app_options>(::apache::thrift::protocol::TProtocol* oprot, const service::create_app_options& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::create_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::create_app_options& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_create_app_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_create_app_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_create_app_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- drop_app_options -------------
+    template<>
+    inline uint32_t marshall_base<service::drop_app_options>(::apache::thrift::protocol::TProtocol* oprot, const service::drop_app_options& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::drop_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::drop_app_options& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_drop_app_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_drop_app_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_drop_app_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_list_apps_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_apps_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_apps_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_list_nodes_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_nodes_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_nodes_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_create_app_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_create_app_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_create_app_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- control_balancer_migration_request -------------
+    template<>
+    inline uint32_t marshall_base<service::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* oprot, const service::control_balancer_migration_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::control_balancer_migration_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- control_balancer_migration_response -------------
+    template<>
+    inline uint32_t marshall_base<service::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* oprot, const service::control_balancer_migration_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::control_balancer_migration_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- balancer_proposal_request -------------
+    template<>
+    inline uint32_t marshall_base<service::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const service::balancer_proposal_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::balancer_proposal_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- balancer_proposal_response -------------
+    template<>
+    inline uint32_t marshall_base<service::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* oprot, const service::balancer_proposal_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::balancer_proposal_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_drop_app_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_drop_app_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_drop_app_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_list_apps_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_apps_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_apps_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_list_nodes_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_nodes_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_nodes_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_query_by_node_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_node_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_node_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_query_by_index_request -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_index_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_index_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- configuration_query_by_index_response -------------
+    template<>
+    inline uint32_t marshall_base<service::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_index_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_index_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- query_replica_decree_request -------------
+    template<>
+    inline uint32_t marshall_base<service::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_decree_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_decree_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- query_replica_decree_response -------------
+    template<>
+    inline uint32_t marshall_base<service::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_decree_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_decree_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- replica_info -------------
+    template<>
+    inline uint32_t marshall_base<service::replica_info>(::apache::thrift::protocol::TProtocol* oprot, const service::replica_info& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::replica_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::replica_info& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- query_replica_info_request -------------
+    template<>
+    inline uint32_t marshall_base<service::query_replica_info_request>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_info_request& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::query_replica_info_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_info_request& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- query_replica_info_response -------------
+    template<>
+    inline uint32_t marshall_base<service::query_replica_info_response>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_info_response& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base<service::query_replica_info_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_info_response& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+}
+
 namespace dsn { namespace replication { 
     // ---------- global_partition_id -------------
     inline void marshall(::dsn::binary_writer& writer, const global_partition_id& val)
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<global_partition_id>(&proto, val, &global_partition_id::write);
+        ::dsn::marshall_base<global_partition_id>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ global_partition_id& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<global_partition_id>(&proto, val, &global_partition_id::read);
+        ::dsn::unmarshall_base<global_partition_id>(&proto, val);
     }
 
     // ---------- mutation_header -------------
@@ -37,14 +2560,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<mutation_header>(&proto, val, &mutation_header::write);
+        ::dsn::marshall_base<mutation_header>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_header& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<mutation_header>(&proto, val, &mutation_header::read);
+        ::dsn::unmarshall_base<mutation_header>(&proto, val);
     }
 
     // ---------- mutation_update -------------
@@ -52,14 +2575,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<mutation_update>(&proto, val, &mutation_update::write);
+        ::dsn::marshall_base<mutation_update>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_update& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<mutation_update>(&proto, val, &mutation_update::read);
+        ::dsn::unmarshall_base<mutation_update>(&proto, val);
     }
 
     // ---------- mutation_data -------------
@@ -67,14 +2590,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<mutation_data>(&proto, val, &mutation_data::write);
+        ::dsn::marshall_base<mutation_data>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_data& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<mutation_data>(&proto, val, &mutation_data::read);
+        ::dsn::unmarshall_base<mutation_data>(&proto, val);
     }
 
     // ---------- partition_configuration -------------
@@ -82,14 +2605,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<partition_configuration>(&proto, val, &partition_configuration::write);
+        ::dsn::marshall_base<partition_configuration>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ partition_configuration& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<partition_configuration>(&proto, val, &partition_configuration::read);
+        ::dsn::unmarshall_base<partition_configuration>(&proto, val);
     }
 
     // ---------- replica_configuration -------------
@@ -97,14 +2620,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<replica_configuration>(&proto, val, &replica_configuration::write);
+        ::dsn::marshall_base<replica_configuration>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_configuration& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<replica_configuration>(&proto, val, &replica_configuration::read);
+        ::dsn::unmarshall_base<replica_configuration>(&proto, val);
     }
 
     // ---------- prepare_msg -------------
@@ -112,14 +2635,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<prepare_msg>(&proto, val, &prepare_msg::write);
+        ::dsn::marshall_base<prepare_msg>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ prepare_msg& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<prepare_msg>(&proto, val, &prepare_msg::read);
+        ::dsn::unmarshall_base<prepare_msg>(&proto, val);
     }
 
     // ---------- read_request_header -------------
@@ -127,14 +2650,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<read_request_header>(&proto, val, &read_request_header::write);
+        ::dsn::marshall_base<read_request_header>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ read_request_header& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<read_request_header>(&proto, val, &read_request_header::read);
+        ::dsn::unmarshall_base<read_request_header>(&proto, val);
     }
 
     // ---------- write_request_header -------------
@@ -142,14 +2665,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<write_request_header>(&proto, val, &write_request_header::write);
+        ::dsn::marshall_base<write_request_header>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ write_request_header& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<write_request_header>(&proto, val, &write_request_header::read);
+        ::dsn::unmarshall_base<write_request_header>(&proto, val);
     }
 
     // ---------- rw_response_header -------------
@@ -157,14 +2680,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<rw_response_header>(&proto, val, &rw_response_header::write);
+        ::dsn::marshall_base<rw_response_header>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ rw_response_header& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<rw_response_header>(&proto, val, &rw_response_header::read);
+        ::dsn::unmarshall_base<rw_response_header>(&proto, val);
     }
 
     // ---------- prepare_ack -------------
@@ -172,14 +2695,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<prepare_ack>(&proto, val, &prepare_ack::write);
+        ::dsn::marshall_base<prepare_ack>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ prepare_ack& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<prepare_ack>(&proto, val, &prepare_ack::read);
+        ::dsn::unmarshall_base<prepare_ack>(&proto, val);
     }
 
     // ---------- learn_state -------------
@@ -187,14 +2710,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<learn_state>(&proto, val, &learn_state::write);
+        ::dsn::marshall_base<learn_state>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_state& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<learn_state>(&proto, val, &learn_state::read);
+        ::dsn::unmarshall_base<learn_state>(&proto, val);
     }
 
     // ---------- learn_request -------------
@@ -202,14 +2725,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<learn_request>(&proto, val, &learn_request::write);
+        ::dsn::marshall_base<learn_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<learn_request>(&proto, val, &learn_request::read);
+        ::dsn::unmarshall_base<learn_request>(&proto, val);
     }
 
     // ---------- learn_response -------------
@@ -217,14 +2740,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<learn_response>(&proto, val, &learn_response::write);
+        ::dsn::marshall_base<learn_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<learn_response>(&proto, val, &learn_response::read);
+        ::dsn::unmarshall_base<learn_response>(&proto, val);
     }
 
     // ---------- group_check_request -------------
@@ -232,14 +2755,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<group_check_request>(&proto, val, &group_check_request::write);
+        ::dsn::marshall_base<group_check_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ group_check_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<group_check_request>(&proto, val, &group_check_request::read);
+        ::dsn::unmarshall_base<group_check_request>(&proto, val);
     }
 
     // ---------- group_check_response -------------
@@ -247,14 +2770,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<group_check_response>(&proto, val, &group_check_response::write);
+        ::dsn::marshall_base<group_check_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ group_check_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<group_check_response>(&proto, val, &group_check_response::read);
+        ::dsn::unmarshall_base<group_check_response>(&proto, val);
     }
 
     // ---------- app_info -------------
@@ -262,14 +2785,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<app_info>(&proto, val, &app_info::write);
+        ::dsn::marshall_base<app_info>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ app_info& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<app_info>(&proto, val, &app_info::read);
+        ::dsn::unmarshall_base<app_info>(&proto, val);
     }
 
     // ---------- node_info -------------
@@ -277,14 +2800,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<node_info>(&proto, val, &node_info::write);
+        ::dsn::marshall_base<node_info>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ node_info& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<node_info>(&proto, val, &node_info::read);
+        ::dsn::unmarshall_base<node_info>(&proto, val);
     }
 
     // ---------- meta_response_header -------------
@@ -292,14 +2815,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<meta_response_header>(&proto, val, &meta_response_header::write);
+        ::dsn::marshall_base<meta_response_header>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ meta_response_header& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<meta_response_header>(&proto, val, &meta_response_header::read);
+        ::dsn::unmarshall_base<meta_response_header>(&proto, val);
     }
 
     // ---------- configuration_update_request -------------
@@ -307,14 +2830,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_update_request>(&proto, val, &configuration_update_request::write);
+        ::dsn::marshall_base<configuration_update_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_update_request>(&proto, val, &configuration_update_request::read);
+        ::dsn::unmarshall_base<configuration_update_request>(&proto, val);
     }
 
     // ---------- configuration_update_response -------------
@@ -322,14 +2845,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_update_response>(&proto, val, &configuration_update_response::write);
+        ::dsn::marshall_base<configuration_update_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_update_response>(&proto, val, &configuration_update_response::read);
+        ::dsn::unmarshall_base<configuration_update_response>(&proto, val);
     }
 
     // ---------- configuration_proposal_request -------------
@@ -337,14 +2860,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_proposal_request>(&proto, val, &configuration_proposal_request::write);
+        ::dsn::marshall_base<configuration_proposal_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_proposal_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_proposal_request>(&proto, val, &configuration_proposal_request::read);
+        ::dsn::unmarshall_base<configuration_proposal_request>(&proto, val);
     }
 
     // ---------- configuration_query_by_node_request -------------
@@ -352,14 +2875,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_query_by_node_request>(&proto, val, &configuration_query_by_node_request::write);
+        ::dsn::marshall_base<configuration_query_by_node_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_node_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_query_by_node_request>(&proto, val, &configuration_query_by_node_request::read);
+        ::dsn::unmarshall_base<configuration_query_by_node_request>(&proto, val);
     }
 
     // ---------- create_app_options -------------
@@ -367,14 +2890,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<create_app_options>(&proto, val, &create_app_options::write);
+        ::dsn::marshall_base<create_app_options>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<create_app_options>(&proto, val, &create_app_options::read);
+        ::dsn::unmarshall_base<create_app_options>(&proto, val);
     }
 
     // ---------- configuration_create_app_request -------------
@@ -382,14 +2905,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::write);
+        ::dsn::marshall_base<configuration_create_app_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::read);
+        ::dsn::unmarshall_base<configuration_create_app_request>(&proto, val);
     }
 
     // ---------- drop_app_options -------------
@@ -397,14 +2920,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::write);
+        ::dsn::marshall_base<drop_app_options>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_app_options& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::read);
+        ::dsn::unmarshall_base<drop_app_options>(&proto, val);
     }
 
     // ---------- configuration_drop_app_request -------------
@@ -412,14 +2935,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::write);
+        ::dsn::marshall_base<configuration_drop_app_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::read);
+        ::dsn::unmarshall_base<configuration_drop_app_request>(&proto, val);
     }
 
     // ---------- configuration_list_apps_request -------------
@@ -427,14 +2950,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::write);
+        ::dsn::marshall_base<configuration_list_apps_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::read);
+        ::dsn::unmarshall_base<configuration_list_apps_request>(&proto, val);
     }
 
     // ---------- configuration_list_nodes_request -------------
@@ -442,14 +2965,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::write);
+        ::dsn::marshall_base<configuration_list_nodes_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::read);
+        ::dsn::unmarshall_base<configuration_list_nodes_request>(&proto, val);
     }
 
     // ---------- configuration_create_app_response -------------
@@ -457,14 +2980,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::write);
+        ::dsn::marshall_base<configuration_create_app_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::read);
+        ::dsn::unmarshall_base<configuration_create_app_response>(&proto, val);
     }
 
     // ---------- control_balancer_migration_request -------------
@@ -472,14 +2995,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::write);
+        ::dsn::marshall_base<control_balancer_migration_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::read);
+        ::dsn::unmarshall_base<control_balancer_migration_request>(&proto, val);
     }
 
     // ---------- control_balancer_migration_response -------------
@@ -487,14 +3010,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::write);
+        ::dsn::marshall_base<control_balancer_migration_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::read);
+        ::dsn::unmarshall_base<control_balancer_migration_response>(&proto, val);
     }
 
     // ---------- balancer_proposal_request -------------
@@ -502,14 +3025,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::write);
+        ::dsn::marshall_base<balancer_proposal_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::read);
+        ::dsn::unmarshall_base<balancer_proposal_request>(&proto, val);
     }
 
     // ---------- balancer_proposal_response -------------
@@ -517,14 +3040,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::write);
+        ::dsn::marshall_base<balancer_proposal_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::read);
+        ::dsn::unmarshall_base<balancer_proposal_response>(&proto, val);
     }
 
     // ---------- configuration_drop_app_response -------------
@@ -532,14 +3055,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::write);
+        ::dsn::marshall_base<configuration_drop_app_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::read);
+        ::dsn::unmarshall_base<configuration_drop_app_response>(&proto, val);
     }
 
     // ---------- configuration_list_apps_response -------------
@@ -547,14 +3070,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::write);
+        ::dsn::marshall_base<configuration_list_apps_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::read);
+        ::dsn::unmarshall_base<configuration_list_apps_response>(&proto, val);
     }
 
     // ---------- configuration_list_nodes_response -------------
@@ -562,14 +3085,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::write);
+        ::dsn::marshall_base<configuration_list_nodes_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::read);
+        ::dsn::unmarshall_base<configuration_list_nodes_response>(&proto, val);
     }
 
     // ---------- configuration_query_by_node_response -------------
@@ -577,14 +3100,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_query_by_node_response>(&proto, val, &configuration_query_by_node_response::write);
+        ::dsn::marshall_base<configuration_query_by_node_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_node_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_query_by_node_response>(&proto, val, &configuration_query_by_node_response::read);
+        ::dsn::unmarshall_base<configuration_query_by_node_response>(&proto, val);
     }
 
     // ---------- configuration_query_by_index_request -------------
@@ -592,14 +3115,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_query_by_index_request>(&proto, val, &configuration_query_by_index_request::write);
+        ::dsn::marshall_base<configuration_query_by_index_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_index_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_query_by_index_request>(&proto, val, &configuration_query_by_index_request::read);
+        ::dsn::unmarshall_base<configuration_query_by_index_request>(&proto, val);
     }
 
     // ---------- configuration_query_by_index_response -------------
@@ -607,14 +3130,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_query_by_index_response>(&proto, val, &configuration_query_by_index_response::write);
+        ::dsn::marshall_base<configuration_query_by_index_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_index_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_query_by_index_response>(&proto, val, &configuration_query_by_index_response::read);
+        ::dsn::unmarshall_base<configuration_query_by_index_response>(&proto, val);
     }
 
     // ---------- query_replica_decree_request -------------
@@ -622,14 +3145,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<query_replica_decree_request>(&proto, val, &query_replica_decree_request::write);
+        ::dsn::marshall_base<query_replica_decree_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_decree_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<query_replica_decree_request>(&proto, val, &query_replica_decree_request::read);
+        ::dsn::unmarshall_base<query_replica_decree_request>(&proto, val);
     }
 
     // ---------- query_replica_decree_response -------------
@@ -637,14 +3160,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<query_replica_decree_response>(&proto, val, &query_replica_decree_response::write);
+        ::dsn::marshall_base<query_replica_decree_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_decree_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<query_replica_decree_response>(&proto, val, &query_replica_decree_response::read);
+        ::dsn::unmarshall_base<query_replica_decree_response>(&proto, val);
     }
 
     // ---------- replica_info -------------
@@ -652,14 +3175,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<replica_info>(&proto, val, &replica_info::write);
+        ::dsn::marshall_base<replica_info>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_info& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<replica_info>(&proto, val, &replica_info::read);
+        ::dsn::unmarshall_base<replica_info>(&proto, val);
     }
 
     // ---------- query_replica_info_request -------------
@@ -667,14 +3190,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<query_replica_info_request>(&proto, val, &query_replica_info_request::write);
+        ::dsn::marshall_base<query_replica_info_request>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_info_request& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<query_replica_info_request>(&proto, val, &query_replica_info_request::read);
+        ::dsn::unmarshall_base<query_replica_info_request>(&proto, val);
     }
 
     // ---------- query_replica_info_response -------------
@@ -682,14 +3205,14 @@ namespace dsn { namespace replication {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<query_replica_info_response>(&proto, val, &query_replica_info_response::write);
+        ::dsn::marshall_base<query_replica_info_response>(&proto, val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_info_response& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<query_replica_info_response>(&proto, val, &query_replica_info_response::read);
+        ::dsn::unmarshall_base<query_replica_info_response>(&proto, val);
     }
 
 } } 

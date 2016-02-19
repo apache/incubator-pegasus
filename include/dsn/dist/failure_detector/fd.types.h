@@ -1,38 +1,5 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 # pragma once
+# include <dsn/service_api_cpp.h>
 
 //
 // uncomment the following line if you want to use 
@@ -44,12 +11,125 @@
 //
 // # define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
-# include <dsn/service_api_cpp.h>
-
 # ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 # include <dsn/thrift_helper.h>
 # include "fd_types.h" 
+
+namespace dsn {
+    // ---------- beacon_msg -------------
+    template<>
+    inline uint32_t marshall_base< ::dsn::fd::beacon_msg>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::fd::beacon_msg& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base< ::dsn::fd::beacon_msg>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::fd::beacon_msg& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+    // ---------- beacon_ack -------------
+    template<>
+    inline uint32_t marshall_base< ::dsn::fd::beacon_ack>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::fd::beacon_ack& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base< ::dsn::fd::beacon_ack>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::fd::beacon_ack& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+}
 
 namespace dsn { namespace fd { 
     // ---------- beacon_msg -------------
@@ -57,30 +137,30 @@ namespace dsn { namespace fd {
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<beacon_msg>(&proto, val, &beacon_msg::write);
-    };
+        ::dsn::marshall_base<beacon_msg>(&proto, val);
+    }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<beacon_msg>(&proto, val, &beacon_msg::read);
-    };
+        ::dsn::unmarshall_base<beacon_msg>(&proto, val);
+    }
 
     // ---------- beacon_ack -------------
     inline void marshall(::dsn::binary_writer& writer, const beacon_ack& val)
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<beacon_ack>(&proto, val, &beacon_ack::write);
-    };
+        ::dsn::marshall_base<beacon_ack>(&proto, val);
+    }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_ack& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<beacon_ack>(&proto, val, &beacon_ack::read);
-    };
+        ::dsn::unmarshall_base<beacon_ack>(&proto, val);
+    }
 
 } } 
 
@@ -96,7 +176,19 @@ namespace dsn { namespace fd {
         ::dsn::rpc_address to;
     };
 
-    DEFINE_POD_SERIALIZATION(beacon_msg)
+    inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
+    {
+        marshall(writer, val.time);
+        marshall(writer, val.from);
+        marshall(writer, val.to);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
+    {
+        unmarshall(reader, val.time);
+        unmarshall(reader, val.from);
+        unmarshall(reader, val.to);
+    }
 
     // ---------- beacon_ack -------------
     struct beacon_ack
@@ -108,7 +200,24 @@ namespace dsn { namespace fd {
         bool allowed;
     };
 
-    DEFINE_POD_SERIALIZATION(beacon_ack)
+    inline void marshall(::dsn::binary_writer& writer, const beacon_ack& val)
+    {
+        marshall(writer, val.time);
+        marshall(writer, val.this_node);
+        marshall(writer, val.primary_node);
+        marshall(writer, val.is_master);
+        marshall(writer, val.allowed);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_ack& val)
+    {
+        unmarshall(reader, val.time);
+        unmarshall(reader, val.this_node);
+        unmarshall(reader, val.primary_node);
+        unmarshall(reader, val.is_master);
+        unmarshall(reader, val.allowed);
+    }
+
 } } 
 
 #endif 
