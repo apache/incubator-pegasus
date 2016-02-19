@@ -13,7 +13,6 @@
  Scalability, reliability, and availability (e.g., storage, micro-service)
 
  @{
- \defgroup l2-model Overview
  \defgroup l2-ref API Reference
  @}
  
