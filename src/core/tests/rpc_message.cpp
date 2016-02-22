@@ -213,7 +213,7 @@ TEST(core, message_ex)
 
         dsn_msg_get_options(request, &opts);
         ASSERT_EQ(100, opts.timeout_ms);
-        ASSERT_EQ(1, opts.thread_hash);
+        ASSERT_EQ(1, opts.request_hash);
         ASSERT_EQ(333u, opts.vnid);
         ASSERT_EQ(444u, opts.context.context);
 

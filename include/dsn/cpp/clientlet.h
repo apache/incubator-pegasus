@@ -301,9 +301,11 @@ namespace dsn
             TCallback&& callback,
             int request_hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int reply_hash = 0)
+            int reply_hash = 0,
+            uint64_t partition_hash = 0
+            )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
             ::marshall(msg, std::forward<TRequest>(req));
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
         }
@@ -330,9 +332,11 @@ namespace dsn
             dsn_task_code_t code,
             TRequest&& req,
             int request_hash = 0,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds(0))
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+            uint64_t partition_hash = 0
+            )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
             ::marshall(msg, std::forward<TRequest>(req));
             return rpc_message_helper(msg);
         }
@@ -354,15 +358,15 @@ namespace dsn
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
-            int hash = 0
+            int request_hash = 0,
+            uint64_t partition_hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
+            dsn_message_t msg = dsn_msg_create_request(code, 0, request_hash, partition_hash);
             ::marshall(msg, req);
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }
-
-
+        
         template<typename TResponse>
         std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
         {
