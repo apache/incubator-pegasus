@@ -47,10 +47,14 @@ using namespace dsn::utils;
 # define __TITLE__ "message"
 #define CRC_INVALID 0xdead0c2c
 
-DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
+DSN_API dsn_message_t dsn_msg_create_request(
+    dsn_task_code_t rpc_code, 
+    int timeout_milliseconds, 
+    int request_hash, 
+    uint64_t partition_hash
+    )
 {
-    auto msg = ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
-    return msg;
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, request_hash, partition_hash);
 }
 
 DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
@@ -134,7 +138,7 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_HASH)
     {
-        hdr->client.hash = opts->thread_hash;
+        hdr->client.hash = opts->request_hash;
     }
     
     if (mask & DSN_MSGM_VNID)
@@ -155,7 +159,7 @@ DSN_API void dsn_msg_get_options(
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
     opts->context = hdr->context;
-    opts->thread_hash = hdr->client.hash;
+    opts->request_hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
     opts->vnid = hdr->vnid;
 }
@@ -389,7 +393,7 @@ message_ex* message_ex::copy_and_prepare_send()
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int request_hash, uint64_t partition_hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -398,10 +402,9 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
-    hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;    
-    
-    if (0 != hash) 
-        hdr.client.hash = hash;
+    hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
+
+    hdr.client.hash = request_hash;
 
     if (0 == timeout_milliseconds)
     {
@@ -412,12 +415,20 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
         hdr.client.timeout_ms = timeout_milliseconds;
     }
 
-    strncpy(hdr.rpc_name, dsn_task_code_to_string(rpc_code), sizeof(hdr.rpc_name));
+    task_spec* sp = task_spec::get(rpc_code);
+    strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name));
     hdr.rpc_name_fast.local_rpc_id = (uint32_t)rpc_code;
     hdr.rpc_name_fast.local_hash = s_local_hash;
 
     hdr.id = new_id();
+
     hdr.context.u.is_request = true;
+    if (0 != partition_hash)
+    {
+        hdr.context.u.parameter_type = MSG_PARAM_PARTITION_HASH;
+        hdr.context.u.parameter = partition_hash;
+    }
+    hdr.context.u.is_replication_needed = sp->rpc_request_is_replicated_write_operation;
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;
