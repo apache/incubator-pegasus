@@ -139,6 +139,7 @@ namespace dsn
             int request_hash = 0, 
             uint64_t partition_hash = 0
             );
+        static message_ex* create_receive_message_with_standalone_header(const blob& data);
         message_ex* create_response();
         message_ex* copy();
         message_ex* copy_and_prepare_send();
