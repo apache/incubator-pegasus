@@ -12,7 +12,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_INC_PATH "")
 
 if (UNIX)
-    set(MY_PROJ_LIBS pthread)
+    set(MY_PROJ_LIBS pthread dsn.cli)
 else()
     set(MY_PROJ_LIBS "")
 endif()

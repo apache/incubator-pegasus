@@ -6,14 +6,22 @@
 #include <cstdio>
 #include <cerrno>
 
+inline void error_msg(int err_number, /*out*/char* buffer, int buflen)
+{
 #ifdef _WIN32
-#define errno_msg(errno, buffer, length) strerror_s(buffer, length, errno)
+    int result = strerror_s(buffer, buflen, err_number);
+    if (result != 0)
+        fprintf(stderr, "maybe unknown err number(%s)", err_number);
 #else
-#define errno_msg strerror_r
+    char* result = strerror_r(err_number, buffer, buflen);
+    if (result != buffer) {
+        fprintf(stderr, "%s\n", result);
+    }
 #endif
+}
 
 #define log_error_and_return(buffer, length) do {\
-    errno_msg(errno, buffer, length);\
+    error_msg(errno, buffer, length);\
     derror("append file failed, reason(%s)", buffer);\
     return -1;\
 } while (0)

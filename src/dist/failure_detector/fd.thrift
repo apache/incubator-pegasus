@@ -5,8 +5,8 @@ namespace cpp dsn.fd
 struct beacon_msg
 {
     1: i64 time;
-    2: dsn.rpc_address from;
-    3: dsn.rpc_address to;
+    2: dsn.rpc_address from_addr;
+    3: dsn.rpc_address to_addr;
 }
 
 struct beacon_ack

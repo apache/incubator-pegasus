@@ -52,7 +52,7 @@ namespace dsn
         DEFINE_THREAD_POOL_CODE(THREAD_POOL_SCHEDULER_LONG)
 
         // ---------- cluster_type -------------
-        enum class cluster_type
+        enum cluster_type
         {
             kubernetes = 0,
             docker = 1,
@@ -65,8 +65,9 @@ namespace dsn
             invalid = 8
         };
 
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(cluster_type);
-
+#endif
         ENUM_BEGIN(cluster_type, cluster_type::invalid)
             ENUM_REG(cluster_type::kubernetes)
             ENUM_REG(cluster_type::docker)
@@ -79,7 +80,7 @@ namespace dsn
         ENUM_END(cluster_type)
 
         // ---------- service_status -------------
-        enum class service_status
+        enum service_status
         {
             SS_PREPARE_RESOURCE = 0,
             SS_DEPLOYING = 1,
@@ -91,9 +92,9 @@ namespace dsn
             SS_UNDEPLOYING = 7,
             SS_UNDEPLOYED = 8
         };
-
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(service_status);
-
+#endif
         ENUM_BEGIN(service_status, service_status::SS_INVALID)
             ENUM_REG(service_status::SS_PREPARE_RESOURCE)
             ENUM_REG(service_status::SS_DEPLOYING)

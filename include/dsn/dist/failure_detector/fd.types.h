@@ -172,22 +172,22 @@ namespace dsn { namespace fd {
     struct beacon_msg
     {
         int64_t time;
-        ::dsn::rpc_address from;
-        ::dsn::rpc_address to;
+        ::dsn::rpc_address from_addr;
+        ::dsn::rpc_address to_addr;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
     {
         marshall(writer, val.time);
-        marshall(writer, val.from);
-        marshall(writer, val.to);
+        marshall(writer, val.from_addr);
+        marshall(writer, val.to_addr);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
     {
         unmarshall(reader, val.time);
-        unmarshall(reader, val.from);
-        unmarshall(reader, val.to);
+        unmarshall(reader, val.from_addr);
+        unmarshall(reader, val.to_addr);
     }
 
     // ---------- beacon_ack -------------

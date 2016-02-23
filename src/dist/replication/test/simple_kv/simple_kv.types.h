@@ -1,28 +1,3 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
 # pragma once
 # include <dsn/service_api_cpp.h>
 
@@ -41,21 +16,80 @@
 # include <dsn/thrift_helper.h>
 # include "simple_kv_types.h" 
 
+namespace dsn {
+    // ---------- kv_pair -------------
+    template<>
+    inline uint32_t marshall_base< ::dsn::replication::test::kv_pair>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::test::kv_pair& val)
+    {
+        uint32_t xfer = 0;
+        oprot->incrementInputRecursionDepth();
+        xfer += oprot->writeStructBegin("rpc_message");
+        xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+        xfer += val.write(oprot);
+
+        xfer += oprot->writeFieldEnd();
+
+        xfer += oprot->writeFieldStop();
+        xfer += oprot->writeStructEnd();
+        oprot->decrementInputRecursionDepth();
+        return xfer;
+    }
+
+    template<>
+    inline uint32_t unmarshall_base< ::dsn::replication::test::kv_pair>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::test::kv_pair& val)
+    {
+        uint32_t xfer = 0;
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+        xfer += iprot->readStructBegin(fname);
+        using ::apache::thrift::protocol::TProtocolException;
+        while (true)
+        {
+            xfer += iprot->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP) {
+                break;
+            }
+            switch (fid)
+            {
+            case 1:
+                if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                    xfer += val.read(iprot);
+                }
+                else {
+                    xfer += iprot->skip(ftype);
+                }
+                break;
+            default:
+                xfer += iprot->skip(ftype);
+                break;
+            }
+            xfer += iprot->readFieldEnd();
+        }
+        xfer += iprot->readStructEnd();
+        iprot->readMessageEnd();
+        iprot->getTransport()->readEnd();
+        return xfer;
+    }
+
+}
+
 namespace dsn { namespace replication { namespace test { 
     // ---------- kv_pair -------------
     inline void marshall(::dsn::binary_writer& writer, const kv_pair& val)
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<kv_pair>(&proto, val, &kv_pair::write);
-    };
+        ::dsn::marshall_base<kv_pair>(&proto, val);
+    }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ kv_pair& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<kv_pair>(&proto, val, &kv_pair::read);
-    };
+        ::dsn::unmarshall_base<kv_pair>(&proto, val);
+    }
 
 } } } 
 
@@ -74,13 +108,13 @@ namespace dsn { namespace replication { namespace test {
     {
         marshall(writer, val.key);
         marshall(writer, val.value);
-    };
+    }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ kv_pair& val)
     {
         unmarshall(reader, val.key);
         unmarshall(reader, val.value);
-    };
+    }
 
 } } } 
 

@@ -110,8 +110,8 @@ protected:
         else {
             dinfo("ignore on ping, beacon msg, time[%" PRId64 "], from[%s], to[%s]",
                   beacon.time,
-                  beacon.from.to_string(),
-                  beacon.to.to_string());
+                  beacon.from_addr.to_string(),
+                  beacon.to_addr.to_string());
         }
     }
 

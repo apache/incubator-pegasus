@@ -34,7 +34,7 @@
  * In MSVC 11 all of the implementations live in std, with aliases
  *  in std::tr1 to point to the ones in std.
  */
-#if defined(_WIN32) && !defined(__MINGW32__)
+#ifdef _WIN32
   #define _THRIFT_USING_MICROSOFT_STDLIB 1
 #endif
 
@@ -105,11 +105,7 @@
   }}} // apache::thrift::stdcxx
 
 #elif _THRIFT_USING_GNU_LIBSTDCXX
-  #ifdef USE_BOOST_THREAD
-    #include <boost/tr1/functional.hpp>
-  #else
-    #include <tr1/functional>
-  #endif
+  #include <tr1/functional>
 
   namespace apache { namespace thrift { namespace stdcxx {
     using ::std::tr1::function;

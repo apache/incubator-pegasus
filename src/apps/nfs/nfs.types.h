@@ -19,7 +19,7 @@
 namespace dsn {
     // ---------- copy_request -------------
     template<>
-    inline uint32_t marshall_base<service::copy_request>(::apache::thrift::protocol::TProtocol* oprot, const service::copy_request& val)
+    inline uint32_t marshall_base< ::dsn::service::copy_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::service::copy_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -37,7 +37,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::copy_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::copy_request& val)
+    inline uint32_t unmarshall_base< ::dsn::service::copy_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::service::copy_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -75,7 +75,7 @@ namespace dsn {
 
     // ---------- copy_response -------------
     template<>
-    inline uint32_t marshall_base<service::copy_response>(::apache::thrift::protocol::TProtocol* oprot, const service::copy_response& val)
+    inline uint32_t marshall_base< ::dsn::service::copy_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::service::copy_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -93,7 +93,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::copy_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::copy_response& val)
+    inline uint32_t unmarshall_base< ::dsn::service::copy_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::service::copy_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -131,7 +131,7 @@ namespace dsn {
 
     // ---------- get_file_size_request -------------
     template<>
-    inline uint32_t marshall_base<service::get_file_size_request>(::apache::thrift::protocol::TProtocol* oprot, const service::get_file_size_request& val)
+    inline uint32_t marshall_base< ::dsn::service::get_file_size_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::service::get_file_size_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -149,7 +149,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::get_file_size_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::get_file_size_request& val)
+    inline uint32_t unmarshall_base< ::dsn::service::get_file_size_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::service::get_file_size_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -187,7 +187,7 @@ namespace dsn {
 
     // ---------- get_file_size_response -------------
     template<>
-    inline uint32_t marshall_base<service::get_file_size_response>(::apache::thrift::protocol::TProtocol* oprot, const service::get_file_size_response& val)
+    inline uint32_t marshall_base< ::dsn::service::get_file_size_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::service::get_file_size_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -205,7 +205,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::get_file_size_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::get_file_size_response& val)
+    inline uint32_t unmarshall_base< ::dsn::service::get_file_size_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::service::get_file_size_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;

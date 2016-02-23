@@ -313,7 +313,7 @@
 #define PACKAGE_NAME "thrift"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "thrift 1.0.0-dev"
+#define PACKAGE_STRING "thrift 0.9.3"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "thrift"
@@ -322,7 +322,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.0.0-dev"
+#define PACKAGE_VERSION "0.9.3"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -368,7 +368,7 @@
 /* #undef USE_BOOST_THREAD */
 
 /* Version number of package */
-#define VERSION "1.0.0-dev"
+#define VERSION "0.9.3"
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */

@@ -19,7 +19,7 @@
 namespace dsn {
     // ---------- global_partition_id -------------
     template<>
-    inline uint32_t marshall_base<service::global_partition_id>(::apache::thrift::protocol::TProtocol* oprot, const service::global_partition_id& val)
+    inline uint32_t marshall_base< ::dsn::replication::global_partition_id>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::global_partition_id& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -37,7 +37,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::global_partition_id>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::global_partition_id& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::global_partition_id>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::global_partition_id& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -75,7 +75,7 @@ namespace dsn {
 
     // ---------- mutation_header -------------
     template<>
-    inline uint32_t marshall_base<service::mutation_header>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_header& val)
+    inline uint32_t marshall_base< ::dsn::replication::mutation_header>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::mutation_header& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -93,7 +93,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::mutation_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_header& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::mutation_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::mutation_header& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -131,7 +131,7 @@ namespace dsn {
 
     // ---------- mutation_update -------------
     template<>
-    inline uint32_t marshall_base<service::mutation_update>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_update& val)
+    inline uint32_t marshall_base< ::dsn::replication::mutation_update>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::mutation_update& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -149,7 +149,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::mutation_update>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_update& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::mutation_update>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::mutation_update& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -187,7 +187,7 @@ namespace dsn {
 
     // ---------- mutation_data -------------
     template<>
-    inline uint32_t marshall_base<service::mutation_data>(::apache::thrift::protocol::TProtocol* oprot, const service::mutation_data& val)
+    inline uint32_t marshall_base< ::dsn::replication::mutation_data>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::mutation_data& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -205,7 +205,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::mutation_data>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::mutation_data& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::mutation_data>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::mutation_data& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -243,7 +243,7 @@ namespace dsn {
 
     // ---------- partition_configuration -------------
     template<>
-    inline uint32_t marshall_base<service::partition_configuration>(::apache::thrift::protocol::TProtocol* oprot, const service::partition_configuration& val)
+    inline uint32_t marshall_base< ::dsn::replication::partition_configuration>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::partition_configuration& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -261,7 +261,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::partition_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::partition_configuration& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::partition_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::partition_configuration& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -299,7 +299,7 @@ namespace dsn {
 
     // ---------- replica_configuration -------------
     template<>
-    inline uint32_t marshall_base<service::replica_configuration>(::apache::thrift::protocol::TProtocol* oprot, const service::replica_configuration& val)
+    inline uint32_t marshall_base< ::dsn::replication::replica_configuration>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::replica_configuration& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -317,7 +317,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::replica_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::replica_configuration& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::replica_configuration>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::replica_configuration& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -355,7 +355,7 @@ namespace dsn {
 
     // ---------- prepare_msg -------------
     template<>
-    inline uint32_t marshall_base<service::prepare_msg>(::apache::thrift::protocol::TProtocol* oprot, const service::prepare_msg& val)
+    inline uint32_t marshall_base< ::dsn::replication::prepare_msg>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::prepare_msg& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -373,7 +373,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::prepare_msg>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::prepare_msg& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::prepare_msg>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::prepare_msg& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -411,7 +411,7 @@ namespace dsn {
 
     // ---------- read_request_header -------------
     template<>
-    inline uint32_t marshall_base<service::read_request_header>(::apache::thrift::protocol::TProtocol* oprot, const service::read_request_header& val)
+    inline uint32_t marshall_base< ::dsn::replication::read_request_header>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::read_request_header& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -429,7 +429,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::read_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::read_request_header& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::read_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::read_request_header& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -467,7 +467,7 @@ namespace dsn {
 
     // ---------- write_request_header -------------
     template<>
-    inline uint32_t marshall_base<service::write_request_header>(::apache::thrift::protocol::TProtocol* oprot, const service::write_request_header& val)
+    inline uint32_t marshall_base< ::dsn::replication::write_request_header>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::write_request_header& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -485,7 +485,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::write_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::write_request_header& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::write_request_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::write_request_header& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -523,7 +523,7 @@ namespace dsn {
 
     // ---------- rw_response_header -------------
     template<>
-    inline uint32_t marshall_base<service::rw_response_header>(::apache::thrift::protocol::TProtocol* oprot, const service::rw_response_header& val)
+    inline uint32_t marshall_base< ::dsn::replication::rw_response_header>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::rw_response_header& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -541,7 +541,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::rw_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::rw_response_header& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::rw_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::rw_response_header& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -579,7 +579,7 @@ namespace dsn {
 
     // ---------- prepare_ack -------------
     template<>
-    inline uint32_t marshall_base<service::prepare_ack>(::apache::thrift::protocol::TProtocol* oprot, const service::prepare_ack& val)
+    inline uint32_t marshall_base< ::dsn::replication::prepare_ack>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::prepare_ack& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -597,7 +597,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::prepare_ack>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::prepare_ack& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::prepare_ack>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::prepare_ack& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -635,7 +635,7 @@ namespace dsn {
 
     // ---------- learn_state -------------
     template<>
-    inline uint32_t marshall_base<service::learn_state>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_state& val)
+    inline uint32_t marshall_base< ::dsn::replication::learn_state>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::learn_state& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -653,7 +653,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::learn_state>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_state& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::learn_state>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::learn_state& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -691,7 +691,7 @@ namespace dsn {
 
     // ---------- learn_request -------------
     template<>
-    inline uint32_t marshall_base<service::learn_request>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::learn_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::learn_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -709,7 +709,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::learn_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::learn_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::learn_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -747,7 +747,7 @@ namespace dsn {
 
     // ---------- learn_response -------------
     template<>
-    inline uint32_t marshall_base<service::learn_response>(::apache::thrift::protocol::TProtocol* oprot, const service::learn_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::learn_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::learn_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -765,7 +765,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::learn_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::learn_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::learn_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::learn_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -803,7 +803,7 @@ namespace dsn {
 
     // ---------- group_check_request -------------
     template<>
-    inline uint32_t marshall_base<service::group_check_request>(::apache::thrift::protocol::TProtocol* oprot, const service::group_check_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::group_check_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::group_check_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -821,7 +821,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::group_check_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::group_check_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::group_check_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::group_check_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -859,7 +859,7 @@ namespace dsn {
 
     // ---------- group_check_response -------------
     template<>
-    inline uint32_t marshall_base<service::group_check_response>(::apache::thrift::protocol::TProtocol* oprot, const service::group_check_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::group_check_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::group_check_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -877,7 +877,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::group_check_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::group_check_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::group_check_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::group_check_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -915,7 +915,7 @@ namespace dsn {
 
     // ---------- app_info -------------
     template<>
-    inline uint32_t marshall_base<service::app_info>(::apache::thrift::protocol::TProtocol* oprot, const service::app_info& val)
+    inline uint32_t marshall_base< ::dsn::replication::app_info>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::app_info& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -933,7 +933,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::app_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::app_info& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::app_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::app_info& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -971,7 +971,7 @@ namespace dsn {
 
     // ---------- node_info -------------
     template<>
-    inline uint32_t marshall_base<service::node_info>(::apache::thrift::protocol::TProtocol* oprot, const service::node_info& val)
+    inline uint32_t marshall_base< ::dsn::replication::node_info>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::node_info& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -989,7 +989,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::node_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::node_info& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::node_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::node_info& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1027,7 +1027,7 @@ namespace dsn {
 
     // ---------- meta_response_header -------------
     template<>
-    inline uint32_t marshall_base<service::meta_response_header>(::apache::thrift::protocol::TProtocol* oprot, const service::meta_response_header& val)
+    inline uint32_t marshall_base< ::dsn::replication::meta_response_header>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::meta_response_header& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1045,7 +1045,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::meta_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::meta_response_header& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::meta_response_header>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::meta_response_header& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1083,7 +1083,7 @@ namespace dsn {
 
     // ---------- configuration_update_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_update_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_update_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_update_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_update_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1101,7 +1101,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_update_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_update_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_update_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_update_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1139,7 +1139,7 @@ namespace dsn {
 
     // ---------- configuration_update_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_update_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_update_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_update_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_update_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1157,7 +1157,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_update_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_update_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_update_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_update_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1195,7 +1195,7 @@ namespace dsn {
 
     // ---------- configuration_proposal_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_proposal_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_proposal_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1213,7 +1213,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_proposal_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_proposal_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1251,7 +1251,7 @@ namespace dsn {
 
     // ---------- configuration_query_by_node_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_node_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_query_by_node_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1269,7 +1269,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_node_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_query_by_node_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_query_by_node_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1307,7 +1307,7 @@ namespace dsn {
 
     // ---------- create_app_options -------------
     template<>
-    inline uint32_t marshall_base<service::create_app_options>(::apache::thrift::protocol::TProtocol* oprot, const service::create_app_options& val)
+    inline uint32_t marshall_base< ::dsn::replication::create_app_options>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::create_app_options& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1325,7 +1325,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::create_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::create_app_options& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::create_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::create_app_options& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1363,7 +1363,7 @@ namespace dsn {
 
     // ---------- configuration_create_app_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_create_app_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_create_app_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1381,7 +1381,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_create_app_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_create_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_create_app_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1419,7 +1419,7 @@ namespace dsn {
 
     // ---------- drop_app_options -------------
     template<>
-    inline uint32_t marshall_base<service::drop_app_options>(::apache::thrift::protocol::TProtocol* oprot, const service::drop_app_options& val)
+    inline uint32_t marshall_base< ::dsn::replication::drop_app_options>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::drop_app_options& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1437,7 +1437,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::drop_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::drop_app_options& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::drop_app_options>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::drop_app_options& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1475,7 +1475,7 @@ namespace dsn {
 
     // ---------- configuration_drop_app_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_drop_app_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_drop_app_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1493,7 +1493,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_drop_app_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_drop_app_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_drop_app_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1531,7 +1531,7 @@ namespace dsn {
 
     // ---------- configuration_list_apps_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_apps_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_list_apps_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1549,7 +1549,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_apps_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_list_apps_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_list_apps_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1587,7 +1587,7 @@ namespace dsn {
 
     // ---------- configuration_list_nodes_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_nodes_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_list_nodes_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1605,7 +1605,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_nodes_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_list_nodes_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_list_nodes_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1643,7 +1643,7 @@ namespace dsn {
 
     // ---------- configuration_create_app_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_create_app_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_create_app_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1661,7 +1661,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_create_app_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_create_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_create_app_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1699,7 +1699,7 @@ namespace dsn {
 
     // ---------- control_balancer_migration_request -------------
     template<>
-    inline uint32_t marshall_base<service::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* oprot, const service::control_balancer_migration_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::control_balancer_migration_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1717,7 +1717,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::control_balancer_migration_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::control_balancer_migration_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::control_balancer_migration_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1755,7 +1755,7 @@ namespace dsn {
 
     // ---------- control_balancer_migration_response -------------
     template<>
-    inline uint32_t marshall_base<service::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* oprot, const service::control_balancer_migration_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::control_balancer_migration_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1773,7 +1773,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::control_balancer_migration_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::control_balancer_migration_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::control_balancer_migration_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1811,7 +1811,7 @@ namespace dsn {
 
     // ---------- balancer_proposal_request -------------
     template<>
-    inline uint32_t marshall_base<service::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const service::balancer_proposal_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::balancer_proposal_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1829,7 +1829,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::balancer_proposal_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::balancer_proposal_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::balancer_proposal_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1867,7 +1867,7 @@ namespace dsn {
 
     // ---------- balancer_proposal_response -------------
     template<>
-    inline uint32_t marshall_base<service::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* oprot, const service::balancer_proposal_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::balancer_proposal_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1885,7 +1885,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::balancer_proposal_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::balancer_proposal_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::balancer_proposal_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1923,7 +1923,7 @@ namespace dsn {
 
     // ---------- configuration_drop_app_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_drop_app_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_drop_app_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1941,7 +1941,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_drop_app_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_drop_app_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_drop_app_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -1979,7 +1979,7 @@ namespace dsn {
 
     // ---------- configuration_list_apps_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_apps_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_list_apps_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -1997,7 +1997,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_apps_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_list_apps_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_list_apps_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2035,7 +2035,7 @@ namespace dsn {
 
     // ---------- configuration_list_nodes_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_list_nodes_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_list_nodes_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2053,7 +2053,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_list_nodes_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_list_nodes_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_list_nodes_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2091,7 +2091,7 @@ namespace dsn {
 
     // ---------- configuration_query_by_node_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_node_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_query_by_node_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2109,7 +2109,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_node_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_query_by_node_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_query_by_node_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2147,7 +2147,7 @@ namespace dsn {
 
     // ---------- configuration_query_by_index_request -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_index_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_query_by_index_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2165,7 +2165,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_index_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_query_by_index_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_query_by_index_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2203,7 +2203,7 @@ namespace dsn {
 
     // ---------- configuration_query_by_index_response -------------
     template<>
-    inline uint32_t marshall_base<service::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* oprot, const service::configuration_query_by_index_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::configuration_query_by_index_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2221,7 +2221,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::configuration_query_by_index_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::configuration_query_by_index_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::configuration_query_by_index_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2259,7 +2259,7 @@ namespace dsn {
 
     // ---------- query_replica_decree_request -------------
     template<>
-    inline uint32_t marshall_base<service::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_decree_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::query_replica_decree_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2277,7 +2277,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_decree_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::query_replica_decree_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::query_replica_decree_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2315,7 +2315,7 @@ namespace dsn {
 
     // ---------- query_replica_decree_response -------------
     template<>
-    inline uint32_t marshall_base<service::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_decree_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::query_replica_decree_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2333,7 +2333,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_decree_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::query_replica_decree_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::query_replica_decree_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2371,7 +2371,7 @@ namespace dsn {
 
     // ---------- replica_info -------------
     template<>
-    inline uint32_t marshall_base<service::replica_info>(::apache::thrift::protocol::TProtocol* oprot, const service::replica_info& val)
+    inline uint32_t marshall_base< ::dsn::replication::replica_info>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::replica_info& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2389,7 +2389,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::replica_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::replica_info& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::replica_info>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::replica_info& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2427,7 +2427,7 @@ namespace dsn {
 
     // ---------- query_replica_info_request -------------
     template<>
-    inline uint32_t marshall_base<service::query_replica_info_request>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_info_request& val)
+    inline uint32_t marshall_base< ::dsn::replication::query_replica_info_request>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::query_replica_info_request& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2445,7 +2445,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::query_replica_info_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_info_request& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::query_replica_info_request>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::query_replica_info_request& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -2483,7 +2483,7 @@ namespace dsn {
 
     // ---------- query_replica_info_response -------------
     template<>
-    inline uint32_t marshall_base<service::query_replica_info_response>(::apache::thrift::protocol::TProtocol* oprot, const service::query_replica_info_response& val)
+    inline uint32_t marshall_base< ::dsn::replication::query_replica_info_response>(::apache::thrift::protocol::TProtocol* oprot, const ::dsn::replication::query_replica_info_response& val)
     {
         uint32_t xfer = 0;
         oprot->incrementInputRecursionDepth();
@@ -2501,7 +2501,7 @@ namespace dsn {
     }
 
     template<>
-    inline uint32_t unmarshall_base<service::query_replica_info_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ service::query_replica_info_response& val)
+    inline uint32_t unmarshall_base< ::dsn::replication::query_replica_info_response>(::apache::thrift::protocol::TProtocol* iprot, /*out*/ ::dsn::replication::query_replica_info_response& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -4050,24 +4050,24 @@ namespace dsn { namespace replication {
     {
         global_partition_id gpid;
         balancer_type type;
-        ::dsn::rpc_address from;
-        ::dsn::rpc_address to;
+        ::dsn::rpc_address from_addr;
+        ::dsn::rpc_address to_addr;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_request& val)
     {
         marshall(writer, val.gpid);
         marshall(writer, val.type);
-        marshall(writer, val.from);
-        marshall(writer, val.to);
+        marshall(writer, val.from_addr);
+        marshall(writer, val.to_addr);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_request& val)
     {
         unmarshall(reader, val.gpid);
         unmarshall(reader, val.type);
-        unmarshall(reader, val.from);
-        unmarshall(reader, val.to);
+        unmarshall(reader, val.from_addr);
+        unmarshall(reader, val.to_addr);
     }
 
     // ---------- balancer_proposal_response -------------

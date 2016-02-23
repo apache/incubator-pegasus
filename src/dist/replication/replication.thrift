@@ -320,8 +320,8 @@ struct balancer_proposal_request
 {
     1:global_partition_id gpid;
     2:balancer_type       type;
-    3:dsn.rpc_address     from;
-    4:dsn.rpc_address     to;
+    3:dsn.rpc_address     from_addr;
+    4:dsn.rpc_address     to_addr;
 }
 
 struct balancer_proposal_response

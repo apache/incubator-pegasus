@@ -113,7 +113,7 @@ namespace dsn {
             if (ftype == ::apache::thrift::protocol::TType::T_##TTag) return proto->read##TMethod(val); \
             else return proto->skip(ftype);\
         }
-        
+
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
@@ -126,6 +126,61 @@ namespace dsn {
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
     template<typename T>
     uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, T& val);
+
+    template<typename T>
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const T& value)
+    {
+        switch (sizeof(value))
+        {
+        case 1:
+            return write_base(proto, (int8_t)value);
+        case 2:
+            return write_base(proto, (int16_t)value);
+        case 4:
+            return write_base(proto, (int32_t)value);
+        case 8:
+            return write_base(proto, (int64_t)value);
+        default:
+            assert(false);
+            return 0;
+        }
+    }
+
+    template <typename T>
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value, ::apache::thrift::protocol::TType ftype)
+    {
+        uint32_t res = 0;
+        switch (sizeof(value))
+        {
+        case 1: {
+            int8_t val;
+            res = read_base(proto, val, ftype);
+            value = (T)val;
+            return res;
+        }
+        case 2: {
+            int16_t val;
+            res = read_base(proto, val, ftype);
+            value = (T)val;
+            return res;
+        }
+        case 4: {
+            int32_t val;
+            res = read_base(proto, val, ftype);
+            value = T(val);
+            return res;
+        }
+        case 8: {
+            int64_t val;
+            res = read_base(proto, val, ftype);
+            value = T(val);
+            return res;
+        }
+        default:
+            assert(false);
+            return 0;
+        }
+    }
 
     template<typename T>
     inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oprot, const std::vector<T>& val)
@@ -211,7 +266,7 @@ namespace dsn {
     template<typename TName>
     inline uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const TName& val)
     {
-        uint32_t xfer = 0; 
+        uint32_t xfer = 0;
         xfer += oproto->writeStructBegin("val");
         xfer += write_base(oproto, val);
         xfer += oproto->writeFieldStop();
@@ -226,11 +281,11 @@ namespace dsn {
         std::string fname;
         ::apache::thrift::protocol::TType ftype;
         int16_t fid;
-        
+
         xfer += iproto->readStructBegin(fname);
-        
+
         using ::apache::thrift::protocol::TProtocolException;
-        
+
         while (true)
         {
             xfer += iproto->readFieldBegin(fname, ftype, fid);
@@ -250,7 +305,7 @@ namespace dsn {
 
             xfer += iproto->readFieldEnd();
         }
-            
+
         xfer += iproto->readStructEnd();
         return xfer;
     }
@@ -273,45 +328,60 @@ namespace dsn {
 
     inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     {
-
+        return iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
     }
 
     inline uint32_t rpc_address::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-
+        return oprot->writeI64((int64_t)_addr.u.value);
     }
 
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
-
+        std::string task_code_string;
+        uint32_t xfer = iprot->readString(task_code_string);
+        _internal_code = dsn_task_code_from_string(task_code_string.c_str(), TASK_CODE_INVALID);
+        return xfer;
     }
 
     inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-
+        std::string str(to_string());
+        return oprot->writeString(str);
     }
 
     inline uint32_t blob::read(apache::thrift::protocol::TProtocol *iprot)
     {
+        std::string ptr;
+        uint32_t xfer = iprot->readString(ptr);
 
+        //TODO: need something to do to resolve the memory copy
+        std::shared_ptr<char> buffer(new char [ptr.size()], std::default_delete<char[]>());
+        memcpy(buffer.get(), ptr.c_str(), ptr.size());
+        assign(buffer, 0, ptr.size());
+        return xfer;
     }
 
     inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-
+        //TODO: need something to do to resolve the memory copy
+        std::string ptr(_data, _length);
+        return oprot->writeString(ptr);
     }
 
     inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
-
+        std::string ec_string;
+        uint32_t xfer = iprot->readString(ec_string);
+        _internal_code = dsn_error_from_string(ec_string.c_str(), ERR_UNKNOWN);
+        return xfer;
     }
 
     inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-
     }
 
-    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT);
+    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 
     class thrift_binary_message_parser : public message_parser
     {
@@ -452,40 +522,3 @@ namespace dsn {
         }
     };
 }
-
-/*
-    symbols defined in libthrift, putting here so we don't need to link :-)
-*/
-namespace apache {
-    namespace thrift {
-        namespace transport {
-            inline const char* TTransportException::what() const throw() {
-                if (message_.empty()) {
-                    switch (type_) {
-                    case UNKNOWN:
-                        return "TTransportException: Unknown transport exception";
-                    case NOT_OPEN:
-                        return "TTransportException: Transport not open";
-                    case TIMED_OUT:
-                        return "TTransportException: Timed out";
-                    case END_OF_FILE:
-                        return "TTransportException: End of file";
-                    case INTERRUPTED:
-                        return "TTransportException: Interrupted";
-                    case BAD_ARGS:
-                        return "TTransportException: Invalid arguments";
-                    case CORRUPTED_DATA:
-                        return "TTransportException: Corrupted Data";
-                    case INTERNAL_ERROR:
-                        return "TTransportException: Internal error";
-                    default:
-                        return "TTransportException: (Invalid exception type)";
-                    }
-                }
-                else {
-                    return message_.c_str();
-                }
-            }
-        }
-    }
-} // apache::thrift::transport

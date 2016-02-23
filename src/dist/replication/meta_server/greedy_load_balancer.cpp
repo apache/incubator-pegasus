@@ -111,22 +111,22 @@ bool greedy_load_balancer::balancer_proposal_check(const balancer_proposal_reque
         gpid.pidx >= _state->_apps[gpid.app_id - 1].partitions.size() )
         return false;
 
-    if ( !is_node_alive(balancer_proposal.from) || !is_node_alive(balancer_proposal.to) )
+    if ( !is_node_alive(balancer_proposal.from_addr) || !is_node_alive(balancer_proposal.to_addr) )
         return false;
 
-    if (balancer_proposal.from == balancer_proposal.to)
+    if (balancer_proposal.from_addr== balancer_proposal.to_addr)
         return false;
 
     switch (balancer_proposal.type)
     {
     case BT_MOVE_PRIMARY:
-        return is_primary(balancer_proposal.from, gpid) && is_secondary(balancer_proposal.to, gpid);
+        return is_primary(balancer_proposal.from_addr, gpid) && is_secondary(balancer_proposal.to_addr, gpid);
     case BT_COPY_PRIMARY:
-        return is_primary(balancer_proposal.from, gpid) && !is_secondary(balancer_proposal.to, gpid);
+        return is_primary(balancer_proposal.from_addr, gpid) && !is_secondary(balancer_proposal.to_addr, gpid);
     case BT_COPY_SECONDARY:
-        return is_secondary(balancer_proposal.from, gpid) &&
-               !is_primary(balancer_proposal.to, gpid) &&
-               !is_secondary(balancer_proposal.to, gpid);
+        return is_secondary(balancer_proposal.from_addr, gpid) &&
+               !is_primary(balancer_proposal.to_addr, gpid) &&
+               !is_secondary(balancer_proposal.to_addr, gpid);
     default:
         return false;
     }
@@ -151,7 +151,7 @@ void greedy_load_balancer::execute_balancer_proposal()
         switch (p.type)
         {
         case BT_MOVE_PRIMARY:
-            dassert(pc.primary==p.from, "invalid balancer proposal");
+            dassert(pc.primary==p.from_addr, "invalid balancer proposal");
 
             proposal.config = pc;
             proposal.type = CT_DOWNGRADE_TO_SECONDARY;
@@ -159,17 +159,17 @@ void greedy_load_balancer::execute_balancer_proposal()
             break;
 
         case BT_COPY_PRIMARY:
-            dassert(pc.primary==p.from, "invalid balancer proposal");
+            dassert(pc.primary==p.from_addr, "invalid balancer proposal");
 
             proposal.config = pc;
             proposal.type = CT_ADD_SECONDARY_FOR_LB;
-            proposal.node = p.to;
+            proposal.node = p.to_addr;
             break;
 
         case BT_COPY_SECONDARY:
             proposal.config = pc;
             proposal.type = CT_ADD_SECONDARY_FOR_LB;
-            proposal.node = p.to;
+            proposal.node = p.to_addr;
             break;
 
         default:
@@ -534,7 +534,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         //it is possible that we can't find gpid, coz the meta server may switch
         if (it != _balancer_proposals_map.end())
         {
-            _primary_recommender[gpid] = it->second.to;
+            _primary_recommender[gpid] = it->second.to_addr;
             _balancer_proposals_map.erase(it);
         }
         break;
@@ -545,7 +545,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         {
             balancer_proposal_request& p = it->second;
             //this secondary is what we add
-            if (p.to == request->node)
+            if (p.to_addr == request->node)
             {
                 if (p.type == BT_COPY_PRIMARY)
                     p.type = BT_MOVE_PRIMARY;
@@ -569,8 +569,8 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         else if (_balancer_proposals_map.find(gpid) != _balancer_proposals_map.end())
         {
             balancer_proposal_request& p = _balancer_proposals_map[gpid];
-            if (p.type == BT_COPY_SECONDARY && request->node==p.from ||
-                p.type == BT_MOVE_PRIMARY && request->node==p.to)
+            if (p.type == BT_COPY_SECONDARY && request->node==p.from_addr||
+                p.type == BT_MOVE_PRIMARY && request->node==p.to_addr)
                 _balancer_proposals_map.erase(gpid);
         }
         break;

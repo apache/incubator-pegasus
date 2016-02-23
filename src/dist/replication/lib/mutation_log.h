@@ -138,7 +138,7 @@ public:
         int32_t max_log_file_mb,
         bool force_flush = false,
         bool is_private = false,
-        global_partition_id private_gpid = {0, 0}
+        global_partition_id private_gpid = global_partition_id()
         );
     virtual ~mutation_log();
 
