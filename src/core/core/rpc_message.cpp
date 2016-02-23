@@ -339,6 +339,18 @@ message_ex* message_ex::create_receive_message(const blob& data)
     return msg;
 }
 
+message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data)
+{
+    message_ex* msg = new message_ex();
+    msg->buffers.push_back(data);
+    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(sizeof(message_header))), [](char* c) {dsn_transient_free(c);});
+    msg->header = reinterpret_cast<message_header*>(header_holder.get());
+    memset(msg->header, 0, sizeof(message_header));
+    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    msg->_is_read = true;
+    return msg;
+}
+
 message_ex* message_ex::copy()
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");

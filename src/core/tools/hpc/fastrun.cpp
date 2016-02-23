@@ -54,36 +54,45 @@ namespace dsn
             {
                 spec.aio_factory_name = ("dsn::tools::hpc_aio_provider");
             }
-                
+
             if (spec.env_factory_name == "")
                 spec.env_factory_name = ("dsn::tools::hpc_env_provider");
 
             if (spec.timer_factory_name == "")
                 spec.timer_factory_name = "dsn::tools::io_looper_timer_service";
 
-            network_client_config cs;
-            cs.factory_name = "dsn::tools::hpc_network_provider";
-            cs.message_buffer_block_size = 1024 * 64;
-            spec.network_default_client_cfs[RPC_CHANNEL_TCP] = cs;
+            {
+                network_client_config cs;
+                cs.factory_name = "dsn::tools::hpc_network_provider";
+                cs.message_buffer_block_size = 1024 * 64;
+                spec.network_default_client_cfs[RPC_CHANNEL_TCP] = cs;
+            }
+            {
+                network_server_config cs2;
+                cs2.port = 0;
+                cs2.channel = RPC_CHANNEL_TCP;
+                cs2.hdr_format = NET_HDR_DSN;
+                cs2.factory_name = "dsn::tools::hpc_network_provider";
+                cs2.message_buffer_block_size = 1024 * 64;
+                spec.network_default_server_cfs[cs2] = cs2;
+            }
 
-            network_server_config cs2;
-            cs2.port = 0;
-            cs2.channel = RPC_CHANNEL_TCP;
-            cs2.hdr_format = NET_HDR_DSN;
-            cs2.factory_name = "dsn::tools::hpc_network_provider";
-            cs2.message_buffer_block_size = 1024 * 64;
-            spec.network_default_server_cfs[cs2] = cs2;
+            {
+                network_client_config cs;
+                cs.factory_name = "dsn::tools::asio_udp_provider";
+                cs.message_buffer_block_size = 1024 * 64;
+                spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
+            }
+            {
 
-            cs.factory_name = "dsn::tools::asio_udp_provider";
-            cs.message_buffer_block_size = 1024 * 64;
-            spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
-
-            cs2.port = 0;
-            cs2.channel = RPC_CHANNEL_UDP;
-            cs2.hdr_format = NET_HDR_DSN;
-            cs2.factory_name = "dsn::tools::asio_udp_provider";
-            cs2.message_buffer_block_size = 1024 * 64;
-            spec.network_default_server_cfs[cs2] = cs2;
+                network_server_config cs2;
+                cs2.port = 0;
+                cs2.channel = RPC_CHANNEL_UDP;
+                cs2.hdr_format = NET_HDR_DSN;
+                cs2.factory_name = "dsn::tools::asio_udp_provider";
+                cs2.message_buffer_block_size = 1024 * 64;
+                spec.network_default_server_cfs[cs2] = cs2;
+            }
 
             if (spec.perf_counter_factory_name == "")
                 spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";
