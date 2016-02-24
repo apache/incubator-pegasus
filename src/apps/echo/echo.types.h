@@ -13,14 +13,9 @@
 
 # ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
+
 # include <dsn/thrift_helper.h>
 # include "echo_types.h" 
-
-namespace dsn {
-}
-
-namespace dsn { namespace example { 
-} } 
 
 
 # else // use rDSN's data encoding/decoding

@@ -44,6 +44,8 @@
 # include <thrift/transport/TVirtualTransport.h>
 # include <thrift/TApplicationException.h>
 
+# include <type_traits>
+
 using namespace ::apache::thrift::transport;
 
 namespace dsn {
@@ -103,15 +105,11 @@ namespace dsn {
     #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
         inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
         {\
-            uint32_t xfer = proto->writeFieldBegin("val", ::apache::thrift::protocol::TType::T_##TTag, 0); \
-            xfer += proto->write##TMethod(val); \
-            xfer += proto->writeFieldEnd(); \
-            return xfer;\
+            return proto->write##TMethod(val); \
         }\
-        inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val, ::apache::thrift::protocol::TType ftype)\
+        inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val)\
         {\
-            if (ftype == ::apache::thrift::protocol::TType::T_##TTag) return proto->read##TMethod(val); \
-            else return proto->skip(ftype);\
+            return proto->read##TMethod(val); \
         }
 
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
@@ -147,32 +145,32 @@ namespace dsn {
     }
 
     template <typename T>
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value, ::apache::thrift::protocol::TType ftype)
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value)
     {
         uint32_t res = 0;
         switch (sizeof(value))
         {
         case 1: {
             int8_t val;
-            res = read_base(proto, val, ftype);
+            res = read_base(proto, val);
             value = (T)val;
             return res;
         }
         case 2: {
             int16_t val;
-            res = read_base(proto, val, ftype);
+            res = read_base(proto, val);
             value = (T)val;
             return res;
         }
         case 4: {
             int32_t val;
-            res = read_base(proto, val, ftype);
+            res = read_base(proto, val);
             value = T(val);
             return res;
         }
         case 8: {
             int64_t val;
-            res = read_base(proto, val, ftype);
+            res = read_base(proto, val);
             value = T(val);
             return res;
         }
@@ -185,20 +183,27 @@ namespace dsn {
     template<typename T>
     inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oprot, const std::vector<T>& val)
     {
-        uint32_t xfer = oprot->writeFieldBegin("val", ::apache::thrift::protocol::T_LIST, 0);
+        uint32_t xfer = oprot->writeFieldBegin("vector", ::apache::thrift::protocol::T_LIST, 1);
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(val.size()));
         for (auto iter = val.begin(); iter!=val.end(); ++iter)
         {
             marshall_base(oprot, *iter);
         }
         xfer += oprot->writeListEnd();
+        xfer += oprot->writeFieldStop();
         xfer += oprot->writeFieldEnd();
     }
 
     template <typename T>
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iprot, std::vector<T>& val, ::apache::thrift::protocol::TType ftype)
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iprot, std::vector<T>& val)
     {
         uint32_t xfer = 0;
+
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
         if (ftype == ::apache::thrift::protocol::T_LIST)
         {
             val.clear();
@@ -210,50 +215,12 @@ namespace dsn {
             {
                 xfer += unmarshall_base(iprot, val[i]);
             }
+            xfer += iprot->readListEnd();
         }
         else
             xfer += iprot->skip(ftype);
+        xfer += iprot->readFieldEnd();
         return xfer;
-    }
-
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const error_code& val)
-    {
-
-    }
-
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, error_code& val, apache::thrift::protocol::TType ftype)
-    {
-
-    }
-
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const task_code& val)
-    {
-
-    }
-
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, task_code& val, apache::thrift::protocol::TType ftype)
-    {
-
-    }
-
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const rpc_address& val)
-    {
-
-    }
-
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, rpc_address& val, apache::thrift::protocol::TType ftype)
-    {
-
-    }
-
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* oproto, const blob& val)
-    {
-
-    }
-
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* iproto, blob& val, apache::thrift::protocol::TType ftype)
-    {
-
     }
 
     inline const char* to_string(const rpc_address& addr) { return ""; }
@@ -261,53 +228,60 @@ namespace dsn {
     inline const char* to_string(const task_code& code) { return ""; }
     inline const char* to_string(const error_code& ec) { return ""; }
 
-    //TODO: the write_base and read_base of set, map, unordered_map
+    template<typename T>
+    class serialization_forwarder
+    {
+    private:
+        template<typename C>
+        static constexpr auto check_method( C* ) ->
+            typename std::is_same< decltype(std::declval<C>().write( std::declval< ::apache::thrift::protocol::TProtocol* >() ) ), uint32_t >::type;
+
+        template<typename>
+        static constexpr std::false_type check_method(...);
+
+        typedef decltype(check_method<T>(nullptr)) has_read_write_method;
+
+        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::false_type)
+        {
+            return write_base(oproto, value);
+        }
+
+        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::true_type)
+        {
+            return value.write(oproto);
+        }
+
+        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::false_type)
+        {
+            return read_base(iproto, value);
+        }
+
+        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::true_type)
+        {
+            return value.read(iproto);
+        }
+    public:
+        static uint32_t marshall(::apache::thrift::protocol::TProtocol* oproto, const T& value)
+        {
+            return marshall_internal(oproto, value, has_read_write_method());
+        }
+        static uint32_t unmarshall(::apache::thrift::protocol::TProtocol* iproto, T& value)
+        {
+            return unmarshall_internal(iproto, value, has_read_write_method());
+        }
+    };
 
     template<typename TName>
     inline uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const TName& val)
     {
-        uint32_t xfer = 0;
-        xfer += oproto->writeStructBegin("val");
-        xfer += write_base(oproto, val);
-        xfer += oproto->writeFieldStop();
-        xfer += oproto->writeStructEnd();
-        return xfer;
+        return serialization_forwarder<TName>::marshall(oproto, val);
     }
 
     template<typename TName>
     inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
     {
-        uint32_t xfer = 0;
-        std::string fname;
-        ::apache::thrift::protocol::TType ftype;
-        int16_t fid;
-
-        xfer += iproto->readStructBegin(fname);
-
-        using ::apache::thrift::protocol::TProtocolException;
-
-        while (true)
-        {
-            xfer += iproto->readFieldBegin(fname, ftype, fid);
-            if (ftype == ::apache::thrift::protocol::T_STOP) {
-                break;
-            }
-
-            switch (fid)
-            {
-            case 0:
-                xfer += read_base(iproto, val, ftype);
-                break;
-            default:
-                xfer += iproto->skip(ftype);
-                break;
-            }
-
-            xfer += iproto->readFieldEnd();
-        }
-
-        xfer += iproto->readStructEnd();
-        return xfer;
+        //well, we assume read/write are in coupled
+        return serialization_forwarder<TName>::unmarshall(iproto, val);
     }
 
     template<typename T>
@@ -379,6 +353,8 @@ namespace dsn {
 
     inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
+        std::string ec_string(to_string());
+        return oprot->writeString(ec_string);
     }
 
     DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)

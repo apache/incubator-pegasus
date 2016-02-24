@@ -233,7 +233,7 @@ def toggle_serialization_in_cpp(thrift_name):
     os.rename(new_file, cpp_file)
     os.chdir("..")
 
-def compile_thrift_file(thrift_info):
+def compile_thrift_file(thrift_info, only_php_flag):
     thrift_name = thrift_info["name"]
     print ">>>compiling thrift file %s.thrift ..."%(thrift_name)
 
@@ -250,19 +250,21 @@ def compile_thrift_file(thrift_info):
     #### first generate .types.h
     os.system("%s %s.thrift cpp build replication"%(env_tools["dsn_gentool"], thrift_name))
     os.system("cp build/%s.types.h output"%(thrift_name))
-    #### then generate _types.h _types.cpp
-    thrift_gen = "%s -r --gen cpp -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
-    print "exec " + thrift_gen
-    os.system(thrift_gen)
-    os.system("cp build/%s_types.h output"%(thrift_name))
-    os.system("cp build/%s_types.cpp output"%(thrift_name))
-    os.system("rm -rf build")
 
-    if "include_fix" in thrift_info:
-        fix_include(thrift_name, thrift_info["include_fix"])
+    if not only_php_flag:
+        #### then generate _types.h _types.cpp
+        thrift_gen = "%s -r --gen cpp -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
+        print "exec " + thrift_gen
+        os.system(thrift_gen)
+        os.system("cp build/%s_types.h output"%(thrift_name))
+        os.system("cp build/%s_types.cpp output"%(thrift_name))
+        os.system("rm -rf build")
 
-    handle_enums(thrift_name)
-    toggle_serialization_in_cpp(thrift_name)
+        if "include_fix" in thrift_info:
+            fix_include(thrift_name, thrift_info["include_fix"])
+
+        handle_enums(thrift_name)
+        toggle_serialization_in_cpp(thrift_name)
 
     if "file_move" in thrift_info:
         for pair in thrift_info["file_move"].iteritems():
@@ -287,11 +289,13 @@ def find_desc_from_name(name):
 if __name__ == "__main__":
     init_env()
 
-    if len(sys.argv)>1:
-        for i in sys.argv[1:]:
+    only_php = sys.argv[1]=="only_php"
+
+    if len(sys.argv)>2:
+        for i in sys.argv[2:]:
             desc = find_desc_from_name(i)
             if not desc is None:
-                compile_thrift_file(desc)
+                compile_thrift_file(desc, only_php)
     else:
         for i in thrift_description:
-            compile_thrift_file(i)
+            compile_thrift_file(i, only_php)
