@@ -30,7 +30,7 @@
  *
  * Revision history:
  *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-02-24, Weijie Sun(sunweijie[at]xiaomi.com), add support for serialization in thrift
  */
 
 # pragma once

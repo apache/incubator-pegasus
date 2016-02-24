@@ -44,6 +44,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
 # include "rpc_engine.h"
+# include <dsn/tool/cli.types.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -309,15 +310,11 @@ namespace dsn {
     void command_manager::on_remote_cli(dsn_message_t req)
     {
         rpc_read_stream reader(req);
-
-        std::string cmd;
-        unmarshall(reader, cmd);
-
-        std::vector<std::string> args;
-        unmarshall(reader, args);
-
+        dsn::command cli_command;
         std::string result;
-        run_command(cmd, args, result);
+
+        unmarshall(reader, cli_command);
+        run_command(cli_command.cmd, cli_command.arguments, result);
 
         auto resp = dsn_msg_create_response(req);
         ::marshall(resp, result);

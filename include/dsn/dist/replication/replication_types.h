@@ -193,12 +193,12 @@ typedef struct _global_partition_id__isset {
 
 class global_partition_id {
  public:
+  global_partition_id(int32_t _app_id, int32_t _pidx): app_id(_app_id), pidx(_pidx) {
+  }
 
   global_partition_id(const global_partition_id&);
   global_partition_id& operator=(const global_partition_id&);
   global_partition_id() : app_id(-1), pidx(-1) {
-  }
-  global_partition_id(int32_t _app_id, int32_t _pidx): app_id(_app_id), pidx(_pidx) {
   }
 
   virtual ~global_partition_id() throw();
@@ -222,6 +222,7 @@ class global_partition_id {
   bool operator != (const global_partition_id &rhs) const {
     return !(*this == rhs);
   }
+
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;

@@ -4,12 +4,7 @@ import os
 import sys
 
 '''
-some extra work need to be done to make all this compiled
-1. remove the enums define in the deploy_svc_types.h,
-   coz they have been defined in the cluster_scheduler.h
-2. add constructor for global_partition_id in replication_types.h:
-   global_partition_id(int app_id, int pidx),
-   and remove the "operator <" statement
+the default thrift generator
 '''
 
 thrift_description = [
@@ -233,7 +228,7 @@ def toggle_serialization_in_cpp(thrift_name):
     os.rename(new_file, cpp_file)
     os.chdir("..")
 
-def compile_thrift_file(thrift_info, only_php_flag):
+def compile_thrift_file(thrift_info):
     thrift_name = thrift_info["name"]
     print ">>>compiling thrift file %s.thrift ..."%(thrift_name)
 
@@ -251,20 +246,25 @@ def compile_thrift_file(thrift_info, only_php_flag):
     os.system("%s %s.thrift cpp build replication"%(env_tools["dsn_gentool"], thrift_name))
     os.system("cp build/%s.types.h output"%(thrift_name))
 
-    if not only_php_flag:
-        #### then generate _types.h _types.cpp
-        thrift_gen = "%s -r --gen cpp -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
-        print "exec " + thrift_gen
-        os.system(thrift_gen)
-        os.system("cp build/%s_types.h output"%(thrift_name))
-        os.system("cp build/%s_types.cpp output"%(thrift_name))
-        os.system("rm -rf build")
+    #### then generate _types.h _types.cpp
+    thrift_gen = "%s -r --gen cpp -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
+    print "exec " + thrift_gen
+    os.system(thrift_gen)
+    os.system("cp build/%s_types.h output"%(thrift_name))
+    os.system("cp build/%s_types.cpp output"%(thrift_name))
+    os.system("rm -rf build")
 
-        if "include_fix" in thrift_info:
-            fix_include(thrift_name, thrift_info["include_fix"])
+    handle_enums(thrift_name)
+    toggle_serialization_in_cpp(thrift_name)
 
-        handle_enums(thrift_name)
-        toggle_serialization_in_cpp(thrift_name)
+    if "include_fix" in thrift_info:
+        fix_include(thrift_name, thrift_info["include_fix"])
+
+    if "hook" in thrift_info:
+        os.chdir("output")
+        for hook_func, args in thrift_info["hook"]:
+            hook_func(args)
+        os.chdir("..")
 
     if "file_move" in thrift_info:
         for pair in thrift_info["file_move"].iteritems():
@@ -281,21 +281,83 @@ def compile_thrift_file(thrift_info, only_php_flag):
     os.chdir( env_tools["root_dir"] )
 
 def find_desc_from_name(name):
+    ans = []
     for i in thrift_description:
         if i["name"] == name:
-            return i
-    return None
+            ans.append(i)
+    return ans
+
+# special hooks for thrift, all these are executed in the output dir
+def constructor_hook(args):
+    generated_fname = args[0]
+    class_name = args[1]
+    add_code = args[2]
+
+    target_fname = generated_fname + ".swapfile"
+    src_fd, dst_fd = open(generated_fname, "r"), open(target_fname, "w")
+
+    in_class = 0
+    for line in src_fd:
+        if in_class == 1:
+            if "public:" in line:
+                line = line + add_code + "\n"
+            elif "bool operator <" in line:
+                line = ""
+            # this may not be right
+            elif line.startswith("};"):
+                in_class = 2
+        elif in_class == 0 and line.startswith("class "+class_name):
+            in_class = 1
+        dst_fd.write(line)
+
+    src_fd.close()
+    dst_fd.close()
+    os.rename(target_fname, generated_fname)
+
+def remove_all_enums_define_hook(args):
+    generated_fname = args[0]
+    target_fname = generated_fname + ".swapfile"
+    src_fd, dst_fd = open(generated_fname, "r"), open(target_fname, "w")
+
+    in_enums = False
+    for line in src_fd:
+        if in_enums:
+            if line.startswith("};"):
+                in_enums = False
+            line = ""
+        else:
+            tokens = line.strip().split()
+            if len(tokens)>1 and tokens[0]=="enum" and tokens[2]=="{":
+                in_enums = True
+                line = ""
+        dst_fd.write(line)
+
+    src_fd.close()
+    dst_fd.close()
+    os.rename(target_fname, generated_fname)
+
+def add_hook(name, path, func, args):
+    for i in thrift_description:
+        if name == i["name"] and path == i["path"]:
+            if "hook" not in i:
+                i["hook"] = [(func, args)]
+            else:
+                i["hook"].append((func, args))
 
 if __name__ == "__main__":
     init_env()
 
-    only_php = sys.argv[1]=="only_php"
+    ctor_gpid = "  global_partition_id(int32_t _app_id, int32_t _pidx): app_id(_app_id), pidx(_pidx) {\n  }"
+    ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
 
-    if len(sys.argv)>2:
-        for i in sys.argv[2:]:
-            desc = find_desc_from_name(i)
-            if not desc is None:
-                compile_thrift_file(desc, only_php)
+    add_hook("deploy_svc", "src/dist/deployment_service", remove_all_enums_define_hook, ["deploy_svc_types.h"])
+    add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "global_partition_id", ctor_gpid])
+    add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
+
+    if len(sys.argv)>1:
+        for i in sys.argv[1:]:
+            for desc in find_desc_from_name(i):
+                compile_thrift_file(desc)
     else:
         for i in thrift_description:
-            compile_thrift_file(i, only_php)
+            compile_thrift_file(i)
