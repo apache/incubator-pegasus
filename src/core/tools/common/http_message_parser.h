@@ -55,12 +55,15 @@ public:
 
     int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) override;
 private:
+    http_parser _parser;
+    http_parser_settings _parser_setting;
+    std::queue<std::unique_ptr<message_ex>> _received_messages;
+    struct
+    {
+        std::string rpc_name;
+        int hash;
+    } _last_url_info;
 
-    http_parser parser;
-    http_parser_settings settings;
-    std::queue<std::unique_ptr<message_ex>> messages;
-    std::string last_rpc_name;
-    int last_rpc_hash;
     constexpr static const char header_prefix[] =
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html; charset=UTF-8\r\n"
@@ -70,5 +73,7 @@ private:
     constexpr static const char header_contentlen_suffix[] = "\r\n\r\n";
     constexpr static size_t header_size = sizeof(header_prefix) + sizeof(header_contentlen_prefix) + contentlen_placeholder_length + sizeof(header_contentlen_suffix);
     constexpr static const char suffix_padding[] = "\r\n";
+
+    char http_header_send_buffer[header_size];
 };
 }
