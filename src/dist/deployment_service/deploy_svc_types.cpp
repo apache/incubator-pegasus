@@ -15,24 +15,24 @@
 namespace dsn { namespace dist {
 
 int _kcluster_typeValues[] = {
-  cluster_type::kubernetes,
-  cluster_type::docker,
-  cluster_type::bare_medal_linux,
-  cluster_type::bare_medal_windows,
-  cluster_type::yarn_on_linux,
-  cluster_type::yarn_on_windows,
-  cluster_type::mesos_on_linux,
-  cluster_type::mesos_on_windows
+  cluster_type::cstype_kubernetes,
+  cluster_type::cstype_docker,
+  cluster_type::cstype_bare_medal_linux,
+  cluster_type::cstype_bare_medal_windows,
+  cluster_type::cstype_yarn_on_linux,
+  cluster_type::cstype_yarn_on_windows,
+  cluster_type::cstype_mesos_on_linux,
+  cluster_type::cstype_mesos_on_windows
 };
 const char* _kcluster_typeNames[] = {
-  "kubernetes",
-  "docker",
-  "bare_medal_linux",
-  "bare_medal_windows",
-  "yarn_on_linux",
-  "yarn_on_windows",
-  "mesos_on_linux",
-  "mesos_on_windows"
+  "cstype_kubernetes",
+  "cstype_docker",
+  "cstype_bare_medal_linux",
+  "cstype_bare_medal_windows",
+  "cstype_yarn_on_linux",
+  "cstype_yarn_on_windows",
+  "cstype_mesos_on_linux",
+  "cstype_mesos_on_windows"
 };
 
 int _kservice_statusValues[] = {

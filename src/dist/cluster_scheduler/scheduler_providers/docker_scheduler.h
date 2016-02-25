@@ -66,7 +66,7 @@ namespace dsn
                     );
             virtual cluster_type type() const override
             {
-                return cluster_type::docker;
+                return cluster_type::cstype_docker;
             }
 
             /*

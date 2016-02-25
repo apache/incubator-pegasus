@@ -21,8 +21,8 @@
 # else // use rDSN's data encoding/decoding
 
 #include <dsn/dist/cluster_scheduler.h>
-namespace dsn { namespace dist { 
 
+namespace dsn { namespace dist { 
     // ---------- deploy_request -------------
     struct deploy_request
     {
