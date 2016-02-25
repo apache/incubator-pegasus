@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.7)
 
-set(DSN_SERIALIZATION_TYPE "thrift")
+set(DSN_SERIALIZATION_TYPE "default")
 
 if(DSN_SERIALIZATION_TYPE STREQUAL "default")
     message(STATUS "use default serialization method")
@@ -30,6 +30,10 @@ if(ENABLE_GCOV AND UNIX)
 endif()
 dsn_common_setup()
 dsn_add_pseudo_projects()
+
+if(DSN_SERIALIZATION_TYPE STREQUAL "thrift")
+    add_subdirectory(ext/thrift)
+endif()
 
 add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)

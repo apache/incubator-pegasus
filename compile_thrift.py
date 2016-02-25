@@ -122,8 +122,7 @@ def find_struct_define(line, enum_class_list):
 
 def modify_struct_define(header_file, enum_class):
     tmp_result = header_file + ".swapfile"
-    res_fd = open(tmp_result, "w")
-    src_fd = open(header_file, "r")
+    res_fd, src_fd = open(tmp_result, "w"), open(header_file, "r")
 
     in_enum_define = 0
 
@@ -176,8 +175,7 @@ def handle_enums(thrift_name):
 
 def fix_include_file(filename, fix_commands):
     tmp_result = filename + ".swapfile"
-    from_fd = open(filename, "r")
-    to_fd = open(tmp_result, "w")
+    from_fd, to_fd = open(filename, "r"), open(tmp_result, "w")
 
     add_ok = not "add" in fix_commands
 
