@@ -1128,8 +1128,11 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
+extern void dsn_core_init();
+
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list)
 {
+    dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 
     dsn_all.engine_ready = false;
