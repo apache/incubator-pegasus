@@ -45,9 +45,9 @@ namespace dsn{
 http_message_parser::http_message_parser(int buffer_block_size, bool is_write_only)
     : message_parser(buffer_block_size, is_write_only)
 {
-    memset(&settings, 0, sizeof(settings));
-    parser.data = this;
-    settings.on_url = [](http_parser* parser, const char *at, size_t length)->int
+    memset(&_parser_setting, 0, sizeof(_parser_setting));
+    _parser.data = this;
+    _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
         http_parser_url url;
@@ -63,46 +63,48 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
         if (args.size() != 2)
         {
             derror("invalid url");
+            //error, reset parser state
             return 1;
         }
-        owner->last_rpc_name = std::move(args[0]);
-        owner->last_rpc_hash = std::stoi(args[1]);
+        owner->_last_url_info.rpc_name = std::move(args[0]);
+        owner->_last_url_info.hash = std::stoi(args[1]);
         return 0;
     };
-    settings.on_body = [](http_parser* parser, const char *at, size_t length)->int
+    _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
         dassert(owner->_read_buffer.buffer() != nullptr, "the read buffer is not owning");
-        owner->messages.emplace(
+        owner->_received_messages.emplace(
             message_ex::create_receive_message_with_standalone_header(
                 blob(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length)));
-        strcpy(owner->messages.back()->header->rpc_name, owner->last_rpc_name.c_str());
-        owner->messages.back()->header->client.hash = owner->last_rpc_hash;
-        owner->messages.back()->header->context.u.is_request = 1;
+        strcpy(owner->_received_messages.back()->header->rpc_name, owner->_last_url_info.rpc_name.c_str());
+        owner->_received_messages.back()->header->client.hash = owner->_last_url_info.hash;
+        owner->_received_messages.back()->header->context.u.is_request = 1;
         return 0;
     };
-    http_parser_init(&parser, HTTP_REQUEST);
+    http_parser_init(&_parser, HTTP_REQUEST);
+    
 }
 
 message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
 {
     read_next = 4096;
-    auto nparsed = http_parser_execute(&parser, &settings, _read_buffer.data() + _read_buffer_occupied, read_length);
-    if (parser.upgrade)
+    auto nparsed = http_parser_execute(&_parser, &_parser_setting, _read_buffer.data() + _read_buffer_occupied, read_length);
+    if (_parser.upgrade)
     {
         derror("unsupported protocol");
         return nullptr;
     }
-    else if (nparsed != read_length)
+    if (nparsed != read_length)
     {
         derror("malformed http packet, we cannot handle it now");
         return nullptr;
     }
     mark_read(read_length);
-    if (!messages.empty())
+    if (!_received_messages.empty())
     {
-        auto message = std::move(messages.front());
-        messages.pop();
+        auto message = std::move(_received_messages.front());
+        _received_messages.pop();
         return message.release();
     }
     else
@@ -114,34 +116,39 @@ message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/
 int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, send_buf* buffers)
 {
     //skip message header for browser
+    if (offset == 0)
+    {
+        sprintf(http_header_send_buffer, "%s%s%09lld%s", header_prefix, header_contentlen_prefix, msg->body_size(), header_contentlen_suffix);
+    }
+    int buffer_iter = 0;
+    if (offset < header_size)
+    {
+        buffers[0].buf = http_header_send_buffer + offset;
+        buffers[0].sz = header_size - offset;
+        buffer_iter = 1;
+        offset = 0;
+    }
+    else
+    {
+        offset -= header_size;
+    }
     offset += sizeof(message_header);
-    blob header_holder(std::shared_ptr<char>(static_cast<char*>(dsn_transient_malloc(header_size)), [](char* c) {dsn_transient_free(c); }), 0, header_size);
-    int write_size = sprintf(header_holder.buffer().get(), "%s%s%09lld%s", header_prefix, header_contentlen_prefix, msg->body_size(), header_contentlen_suffix);
-    buffers[0].buf = header_holder.buffer().get();
-    buffers[0].sz = header_size;
-    size_t buffer_iter = 1;
     for (auto& buf : msg->buffers)
     {
         if (offset >= buf.length())
         {
-            //we still add it to buffer because the size of `buffers` should be the one returned from `get_send_buffers_count_and_total_length`
-            buffers[buffer_iter].buf = const_cast<char*>(buf.data());
-            buffers[buffer_iter].sz = 0;
             offset -= buf.length();
+            continue;
         }
-        else
-        {
-            buffers[buffer_iter].buf = const_cast<char*>(buf.data() + offset);
-            buffers[buffer_iter].sz = buf.length() - offset;
-            offset = 0;
-        }
+        buffers[buffer_iter].buf = const_cast<char*>(buf.data() + offset);
+        buffers[buffer_iter].sz = buf.length() - offset;
+        offset = 0;
         buffer_iter += 1;
     }
 
     buffers[buffer_iter].buf = const_cast<char*>(suffix_padding);
     buffers[buffer_iter].sz = sizeof(suffix_padding);
     buffer_iter += 1;
-    msg->buffers.emplace_back(std::move(header_holder));
     return buffer_iter;
 }
 
