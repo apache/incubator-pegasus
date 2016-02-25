@@ -5,7 +5,7 @@ set(target_dir ${PROJECT_BINARY_DIR}/thrift/lib)
 if(WIN32)
     set(install_cmd make install)
 else()
-    set(install_cmd COMMAND make install COMMAND ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so" "${PROJECT_BINARY_DIR}/lib/libthrift.so")
+    set(install_cmd COMMAND make install COMMAND ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so.0.9.3" "${PROJECT_BINARY_DIR}/lib/" COMMAND ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so" "${PROJECT_BINARY_DIR}/lib/")
 endif()
 
 ExternalProject_Add(libthrift
