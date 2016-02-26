@@ -41,6 +41,9 @@
 # include <google/protobuf/stubs/common.h>
 # include <google/protobuf/io/zero_copy_stream.h>
 # include <google/protobuf/io/coded_stream.h>
+# include <google/protobuf/util/json_util.h>
+# include <google/protobuf/util/type_resolver_util.h>
+# include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 namespace dsn {
 
@@ -107,7 +110,10 @@ namespace dsn {
     private:
         binary_writer& _writer;
     };
-    
+
+#ifndef DSN_IDL_JSON
+
+
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
@@ -123,5 +129,39 @@ namespace dsn {
         ::google::protobuf::io::CodedInputStream is(&rd2);
         val.MergePartialFromCodedStream(&is);
     }
+#else
+    /* you may want to specify your own url prefix here */
+    static const char kTypeUrlPrefix[] = "";
+
+    static google::protobuf::util::TypeResolver *type_resolver = google::protobuf::util::NewTypeResolverForDescriptorPool(
+        kTypeUrlPrefix, google::protobuf::DescriptorPool::generated_pool());
     
+    template<typename T>
+    inline std::string resolve_type_url(const T& val)
+    {
+        return std::string(kTypeUrlPrefix) + "/" + val.GetDescriptor()->full_name();
+    }
+
+    template<typename T>
+    void marshall(binary_writer& writer, const T& val)
+    {
+        std::string type_url = resolve_type_url(val);
+        std::string binary_str;
+        val.SerializeToString(&binary_str);
+        gproto_binary_writer wt2(writer);
+        google::protobuf::io::ArrayInputStream input_stream(binary_str.data(), binary_str.size());
+        google::protobuf::util::BinaryToJsonStream(type_resolver, type_url, &input_stream, &wt2);
+    }
+
+    template<typename T>
+    void unmarshall(binary_reader& reader, /*out*/ T& val)
+    {
+        std::string type_url = resolve_type_url(val);
+        gproto_binary_reader rd2(reader);
+        std::string binary_str;
+        google::protobuf::io::StringOutputStream output_stream(&binary_str);
+        google::protobuf::util::JsonToBinaryStream(type_resolver, type_url, &rd2, &output_stream);
+        val.ParseFromString(binary_str);
+    }
+#endif // DSN_IDL_JSON
 }

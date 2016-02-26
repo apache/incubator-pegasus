@@ -2,13 +2,21 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
-$dsn_root = dirname(dirname(dirname(dirname(__DIR__))));
-$dsn_root = str_replace('\\', '/', $dsn_root);
+$idl_format = $argv[4];
+
+global $inc_path;
+global $inc_lib;
+$inc_path = "";
+$inc_lib = "";
+if ($idl_format == "proto")
+{
+    $inc_path = '${DSN_ROOT}/include/ext/protoc';
+    $inc_lib = "libprotobufd.lib";
+}
 ?>
 cmake_minimum_required(VERSION 2.8.8)
 
-set(DSN_ROOT "<?=$dsn_root?>")
-#set(DSN_ROOT "$ENV{DSN_ROOT}")
+set(DSN_ROOT "$ENV{DSN_ROOT}")
 if((DSN_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_ROOT}/"))
     message(FATAL_ERROR "Please make sure that DSN_ROOT is defined and does exists.")
 endif()
@@ -27,9 +35,9 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
+set(MY_PROJ_INC_PATH "<?=$inc_path?>")
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS "<?=$inc_lib?>")
 
 set(MY_PROJ_LIB_PATH "")
 

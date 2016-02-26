@@ -23,6 +23,7 @@ add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)
 add_subdirectory(ext/rapidjson)
 add_subdirectory(ext/concurrentqueue)
+add_subdirectory(ext/protobuf)
 #
 # !!! gflags is currently not used, and when it is enabled, it causes failure on windows compilation
 # add_subdirectory(ext/gflags)

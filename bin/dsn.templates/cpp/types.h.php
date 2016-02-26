@@ -3,6 +3,7 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
+$idl_format = $argv[5];
 ?>
 # pragma once
 # include <dsn/service_api_cpp.h>
@@ -15,49 +16,28 @@ $idl_type = $argv[4];
 //
 // !!! WARNING: not feasible for replicated service yet!!! 
 //
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
-
-# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 <?php if ($idl_type == "thrift") { ?>
+
 # include <dsn/thrift_helper.h>
 # include "<?=$_PROG->name?>_types.h" 
 
-<?php
-echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
-
-foreach ($_PROG->structs as $s) 
-{
-    echo "    // ---------- ". $s->name . " -------------". PHP_EOL;
-    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
-    echo "    {".PHP_EOL;
-    echo "        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));".PHP_EOL;
-    echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
-    echo "        ::dsn::marshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::write);".PHP_EOL;
-    echo "    };".PHP_EOL;
-    echo PHP_EOL;
-    echo "    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ". $s->get_cpp_name() . "& val)".PHP_EOL;
-    echo "    {".PHP_EOL;
-    echo "        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));".PHP_EOL;
-    echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
-    echo "        ::dsn::unmarshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::read);".PHP_EOL;
-    echo "    };".PHP_EOL;
-    echo PHP_EOL;
-}
-
-echo $_PROG->get_cpp_namespace_end().PHP_EOL;
-?>
-
 <?php } else if ($idl_type == "proto") {?>
 
+<?php       if ($idl_format == "binary") {?>
+// define DSN_IDL_BINARY to use binary format to send rpc request/response
+#define DSN_IDL_BINARY
+<?php       } else if ($idl_format == "json") {?>
+// define DSN_IDL_JSON to use json format to send rpc request/response
+#define DSN_IDL_JSON
+
+<?php       }?>
 # include "<?=$_PROG->name?>.pb.h"
-# include <dsn/gproto_helper.h>
+# include <dsn/idl/gproto_helper.h>
 
 <?php } else { ?>
-# error not supported idl type <?=$idl_type?> 
-<?php } ?>
-
-# else // use rDSN's data encoding/decoding
+// error not supported idl type <?=$idl_type?>
+// use rDSN's data encoding/decoding
 
 <?php
 echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
@@ -91,14 +71,14 @@ foreach ($_PROG->structs as $s)
     foreach ($s->fields as $fld) {
         echo "        marshall(writer, val." .$fld->name .");" .PHP_EOL;
     }
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
     echo "    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ". $s->get_cpp_name() . "& val)".PHP_EOL;
     echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
         echo "        unmarshall(reader, val." .$fld->name .");" .PHP_EOL;
     }
-    echo "    };".PHP_EOL;
+    echo "    }".PHP_EOL;
     echo PHP_EOL;
 }
 
@@ -106,3 +86,4 @@ echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
 
 #endif 
+<?php } ?>
