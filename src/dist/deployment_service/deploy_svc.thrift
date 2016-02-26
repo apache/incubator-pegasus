@@ -4,14 +4,14 @@ namespace cpp dsn.dist
 
 enum cluster_type
 {
-    kubernetes,
-    docker,
-    bare_medal_linux,
-    bare_medal_windows,
-    yarn_on_linux,
-    yarn_on_windows,
-    mesos_on_linux,
-    mesos_on_windows
+    cstype_kubernetes,
+    cstype_docker,
+    cstype_bare_medal_linux,
+    cstype_bare_medal_windows,
+    cstype_yarn_on_linux,
+    cstype_yarn_on_windows,
+    cstype_mesos_on_linux,
+    cstype_mesos_on_windows
 }
 
 enum service_status

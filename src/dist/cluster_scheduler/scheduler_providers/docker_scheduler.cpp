@@ -150,7 +150,7 @@ void docker_scheduler::get_app_list(std::string& ldir,/*out*/std::vector<std::st
     std::string popen_command = "cat " + ldir + "/applist";
     FILE *f = popen(popen_command.c_str(),"r");
     char buffer[128];
-    fgets(buffer,128,f);
+    dassert(fgets(buffer,128,f) == buffer, "");
     ::dsn::utils::split_args(buffer, app_list, ' ');
 #endif
 }
@@ -244,7 +244,7 @@ void docker_scheduler::create_containers(std::string& name,std::function<void(er
         std::string popen_command = "IP=`cat "+ local_package_directory +"/metalist`;echo ${IP#*@}";
         FILE *f = popen(popen_command.c_str(),"r");
         char buffer[30];
-        fgets(buffer,30,f);
+        dassert(fgets(buffer,30,f) == buffer, "");
         {
             zauto_lock l(_lock);
             auto unit = _deploy_map[name];

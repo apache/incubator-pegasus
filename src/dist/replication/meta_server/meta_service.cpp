@@ -387,8 +387,8 @@ void meta_service::on_balancer_proposal(dsn_message_t req)
     dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
           request.gpid.app_id, request.gpid.pidx,
           enum_to_string(request.type),
-          request.from.to_string(),
-          request.to.to_string());
+          request.from_addr.to_string(),
+          request.to_addr.to_string());
     _balancer->on_balancer_proposal(request, response);
     reply(req, response);
 }

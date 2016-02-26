@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 # pragma once
-# include "nfs_types.h"
+# include "nfs.types.h"
 
 # ifdef __TITLE__
 # undef __TITLE__

@@ -179,10 +179,10 @@ int main(int argc, char** argv)
                 request.type = mapper[argv[i+1]];
             }
             else if (strcmp(argv[i], "-from") == 0) {
-                request.from.from_string_ipv4(argv[i+1]);
+                request.from_addr.from_string_ipv4(argv[i+1]);
             }
             else if (strcmp(argv[i], "-to") == 0) {
-                request.to.from_string_ipv4(argv[i+1]);
+                request.to_addr.from_string_ipv4(argv[i+1]);
             }
         }
         dsn::error_code err = client.send_balancer_proposal(request);

@@ -256,7 +256,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
 {
     fd::beacon_ack ack;
     ack.time = beacon.time;
-    ack.this_node = beacon.to;
+    ack.this_node = beacon.to_addr;
     ack.allowed = true;
 
     if ( !is_primary() )
@@ -267,7 +267,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     else 
     {
         ack.is_master = true;
-        ack.primary_node = beacon.to;
+        ack.primary_node = beacon.to_addr;
         failure_detector::on_ping_internal(beacon, ack);
     }
 

@@ -80,8 +80,8 @@ private:
         balancer_proposal_request& request = _balancer_proposals_map[gpid];
         request.gpid = gpid;
         request.type = type;
-        request.from = from;
-        request.to = to;
+        request.from_addr= from;
+        request.to_addr = to;
     }
 private:
     volatile bool _is_greedy_rebalancer_enabled;
