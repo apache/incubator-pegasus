@@ -109,7 +109,7 @@ replica::~replica(void)
     dinfo("%s: replica destroyed", name());
 }
 
-void replica::on_client_read(dsn_message_t request)
+void replica::on_client_read(task_code code, dsn_message_t request)
 {    
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {
@@ -128,7 +128,6 @@ void replica::on_client_read(dsn_message_t request)
 
     dassert (_app != nullptr, "");
 
-    auto code = dsn_msg_task_code(request);
     rpc_read_stream reader(request);
     _app->dispatch_rpc_call(code, reader, dsn_msg_create_response(request));
 }

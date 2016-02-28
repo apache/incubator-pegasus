@@ -383,7 +383,7 @@ void replica_stub::on_client_write(global_partition_id gpid, dsn_message_t reque
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_write(request);
+        rep->on_client_write(task_code(dsn_msg_task_code(request)), request);
     }
     else
     {
@@ -396,7 +396,51 @@ void replica_stub::on_client_read(global_partition_id gpid, dsn_message_t reques
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(request);
+        rep->on_client_read(task_code(dsn_msg_task_code(request)), request);
+    }
+    else
+    {
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+    }
+}
+
+void replica_stub::on_client_write2(dsn_message_t request)
+{
+    write_request_header hdr;
+    ::unmarshall(request, hdr);
+
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
+    replica_ptr rep = get_replica(hdr.gpid);
+    if (rep != nullptr)
+    {
+        rep->on_client_write(hdr.code, request);
+    }
+    else
+    {
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+    }
+}
+
+void replica_stub::on_client_read2(dsn_message_t request)
+{
+    read_request_header hdr;
+    ::unmarshall(request, hdr);
+
+    if (hdr.code == TASK_CODE_INVALID)
+    {
+        response_client_error(request, ERR_INVALID_DATA);
+        return;
+    }
+
+    replica_ptr rep = get_replica(hdr.gpid);
+    if (rep != nullptr)
+    {
+        rep->on_client_read(hdr.code, request);
     }
     else
     {
@@ -1171,8 +1215,8 @@ void replica_stub::handle_log_failure(error_code err)
 
 void replica_stub::open_service()
 {
-    //register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
-    //register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
+    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write2);
+    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read2);
 
     register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
 

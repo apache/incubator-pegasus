@@ -82,8 +82,8 @@ public:
     //
     //    requests from clients
     // 
-    void on_client_write(dsn_message_t request);
-    void on_client_read(dsn_message_t request);
+    void on_client_write(task_code code, dsn_message_t request);
+    void on_client_read(task_code code, dsn_message_t request);
 
     //
     //    messages and tools from/for meta server

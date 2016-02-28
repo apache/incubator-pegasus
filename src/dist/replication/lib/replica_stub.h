@@ -82,6 +82,9 @@ public:
     void on_client_write(global_partition_id gpid, dsn_message_t request);
     void on_client_read(global_partition_id gpid, dsn_message_t request);
 
+    void on_client_write2(dsn_message_t request);
+    void on_client_read2(dsn_message_t request);
+
     //
     //    messages from meta server
     //

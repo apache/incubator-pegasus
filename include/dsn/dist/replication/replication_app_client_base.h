@@ -84,7 +84,7 @@ namespace dsn { namespace replication {
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0)
         {
-            dsn_message_t msg = nullptr; // dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, static_cast<int>(timeout.count()), 0);
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, static_cast<int>(timeout.count()), 0);
             task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, owner, std::forward<TCallback>(callback), reply_hash);
             auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
             ::marshall(msg, std::forward<TRequest>(req));
@@ -107,7 +107,7 @@ namespace dsn { namespace replication {
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            dsn_message_t msg = nullptr; // dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, static_cast<int>(timeout.count()), 0);
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, static_cast<int>(timeout.count()), 0);
             task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, owner, std::forward<TCallback>(callback), reply_hash);
             auto rc = create_read_context(key_hash, code, msg, task, semantic, snapshot_decree, reply_hash);
             ::marshall(msg, std::forward<TRequest>(req));

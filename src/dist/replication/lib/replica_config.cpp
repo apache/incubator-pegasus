@@ -857,7 +857,7 @@ void replica::replay_prepare_list()
         }
         else
         {
-            mu->add_client_request(nullptr);
+            mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
 
             ddebug(
                 "%s: emit empty mutation %s with mutation_tid=%" PRIu64 " when replay prepare list",
