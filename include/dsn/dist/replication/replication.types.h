@@ -18,6 +18,661 @@
 # include "replication_types.h" 
 
 
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ global_partition_id& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<global_partition_id>(&proto, val, &global_partition_id::read);
+    }
+
+    // ---------- mutation_header -------------
+    inline void marshall(::dsn::binary_writer& writer, const mutation_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<mutation_header>(&proto, val, &mutation_header::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<mutation_header>(&proto, val, &mutation_header::read);
+    }
+
+    // ---------- mutation_update -------------
+    inline void marshall(::dsn::binary_writer& writer, const mutation_update& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<mutation_update>(&proto, val, &mutation_update::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_update& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<mutation_update>(&proto, val, &mutation_update::read);
+    }
+
+    // ---------- mutation_data -------------
+    inline void marshall(::dsn::binary_writer& writer, const mutation_data& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<mutation_data>(&proto, val, &mutation_data::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_data& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<mutation_data>(&proto, val, &mutation_data::read);
+    }
+
+    // ---------- partition_configuration -------------
+    inline void marshall(::dsn::binary_writer& writer, const partition_configuration& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<partition_configuration>(&proto, val, &partition_configuration::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ partition_configuration& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<partition_configuration>(&proto, val, &partition_configuration::read);
+    }
+
+    // ---------- replica_configuration -------------
+    inline void marshall(::dsn::binary_writer& writer, const replica_configuration& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<replica_configuration>(&proto, val, &replica_configuration::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_configuration& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<replica_configuration>(&proto, val, &replica_configuration::read);
+    }
+
+    // ---------- prepare_msg -------------
+    inline void marshall(::dsn::binary_writer& writer, const prepare_msg& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<prepare_msg>(&proto, val, &prepare_msg::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ prepare_msg& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<prepare_msg>(&proto, val, &prepare_msg::read);
+    }
+
+    // ---------- read_request_header -------------
+    inline void marshall(::dsn::binary_writer& writer, const read_request_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<read_request_header>(&proto, val, &read_request_header::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ read_request_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<read_request_header>(&proto, val, &read_request_header::read);
+    }
+
+    // ---------- write_request_header -------------
+    inline void marshall(::dsn::binary_writer& writer, const write_request_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<write_request_header>(&proto, val, &write_request_header::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ write_request_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<write_request_header>(&proto, val, &write_request_header::read);
+    }
+
+    // ---------- rw_response_header -------------
+    inline void marshall(::dsn::binary_writer& writer, const rw_response_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<rw_response_header>(&proto, val, &rw_response_header::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ rw_response_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<rw_response_header>(&proto, val, &rw_response_header::read);
+    }
+
+    // ---------- prepare_ack -------------
+    inline void marshall(::dsn::binary_writer& writer, const prepare_ack& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<prepare_ack>(&proto, val, &prepare_ack::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ prepare_ack& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<prepare_ack>(&proto, val, &prepare_ack::read);
+    }
+
+    // ---------- learn_state -------------
+    inline void marshall(::dsn::binary_writer& writer, const learn_state& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<learn_state>(&proto, val, &learn_state::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_state& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<learn_state>(&proto, val, &learn_state::read);
+    }
+
+    // ---------- learn_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const learn_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<learn_request>(&proto, val, &learn_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<learn_request>(&proto, val, &learn_request::read);
+    }
+
+    // ---------- learn_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const learn_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<learn_response>(&proto, val, &learn_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<learn_response>(&proto, val, &learn_response::read);
+    }
+
+    // ---------- group_check_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const group_check_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<group_check_request>(&proto, val, &group_check_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ group_check_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<group_check_request>(&proto, val, &group_check_request::read);
+    }
+
+    // ---------- group_check_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const group_check_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<group_check_response>(&proto, val, &group_check_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ group_check_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<group_check_response>(&proto, val, &group_check_response::read);
+    }
+
+    // ---------- app_info -------------
+    inline void marshall(::dsn::binary_writer& writer, const app_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<app_info>(&proto, val, &app_info::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ app_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<app_info>(&proto, val, &app_info::read);
+    }
+
+    // ---------- node_info -------------
+    inline void marshall(::dsn::binary_writer& writer, const node_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<node_info>(&proto, val, &node_info::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ node_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<node_info>(&proto, val, &node_info::read);
+    }
+
+    // ---------- meta_response_header -------------
+    inline void marshall(::dsn::binary_writer& writer, const meta_response_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<meta_response_header>(&proto, val, &meta_response_header::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ meta_response_header& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<meta_response_header>(&proto, val, &meta_response_header::read);
+    }
+
+    // ---------- configuration_update_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_update_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_update_request>(&proto, val, &configuration_update_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_update_request>(&proto, val, &configuration_update_request::read);
+    }
+
+    // ---------- configuration_update_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_update_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_update_response>(&proto, val, &configuration_update_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_update_response>(&proto, val, &configuration_update_response::read);
+    }
+
+    // ---------- configuration_query_by_node_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_query_by_node_request>(&proto, val, &configuration_query_by_node_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_node_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_query_by_node_request>(&proto, val, &configuration_query_by_node_request::read);
+    }
+
+    // ---------- create_app_options -------------
+    inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<create_app_options>(&proto, val, &create_app_options::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<create_app_options>(&proto, val, &create_app_options::read);
+    }
+
+    // ---------- configuration_create_app_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_create_app_request>(&proto, val, &configuration_create_app_request::read);
+    }
+
+    // ---------- drop_app_options -------------
+    inline void marshall(::dsn::binary_writer& writer, const drop_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_app_options& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<drop_app_options>(&proto, val, &drop_app_options::read);
+    }
+
+    // ---------- configuration_drop_app_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_drop_app_request>(&proto, val, &configuration_drop_app_request::read);
+    }
+
+    // ---------- configuration_list_apps_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_apps_request>(&proto, val, &configuration_list_apps_request::read);
+    }
+
+    // ---------- configuration_list_nodes_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_nodes_request>(&proto, val, &configuration_list_nodes_request::read);
+    }
+
+    // ---------- configuration_create_app_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_create_app_response>(&proto, val, &configuration_create_app_response::read);
+    }
+
+    // ---------- control_balancer_migration_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<control_balancer_migration_request>(&proto, val, &control_balancer_migration_request::read);
+    }
+
+    // ---------- control_balancer_migration_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const control_balancer_migration_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ control_balancer_migration_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<control_balancer_migration_response>(&proto, val, &control_balancer_migration_response::read);
+    }
+
+    // ---------- balancer_proposal_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<balancer_proposal_request>(&proto, val, &balancer_proposal_request::read);
+    }
+
+    // ---------- balancer_proposal_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const balancer_proposal_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ balancer_proposal_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<balancer_proposal_response>(&proto, val, &balancer_proposal_response::read);
+    }
+
+    // ---------- configuration_drop_app_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_drop_app_response>(&proto, val, &configuration_drop_app_response::read);
+    }
+
+    // ---------- configuration_list_apps_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_apps_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_apps_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_apps_response>(&proto, val, &configuration_list_apps_response::read);
+    }
+
+    // ---------- configuration_list_nodes_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_list_nodes_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_list_nodes_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_list_nodes_response>(&proto, val, &configuration_list_nodes_response::read);
+    }
+
+    // ---------- configuration_query_by_node_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_query_by_node_response>(&proto, val, &configuration_query_by_node_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_node_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_query_by_node_response>(&proto, val, &configuration_query_by_node_response::read);
+    }
+
+    // ---------- configuration_query_by_index_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_query_by_index_request>(&proto, val, &configuration_query_by_index_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_index_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_query_by_index_request>(&proto, val, &configuration_query_by_index_request::read);
+    }
+
+    // ---------- configuration_query_by_index_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<configuration_query_by_index_response>(&proto, val, &configuration_query_by_index_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_index_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<configuration_query_by_index_response>(&proto, val, &configuration_query_by_index_response::read);
+    }
+
+    // ---------- query_replica_decree_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const query_replica_decree_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<query_replica_decree_request>(&proto, val, &query_replica_decree_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_decree_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<query_replica_decree_request>(&proto, val, &query_replica_decree_request::read);
+    }
+
+    // ---------- query_replica_decree_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const query_replica_decree_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<query_replica_decree_response>(&proto, val, &query_replica_decree_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_decree_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<query_replica_decree_response>(&proto, val, &query_replica_decree_response::read);
+    }
+
+    // ---------- replica_info -------------
+    inline void marshall(::dsn::binary_writer& writer, const replica_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<replica_info>(&proto, val, &replica_info::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_info& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<replica_info>(&proto, val, &replica_info::read);
+    }
+
+    // ---------- query_replica_info_request -------------
+    inline void marshall(::dsn::binary_writer& writer, const query_replica_info_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<query_replica_info_request>(&proto, val, &query_replica_info_request::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_info_request& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<query_replica_info_request>(&proto, val, &query_replica_info_request::read);
+    }
+
+    // ---------- query_replica_info_response -------------
+    inline void marshall(::dsn::binary_writer& writer, const query_replica_info_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::marshall_rpc_args<query_replica_info_response>(&proto, val, &query_replica_info_response::write);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ query_replica_info_response& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::unmarshall_rpc_args<query_replica_info_response>(&proto, val, &query_replica_info_response::read);
+    }
+
+} } 
+
+
 # else // use rDSN's data encoding/decoding
 
 namespace dsn { namespace replication { 
@@ -604,6 +1259,7 @@ namespace dsn { namespace replication {
         partition_configuration config;
         config_type type;
         ::dsn::rpc_address node;
+        bool is_stateful;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_update_request& val)
@@ -611,6 +1267,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.config);
         marshall(writer, val.type);
         marshall(writer, val.node);
+        marshall(writer, val.is_stateful);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_request& val)
@@ -618,6 +1275,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.config);
         unmarshall(reader, val.type);
         unmarshall(reader, val.node);
+        unmarshall(reader, val.is_stateful);
     }
 
     // ---------- configuration_update_response -------------
@@ -637,34 +1295,6 @@ namespace dsn { namespace replication {
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.config);
-    }
-
-    // ---------- configuration_proposal_request -------------
-    struct configuration_proposal_request
-    {
-        partition_configuration config;
-        config_type type;
-        ::dsn::rpc_address node;
-        bool is_clean_data;
-        bool is_upgrade;
-    };
-
-    inline void marshall(::dsn::binary_writer& writer, const configuration_proposal_request& val)
-    {
-        marshall(writer, val.config);
-        marshall(writer, val.type);
-        marshall(writer, val.node);
-        marshall(writer, val.is_clean_data);
-        marshall(writer, val.is_upgrade);
-    }
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_proposal_request& val)
-    {
-        unmarshall(reader, val.config);
-        unmarshall(reader, val.type);
-        unmarshall(reader, val.node);
-        unmarshall(reader, val.is_clean_data);
-        unmarshall(reader, val.is_upgrade);
     }
 
     // ---------- configuration_query_by_node_request -------------
@@ -690,6 +1320,7 @@ namespace dsn { namespace replication {
         int32_t replica_count;
         bool success_if_exist;
         std::string app_type;
+        bool is_stateful;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
@@ -698,6 +1329,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.replica_count);
         marshall(writer, val.success_if_exist);
         marshall(writer, val.app_type);
+        marshall(writer, val.is_stateful);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
@@ -706,6 +1338,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.replica_count);
         unmarshall(reader, val.success_if_exist);
         unmarshall(reader, val.app_type);
+        unmarshall(reader, val.is_stateful);
     }
 
     // ---------- configuration_create_app_request -------------

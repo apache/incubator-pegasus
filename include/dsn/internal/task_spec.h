@@ -214,8 +214,8 @@ public:
     bool                   rpc_request_dropped_before_execution_when_timeout;
 
     // layer 2 configurations
-    bool                   rpc_request_is_replicated_write_operation; // need stateful replication 
-    
+    bool                   rpc_request_layer2_handler_required; // need layer 2 handler
+    bool                   rpc_request_is_write_operation;      // need stateful replication
     // ]
 
     task_rejection_handler rejection_handler;
@@ -274,8 +274,9 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD(bool, bool, rpc_request_dropped_before_execution_when_timeout, false, "whether to drop a request right before execution when its queueing time is already greater than its timeout value")    
 
     // layer 2 configurations
-    CONFIG_FLD(bool, bool, rpc_request_is_replicated_write_operation, false, "whether this is a replicated and write request")
-
+    CONFIG_FLD(bool, bool, rpc_request_layer2_handler_required, false, "whether this request needs to be handled by a layer2 handler (e.g., replicated or partitioned)")
+    CONFIG_FLD(bool, bool, rpc_request_is_write_operation, false, "whether this request updates app's state which needs to be replicated using a replication layer2 handler")
+    
 CONFIG_END
 
 struct threadpool_spec

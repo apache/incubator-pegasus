@@ -38,7 +38,7 @@
 //
 // a replica is a replication partition of a serivce,
 // which handles all replication related issues
-// and redirect the app messages to replication_app_base
+// and on_request the app messages to replication_app_base
 // which is binded to this replication partition
 //
 
@@ -82,8 +82,8 @@ public:
     //
     //    requests from clients
     // 
-    void on_client_write(task_code code, dsn_message_t request);
-    void on_client_read(const read_request_header& meta, dsn_message_t request);
+    void on_client_write(dsn_message_t request);
+    void on_client_read(dsn_message_t request);
 
     //
     //    messages and tools from/for meta server

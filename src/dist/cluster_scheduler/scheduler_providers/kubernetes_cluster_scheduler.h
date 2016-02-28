@@ -53,10 +53,6 @@ namespace dsn
             kubernetes_cluster_scheduler();
             virtual error_code initialize() override;
 
-            /*
-            * option 1: combined deploy and failure notification service
-            *  failure_notification is specific for this deployment unit
-            */
             virtual void schedule(
                 std::shared_ptr<deployment_unit>& unit
                 ) override;
@@ -69,18 +65,6 @@ namespace dsn
                 return cluster_type::cstype_kubernetes;
             }
 
-            /*
-            * option 2: seperated deploy and failure notification service
-            */
-            virtual void deploy(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback
-                ) override {}
-
-            // *  failure_notification is general for all deployment units
-            virtual void register_failure_callback(
-                std::function<void(error_code, std::string)> failure_notification
-                ) override {}
             static void deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);
             static void deploy_k8s_unit_cleanup(dsn_cli_reply reply);
             static void undeploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);

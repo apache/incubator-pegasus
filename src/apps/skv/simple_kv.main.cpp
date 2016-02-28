@@ -47,7 +47,7 @@ static void dsn_app_registration()
 
     // register all possible services
     dsn::register_app< ::dsn::service::meta_service_app>("meta");
-    dsn::register_app< ::dsn::replication::replication_service_app>("replica");
+    dsn::dist::register_app< ::dsn::replication::replication_service_app>("replica", DSN_APP_L2_REPLICATION|DSN_APP_L2_STATEFUL|DSN_APP_L2_VNODE);
     dsn::register_app< ::dsn::replication::application::simple_kv_client_app>("client");
     dsn::register_app< ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 

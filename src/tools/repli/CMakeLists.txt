@@ -20,6 +20,7 @@ set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIB_PATH "")
 set(MY_PROJ_LIBS dsn.tools.nfs
+                 dsn.dist.providers.common
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
                  dsn.tools.simulator

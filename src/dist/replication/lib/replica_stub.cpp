@@ -378,21 +378,12 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
     return get_replica(gpid);
 }
 
-void replica_stub::on_client_write(dsn_message_t request)
+void replica_stub::on_client_write(global_partition_id gpid, dsn_message_t request)
 {
-    write_request_header hdr;
-    ::unmarshall(request, hdr);
-
-    if (hdr.code == TASK_CODE_INVALID)
-    {
-        response_client_error(request, ERR_INVALID_DATA);
-        return;
-    }
-
-    replica_ptr rep = get_replica(hdr.gpid);
+    replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_write(hdr.code, request);
+        rep->on_client_write(request);
     }
     else
     {
@@ -400,21 +391,12 @@ void replica_stub::on_client_write(dsn_message_t request)
     }
 }
 
-void replica_stub::on_client_read(dsn_message_t request)
+void replica_stub::on_client_read(global_partition_id gpid, dsn_message_t request)
 {
-    read_request_header hdr;
-    ::unmarshall(request, hdr);
-
-    if (hdr.code == TASK_CODE_INVALID)
-    {
-        response_client_error(request, ERR_INVALID_DATA);
-        return;
-    }
-
-    replica_ptr rep = get_replica(hdr.gpid);
+    replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(hdr, request);
+        rep->on_client_read(request);
     }
     else
     {
@@ -1189,8 +1171,8 @@ void replica_stub::handle_log_failure(error_code err)
 
 void replica_stub::open_service()
 {
-    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
-    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
+    //register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
+    //register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
 
     register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
 

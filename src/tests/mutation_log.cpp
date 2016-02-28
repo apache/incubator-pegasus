@@ -321,7 +321,7 @@ TEST(replication, mutation_log)
             writer.write(str);
         }
         mu->data.updates.push_back(mutation_update());
-        mu->data.updates.back().code = RPC_REPLICATION_CLIENT_READ;
+        mu->data.updates.back().code = RPC_REPLICATION_WRITE_EMPTY;
         mu->data.updates.back().data = writer.get_buffer();
 
         mu->client_requests.push_back(nullptr);

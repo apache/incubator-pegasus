@@ -61,6 +61,7 @@
 # include <dsn/cpp/address.h>
 # include <dsn/internal/task.h>
 # include "group_address.h"
+# include "uri_address.h"
 
 namespace dsn
 {
@@ -234,16 +235,6 @@ DSN_API dsn_address_t dsn_address_build_uri(
     return addr.c_addr();
 }
 
-DSN_API dsn_uri_t dsn_uri_build(const char* url) // must be paired with destroy later
-{
-    return (dsn_uri_t)strdup(url);
-}
-
-DSN_API void dsn_uri_destroy(dsn_uri_t uri)
-{
-    free((void*)uri);
-}
-
 DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with release later
 {
     auto g = new ::dsn::rpc_group_address(name);
@@ -313,4 +304,14 @@ DSN_API void dsn_group_destroy(dsn_group_t g)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
     delete grp;
+}
+
+DSN_API dsn_uri_t dsn_uri_build(const char* url) // must be paired with destroy later
+{
+    return (dsn_uri_t)new ::dsn::rpc_uri_address(url);
+}
+
+DSN_API void dsn_uri_destroy(dsn_uri_t uri)
+{
+    delete (::dsn::rpc_uri_address*)(uri);
 }

@@ -21,12 +21,8 @@ void usage(char* exe)
     exit(-1);
 }
 
-extern void dsn_core_init();
-
 int init_environment(char* exe, char* config_file)
 {
-    dsn_core_init();
-
     //use config file to run
     char* argv[] = {exe, config_file};
 
