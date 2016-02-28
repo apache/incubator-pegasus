@@ -26,47 +26,49 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     layer 2 (eon) API  in rDSN
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# pragma once
 
-# include <dsn/dist/layer2_handler.h>
-# include <dsn/dist/replication/replication_other_types.h>
+# include <dsn/c/api_layer1.h>
 
-namespace dsn { namespace replication {
+# ifdef __cplusplus
+extern "C" {
+# endif
 
-class replication_checker;
-namespace test {
-    class test_checker;
+/*!
+ @defgroup dev-layer2-c C API for layer 2
+
+ @ingroup dev-layer2
+    
+  layer2 API for building frameworks and applications
+  
+ @{
+ */
+ 
+/*!
+Creates layer 1 application.
+
+\param gpid        the gpid.
+\param app_context output context for the application.
+
+\return error code: ERR_OK, ERR_SERVICE_ALREADY_EXIST (app_context is also valid)
+*/
+extern DSN_API dsn_error_t dsn_create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context);
+
+extern DSN_API dsn_error_t dsn_start_layer1_app(void* app_context, int argc, char** argv);
+
+extern DSN_API void        dsn_destroy_layer1_app(void* app_context, bool cleanup);
+
+extern DSN_API void        dsn_handle_layer1_rpc_request(void* app_context, dsn_message_t msg);
+
+/*@}*/
+
+# ifdef __cplusplus
 }
-class replication_service_app :
-    public ::dsn::dist::layer2_handler
-{
-public:
-    replication_service_app();
-
-    ~replication_service_app(void);
-
-    virtual ::dsn::error_code start(int argc, char** argv) override;
-
-    virtual void stop(bool cleanup = false) override;
-
-    virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) override;
-
-private:
-    friend class ::dsn::replication::replication_checker;
-    friend class ::dsn::replication::test::test_checker;
-    replica_stub_ptr _stub;
-
-    static const char* replica_service_app_info(int argc, char** argv);
-    static void replica_service_app_info_free(const char* response);
-};
-
-}}
-
-
+# endif

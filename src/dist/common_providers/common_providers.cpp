@@ -26,47 +26,38 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     partition resolver providers
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# pragma once
 
-# include <dsn/dist/layer2_handler.h>
-# include <dsn/dist/replication/replication_other_types.h>
+# include "partition_resolver_simple.h"
+# include <dsn/internal/factory_store.h>
 
-namespace dsn { namespace replication {
-
-class replication_checker;
-namespace test {
-    class test_checker;
-}
-class replication_service_app :
-    public ::dsn::dist::layer2_handler
+namespace dsn
 {
-public:
-    replication_service_app();
+    namespace dist
+    {
+        static bool register_component_provider(
+            const char* name,
+            ::dsn::dist::partition_resolver::factory f)
+        {
+            return dsn::utils::factory_store< ::dsn::dist::partition_resolver>::register_factory(
+                name,
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
 
-    ~replication_service_app(void);
-
-    virtual ::dsn::error_code start(int argc, char** argv) override;
-
-    virtual void stop(bool cleanup = false) override;
-
-    virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) override;
-
-private:
-    friend class ::dsn::replication::replication_checker;
-    friend class ::dsn::replication::test::test_checker;
-    replica_stub_ptr _stub;
-
-    static const char* replica_service_app_info(int argc, char** argv);
-    static void replica_service_app_info_free(const char* response);
-};
-
-}}
-
-
+        void register_common_providers()
+        {
+            register_component_provider(
+                "partition_resolver_simple",
+                partition_resolver::create< partition_resolver_simple>
+                );
+        }
+    }
+}

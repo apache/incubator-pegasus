@@ -46,7 +46,7 @@
 namespace dsn { namespace replication {
 
 
-void replica::on_client_write(task_code code, dsn_message_t request)
+void replica::on_client_write(dsn_message_t request)
 {
     check_hashed_access();
 
@@ -62,7 +62,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
         return;
     }
 
-    auto mu = _primary_states.write_queue.add_work(code, request, this);
+    auto mu = _primary_states.write_queue.add_work(request, this);
     if (mu)
     {
         init_prepare(mu);

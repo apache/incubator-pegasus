@@ -99,7 +99,6 @@ namespace dsn {
     //-------------------- msg parser manager --------------------
     message_parser_manager::message_parser_manager()
     {
-        _factory_vec.resize(network_header_format::max_value() + 1);
     }
 
     void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)

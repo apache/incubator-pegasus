@@ -590,7 +590,7 @@ DSN_API dsn_address_t dsn_primary_address()
     return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
-DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
+DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param, void* layer1_app_context)
 {
     ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
@@ -598,18 +598,18 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
     h->parameter = param;
 
     h->add_ref();
-    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+
+    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, layer1_app_context);
     if (!r)
     {
         delete h;
-    }      
-
+    }
     return r;
 }
 
-DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
+DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, void* layer1_app_context)
 {
-    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, 0);
+    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, layer1_app_context);
     void* param = nullptr;
 
     if (nullptr != h)

@@ -104,15 +104,15 @@ void mutation::copy_from(mutation_ptr& old)
     }
 }
 
-void mutation::add_client_request(task_code code, dsn_message_t request)
+void mutation::add_client_request(dsn_message_t request)
 {
     data.updates.push_back(mutation_update());
     mutation_update& update = data.updates.back();
-    update.code = code;
     _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr)
     {
+        update.code = task_code(dsn_msg_task_code(request));
         dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;
@@ -126,6 +126,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
     }   
     else
     {
+        update.code = RPC_REPLICATION_WRITE_EMPTY;
         _appro_data_bytes += sizeof(int); // empty data size
     }
 
@@ -267,7 +268,7 @@ mutation_queue::mutation_queue(global_partition_id gpid, int max_concurrent_op /
         );
 }
 
-mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, replica* r)
+mutation_ptr mutation_queue::add_work(dsn_message_t request, replica* r)
 {
     // batch and add to work queue
     if (!_pending_mutation)
@@ -278,7 +279,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
     dinfo("add request with rpc_id=%016lx into mutation with mutation_tid=%" PRIu64,
           dsn_msg_rpc_id(request), _pending_mutation->tid());
 
-    _pending_mutation->add_client_request(code, request);
+    _pending_mutation->add_client_request(request);
 
     // short-cut
     if (_current_op_count < _max_concurrent_op 

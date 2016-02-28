@@ -332,21 +332,6 @@ namespace dsn { namespace replication {
         ::dsn::unmarshall_rpc_args<configuration_update_response>(&proto, val, &configuration_update_response::read);
     }
 
-    // ---------- configuration_proposal_request -------------
-    inline void marshall(::dsn::binary_writer& writer, const configuration_proposal_request& val)
-    {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::marshall_rpc_args<configuration_proposal_request>(&proto, val, &configuration_proposal_request::write);
-    }
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_proposal_request& val)
-    {
-        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        ::dsn::unmarshall_rpc_args<configuration_proposal_request>(&proto, val, &configuration_proposal_request::read);
-    }
-
     // ---------- configuration_query_by_node_request -------------
     inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_request& val)
     {
@@ -1281,6 +1266,7 @@ namespace dsn { namespace replication {
         partition_configuration config;
         config_type type;
         ::dsn::rpc_address node;
+        bool is_stateful;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_update_request& val)
@@ -1288,6 +1274,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.config);
         marshall(writer, val.type);
         marshall(writer, val.node);
+        marshall(writer, val.is_stateful);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_update_request& val)
@@ -1295,6 +1282,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.config);
         unmarshall(reader, val.type);
         unmarshall(reader, val.node);
+        unmarshall(reader, val.is_stateful);
     }
 
     // ---------- configuration_update_response -------------
@@ -1314,34 +1302,6 @@ namespace dsn { namespace replication {
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.config);
-    }
-
-    // ---------- configuration_proposal_request -------------
-    struct configuration_proposal_request
-    {
-        partition_configuration config;
-        config_type type;
-        ::dsn::rpc_address node;
-        bool is_clean_data;
-        bool is_upgrade;
-    };
-
-    inline void marshall(::dsn::binary_writer& writer, const configuration_proposal_request& val)
-    {
-        marshall(writer, val.config);
-        marshall(writer, val.type);
-        marshall(writer, val.node);
-        marshall(writer, val.is_clean_data);
-        marshall(writer, val.is_upgrade);
-    }
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_proposal_request& val)
-    {
-        unmarshall(reader, val.config);
-        unmarshall(reader, val.type);
-        unmarshall(reader, val.node);
-        unmarshall(reader, val.is_clean_data);
-        unmarshall(reader, val.is_upgrade);
     }
 
     // ---------- configuration_query_by_node_request -------------
@@ -1367,6 +1327,7 @@ namespace dsn { namespace replication {
         int32_t replica_count;
         bool success_if_exist;
         std::string app_type;
+        bool is_stateful;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
@@ -1375,6 +1336,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.replica_count);
         marshall(writer, val.success_if_exist);
         marshall(writer, val.app_type);
+        marshall(writer, val.is_stateful);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
@@ -1383,6 +1345,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.replica_count);
         unmarshall(reader, val.success_if_exist);
         unmarshall(reader, val.app_type);
+        unmarshall(reader, val.is_stateful);
     }
 
     // ---------- configuration_create_app_request -------------

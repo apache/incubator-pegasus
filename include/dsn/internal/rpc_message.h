@@ -73,7 +73,7 @@ namespace dsn
         uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
         fast_rpc_name  rpc_name_fast;
-        uint64_t       vnid; // virtual node id
+        dsn_gpid  gpid; // global partition id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
                                         // generally, it is the from_node's primary address, except the
