@@ -64,6 +64,8 @@ private:
         int hash;
     } _last_url_info;
 
+# pragma warning(push)
+# pragma warning(disable: 4579)
     constexpr static const char header_prefix[] =
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html; charset=UTF-8\r\n"
@@ -73,7 +75,7 @@ private:
     constexpr static const char header_contentlen_suffix[] = "\r\n\r\n";
     constexpr static size_t header_size = sizeof(header_prefix) + sizeof(header_contentlen_prefix) + contentlen_placeholder_length + sizeof(header_contentlen_suffix);
     constexpr static const char suffix_padding[] = "\r\n";
-
+# pragma warning(pop)
     char http_header_send_buffer[header_size];
 };
 }
