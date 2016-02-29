@@ -5,7 +5,7 @@ set(target_bin_subdir cmake)
 if(WIN32)
     set(target_binaries libprotobufd.lib)
 else()
-    set(target_binaries libprotobufd.a)
+    set(target_binaries libprotobuf.a protoc)
 endif()
 
 include(${PROJECT_SOURCE_DIR}/bin/dsn.ext.cmake)
@@ -22,4 +22,7 @@ install(DIRECTORY ${source_dir}/src/google
 if (WIN32)
     install(FILES ${PROJECT_BINARY_DIR}/lib/protoc.exe
             DESTINATION $ENV{DSN_ROOT}/bin/Windows)
+else()
+    install(FILES ${PROJECT_BINARY_DIR}/lib/protoc
+            DESTINATION $ENV{DSN_ROOT}/bin/Linux)
 endif ()
