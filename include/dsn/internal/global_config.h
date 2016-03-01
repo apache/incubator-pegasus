@@ -112,6 +112,8 @@ struct service_app_spec
     std::string          dmodule_bridge_arguments; 
     dsn_app              *role;
 
+    std::string          layer2_handler_type_name; // empty for no layer2 handler
+
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
 
@@ -141,6 +143,7 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
     CONFIG_FLD(int, uint64, count, 1, "count of app instances for this type (ports are automatically calculated accordingly to avoid confliction)")
     CONFIG_FLD(bool, bool, run, true, "whether to run the app instances or not")
+    CONFIG_FLD_STRING(layer2_handler_type_name, "", "registered app name as layer2 handler, which is used to host the current layer1 app designated by type")
 CONFIG_END
 
 struct service_spec

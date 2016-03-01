@@ -1,5 +1,4 @@
-
-set(MY_PROJ_NAME dsn.core)
+set(MY_PROJ_NAME dsn.dist.providers.common)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -12,20 +11,11 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_BOOST_PACKAGES system)
-
-set(MY_PROJ_LIBS dsn.dist.providers.common
-                 dsn.tools.nfs
-                 dsn.dev.cpp.core.use
-                 dsn.tools.hpc
-                 dsn.tools.simulator
-                 dsn.tools.common
-                 dsn.corelib
-   )
+set(MY_PROJ_LIBS "")
 
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_shared_library()
+dsn_add_static_library()

@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     group_address is a collection of rpc_addresses, usually used for replication
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Sep., 2015, @imzhenyu, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
+# include <dsn/cpp/service_app.h>
 
  /*
   base contract for the layer2 frameworks on server side
@@ -50,71 +51,39 @@
   */
 namespace dsn
 {
+    class service_node;
+    class layer2_handler_core;
+
     namespace dist
     {
-        class layer2_handler
+        class layer2_handler : public service_app
         {
         public:
-            template <typename T> static layer2_handler* create()
+            virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) = 0;
+
+        public:
+            static void on_layer2_rpc_request(void* app, dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay)
             {
-                return new T();
+                auto sapp = (layer2_handler*)app;
+                return sapp->on_request(gpid, is_write, msg, delay);
             }
-
-            typedef layer2_handler* (*factory)();
-
-        public:
-            virtual error_code initialize(dsn_app* app_type) = 0;
-
-            virtual void redirect(message_ex* msg) = 0;
-
-        public:
-            void commit_layer1(message_ex* msg);
         };
 
-        // partition = true, replication = false, stateless 
-        class partitioner : public virtual layer2_handler
+        /*! C++ wrapper of the \ref dsn_register_app function for layer 2 frameworks */
+        template<typename TServiceApp>
+        void register_app(const char* type_name, uint64_t mask)
         {
-        public:
-            template <typename T> static partitioner* create()
-            {
-                return new T();
-            }
+            dsn_app app;
+            memset(&app, 0, sizeof(app));
+            app.mask = mask;
+            strncpy(app.type_name, type_name, sizeof(app.type_name));
+            app.layer1.create = service_app::app_create<TServiceApp>;
+            app.layer1.start = service_app::app_start;
+            app.layer1.destroy = service_app::app_destroy;
 
-            typedef partitioner* (*factory)();
+            app.layer2.on_rpc_request = layer2_handler::on_layer2_rpc_request;
 
-
-        public:
-            /*
-            * initialization work
-            */
-            virtual error_code initialize(dsn_app* xxxx) = 0;
-
-        private:
-
-        };
-
-        // single node redirector
-        
-
-        // many vnodes redirector
-        class vnodes_replicator : public layer2_handler
-        {
-        public:
-            template <typename T> static vnodes_replicator* create()
-            {
-                return new T();
-            }
-
-            typedef vnodes_replicator* (*factory)();
-            
-        public:
-            /*
-            * initialization work
-            */
-            void replicate(message_ex* msg);
-
-        public:
-            void commit(message_ex* msg);
-        };
+            dsn_register_app(&app);
+        }
     }
 }

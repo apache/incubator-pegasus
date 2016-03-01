@@ -32,72 +32,29 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+ 
+# include <dsn/service_api_c.h>
+# include <dsn/internal/task.h>
+# include "service_engine.h"
+# include "rpc_engine.h"
 
 
-# include "replication_common.h"
-# include "replica_stub.h"
-
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica.service_app"
-
-namespace dsn { namespace replication {
-
-replication_service_app::replication_service_app()
-    : layer2_handler()
+DSN_API dsn_error_t dsn_create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context)
 {
-    _stub = new replica_stub();
+    return ::dsn::task::get_current_node2()->get_l2_handler().create_layer1_app(gpid, app_context);
 }
 
-replication_service_app::~replication_service_app(void)
+DSN_API dsn_error_t dsn_start_layer1_app(void* app_context, int argc, char** argv)
 {
+    return ::dsn::task::get_current_node2()->get_l2_handler().start_layer1_app(app_context, argc, argv);
 }
 
-error_code replication_service_app::start(int argc, char** argv)
+DSN_API void dsn_destroy_layer1_app(void* app_context, bool cleanup)
 {
-    replication_options opts;
-    opts.initialize();
-
-    _stub->initialize(opts);
-    _stub->open_service();
-
-    return ERR_OK;
+    return ::dsn::task::get_current_node2()->get_l2_handler().destroy_layer1_app(app_context, cleanup);
 }
 
-void replication_service_app::stop(bool cleanup)
+DSN_API void dsn_handle_layer1_rpc_request(void* app_context, dsn_message_t msg)
 {
-    if (_stub != nullptr)
-    {
-        _stub->close();
-        _stub = nullptr;
-    }
+    return ::dsn::task::get_current_node2()->get_l2_handler().commit_layer1(app_context, msg);
 }
-
-void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg, int delay_ms)
-{
-    global_partition_id gpid;
-    gpid.app_id = dpid.u.app_id;
-    gpid.pidx = dpid.u.partition_index;
-
-    if (is_write)
-    {
-        tasking::enqueue(
-            LPC_REPLICATION_CLIENT_WRITE,
-            nullptr,
-            [=]() {_stub->on_client_write(gpid, msg); },
-            gpid_to_hash(gpid)
-            );
-    }
-    else
-    {
-        tasking::enqueue(
-            LPC_REPLICATION_CLIENT_READ,
-            nullptr,
-            [=]() {_stub->on_client_read(gpid, msg); },
-            gpid_to_hash(gpid)
-            );
-    }
-}
-
-}}

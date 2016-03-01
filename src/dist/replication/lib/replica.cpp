@@ -109,28 +109,27 @@ replica::~replica(void)
     dinfo("%s: replica destroyed", name());
 }
 
-void replica::on_client_read(const read_request_header& meta, dsn_message_t request)
-{
+void replica::on_client_read(task_code code, dsn_message_t request)
+{    
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {
         response_client_message(request, ERR_INVALID_STATE);
         return;
     }
 
-    if (meta.semantic == read_semantic::ReadLastUpdate)
+    if (status() != PS_PRIMARY ||
+
+        // a small window where the state is not the latest yet
+        last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
     {
-        if (status() != PS_PRIMARY ||
-            last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
-        {
-            response_client_message(request, ERR_INVALID_STATE);
-            return;
-        }
+        response_client_message(request, ERR_INVALID_STATE);
+        return;
     }
 
     dassert (_app != nullptr, "");
 
     rpc_read_stream reader(request);
-    _app->dispatch_rpc_call(meta.code, reader, dsn_msg_create_response(request));
+    _app->dispatch_rpc_call(code, reader, dsn_msg_create_response(request));
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)

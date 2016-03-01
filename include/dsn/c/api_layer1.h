@@ -535,21 +535,30 @@ typedef union dsn_msg_context_t
     struct {
         uint64_t is_request : 1;           ///< whether the RPC message is a request or response
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
-        uint64_t is_replication_needed: 1; ///< whether state replication is needed for this request
-        uint64_t unused : 8;               ///< not used yet
+        uint64_t unused : 9;               ///< not used yet
         uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
     uint64_t context;                      ///< msg_context is of sizeof(uint64_t)
 } dsn_msg_context_t;
 
-# define DSN_VNID_BUILD(app_id, par_idx) (((uint64_t)(app_id) << 32) | (uint64_t)(par_idx))
-# define DSN_VNID_APP_ID(vnid)           ((int)(vnid >> 32))
-# define DSN_VNID_PARTITION_INDEX(vnid)  ((int)(vnid & 0x00000000FFFFFFFFULL))
+typedef union dsn_global_partition_id
+{
+    struct {
+        int32_t app_id;          ///< 1-based app id (0 for invalid)
+        int32_t partition_index; ///< zero-based partition index
+    } u;
+    uint64_t value;
+} dsn_gpid;
+
+inline int dsn_gpid_to_hash(dsn_gpid gpid)
+{
+    return static_cast<int>(gpid.u.app_id ^ gpid.u.partition_index);
+}
 
 # define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get
 # define DSN_MSGM_HASH    (0x1 << 1) ///< thread hash is to be set/get
-# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (vnid) is to be set/get
+# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (gpid) is to be set/get
 # define DSN_MSGM_CONTEXT (0x1 << 3) ///< rpc message context is to be set/get
 
 /*! options for RPC messages, used by \ref dsn_msg_set_options and \ref dsn_msg_get_options */
@@ -557,7 +566,7 @@ typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
     int               request_hash; ///< thread hash on RPC server
-    uint64_t          vnid;        ///< virtual node id, 0 for none
+    dsn_gpid  gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
@@ -569,6 +578,9 @@ inline void dsn_address_size_checker()
 
     static_assert (sizeof(dsn_msg_context_t) == sizeof(uint64_t),
         "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
+
+    static_assert (sizeof(dsn_gpid) == sizeof(uint64_t),
+        "sizeof(dsn_gpid) must equal to sizeof(uint64_t)");    
 }
 
 /*!
@@ -609,6 +621,9 @@ extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
 /*! get rpc id of the message */
 extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
+
+/*! get task code of the message */
+extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);
 
 /*!
  get message write buffer
@@ -662,12 +677,14 @@ extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
-                                void* context
+                                void* context,
+                                void* layer1_app_context DEFAULT(nullptr)
                                 );
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref dsn_rpc_register_handler  */
 extern DSN_API void*         dsn_rpc_unregiser_handler(
-                                dsn_task_code_t code
+                                dsn_task_code_t code,
+                                void* layer1_app_context DEFAULT(nullptr)
                                 );
 
 /*! reply with a response which is created using dsn_msg_create_response */

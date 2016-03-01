@@ -57,6 +57,8 @@ namespace dsn
     */
     class rpc_group_address;
     typedef ref_ptr<rpc_group_address> address_group_ptr;
+
+    class rpc_uri_address;
     
     class rpc_address
     {
@@ -87,6 +89,8 @@ namespace dsn
         uint16_t port() const { return (uint16_t)_addr.u.v4.port; }
         rpc_group_address* group_address() const { return (rpc_group_address*)(uintptr_t)_addr.u.group.group; }
         dsn_group_t group_handle() const { return (dsn_group_t)(uintptr_t)_addr.u.group.group; }
+        rpc_uri_address* uri_address() const { return (rpc_uri_address*)(uintptr_t)_addr.u.uri.uri; }
+        dsn_uri_t uri_handle() const { return (dsn_group_t)(uintptr_t)_addr.u.uri.uri; }
         const char* uri() const { return to_string(); }        
         bool is_invalid() const { return _addr.u.v4.type == HOST_TYPE_INVALID; }
         void set_invalid() { clear(); }

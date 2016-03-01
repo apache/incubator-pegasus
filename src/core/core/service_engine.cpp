@@ -37,6 +37,7 @@
 # include "task_engine.h"
 # include "disk_engine.h"
 # include "rpc_engine.h"
+# include "uri_address.h"
 # include <dsn/internal/env_provider.h>
 # include <dsn/internal/memory_provider.h>
 # include <dsn/internal/nfs.h>
@@ -45,6 +46,8 @@
 # include <dsn/internal/command.h>
 # include <dsn/tool_api.h>
 # include <dsn/tool/node_scoper.h>
+
+# include <dsn/dist/layer2_handler.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -56,45 +59,73 @@ using namespace dsn::utils;
 namespace dsn {
 
 service_node::service_node(service_app_spec& app_spec)
+    : _layer2_handler(this)
 {
     _computation = nullptr;
     _app_spec = app_spec;
     _app_context_ptr = nullptr;
+    _layer2_role = nullptr;
+
+    if (!app_spec.layer2_handler_type_name.empty())
+    {
+        auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
+        if (!store.get(_app_spec.layer2_handler_type_name, _layer2_role))
+        {
+            dassert(false, "service app type name '%s' not registered\n",
+                _app_spec.layer2_handler_type_name.c_str());
+        }
+    }
 }
 
-bool service_node::rpc_register_handler(rpc_handler_info* handler, uint64_t vnid)
+bool service_node::rpc_register_handler(rpc_handler_info* handler, void* layer1_app_context)
 {
-    for (auto& io : _ios)
+    if (nullptr == layer1_app_context)
     {
-        if (io.rpc)
+        for (auto& io : _ios)
         {
-            bool r = io.rpc->register_rpc_handler(handler, vnid);
-            if (!r)
-                return false;
+            if (io.rpc)
+            {
+                bool r = io.rpc->register_rpc_handler(handler);
+                if (!r)
+                    return false;
+            }
         }
+    }
+    else
+    {
+        _layer2_handler.rpc_register_handler(layer1_app_context, handler);
     }
     return true;
 }
 
-rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, void* layer1_app_context)
 {
-    rpc_handler_info* ret = nullptr;
-    for (auto& io : _ios)
+    if (nullptr == layer1_app_context)
     {
-        if (io.rpc)
+        rpc_handler_info* ret = nullptr;
+
+        for (auto& io : _ios)
         {
-            auto r = io.rpc->unregister_rpc_handler(rpc_code, vnid);
-            if (ret != nullptr)
+            if (io.rpc)
             {
-                dassert(ret == r, "registered context must be the same");
-            }
-            else
-            {
-                ret = r;
+                auto r = io.rpc->unregister_rpc_handler(rpc_code);
+                if (ret != nullptr)
+                {
+                    dassert(ret == r, "registered context must be the same");
+                }
+                else
+                {
+                    ret = r;
+                }
             }
         }
+
+        return ret;
     }
-    return ret;
+    else
+    {
+        return _layer2_handler.rpc_unregister_handler(layer1_app_context, rpc_code);
+    }
 }
 
 error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
@@ -244,7 +275,10 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
 
 dsn_error_t service_node::start_app(int argc, char** argv)
 {    
-    return _app_spec.role->layer1.start(_app_context_ptr, argc, argv);
+    if (_layer2_role)
+        return _layer2_role->layer1.start(_app_context_ptr, argc, argv);
+    else
+        return _app_spec.role->layer1.start(_app_context_ptr, argc, argv);
 }
 
 error_code service_node::start()
@@ -300,7 +334,20 @@ error_code service_node::start()
     // create app
     {
         ::dsn::tools::node_scoper scoper(this);
-        _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name);
+        if (nullptr == _layer2_role)
+        {
+            _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name);
+        }   
+        else
+        {
+            _app_context_ptr = _layer2_role->layer1.create(_layer2_role->type_name);
+            auto layer2_app = dynamic_cast<dist::layer2_handler*> ((service_app*)_app_context_ptr);
+
+            dassert(nullptr != layer2_app,
+                "service app with type '%s' is not a layer2 handler app, please make sure create the app by inheriting class layer2_handler ",
+                _layer2_role->type_name
+                );
+        }
     }
 
     return err;
@@ -381,7 +428,116 @@ void service_node::get_queue_info(
     _computation->get_queue_info(ss);
     ss << "]}";
 }
+
+
+void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
+{
+    auto msg = (message_ex*)(req);
+
+    if (nullptr == _layer2_role)
+    {
+        dwarn(
+            "skip recved message with type %s from %s, rpc_id = %016llx, as replicator is required but not insalled on server",
+            msg->header->rpc_name,
+            msg->header->from_address.to_string(),
+            msg->header->rpc_id
+            );
+
+        dassert(msg->get_count() == 0,
+            "request should not be referenced by anybody so far");
+        delete msg;
+    }
+    else
+    {
+        _layer2_role->layer2.on_rpc_request(_app_context_ptr, gpid, is_write, req, delay);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
+
+layer2_handler_core::layer2_handler_core(service_node* node)
+    : _owner_node(node)
+{
+}
+
+error_code layer2_handler_core::create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context)
+{
+    utils::auto_write_lock l(_apps_lock);
+
+    auto it = _layer1_apps.find(gpid.value);
+    if (it != _layer1_apps.end())
+    {
+        *app_context = it->second.get();
+        return ERR_SERVICE_ALREADY_EXIST;
+    }
+    else
+    {
+        auto app = new layer2_handler_core::layer1_app_info();
+        app->app_context = _owner_node->spec().role->layer1.create(_owner_node->spec().role->type_name);
+        app->gpid = gpid;
+        app->server_dispatcher.reset(new rpc_server_dispatcher());
+
+        _layer1_apps.emplace(gpid.value,
+            std::unique_ptr<layer2_handler_core::layer1_app_info>(app));
+        *app_context = app;
+        return ERR_OK;
+    }
+}
+
+error_code layer2_handler_core::start_layer1_app(void* app_context, int argc, char** argv)
+{
+    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
+    return _owner_node->spec().role->layer1.start(app->app_context, argc, argv);
+}
+
+void layer2_handler_core::destroy_layer1_app(void* app_context, bool cleanup)
+{
+    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
+    _owner_node->spec().role->layer1.destroy(app->app_context, cleanup);
+
+    {
+        utils::auto_write_lock l(_apps_lock);
+        auto it = _layer1_apps.find(app->gpid.value);
+        if (it != _layer1_apps.end())
+        {
+            _layer1_apps.erase(it);
+        }
+        else
+        {
+            dassert(false,
+                "layer 1 app is missing, gpid = %d.%d!",
+                app->gpid.u.app_id,
+                app->gpid.u.partition_index
+                );
+        }
+    }
+
+    delete app;
+}
+
+
+bool layer2_handler_core::rpc_register_handler(void* app_context, rpc_handler_info* handler)
+{
+    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
+    return app->server_dispatcher->register_rpc_handler(handler);
+}
+
+rpc_handler_info* layer2_handler_core::rpc_unregister_handler(void* app_context, dsn_task_code_t rpc_code)
+{
+    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
+    return app->server_dispatcher->unregister_rpc_handler(rpc_code);
+}
+
+void layer2_handler_core::commit_layer1(void* app_context, dsn_message_t msg)
+{
+    message_ex* msg2 = (message_ex*)msg;
+    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
+    
+    // TODO: inline execution of msgs
+    app->server_dispatcher->on_request(msg2, _owner_node);
+}
+
+//////////////////////////////////////////////////////////
 
 service_engine::service_engine(void)
 {
@@ -465,7 +621,7 @@ void service_engine::register_system_rpc_handler(
                 if (io.rpc)
                 {
                     h->add_ref();
-                    io.rpc->register_rpc_handler(h, 0);
+                    io.rpc->register_rpc_handler(h);
                 }   
             }
         }
@@ -480,7 +636,7 @@ void service_engine::register_system_rpc_handler(
                 if (io.rpc)
                 {
                     h->add_ref();
-                    io.rpc->register_rpc_handler(h, 0);
+                    io.rpc->register_rpc_handler(h);
                 }   
             }
         }

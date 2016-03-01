@@ -35,8 +35,11 @@
 
 # pragma once
 # include "simple_kv.client.impl.h"
+# include "simple_kv.client.2.h"
 # include "simple_kv.client.perf.h"
 # include "simple_kv.server.h"
+
+// # define TRANSPARENT_LAYER2_CLIENT
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
@@ -57,10 +60,19 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
+# ifdef TRANSPARENT_LAYER2_CLIENT
+        std::string url = std::string("dsn://mycluster/") + argv[1];
+        rpc_address meta_server;
+        meta_server.assign_uri(dsn_uri_build(url.c_str()));
+
+        _simple_kv_client.reset(new simple_kv_client2(meta_server));
+# else
         std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
-        
+
         _simple_kv_client.reset(new simple_kv_client_impl(meta_servers, argv[1]));
+# endif
+
         _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER, this, [this]{on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
@@ -113,8 +125,11 @@ public:
 private:
     ::dsn::task_ptr _timer;
     ::dsn::rpc_address _server;
-    
+# ifdef TRANSPARENT_LAYER2_CLIENT
+    std::unique_ptr<simple_kv_client2> _simple_kv_client;
+# else
     std::unique_ptr<simple_kv_client> _simple_kv_client;
+# endif
 };
 
 class simple_kv_perf_test_client_app : 

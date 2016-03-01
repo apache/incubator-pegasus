@@ -123,6 +123,31 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->header->rpc_id;
 }
 
+DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
+{
+    auto msg2 = ((::dsn::message_ex*)msg);
+    if (msg2->local_rpc_code != (uint32_t)(-1))
+    {
+        return msg2->local_rpc_code;
+    }
+    else
+    {
+        uint32_t code = 0;
+        auto binary_hash = msg2->header->rpc_name_fast.local_hash;
+        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
+        {
+            code = msg2->header->rpc_name_fast.local_rpc_id;
+        }
+        else
+        {
+            code = dsn_task_code_from_string(msg2->header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        }
+
+        msg2->local_rpc_code = code;
+        return code;
+    }
+}
+
 DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
     dsn_msg_options_t *opts,
@@ -143,7 +168,7 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_VNID)
     {
-        hdr->vnid = opts->vnid;
+        hdr->gpid = opts->gpid;
     }
 
     if (mask & DSN_MSGM_CONTEXT)
@@ -161,7 +186,7 @@ DSN_API void dsn_msg_get_options(
     opts->context = hdr->context;
     opts->request_hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
-    opts->vnid = hdr->vnid;
+    opts->gpid = hdr->gpid;
 }
 
 namespace dsn {
@@ -176,6 +201,7 @@ message_ex::message_ex()
     _rw_offset = 0;
     header = nullptr;
     _is_read = false;
+    local_rpc_code = ::dsn::TASK_CODE_INVALID;
 }
 
 message_ex::~message_ex()
@@ -440,7 +466,6 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
         hdr.context.u.parameter_type = MSG_PARAM_PARTITION_HASH;
         hdr.context.u.parameter = partition_hash;
     }
-    hdr.context.u.is_replication_needed = sp->rpc_request_is_replicated_write_operation;
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;

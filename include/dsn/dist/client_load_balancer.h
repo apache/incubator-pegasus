@@ -41,6 +41,7 @@
 # include <string>
 # include <functional>
 # include <memory>
+# include <dsn/dist/replication.h>
 
 namespace dsn
 {
@@ -58,10 +59,7 @@ namespace dsn
 
 
         public:
-            /*
-             * initialization work
-             */
-            virtual error_code initialize() = 0;
+            virtual rpc_address find_target(const ::dsn::replication::partition_configuration& config) = 0;
 
         };
     }

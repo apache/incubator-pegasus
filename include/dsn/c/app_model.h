@@ -264,6 +264,16 @@ typedef void(*dsn_app_destroy)(
     bool            ///< cleanup app state or not
     );
 
+
+/*! callback for layer2 app & framework to handle incoming rpc request */
+typedef void(*dsn_layer2_rpc_request_handler)(
+    void*,          ///< context from dsn_app_create
+    dsn_gpid,       ///< global partition id
+    bool,           ///< is_write_operation or not
+    dsn_message_t,  ///< incoming rpc request
+    int             ///< delay (imposed by tools)
+    );
+
 # define DSN_APP_MASK_DEFAULT    0x0 ///< default mask, only layer1 app model is supported
 # define DSN_APP_L2_VNODE        0x1 ///< whether many virtual app nodes in the same app is supported
 # define DSN_APP_L2_REPLICATION  0x2 ///< whether replication is supported
@@ -291,7 +301,8 @@ typedef struct dsn_app
     /*! TODO: layer 2 app definition */
     struct layer2_callbacks
     {
-        uint64_t dump; // C requires that a struct has at least one member
+        dsn_layer2_rpc_request_handler on_rpc_request;
+
     } layer2;
 
     /*! TODO: layer 3 app definition */

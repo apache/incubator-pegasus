@@ -60,6 +60,7 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.status);
     marshall(writer, val.app_type);
     marshall(writer, val.app_name);
+    marshall(writer, val.is_stateful);
     marshall(writer, val.app_id);
     marshall(writer, val.partition_count);
     marshall(writer, val.partitions);
@@ -73,6 +74,7 @@ void marshall_json(blob& output, const app_state& app, bool available_status)
     writer.StartObject();
     writer.String("app_type"); writer.String(app.app_type.c_str());
     writer.String("app_name"); writer.String(app.app_name.c_str());
+    writer.String("is_stateful"); writer.Bool(app.is_stateful);
     writer.String("app_id"); writer.Int(app.app_id);
     writer.String("partition_count"); writer.Int(app.partition_count);
     writer.String("status"); writer.String(available_status?"available":"dropped");
@@ -98,6 +100,7 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.status);
     unmarshall(reader, val.app_type);
     unmarshall(reader, val.app_name);
+    unmarshall(reader, val.is_stateful);
     unmarshall(reader, val.app_id);
     unmarshall(reader, val.partition_count);
     unmarshall(reader, val.partitions);
@@ -125,6 +128,7 @@ void unmarshall_json(const blob& buf, app_state& app)
     app.app_type = doc["app_type"].GetString();
     app.app_id = doc["app_id"].GetInt();
     app.app_name = doc["app_name"].GetString();
+    app.is_stateful = doc["is_stateful"].GetBool();
     app.partition_count = doc["partition_count"].GetInt();
     app.status = strcmp(doc["status"].GetString(), "available")==0?AS_AVAILABLE:AS_DROPPED;
     partition_configuration pc;
