@@ -162,7 +162,7 @@ FULL_PATH_NAMES        = YES
 # will be relative from the directory where doxygen is started.
 # This tag requires that the tag FULL_PATH_NAMES is set to YES.
 
-STRIP_FROM_PATH        = 
+STRIP_FROM_PATH        = ../
 
 # The STRIP_FROM_INC_PATH tag can be used to strip a user-defined part of the
 # path mentioned in the documentation of a class, which tells the reader which
@@ -781,7 +781,13 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = ../include/dsn/service_api_c.h \
+INPUT                  = intro.h \
+                         install.h \
+                         dev.h \
+                         eon.overview.h \
+                         tools.h \
+                         examples.complexity.h \
+                         extensions.h \
                          ../include/dsn/c/app_model.h \
                          ../include/dsn/service_api_c.h \
                          ../include/dsn/c/api_task.h \
@@ -797,7 +803,7 @@ INPUT                  = ../include/dsn/service_api_c.h \
                          ../include/dsn/cpp/serverlet.h \
                          ../include/dsn/cpp/service_app.h \
                          ../include/dsn/cpp/task_helper.h \
-                         ../include/dsn/cpp/zlocks.h \
+                         ../include/dsn/cpp/zlocks.h \                         
                          ../include/dsn/toollet/explorer.h \
                          ../include/dsn/toollet/fault_injector.h \
                          ../include/dsn/toollet/profiler.h \
@@ -805,7 +811,11 @@ INPUT                  = ../include/dsn/service_api_c.h \
                          ../include/dsn/tool/fastrun.h \
                          ../include/dsn/tool/nativerun.h \
                          ../include/dsn/tool/simulator.h \
-                         ../include/dsn/tool_api.h
+                         ../include/dsn/tool_api.h \
+                         examples.layer1.h \
+                         examples.layer2.h \
+                         examples.network.h
+                         
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

@@ -40,7 +40,7 @@
 
 /*!
 @defgroup tracer Tracer
-@ingroup tools
+@ingroup tools-debug tools-operate
 
 Tracer toollet
 

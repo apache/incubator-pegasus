@@ -53,6 +53,9 @@ namespace dsn {
             class test_checker;
         }
     }
+    namespace dist{
+        class server_load_balancer;
+    }
 }
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
@@ -62,6 +65,7 @@ struct app_state
     app_status                           status;
     std::string                          app_type;
     std::string                          app_name;
+    bool                                 is_stateful;
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
@@ -69,9 +73,9 @@ struct app_state
     // used only for creating app, to count the number of partitions whose node
     // has been ready on the remote storage
     std::atomic_int                      available_partitions;
-    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions)
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, is_stateful, app_id, partition_count, partitions)
 
-    app_state() : status(AS_DROPPED), app_type(), app_name(), app_id(0), partitions(), partition_count(0)
+    app_state() : status(AS_DROPPED), app_type(), app_name(), is_stateful(true), app_id(0), partitions(), partition_count(0)
     {
         available_partitions.store(0);
     }
@@ -80,6 +84,7 @@ struct app_state
         status(other.status),
         app_type(other.app_type),
         app_name(other.app_name),
+        is_stateful(other.is_stateful),
         app_id(other.app_id),
         partition_count(other.partition_count),
         partitions(other.partitions)
@@ -91,6 +96,7 @@ struct app_state
         status(other.status),
         app_type(std::move(other.app_type)),
         app_name(std::move(other.app_name)),
+        is_stateful(other.is_stateful),
         app_id(other.app_id),
         partition_count(other.partition_count),
         partitions(std::move(other.partitions))
@@ -102,6 +108,7 @@ struct app_state
         status = other.status;
         app_type=other.app_type;
         app_name=other.app_name;
+        is_stateful = other.is_stateful;
         app_id=other.app_id;
         partition_count=other.partition_count;
         partitions=other.partitions;
@@ -113,6 +120,7 @@ struct app_state
         status = other.status;
         app_type = std::move(other.app_type);
         app_name = std::move(other.app_name);
+        is_stateful = other.is_stateful;
         app_id = other.app_id;
         partition_count = other.partition_count;
         partitions = std::move(other.partitions);
@@ -232,6 +240,13 @@ private:
     std::string get_partition_path(const global_partition_id& gpid) const;
     std::string get_partition_path(const app_state& app, int partition_id) const;
 
+    bool set_freeze() const
+    {
+        //TODO: make this value configurable in config.ini
+        if (_nodes.size() < 3)
+            return true;
+        return _node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size());
+    }
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -245,7 +260,10 @@ private:
         DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions)
     };
 
+    friend class dsn::dist::server_load_balancer;
     friend class simple_stateful_load_balancer;
+    friend class greedy_load_balancer;
+
     std::string                                         _cluster_root;
 
     //_cluster_root + "/apps"
@@ -259,7 +277,7 @@ private:
      */
     std::unordered_set<dsn::rpc_address> _cache_alive_nodes;
 
-    std::vector<app_state>                              _apps; // vec_index = app_id - 1
+    std::vector<app_state>               _apps; // vec_index = app_id - 1
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;

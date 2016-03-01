@@ -182,6 +182,7 @@ enum config_type
     CT_DOWNGRADE_TO_SECONDARY,
     CT_DOWNGRADE_TO_INACTIVE,
     CT_REMOVE,
+    CT_ADD_SECONDARY_FOR_LB,
 }
 
 enum app_status
@@ -289,6 +290,38 @@ struct configuration_create_app_response
     2:i32              appid;
 }
 
+// load balancer control
+struct control_balancer_migration_request
+{
+    1:bool             enable_migration;
+}
+
+struct control_balancer_migration_response
+{
+    1:dsn.error_code   err;
+}
+
+enum balancer_type
+{
+    BT_INVALID,
+    BT_MOVE_PRIMARY,
+    BT_COPY_PRIMARY,
+    BT_COPY_SECONDARY
+}
+
+struct balancer_proposal_request
+{
+    1:global_partition_id gpid;
+    2:balancer_type       type;
+    3:dsn.rpc_address     from_addr;
+    4:dsn.rpc_address     to_addr;
+}
+
+struct balancer_proposal_response
+{
+    1:dsn.error_code   err;
+}
+
 struct configuration_drop_app_response
 {
     1:dsn.error_code   err;
@@ -338,6 +371,27 @@ struct query_replica_decree_response
     2:i64                 last_decree;
 }
 
+struct replica_info
+{
+    1:global_partition_id    gpid;
+    2:i64                    ballot;
+    3:partition_status       status;
+    4:i64                    last_committed_decree;
+    5:i64                    last_prepared_decree;
+    6:i64                    last_durable_decree;
+}
+
+struct query_replica_info_request
+{
+    1:dsn.rpc_address     node;
+}
+
+struct query_replica_info_response
+{
+    1:dsn.error_code      err;
+    2:list<replica_info>  replicas;
+}
+
 service replica_s
 {
     rw_response_header client_write(1:write_request_header req);
@@ -350,6 +404,7 @@ service replica_s
     void remove(1:replica_configuration request);
     group_check_response group_check(1:group_check_request request);
     query_replica_decree_response query_decree(1:query_replica_decree_request req);
+    query_replica_info_response query_replica_info(1:query_replica_info_request req);
 }
 
 service meta_s

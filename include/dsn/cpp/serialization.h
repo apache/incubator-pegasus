@@ -44,16 +44,9 @@
 # include <set>
 # include <vector>
 
-// pod types
-#define DEFINE_POD_SERIALIZATION(T) \
-    inline void marshall(::dsn::binary_writer& writer, const T& val)\
-    {\
-    writer.write((const char*)&val, static_cast<int>(sizeof(val))); \
-    }\
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ T& val)\
-    {\
-    reader.read((char*)&val, static_cast<int>(sizeof(T))); \
-    }
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+# include <dsn/thrift_helper.h>
+#endif
 
 template<typename T>
 inline void marshall(dsn_message_t msg, const T& val)
@@ -69,21 +62,19 @@ inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
     unmarshall(reader, val);
 }
 
-//template<typename T>
-//inline void marshall(::dsn::rpc_write_stream writer, const T& val)
-//{
-//    marshall(writer, val);
-//}
-//
-//template<typename T>
-//inline void unmarshall(::dsn::rpc_read_stream reader, /*out*/ T& val)
-//{
-//    unmarshall(reader, val);
-//}
-
 namespace dsn {
     
 #ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+// pod types
+#define DEFINE_POD_SERIALIZATION(T) \
+    inline void marshall(::dsn::binary_writer& writer, const T& val)\
+    {\
+    writer.write((const char*)&val, static_cast<int>(sizeof(val))); \
+    }\
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ T& val)\
+    {\
+    reader.read((char*)&val, static_cast<int>(sizeof(T))); \
+    }
 
         DEFINE_POD_SERIALIZATION(bool)
         DEFINE_POD_SERIALIZATION(char)

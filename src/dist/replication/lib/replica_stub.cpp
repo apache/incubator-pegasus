@@ -64,7 +64,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
 }
 
 replica_stub::~replica_stub(void)
-{    
+{
     close();
 }
 
@@ -378,7 +378,33 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
     return get_replica(gpid);
 }
 
-void replica_stub::on_client_write(dsn_message_t request)
+void replica_stub::on_client_write(global_partition_id gpid, dsn_message_t request)
+{
+    replica_ptr rep = get_replica(gpid);
+    if (rep != nullptr)
+    {
+        rep->on_client_write(task_code(dsn_msg_task_code(request)), request);
+    }
+    else
+    {
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+    }
+}
+
+void replica_stub::on_client_read(global_partition_id gpid, dsn_message_t request)
+{
+    replica_ptr rep = get_replica(gpid);
+    if (rep != nullptr)
+    {
+        rep->on_client_read(task_code(dsn_msg_task_code(request)), request);
+    }
+    else
+    {
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+    }
+}
+
+void replica_stub::on_client_write2(dsn_message_t request)
 {
     write_request_header hdr;
     ::unmarshall(request, hdr);
@@ -400,7 +426,7 @@ void replica_stub::on_client_write(dsn_message_t request)
     }
 }
 
-void replica_stub::on_client_read(dsn_message_t request)
+void replica_stub::on_client_read2(dsn_message_t request)
 {
     read_request_header hdr;
     ::unmarshall(request, hdr);
@@ -414,7 +440,7 @@ void replica_stub::on_client_read(dsn_message_t request)
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(hdr, request);
+        rep->on_client_read(hdr.code, request);
     }
     else
     {
@@ -473,6 +499,28 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, /*ou
         resp.err = ERR_OBJECT_NOT_FOUND;
         resp.last_decree = 0;
     }
+}
+
+void replica_stub::on_query_replica_info(const query_replica_info_request& req, /*out*/ query_replica_info_response& resp)
+{
+    replicas rs;
+    {
+        zauto_lock l(_replicas_lock);
+        rs = _replicas;
+    }
+    for (auto it = rs.begin(); it != rs.end(); ++it)
+    {
+        replica_ptr r = it->second;
+        replica_info info;
+        info.gpid = r->get_gpid();
+        info.ballot = r->get_ballot();
+        info.status = r->status();
+        info.last_committed_decree = r->last_committed_decree();
+        info.last_prepared_decree = r->last_prepared_decree();
+        info.last_durable_decree = r->last_durable_decree();
+        resp.replicas.push_back(info);
+    }
+    resp.err = ERR_OK;
 }
 
 void replica_stub::on_prepare(dsn_message_t request)
@@ -1167,8 +1215,8 @@ void replica_stub::handle_log_failure(error_code err)
 
 void replica_stub::open_service()
 {
-    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
-    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
+    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write2);
+    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read2);
 
     register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
 
@@ -1179,6 +1227,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler(RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 
     _cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
@@ -1188,7 +1237,14 @@ void replica_stub::open_service()
 
 void replica_stub::close()
 {
-    dassert(_cli_replica_stub_json_state_handle != nullptr, "unable to find registered cli command, close before initialize?");
+    // this replica may not be opened
+    // or is already closed by calling tool_app::stop_all_apps()
+    // in this case, just return
+    if(_cli_replica_stub_json_state_handle == nullptr)
+    {
+        return;
+    }
+
     dsn_cli_deregister(_cli_replica_stub_json_state_handle);
     _cli_replica_stub_json_state_handle = nullptr;
 
@@ -1216,14 +1272,17 @@ void replica_stub::close()
         while (_closing_replicas.empty() == false)
         {
             task_ptr task = _closing_replicas.begin()->second.first;
+            global_partition_id tmp_gpid = _closing_replicas.begin()->first;
             _replicas_lock.unlock();
 
             task->wait();
 
-
-            _counter_replicas_closing_count.decrement();
             _replicas_lock.lock();
-            _closing_replicas.erase(_closing_replicas.begin());
+            // task will automatically remove this replica from _closing_replicas
+            if(false == _closing_replicas.empty())
+            {
+                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%u.%u' should be removed from _closing_replicas, gpid", tmp_gpid.app_id, tmp_gpid.pidx);
+            }
         }
 
         while (_opening_replicas.empty() == false)

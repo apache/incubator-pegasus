@@ -602,6 +602,63 @@ void rpc_response_task::enqueue()
     }
 }
 
+void rpc_response_task::add_hook(dsn_rpc_response_handler_t callback, void* context, bool is_before_hook)
+{
+    struct hook_context : public transient_object
+    {
+        dsn_rpc_response_handler_t old_callback;
+        dsn_task_cancelled_handler_t old_on_cancel;
+        void* old_context;
+
+        dsn_rpc_response_handler_t new_callback;
+        void* new_context;
+
+        bool is_before_hook;
+    };
+
+    hook_context* nc = new hook_context();
+    nc->old_callback = _cb;
+    nc->old_context = _context;
+    nc->old_on_cancel = _on_cancel;
+    nc->new_callback = callback;
+    nc->new_context = context;
+    nc->is_before_hook = is_before_hook;
+
+    _context = nc;
+
+    _cb = [](dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* ctx)
+    {
+        auto nc = (hook_context*)ctx;
+
+        if (nc->is_before_hook)
+        {
+            nc->new_callback(err, req, resp, nc->new_context);
+        }
+
+        if (nc->old_callback)
+        {
+            nc->old_callback(err, req, resp, nc->old_context);
+        }
+
+        if (!nc->is_before_hook)
+        {
+            nc->new_callback(err, req, resp, nc->new_context);
+        }
+        delete nc;
+    };
+
+    _on_cancel = [](void* ctx)
+    {
+        auto nc = (hook_context*)ctx;
+        if (nc->old_on_cancel != nullptr)
+        {
+            nc->old_on_cancel(nc->old_context);
+        }
+
+        delete nc;
+    };
+}
+
 aio_task::aio_task(
     dsn_task_code_t code, 
     dsn_aio_handler_t cb, 

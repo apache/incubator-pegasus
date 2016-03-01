@@ -79,15 +79,19 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(dsn_message_t request);
-    void on_client_read(dsn_message_t request);
+    void on_client_write(global_partition_id gpid, dsn_message_t request);
+    void on_client_read(global_partition_id gpid, dsn_message_t request);
+
+    void on_client_write2(dsn_message_t request);
+    void on_client_read2(dsn_message_t request);
 
     //
     //    messages from meta server
     //
     void on_config_proposal(const configuration_update_request& proposal);
     void on_query_decree(const query_replica_decree_request& req, /*out*/ query_replica_decree_response& resp);
-        
+    void on_query_replica_info(const query_replica_info_request& req, /*out*/ query_replica_info_response& resp);
+
     //
     //    messages from peers (primary or secondary)
     //        - prepare

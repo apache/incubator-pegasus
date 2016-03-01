@@ -55,18 +55,37 @@ class task_queue;
 class task_worker_pool;
 class timer_service;
 class aio_provider;
+class rpc_server_dispatcher;
+class service_node;
 
-
-//
-//
-//
-class app_node
+class layer2_handler_core
 {
 public:
-    
+    layer2_handler_core(service_node* node);
+
+    error_code create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context);
+
+    error_code start_layer1_app(void* app_context, int argc, char** argv);
+
+    void destroy_layer1_app(void* app_context, bool cleanup);
+
+    bool  rpc_register_handler(void* app_context, rpc_handler_info* handler);
+
+    rpc_handler_info* rpc_unregister_handler(void* app_context, dsn_task_code_t rpc_code);
+
+    void commit_layer1(void* app_context, dsn_message_t msg);
 
 private:
-    uint64_t _vnid;
+    struct layer1_app_info
+    {
+        void*                 app_context;
+        dsn_gpid              gpid;
+        std::unique_ptr<rpc_server_dispatcher> server_dispatcher;
+    };
+
+    service_node  *_owner_node;
+    utils::rw_lock_nr _apps_lock;
+    std::unordered_map<uint64_t, std::unique_ptr<layer1_app_info> > _layer1_apps;
 };
 
 //
@@ -120,8 +139,11 @@ public:
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
 
-    bool  rpc_register_handler(rpc_handler_info* handler, uint64_t vnid);
-    rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid);
+    bool  rpc_register_handler(rpc_handler_info* handler, void* layer1_app_context = nullptr);
+    rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, void* layer1_app_context = nullptr);
+
+    layer2_handler_core& get_l2_handler() { return _layer2_handler; }
+    void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
 
 private:
     void*            _app_context_ptr; // app start returns this value and used by app stop
@@ -131,6 +153,10 @@ private:
     io_engine                                   _per_node_io;
     std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
     std::list<io_engine>                        _ios; // all ios
+
+    // when this app is hosted by a layer2 handler app
+    layer2_handler_core                         _layer2_handler;
+    dsn_app                                     *_layer2_role;
 
 private:
     error_code init_io_engine(io_engine& io, ioe_mode mode);

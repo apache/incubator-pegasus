@@ -108,11 +108,11 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 {
     data.updates.push_back(mutation_update());
     mutation_update& update = data.updates.back();
-    update.code = code;
     _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr)
     {
+        update.code = code;
         dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;
@@ -126,6 +126,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
     }   
     else
     {
+        update.code = RPC_REPLICATION_WRITE_EMPTY;
         _appro_data_bytes += sizeof(int); // empty data size
     }
 
@@ -352,6 +353,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
     else
     {
         _current_op_count++;
+        _current_op_counter.increment();
         return unlink_next_workload();
     }
 }

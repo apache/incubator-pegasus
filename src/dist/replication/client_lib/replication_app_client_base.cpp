@@ -322,8 +322,9 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
 
             dsn_msg_options_t opts;
             opts.timeout_ms = request->timeout_ms;
-            opts.thread_hash = gpid_to_hash(request->read_header.gpid);
-            opts.vnid = *(uint64_t*)(&request->read_header.gpid);
+            opts.request_hash = gpid_to_hash(request->read_header.gpid);
+            opts.gpid.u.app_id = request->read_header.gpid.app_id;
+            opts.gpid.u.partition_index = request->read_header.gpid.pidx;
             dsn_msg_set_options(request->request, &opts, DSN_MSGM_HASH | DSN_MSGM_TIMEOUT); // TODO: not supported yet DSN_MSGM_VNID);
         }
         else
@@ -336,8 +337,9 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
 
             dsn_msg_options_t opts;
             opts.timeout_ms = request->timeout_ms;
-            opts.thread_hash = gpid_to_hash(request->write_header.gpid);
-            opts.vnid = *(uint64_t*)(&request->write_header.gpid);
+            opts.request_hash = gpid_to_hash(request->write_header.gpid);
+            opts.gpid.u.app_id = request->write_header.gpid.app_id;
+            opts.gpid.u.partition_index = request->write_header.gpid.pidx;
             
             dsn_msg_set_options(request->request, &opts, DSN_MSGM_HASH | DSN_MSGM_TIMEOUT); // TODO: not supported yet DSN_MSGM_VNID | DSN_MSGM_CONTEXT);
         }

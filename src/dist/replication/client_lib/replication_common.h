@@ -48,10 +48,12 @@ inline bool operator < (const global_partition_id& l, const global_partition_id&
     return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
 }
 
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
 inline bool operator == (const global_partition_id& l, const global_partition_id& r)
 {
     return l.app_id == r.app_id && l.pidx == r.pidx;
 }
+#endif
 
 inline int gpid_to_hash(global_partition_id gpid)
 {

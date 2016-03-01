@@ -163,6 +163,7 @@ protected:
     bool                   _is_null;
     error_code             _error;
     void                   *_context; // the context for the task/on_cancel callbacks
+    dsn_task_cancelled_handler_t _on_cancel;
 
 private:
     task(const task&);
@@ -177,8 +178,7 @@ private:
     task_spec              *_spec;
     service_node           *_node;
     trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
-    dsn_task_cancelled_handler_t _on_cancel;
-
+    
 public:
     // used by task queue only
     task*                  next;
@@ -322,7 +322,8 @@ public:
     void             enqueue(error_code err, message_ex* reply);
     virtual void     enqueue(); // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() { return _request; }
-    message_ex*      get_response() { return _response; }
+    message_ex*      get_response() { return _response; }    
+    void             add_hook(dsn_rpc_response_handler_t callback, void* context, bool is_before_hook);
 
     virtual void  exec()
     {

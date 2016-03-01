@@ -35,8 +35,8 @@
 
 #pragma once
 
-#include <dsn/cpp/service_app.h>
-#include <dsn/dist/replication/replication_other_types.h>
+# include <dsn/dist/layer2_handler.h>
+# include <dsn/dist/replication/replication_other_types.h>
 
 namespace dsn { namespace replication {
 
@@ -44,7 +44,8 @@ class replication_checker;
 namespace test {
     class test_checker;
 }
-class replication_service_app : public ::dsn::service_app
+class replication_service_app :
+    public ::dsn::dist::layer2_handler
 {
 public:
     replication_service_app();
@@ -54,6 +55,8 @@ public:
     virtual ::dsn::error_code start(int argc, char** argv) override;
 
     virtual void stop(bool cleanup = false) override;
+
+    virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) override;
 
 private:
     friend class ::dsn::replication::replication_checker;

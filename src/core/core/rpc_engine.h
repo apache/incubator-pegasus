@@ -44,6 +44,7 @@ namespace dsn {
 
 class service_node;
 class rpc_engine;
+class uri_resolver_manager;
 
 #define MAX_CLIENT_PORT 1023
 
@@ -139,8 +140,8 @@ public:
     //
     // rpc registrations
     //
-    bool  register_rpc_handler(rpc_handler_info* handler, uint64_t vnid);
-    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
+    bool  register_rpc_handler(rpc_handler_info* handler);
+    rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code);
 
     //
     // rpc routines
@@ -156,10 +157,20 @@ public:
     service_node* node() const { return _node; }
     ::dsn::rpc_address primary_address() const { return _local_primary_address; }
     rpc_client_matcher* matcher() { return &_rpc_matcher; }
+    uri_resolver_manager* uri_resolver_mgr() { return _uri_resolver_mgr.get(); }
+
+    // call with URI address only
+    void call_uri(rpc_address addr, message_ex* request, rpc_response_task* call);
+
+    // call with group address only
+    void call_group(rpc_address addr, message_ex* request, rpc_response_task* call);
 
     // call with ip address only
     void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false, bool set_forwarded = false);
 
+    // call with explicit address
+    void call_address(rpc_address addr, message_ex* request, rpc_response_task* call);
+    
 private:
     network* create_network(
         const network_server_config& netcs, 
@@ -174,16 +185,38 @@ private:
     std::unordered_map<int, std::vector<network*>>   _server_nets; // <port, <CHANNEL, network*>>
     ::dsn::rpc_address                               _local_primary_address;
     rpc_client_matcher                               _rpc_matcher;
-    rpc_server_dispatcher                            _rpc_dispatcher;    
+    rpc_server_dispatcher                            _rpc_dispatcher;   
 
-    utils::rw_lock_nr                                    _vnodes_lock;
-    std::unordered_map<uint64_t, rpc_server_dispatcher*> _vnodes;
+    std::unique_ptr<uri_resolver_manager>            _uri_resolver_mgr;
     
     volatile bool                 _is_running;
     static bool                   _message_crc_required;
 };
 
 // ------------------------ inline implementations --------------------
+
+inline void rpc_engine::call_address(
+    rpc_address addr, 
+    message_ex* request, 
+    rpc_response_task* call
+    )
+{
+    switch (addr.type())
+    {
+    case HOST_TYPE_IPV4:
+        call_ip(addr, request, call);
+        break;
+    case HOST_TYPE_URI:
+        call_uri(addr, request, call);
+        break;
+    case HOST_TYPE_GROUP:
+        call_group(addr, request, call);
+        break;
+    default:
+        dassert(false, "invalid target address type %d", (int)request->server_address.type());
+        break;
+    }
+}
 
 } // end namespace
 

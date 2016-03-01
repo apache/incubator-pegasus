@@ -47,10 +47,14 @@ using namespace dsn::utils;
 # define __TITLE__ "message"
 #define CRC_INVALID 0xdead0c2c
 
-DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
+DSN_API dsn_message_t dsn_msg_create_request(
+    dsn_task_code_t rpc_code, 
+    int timeout_milliseconds, 
+    int request_hash, 
+    uint64_t partition_hash
+    )
 {
-    auto msg = ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
-    return msg;
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, request_hash, partition_hash);
 }
 
 DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
@@ -119,6 +123,31 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->header->rpc_id;
 }
 
+DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
+{
+    auto msg2 = ((::dsn::message_ex*)msg);
+    if (msg2->local_rpc_code != (uint32_t)(-1))
+    {
+        return msg2->local_rpc_code;
+    }
+    else
+    {
+        uint32_t code = 0;
+        auto binary_hash = msg2->header->rpc_name_fast.local_hash;
+        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
+        {
+            code = msg2->header->rpc_name_fast.local_rpc_id;
+        }
+        else
+        {
+            code = dsn_task_code_from_string(msg2->header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        }
+
+        msg2->local_rpc_code = code;
+        return code;
+    }
+}
+
 DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
     dsn_msg_options_t *opts,
@@ -134,12 +163,12 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_HASH)
     {
-        hdr->client.hash = opts->thread_hash;
+        hdr->client.hash = opts->request_hash;
     }
     
     if (mask & DSN_MSGM_VNID)
     {
-        hdr->vnid = opts->vnid;
+        hdr->gpid = opts->gpid;
     }
 
     if (mask & DSN_MSGM_CONTEXT)
@@ -155,23 +184,15 @@ DSN_API void dsn_msg_get_options(
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
     opts->context = hdr->context;
-    opts->thread_hash = hdr->client.hash;
+    opts->request_hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
-    opts->vnid = hdr->vnid;
+    opts->gpid = hdr->gpid;
 }
 
 namespace dsn {
 
-static uint64_t get_local_binary_hash()
-{
-    const char* last_compile_time = __DATE__ __TIME__;
-    uint64_t crc = dsn_crc64_compute(last_compile_time, strlen(last_compile_time), 0);
-    crc = ((crc << 16) >> 16) ^ (crc >> 16);
-    return crc;
-}
-
 std::atomic<uint64_t> message_ex::_id(0);
-uint64_t message_ex::s_local_binary_hash = get_local_binary_hash();
+uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
 {
@@ -180,6 +201,7 @@ message_ex::message_ex()
     _rw_offset = 0;
     header = nullptr;
     _is_read = false;
+    local_rpc_code = ::dsn::TASK_CODE_INVALID;
 }
 
 message_ex::~message_ex()
@@ -343,6 +365,18 @@ message_ex* message_ex::create_receive_message(const blob& data)
     return msg;
 }
 
+message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data)
+{
+    message_ex* msg = new message_ex();
+    msg->buffers.push_back(data);
+    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(sizeof(message_header))), [](char* c) {dsn_transient_free(c);});
+    msg->header = reinterpret_cast<message_header*>(header_holder.get());
+    memset(msg->header, 0, sizeof(message_header));
+    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    msg->_is_read = true;
+    return msg;
+}
+
 message_ex* message_ex::copy()
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
@@ -397,7 +431,7 @@ message_ex* message_ex::copy_and_prepare_send()
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int request_hash, uint64_t partition_hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -406,10 +440,9 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
-    hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;    
-    
-    if (0 != hash) 
-        hdr.client.hash = hash;
+    hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
+
+    hdr.client.hash = request_hash;
 
     if (0 == timeout_milliseconds)
     {
@@ -420,14 +453,21 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
         hdr.client.timeout_ms = timeout_milliseconds;
     }
 
-    strncpy(hdr.rpc_name, dsn_task_code_to_string(rpc_code), sizeof(hdr.rpc_name));
-    hdr.rpc_name_fast.local_rpc_id = (uint16_t)rpc_code;
-    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
+    task_spec* sp = task_spec::get(rpc_code);
+    strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name));
+    hdr.rpc_name_fast.local_rpc_id = (uint32_t)rpc_code;
+    hdr.rpc_name_fast.local_hash = s_local_hash;
 
     hdr.id = new_id();
-    hdr.context.u.is_request = true;
 
-    msg->local_rpc_code = (uint16_t)rpc_code;
+    hdr.context.u.is_request = true;
+    if (0 != partition_hash)
+    {
+        hdr.context.u.parameter_type = MSG_PARAM_PARTITION_HASH;
+        hdr.context.u.parameter = partition_hash;
+    }
+
+    msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;
 }
 
@@ -447,7 +487,7 @@ message_ex* message_ex::create_response()
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     hdr.rpc_name_fast.local_rpc_id = msg->local_rpc_code;
-    hdr.rpc_name_fast.local_binary_hash = s_local_binary_hash;
+    hdr.rpc_name_fast.local_hash = s_local_hash;
 
     // ATTENTION: the from_address may not be the primary address of this node
     // if there are more than one ports listened and the to_address is not equal to

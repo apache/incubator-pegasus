@@ -43,9 +43,9 @@ extern "C" {
 # endif
 
 /*!
- @defgroup layer1-dev-c Core API
+ @defgroup dev-layer1-c Core API
 
- @ingroup layer1-dev
+ @ingroup dev-layer1
     
   Core API in rDSN for building distributed systems.
     
@@ -493,8 +493,11 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param hash                  if the task code is bound to a partitioned thread pool,
-   a hash value is needed to specify which thread in the pool should handle the request
+ \param request_hash          if the task code is bound to a partitioned thread pool,
+   a thread hash is needed to specify which thread in the pool should handle the request
+
+ \param partition_hash        if the target service is partitioned,
+   a partition hash is needed to specify which partition/shard should handle the request
 
  \return RPC message handle
  */
@@ -502,7 +505,8 @@ rpc message read/write
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int hash DEFAULT(0)
+                                int request_hash DEFAULT(0),
+                                uint64_t partition_hash DEFAULT(0)
                                 );
 
 /*! create a RPC response message correspondent to the given request message */
@@ -517,32 +521,52 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 
+/*! type of the parameter in \ref dsn_msg_context_t */
+typedef enum dsn_msg_parameter_type_t
+{
+    MSG_PARAM_NONE = 0,           ///< nothing  
+    MSG_PARAM_PARTITION_HASH = 1  ///< partition hash
+
+} dsn_msg_parameter_type_t;
+
 /*! RPC message context */
 typedef union dsn_msg_context_t
 {
     struct {
-        uint64_t is_request : 1;        ///< whether the RPC message is a request or response
-        uint64_t is_forwarded : 1;      ///< whether the msg is forwarded or not
-        uint64_t write_replication : 1; ///< whether it is a write request to a replicated service
-        uint64_t read_replication : 1;  ///< whether it is a read request to a replicated service
-        uint64_t read_semantic : 2;     ///< see \ref read_semantic
-        uint64_t unused : 8;
-        uint64_t parameter : 50;        ///< parameter for the flags, e.g., snapshort decree for replication read
+        uint64_t is_request : 1;           ///< whether the RPC message is a request or response
+        uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
+        uint64_t unused : 9;               ///< not used yet
+        uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
+        uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
-    uint64_t context;                   ///< above flag specific information
+    uint64_t context;                      ///< msg_context is of sizeof(uint64_t)
 } dsn_msg_context_t;
+
+typedef union dsn_global_partition_id
+{
+    struct {
+        int32_t app_id;          ///< 1-based app id (0 for invalid)
+        int32_t partition_index; ///< zero-based partition index
+    } u;
+    uint64_t value;
+} dsn_gpid;
+
+inline int dsn_gpid_to_hash(dsn_gpid gpid)
+{
+    return static_cast<int>(gpid.u.app_id ^ gpid.u.partition_index);
+}
 
 # define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get
 # define DSN_MSGM_HASH    (0x1 << 1) ///< thread hash is to be set/get
-# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (vnid) is to be set/get
+# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (gpid) is to be set/get
 # define DSN_MSGM_CONTEXT (0x1 << 3) ///< rpc message context is to be set/get
 
 /*! options for RPC messages, used by \ref dsn_msg_set_options and \ref dsn_msg_get_options */
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               thread_hash; ///< thread hash on RPC server
-    uint64_t          vnid;        ///< virtual node id, 0 for none
+    int               request_hash; ///< thread hash on RPC server
+    dsn_gpid  gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
@@ -554,6 +578,9 @@ inline void dsn_address_size_checker()
 
     static_assert (sizeof(dsn_msg_context_t) == sizeof(uint64_t),
         "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
+
+    static_assert (sizeof(dsn_gpid) == sizeof(uint64_t),
+        "sizeof(dsn_gpid) must equal to sizeof(uint64_t)");    
 }
 
 /*!
@@ -594,6 +621,9 @@ extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
 /*! get rpc id of the message */
 extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
+
+/*! get task code of the message */
+extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);
 
 /*!
  get message write buffer
@@ -647,12 +677,14 @@ extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
-                                void* context
+                                void* context,
+                                void* layer1_app_context DEFAULT(nullptr)
                                 );
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref dsn_rpc_register_handler  */
 extern DSN_API void*         dsn_rpc_unregiser_handler(
-                                dsn_task_code_t code
+                                dsn_task_code_t code,
+                                void* layer1_app_context DEFAULT(nullptr)
                                 );
 
 /*! reply with a response which is created using dsn_msg_create_response */

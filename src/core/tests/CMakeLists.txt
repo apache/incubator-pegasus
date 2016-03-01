@@ -18,12 +18,14 @@ set(MY_PROJ_INC_PATH
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
+                 dsn.dist.providers.common
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
                  dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
+                 dsn.cli
 )
 
 set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")

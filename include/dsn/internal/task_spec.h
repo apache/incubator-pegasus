@@ -153,6 +153,7 @@ ENUM_END(throttling_mode_t)
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP);
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
@@ -211,6 +212,10 @@ public:
     throttling_mode_t      rpc_request_throttling_mode; // 
     std::vector<int>       rpc_request_delays_milliseconds; // see exp_delay for delaying recving
     bool                   rpc_request_dropped_before_execution_when_timeout;
+
+    // layer 2 configurations
+    bool                   rpc_request_layer2_handler_required; // need layer 2 handler
+    bool                   rpc_request_is_write_operation;      // need stateful replication
     // ]
 
     task_rejection_handler rejection_handler;
@@ -267,6 +272,11 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(throttling_mode_t, rpc_request_throttling_mode, TM_NONE, TM_INVALID, false, "throttling mode for rpc requets: TM_NONE, TM_REJECT, TM_DELAY when queue length > pool.queue_length_throttling_threshold")
     CONFIG_FLD_INT_LIST(rpc_request_delays_milliseconds, "how many milliseconds to delay recving rpc session for when queue length ~= [1.0, 1.2, 1.4, 1.6, 1.8, >=2.0] x pool.queue_length_throttling_threshold, e.g., 0, 0, 1, 2, 5, 10")
     CONFIG_FLD(bool, bool, rpc_request_dropped_before_execution_when_timeout, false, "whether to drop a request right before execution when its queueing time is already greater than its timeout value")    
+
+    // layer 2 configurations
+    CONFIG_FLD(bool, bool, rpc_request_layer2_handler_required, false, "whether this request needs to be handled by a layer2 handler (e.g., replicated or partitioned)")
+    CONFIG_FLD(bool, bool, rpc_request_is_write_operation, false, "whether this request updates app's state which needs to be replicated using a replication layer2 handler")
+    
 CONFIG_END
 
 struct threadpool_spec

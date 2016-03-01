@@ -45,7 +45,7 @@
 namespace dsn { namespace replication {
 
 replication_service_app::replication_service_app()
-    : service_app()
+    : layer2_handler()
 {
     _stub = new replica_stub();
 }
@@ -71,6 +71,32 @@ void replication_service_app::stop(bool cleanup)
     {
         _stub->close();
         _stub = nullptr;
+    }
+}
+
+void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg, int delay_ms)
+{
+    global_partition_id gpid;
+    gpid.app_id = dpid.u.app_id;
+    gpid.pidx = dpid.u.partition_index;
+
+    if (is_write)
+    {
+        tasking::enqueue(
+            LPC_REPLICATION_CLIENT_WRITE,
+            nullptr,
+            [=]() {_stub->on_client_write(gpid, msg); },
+            gpid_to_hash(gpid)
+            );
+    }
+    else
+    {
+        tasking::enqueue(
+            LPC_REPLICATION_CLIENT_READ,
+            nullptr,
+            [=]() {_stub->on_client_read(gpid, msg); },
+            gpid_to_hash(gpid)
+            );
     }
 }
 
