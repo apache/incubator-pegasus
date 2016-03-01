@@ -17,7 +17,7 @@ namespace dsn
         inline const char* rm_type_prefix(const char* s)
         {
             //the monitor need not know the exact class name of the status code
-            //for example, instead of "cluster_type::docker",
+            //for example, instead of "cluster_type::cstype_docker",
             //just "docker" would be enough
             const char* postfix = strchr(s, ':');
             if (postfix != nullptr)

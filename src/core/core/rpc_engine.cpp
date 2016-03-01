@@ -456,9 +456,10 @@ namespace dsn {
     rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
     {
         rpc_handler_info* handler = nullptr;
-        if (msg->header->rpc_name_fast.local_binary_hash == message_ex::s_local_binary_hash)
+        auto binary_hash = msg->header->rpc_name_fast.local_hash;
+        if (binary_hash == message_ex::s_local_hash && binary_hash != 0)
         {
-            msg->local_rpc_code = (uint16_t)msg->header->rpc_name_fast.local_rpc_id;
+            msg->local_rpc_code = msg->header->rpc_name_fast.local_rpc_id;
 
             {
                 utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
@@ -475,7 +476,7 @@ namespace dsn {
             auto it = _handlers.find(msg->header->rpc_name);
             if (it != _handlers.end())
             {
-                msg->local_rpc_code = (uint16_t)it->second->code;
+                msg->local_rpc_code = it->second->code;
                 handler = it->second;
                 handler->add_ref();
             }
@@ -529,6 +530,7 @@ namespace dsn {
         else
         {
             // mem leak, don't care as it halts the program
+            dassert(false, "create network failed, error_code: %s", ret.to_string());
             return nullptr;
         }   
     }

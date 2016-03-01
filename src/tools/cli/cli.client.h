@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 # pragma once
-# include "cli.types.h"
+# include <dsn/tool/cli.types.h>
 # include <iostream>
 
 

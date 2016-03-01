@@ -63,7 +63,7 @@ namespace dsn
                 )override;
             virtual cluster_type type() const override
             {
-                return cluster_type::bare_medal_windows;
+                return cluster_type::cstype_bare_medal_windows;
             }
 
         private:

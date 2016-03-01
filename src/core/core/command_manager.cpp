@@ -44,6 +44,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
 # include "rpc_engine.h"
+# include <dsn/tool/cli.types.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -309,15 +310,11 @@ namespace dsn {
     void command_manager::on_remote_cli(dsn_message_t req)
     {
         rpc_read_stream reader(req);
-
-        std::string cmd;
-        unmarshall(reader, cmd);
-
-        std::vector<std::string> args;
-        unmarshall(reader, args);
-
+        dsn::command cli_command;
         std::string result;
-        run_command(cmd, args, result);
+
+        unmarshall(reader, cli_command);
+        run_command(cli_command.cmd, cli_command.arguments, result);
 
         auto resp = dsn_msg_create_response(req);
         ::marshall(resp, result);
@@ -365,7 +362,7 @@ namespace dsn {
         );
 
         register_command(
-        { "repeat", "r", "R", "Repeat" },
+            { "repeat", "r", "R", "Repeat" },
             "repeat|Repeat|r|R interval_seconds max_count command - execute command periodically",
             "repeat|Repeat|r|R interval_seconds max_count command - execute command every interval seconds, to the max count as max_count (0 for infinite)",
             [this](const std::vector<std::string>& args)
@@ -405,7 +402,6 @@ namespace dsn {
             {
                 std::string output;
                 auto r = this->run_command(cmd, largs, output);
-                std::cout << output << std::endl;
 
                 if (!r)
                 {
@@ -417,6 +413,30 @@ namespace dsn {
 
             return "repeat command completed";
         }
+        );
+
+        register_command(
+            { "command-list" },
+            "command-list - query command list",
+            "",
+            [this](const std::vector<std::string>& args)
+            {
+                std::set<std::string> cmds;
+                {
+                    utils::auto_read_lock l(_lock);
+                    for (auto& h : _handlers)
+                    {
+                        cmds.insert(h.second->help_short);
+                    }
+                }
+
+                std::stringstream ss;
+                for (auto& c : cmds)
+                {
+                    ss << "    " << c << std::endl;
+                }
+                return ss.str();
+            }
         );
     }
 }

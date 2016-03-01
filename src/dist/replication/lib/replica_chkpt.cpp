@@ -145,7 +145,7 @@ namespace dsn {
                         [this] {background_checkpoint();},
                         gpid_to_hash(get_gpid()));
                     _secondary_states.checkpoint_task->enqueue();
-                }                
+                }
             }
         }
 
@@ -260,7 +260,13 @@ namespace dsn {
         {
             check_hashed_access();
 
-            // TODO: dealing with the error
+            if (ERR_OK != err)
+            {
+                if (ERR_TIMEOUT == err)
+                    dwarn("copy checkpoint failed, err(%s), remote_addr(%s)", err.to_string(), resp->address.to_string());
+                _primary_states.checkpoint_task = nullptr;
+                return;
+            }
             if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
                 // we must give the app the full path of the check point
@@ -279,7 +285,7 @@ namespace dsn {
         void replica::background_checkpoint()
         {
             auto err = _app->checkpoint();
-            tasking::enqueue(
+            _secondary_states.checkpoint_completed_task = tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
                 [this, err]() { this->on_checkpoint_completed(err); },

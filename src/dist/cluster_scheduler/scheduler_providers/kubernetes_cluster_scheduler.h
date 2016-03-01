@@ -62,7 +62,7 @@ namespace dsn
                     )override;
             virtual cluster_type type() const override
             {
-                return cluster_type::kubernetes;
+                return cluster_type::cstype_kubernetes;
             }
 
             static void deploy_k8s_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);

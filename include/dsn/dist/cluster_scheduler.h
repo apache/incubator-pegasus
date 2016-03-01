@@ -52,34 +52,35 @@ namespace dsn
         DEFINE_THREAD_POOL_CODE(THREAD_POOL_SCHEDULER_LONG)
 
         // ---------- cluster_type -------------
-        enum class cluster_type
+        enum cluster_type
         {
-            kubernetes = 0,
-            docker = 1,
-            bare_medal_linux = 2,
-            bare_medal_windows = 3,
-            yarn_on_linux = 4,
-            yarn_on_windows = 5,
-            mesos_on_linux = 6,
-            mesos_on_windows = 7,
-            invalid = 8
+            cstype_kubernetes = 0,
+            cstype_docker = 1,
+            cstype_bare_medal_linux = 2,
+            cstype_bare_medal_windows = 3,
+            cstype_yarn_on_linux = 4,
+            cstype_yarn_on_windows = 5,
+            cstype_mesos_on_linux = 6,
+            cstype_mesos_on_windows = 7,
+            cstype_invalid = 8
         };
 
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(cluster_type);
-
-        ENUM_BEGIN(cluster_type, cluster_type::invalid)
-            ENUM_REG(cluster_type::kubernetes)
-            ENUM_REG(cluster_type::docker)
-            ENUM_REG(cluster_type::bare_medal_linux)
-            ENUM_REG(cluster_type::bare_medal_windows)
-            ENUM_REG(cluster_type::yarn_on_linux)
-            ENUM_REG(cluster_type::yarn_on_windows)
-            ENUM_REG(cluster_type::mesos_on_linux)
-            ENUM_REG(cluster_type::mesos_on_windows)
+#endif
+        ENUM_BEGIN(cluster_type, cluster_type::cstype_invalid)
+            ENUM_REG(cluster_type::cstype_kubernetes)
+            ENUM_REG(cluster_type::cstype_docker)
+            ENUM_REG(cluster_type::cstype_bare_medal_linux)
+            ENUM_REG(cluster_type::cstype_bare_medal_windows)
+            ENUM_REG(cluster_type::cstype_yarn_on_linux)
+            ENUM_REG(cluster_type::cstype_yarn_on_windows)
+            ENUM_REG(cluster_type::cstype_mesos_on_linux)
+            ENUM_REG(cluster_type::cstype_mesos_on_windows)
         ENUM_END(cluster_type)
 
         // ---------- service_status -------------
-        enum class service_status
+        enum service_status
         {
             SS_PREPARE_RESOURCE = 0,
             SS_DEPLOYING = 1,
@@ -91,9 +92,9 @@ namespace dsn
             SS_UNDEPLOYING = 7,
             SS_UNDEPLOYED = 8
         };
-
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(service_status);
-
+#endif
         ENUM_BEGIN(service_status, service_status::SS_INVALID)
             ENUM_REG(service_status::SS_PREPARE_RESOURCE)
             ENUM_REG(service_status::SS_DEPLOYING)

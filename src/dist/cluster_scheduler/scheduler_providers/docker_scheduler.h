@@ -62,7 +62,7 @@ namespace dsn
                     );
             virtual cluster_type type() const override
             {
-                return cluster_type::docker;
+                return cluster_type::cstype_docker;
             }
 
             static void deploy_docker_unit(void* context, int argc, const char** argv, dsn_cli_reply* reply);

@@ -43,9 +43,9 @@ extern "C" {
 # endif
 
 /*!
- @defgroup layer1-dev-c Core API
+ @defgroup dev-layer1-c Core API
 
- @ingroup layer1-dev
+ @ingroup dev-layer1
     
   Core API in rDSN for building distributed systems.
     
@@ -493,8 +493,11 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param hash                  if the task code is bound to a partitioned thread pool,
-   a hash value is needed to specify which thread in the pool should handle the request
+ \param request_hash          if the task code is bound to a partitioned thread pool,
+   a thread hash is needed to specify which thread in the pool should handle the request
+
+ \param partition_hash        if the target service is partitioned,
+   a partition hash is needed to specify which partition/shard should handle the request
 
  \return RPC message handle
  */
@@ -502,7 +505,8 @@ rpc message read/write
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int hash DEFAULT(0)
+                                int request_hash DEFAULT(0),
+                                uint64_t partition_hash DEFAULT(0)
                                 );
 
 /*! create a RPC response message correspondent to the given request message */
@@ -517,20 +521,31 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 
+/*! type of the parameter in \ref dsn_msg_context_t */
+typedef enum dsn_msg_parameter_type_t
+{
+    MSG_PARAM_NONE = 0,           ///< nothing  
+    MSG_PARAM_PARTITION_HASH = 1  ///< partition hash
+
+} dsn_msg_parameter_type_t;
+
 /*! RPC message context */
 typedef union dsn_msg_context_t
 {
     struct {
-        uint64_t is_request : 1;        ///< whether the RPC message is a request or response
-        uint64_t is_forwarded : 1;      ///< whether the msg is forwarded or not
-        uint64_t write_replication : 1; ///< whether it is a write request to a replicated service
-        uint64_t read_replication : 1;  ///< whether it is a read request to a replicated service
-        uint64_t read_semantic : 2;     ///< see \ref read_semantic
-        uint64_t unused : 8;
-        uint64_t parameter : 50;        ///< parameter for the flags, e.g., snapshort decree for replication read
+        uint64_t is_request : 1;           ///< whether the RPC message is a request or response
+        uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
+        uint64_t is_replication_needed: 1; ///< whether state replication is needed for this request
+        uint64_t unused : 8;               ///< not used yet
+        uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
+        uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
-    uint64_t context;                   ///< above flag specific information
+    uint64_t context;                      ///< msg_context is of sizeof(uint64_t)
 } dsn_msg_context_t;
+
+# define DSN_VNID_BUILD(app_id, par_idx) (((uint64_t)(app_id) << 32) | (uint64_t)(par_idx))
+# define DSN_VNID_APP_ID(vnid)           ((int)(vnid >> 32))
+# define DSN_VNID_PARTITION_INDEX(vnid)  ((int)(vnid & 0x00000000FFFFFFFFULL))
 
 # define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get
 # define DSN_MSGM_HASH    (0x1 << 1) ///< thread hash is to be set/get
@@ -541,7 +556,7 @@ typedef union dsn_msg_context_t
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               thread_hash; ///< thread hash on RPC server
+    int               request_hash; ///< thread hash on RPC server
     uint64_t          vnid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;

@@ -39,7 +39,7 @@
 
  /*!
  @defgroup fault-injector Fault Injector
- @ingroup tools
+ @ingroup tools-test
 
  Fault Injector toollet
 

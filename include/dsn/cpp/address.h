@@ -45,6 +45,10 @@
 # include <string>
 # include <cstdlib>
 
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+# include <thrift/protocol/TProtocol.h>
+#endif
+
 namespace dsn
 {
     /*!
@@ -91,6 +95,10 @@ namespace dsn
         bool operator != (::dsn::rpc_address r) const;
         bool operator <  (::dsn::rpc_address r) const;
 
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+        uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+        uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+#endif
     private:
         void clear();
 

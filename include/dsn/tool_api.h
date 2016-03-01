@@ -55,20 +55,6 @@
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/configuration.h>
 
-/*!
- \defgroup ext Extension and Integration
-
- How to extend the runtime and integrate with your own system
-
- @{
-  \defgroup ext-runtime Customize the runtime libraries
-  \defgroup ext-tools   Add new tools
-  \defgroup ext-op      Integration within existing cluster
-  \defgroup ext-sys     Integrate client-lib into other systems
-  \defgroup ext-talk    Communication with other protocols
- @}
- */
-
 namespace dsn { namespace tools {
     
 class tool_base

@@ -11,6 +11,9 @@ void usage(char* exe)
     std::cout << "\t" << exe << " <config.ini> list_apps [-status <all|available|creating|creating_failed|dropping|dropping_failed|dropped>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_nodes [-status <all|alive|unalive>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_app -name <app_name> [-detailed] [-o <out_file>]" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> stop_migration" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> start_migration" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> balancer -gpid <appid.pidx> -type <move_pri|copy_pri|copy_sec> -from <from_address> -to <to_address>" << std::endl;
     std::cout << "\t\tpartition count must be a power of 2" << std::endl;
     std::cout << "\t\tapp_name and app_type shoud be composed of a-z, 0-9 and underscore" << std::endl;
     std::cout << "\t\twithout -o option, program will print status on screen" << std::endl;
@@ -149,6 +152,41 @@ int main(int argc, char** argv)
             std::cout << "list app:" << app_name << " succeed" << std::endl;
         else
             std::cout << "list app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
+    }
+    else if (command == "stop_migration") {
+        dsn::error_code err = client.control_meta_balancer_migration(false);
+        std::cout << "stop migration result: " << dsn_error_to_string(err) << std::endl;
+    }
+    else if (command == "start_migration") {
+        dsn::error_code err = client.control_meta_balancer_migration(true);
+        std::cout << "start migration result: " << err.to_string() << std::endl;
+    }
+    else if (command == "balancer") {
+        dsn::replication::balancer_proposal_request request;
+        for (int i=3; i<argc-1; i+=2) {
+            if (strcmp(argv[i], "-gpid") == 0){
+                sscanf(argv[i+1], "%d.%d", &request.gpid.app_id, &request.gpid.pidx);
+            }
+            else if (strcmp(argv[i], "-type") == 0){
+                std::map<std::string, dsn::replication::balancer_type> mapper = {
+                    {"move_pri", BT_MOVE_PRIMARY},
+                    {"copy_pri", BT_COPY_PRIMARY},
+                    {"copy_sec", BT_COPY_SECONDARY}
+                };
+                if (mapper.find(argv[i+1]) == mapper.end()) {
+                    usage(argv[0]);
+                }
+                request.type = mapper[argv[i+1]];
+            }
+            else if (strcmp(argv[i], "-from") == 0) {
+                request.from_addr.from_string_ipv4(argv[i+1]);
+            }
+            else if (strcmp(argv[i], "-to") == 0) {
+                request.to_addr.from_string_ipv4(argv[i+1]);
+            }
+        }
+        dsn::error_code err = client.send_balancer_proposal(request);
+        std::cout << "send balancer proposal result: " << err.to_string() << std::endl;
     }
     else {
         std::cout << "invalid command:" << command << std::endl;

@@ -43,7 +43,7 @@ extern "C" {
 
 /*!
 @defgroup exec-model Programming Model
-@ingroup layer1-dev-models
+@ingroup dev-layer1-models
 
 The programming and execution model for rDSN applications.
 

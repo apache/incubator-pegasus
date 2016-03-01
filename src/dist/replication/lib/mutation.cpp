@@ -352,6 +352,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
     else
     {
         _current_op_count++;
+        _current_op_counter.increment();
         return unlink_next_workload();
     }
 }

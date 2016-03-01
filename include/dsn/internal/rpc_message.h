@@ -57,8 +57,10 @@ namespace dsn
 
     struct fast_rpc_name
     {
-        uint64_t local_rpc_id : 16;
-        uint64_t local_binary_hash : 48;
+        uint32_t local_rpc_id;
+        uint32_t local_hash; // same hash from two processes indicates that
+                             // the mapping of rpc string and id are consistent, which
+                             // we leverage for optimization (fast rpc handler lookup)
     };
 
     typedef struct message_header
@@ -105,7 +107,7 @@ namespace dsn
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
-        uint16_t               local_rpc_code;
+        uint32_t               local_rpc_code;
 
         // by message queuing
         dlink                  dl;
@@ -131,7 +133,13 @@ namespace dsn
         // routines for create messages
         //
         static message_ex* create_receive_message(const blob& data);
-        static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
+        static message_ex* create_request(
+            dsn_task_code_t rpc_code, 
+            int timeout_milliseconds = 0,
+            int request_hash = 0, 
+            uint64_t partition_hash = 0
+            );
+        static message_ex* create_receive_message_with_standalone_header(const blob& data);
         message_ex* create_response();
         message_ex* copy();
         message_ex* copy_and_prepare_send();
@@ -162,7 +170,7 @@ namespace dsn
         bool                   _is_read;      // is for read(recv) or write(send)
 
     public:
-        static uint64_t s_local_binary_hash;  // used by fast_rpc_name
+        static uint32_t s_local_hash;  // used by fast_rpc_name
     };
 
 } // end namespace

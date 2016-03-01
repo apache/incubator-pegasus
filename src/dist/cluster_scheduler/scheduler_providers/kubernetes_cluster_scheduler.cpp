@@ -162,7 +162,8 @@ void kubernetes_cluster_scheduler::create_pod(std::string& name,std::function<vo
         std::string popen_command = "kubectl get svc -l app=meta -l instance=" + name + " --template '{{(index .items 0).spec.clusterIP}}'";
         FILE * f = popen(popen_command.c_str(),"r");
         char buffer[30];
-        fgets(buffer,30,f);
+        char* ans = fgets(buffer,30,f);
+        dassert(ans != nullptr, "");
         {
             zauto_lock l(_lock);
             auto unit = _deploy_map[name];

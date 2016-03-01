@@ -24,6 +24,8 @@ set(MY_PROJ_LIBS dsn.tools.nfs
     dsn.replication.clientlib
     )
 
+set(MY_PROJ_LIB_PATH)
+
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
 if(WIN32)

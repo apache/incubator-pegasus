@@ -42,15 +42,15 @@ extern "C" {
 # endif
 
 /*!
-@defgroup layer1-dev-utilities Utility API
-@ingroup layer1-dev
+@defgroup dev-layer1-utilities Utility API
+@ingroup dev-layer1
 
  Commonly used utility API for building distributed systems.
 */
     
 /*!
 @defgroup error-t Error Code
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
  Error code registration and translation between string and integer. 
 
@@ -91,7 +91,7 @@ extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_er
 
 /*!
 @defgroup app-cli Command-Line Interface (cli)
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
  Built-in command line interface that can be accessed via local/tcp/http consoles.
 
@@ -177,7 +177,7 @@ extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
 
 /*!
 @defgroup config Configuration Service
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
  Configuration Service (e.g., config.ini)
 
@@ -219,7 +219,7 @@ extern DSN_API void                  dsn_config_dump(const char* file);
 
 /*!
 @defgroup logging Logging Service
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
  Logging Service
 
@@ -295,7 +295,7 @@ extern DSN_API void                  dsn_coredump();
 
 /*!
 @defgroup checksum Checksum
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
 Checksum
 
@@ -347,7 +347,7 @@ extern DSN_API uint64_t              dsn_crc64_concatenate(
 
 /*!
 @defgroup perf-counter Performance Counters
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
 Performance Counters
 
@@ -390,7 +390,7 @@ extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_p
 
 /*!
 @defgroup memory Memory Management
-@ingroup layer1-dev-utilities
+@ingroup dev-layer1-utilities
 
 Memory Management
 
