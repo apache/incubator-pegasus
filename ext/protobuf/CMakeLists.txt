@@ -24,5 +24,6 @@ if (WIN32)
             DESTINATION $ENV{DSN_ROOT}/bin/Windows)
 else()
     install(FILES ${PROJECT_BINARY_DIR}/lib/protoc
-            DESTINATION $ENV{DSN_ROOT}/bin/Linux)
+            DESTINATION $ENV{DSN_ROOT}/bin/Linux
+            PERMISSIONS OWNER_EXECUTE)
 endif ()

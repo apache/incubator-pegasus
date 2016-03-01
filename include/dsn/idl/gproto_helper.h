@@ -70,9 +70,9 @@ namespace dsn {
             return _reader.skip(count);
         }
 
-        virtual int64_t ByteCount() const
+        virtual google::protobuf::int64 ByteCount() const
         {
-            return static_cast<int64_t>(_reader.total_size());
+            return static_cast<google::protobuf::int64>(_reader.total_size());
         }
             
     private:
@@ -97,9 +97,9 @@ namespace dsn {
             _writer.backup(count);
         }
 
-        virtual int64_t ByteCount() const
+        virtual google::protobuf::int64 ByteCount() const
         {
-            return static_cast<int64_t>(_writer.total_size());
+            return static_cast<google::protobuf::int64>(_writer.total_size());
         }
 
         virtual bool WriteAliasedRaw(const void* data, int size)

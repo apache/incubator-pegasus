@@ -11,7 +11,13 @@ $inc_lib = "";
 if ($idl_format == "proto")
 {
     $inc_path = '${DSN_ROOT}/include/ext/protoc';
-    $inc_lib = "libprotobufd.lib";
+    if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
+    {
+        $inc_lib = "libprotobufd.lib";
+    } else
+    {
+        $inc_lib = "libprotobuf.a";
+    }
 }
 ?>
 cmake_minimum_required(VERSION 2.8.8)
