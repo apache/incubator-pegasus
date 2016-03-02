@@ -3,6 +3,7 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
+$idl_format = $argv[5];
 ?>
 # pragma once
 # include <dsn/service_api_cpp.h>
@@ -15,9 +16,6 @@ $idl_type = $argv[4];
 //
 // !!! WARNING: not feasible for replicated service yet!!! 
 //
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
-
-# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 <?php if ($idl_type == "thrift") { ?>
 
@@ -26,14 +24,20 @@ $idl_type = $argv[4];
 
 <?php } else if ($idl_type == "proto") {?>
 
+<?php       if ($idl_format == "binary") {?>
+// define DSN_IDL_BINARY to use binary format to send rpc request/response
+#define DSN_IDL_BINARY
+<?php       } else if ($idl_format == "json") {?>
+// define DSN_IDL_JSON to use json format to send rpc request/response
+#define DSN_IDL_JSON
+
+<?php       }?>
 # include "<?=$_PROG->name?>.pb.h"
-# include <dsn/gproto_helper.h>
+# include <dsn/idl/gproto_helper.h>
 
 <?php } else { ?>
-# error not supported idl type <?=$idl_type?> 
-<?php } ?>
-
-# else // use rDSN's data encoding/decoding
+// error not supported idl type <?=$idl_type?>
+// use rDSN's data encoding/decoding
 
 <?php
 echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
@@ -80,5 +84,4 @@ foreach ($_PROG->structs as $s)
 
 echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
-
-#endif 
+<?php } ?>

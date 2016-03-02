@@ -48,7 +48,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client = new <?=$svc->name?>Client(_server);
 <?php } ?>
-            _timer = Clientlet.CallAsync3(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
+            _timer = Clientlet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
             return ErrorCode.ERR_OK;
         }
 
@@ -70,7 +70,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         foreach ($svc->functions as $f)
     {?>
             {
-                <?=$f->get_first_param()->get_csharp_type()?> req = default(<?=$f->get_first_param()->get_csharp_type()?>);
+                 <?=$f->get_first_param()->get_csharp_type()?> req = new <?=$f->get_first_param()->get_csharp_type()?>();
 <?php if ($f->is_one_way()) { ?>
                 _<?=$svc->name?>Client.<?=$f->name?>(req);
 <?php } else { ?>

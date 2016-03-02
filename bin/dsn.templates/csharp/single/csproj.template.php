@@ -2,8 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
-$dsn_root = dirname(dirname(dirname(dirname(__DIR__))));
-$dsn_root = str_replace('\\', '/', $dsn_root);
+$dsn_root = getenv('DSN_ROOT');
 
 function getGUID()
 {
@@ -29,6 +28,7 @@ function getGUID()
 
 $appguid = getGUID();
 echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
+
 ?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -108,7 +108,10 @@ echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="dsn.dev.csharp">
-        <HintPath><?=$dsn_root?>/lib/dsn.dev.csharp.dll</HintPath>
+        <HintPath><?=$dsn_root?>\lib\dsn.dev.csharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf">
+        <HintPath><?=$dsn_root?>\lib\Google.Protobuf.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

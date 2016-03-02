@@ -58,7 +58,7 @@ public:
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 <?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = std::make_unique<<?=$svc->name?>_client>(_server);
+        _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(_server));
 <?php } ?>
         _timer = ::dsn::tasking::enqueue_timer(<?=$_PROG->get_test_task_code()?>, this, [this]{on_test_timer();}, std::chrono::seconds(1));
         return ::dsn::ERR_OK;

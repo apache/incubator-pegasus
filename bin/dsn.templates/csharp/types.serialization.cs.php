@@ -4,6 +4,7 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
 ?>
+<?php if ($idl_type == "thrift") { ?>
 using System;
 using System.IO;
 
@@ -58,3 +59,11 @@ foreach ($_PROG->structs as $s)
 }
 ?>
 } 
+<?php } else if ($idl_type == "proto") {?>
+using System;
+using System.IO;
+using dsn.dev.csharp;
+
+<?php } else { ?>
+# error not supported idl type <?=$idl_type?>
+<?php } ?>

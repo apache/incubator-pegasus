@@ -2,7 +2,8 @@
 
 function usage()
 {
-    echo "dsn.cg %name%.thrift|.proto cpp|csharp %out_dir% [single|replication]".PHP_EOL;
+    echo "dsn.cg %name%.thrift|.proto cpp|csharp %out_dir%  [binary|json] [single|replication]".PHP_EOL;
+    echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
 }
@@ -22,6 +23,7 @@ global $g_idl_post;
 global $g_program;
 global $g_idl_php;
 global $g_is_replicated;
+global $g_idl_format;
 
 $g_idl = $argv[1];
 $g_lang = $argv[2];
@@ -32,11 +34,39 @@ $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
 $g_idl_php = "";
+$g_idl_format = "";
 
 if (count($argv) >= 5)
-    $g_mode = $argv[4];
+{
+    $format_input = $argv[4];
+    if ($format_input == "json")
+    {
+        $g_idl_format = "json";
+    }
+    else if ($format_input == "binary")
+    {
+        $g_idl_format = "binary";
+    }
+    else
+    {
+        echo "invalid format '$format_input'".PHP_EOL;
+        usage();
+        exit(0);
+    }
+}
 else
+{
+    $g_idl_format = "binary";
+}
+
+if (count($argv) >= 6)
+{
+    $g_mode = $argv[5];
+}
+else
+{
     $g_mode = "single";
+}
     
 if ($g_mode != "single" && $g_mode != "replication")
 {
@@ -127,6 +157,10 @@ case "proto":
             echo "failed invoke protoc tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
+
+        $command = $g_cg_dir."/".$os_name."/protoc --".$g_lang."_out=".$g_out_dir." ".$g_idl;
+        echo "exec: ".$command.PHP_EOL;
+        system($command);
     }
     break;
 default:
@@ -168,6 +202,7 @@ function generate_files_from_dir($dr)
     global $g_program;
     global $g_out_dir;
     global $g_idl_type;
+    global $g_idl_format;
     
     foreach (scandir($dr) as $template)
     {
@@ -194,6 +229,7 @@ function generate_files_from_dir($dr)
                     ." ".$g_idl_php
                     ." ".$g_program
                     ." ".$g_idl_type
+                    ." ".$g_idl_format
                     ." >".$output_file
                     ;
         
@@ -220,5 +256,26 @@ if (!file_exists($g_templates."/".$g_lang))
 
 generate_files_from_dir($g_templates."/".$g_lang);
 generate_files_from_dir($g_templates."/".$g_lang."/".$g_mode);
+
+// copy additional files
+if ($g_idl_type == "proto" && $g_lang == "csharp")
+{
+    if ($g_idl_format == "json")
+    {
+        $add_file_name = "GProtoJsonHelper.cs";
+    }
+    else
+    {
+        $add_file_name = "GProtoBinaryHelper.cs";
+    }
+    $dsn_root = getenv('DSN_ROOT');
+    $add_file = $dsn_root."/include/dsn/idl/".$add_file_name;
+    $target = $g_out_dir."/".$add_file_name;
+    if (!copy($add_file, $target))
+    {
+        echo "failed to copy ".$add_file;
+        exit(0);
+    }
+}
 
 ?>

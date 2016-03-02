@@ -2,6 +2,23 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_format = $argv[4];
+
+global $inc_path;
+global $inc_lib;
+$inc_path = "";
+$inc_lib = "";
+if ($idl_format == "proto")
+{
+    $inc_path = '${DSN_ROOT}/include/ext/protoc';
+    if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
+    {
+        $inc_lib = "libprotobufd.lib";
+    } else
+    {
+        $inc_lib = "libprotobuf.a";
+    }
+}
 ?>
 cmake_minimum_required(VERSION 2.8.8)
 
@@ -24,9 +41,9 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
+set(MY_PROJ_INC_PATH "<?=$inc_path?>")
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS "<?=$inc_lib?>")
 
 set(MY_PROJ_LIB_PATH "")
 

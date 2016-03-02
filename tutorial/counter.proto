@@ -1,19 +1,20 @@
+syntax = "proto3";
 package dsn.example;
 
 message count_op
 {
-   required string name = 1;
-   required int32  operand = 2;
+   string name = 1;
+   int32  operand = 2;
 }
 
 message count_name
 {
-   required string name = 1;
+   string name = 1;
 }
 
 message count_result
 {
-   required int32 value = 1;
+   int32 value = 1;
 }
 
 service counter
