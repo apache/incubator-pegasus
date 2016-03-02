@@ -3,4 +3,5 @@ add_subdirectory(replication)
 add_subdirectory(cluster_scheduler)
 add_subdirectory(deployment_service)
 add_subdirectory(common_providers)
-
+add_subdirectory(app_daemon)
+add_subdirectory(failure_detector_multimaster)

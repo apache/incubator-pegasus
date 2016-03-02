@@ -66,6 +66,7 @@ struct app_state
     std::string                          app_type;
     std::string                          app_name;
     bool                                 is_stateful;
+    std::string                          package_id;
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
@@ -73,9 +74,9 @@ struct app_state
     // used only for creating app, to count the number of partitions whose node
     // has been ready on the remote storage
     std::atomic_int                      available_partitions;
-    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, is_stateful, app_id, partition_count, partitions)
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, is_stateful, package_id, app_id, partition_count, partitions)
 
-    app_state() : status(AS_DROPPED), app_type(), app_name(), is_stateful(true), app_id(0), partitions(), partition_count(0)
+    app_state() : status(AS_DROPPED), app_type(), app_name(), is_stateful(true), package_id(), app_id(0), partitions(), partition_count(0)
     {
         available_partitions.store(0);
     }
@@ -85,6 +86,7 @@ struct app_state
         app_type(other.app_type),
         app_name(other.app_name),
         is_stateful(other.is_stateful),
+        package_id(other.package_id),
         app_id(other.app_id),
         partition_count(other.partition_count),
         partitions(other.partitions)
@@ -97,6 +99,7 @@ struct app_state
         app_type(std::move(other.app_type)),
         app_name(std::move(other.app_name)),
         is_stateful(other.is_stateful),
+        package_id(std::move(other.package_id)),
         app_id(other.app_id),
         partition_count(other.partition_count),
         partitions(std::move(other.partitions))
@@ -109,6 +112,7 @@ struct app_state
         app_type=other.app_type;
         app_name=other.app_name;
         is_stateful = other.is_stateful;
+        package_id = other.package_id;
         app_id=other.app_id;
         partition_count=other.partition_count;
         partitions=other.partitions;
@@ -121,6 +125,7 @@ struct app_state
         app_type = std::move(other.app_type);
         app_name = std::move(other.app_name);
         is_stateful = other.is_stateful;
+        package_id = other.package_id;
         app_id = other.app_id;
         partition_count = other.partition_count;
         partitions = std::move(other.partitions);
@@ -242,9 +247,9 @@ private:
 
     bool set_freeze() const
     {
-        //TODO: make this value configurable in config.ini
-        if (_nodes.size() < 3)
+        if (_nodes.size() < _min_live_node_count_for_unfreeze)
             return true;
+
         return _node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size());
     }
 private:
@@ -261,7 +266,7 @@ private:
     };
 
     friend class dsn::dist::server_load_balancer;
-    friend class simple_stateful_load_balancer;
+    friend class simple_load_balancer;
     friend class greedy_load_balancer;
 
     std::string                                         _cluster_root;
@@ -281,6 +286,7 @@ private:
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
+    int                               _min_live_node_count_for_unfreeze;
     std::atomic<bool>                 _freeze;
 
     ::dsn::dist::meta_state_service *_storage;

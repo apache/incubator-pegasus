@@ -1,4 +1,3 @@
-#include "replication_failure_detector.h"
 #include "meta_server_failure_detector.h"
 #include "replica_stub.h"
 #include <gtest/gtest.h>
@@ -38,7 +37,7 @@ void unmarshall(rpc_read_stream& msg, config_master_message &val)
 }
 
 volatile int started_apps = 0;
-class worker_fd_test: public replication::replication_failure_detector
+class worker_fd_test: public ::dsn::dist::slave_failure_detector_with_multimaster
 {
 private:
     volatile bool _send_ping_switch;
@@ -72,7 +71,11 @@ protected:
 
 public:
     worker_fd_test(replica_stub* stub, std::vector< dsn::rpc_address>& meta_servers):
-        replication_failure_detector(stub, meta_servers)
+        slave_failure_detector_with_multimaster(
+            meta_servers, 
+            [=]() {stub->on_meta_server_disconnected(); },
+            [=]() {stub->on_meta_server_connected(); }
+            )
     {
         _send_ping_switch = false;
     }

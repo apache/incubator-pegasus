@@ -52,12 +52,12 @@ public:
 
     virtual void run() override;
     virtual void run(global_partition_id gpid) override;
-    virtual void on_config_changed(std::shared_ptr<configuration_update_request> request) override;
+    virtual void on_config_changed(std::shared_ptr<configuration_update_request>& request) override;
     virtual void on_balancer_proposal(/*in*/const balancer_proposal_request& request, /*out*/balancer_proposal_response& response) override;
     virtual void on_control_migration(/*in*/const control_balancer_migration_request& request,
                                       /*out*/control_balancer_migration_response& response) override;
 private:
-    bool run_lb(partition_configuration& pc);
+    bool run_lb(partition_configuration& pc, bool is_stateful);
 
     bool balancer_proposal_check(const balancer_proposal_request& balancer_proposal);
 

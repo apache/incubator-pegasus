@@ -62,7 +62,7 @@ namespace dsn { namespace replication {
     class replication_app_client_base : public virtual clientlet
     {
     public:
-        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers, const char* section = "replication.meta_servers");
+        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers, const char* section = "meta_servers");
 
     public:
         replication_app_client_base(        

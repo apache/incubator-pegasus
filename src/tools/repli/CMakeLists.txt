@@ -29,6 +29,7 @@ set(MY_PROJ_LIBS dsn.tools.nfs
                  dsn.replication
                  dsn.replication.meta_server
                  dsn.replication.clientlib
+                 dsn.failure_detector.multimaster
                  dsn.failure_detector
 )
 

@@ -38,7 +38,6 @@
 
 # include "../../lib/replica.h"
 # include "../../lib/replica_stub.h"
-# include "../../lib/replication_failure_detector.h"
 # include "../../lib/mutation_log.h"
 # include "../../meta_server/meta_service.h"
 # include "../../meta_server/meta_server_failure_detector.h"

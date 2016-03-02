@@ -40,7 +40,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include "autoref_ptr.h"
+#include <dsn/cpp/autoref_ptr.h>
 
 #define JSON_DICT_ENTRY(out, prefix, T) out << "\""#T"\":"; ::std::json_forwarder<std::decay<decltype((prefix).T)>::type>::call(out, (prefix).T)
 #define JSON_DICT_ENTRIES2(out, prefix, T1, T2) JSON_DICT_ENTRY(out, prefix, T1); out << ","; JSON_DICT_ENTRY(out, prefix, T2)
@@ -50,11 +50,12 @@
 #define JSON_DICT_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6) JSON_DICT_ENTRIES5(out, prefix, T1, T2, T3, T4, T5); out << ","; JSON_DICT_ENTRY(out, prefix, T6)
 #define JSON_DICT_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_DICT_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6); out << ","; JSON_DICT_ENTRY(out, prefix, T7)
 #define JSON_DICT_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_DICT_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7); out << ","; JSON_DICT_ENTRY(out, prefix, T8)
+#define JSON_DICT_ENTRIES9(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9) JSON_DICT_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8); out << ","; JSON_DICT_ENTRY(out, prefix, T9)
 
-#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8, NAME, ...) NAME
+#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8,ph9, NAME, ...) NAME
 //workaround due to the way VC handles "..."
 #define JSON_ENTRIES_GET_MACRO_(tuple) JSON_ENTRIES_GET_MACRO tuple
-#define JSON_DICT_ENTRIES(out, prefix, ...) out<<"{";JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, JSON_DICT_ENTRIES8, JSON_DICT_ENTRIES7, JSON_DICT_ENTRIES6, JSON_DICT_ENTRIES5, JSON_DICT_ENTRIES4, JSON_DICT_ENTRIES3, JSON_DICT_ENTRIES2)) (out, prefix, __VA_ARGS__); out<<"}"
+#define JSON_DICT_ENTRIES(out, prefix, ...) out<<"{";JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, JSON_DICT_ENTRIES9, JSON_DICT_ENTRIES8, JSON_DICT_ENTRIES7, JSON_DICT_ENTRIES6, JSON_DICT_ENTRIES5, JSON_DICT_ENTRIES4, JSON_DICT_ENTRIES3, JSON_DICT_ENTRIES2)) (out, prefix, __VA_ARGS__); out<<"}"
 
 //parameters: fields to be serialized
 #define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}

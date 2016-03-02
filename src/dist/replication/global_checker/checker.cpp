@@ -41,7 +41,6 @@
 # include "meta_service.h"
 # include "meta_server_failure_detector.h"
 # include "server_state.h"
-# include "replication_failure_detector.h"
 # include "mutation_log.h"
 
 # ifdef __TITLE__

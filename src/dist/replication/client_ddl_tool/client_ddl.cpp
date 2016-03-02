@@ -48,7 +48,7 @@ client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
-dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
+dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::string& package_id, bool is_stateless)
 {
     if(partition_count < 1)
     {
@@ -80,6 +80,8 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     req->options.replica_count = replica_count;
     req->options.success_if_exist = true;
     req->options.app_type = app_type;
+    req->options.package_id = package_id;
+    req->options.is_stateful = !is_stateless;
 
     auto resp_task = request_meta<configuration_create_app_request>(
             RPC_CM_CREATE_APP,
@@ -222,6 +224,8 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
         << std::setw(20) << std::left << "app_name"
         << std::setw(20) << std::left << "app_type"
         << std::setw(10) << std::left << "partition_count"
+        << std::setw(10) << std::left << "is_stateful"
+        << std::setw(10) << std::left << "package_id"
         << std::endl;
     for(int i = 0; i < resp.infos.size(); i++)
     {
@@ -231,6 +235,8 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
             << std::setw(20) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
             << std::setw(10) << std::left << info.partition_count
+            << std::setw(10) << std::left << info.is_stateful
+            << std::setw(10) << std::left << info.package_id
             << std::endl;
     }
     out << std::endl << std::flush;

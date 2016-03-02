@@ -73,7 +73,7 @@ namespace dsn
             virtual void run(global_partition_id gpid) = 0;
 
             // actions when config is changed
-            virtual void on_config_changed(std::shared_ptr<configuration_update_request>) {}
+            virtual void on_config_changed(std::shared_ptr<configuration_update_request>&) {}
 
             // do migration according to external command
             virtual void on_balancer_proposal(/*in*/const balancer_proposal_request& request, /*out*/balancer_proposal_response& response) {}
@@ -83,6 +83,7 @@ namespace dsn
                                               /*out*/control_balancer_migration_response& response) {}
 
             void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
+
         protected:
             void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
 
