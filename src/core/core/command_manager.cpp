@@ -58,7 +58,8 @@ DSN_API const char* dsn_cli_run(const char* command_line) // return command outp
     dsn::command_manager::instance().run_command(cmd, output);
 
     char* c_output = (char*)malloc(output.length() + 1);
-    strcpy(c_output, output.c_str());
+    memcpy(c_output, &output[0], output.length());
+    c_output[output.length()] = '\0';
     return c_output;
 }
 
