@@ -19,6 +19,7 @@ before_install:
     - cd packages
     - ls | xargs sudo dpkg -i --force-depends
     - cd ..
+    - sudo aptitude install mono-xbuild -y
 
 install:
     - ./run.sh format

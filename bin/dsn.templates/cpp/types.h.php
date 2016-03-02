@@ -84,6 +84,4 @@ foreach ($_PROG->structs as $s)
 
 echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
-
-#endif 
 <?php } ?>
