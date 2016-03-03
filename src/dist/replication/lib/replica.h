@@ -111,6 +111,7 @@ public:
     //  routine for testing purpose only
     //
     void send_group_check_once_for_test(int delay_milliseconds);
+    void inject_error(error_code err) { handle_local_failure(err); }
     
     //
     //  local information query

@@ -115,5 +115,12 @@ private:
     dsn::task_ptr                   _balancer_timer;
     replication_options             _opts;
     bool                            _started;
+
+    dsn_handle_t _cli_create_app;
+    dsn_handle_t _cli_drop_app;
+    dsn_handle_t _cli_list_apps;
+    dsn_handle_t _cli_list_nodes;
+    dsn_handle_t _cli_query_config_by_app;
+    dsn_handle_t _cli_query_config_by_node;
 }; 
 
