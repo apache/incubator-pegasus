@@ -28,7 +28,7 @@ foreach ($svc->functions as $f)
     
 foreach ($keys as $k => $v)
 {
-    echo "    public virtual UInt64 GetPartitionHash(".$k."& key) { return 0; }".PHP_EOL;
+    echo "    public virtual UInt64 GetPartitionHash(".$k." key) { return 0; }".PHP_EOL;
 }
 ?>
 
