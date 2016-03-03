@@ -720,29 +720,16 @@ error_code server_state::sync_apps_from_remote_storage()
             {
                 auto& ps = app.partitions[i];
 
-                if (app.is_stateful)
+                if (ps.primary.is_invalid() == false)
                 {
-                    if (ps.primary.is_invalid() == false)
-                    {
-                        _nodes[ps.primary].primaries.insert(ps.gpid);
-                        _nodes[ps.primary].partitions.insert(ps.gpid);
-                    }
-
-                    for (auto& ep : ps.secondaries)
-                    {
-                        dassert(ep.is_invalid() == false, "");
-                        _nodes[ep].partitions.insert(ps.gpid);
-                    }
+                    _nodes[ps.primary].primaries.insert(ps.gpid);
+                    _nodes[ps.primary].partitions.insert(ps.gpid);
                 }
 
-                // stateless
-                else
+                for (auto& ep : ps.secondaries)
                 {
-                    for (auto& ep : ps.last_drops)
-                    {
-                        dassert(ep.is_invalid() == false, "");
-                        _nodes[ep].partitions.insert(ps.gpid);
-                    }
+                    dassert(ep.is_invalid() == false, "");
+                    _nodes[ep].partitions.insert(ps.gpid);
                 }
             }
         }
@@ -903,6 +890,7 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
     response.err = ERR_OK;
     response.app_id = app.app_id;
     response.partition_count = app.partition_count;
+    response.is_stateful = app.is_stateful;
 
     for (const int32_t& index: request.partition_indices) {
         if (index>=0 && index<app.partitions.size())
@@ -1317,7 +1305,7 @@ void server_state::update_configuration(
 
         // update for stateless services
         else
-        {
+        {            
             if (req->config.ballot != old.ballot)
             {
                 dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
@@ -1328,10 +1316,13 @@ void server_state::update_configuration(
             }
             else
             {
+                partition_configuration_stateless pcs(old);
+
                 // remove
                 if (CT_REMOVE == req->type)
                 {
-                    if (std::find(old.secondaries.begin(), old.secondaries.end(), req->node) == old.secondaries.end())
+                    // not found
+                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end())
                     {
                         write = false;
                         response.err = ERR_OK;
@@ -1347,7 +1338,7 @@ void server_state::update_configuration(
                 else
                 {
                     // added already
-                    if (std::find(old.secondaries.begin(), old.secondaries.end(), req->node) != old.secondaries.end())
+                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
                     {
                         write = false;
                         response.err = ERR_OK;
@@ -1589,14 +1580,16 @@ void server_state::update_configuration_internal(const configuration_update_requ
         }
         else
         {
+            partition_configuration_stateless pcs(old);
+
             // remove
             if (CT_REMOVE == request.type)
             {
-                // secondaries for working node addresses
-                std::remove(old.secondaries.begin(), old.secondaries.end(), request.node);
+                // remove working node address
+                std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
 
-                // last_drops for host node addresses
-                std::remove(old.last_drops.begin(), old.last_drops.end(), request.host_node);
+                // remove host node address
+                std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
 
                 auto it = _nodes.find(request.host_node);
                 dassert(it != _nodes.end(), "");
@@ -1607,10 +1600,10 @@ void server_state::update_configuration_internal(const configuration_update_requ
             else
             {
                 // add
-                if (std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end())
+                if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node) == pcs.host_replicas().end())
                 {
-                    old.secondaries.emplace_back(request.node);
-                    old.last_drops.emplace_back(request.host_node);
+                    pcs.worker_replicas().emplace_back(request.node);
+                    pcs.host_replicas().emplace_back(request.host_node);
 
                     auto it = _nodes.find(request.host_node);
                     dassert(it != _nodes.end(), "");
@@ -1622,9 +1615,9 @@ void server_state::update_configuration_internal(const configuration_update_requ
 
             std::stringstream cf;
             cf << "{replicas = [";
-            for (auto& s : response.config.secondaries)
+            for (size_t i = 0; i < pcs.host_replicas().size(); i++)
             {
-                cf << s.to_string() << ",";
+                cf << pcs.host_replicas()[i].to_string() << " (work-port = " << pcs.worker_replicas()[i].port() << "),";
             }
             cf << "]}";
 
@@ -1681,9 +1674,9 @@ void server_state::check_consistency(global_partition_id gpid)
     // stateless
     else
     {
-        // secondaries as working nodes, last_drops as daemon nodes
-        dassert(config.secondaries.size() == config.last_drops.size(), "");
-        for (auto& ep : config.last_drops)
+        partition_configuration_stateless pcs(config);
+        dassert(pcs.host_replicas().size() == pcs.worker_replicas().size(), "");
+        for (auto& ep : pcs.host_replicas())
         {
             auto it = _nodes.find(ep);
             dassert(it != _nodes.end(), "");

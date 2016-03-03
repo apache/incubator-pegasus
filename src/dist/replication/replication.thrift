@@ -361,7 +361,8 @@ struct configuration_query_by_index_response
     1:dsn.error_code                err;
     2:i32                           app_id;
     3:i32                           partition_count;
-    4:list<partition_configuration> partitions;
+    4:bool                          is_stateful;
+    5:list<partition_configuration> partitions;    
 }
 
 struct query_replica_decree_request

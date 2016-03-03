@@ -79,6 +79,7 @@ namespace dsn
             std::unordered_map<int, ::dsn::replication::partition_configuration> _config_cache;
             int                                  _app_id;
             int                                  _app_partition_count;
+            bool                                 _app_is_stateful;
 
         private:
             typedef std::function<void(dist::partition_resolver::resolve_result&&)> callback_t;

@@ -49,7 +49,7 @@ namespace dsn
             const char* app_path
             )
             : partition_resolver(meta_server, app_path),
-            _app_id(-1), _app_partition_count(-1)
+            _app_id(-1), _app_partition_count(-1), _app_is_stateful(true)
         {
         }
 
@@ -347,6 +347,7 @@ namespace dsn
                     }
                     _app_id = resp.app_id;
                     _app_partition_count = resp.partition_count;
+                    _app_is_stateful = resp.is_stateful;
 
                     for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
                     {
@@ -486,7 +487,19 @@ namespace dsn
         /*search in cache*/
         dsn::rpc_address partition_resolver_simple::get_address(const partition_configuration& config)
         {
-            return config.primary;
+            if (_app_is_stateful)
+                return config.primary;
+            else
+            {
+                if (config.last_drops.size() == 0)
+                {
+                    return ::dsn::rpc_address();
+                }
+                else
+                {
+                    return config.last_drops[dsn_random32(0, config.last_drops.size() - 1)];
+                }
+            }
 
             //if (is_write || semantic == read_semantic::ReadLastUpdate)
             //    return config.primary;

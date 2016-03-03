@@ -755,7 +755,9 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
     // stateless
     else
     {
-        if (static_cast<int>(pc.secondaries.size()) < pc.max_replica_count)
+        partition_configuration_stateless pcs(pc);
+
+        if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
         {
             proposal.type = CT_ADD_SECONDARY;
             proposal.node = find_minimal_load_machine(false);

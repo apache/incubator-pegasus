@@ -1632,6 +1632,7 @@ namespace dsn { namespace replication {
         ::dsn::error_code err;
         int32_t app_id;
         int32_t partition_count;
+        bool is_stateful;
         std::vector< partition_configuration> partitions;
     };
 
@@ -1640,6 +1641,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.err);
         marshall(writer, val.app_id);
         marshall(writer, val.partition_count);
+        marshall(writer, val.is_stateful);
         marshall(writer, val.partitions);
     }
 
@@ -1648,6 +1650,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.err);
         unmarshall(reader, val.app_id);
         unmarshall(reader, val.partition_count);
+        unmarshall(reader, val.is_stateful);
         unmarshall(reader, val.partitions);
     }
 

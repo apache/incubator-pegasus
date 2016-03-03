@@ -138,6 +138,20 @@ typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_up
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
+
+struct partition_configuration_stateless
+{
+    ::dsn::replication::partition_configuration& config;
+
+    partition_configuration_stateless(::dsn::replication::partition_configuration& pc)
+        : config(pc) {}
+
+    std::vector<dsn::rpc_address>& worker_replicas() { return config.last_drops; }
+
+    std::vector<dsn::rpc_address>& host_replicas() { return config.secondaries; }
+
+};
+
 class server_state :
     public ::dsn::serverlet<server_state>
 {
