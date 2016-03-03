@@ -51,6 +51,171 @@
 # endif
 # define __TITLE__ "meta.service"
 
+#define TEST_PARAM(x) if(!(x)){return ERR_INVALID_PARAMETERS;}
+#define PREPARE_UNMARSHALL(json_str) std::string jstr(json_str);std::replace(jstr.begin(), jstr.end(), '\'', '\"');rapidjson::Document doc; TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError()) TEST_PARAM(doc.IsObject())
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, bool &val)
+{
+    TEST_PARAM(doc.IsBool())
+    val = doc.GetBool();
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, int32_t &val)
+{
+    TEST_PARAM(doc.IsInt())
+    val = doc.GetInt();
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, std::string& val)
+{
+    TEST_PARAM(doc.IsString())
+    val = doc.GetString();
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, std::vector< int32_t>& val)
+{
+    TEST_PARAM(doc.IsArray())
+    val.clear();
+    for (rapidjson::SizeType i = 0; i < doc.MemberCount(); i++)
+    {
+        TEST_PARAM(doc[i].IsInt())
+        val.push_back(doc[i].GetInt());
+    }
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, rpc_address& val)
+{
+    TEST_PARAM(doc.IsUint64());
+    dsn_address_t addr;
+    addr.u.value = doc.GetUint64();
+    val = rpc_address(addr);
+    TEST_PARAM(!val.is_invalid())
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, create_app_options& val)
+{
+    TEST_PARAM(doc.HasMember("app_type"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["app_type"], val.app_type))
+    TEST_PARAM(doc.HasMember("is_stateful"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["is_stateful"], val.is_stateful))
+    TEST_PARAM(doc.HasMember("package_id"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["package_id"], val.package_id))
+    TEST_PARAM(doc.HasMember("partition_count"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["partition_count"], val.partition_count))
+    TEST_PARAM(doc.HasMember("replica_count"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["replica_count"], val.replica_count))
+    TEST_PARAM(doc.HasMember("success_if_exist"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["success_if_exist"], val.success_if_exist))
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const rapidjson::Value &doc, drop_app_options& val)
+{
+    TEST_PARAM(doc.HasMember("success_if_not_exist"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc["success_if_not_exist"], val.success_if_not_exist))
+    return ERR_OK;
+}
+
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_create_app_request& val)
+{
+    PREPARE_UNMARSHALL(json_str)
+
+    TEST_PARAM(doc[key].IsObject())
+    TEST_PARAM(doc[key].HasMember("app_name"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
+    TEST_PARAM(doc[key].HasMember("options"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["options"], val.options))
+
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_create_app_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, appid);
+
+    return std::move(ss.str());
+}
+
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_drop_app_request& val)
+{
+    PREPARE_UNMARSHALL(json_str)
+
+    TEST_PARAM(doc[key].IsObject())
+    TEST_PARAM(doc[key].HasMember("app_name"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
+    TEST_PARAM(doc[key].HasMember("options"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["options"], val.options))
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_drop_app_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err);
+
+    return std::move(ss.str());
+}
+
+inline std::string marshall_json(const configuration_list_apps_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, infos);
+
+    return std::move(ss.str());
+}
+
+inline std::string marshall_json(const configuration_list_nodes_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, infos);
+
+    return std::move(ss.str());
+}
+
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_index_request& val)
+{
+    PREPARE_UNMARSHALL(json_str)
+
+    TEST_PARAM(doc[key].IsObject())
+    TEST_PARAM(doc[key].HasMember("app_name"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
+    TEST_PARAM(doc[key].HasMember("partition_indices"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["partition_indices"], val.partition_indices))
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_query_by_index_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, app_id, partition_count, is_stateful, partitions);
+
+    return std::move(ss.str());
+}
+
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_node_request& val)
+{
+    PREPARE_UNMARSHALL(json_str)
+
+    TEST_PARAM(doc[key].IsObject())
+    TEST_PARAM(doc[key].HasMember("node"))
+    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["node"], val.node))
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_query_by_node_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, partitions);
+
+    return std::move(ss.str());
+}
+
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _balancer(nullptr), _started(false)
 {
@@ -350,21 +515,6 @@ bool meta_service::check_primary(dsn_message_t req)
     }\
 
 // create app cli
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_create_app_request& val)
-{
-    // TODO:
-    // 
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_create_app_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, appid);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_create_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
@@ -391,21 +541,6 @@ void meta_service::on_create_app_cli(void *context, int argc, const char **argv,
 }
 
 // drop app cli
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_drop_app_request& val)
-{
-    // TODO:
-    // 
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_drop_app_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_drop_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
@@ -432,14 +567,6 @@ void meta_service::on_drop_app_cli(void *context, int argc, const char **argv, d
 }
 
 // list_apps
-inline std::string marshall_json(const configuration_list_apps_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, infos);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
@@ -458,14 +585,6 @@ void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, 
 }
 
 // list nodes
-inline std::string marshall_json(const configuration_list_nodes_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, infos);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
@@ -485,21 +604,6 @@ void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv,
 
 
 // query app config
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_index_request& val)
-{
-    // TODO:
-    // 
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_query_by_index_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, app_id, partition_count, is_stateful, partitions);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_query_config_by_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
@@ -526,21 +630,6 @@ void meta_service::on_query_config_by_app_cli(void *context, int argc, const cha
 }
 
 // query node config
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_node_request& val)
-{
-    // TODO:
-    // 
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_query_by_node_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, partitions);
-
-    return std::move(ss.str());
-}
-
 void meta_service::on_query_config_by_node_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
 {
     dassert(context == this, "must called with local context");
