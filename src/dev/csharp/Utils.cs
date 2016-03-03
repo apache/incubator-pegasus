@@ -243,6 +243,12 @@ namespace dsn.dev.csharp
             addr = 0;
         }
 
+        public RpcAddress(string url)
+        {
+            _uri = new UriAddress(url);
+            addr = Native.dsn_address_build_uri(_uri.DangerousGetHandle());
+        }
+
         public RpcAddress(string host, UInt16 port)
         {
             addr = Native.dsn_address_build(host, port);
@@ -259,5 +265,6 @@ namespace dsn.dev.csharp
         }
 
         public dsn_address_t addr;
+        private UriAddress _uri = null;
     }
 }

@@ -38,12 +38,19 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     {
         public override ErrorCode Start(string[] args)
         {
-            if (args.Length < 3)
+            if (args.Length < 2)
             {
-                throw new Exception("wrong usage: server-host server-port");                
+                throw new Exception("wrong usage: server-url or server-host server-port");                
             }
 
-            _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
+            if (args.Length == 2)
+            {
+                _server = new RpcAddress(args[1]);
+            }
+            else
+            {
+                _server = new RpcAddress(args[1], ushort.Parse(args[2]));
+            }
 
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client = new <?=$svc->name?>Client(_server);

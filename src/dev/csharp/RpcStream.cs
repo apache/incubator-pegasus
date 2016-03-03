@@ -81,6 +81,25 @@ namespace dsn.dev.csharp
         }
     }
 
+    public class UriAddress : SafeHandleZeroIsInvalid
+    {
+        public UriAddress(string url)
+            : base(Native.dsn_uri_build(url), true)
+        {
+        }
+
+        protected override bool ReleaseHandle()
+        {
+            if (!IsInvalid)
+            {
+                Native.dsn_uri_destroy(handle);
+                return true;
+            }
+            else
+                return false;
+        }
+    }
+
     public abstract class RpcStream : Stream
     {
         public RpcStream(IntPtr msg, bool owner, bool isRead)

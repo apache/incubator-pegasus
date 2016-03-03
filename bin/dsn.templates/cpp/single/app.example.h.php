@@ -53,10 +53,22 @@ public:
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
-        if (argc < 3)
+        if (argc < 2)
+        {
+            printf ("Usage: <exe> server-host server-port or service-url\n");
             return ::dsn::ERR_INVALID_PARAMETERS;
+        }
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        if (argc == 2)
+        {
+            // mem leak for uri-build, but we don't care here as it is once only
+            _server.assign_uri(dsn_uri_build(argv[1]));
+        }
+        else
+        {
+            _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        }
+            
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(_server));
 <?php } ?>

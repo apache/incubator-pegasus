@@ -382,7 +382,8 @@ namespace dsn
                 std::stringstream ss;
 # ifdef _WIN32
                 ss << "cmd.exe /k SET port=" << port;
-                ss << " && CALL " << app->runner_script;
+                ss << " && SET package_dir=" << app->package_dir << "\\" << app->configuration.package_id;
+                ss << "&& CALL " << app->runner_script;
 # else
 //# error not implemented
 # endif
