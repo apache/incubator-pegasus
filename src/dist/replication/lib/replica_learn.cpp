@@ -691,6 +691,8 @@ void replica::on_copy_remote_state_completed(
             err = _app->apply_checkpoint(lstate, CHKPT_LEARN);
             if (err == ERR_OK)
             {
+                _app->reset_counters_after_learning();
+
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
                 // because if the original _app->last_committed_decree > resp.last_committed_decree,
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
