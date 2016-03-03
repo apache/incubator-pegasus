@@ -957,7 +957,7 @@ void server_state::init_app_partition_node(int app_id, int pidx)
 
 void server_state::initialize_app(app_state& app, dsn_message_t msg)
 {
-    dsn_msg_add_ref(msg);
+    if (msg) dsn_msg_add_ref(msg);
     auto on_create_app_root = [this, msg, &app](error_code ec)
     {
         configuration_create_app_response resp;
@@ -966,7 +966,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
             dinfo("create app on storage service ok, name: %s, appid %" PRId32 "", app.app_name.c_str(), app.app_id);
             resp.appid = app.app_id;
             resp.err = ERR_OK;
-            reply(msg, resp);
+            if (msg) reply(msg, resp);
             for (unsigned int i=0; i!=app.partition_count; ++i)
             {
                 init_app_partition_node(app.app_id, i);
@@ -984,7 +984,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
         {
             dassert(false, "we can't handle this right now, err(%s)", ec.to_string());
         }
-        dsn_msg_release_ref(msg);
+        if (msg) dsn_msg_release_ref(msg);
     };
 
     blob value;
@@ -997,14 +997,11 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
         value);
 }
 
-void server_state::create_app(dsn_message_t msg)
+void server_state::create_app(configuration_create_app_request& request, /*out*/ configuration_create_app_response& response)
 {
-    configuration_create_app_request request;
-    configuration_create_app_response response;
-    bool will_create_app = false;
     int32_t index;
-    ::unmarshall(msg ,request);
-    
+    bool will_create_app = false;
+
     ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d), stateful(%s), package_id(%s)",
            request.app_name.c_str(),
            request.options.app_type.c_str(),
@@ -1026,14 +1023,15 @@ void server_state::create_app(dsn_message_t msg)
         if (index != -1 && _apps[index].status!=AS_DROPPED)
         {
             app_state& exist_app = _apps[index];
+            response.appid = exist_app.app_id;
+
             switch (exist_app.status)
             {
             case AS_AVAILABLE:
                 if (!request.options.success_if_exist || !option_match_check(request.options, exist_app))
                     response.err = ERR_INVALID_PARAMETERS;
                 else {
-                    response.err = ERR_OK;
-                    response.appid = exist_app.app_id;
+                    response.err = ERR_OK;                    
                 }
                 break;
             case AS_CREATING:
@@ -1042,6 +1040,7 @@ void server_state::create_app(dsn_message_t msg)
             case AS_CREATE_FAILED:
                 exist_app.status = AS_CREATING;
                 will_create_app = true;
+                response.err = ERR_IO_PENDING;
                 break;
             case AS_DROPPING:
             case AS_DROP_FAILED:
@@ -1050,9 +1049,13 @@ void server_state::create_app(dsn_message_t msg)
                 break;
             }
         }
-        else {
-            will_create_app = true;
+        else 
+        {
+            will_create_app = true;            
             index = _apps.size();
+            response.err = ERR_IO_PENDING;
+            response.appid = index;
+
             _apps.push_back(app_state());
             app_state& app = _apps.back();
 
@@ -1076,11 +1079,10 @@ void server_state::create_app(dsn_message_t msg)
         }
     }
 
-    if ( will_create_app ) {
-        initialize_app(_apps[index], msg);
+    if ( will_create_app ) 
+    {
+        initialize_app(_apps[index], nullptr);
     }
-    else
-        reply(msg, response);
 }
 
 void server_state::do_app_drop(app_state& app, dsn_message_t msg)
@@ -1090,7 +1092,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
 
     std::string app_path = get_app_path(app);
 
-    dsn_msg_add_ref(msg);
+    if (msg) dsn_msg_add_ref(msg);
     auto after_set_app_dropped = [this, &app, msg](error_code ec) {
         configuration_drop_app_response response;
         if (ERR_OK == ec || ERR_OBJECT_NOT_FOUND == ec)
@@ -1100,7 +1102,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
                 app.status = AS_DROPPED;
             }
             response.err = ERR_OK;
-            reply(msg, response);
+            if (msg) reply(msg, response);
             dinfo("drop table(id:%d, name:%s) finished", app.app_id, app.app_name.c_str());
         }
         else if (ERR_TIMEOUT == ec)
@@ -1113,7 +1115,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         {
             dassert(false, "we can't handle this, error(%s)", ec.to_string());
         }
-        dsn_msg_release_ref(msg);
+        if (msg) dsn_msg_release_ref(msg);
     };    
     _storage->set_data(app_path,
         value,
@@ -1121,29 +1123,29 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         after_set_app_dropped);
 }
 
-void server_state::drop_app(dsn_message_t msg)
+void server_state::drop_app(configuration_drop_app_request& request, /*out*/ configuration_drop_app_response& response)
 {
-    configuration_drop_app_request request;
-    configuration_drop_app_response response;
     int32_t index;
     bool do_dropping = false;
-    ::unmarshall(msg, request);
 
     ddebug("drop app request, name(%s)", request.app_name.c_str());
 
     {
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
-        if (index == -1 || _apps[index].status == AS_DROPPED) {
+        if (index == -1 || _apps[index].status == AS_DROPPED)
+        {
             response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
         }
-        else {
+        else
+        {
             switch (_apps[index].status)
             {
             case AS_AVAILABLE:
             case AS_DROP_FAILED:
             case AS_CREATE_FAILED:
                 do_dropping = true;
+                response.err = ERR_IO_PENDING;
                 _apps[index].status = AS_DROPPING;
                 break;
             case AS_CREATING:
@@ -1157,20 +1159,15 @@ void server_state::drop_app(dsn_message_t msg)
             }
         }
     }
+
     if (do_dropping)
     {
-        do_app_drop(_apps[index], msg);
+        do_app_drop(_apps[index], nullptr);
     }
-    else
-        reply(msg, response);
 }
 
-void server_state::list_apps(dsn_message_t msg)
+void server_state::list_apps(configuration_list_apps_request& request, /*out*/ configuration_list_apps_response& response)
 {
-    configuration_list_apps_request request;
-    configuration_list_apps_response response;
-    ::unmarshall(msg, request);
-
     ddebug("list app request, status(%d)", request.status);
     {
         zauto_read_lock l(_lock);
@@ -1191,14 +1188,10 @@ void server_state::list_apps(dsn_message_t msg)
         }
         response.err = dsn::ERR_OK;
     }
-    reply(msg, response);
 }
 
-void server_state::list_nodes(dsn_message_t msg)
+void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/ configuration_list_nodes_response& response)
 {
-    configuration_list_nodes_request request;
-    configuration_list_nodes_response response;
-    ::unmarshall(msg, request);
     {
         zauto_read_lock l(_lock);
         for (auto& node: _nodes)
@@ -1214,7 +1207,6 @@ void server_state::list_nodes(dsn_message_t msg)
         }
         response.err = dsn::ERR_OK;
     }
-    reply(msg, response);
 }
 
 void server_state::update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi)

@@ -205,12 +205,11 @@ public:
         std::function<void()> callback
         );
 
-    // table options
-    void create_app(dsn_message_t msg);
-    void drop_app(dsn_message_t msg);
-    void list_apps(dsn_message_t msg);
-
-    void list_nodes(dsn_message_t msg);
+    // configuration operations
+    void create_app(configuration_create_app_request& request, /*out*/ configuration_create_app_response& response);
+    void drop_app(configuration_drop_app_request& request, /*out*/ configuration_drop_app_response& response);
+    void list_apps(configuration_list_apps_request& request, /*out*/ configuration_list_apps_response& response);
+    void list_nodes(configuration_list_nodes_request& request, /*out*/ configuration_list_nodes_response& response);
 
     void unfree_if_possible_on_start();
 

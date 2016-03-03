@@ -114,6 +114,8 @@ int main(int argc, char** argv)
         dsn::error_code err = client.create_app(app_name, app_type, partition_count, replica_count, package_id, is_stateless);
         if(err == dsn::ERR_OK)
             std::cout << "create app:" << app_name << " succeed" << std::endl;
+        else if (err == dsn::ERR_IO_PENDING)
+            std::cout << "create app:" << app_name << " ongoing ..." << std::endl;
         else
             std::cout << "create app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
@@ -123,6 +125,8 @@ int main(int argc, char** argv)
         dsn::error_code err = client.drop_app(app_name);
         if(err == dsn::ERR_OK)
             std::cout << "drop app:" << app_name << " succeed" << std::endl;
+        else if (err == dsn::ERR_IO_PENDING)
+            std::cout << "drop app:" << app_name << " ongoing ..." << std::endl;
         else
             std::cout << "drop app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }

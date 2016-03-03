@@ -40,6 +40,12 @@
 #include <sys/stat.h>
 #include <dsn/internal/factory_store.h>
 
+# include <dsn/cpp/json_helper.h>
+
+# include <rapidjson/document.h> 
+# include <rapidjson/writer.h>
+# include <rapidjson/stringbuffer.h>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -120,6 +126,12 @@ error_code meta_service::start()
     return ERR_OK;
 }
 
+static void __svc_cli_freeer__(dsn_cli_reply reply)
+{
+    std::string* s = (std::string*)reply.context;
+    delete s;
+}
+
 void meta_service::register_rpc_handlers()
 {
     register_rpc_handler(
@@ -179,6 +191,85 @@ void meta_service::register_rpc_handlers()
         RPC_CM_BALANCER_PROPOSAL,
         "RPC_CM_BALANCER_PROPOSAL",
         &meta_service::on_balancer_proposal);
+
+
+    dsn_cli_app_register(
+        "create_app",
+        "create app on meta server (in json format)",
+        "create app on meta server and auto-deployed in cluster",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_create_app_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
+
+    dsn_cli_app_register(
+        "drop_app",
+        "drop app on meta server (in json format)",
+        "drop app on meta server and auto-undeployed in cluster",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_drop_app_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
+
+    dsn_cli_app_register(
+        "list_apps",
+        "list apps on meta server (in json format)",
+        "list apps and their status on meta server",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_list_apps_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
+
+    dsn_cli_app_register(
+        "list_nodes",
+        "list nodes on meta server (in json format)",
+        "list nodes and their status on meta server",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_list_nodes_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
+
+    dsn_cli_app_register(
+        "query_config_by_app",
+        "query app configurations on meta server (in json format)",
+        "query app configurations on meta server with app id",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_query_config_by_app_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
+
+    dsn_cli_app_register(
+        "query_config_by_node",
+        "query apps on one node (in json format)",
+        "query apps on one node with node address",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (meta_service*)context;
+            this_->on_query_config_by_node_cli(context, argc, argv, reply);
+        },
+        __svc_cli_freeer__
+        );
 }
 
 void meta_service::stop()
@@ -258,33 +349,265 @@ bool meta_service::check_primary(dsn_message_t req)
         return;\
     }\
 
+// create app cli
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_create_app_request& val)
+{
+    // TODO:
+    // 
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_create_app_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, appid);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_create_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    error_code err = ERR_INVALID_PARAMETERS;
+    configuration_create_app_request req;
+    configuration_create_app_response resp;
+    
+    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
+    {
+        resp.err = err;
+    }
+    else
+    {
+        _state->create_app(req, resp);
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+// drop app cli
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_drop_app_request& val)
+{
+    // TODO:
+    // 
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_drop_app_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_drop_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    error_code err = ERR_INVALID_PARAMETERS;
+    configuration_drop_app_request req;
+    configuration_drop_app_response resp;
+
+    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
+    {
+        resp.err = err;
+    }
+    else
+    {
+        _state->drop_app(req, resp);
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+// list_apps
+inline std::string marshall_json(const configuration_list_apps_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, infos);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    configuration_list_apps_request req;
+    configuration_list_apps_response resp;
+
+    _state->list_apps(req, resp);
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+// list nodes
+inline std::string marshall_json(const configuration_list_nodes_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, infos);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    configuration_list_nodes_request req;
+    configuration_list_nodes_response resp;
+
+    _state->list_nodes(req, resp);
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+
+// query app config
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_index_request& val)
+{
+    // TODO:
+    // 
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_query_by_index_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, app_id, partition_count, is_stateful, partitions);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_query_config_by_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    error_code err = ERR_INVALID_PARAMETERS;
+    configuration_query_by_index_request req;
+    configuration_query_by_index_response resp;
+
+    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
+    {
+        resp.err = err;
+    }
+    else
+    {
+        _state->query_configuration_by_index(req, resp);
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+// query node config
+inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_node_request& val)
+{
+    // TODO:
+    // 
+    return ::dsn::ERR_OK;
+}
+
+inline std::string marshall_json(const configuration_query_by_node_response& val)
+{
+    std::stringstream ss;
+    JSON_DICT_ENTRIES(ss, val, err, partitions);
+
+    return std::move(ss.str());
+}
+
+void meta_service::on_query_config_by_node_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    dassert(context == this, "must called with local context");
+
+    error_code err = ERR_INVALID_PARAMETERS;
+    configuration_query_by_node_request req;
+    configuration_query_by_node_response resp;
+
+    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
+    {
+        resp.err = err;
+    }
+    else
+    {
+        _state->query_configuration_by_node(req, resp);
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = std::move(marshall_json(resp));
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+
 // table operations
 void meta_service::on_create_app(dsn_message_t req)
 {
     configuration_create_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->create_app(req);
+
+    configuration_create_app_request request;
+    unmarshall(req, request);
+    _state->create_app(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_drop_app(dsn_message_t req)
 {
     configuration_drop_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->drop_app(req);
+
+    configuration_drop_app_request request;
+    unmarshall(req, request);
+    _state->drop_app(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_list_apps(dsn_message_t req)
 {
     configuration_list_apps_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->list_apps(req);
+
+    configuration_list_apps_request request;
+    _state->list_apps(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_list_nodes(dsn_message_t req)
 {
     configuration_list_nodes_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->list_nodes(req);
+
+    configuration_list_nodes_request request;
+    _state->list_nodes(request, response);
+    reply(req, response);
 }
 
 // partition server & client => meta server

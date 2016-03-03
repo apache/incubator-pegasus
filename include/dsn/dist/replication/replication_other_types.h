@@ -149,10 +149,22 @@ namespace dsn {
             JSON_DICT_ENTRIES(out, gpid, app_id, pidx);
         }
 
+        inline void json_encode(std::stringstream& out, const app_info& config)
+        {
+            JSON_DICT_ENTRIES(out, config, status, app_type, app_name, app_id, partition_count, package_id, is_stateful);
+        }
+
+
+        inline void json_encode(std::stringstream& out, const node_info& config)
+        {
+            JSON_DICT_ENTRIES(out, config, status, address);
+        }
+
         inline void json_encode(std::stringstream& out, const app_status& status)
         {
             out << "\"" << enum_to_string(status) << "\"";
         }
+
         inline bool is_partition_config_equal(const partition_configuration& pc1, const partition_configuration& pc2)
         {
             // last_drops is not considered into equality check
