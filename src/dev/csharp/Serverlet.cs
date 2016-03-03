@@ -98,7 +98,7 @@ namespace dsn.dev.csharp
                     handler(rms);
                 };
 
-            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
+            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
             lock (_handlers)
@@ -123,7 +123,7 @@ namespace dsn.dev.csharp
                 handler(rms, wms);    
             };
 
-            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
+            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
             lock (_handlers)
@@ -135,7 +135,7 @@ namespace dsn.dev.csharp
 
         protected bool UnregisterRpcHandler(TaskCode code)
         {
-            Native.dsn_rpc_unregiser_handler(code);
+            Native.dsn_rpc_unregiser_handler(code, IntPtr.Zero);
             bool r;
 
             lock (_handlers)

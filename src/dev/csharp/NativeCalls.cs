@@ -516,7 +516,7 @@ namespace dsn.dev.csharp
         // and msg_release_ref explicitly.
         //
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash);
+        public extern static dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash, UInt64 partition_hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_message_t dsn_msg_create_response(dsn_message_t request);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -546,9 +546,9 @@ namespace dsn.dev.csharp
     
         // rpc calls
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static bool          dsn_rpc_register_handler(dsn_task_code_t code, string name, dsn_rpc_request_handler_t cb, IntPtr param);
+        public extern static bool          dsn_rpc_register_handler(dsn_task_code_t code, string name, dsn_rpc_request_handler_t cb, IntPtr param, IntPtr layer1_app_context);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static IntPtr        dsn_rpc_unregiser_handler(dsn_task_code_t code);   // return IntPtr param on registration  
+        public extern static IntPtr        dsn_rpc_unregiser_handler(dsn_task_code_t code, IntPtr layer1_app_context);   // return IntPtr param on registration  
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

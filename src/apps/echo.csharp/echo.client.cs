@@ -12,6 +12,7 @@ namespace dsn.example
         public echoClient() { }
         ~echoClient() {}
 
+        public virtual UInt64 GetKeyPartitionHash(string req) { return 0; }
     
         // ---------- call echoHelper.RPC_ECHO_ECHO_PING ------------
         // - synchronous 
@@ -22,7 +23,7 @@ namespace dsn.example
             int hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash);
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash, GetKeyPartitionHash(val));
             s.Write(val);
             s.Flush();
             
@@ -49,7 +50,7 @@ namespace dsn.example
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING,timeout_milliseconds, request_hash);
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash, GetKeyPartitionHash(val));
             s.Write(val);
             s.Flush();
             
@@ -75,7 +76,7 @@ namespace dsn.example
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING,timeout_milliseconds, request_hash);
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash, GetKeyPartitionHash(val));
             s.Write(val);
             s.Flush();
             
