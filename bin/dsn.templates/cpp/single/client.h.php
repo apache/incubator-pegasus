@@ -18,6 +18,20 @@ public:
     <?=$svc->name?>_client(::dsn::rpc_address server) { _server = server; }
     <?=$svc->name?>_client() { }
     virtual ~<?=$svc->name?>_client() {}
+    
+    // from requests to partition index
+    // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
+<?php
+$keys = array();
+foreach ($svc->functions as $f)
+    $keys[$f->get_first_param()->get_cpp_type()] = 1;
+    
+    
+foreach ($keys as $k => $v)
+{
+    echo "    virtual uint64_t get_partition_hash(const ".$k."& key) { return 0; }".PHP_EOL;
+}
+?>
 
 <?php foreach ($svc->functions as $f) { ?>
  
@@ -30,7 +44,7 @@ public:
         )
     {
         ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, get_partition_hash(<?=$f->get_first_param()->name?>));
     }
 <?php    } else { ?>
     // - synchronous 
@@ -49,7 +63,9 @@ public:
                 nullptr,
                 empty_callback,
                 hash,
-                timeout
+                timeout,
+                0,
+                get_partition_hash(<?=$f->get_first_param()->name?>)
                 )
             );
     }
@@ -73,7 +89,8 @@ public:
                     std::forward<TCallback>(callback),
                     request_hash, 
                     timeout, 
-                    reply_hash
+                    reply_hash,
+                    get_partition_hash(<?=$f->get_first_param()->name?>)
                     );
     }
 <?php    }?>

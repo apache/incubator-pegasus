@@ -18,6 +18,20 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         public <?=$svc->name?>Client() { }
         ~<?=$svc->name?>Client() {}
 
+        // from requests to partition index
+    // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
+<?php
+$keys = array();
+foreach ($svc->functions as $f)
+    $keys[$f->get_first_param()->get_cpp_type()] = 1;
+    
+    
+foreach ($keys as $k => $v)
+{
+    echo "    public virtual UInt64 GetPartitionHash(".$k."& key) { return 0; }".PHP_EOL;
+}
+?>
+
     <?php foreach ($svc->functions as $f) { ?>
 
         // ---------- call <?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?> ------------
@@ -27,7 +41,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             int hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
             s.Write(<?=$f->get_first_param()->name?>);
             s.Flush();
             
@@ -42,7 +56,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             int hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
             s.Write(<?=$f->get_first_param()->name?>);
             s.Flush();
             
@@ -69,7 +83,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
             s.Write(<?=$f->get_first_param()->name?>);
             s.Flush();
             
@@ -95,7 +109,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
             s.Write(<?=$f->get_first_param()->name?>);
             s.Flush();
             
