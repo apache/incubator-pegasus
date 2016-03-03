@@ -168,6 +168,59 @@ namespace dsn
                 [this]{ this->check_apps(); },
                 std::chrono::milliseconds(30)
                 );
+
+
+            _cli_kill_partition = dsn_cli_app_register(
+                "kill_partition",
+                "kill_partition app_id partition_index",
+                "kill partition with its global partition id",
+                (void*)this,
+                [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+                {
+                    auto this_ = (daemon_s_service*)context;
+                    this_->on_kill_app_cli(context, argc, argv, reply);
+                },
+                [](dsn_cli_reply reply)
+                {
+                    std::string* s = (std::string*)reply.context;
+                    delete s;
+                }
+                );
+        }
+
+        void daemon_s_service::on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            error_code err = ERR_INVALID_PARAMETERS;
+            if (argc >= 2)
+            {
+                global_partition_id gpid;
+                gpid.app_id = atoi(argv[0]);
+                gpid.pidx = atoi(argv[1]);
+                std::shared_ptr<layer1_app_info> app = nullptr;
+                {
+                    ::dsn::service::zauto_write_lock l(_lock);
+                    auto it = _apps.find(gpid);
+                    if (it != _apps.end())
+                        app = it->second;
+                }
+
+                if (app == nullptr)
+                {
+                    err = ERR_OBJECT_NOT_FOUND;
+                }
+                else
+                {
+                    kill_app(std::move(app));
+                    err = ERR_OK;
+                }
+            }
+
+            std::string* resp_json = new std::string();
+            *resp_json = err.to_string();
+            reply->context = resp_json;
+            reply->message = (const char*)resp_json->c_str();
+            reply->size = resp_json->size();
+            return;
         }
 
         void daemon_s_service::close_service()
@@ -175,6 +228,9 @@ namespace dsn
             _app_check_timer->cancel(true);
             _fd->stop();
             this->unregister_rpc_handler(RPC_CONFIG_PROPOSAL);
+
+            dsn_cli_deregister(_cli_kill_partition);
+            _cli_kill_partition = nullptr;
         }
 
         void daemon_s_service::on_master_connected()

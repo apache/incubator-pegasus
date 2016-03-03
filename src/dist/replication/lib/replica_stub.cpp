@@ -52,7 +52,7 @@ using namespace dsn::service;
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr)
+    : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr), _cli_kill_partition(nullptr)
 {    
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -338,6 +338,35 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     {
         _state = NS_Connected;
     }
+}
+
+void replica_stub::on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    error_code err = ERR_INVALID_PARAMETERS;
+    if (argc >= 2)
+    {
+        global_partition_id gpid;
+        gpid.app_id = atoi(argv[0]);
+        gpid.pidx = atoi(argv[1]);
+
+        replica_ptr r = get_replica(gpid.app_id, gpid.pidx);
+        if (r == nullptr)
+        {
+            err = ERR_OBJECT_NOT_FOUND;
+        }
+        else
+        {
+            r->inject_error(ERR_INJECTED);
+            err = ERR_OK;
+        }
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = err.to_string();
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
 }
 
 replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_possible, const char* app_type)
@@ -1236,6 +1265,23 @@ void replica_stub::open_service()
     _cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
         this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
     dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");
+
+    _cli_kill_partition = dsn_cli_app_register(
+        "kill_partition",
+        "kill_partition app_id partition_index",
+        "kill partition with its global partition id",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (replica_stub*)context;
+            this_->on_kill_app_cli(context, argc, argv, reply);
+        },
+        [](dsn_cli_reply reply)
+        {
+            std::string* s = (std::string*)reply.context;
+            delete s;
+        }
+    );
 }
 
 void replica_stub::close()
@@ -1249,7 +1295,9 @@ void replica_stub::close()
     }
 
     dsn_cli_deregister(_cli_replica_stub_json_state_handle);
+    dsn_cli_deregister(_cli_kill_partition);
     _cli_replica_stub_json_state_handle = nullptr;
+    _cli_kill_partition = nullptr;
 
     if (_config_sync_timer_task != nullptr)
     {

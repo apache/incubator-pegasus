@@ -160,6 +160,7 @@ private:
     void handle_log_failure(error_code err);
 
     void install_perf_counters();
+    void on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
 
 private:
     friend class ::dsn::replication::replication_checker;    
@@ -191,6 +192,7 @@ private:
 
     //cli handle, for deregister cli command
     dsn_handle_t    _cli_replica_stub_json_state_handle;
+    dsn_handle_t    _cli_kill_partition;
 
     // performance counters
     perf_counter_    _counter_replicas_count;

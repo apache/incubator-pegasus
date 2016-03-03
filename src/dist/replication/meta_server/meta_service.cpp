@@ -193,7 +193,7 @@ void meta_service::register_rpc_handlers()
         &meta_service::on_balancer_proposal);
 
 
-    dsn_cli_app_register(
+    _cli_create_app = dsn_cli_app_register(
         "create_app",
         "create app on meta server (in json format)",
         "create app on meta server and auto-deployed in cluster",
@@ -206,7 +206,7 @@ void meta_service::register_rpc_handlers()
         __svc_cli_freeer__
         );
 
-    dsn_cli_app_register(
+    _cli_drop_app = dsn_cli_app_register(
         "drop_app",
         "drop app on meta server (in json format)",
         "drop app on meta server and auto-undeployed in cluster",
@@ -219,7 +219,7 @@ void meta_service::register_rpc_handlers()
         __svc_cli_freeer__
         );
 
-    dsn_cli_app_register(
+    _cli_list_apps = dsn_cli_app_register(
         "list_apps",
         "list apps on meta server (in json format)",
         "list apps and their status on meta server",
@@ -232,7 +232,7 @@ void meta_service::register_rpc_handlers()
         __svc_cli_freeer__
         );
 
-    dsn_cli_app_register(
+    _cli_list_nodes = dsn_cli_app_register(
         "list_nodes",
         "list nodes on meta server (in json format)",
         "list nodes and their status on meta server",
@@ -245,7 +245,7 @@ void meta_service::register_rpc_handlers()
         __svc_cli_freeer__
         );
 
-    dsn_cli_app_register(
+    _cli_query_config_by_app = dsn_cli_app_register(
         "query_config_by_app",
         "query app configurations on meta server (in json format)",
         "query app configurations on meta server with app id",
@@ -258,7 +258,7 @@ void meta_service::register_rpc_handlers()
         __svc_cli_freeer__
         );
 
-    dsn_cli_app_register(
+    _cli_query_config_by_node = dsn_cli_app_register(
         "query_config_by_node",
         "query apps on one node (in json format)",
         "query apps on one node with node address",
@@ -284,6 +284,13 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_DROP_APP);
     unregister_rpc_handler(RPC_CM_CONTROL_BALANCER_MIGRATION);
     unregister_rpc_handler(RPC_CM_BALANCER_PROPOSAL);
+        
+    dsn_cli_deregister(_cli_create_app);
+    dsn_cli_deregister(_cli_drop_app);
+    dsn_cli_deregister(_cli_list_apps);
+    dsn_cli_deregister(_cli_list_nodes);
+    dsn_cli_deregister(_cli_query_config_by_app);
+    dsn_cli_deregister(_cli_query_config_by_node);
 
     if (_balancer_timer != nullptr)
     {

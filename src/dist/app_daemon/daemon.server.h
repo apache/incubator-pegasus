@@ -90,6 +90,7 @@ namespace dsn
             uint32_t    _app_port_min; // inclusive
             uint32_t    _app_port_max; // inclusive
             task_ptr _app_check_timer;
+            dsn_handle_t _cli_kill_partition;
             
 # ifdef _WIN32
             HANDLE   _job; ///< manage all procs which exits when job dies
@@ -112,6 +113,8 @@ namespace dsn
                 );
 
             void check_apps();
+
+            void on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
         };
     }
 }
