@@ -9,9 +9,8 @@ namespace dsn.dev.csharp
         {
             byte[] bytes = new byte[rs.Length];
             rs.Read(bytes, 0, bytes.Length);
-            char[] chars = new char[bytes.Length / sizeof(char)];
-            System.Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
-            string jstr = new string(chars);
+
+            string jstr = System.Text.Encoding.ASCII.GetString(bytes);
             JsonParser jparser = JsonParser.Default;
             val = jparser.Parse<T>(jstr);
         }
@@ -20,8 +19,8 @@ namespace dsn.dev.csharp
         {
             JsonFormatter jformatter = JsonFormatter.Default;
             string jstr = jformatter.Format(val);
-            byte[] bytes = new byte[jstr.Length * sizeof(char)];
-            System.Buffer.BlockCopy(jstr.ToCharArray(), 0, bytes, 0, bytes.Length);
+            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(jstr);
+                        
             ws.Write(bytes, 0, bytes.Length);
             ws.Flush();
         }
