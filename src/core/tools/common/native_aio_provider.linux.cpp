@@ -140,7 +140,7 @@ namespace dsn {
                 }
                 else
                 {
-                    dwarn("io_getevents returns %d, you probably want to try on another machine:-(", ret);
+                    //dwarn("io_getevents returns %d, you probably want to try on another machine:-(", ret);
                 }
             }
         }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.7)
 
-set(DSN_SERIALIZATION_TYPE "default")
+set(DSN_SERIALIZATION_TYPE "thrift")
 
 if(DSN_SERIALIZATION_TYPE STREQUAL "default")
     message(STATUS "use default serialization method")

@@ -104,6 +104,7 @@ namespace dsn {
 
                     while (msg != nullptr)
                     {
+                        msg->header->from_address = _remote_addr;
                         this->on_message_read(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }

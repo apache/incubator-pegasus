@@ -31,12 +31,14 @@
  * Revision history:
  *     xxxx-xx-xx, author, first version
  *     2016-02-24, Weijie Sun(sunweijie[at]xiaomi.com), add support for serialization in thrift
+ *     2016-03-01, Weijie Sun(sunweijie[at]xiaomi.com), add support for rpc in thrift
  */
 
 # pragma once
 
 # include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
+# include <dsn/cpp/rpc_stream.h>
 
 # include <thrift/Thrift.h>
 # include <thrift/protocol/TBinaryProtocol.h>
@@ -190,7 +192,6 @@ namespace dsn {
             marshall_base(oprot, *iter);
         }
         xfer += oprot->writeListEnd();
-        xfer += oprot->writeFieldStop();
         xfer += oprot->writeFieldEnd();
     }
 
@@ -223,10 +224,10 @@ namespace dsn {
         return xfer;
     }
 
-    inline const char* to_string(const rpc_address& addr) { return ""; }
+    inline const char* to_string(const rpc_address& addr) { return addr.to_string(); }
     inline const char* to_string(const blob& blob) { return ""; }
-    inline const char* to_string(const task_code& code) { return ""; }
-    inline const char* to_string(const error_code& ec) { return ""; }
+    inline const char* to_string(const task_code& code) { return code.to_string(); }
+    inline const char* to_string(const error_code& ec) { return ec.to_string(); }
 
     template<typename T>
     class serialization_forwarder
@@ -284,12 +285,44 @@ namespace dsn {
         return serialization_forwarder<TName>::unmarshall(iproto, val);
     }
 
+#define GET_THRIFT_TYPE_MACRO(cpp_type, thrift_type) \
+    inline ::apache::thrift::protocol::TType get_thrift_type(const cpp_type&)\
+    {\
+        return ::apache::thrift::protocol::thrift_type;\
+    }\
+
+    GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
+    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
+    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
+    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
+    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
+
+    template<typename T>
+    inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
+    {
+        return ::apache::thrift::protocol::T_LIST;
+    }
+
+    template<typename T>
+    inline ::apache::thrift::protocol::TType get_thrift_type(const T&)
+    {
+        return ::apache::thrift::protocol::T_STRUCT;
+    }
+
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        proto.writeFieldBegin("args", get_thrift_type(val), (*writer._p_value_id)++);
         marshall_base<T>(&proto, val);
+        proto.writeFieldEnd();
     }
 
     template<typename T>
@@ -297,7 +330,16 @@ namespace dsn {
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        unmarshall_base<T>(&proto, val);
+
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+
+        proto.readFieldBegin(fname, ftype, fid);
+        if (ftype == get_thrift_type(val))
+            unmarshall_base<T>(&proto, val);
+        else
+            proto.skip(ftype);
     }
 
     inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
@@ -357,144 +399,148 @@ namespace dsn {
         return oprot->writeString(ec_string);
     }
 
-    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
+    typedef union
+    {
+        struct {
+            uint64_t is_forward_msg_disabled: 1;
+            uint64_t is_replication_needed: 1;
+            uint64_t unused: 63;
+        }u;
+        uint64_t o;
+    }dsn_thrift_header_options;
 
-    class thrift_binary_message_parser : public message_parser
+    struct dsn_thrift_header
+    {
+        int32_t hdr_type;
+        int32_t hdr_crc32;
+        int32_t total_length;
+        int32_t body_offset;
+        dsn_thrift_header_options opt;
+    };
+
+    class thrift_header_parser
     {
     public:
-        static void register_parser()
+        static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data)
         {
-            ::dsn::tools::register_message_header_parser<thrift_binary_message_parser>(NET_HDR_THRIFT);
+            dsn::blob message_content = message_data.range(header->body_offset);
+            dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(message_content);
+            dsn::message_header* dsn_hdr = msg->header;
+
+            dsn::rpc_read_stream stream(msg);
+            boost::shared_ptr< ::dsn::binary_reader_transport > input_trans(new ::dsn::binary_reader_transport( stream ));
+            ::apache::thrift::protocol::TBinaryProtocol iprot(input_trans);
+
+            std::string fname;
+            ::apache::thrift::protocol::TMessageType mtype;
+            int32_t seqid;
+            iprot.readMessageBegin(fname, mtype, seqid);
+
+            dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
+            memset(dsn_hdr, 0, sizeof(*dsn_hdr));
+            dsn_hdr->hdr_type = hdr_dsn_thrift;
+            dsn_hdr->body_length = header->total_length - header->body_offset;
+            std::size_t pos = fname.find_first_of('@');
+            if (pos == std::string::npos)
+                pos = 0;
+
+            strncpy(dsn_hdr->rpc_name, fname.c_str()+pos+1, DSN_MAX_TASK_CODE_NAME_LENGTH);
+            strncpy(msg->_remote_rpc_name, fname.c_str(), pos);
+
+            if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
+                dsn_hdr->context.u.is_request = 1;
+
+            dsn_hdr->id = seqid;
+            dsn_hdr->context.u.is_replication_needed = header->opt.u.is_replication_needed;
+            dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
+
+            iprot.readStructBegin(fname);
+            return msg;
         }
 
-    private:
-        // only one concurrent write message for each parser, so
-        char _write_buffer_for_header[512];
-
-    public:
-        thrift_binary_message_parser(int buffer_block_size, bool is_write_only)
-            : message_parser(buffer_block_size, is_write_only)
+        static void add_prefix_for_thrift_response(message_ex* msg)
         {
-        }
+            dsn::rpc_write_stream write_stream(msg);
+            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
+            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
 
-        //fixme
-        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override
-        {
-            return 0;
-        }
+            // remove the "_ACK" postfix
+            std::string call_rpc_name = std::string(msg->_remote_rpc_name) + "@" + std::string(msg->header->rpc_name);
+            call_rpc_name.erase(call_rpc_name.length() - 4);
 
-        int prepare_buffers_on_send(message_ex* msg, /*out*/ std::vector<blob>& buffers)
-        {
-            // prepare head
-            blob bb(_write_buffer_for_header, 0, 512);
-            binary_writer writer(bb);
-            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-            ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-
-            // FIXME:
-            auto sp = task_spec::get(msg->header->rpc_id);
-
-            proto.writeMessageBegin(msg->header->rpc_name,
-                sp->type == TASK_TYPE_RPC_REQUEST ?
-                ::apache::thrift::protocol::T_CALL :
-                ::apache::thrift::protocol::T_REPLY,
-                (int32_t)msg->header->id
-                );
-
-            // patched end (writeMessageEnd)
-            // no need for now as no data is written
-
-            // finalize
-            std::vector<blob> lbuffers;
-            //FIXME:
-            //msg->writer().get_buffers(lbuffers);
-            if (lbuffers[0].length() == sizeof(message_header))
+            msg_proto.writeMessageBegin(call_rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
+            msg_proto.writeStructBegin(""); //resp args
+            if (msg->header->context.u.is_response_in_piece)
             {
-                lbuffers[0] = writer.get_buffer();
-                buffers = lbuffers;
+                msg_proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
+                msg_proto.writeStructBegin("");
             }
-            else
-            {
-                dassert(lbuffers[0].length() > sizeof(message_header), "");
-                buffers.resize(lbuffers.size() + 1);
-                buffers[0] = writer.get_buffer();
-
-                for (int i = 0; i < static_cast<int>(lbuffers.size()); i++)
-                {
-                    if (i == 0)
-                    {
-                        buffers[1] = lbuffers[0].range(sizeof(message_header));
-                    }
-                    else
-                    {
-                        buffers[i + 1] = lbuffers[i];
-                    }
-                }
-            }
-
-            //FIXME:
-            return 0;
         }
 
-        virtual int get_send_buffers_count_and_total_length(message_ex *msg, int *total_length)
+        static void add_postfix_for_thrift_response(message_ex* msg)
         {
-            return 0;
+            dsn::rpc_write_stream write_stream(msg);
+            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
+            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+
+            if (msg->header->context.u.is_response_in_piece)
+            {
+                msg_proto.writeFieldStop(); // for all pieces
+                msg_proto.writeStructEnd(); // matched with line 484
+            }
+            //after all fields, write a field stop
+            msg_proto.writeFieldStop();
+            //writestruct end, this is because all thirft returing values are in a struct
+            msg_proto.writeStructEnd();
+            //write message end, which indicate the end of a thrift message
+            msg_proto.writeMessageEnd();
         }
 
-        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override
+        static void adjust_thrift_response(message_ex* msg)
         {
-            mark_read(read_length);
+            dassert(msg->_resp_adjusted==false, "we have adjusted this");
 
-            if (_read_buffer_occupied < 10)
+            msg->_resp_adjusted = true;
+            add_postfix_for_thrift_response(msg);
+        }
+
+        static int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/message_parser::send_buf* buffers)
+        {
+            if ( !msg->_resp_adjusted )
+                adjust_thrift_response(msg);
+
+            dassert(!msg->buffers.empty(), "buffers is not possible to be empty");
+
+            // we ignore header for thrift resp
+            offset += sizeof(message_header);
+
+            int count=0;
+            //ignore the msg header
+            for (unsigned int i=0; i!=msg->buffers.size(); ++i)
             {
-                read_next = 128;
-                return nullptr;
-            }
-
-            try
-            {
-                blob bb = _read_buffer.range(0, _read_buffer_occupied);
-                binary_reader reader(bb);
-                boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-                ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-
-                int32_t rseqid = 0;
-                std::string fname;
-                ::apache::thrift::protocol::TMessageType mtype;
-
-                proto.readMessageBegin(fname, mtype, rseqid);
-                int hdr_sz = _read_buffer_occupied - reader.get_remaining_size();
-
-                if (mtype == ::apache::thrift::protocol::T_EXCEPTION)
+                blob& bb = msg->buffers[i];
+                if (offset >= bb.length())
                 {
-                    proto.skip(::apache::thrift::protocol::T_STRUCT);
-                }
-                else
-                {
-                    proto.skip(::apache::thrift::protocol::T_STRUCT);
+                    offset -= bb.length();
+                    continue;
                 }
 
-                proto.readMessageEnd();
-                proto.getTransport()->readEnd();
-
-                // msg done
-                int msg_sz = _read_buffer_occupied - reader.get_remaining_size() - hdr_sz;
-                auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
-                message_ex* msg = message_ex::create_receive_message(msg_bb);
-                msg->header->id = msg->header->rpc_id = rseqid;
-                strncpy(msg->header->rpc_name, fname.c_str(), sizeof(msg->header->rpc_name));
-                msg->header->body_length = msg_sz;
-
-                _read_buffer = _read_buffer.range(msg_sz + hdr_sz);
-                _read_buffer_occupied -= (msg_sz + hdr_sz);
-                read_next = 128;
-                return msg;
+                buffers[count].buf = (void*)(bb.data() + offset);
+                buffers[count].sz = (uint32_t)(bb.length() - offset);
+                offset = 0;
+                ++count;
             }
-            catch (TTransportException& ex)
-            {
-                ex;
-                return nullptr;
-            }
+            return count;
+        }
+
+        static int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/int* total_length)
+        {
+            if ( !msg->_resp_adjusted )
+                adjust_thrift_response(msg);
+
+            // when send thrift message, we ignore the header
+            *total_length = msg->header->body_length;
+            return msg->buffers.size();
         }
     };
 }

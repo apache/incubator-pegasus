@@ -536,7 +536,9 @@ typedef union dsn_msg_context_t
         uint64_t is_request : 1;           ///< whether the RPC message is a request or response
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
         uint64_t is_replication_needed: 1; ///< whether state replication is needed for this request
-        uint64_t unused : 8;               ///< not used yet
+        uint64_t is_response_in_piece: 1;  ///< set when a response is marshalled in different place
+        uint64_t is_forward_disabled: 1;   ///< whether forward a message to real leader
+        uint64_t unused : 6;               ///< not used yet
         uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;

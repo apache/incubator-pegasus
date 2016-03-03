@@ -63,8 +63,12 @@ namespace dsn
                              // we leverage for optimization (fast rpc handler lookup)
     };
 
+#define hdr_dsn_default 0x44464c54
+#define hdr_dsn_thrift  0x54484654
+
     typedef struct message_header
     {
+        int32_t        hdr_type;
         int32_t        hdr_crc32;
         int32_t        body_crc32;
         int32_t        body_length;
@@ -155,6 +159,13 @@ namespace dsn
         void* rw_ptr(size_t offset_begin);
         void seal(bool crc_required);
 
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+    public:
+        //this is used to count the marshalling content, useful for other serialization method, eg. thirft
+        int _value_id;
+        bool _resp_adjusted;
+        char _remote_rpc_name[DSN_MAX_ADDRESS_NAME_LENGTH];
+#endif
     private:
         message_ex();
         void prepare_buffer_header();
