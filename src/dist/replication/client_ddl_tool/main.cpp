@@ -6,7 +6,7 @@ using namespace dsn::replication;
 void usage(char* exe)
 {
     std::cout << "Usage:" << std::endl;
-    std::cout << "\t" << exe << " <config.ini> create_app -name <app_name> -type <app_type> [-pc partition_count] [-rc replication_count]" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> create_app -name <app_name> -type <app_type> [-pc partition_count] [-rc replication_count] [-pid package_id] [-stateless]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> drop_app -name <app_name>" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_apps [-status <all|available|creating|creating_failed|dropping|dropping_failed|dropped>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_nodes [-status <all|alive|unalive>] [-o <out_file>]" << std::endl;
@@ -45,6 +45,8 @@ int main(int argc, char** argv)
     std::string status;
     bool detailed = false;
     std::string out_file;
+    bool is_stateless = false;
+    std::string package_id;
 
     for(int index = 3; index < argc; index++)
     {
@@ -83,6 +85,16 @@ int main(int argc, char** argv)
             out_file = argv[++index];
             std::cout << "out to file:" << out_file <<std::endl;
         }
+        else if (strcmp(argv[index], "-pid") == 0 && argc > index)
+        {
+            package_id.assign(argv[++index]);
+            std::cout << "package_id:" << package_id << std::endl;
+        }
+        else if (strcmp(argv[index], "-stateless") == 0)
+        {
+            is_stateless = true;
+            std::cout << "is_stateless:" << is_stateless << std::endl;
+        }
     }
 
     if(init_environment(argv[0], argv[1]) < 0)
@@ -99,7 +111,7 @@ int main(int argc, char** argv)
     if (command == "create_app") {
         if(app_name.empty() || app_type.empty())
             usage(argv[0]);
-        dsn::error_code err = client.create_app(app_name, app_type, partition_count, replica_count);
+        dsn::error_code err = client.create_app(app_name, app_type, partition_count, replica_count, package_id, is_stateless);
         if(err == dsn::ERR_OK)
             std::cout << "create app:" << app_name << " succeed" << std::endl;
         else

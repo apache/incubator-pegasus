@@ -43,11 +43,11 @@
 
 # include "replication_common.h"
 # include <dsn/cpp/perf_counter_.h>
+# include <dsn/dist/failure_detector_multimaster.h>
 
 namespace dsn { namespace replication {
 
 class mutation_log;
-class replication_failure_detector;
 class replication_checker;
 namespace test {
     class test_checker;
@@ -176,7 +176,7 @@ private:
     mutation_log_ptr            _log;
     ::dsn::rpc_address          _primary_address;
 
-    replication_failure_detector *_failure_detector;
+    ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;
     volatile replica_node_state   _state;
 
     // constants

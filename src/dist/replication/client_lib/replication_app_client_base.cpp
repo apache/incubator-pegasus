@@ -46,7 +46,7 @@ using namespace ::dsn::service;
 
 /*static*/void replication_app_client_base::load_meta_servers(
     /*out*/ std::vector<dsn::rpc_address>& servers,
-    const char* section /*= "replication.meta_servers"*/)
+    const char* section /*= "meta_servers"*/)
 {
     // read meta_servers from machine list file
     servers.clear();

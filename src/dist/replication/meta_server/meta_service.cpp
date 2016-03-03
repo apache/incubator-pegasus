@@ -105,7 +105,7 @@ error_code meta_service::start()
     const char* server_load_balancer = dsn_config_get_value_string(
         "meta_server",
         "server_load_balancer_type",
-        "simple_stateful_load_balancer",
+        "simple_load_balancer",
         "server_load_balancer provider type"
         );
     
@@ -345,7 +345,8 @@ void meta_service::on_update_configuration(dsn_message_t req)
     }
   
     global_partition_id gpid = request->config.gpid;
-    _state->update_configuration(request, req, [this, gpid, request](){
+    _state->update_configuration(request, req, [this, gpid, request]() mutable
+    {
         if (_started)
         {
             _balancer->on_config_changed(request);
@@ -357,7 +358,8 @@ void meta_service::on_update_configuration(dsn_message_t req)
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
     global_partition_id gpid = update->config.gpid;
-    _state->update_configuration(update, nullptr, [this, gpid, update](){
+    _state->update_configuration(update, nullptr, [this, gpid, update]() mutable
+    {
         if (_started)
         {
             _balancer->on_config_changed(update);

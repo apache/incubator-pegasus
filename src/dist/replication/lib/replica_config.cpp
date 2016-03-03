@@ -37,7 +37,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "replication_failure_detector.h"
 
 # ifdef __TITLE__
 # undef __TITLE__

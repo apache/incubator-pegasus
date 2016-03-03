@@ -26,6 +26,7 @@ set(MY_PROJ_LIBS gtest
                  dsn.replication
                  dsn.replication.meta_server
                  dsn.replication.clientlib
+                 dsn.failure_detector.multimaster
                  dsn.failure_detector
                  dsn.replication.zookeeper_provider
                  zookeeper_mt

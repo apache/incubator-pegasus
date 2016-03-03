@@ -98,7 +98,7 @@ void replication_options::read_meta_servers()
 
     const char* server_ss[10];
     int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys("replication.meta_servers", server_ss, &capacity);
+    need_count = dsn_config_get_all_keys("meta_servers", server_ss, &capacity);
     dassert(need_count <= capacity, "too many meta servers specified");
 
     std::ostringstream oss;

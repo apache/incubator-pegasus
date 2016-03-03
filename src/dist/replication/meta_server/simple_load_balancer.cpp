@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "simple_stateful_load_balancer.h"
+#include "simple_load_balancer.h"
 #include <algorithm>
 
 # ifdef __TITLE__
@@ -41,17 +41,17 @@
 # endif
 # define __TITLE__ "load.balancer"
 
-simple_stateful_load_balancer::simple_stateful_load_balancer(server_state* state):
+simple_load_balancer::simple_load_balancer(server_state* state):
     ::dsn::dist::server_load_balancer(state),
-    serverlet<simple_stateful_load_balancer>("simple_stateful_load_balancer")
+    serverlet<simple_load_balancer>("simple_load_balancer")
 {
 }
 
-simple_stateful_load_balancer::~simple_stateful_load_balancer()
+simple_load_balancer::~simple_load_balancer()
 {
 }
 
-void simple_stateful_load_balancer::run()
+void simple_load_balancer::run()
 {
     if (s_disable_lb) return;
 
@@ -65,21 +65,21 @@ void simple_stateful_load_balancer::run()
         for (int j = 0; j < app.partition_count; j++)
         {
             partition_configuration& pc = app.partitions[j];
-            run_lb(pc);
+            run_lb(pc, app.is_stateful);
         }
     }
 }
 
-void simple_stateful_load_balancer::run(global_partition_id gpid)
+void simple_load_balancer::run(global_partition_id gpid)
 {
     if (s_disable_lb) return;
 
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
-    run_lb(pc);
+    run_lb(pc, _state->_apps[gpid.app_id - 1].is_stateful);
 }
 
-::dsn::rpc_address simple_stateful_load_balancer::find_minimal_load_machine(bool primaryOnly)
+::dsn::rpc_address simple_load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
     std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
@@ -121,75 +121,114 @@ void simple_stateful_load_balancer::run(global_partition_id gpid)
     return stats[dsn_random32(0, candidate_count - 1)].first;
 }
 
-void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
+void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
 {
     if (_state->freezed())
         return;
 
     configuration_update_request proposal;
     proposal.config = pc;
+    proposal.is_stateful = is_stateful;
 
-    if (pc.primary.is_invalid())
+    if (is_stateful)
     {
-        if (pc.secondaries.size() > 0)
+        if (pc.primary.is_invalid())
         {
-            if (s_lb_for_test)
+            if (pc.secondaries.size() > 0)
             {
-                std::vector< ::dsn::rpc_address> tmp(pc.secondaries);
-                std::sort(tmp.begin(), tmp.end());
-                proposal.node = tmp[0];
+                if (s_lb_for_test)
+                {
+                    std::vector< ::dsn::rpc_address> tmp(pc.secondaries);
+                    std::sort(tmp.begin(), tmp.end());
+                    proposal.node = tmp[0];
+                }
+                else
+                {
+                    proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+                }
+                proposal.type = CT_UPGRADE_TO_PRIMARY;
             }
+
+            else if (pc.last_drops.size() == 0)
+            {
+                proposal.node = find_minimal_load_machine(true);
+                proposal.type = CT_ASSIGN_PRIMARY;
+            }
+
+            // DDD
             else
             {
-                proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+                proposal.node = *pc.last_drops.rbegin();
+                proposal.type = CT_ASSIGN_PRIMARY;
+
+                derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                    pc.app_type.c_str(),
+                    pc.gpid.app_id,
+                    pc.gpid.pidx,
+                    proposal.node.to_string()
+                    );
             }
-            proposal.type = CT_UPGRADE_TO_PRIMARY;
+
+            if (proposal.node.is_invalid() == false)
+            {
+                send_proposal(proposal.node, proposal);
+            }
         }
 
-        else if (pc.last_drops.size() == 0)
+        else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
         {
-            proposal.node = find_minimal_load_machine(true);
-            proposal.type = CT_ASSIGN_PRIMARY;
+            proposal.type = CT_ADD_SECONDARY;
+            proposal.node = find_minimal_load_machine(false);
+            if (proposal.node.is_invalid() == false &&
+                proposal.node != pc.primary &&
+                std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
+            {
+                send_proposal(pc.primary, proposal);
+            }
         }
-
-        // DDD
         else
         {
-            proposal.node = *pc.last_drops.rbegin();
-            proposal.type = CT_ASSIGN_PRIMARY;
-
-            derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                pc.app_type.c_str(),
-                pc.gpid.app_id,
-                pc.gpid.pidx,
-                proposal.node.to_string()
-                );
-        }
-
-        if (proposal.node.is_invalid() == false)
-        {
-            send_proposal(proposal.node, proposal);
+            // it is healthy, nothing to do
         }
     }
-
-    else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
-    {
-        proposal.type = CT_ADD_SECONDARY;
-        proposal.node = find_minimal_load_machine(false);
-        if (proposal.node.is_invalid() == false && 
-            proposal.node != pc.primary &&
-            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
-        {
-            send_proposal(pc.primary, proposal);
-        }
-    }
+    
+    // stateless
     else
     {
-        // it is healthy, nothing to do
+        partition_configuration_stateless pcs(pc);
+
+        if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
+        {
+            proposal.type = CT_ADD_SECONDARY;
+            proposal.node = find_minimal_load_machine(false);
+            if (proposal.node.is_invalid() == false)
+            {
+                bool send = true;
+
+                //for (auto& s : pc.secondaries)
+                //{
+                //    // not on the same machine
+                //    if (s.ip() == proposal.node.ip())
+                //    {
+                //        send = false;
+                //        break;
+                //    }
+                //}
+
+                if (send)
+                {
+                    send_proposal(proposal.node, proposal);
+                }
+            }
+        }
+        else
+        {
+            // it is healthy, nothing to do
+        }
     }
 }
 
-void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
+void simple_load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
 {
     rpc::call(
         query->node,
@@ -205,11 +244,11 @@ void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_d
         gpid_to_hash(query->gpid), std::chrono::seconds(3));
 }
 
-void simple_stateful_load_balancer::on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp)
+void simple_load_balancer::on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp)
 {
     if (err != ERR_OK)
     {
-        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, std::chrono::seconds(1));
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_load_balancer::query_decree, this, query), 0, std::chrono::seconds(1));
     }
     else
     {

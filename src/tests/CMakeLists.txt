@@ -29,6 +29,7 @@ set(MY_PROJ_LIBS
     dsn.replication.meta_server
     dsn.replication
     dsn.replication.clientlib
+    dsn.failure_detector.multimaster
     dsn.failure_detector
     dsn.replication.zookeeper_provider
     zookeeper_mt

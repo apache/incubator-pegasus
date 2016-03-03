@@ -41,3 +41,37 @@
 # include <dsn/dist/replication/replication_service_app.h>
 
 
+
+namespace dsn
+{
+    namespace replication 
+    {
+
+        inline bool operator < (const global_partition_id& l, const global_partition_id& r)
+        {
+            return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
+        }
+
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+        inline bool operator == (const global_partition_id& l, const global_partition_id& r)
+        {
+            return l.app_id == r.app_id && l.pidx == r.pidx;
+        }
+#endif
+
+        inline int gpid_to_hash(global_partition_id gpid)
+        {
+            return static_cast<int>(gpid.app_id ^ gpid.pidx);
+        }
+    }
+}
+
+namespace std
+{
+    template<>
+    struct hash< ::dsn::replication::global_partition_id> {
+        size_t operator()(const ::dsn::replication::global_partition_id &gpid) const {
+            return std::hash<int>()(gpid.app_id) ^ std::hash<int>()(gpid.pidx);
+        }
+    };
+}

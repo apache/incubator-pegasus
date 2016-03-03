@@ -511,7 +511,7 @@ void greedy_load_balancer::run()
         for (int j = 0; j < app.partition_count; j++)
         {
             partition_configuration& pc = app.partitions[j];
-            is_system_healthy = (run_lb(pc) && is_system_healthy);
+            is_system_healthy = (run_lb(pc, app.is_stateful) && is_system_healthy);
         }
         total_replicas += app.partition_count;
     }
@@ -523,7 +523,7 @@ void greedy_load_balancer::run()
     }
 }
 
-void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_update_request> request)
+void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_update_request>& request)
 {
     std::unordered_map<global_partition_id, balancer_proposal_request>::iterator it;
     global_partition_id& gpid = request->config.gpid;
@@ -583,7 +583,7 @@ void greedy_load_balancer::run(global_partition_id gpid)
 {
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id-1].partitions[gpid.pidx];
-    run_lb(pc);
+    run_lb(pc, _state->_apps[gpid.app_id -1].is_stateful);
 }
 
 dsn::rpc_address greedy_load_balancer::find_minimal_load_machine(bool primaryOnly)
@@ -661,7 +661,7 @@ dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration
     return result;
 }
 
-bool greedy_load_balancer::run_lb(partition_configuration &pc)
+bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
 {
     if (_state->freezed())
     {
@@ -673,79 +673,117 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary.is_invalid())
+    if (is_stateful)
     {
-        if (pc.secondaries.size() > 0)
+        if (pc.primary.is_invalid())
         {
-            proposal.node = recommend_primary(pc);
-            proposal.type = CT_UPGRADE_TO_PRIMARY;
-
-            if (proposal.node.is_invalid())
+            if (pc.secondaries.size() > 0)
             {
-                derror("all replicas has been died");
+                proposal.node = recommend_primary(pc);
+                proposal.type = CT_UPGRADE_TO_PRIMARY;
+
+                if (proposal.node.is_invalid())
+                {
+                    derror("all replicas has been died");
+                }
+            }
+            else if (pc.last_drops.size() == 0)
+            {
+                proposal.node = recommend_primary(pc);
+                proposal.type = CT_ASSIGN_PRIMARY;
+            }
+            // DDD
+            else
+            {
+                proposal.node = *pc.last_drops.rbegin();
+                proposal.type = CT_ASSIGN_PRIMARY;
+
+                derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                    pc.app_type.c_str(),
+                    pc.gpid.app_id,
+                    pc.gpid.pidx,
+                    proposal.node.to_string()
+                    );
+            }
+
+            if (proposal.node.is_invalid() == false)
+            {
+                send_proposal(proposal.node, proposal);
+            }
+
+            return false;
+        }
+        else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
+        {
+            proposal.type = CT_ADD_SECONDARY;
+            proposal.node = find_minimal_load_machine(false);
+            if (proposal.node.is_invalid() == false &&
+                proposal.node != pc.primary &&
+                std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
+            {
+                send_proposal(pc.primary, proposal);
+            }
+            return false;
+        }
+        //we have too many secondaries, let's do remove
+        else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
+        {
+            auto iter = _balancer_proposals_map.find(pc.gpid);
+            if (iter != _balancer_proposals_map.end() && iter->second.type == BT_MOVE_PRIMARY)
+                return true;
+            int target = 0;
+            int load = _state->_nodes[pc.secondaries.front()].partitions.size();
+            for (int i = 1; i<pc.secondaries.size(); ++i)
+            {
+                int l = _state->_nodes[pc.secondaries[i]].partitions.size();
+                if (l > load)
+                {
+                    load = l;
+                    target = i;
+                }
+            }
+
+            proposal.type = CT_REMOVE;
+            proposal.node = pc.secondaries[target];
+            send_proposal(pc.primary, proposal);
+            return false;
+        }
+        else
+            return true;
+    }
+
+    // stateless
+    else
+    {
+        partition_configuration_stateless pcs(pc);
+
+        if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
+        {
+            proposal.type = CT_ADD_SECONDARY;
+            proposal.node = find_minimal_load_machine(false);
+            if (proposal.node.is_invalid() == false)
+            {
+                bool send = true;
+
+                //for (auto& s : pc.secondaries)
+                //{
+                //    // not on the same machine
+                //    if (s.ip() == proposal.node.ip())
+                //    {
+                //        send = false;
+                //        break;
+                //    }
+                //}
+
+                if (send)
+                {
+                    send_proposal(proposal.node, proposal);
+                }
             }
         }
-        else if (pc.last_drops.size() == 0)
-        {
-            proposal.node = recommend_primary(pc);
-            proposal.type = CT_ASSIGN_PRIMARY;
-        }
-        // DDD
         else
         {
-            proposal.node = *pc.last_drops.rbegin();
-            proposal.type = CT_ASSIGN_PRIMARY;
-
-            derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                pc.app_type.c_str(),
-                pc.gpid.app_id,
-                pc.gpid.pidx,
-                proposal.node.to_string()
-                );
+            // it is healthy, nothing to do
         }
-
-        if (proposal.node.is_invalid() == false)
-        {
-            send_proposal(proposal.node, proposal);
-        }
-
-        return false;
     }
-    else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
-    {
-        proposal.type = CT_ADD_SECONDARY;
-        proposal.node = find_minimal_load_machine(false);
-        if (proposal.node.is_invalid() == false &&
-            proposal.node != pc.primary &&
-            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
-        {
-            send_proposal(pc.primary, proposal);
-        }
-        return false;
-    }
-    //we have too many secondaries, let's do remove
-    else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
-    {
-        auto iter = _balancer_proposals_map.find(pc.gpid);
-        if (iter != _balancer_proposals_map.end() && iter->second.type == BT_MOVE_PRIMARY)
-            return true;
-        int target = 0;
-        int load = _state->_nodes[pc.secondaries.front()].partitions.size();
-        for (int i=1; i<pc.secondaries.size(); ++i)
-        {
-            int l = _state->_nodes[pc.secondaries[i]].partitions.size();
-            if (l > load)
-            {
-                load = l;
-                target = i;
-            }
-        }
-
-        proposal.type = CT_REMOVE;
-        proposal.node = pc.secondaries[target];
-        send_proposal(pc.primary, proposal);
-        return false;
-    }
-    else
-        return true;
 }

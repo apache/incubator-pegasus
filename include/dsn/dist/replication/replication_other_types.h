@@ -133,7 +133,7 @@ namespace dsn {
 
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {
-            JSON_DICT_ENTRIES(out, config, app_type, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+            JSON_DICT_ENTRIES(out, config, app_type, package_id, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
         }
         inline void json_encode(std::stringstream& out, const partition_status& status)
         {

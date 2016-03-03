@@ -41,13 +41,13 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
-class simple_stateful_load_balancer 
+class simple_load_balancer 
     : public ::dsn::dist::server_load_balancer,
-      public serverlet<simple_stateful_load_balancer>
+      public serverlet<simple_load_balancer>
 {
 public:
-    simple_stateful_load_balancer(server_state* state);
-    virtual ~simple_stateful_load_balancer() override;
+    simple_load_balancer(server_state* state);
+    virtual ~simple_load_balancer() override;
 
     virtual void run() override;
     virtual void run(global_partition_id gpid) override;
@@ -57,7 +57,7 @@ private:
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
     void on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp);
     
-    void run_lb(partition_configuration& pc);
+    void run_lb(partition_configuration& pc, bool is_stateful);
     ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 };
 

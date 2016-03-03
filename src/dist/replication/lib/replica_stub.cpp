@@ -38,7 +38,6 @@
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
-#include "replication_failure_detector.h"
 #include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
@@ -320,7 +319,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     dassert (NS_Disconnected == _state, "");
     if (_options.fd_disabled == false)
     {
-        _failure_detector = new replication_failure_detector(this, _options.meta_servers);
+        _failure_detector = new ::dsn::dist::slave_failure_detector_with_multimaster(
+            _options.meta_servers,
+            [=]() {this->on_meta_server_disconnected(); },
+            [=]() {this->on_meta_server_connected(); }
+            );
         err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,

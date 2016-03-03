@@ -41,7 +41,7 @@
 # include "../zookeeper/meta_state_service_zookeeper.h"
 # include "../zookeeper/distributed_lock_service_zookeeper.h"
 # include <dsn/internal/factory_store.h>
-# include "simple_stateful_load_balancer.h"
+# include "simple_load_balancer.h"
 # include "greedy_load_balancer.h"
 
 namespace dsn {
@@ -102,8 +102,8 @@ namespace dsn {
                 );
 
             register_component_provider(
-                "simple_stateful_load_balancer",
-                dsn::dist::server_load_balancer::create<simple_stateful_load_balancer>
+                "simple_load_balancer",
+                dsn::dist::server_load_balancer::create<simple_load_balancer>
                 );
 
             register_component_provider(

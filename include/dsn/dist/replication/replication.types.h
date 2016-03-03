@@ -864,6 +864,7 @@ namespace dsn { namespace replication {
     struct partition_configuration
     {
         std::string app_type;
+        std::string package_id;
         global_partition_id gpid;
         int64_t ballot;
         int32_t max_replica_count;
@@ -876,6 +877,7 @@ namespace dsn { namespace replication {
     inline void marshall(::dsn::binary_writer& writer, const partition_configuration& val)
     {
         marshall(writer, val.app_type);
+        marshall(writer, val.package_id);
         marshall(writer, val.gpid);
         marshall(writer, val.ballot);
         marshall(writer, val.max_replica_count);
@@ -888,6 +890,7 @@ namespace dsn { namespace replication {
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ partition_configuration& val)
     {
         unmarshall(reader, val.app_type);
+        unmarshall(reader, val.package_id);
         unmarshall(reader, val.gpid);
         unmarshall(reader, val.ballot);
         unmarshall(reader, val.max_replica_count);
@@ -1195,6 +1198,8 @@ namespace dsn { namespace replication {
         std::string app_name;
         int32_t app_id;
         int32_t partition_count;
+        std::string package_id;
+        bool is_stateful;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const app_info& val)
@@ -1204,6 +1209,8 @@ namespace dsn { namespace replication {
         marshall(writer, val.app_name);
         marshall(writer, val.app_id);
         marshall(writer, val.partition_count);
+        marshall(writer, val.package_id);
+        marshall(writer, val.is_stateful);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ app_info& val)
@@ -1213,6 +1220,8 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.app_name);
         unmarshall(reader, val.app_id);
         unmarshall(reader, val.partition_count);
+        unmarshall(reader, val.package_id);
+        unmarshall(reader, val.is_stateful);
     }
 
     // ---------- node_info -------------
@@ -1259,6 +1268,7 @@ namespace dsn { namespace replication {
         partition_configuration config;
         config_type type;
         ::dsn::rpc_address node;
+        ::dsn::rpc_address host_node;
         bool is_stateful;
     };
 
@@ -1267,6 +1277,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.config);
         marshall(writer, val.type);
         marshall(writer, val.node);
+        marshall(writer, val.host_node);
         marshall(writer, val.is_stateful);
     }
 
@@ -1275,6 +1286,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.config);
         unmarshall(reader, val.type);
         unmarshall(reader, val.node);
+        unmarshall(reader, val.host_node);
         unmarshall(reader, val.is_stateful);
     }
 
@@ -1321,6 +1333,7 @@ namespace dsn { namespace replication {
         bool success_if_exist;
         std::string app_type;
         bool is_stateful;
+        std::string package_id;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
@@ -1330,6 +1343,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.success_if_exist);
         marshall(writer, val.app_type);
         marshall(writer, val.is_stateful);
+        marshall(writer, val.package_id);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
@@ -1339,6 +1353,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.success_if_exist);
         unmarshall(reader, val.app_type);
         unmarshall(reader, val.is_stateful);
+        unmarshall(reader, val.package_id);
     }
 
     // ---------- configuration_create_app_request -------------
@@ -1617,6 +1632,7 @@ namespace dsn { namespace replication {
         ::dsn::error_code err;
         int32_t app_id;
         int32_t partition_count;
+        bool is_stateful;
         std::vector< partition_configuration> partitions;
     };
 
@@ -1625,6 +1641,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.err);
         marshall(writer, val.app_id);
         marshall(writer, val.partition_count);
+        marshall(writer, val.is_stateful);
         marshall(writer, val.partitions);
     }
 
@@ -1633,6 +1650,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.err);
         unmarshall(reader, val.app_id);
         unmarshall(reader, val.partition_count);
+        unmarshall(reader, val.is_stateful);
         unmarshall(reader, val.partitions);
     }
 

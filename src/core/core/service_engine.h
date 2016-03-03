@@ -57,6 +57,7 @@ class timer_service;
 class aio_provider;
 class rpc_server_dispatcher;
 class service_node;
+class service_app;
 
 class layer2_handler_core
 {
@@ -78,7 +79,11 @@ public:
 private:
     struct layer1_app_info
     {
-        void*                 app_context;
+        union {
+            void*                 app_context;
+            service_app*          app_for_cpp;
+        };
+        
         dsn_gpid              gpid;
         std::unique_ptr<rpc_server_dispatcher> server_dispatcher;
     };
@@ -146,7 +151,11 @@ public:
     void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
 
 private:
-    void*            _app_context_ptr; // app start returns this value and used by app stop
+    union {
+        void*            _app_context_ptr; // app start returns this value and used by app stop
+        service_app*     _app_for_cpp; 
+    };
+    
     service_app_spec _app_spec;
     task_engine*     _computation;
 
