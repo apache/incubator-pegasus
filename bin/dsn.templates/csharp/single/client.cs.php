@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 using System;
 using System.IO;
@@ -23,7 +24,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php
 $keys = array();
 foreach ($svc->functions as $f)
-    $keys[$f->get_first_param()->get_cpp_type()] = 1;
+    $keys[$f->get_csharp_request_type_name()] = 1;
     
     
 foreach ($keys as $k => $v)
@@ -37,7 +38,7 @@ foreach ($keys as $k => $v)
         // ---------- call <?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
         public void <?=$f->name?>(
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
             int hash = 0,
             RpcAddress server = null)
         {
@@ -50,7 +51,7 @@ foreach ($keys as $k => $v)
 <?php    } else { ?>
         // - synchronous 
         public ErrorCode <?=$f->name?>(
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
             out <?=$f->get_csharp_return_type()?> resp, 
             int timeout_milliseconds = 0, 
             int hash = 0,
@@ -73,10 +74,10 @@ foreach ($keys as $k => $v)
             }
         }
         
-        // - asynchronous with on-stack <?=$f->get_first_param()->get_csharp_type()?> and <?=$f->get_csharp_return_type()?> 
+        // - asynchronous with on-stack <?=$f->get_csharp_request_type_name()?> and <?=$f->get_csharp_return_type()?> 
         public delegate void <?=$f->name?>Callback(ErrorCode err, <?=$f->get_csharp_return_type()?> resp);
         public void <?=$f->name?>(
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_hash = 0,
@@ -102,7 +103,7 @@ foreach ($keys as $k => $v)
         }        
         
         public SafeTaskHandle <?=$f->name?>2(
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_hash = 0,

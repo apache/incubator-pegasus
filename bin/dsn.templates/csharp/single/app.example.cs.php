@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 using System;
 using System.IO;
@@ -77,7 +78,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         foreach ($svc->functions as $f)
     {?>
             {
-                 <?=$f->get_first_param()->get_csharp_type()?> req = new <?=$f->get_first_param()->get_csharp_type()?>();
+                <?=$f->get_csharp_request_type_name()?> req = new <?=$f->get_csharp_request_type_name()?>();
 <?php if ($f->is_one_way()) { ?>
                 _<?=$svc->name?>Client.<?=$f->name?>(req);
 <?php } else { ?>

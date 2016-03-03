@@ -145,6 +145,9 @@ case "thrift":
             echo "failed invoke thrift tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
+        $command = $g_cg_dir."/".$os_name."/thrift --gen ".$g_lang." -out ".$g_out_dir." ".$g_idl;
+        echo "exec: ".$command.PHP_EOL;
+        system($command);
     }
     break;
 case "proto":
@@ -258,24 +261,37 @@ generate_files_from_dir($g_templates."/".$g_lang);
 generate_files_from_dir($g_templates."/".$g_lang."/".$g_mode);
 
 // copy additional files
+$add_idl_file_name= "";
 if ($g_idl_type == "proto" && $g_lang == "csharp")
 {
     if ($g_idl_format == "json")
     {
-        $add_file_name = "GProtoJsonHelper.cs";
+        $add_idl_file_name = "GProtoJsonHelper.cs";
     }
     else
     {
-        $add_file_name = "GProtoBinaryHelper.cs";
+        $add_idl_file_name = "GProtoBinaryHelper.cs";
     }
+} else if ($g_idl_type == "thrift" && $g_lang == "csharp")
+{
+    if ($g_idl_format == "json")
+    {
+        $add_idl_file_name = "ThriftJsonHelper.cs";
+    }
+    else
+    {
+        $add_idl_file_name = "ThriftBinaryHelper.cs";
+    }
+}
+if ($add_idl_file_name != "")
+{
     $dsn_root = getenv('DSN_ROOT');
-    $add_file = $dsn_root."/include/dsn/idl/".$add_file_name;
-    $target = $g_out_dir."/".$add_file_name;
+    $add_file = $dsn_root."/include/dsn/idl/".$add_idl_file_name;
+    $target = $g_out_dir."/".$add_idl_file_name;
     if (!copy($add_file, $target))
     {
         echo "failed to copy ".$add_file;
         exit(0);
     }
 }
-
 ?>

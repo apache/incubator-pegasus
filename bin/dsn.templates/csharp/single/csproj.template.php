@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_format = $argv[4];
 $dsn_root = getenv('DSN_ROOT');
 
 function getGUID()
@@ -110,9 +111,15 @@ echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
     <Reference Include="dsn.dev.csharp">
         <HintPath><?=$dsn_root?>\lib\dsn.dev.csharp.dll</HintPath>
     </Reference>
+<?php if ($idl_format == "proto") { ?>
     <Reference Include="Google.Protobuf">
         <HintPath><?=$dsn_root?>\lib\Google.Protobuf.dll</HintPath>
     </Reference>
+<?php } else if ($idl_format == "thrift") { ?>
+    <Reference Include="Thrift">
+        <HintPath><?=$dsn_root?>\lib\Thrift.dll</HintPath>
+    </Reference>
+<?php } ?>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="${MY_PROJ_SRC}" />

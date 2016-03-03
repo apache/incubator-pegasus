@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 using System;
 using System.IO;
@@ -21,7 +22,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     if ($f->is_one_way()) {?>
         private void On<?=$f->name?>Internal(RpcReadStream request)
         {
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>;
             
             try 
             {
@@ -36,7 +37,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             On<?=$f->name?>(<?=$f->get_first_param()->name?>);
         }
         
-        protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>)
+        protected virtual void On<?=$f->name?>(<?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>)
         {
             Console.WriteLine("... exec <?=$f->get_rpc_code()?> ... (not implemented) ");
         }
@@ -44,7 +45,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     } else {?>
         private void On<?=$f->name?>Internal(RpcReadStream request, RpcWriteStream response)
         {
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
+            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>;
             
             try 
             {
@@ -63,7 +64,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             }));
         }
         
-        protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)
+        protected virtual void On<?=$f->name?>(<?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)
         {
             Console.WriteLine("... exec <?=$f->get_rpc_code()?> ... (not implemented) ");
             var resp =  new <?=$f->get_csharp_return_type()?>();
