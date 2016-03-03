@@ -178,6 +178,11 @@ void replication_app_base::install_perf_counters()
     _app_req_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "request throughput for current app");
 }
 
+void replication_app_base::reset_counters_after_learning()
+{
+    _app_commit_decree.set(_last_committed_decree.load());
+}
+
 error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     auto err = open(create_new);

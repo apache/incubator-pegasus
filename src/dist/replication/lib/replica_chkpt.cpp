@@ -276,6 +276,7 @@ namespace dsn {
                     filename = utils::filesystem::path_combine(chk_dir, filename);
                 }
                 _app->apply_checkpoint(resp->state, CHKPT_COPY);
+                _app->reset_counters_after_learning();
             }
 
             _primary_states.checkpoint_task = nullptr;

@@ -209,6 +209,7 @@ public:
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
     bool is_delta_state_learning_supported() const { return _is_delta_state_learning_supported; }
+    void reset_counters_after_learning();
 
     //
     // set physical error (e.g., disk error) so that the app is dropped by replication later
