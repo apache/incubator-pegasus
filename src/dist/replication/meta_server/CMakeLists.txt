@@ -1,3 +1,5 @@
+add_definitions(-DDSN_META_SERVER_DYNAMIC_LIB)
+
 set(MY_PROJ_NAME dsn.meta_server)
 
 # Source files under CURRENT project directory will be automatically included.
