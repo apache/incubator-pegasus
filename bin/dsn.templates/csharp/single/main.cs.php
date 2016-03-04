@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using dsn.dev.csharp;
+using rDSN.Tron.App;
 
 namespace <?=$_PROG->get_csharp_namespace()?> 
 {

@@ -75,6 +75,7 @@ namespace rDSN.Tron.ControlPanel
             CommandManager.Instance().Add(new string[] { "GetPackage", "GP", "gp" }, new GetServicePackageCommand());
             CommandManager.Instance().Add(new string[] { "GetCompositionStub", "GC", "gc" }, new GetServiceCompositionStubCommand());
             CommandManager.Instance().Add(new string[] { "GetServiceClient", "GSC", "gsc" }, new GetServiceClientLibCommand());
+            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "PHP", "php" }, new GenerateCommonSpecCommand());
 
             // local tools
             //CommandManager.Instance().Add(new string[] { "Generate", "generate", "g", "G" }, new GenerateCommand());

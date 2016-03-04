@@ -112,6 +112,40 @@ namespace rDSN.Tron.Contract
 
             return builder.ToString();
         }
+        public static string GenerateThriftSpec(Type type, List<string> dependentSpecFiles)
+        {
+            var thriftTypeMapping = new Dictionary<Type, string>()
+            {
+                {typeof(bool), "bool"},
+                {typeof(byte), "byte"},
+                {typeof(Int16), "i16" },
+                {typeof(Int32), "i32"},
+                {typeof(Int64), "i64" },
+                {typeof(double), "double" },
+                {typeof(byte[]), "binary"},
+                {typeof(string), "string" }
+            };
+            CodeBuilder builder = new CodeBuilder();
+            
+            builder.AppendLine();
+            builder.AppendLine("namespace csharp " + type.Namespace.ToString());
+            builder.AppendLine("service " + type.Name);
+            builder.BeginBlock();
+
+            foreach (var m in ServiceContract.GetServiceCalls(type))
+            {
+                var return_value_type = m.ReturnType.GetGenericArguments()[0];
+                var parameter_type = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
+                string return_value_name = thriftTypeMapping.ContainsKey(return_value_type) ? thriftTypeMapping[return_value_type] : return_value_type.FullName.GetCompilableTypeName();
+                string parameter_name = thriftTypeMapping.ContainsKey(parameter_type) ? thriftTypeMapping[parameter_type] : parameter_type.FullName.GetCompilableTypeName();
+                builder.AppendLine(return_value_name + " " + m.Name + "(" + parameter_name + " req);");
+            }
+
+            builder.EndBlock();
+            builder.AppendLine();
+
+            return builder.ToString();
+        }
 
         public static string GenerateBondSpec(Type type, List<string> dependentSpecFiles)
         {
@@ -163,6 +197,7 @@ namespace rDSN.Tron.Contract
             cb.AppendLine("Spec.SType = ServiceSpecType." + package.Spec.SType.ToString() + ";");
             cb.AppendLine("Spec.MainSpecFile = \"" + package.Spec.MainSpecFile + "\";");
             cb.AppendLine("Spec.ReferencedSpecFiles = new List<string>();");
+            cb.AppendLine("Spec.IsRdsnRpc = " + (package.Spec.IsRdsnRpc ? "true" : "false") + ";");
             foreach (var p in package.Spec.ReferencedSpecFiles)
             {
                 cb.AppendLine("Spec.ReferencedSpecFiles.Add(\"" + p + "\");");

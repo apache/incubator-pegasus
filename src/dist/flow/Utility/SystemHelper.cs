@@ -52,6 +52,7 @@ namespace rDSN.Tron.Utility
     /// <summary>
     /// A class used to pass arguments/data to the threaded robocopy commands.
     /// </summary>
+    
     public class RobocopyData
     {
         public string srcDir;
