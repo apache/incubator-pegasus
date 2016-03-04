@@ -42,6 +42,13 @@
 # endif
 # define __TITLE__ "replica.service_app"
 
+// TODO: enabled after server-side layer2 application mode is done
+//# include <dsn/internal/module_init.cpp.h>
+//
+//MODULE_INIT_BEGIN
+//    dsn::register_app< ::dsn::replication::replication_service_app>("meta");
+//MODULE_INIT_END
+
 namespace dsn { namespace replication {
 
 replication_service_app::replication_service_app()

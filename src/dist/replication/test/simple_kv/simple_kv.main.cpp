@@ -56,8 +56,6 @@ void dsn_app_registration()
     dsn::replication::test::install_checkers();
 }
 
-extern void dsn_core_init();
-
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -70,8 +68,6 @@ int main(int argc, char** argv)
     dsn::replication::test::g_case_input = argv[2];
 
     dsn_app_registration();
-
-    dsn_core_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);

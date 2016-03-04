@@ -44,6 +44,17 @@
 # include "simple_load_balancer.h"
 # include "greedy_load_balancer.h"
 
+# ifdef DSN_META_SERVER_DYNAMIC_LIB
+
+# include <dsn/internal/module_init.cpp.h>
+
+MODULE_INIT_BEGIN
+    dsn::register_app< ::dsn::service::meta_service_app>("meta");
+MODULE_INIT_END
+
+# endif
+
+
 namespace dsn {
     namespace service {
         static bool register_component_provider(

@@ -780,10 +780,12 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
                     send_proposal(proposal.node, proposal);
                 }
             }
+            return false;
         }
         else
         {
             // it is healthy, nothing to do
+            return true;
         }
     }
 }
