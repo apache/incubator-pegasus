@@ -52,7 +52,8 @@
 # define __TITLE__ "meta.service"
 
 #define TEST_PARAM(x) if(!(x)){return ERR_INVALID_PARAMETERS;}
-#define PREPARE_UNMARSHALL(json_str) std::string jstr(json_str);std::replace(jstr.begin(), jstr.end(), '\'', '\"');rapidjson::Document doc; TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError()) TEST_PARAM(doc.IsObject())
+#define PREPARE_UNMARSHALL(json_str) std::string jstr(json_str);std::replace(jstr.begin(), jstr.end(), '\'', '\"'); \
+    rapidjson::Document doc; TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError()) TEST_PARAM(doc.IsObject()) TEST_PARAM(doc.HasMember("req"))
 
 inline error_code unmarshall_json(const rapidjson::Value &doc, bool &val)
 {
@@ -79,7 +80,7 @@ inline error_code unmarshall_json(const rapidjson::Value &doc, std::vector< int3
 {
     TEST_PARAM(doc.IsArray())
     val.clear();
-    for (rapidjson::SizeType i = 0; i < doc.MemberCount(); i++)
+    for (rapidjson::SizeType i = 0; i < doc.Size(); i++)
     {
         TEST_PARAM(doc[i].IsInt())
         val.push_back(doc[i].GetInt());
@@ -89,11 +90,29 @@ inline error_code unmarshall_json(const rapidjson::Value &doc, std::vector< int3
 
 inline error_code unmarshall_json(const rapidjson::Value &doc, rpc_address& val)
 {
-    TEST_PARAM(doc.IsUint64());
-    dsn_address_t addr;
-    addr.u.value = doc.GetUint64();
-    val = rpc_address(addr);
-    TEST_PARAM(!val.is_invalid())
+    if (doc.IsUint64())
+    {
+        dsn_address_t addr;
+        addr.u.value = doc.GetUint64();
+        val = rpc_address(addr);
+    }
+    else if (doc.IsString())
+    {
+        std::vector<std::string> segments;
+        utils::split_args(doc.GetString(), segments, ':');
+        if (segments.size() != 2)
+        {
+            return ERR_INVALID_PARAMETERS;
+        }
+        else
+        {
+            val = rpc_address(segments[0].c_str(), (uint16_t)atoi(segments[1].c_str()));
+        }
+    }
+    else
+    {
+        return ERR_INVALID_PARAMETERS;
+    }
     return ERR_OK;
 }
 
