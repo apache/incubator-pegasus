@@ -2,6 +2,7 @@
 
 // the current program
 global $_PROG;
+global $_IDL_FORMAT;
 
 class thelpers
 {
@@ -37,7 +38,7 @@ class thelpers
             if (strpos($kvs, ",") == FALSE)
                 return $kvs;
             else
-                return trim(substr($kvs, 0, strpos($kvs, ",") - 1));
+                return trim(substr($kvs, 0, strpos($kvs, ",")));
         }
         else
             return FALSE;
@@ -632,6 +633,11 @@ class t_function
     
     function get_csharp_return_type()
     {
+        global $_IDL_FORMAT;
+        if ($_IDL_FORMAT == "thrift")
+        {
+            return $this->service->name.".".$this->name."_result";
+        }
         return thelpers::get_csharp_type_name($this->ret);
     }
     
@@ -640,6 +646,16 @@ class t_function
         return $this->params[0];
     }
     
+    function get_csharp_request_type_name()
+    {
+        global $_IDL_FORMAT;
+        if ($_IDL_FORMAT == "thrift")
+        {
+            return $this->service->name.".".$this->name."_args";
+        }
+        return $this->params[0]->get_csharp_type();
+    }
+
     function get_rpc_code()
     {
         return "RPC"
