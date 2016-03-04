@@ -78,6 +78,28 @@ namespace rDSN.Tron.LanguageProvider
                 return null;
             }
         }
+        public ErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
+        {
+            linkinfo = new LinkageInfo();
+            var app_name = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+            {
+                var thriftGenPath = Path.Combine(dir, "thrift");
+                CSharpCompiler.ToDiskAssembly(
+                    new string[] { Path.Combine(dir, "ThriftBinaryHelper.cs"), Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") }.Concat(Directory.GetFiles(thriftGenPath, "*.cs", SearchOption.AllDirectories)).ToArray(),
+                    new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "Windows", "Thrift.dll") },
+                    new string[] { },
+                    Path.Combine(dir, app_name + ".client.dll")
+                    );
+                Directory.Delete(thriftGenPath, true);
+                linkinfo.DynamicLibraries.Add(Path.Combine(dir, app_name + ".client.dll"));
+                return ErrorCode.Success;
+            }
+            else
+            {
+                return ErrorCode.ProcessStartFailed;
+            }
+        }
 
         public ErrorCode GenerateServiceClient(
             ServiceSpec spec,
@@ -87,6 +109,11 @@ namespace rDSN.Tron.LanguageProvider
             out LinkageInfo linkInfo
             )
         {
+            if (spec.IsRdsnRpc)
+            {
+                return GenerateRdsnClient(spec, dir, out linkInfo);
+            }
+
             var compiler = LanguageHelper.GetCompilerPath(GetType(), platform);
             linkInfo = new LinkageInfo();
             if (compiler == "")

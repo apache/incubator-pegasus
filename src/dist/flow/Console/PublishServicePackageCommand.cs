@@ -159,6 +159,8 @@ namespace rDSN.Tron.ControlPanel
             
             // get csharp spec source
             var sources = provider.ToCommonSpec(cls.Spec, ".");
+            foreach (var s in sources)
+                Console.WriteLine(s);
 
             // compile to assembly
             CSharpCompiler.ToDiskAssembly(sources, new string[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" }, new string[]{}, 

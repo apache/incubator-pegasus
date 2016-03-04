@@ -1180,6 +1180,8 @@ public partial class ServiceSpec : IBondSerializable, IGenericSerializer
     // 4: Optional string Directory
     private String m_Directory;
 
+    public bool IsRdsnRpc { get; set; }
+
     /// <summary>
     /// SType
     /// </summary>

@@ -72,7 +72,7 @@ namespace rDSN.Tron.Compiler
         }
 
         private static ServicePlan Compile(Dictionary<MethodInfo, MethodCallExpression> expressions, object serviceObject)
-        {           
+        {
             // step: collect all types, methods, variables referenced in this expression
             var workerQueue = new Queue<KeyValuePair<MethodInfo, MethodCallExpression>>();
 
@@ -98,8 +98,10 @@ namespace rDSN.Tron.Compiler
                 }
             }
 
+            
+
             // step: prepare service plan
-            CodeGenerator codeGenerator = new CodeGenerator();  
+            CodeGenerator codeGenerator = new CodeGenerator();
             string name = serviceObject.GetType().Name + "." + codeGenerator.AppId.ToString();
             ServicePlan plan = new ServicePlan();
             plan.DependentServices = contexts
@@ -112,16 +114,18 @@ namespace rDSN.Tron.Compiler
 
             // step: generate composed service code
             HashSet<string> sources = new HashSet<string>();
-            HashSet<string> libs = new HashSet<string>();                      
+            HashSet<string> libs = new HashSet<string>();
             string dir = name + ".Source";
             SystemHelper.CreateOrCleanDirectory(dir);
 
-            string code = codeGenerator.Build(serviceObject.GetType().Name, contexts.Select(c => c.Value).ToArray());            
-            SystemHelper.StringToFile(code, Path.Combine(dir, name + ".cs"));                        
+            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"));
+            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "Windows", "Thrift.dll"));
+            //sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
+
+
+            string code = codeGenerator.BuildRdsn(serviceObject.GetType(), contexts.Select(c => c.Value).ToArray());
+            SystemHelper.StringToFile(code, Path.Combine(dir, name + ".cs"));
             sources.Add(Path.Combine(dir, name + ".cs"));
-            SystemHelper.StringToFile(ServiceContract.GenerateComposedServiceImplementation(serviceObject.GetType()),
-                Path.Combine(dir, name + "_ServiceWrapper.cs"));
-            sources.Add(Path.Combine(dir, name + "_ServiceWrapper.cs"));
 
             //foreach (var lib in contexts.SelectMany(q => q.Value.AllLibraries))
             //{
@@ -161,15 +165,15 @@ namespace rDSN.Tron.Compiler
 
             // step: fill service plan
             plan.Package.Spec = new ServiceSpec();
-            plan.Package.Spec.SType = ServiceSpecType.Bond_3_0;
-            plan.Package.Spec.MainSpecFile = name + ".bond";
+            plan.Package.Spec.SType = ServiceSpecType.Thrift_0_9;
+            plan.Package.Spec.MainSpecFile = serviceObject.GetType().Name + ".thrift";
             plan.Package.Spec.ReferencedSpecFiles = plan.DependentServices
                 .DistinctBy(s => s.PackageName)
                 .SelectMany(s =>
                 {
                     var spec = s.ExtractSpec();
                     List<string> specFiles = new List<string>();
-                    
+
                     specFiles.Add(spec.MainSpecFile);
                     SystemHelper.SafeCopy(Path.Combine(spec.Directory, spec.MainSpecFile), Path.Combine(name, spec.MainSpecFile), false);
 
@@ -184,8 +188,25 @@ namespace rDSN.Tron.Compiler
                 .Distinct()
                 .ToList();
             plan.Package.Spec.Directory = name;
-            plan.Package.MainSpec = ServiceContract.GenerateBondSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);            
+            plan.Package.MainSpec = ServiceContract.GenerateThriftSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);
             SystemHelper.StringToFile(plan.Package.MainSpec, Path.Combine(name, plan.Package.Spec.MainSpecFile));
+        
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+            {
+                sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
+                sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));
+                sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".main.composed.cs"));
+                sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".code.definition.cs"));
+            }
+            else
+            {
+                Console.Write("php codegen failed");
+            }
+            foreach (var file in Directory.GetFiles(Path.Combine(dir, "thrift"), "*.cs", SearchOption.AllDirectories))
+            {
+                sources.Add(file);
+            }
+
             plan.Package.MainExecutableName = "rDSN.Tron.App.ServiceHost.exe";
             plan.Package.Arguments = "%name% " + name + ".dll %port%";
             plan.Package.Name = name;
@@ -193,24 +214,7 @@ namespace rDSN.Tron.Compiler
             plan.Package.Author = "XYZ";
             plan.Package.Description = "Auto generated composed service";
             plan.Package.IconFileName = "abc.png";
-
-            // step: generate service sketch files
-            var provider2 = SpecProviderManager.Instance().GetProvider(plan.Package.Spec.SType);
-            Trace.Assert(null != provider2, "Language provider missing for type " + plan.Package.Spec.SType.ToString());
-            LinkageInfo linkInfo2 = new LinkageInfo();
-            var err2 = provider2.GenerateServiceSketch(plan.Package.Spec, dir, ClientLanguage.Client_CSharp, ClientPlatform.Windows, out linkInfo2);
-            Trace.Assert(ErrorCode.Success == err2);
-
-            foreach (var source in linkInfo2.Sources)
-            {
-                sources.Add(Path.Combine(dir, source));
-            }
-            foreach (var lib in linkInfo2.DynamicLibraries)
-            {
-                if (!libs.Contains(lib))
-                    libs.Add(lib);
-            }
-
+            
             // step: fill servicedef.ini file
             string def = "[Service]\r\n"
                         + "Name = " + serviceObject.GetType().Name  + "\r\n"
@@ -229,11 +233,13 @@ namespace rDSN.Tron.Compiler
 
             // step: generate composed service package                        
             CSharpCompiler.ToDiskAssembly(sources.ToArray(), libs.ToArray(), new string[] { },
-                Path.Combine(name, name + ".dll"),
-
-                false,
+                Path.Combine(name, name + ".exe"),
+                true,
                 true
                 );
+
+            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.core.dll"));
+            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "zookeeper_mt.dll"));
             foreach (var lib in libs)
             {
                 // TODO: fix me as this is a hack
@@ -242,7 +248,8 @@ namespace rDSN.Tron.Compiler
                     SystemHelper.SafeCopy(lib, Path.Combine(name, Path.GetFileName(lib)), false);
                 }
             }
-            
+
+            Console.ReadKey();
             return plan;
 
             //// step: identify all calls to services

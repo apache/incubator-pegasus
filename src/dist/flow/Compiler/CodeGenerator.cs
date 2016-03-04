@@ -62,6 +62,48 @@ namespace rDSN.Tron.Compiler
         private Dictionary<Type, string> _rewrittenTypes = new Dictionary<Type, string>();
 
         public UInt64 AppId { get { return _appId; } }
+
+        public string BuildRdsn(Type service, QueryContext[] contexts)
+        {
+            //_stages = stages;
+            _contexts = contexts;
+            _appClassName = service.Name;
+
+            //BuildInputOutputValueTypes();
+            BuildRewrittenTypes();
+            BuildHeaderRdsn(service.Namespace);
+            _builder.AppendLine("public class " + _appClassName + "Server_impl :" + _appClassName + "Server");
+            _builder.BeginBlock();
+            BuildServiceClientsRdsn();
+            BuildConstructorRdsn();
+            BuildServiceCallsRdsn(_appClassName);
+            foreach (var c in contexts)
+                BuildQueryRdsn(_appClassName, ServiceContract.GetServiceCalls(service), c);
+
+            _builder.EndBlock();
+
+            BuildMain();
+            BuildFooter();
+            return _builder.ToString();
+        }
+        public void BuildMain()
+        {
+            _builder.AppendLine("class Program");
+            _builder.BeginBlock();
+            _builder.AppendLine("static void Main(string[] args)");
+            _builder.BeginBlock();
+            _builder.AppendLine(_appClassName + "Helper.InitCodes();");
+            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
+            {
+                _builder.AppendLine(s.Value.Spec.MainSpecFile.Split('.')[0] + "Helper.InitCodes();");
+            }
+            _builder.AppendLine("ServiceApp.RegisterApp<" + _appClassName + "ServerApp>(\"server\");");
+            _builder.AppendLine("ServiceApp.RegisterApp<" + _appClassName + "ClientApp>(\"client\");");
+            _builder.AppendLine("string[] args2 = (new string[] { \"" + _appClassName + "\" }).Union(args).ToArray();");
+            _builder.AppendLine("Native.dsn_run(args2.Length, args2, true);");
+            _builder.EndBlock();
+            _builder.EndBlock();
+        }
         
         public string Build(string className, QueryContext[] contexts)
         {
@@ -77,7 +119,7 @@ namespace rDSN.Tron.Compiler
             _builder.AppendLine("public class " + _appClassName + " : ServiceMesh");
             _builder.BeginBlock();
 
-            BuildConstructor();
+            //BuildConstructor();
             BuildServiceClients();
             BuildServiceCalls();
             foreach (var c in contexts)
@@ -89,6 +131,18 @@ namespace rDSN.Tron.Compiler
             return _builder.ToString();
         }
                 
+        private void BuildConstructorRdsn()
+        {
+            _builder.AppendLine("public " + _appClassName + "Server_impl()");
+            _builder.BeginBlock();
+            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
+            {
+                _builder.AppendLine(s.Key.Member.Name + " = new " + s.Value.Schema.FullName.GetCompilableTypeName() + "Client(new RpcAddress(\"" + s.Value.URL + "\"));");
+                _builder.AppendLine();
+            }
+            _builder.EndBlock();
+            _builder.AppendLine();
+        }
         private void BuildConstructor()
         {
             _builder.AppendLine("public " + _appClassName + "()");
@@ -114,6 +168,15 @@ namespace rDSN.Tron.Compiler
 
         //}
 
+        private void BuildServiceClientsRdsn()
+        {
+            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
+            {
+                _builder.AppendLine("private " + s.Value.Schema.FullName.GetCompilableTypeName() + "Client " + s.Key.Member.Name + " = new " + s.Value.Schema.FullName.GetCompilableTypeName() + "Client(new RpcAddress(\"" + s.Value.URL + "\"));");
+                _builder.AppendLine();
+            }
+        }
+        
         private void BuildServiceClients()
         {
             foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
@@ -146,6 +209,34 @@ namespace rDSN.Tron.Compiler
             _builder--;
             _builder.AppendLine("}");
             _builder.AppendLine();
+        }
+
+        private void BuildServiceCallsRdsn(string serviceName)
+        {
+            HashSet<string> calls = new HashSet<string>();
+            foreach (var s in _contexts.SelectMany(c => c.ServiceCalls))
+            {
+                Trace.Assert(s.Key.Object != null && s.Key.Object.NodeType == ExpressionType.MemberAccess);
+                string svcName = (s.Key.Object as MemberExpression).Member.Name;
+                string svcTypeName = s.Key.Object.Type.GetCompilableTypeName(_rewrittenTypes);
+                string callName = s.Key.Method.Name;
+                string respTypeName = s.Key.Type.GetCompilableTypeName(_rewrittenTypes);
+                string reqTypeName = s.Key.Arguments[0].Type.GetCompilableTypeName(_rewrittenTypes);
+                string call = "Call_" + s.Value.Schema.Name + "_" + callName;
+
+                if (!calls.Add(call + ":" + reqTypeName))
+                    continue;
+
+                _builder.AppendLine("private " + respTypeName + " " + call + "( " + reqTypeName + " req)");
+                _builder.BeginBlock();
+                _builder.AppendLine("var request = new " + s.Value.Schema.Name + "." + callName + "_args();");
+                _builder.AppendLine("request.Num1 = req;");
+                _builder.AppendLine(s.Value.Schema.Name + "." + callName + "_result resp;");
+                _builder.AppendLine(svcName + "." + callName + "(request, out resp);");
+                _builder.AppendLine("return resp.Success;");
+                _builder.EndBlock();
+                _builder.AppendLine();
+            }
         }
 
         private void BuildServiceCalls()
@@ -200,7 +291,49 @@ namespace rDSN.Tron.Compiler
                 _builder.AppendLine();
             }
         }
-        
+
+        private void BuildQueryRdsn(string serviceName, MethodInfo[] methods, QueryContext c)
+        {
+            _builder.AppendLine("public " + c.OutputType.GetGenericArguments()[0].FullName.GetCompilableTypeName()
+                        + " " + c.Name + "(" + c.InputType.GetCompilableTypeName(_rewrittenTypes) + " request)");
+
+            _builder.AppendLine("{");
+            _builder++;
+
+            _builder.AppendLine("Console.Write(\".\");");
+
+            // local vars
+            foreach (var s in c.TempSymbolsByAlias)
+            {
+                _builder.AppendLine(s.Value.Type.GetCompilableTypeName(_rewrittenTypes) + " " + s.Key + ";");
+            }
+
+            if (c.TempSymbolsByAlias.Count > 0)
+                _builder.AppendLine();
+
+            // final query
+            ExpressionToCode codeBuilder = new ExpressionToCode(c.RootExpression, c);
+            string code = codeBuilder.GenCode(_builder.Indent);
+
+            _builder.AppendLine(code + ";");
+
+            _builder--;
+            _builder.AppendLine("}");
+            _builder.AppendLine();
+
+            foreach (var m in methods)
+            {
+                var resp_type = serviceName + "." + m.Name + "_result";
+                _builder.AppendLine("protected override void On" + m.Name + "(" + serviceName + "." + m.Name + "_args request, RpcReplier<" + resp_type + "> replier)");
+                _builder.BeginBlock();
+                _builder.AppendLine("var resp = new " + resp_type + "();");
+                _builder.AppendLine("resp.Success = " + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request.Req));");
+                _builder.AppendLine("replier.Reply(resp);");
+                _builder.EndBlock();
+                _builder.AppendLine();
+            }
+        }
+
         private void BuildQuery(QueryContext c)
         {
             _builder.AppendLine("public " + c.OutputType.GetCompilableTypeName(_rewrittenTypes)
@@ -282,6 +415,47 @@ namespace rDSN.Tron.Compiler
             }
         }
 
+        private void BuildHeaderRdsn(string service_namespce)
+        {
+
+            _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime().ToString() + " */");
+
+
+            HashSet<string> namespaces = new HashSet<string>();
+            namespaces.Add("System");
+            namespaces.Add("System.IO");
+            namespaces.Add("dsn.dev.csharp");
+            namespaces.Add(service_namespce);
+            namespaces.Add("System.Linq");
+            namespaces.Add("System.Text");
+            namespaces.Add("System.Linq.Expressions");
+            namespaces.Add("System.Reflection");
+            namespaces.Add("System.Diagnostics");
+            namespaces.Add("System.Net");
+            namespaces.Add("System.Threading");
+
+            //namespaces.Add("rDSN.Tron.Utility");
+            //namespaces.Add("rDSN.Tron.Compiler");
+            namespaces.Add("rDSN.Tron.Contract");
+            namespaces.Add("rDSN.Tron.Runtime");
+            namespaces.Add("rDSN.Tron.App");
+
+            foreach (var nm in _contexts.SelectMany(c => c.Methods).Select(mi => mi.DeclaringType.Namespace).Distinct().Except(namespaces))
+            {
+                namespaces.Add(nm);
+            }
+
+            foreach (var np in namespaces)
+            {
+                _builder.AppendLine("using " + np + ";");
+            }
+
+            _builder.AppendLine();
+
+            _builder.AppendLine("namespace rDSN.Tron.App");
+            _builder.AppendLine("{");
+            _builder++;
+        }
         private void BuildHeader()
         {
             _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime().ToString() + " */");
