@@ -58,7 +58,7 @@ io_service_worker_count = 2
 [threadpool.THREAD_POOL_DEFAULT]
 name = default
 partitioned = false
-worker_count = 1
+worker_count = 4
 max_input_queue_length = 1024
 worker_priority = THREAD_xPRIORITY_NORMAL
 
