@@ -137,7 +137,7 @@ inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/
 inline std::string marshall_json(const configuration_create_app_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, appid);
+    JSON_DICT_ENTRIES(ss, val, err.to_string(), appid);
 
     return std::move(ss.str());
 }
@@ -157,7 +157,7 @@ inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/
 inline std::string marshall_json(const configuration_drop_app_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err);
+    JSON_DICT_ENTRIES(ss, val, err.to_string());
 
     return std::move(ss.str());
 }
@@ -165,7 +165,7 @@ inline std::string marshall_json(const configuration_drop_app_response& val)
 inline std::string marshall_json(const configuration_list_apps_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, infos);
+    JSON_DICT_ENTRIES(ss, val, err.to_string(), infos);
 
     return std::move(ss.str());
 }
@@ -173,7 +173,7 @@ inline std::string marshall_json(const configuration_list_apps_response& val)
 inline std::string marshall_json(const configuration_list_nodes_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, infos);
+    JSON_DICT_ENTRIES(ss, val, err.to_string(), infos);
 
     return std::move(ss.str());
 }
@@ -193,7 +193,7 @@ inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/
 inline std::string marshall_json(const configuration_query_by_index_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, app_id, partition_count, is_stateful, partitions);
+    JSON_DICT_ENTRIES(ss, val, err.to_string(), app_id, partition_count, is_stateful, partitions);
 
     return std::move(ss.str());
 }
@@ -211,7 +211,7 @@ inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/
 inline std::string marshall_json(const configuration_query_by_node_response& val)
 {
     std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err, partitions);
+    JSON_DICT_ENTRIES(ss, val, err.to_string(), partitions);
 
     return std::move(ss.str());
 }
@@ -581,6 +581,7 @@ void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, 
     configuration_list_apps_request req;
     configuration_list_apps_response resp;
 
+    req.status = AS_INVALID;
     _state->list_apps(req, resp);
 
     std::string* resp_json = new std::string();
@@ -599,6 +600,7 @@ void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv,
     configuration_list_nodes_request req;
     configuration_list_nodes_response resp;
 
+    req.status = NS_INVALID;
     _state->list_nodes(req, resp);
 
     std::string* resp_json = new std::string();
