@@ -62,19 +62,10 @@ namespace rDSN.Tron.ControlPanel
             CommandManager.Instance().Add(new string[] { "win", "Win", "w", "W" }, new WinBatchCommand());
 
             // service infrastructure commands
-            CommandManager.Instance().Add(new string[] { "QueryMachine", "QM", "qm" }, new QueryMachineCommand());
-            CommandManager.Instance().Add(new string[] { "QueryService", "QS", "qs" }, new QueryServiceCommand());
             CommandManager.Instance().Add(new string[] { "server", "Server", "s", "S" }, new AppServerController());
             CommandManager.Instance().Add(new string[] { "meta", "Meta", "m", "M" }, new MetaServerController());
-            CommandManager.Instance().Add(new string[] { "CreateService", "CS", "cs"}, new ServiceCreateCommand());
-            CommandManager.Instance().Add(new string[] { "RemoveService", "RS", "rs" }, new ServiceRemoveCommand());
 
             // service store commands
-            CommandManager.Instance().Add(new string[] { "PublishPackage", "PP", "pp" }, new PublishServicePackageCommand());
-            CommandManager.Instance().Add(new string[] { "QueryPackage", "QP", "qp" }, new QueryServicePackageCommand());
-            CommandManager.Instance().Add(new string[] { "GetPackage", "GP", "gp" }, new GetServicePackageCommand());
-            CommandManager.Instance().Add(new string[] { "GetCompositionStub", "GC", "gc" }, new GetServiceCompositionStubCommand());
-            CommandManager.Instance().Add(new string[] { "GetServiceClient", "GSC", "gsc" }, new GetServiceClientLibCommand());
             CommandManager.Instance().Add(new string[] { "GenCompositionStub", "PHP", "php" }, new GenerateCommonSpecCommand());
 
             // local tools

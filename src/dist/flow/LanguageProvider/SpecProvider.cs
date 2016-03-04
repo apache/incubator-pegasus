@@ -79,29 +79,29 @@ namespace rDSN.Tron.LanguageProvider
         public List<string> Sources;
 
         /// <summary>
-        /// where are the header files (if necessary), e.g., d:/bond/Cpp/Include
+        /// where are the header files (if necessary), e.g., d:/thrift/Cpp/Include
         /// </summary>
         public List<string> IncludeDirectories;
 
         /// <summary>
-        /// where are the libraries, e.g., d:/bond/Cpp/Library/x64
+        /// where are the libraries, e.g., d:/thrift/Cpp/Library/x64
         /// </summary>
         public List<string> LibraryPaths;
 
         /// <summary>
         /// static linked library names, without path (path should be designated using LibraryPaths above)
-        /// e.g., Bond.lib (bond.a)
+        /// e.g., thrift.lib (thrift.a)
         /// </summary>
         public List<string> StaticLibraries;
 
         /// <summary>
-        /// dynamic linked library names, without path, e.g., bond.dll (bond.so)
+        /// dynamic linked library names, without path, e.g., thrift.dll (thrift.so)
         /// </summary>
         public List<string> DynamicLibraries;
     }
 
     /// <summary>
-    /// each spec lang (e.g., bond/protobuf/thrift) needs to implement ISpecProvider and register it
+    /// each spec lang (e.g., thrift/protobuf/thrift) needs to implement ISpecProvider and register it
     /// to SpecProviderManager.
     /// </summary>
     public interface ISpecProvider
@@ -166,7 +166,6 @@ namespace rDSN.Tron.LanguageProvider
     {
         public SpecProviderManager()
         {
-            Register(new BondSpecProvider());
             Register(new ThriftSpecProvider());
         }
 

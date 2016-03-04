@@ -74,9 +74,6 @@ namespace rDSN.Tron.LanguageProvider
            var prefix = "..\\..\\external\\";
            switch(t)
            {
-               case ServiceSpecType.Bond_3_0:
-                   path = prefix + "bond\\amd64\\bondc.exe";
-                   break;
                case ServiceSpecType.Proto_Buffer_1_0:
                    path = prefix + "protobuf\\protoc.exe";
                    break;

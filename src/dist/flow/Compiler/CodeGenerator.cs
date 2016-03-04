@@ -179,36 +179,7 @@ namespace rDSN.Tron.Compiler
         
         private void BuildServiceClients()
         {
-            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
-            {
-                _builder.AppendLine("private " + s.Value.Schema.FullName.GetCompilableTypeName() + "_Proxy " + s.Key.Member.Name + " = null;");
-                _builder.AppendLine();
-            }
-
-            _builder.AppendLine("protected override ErrorCode InitServicesAndClients()");
-            _builder.AppendLine("{");
-            _builder++;
-
-            _builder.AppendLine("IBondTransportClient client;");
-            _builder.AppendLine("ErrorCode err;");
-            _builder.AppendLine();
-
-            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
-            {
-                _builder.AppendLine("err = InitService(\"" + s.Value.PackageName + "\", \"" + s.Value.URL + "\", \"" + s.Value.Name + "\");");
-                _builder.AppendLine("if (err != ErrorCode.Success && err != ErrorCode.AppServiceAlreadyExist) return err; ");
-                _builder.AppendLine("err = InitClient(\"" + s.Value.Name + "\", out client);");
-                _builder.AppendLine("if (err != ErrorCode.Success) return err; ");
-                _builder.AppendLine(s.Key.Member.Name + " = new " + s.Value.Schema.FullName + "_Proxy(client);");
-                _builder.AppendLine();
-            }
-
-            _builder.AppendLine();
-            _builder.AppendLine("return 0;");
-
-            _builder--;
-            _builder.AppendLine("}");
-            _builder.AppendLine();
+           
         }
 
         private void BuildServiceCallsRdsn(string serviceName)
@@ -241,55 +212,7 @@ namespace rDSN.Tron.Compiler
 
         private void BuildServiceCalls()
         {
-            HashSet<string> calls = new HashSet<string>();
-            foreach (var s in _contexts.SelectMany(c => c.ServiceCalls))
-            {
-                Trace.Assert(s.Key.Object != null && s.Key.Object.NodeType == ExpressionType.MemberAccess);
-                string svcName = (s.Key.Object as MemberExpression).Member.Name;
-                string svcTypeName = s.Key.Object.Type.GetCompilableTypeName(_rewrittenTypes);
-                string callName = s.Key.Method.Name;
-                string respTypeName = s.Key.Type.GetCompilableTypeName(_rewrittenTypes);
-                string reqTypeName = s.Key.Arguments[0].Type.GetCompilableTypeName(_rewrittenTypes);
-                string call = "Call_" + s.Value.Schema.Name + "_" + callName;
-
-                if (!calls.Add(call + ":" + reqTypeName))
-                    continue;
-
-                _builder.AppendLine("private " + respTypeName + " " + call  + "( " + reqTypeName + " req)");
-                _builder.AppendLine("{");
-                _builder++;
-                _builder.AppendLine("while (true)");
-                _builder.AppendLine("{");
-                _builder++;
-
-                // try block
-                _builder.AppendLine("try");
-                _builder.AppendLine("{");
-                _builder++;
-
-                _builder.AppendLine(" return " + svcName + "."  + callName  + "(req);");
-
-                _builder--;
-                _builder.AppendLine("}");
-
-
-                // catch block
-                _builder.AppendLine("catch(Exception e)");
-                _builder.AppendLine("{");
-                _builder++;
-                _builder.AppendLine("Console.WriteLine(\"Exception during call " + svcName  + "." + callName + ", msg = \" + e.Message + \"\");");
-                _builder.AppendLine("IBondTransportClient client;");
-                _builder.AppendLine("while (ErrorCode.Success != InitClient(\"" + s.Value.Name + "\", out client)) Thread.Sleep(500);");
-                _builder.AppendLine(svcName + " = new " + s.Value.Schema.FullName.GetCompilableTypeName() + "_Proxy(client);");
-                _builder--;                
-                _builder.AppendLine("}");
-
-                _builder--;
-                _builder.AppendLine("}");
-                _builder--;
-                _builder.AppendLine("}");
-                _builder.AppendLine();
-            }
+            
         }
 
         private void BuildQueryRdsn(string serviceName, MethodInfo[] methods, QueryContext c)
@@ -477,10 +400,7 @@ namespace rDSN.Tron.Compiler
             //namespaces.Add("rDSN.Tron.Compiler");
             namespaces.Add("rDSN.Tron.Contract");
             namespaces.Add("rDSN.Tron.Runtime");
-
-            namespaces.Add("BondNetlibTransport");
-            namespaces.Add("BondTransport");
-
+            
             foreach (var nm in _contexts.SelectMany(c => c.Methods).Select(mi => mi.DeclaringType.Namespace).Distinct().Except(namespaces))
             {
                 namespaces.Add(nm);

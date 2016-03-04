@@ -48,9 +48,6 @@ using System.IO.Compression;
 using System.Windows.Forms;
 using System.Threading;
 
-using BondNetlibTransport;
-using BondTransport;
-
 using Microsoft.CSharp;
 using rDSN.Tron.Utility;
 using rDSN.Tron.Runtime;
@@ -137,7 +134,7 @@ namespace rDSN.Tron.ControlPanel
             writer.Close();
 
             CSharpCompiler.ToDiskAssembly(new string[] { Path.Combine("tmp", app_name + ".commonspec.cs"),  Path.Combine("tmp", app_name + ".Tron.Composition.cs") },
-                new string[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll", "Microsoft.Bond.Interfaces.dll" },
+                new string[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
                 new string[] { args[2] },
                 Path.Combine("tmp", app_name + ".Tron.Composition.dll"),
                 false, true

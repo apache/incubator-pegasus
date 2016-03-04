@@ -37,21 +37,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bond">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Interfaces">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Rpc">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rpc.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Rules">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rules.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.TypeProvider">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.TypeProvider.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression.FileSystem" />
@@ -62,22 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppServer_proxies.cs" />
-    <Compile Include="AppServer_services.cs" />
-    <Compile Include="AppServer_types.cs" />
-    <Compile Include="MetaServer_proxies.cs" />
-    <Compile Include="MetaServer_services.cs" />
-    <Compile Include="MetaServer_types.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="replication.client.cs" />
-    <Compile Include="replication.code.definition.cs" />
-    <Compile Include="replication.types.cs" />
-    <Compile Include="replication.types.serialization.cs" />
-    <Compile Include="ServiceClient.cs" />
-    <Compile Include="ServiceMesh.cs" />
-    <Compile Include="ServiceStore_proxies.cs" />
-    <Compile Include="ServiceStore_services.cs" />
-    <Compile Include="ServiceStore_types.cs" />
     <Compile Include="Value.cs" />
     <Compile Include="ValueOperators.cs" />
   </ItemGroup>
@@ -94,12 +64,6 @@
       <Project>{6085924d-81db-4f1e-abf8-021b92738b0d}</Project>
       <Name>Utility</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AppServer.bond" />
-    <None Include="codegen.bat" />
-    <None Include="MetaServer.bond" />
-    <None Include="ServiceStore.bond" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

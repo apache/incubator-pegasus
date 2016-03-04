@@ -84,9 +84,6 @@ namespace rDSN.Tron.ControlPanel
             // TODO: using class factory to generate the instance
             switch (extension) 
             {
-                case ".bond":
-                    translator = new BondTranslator();
-                    break;
                 case ".proto":
                     translator = null;
                     break;
@@ -104,43 +101,7 @@ namespace rDSN.Tron.ControlPanel
             else
             {
                 return false;
-            }
-
-
-            
-
-            /*
-            Grammar grammar = new BondGrammar();
-            var language = new LanguageData(grammar);
-            var parser = new Parser(language);
-            var content = File.ReadAllText(input);
-            var parseTree = parser.Parse(content);
-            Trace.Assert(!parseTree.HasErrors());
-
-
-
-            //
-            // code gen 
-            //
-            CodeBuilder c = new CodeBuilder();
-            c.AppendLine("using System;");
-            c.AppendLine("using System.Collections.Generic;");
-            c.AppendLine("using System.Linq;");
-            c.AppendLine("using System.Text;");
-            c.AppendLine("using System.Diagnostics;");
-            c.AppendLine();
-
-
-            generateEnums(parseTree, c);
-            generateStructs(parseTree, c);
-            generateServices(parseTree, c);
-          
-            StreamWriter writer = new StreamWriter(toFile);
-            writer.Write(c.ToString());
-            writer.Close();
-             */
-
-              
+            }              
         }
        
         public override bool Execute(List<string> args)
@@ -165,8 +126,7 @@ namespace rDSN.Tron.ControlPanel
         public override string Help()
         {
             return "[g|G]eneratec common interface from IDL files\n"
-                + "\tGenerate C# common interface file from IDL files like .bond, .thrift, .proto\n"
-                + "\te.g., 'generatec weibo.bond' will generate Weibo.cs.\n"
+                + "\tGenerate C# common interface file from IDL files like .thrift, .proto\n"
                 ;
         }
 

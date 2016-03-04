@@ -61,7 +61,6 @@
   <ItemGroup>
     <Compile Include="Annotations.cs" />
     <Compile Include="contract_types.cs" />
-    <Compile Include="ISystem.cs" />
     <Compile Include="LocalTypeHelper.cs" />
     <Compile Include="Patch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -76,8 +75,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="codegen.bat" />
-    <None Include="contract.bond" />
     <Compile Include="ServiceContract.CodeGen.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

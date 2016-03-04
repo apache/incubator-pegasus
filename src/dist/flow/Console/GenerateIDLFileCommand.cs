@@ -105,7 +105,7 @@ namespace rDSN.Tron.ControlPanel
             string toFile = InterfacesToIdl(input, outDir, outputType);
             if (toFile != "")
             {
-                Trace.WriteLine("bond code generated completed, saved in " + toFile);
+                Trace.WriteLine("idl code generated completed, saved in " + toFile);
                 return true;
             }
             else
@@ -115,8 +115,8 @@ namespace rDSN.Tron.ControlPanel
         public override string Help()
         {
             return "[g|G]enerateb interfaceAssembly\n"
-                + "\tGenerate bond file for the service interfaces defined in the given assembly\n"
-                + "\te.g., 'generatei weibo.dll bond' will generate Weibo.bond, with which people can use it for generating various service codes.\n"
+                + "\tGenerate idl file for the service interfaces defined in the given assembly\n"
+                + "\te.g., 'generatei weibo.dll thrift' will generate Weibo.thrift, with which people can use it for generating various service codes.\n"
                 + "\te.g., 'generatei foldername\\weibo.dll proto' will generate Weibo.proto in the same foler.\n"
                 ;
         }

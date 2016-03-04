@@ -106,9 +106,6 @@ namespace rDSN.Tron.ControlPanel
             "rDSN.Tron.Contract.dll",
             "rDSN.Tron.Runtime.FailureDetector.dll",
             "rDSN.Tron.Runtime.Common.dll",
-            "Microsoft.Bond.dll",
-            "Microsoft.Bond.Rpc.dll",
-            "Microsoft.Bond.Interfaces.dll",
             "config.ini",
         };
 

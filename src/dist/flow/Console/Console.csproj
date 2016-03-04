@@ -89,34 +89,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bond, Version=3.0.7.0, Culture=neutral, PublicKeyToken=cf7230938fec607f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Interfaces, Version=3.0.3.0, Culture=neutral, PublicKeyToken=cf7230938fec607f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Rpc, Version=3.0.7.0, Culture=neutral, PublicKeyToken=cf7230938fec607f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rpc.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Rules, Version=3.0.1.0, Culture=neutral, PublicKeyToken=29b240ea5bec0c5d, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rules.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.TypeProvider, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.TypeProvider.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Practices.EnterpriseLibrary.TransientFaultHandling, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EnterpriseLibrary.TransientFaultHandling.6.0.1304.0\lib\portable-net45+win+wp8\Microsoft.Practices.EnterpriseLibrary.TransientFaultHandling.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Practices.EnterpriseLibrary.TransientFaultHandling.Data, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EnterpriseLibrary.TransientFaultHandling.Data.6.0.1304.1\lib\NET45\Microsoft.Practices.EnterpriseLibrary.TransientFaultHandling.Data.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -132,25 +104,15 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandManager.cs" />
     <Compile Include="GenerateCommonSpecCommand.cs" />
-    <Compile Include="GetServiceClientLibCommand.cs" />
-    <Compile Include="GetServicePackageCommand.cs" />
-    <Compile Include="GetServiceCompositionStubCommand.cs" />
-    <Compile Include="QueryServicePackageCommand.cs" />
     <Compile Include="GenerateCommonInterface.cs" />
     <Compile Include="GenerateIDLFileCommand.cs" />
     <Compile Include="ExitCommand.cs" />
-    <Compile Include="GenerateCommand.cs" />
-    <Compile Include="PublishServicePackageCommand.cs" />
-    <Compile Include="ServiceCreateCommand.cs" />
-    <Compile Include="ServiceRemoveCommand.cs" />
     <Compile Include="WinBatchCommand.cs" />
     <Compile Include="HelpCommand.cs" />
     <Compile Include="EnumCommand.cs" />
     <Compile Include="MetaServerController.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QueryMachineCommand.cs" />
-    <Compile Include="QueryServiceCommand.cs" />
     <Compile Include="RepeatCommand.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -177,22 +139,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Content Include="resource\Microsoft.VisualStudio.TextTemplating.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="resource\Rules_Bond_CSharp_CSQL.txt">
-      <LastGenOutput>Rules_Bond_CSharp_CSQL.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-    <None Include="resource\bondc.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="resource\Microsoft.Bond.Rules.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -219,7 +165,9 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="resource\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

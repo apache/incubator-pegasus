@@ -164,7 +164,7 @@ namespace rDSN.Tron.Utility
                 case ".zip": return "application/zip";
                 case ".json":
                 case ".ini":
-                case ".bond":
+                case ".thrift":
                 case ".cs":
                 case ".h":
                 case ".cpp":
