@@ -98,8 +98,6 @@ namespace rDSN.Tron.Compiler
                 }
             }
 
-            
-
             // step: prepare service plan
             CodeGenerator codeGenerator = new CodeGenerator();
             string name = serviceObject.GetType().Name + "." + codeGenerator.AppId.ToString();
@@ -120,18 +118,11 @@ namespace rDSN.Tron.Compiler
 
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"));
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "Windows", "Thrift.dll"));
-            //sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
-
-
+            
             string code = codeGenerator.BuildRdsn(serviceObject.GetType(), contexts.Select(c => c.Value).ToArray());
             SystemHelper.StringToFile(code, Path.Combine(dir, name + ".cs"));
             sources.Add(Path.Combine(dir, name + ".cs"));
-
-            //foreach (var lib in contexts.SelectMany(q => q.Value.AllLibraries))
-            //{
-            //    if (!libs.Contains(lib.Key))
-            //        libs.Add(lib.Key);
-            //}
+            
             foreach (var lib in QueryContext.KnownLibs)
             {
                 if (!libs.Contains(lib))
@@ -191,7 +182,7 @@ namespace rDSN.Tron.Compiler
             plan.Package.MainSpec = ServiceContract.GenerateThriftSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);
             SystemHelper.StringToFile(plan.Package.MainSpec, Path.Combine(name, plan.Package.Spec.MainSpecFile));
         
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));
@@ -202,35 +193,11 @@ namespace rDSN.Tron.Compiler
             {
                 Console.Write("php codegen failed");
             }
+            //grab thrift-generated files
             foreach (var file in Directory.GetFiles(Path.Combine(dir, "thrift"), "*.cs", SearchOption.AllDirectories))
             {
                 sources.Add(file);
             }
-
-            plan.Package.MainExecutableName = "rDSN.Tron.App.ServiceHost.exe";
-            plan.Package.Arguments = "%name% " + name + ".dll %port%";
-            plan.Package.Name = name;
-            SystemHelper.SafeCopy("rDSN.Tron.App.ServiceHost.exe", Path.Combine(name, "rDSN.Tron.App.ServiceHost.exe"), true);
-            plan.Package.Author = "XYZ";
-            plan.Package.Description = "Auto generated composed service";
-            plan.Package.IconFileName = "abc.png";
-            
-            // step: fill servicedef.ini file
-            string def = "[Service]\r\n"
-                        + "Name = " + serviceObject.GetType().Name  + "\r\n"
-                        + "MainExecutableName = " + plan.Package.MainExecutableName + "\r\n"
-                        + "Arguments = " + plan.Package.Arguments +"\r\n"
-                        + "ServiceSpecType = " + plan.Package.Spec.SType +  " \r\n"
-                        + "MainSpecFile = " + plan.Package.Spec.MainSpecFile + "\r\n"
-                        + "Author = " + plan.Package.Author + "\r\n"
-                        + "Description = " + plan.Package.Description + "\r\n"
-                        + "IconFileName = " + plan.Package.IconFileName + "\r\n"
-                        + "\r\n"
-                        + "[ReferencedSpecFiles]\r\n"
-                        + plan.Package.Spec.ReferencedSpecFiles.VerboseCombine("\r\n", s => s);
-
-            SystemHelper.StringToFile(def, Path.Combine(name, "servicedef.ini"));
-
             // step: generate composed service package                        
             CSharpCompiler.ToDiskAssembly(sources.ToArray(), libs.ToArray(), new string[] { },
                 Path.Combine(name, name + ".exe"),
@@ -251,24 +218,6 @@ namespace rDSN.Tron.Compiler
 
             Console.ReadKey();
             return plan;
-
-            //// step: identify all calls to services
-            //LGraph g = new LGraph();
-
-            //PrimitiveGraphBuilder builder = new PrimitiveGraphBuilder(serviceObject, expression, g);
-            //builder.Build();
-            //g.VisualizeGraph("c:\\abc", "pass1");
-
-            //BasicBlockBuilder builder2 = new BasicBlockBuilder(g);
-            //builder2.Build();
-
-            //g.Vertices.Select(v => { v.Value.DumpInstructions(); return 0; }).Count();
-
-            //g.VisualizeGraph("c:\\abc", "pass2");
-
-            ////builder.Report();
-
-            //return "";
         }
     }
 }

@@ -201,7 +201,10 @@ namespace rDSN.Tron.Compiler
                 _builder.AppendLine("private " + respTypeName + " " + call + "( " + reqTypeName + " req)");
                 _builder.BeginBlock();
                 _builder.AppendLine("var request = new " + s.Value.Schema.Name + "." + callName + "_args();");
-                _builder.AppendLine("request.Num1 = req;");
+
+                var thriftArgName = s.Key.Method.GetParameters()[0].Name;
+                var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
+                _builder.AppendLine("request." + upperedThriftArgName + " = req;");
                 _builder.AppendLine(s.Value.Schema.Name + "." + callName + "_result resp;");
                 _builder.AppendLine(svcName + "." + callName + "(request, out resp);");
                 _builder.AppendLine("return resp.Success;");

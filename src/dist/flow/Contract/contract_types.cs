@@ -33,7 +33,7 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,16 +45,16 @@ namespace rDSN.Tron
 
 public class ServiceMethod
 {
-	public string Name;
-	public string InputTypeFullName;
-	public string OutputTypeFullName;
-	public string ParameterName;
+	public string Name{ get; set; } 
+	public string InputTypeFullName{ get; set; } 
+	public string OutputTypeFullName{ get; set; } 
+	public string ParameterName{ get; set; } 
 }
 
 public class ServiceAPI
 {
-	public string Name;
-	public Dictionary<string, ServiceMethod> Methods;
+	public string Name{ get; set; } 
+	public Dictionary<string, ServiceMethod> Methods{ get; set; } 
 }
 
 public enum ServiceSpecType
@@ -68,98 +68,109 @@ public enum ServiceSpecType
 
 public class ServiceSpec
 {
-	public ServiceSpecType SType = ServiceSpecType.Unknown;
-	public string MainSpecFile;
-	public List<string> ReferencedSpecFiles;
-	public string Directory;
-    public bool IsRdsnRpc;
+    public ServiceSpecType SType{ get; set; } 
+	public string MainSpecFile{ get; set; } 
+	public List<string> ReferencedSpecFiles{ get; set; } 
+	public string Directory{ get; set; } 
+    public bool IsRdsnRpc{ get; set; } 
+
+    public ServiceSpec()
+    {
+        Directory = "";
+        ReferencedSpecFiles = new List<string>();
+    }
 }
 
 public class ServicePackage
 {
-    public string Name;
-	public string Author;
-	public double Version;
-	public Int64  PublishTime;
-	public string Description;
-	public string IconFileName;
-	public byte[]   PackageZip;
-    public ServiceSpec Spec;
-	public string MainExecutableName;
-	public string Arguments; // %port% is used for RPC port, which will be replaced by our scheduler at runtime
-	public string MainSpec; // for query
-	public byte[]   CompositionAssemblyContent; // for composition
+    public string Name{ get; set; } 
+	public string Author{ get; set; } 
+	public double Version{ get; set; } 
+	public Int64  PublishTime{ get; set; } 
+	public string Description{ get; set; } 
+	public string IconFileName{ get; set; } 
+	public byte[]   PackageZip{ get; set; } 
+    public ServiceSpec Spec{ get; set; } 
+	public string MainExecutableName{ get; set; } 
+	public string Arguments{ get; set; }  // %port% is used for RPC port, which will be replaced by our scheduler at runtime
+	public string MainSpec{ get; set; }  // for query
+	public byte[]   CompositionAssemblyContent{ get; set; }  // for composition
+
+    public ServicePackage()
+    {
+        Spec = new ServiceSpec();
+    }
 }
 
 public class ServiceDsptr
 {
-	public string Name;
-	public string Author;
-	public double Version;
-	public string PublishTime;
-	public string Description;
-	public string IconFileName;
-	public string MainSpec;
+	public string Name{ get; set; } 
+	public string Author{ get; set; } 
+	public double Version{ get; set; } 
+	public string PublishTime{ get; set; } 
+	public string Description{ get; set; } 
+	public string IconFileName{ get; set; } 
+	public string MainSpec{ get; set; } 
 }
 
 public class RpcError
 {
-	public  Int32 Code;
+	public  Int32 Code{ get; set; } 
 }
 
 public class RpcResponse<T> : RpcError
 {
-	public T Value;
+	public T Value{ get; set; } 
 }
 
 public class Name
 {
-	public string Value;
+	public string Value{ get; set; } 
 }
 
 public class NameList
 {
-	public List<string> Names;
+	public List<string> Names{ get; set; } 
 }
 
 
 public partial class NodeAddress
 {
-	public string Host;
-	public Int32  Port;
+	public string Host{ get; set; } 
+	public Int32  Port{ get; set; } 
 }
 
 public class ServiceInfo
 {
-	public string Name;
-	public Int32  InternalServiceSequenceId;
-	public Int32  PartitionCount;	
-	public string ServicePackageName;
-};
+	public string Name{ get; set; } 
+	public Int32  InternalServiceSequenceId{ get; set; } 
+	public Int32  PartitionCount{ get; set; } 	
+	public string ServicePackageName{ get; set; } 
+}
 
 public class ServicePartitionInfo
 {
-    public Int32       InternalServiceSequenceId;
-	public Int32       Index;
-	public UInt64      GlobalPartitionId; // InternalServiceSequenceId ## Index
-	public string      Name;
-	public Int32       ConfigurationVersion;
-	public Int32       ServicePort;
-	public NodeAddress ManagerAddress;	
+    public Int32       InternalServiceSequenceId{ get; set; } 
+	public Int32       Index{ get; set; } 
+	public UInt64      GlobalPartitionId{ get; set; }  // InternalServiceSequenceId ## Index
+	public string      Name{ get; set; } 
+	public Int32       ConfigurationVersion{ get; set; } 
+	public Int32       ServicePort{ get; set; } 
+	public NodeAddress ManagerAddress{ get; set; } 	
 }
 
 public class ServiceInfoEx : ServiceInfo
 {
-	public List<ServicePartitionInfo> Partitions;
+	public List<ServicePartitionInfo> Partitions{ get; set; } 
 }
 
 public class AppServerInfo
 {
-    public string                     Host;
-	public NodeAddress                Address;
+    public string                     Host{ get; set; } 
+	public NodeAddress                Address{ get; set; } 
 	// temp fix from Dictionary<UInt64, ...> to ensure converting to json can work in C#
-	public Dictionary<string, ServicePartitionInfo> Services;
-	public bool                       IsAlive;
+	public Dictionary<string, ServicePartitionInfo> Services{ get; set; } 
+	public bool                       IsAlive{ get; set; } 
 }
 
 public enum ServicePartitionAction

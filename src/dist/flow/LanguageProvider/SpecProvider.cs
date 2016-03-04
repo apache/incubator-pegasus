@@ -167,6 +167,7 @@ namespace rDSN.Tron.LanguageProvider
         public SpecProviderManager()
         {
             Register(new ThriftSpecProvider());
+            Register(new ProtoSpecProvider());
         }
 
         public void Register(ISpecProvider provider)
