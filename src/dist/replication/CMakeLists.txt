@@ -1,5 +1,6 @@
 add_subdirectory(client_lib)
 add_subdirectory(meta_server)
+add_subdirectory(meta_server_lib)
 add_subdirectory(lib)
 add_subdirectory(global_checker)
 add_subdirectory(zookeeper)
