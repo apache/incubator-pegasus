@@ -508,11 +508,11 @@ error_code server_state::initialize_apps()
             app_state app;
             app.app_id = 1 + _apps.size();
             app.app_name = dsn_config_get_value_string(s,
-                "app_name", "", "replication app name");
-            dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
+                "app_name", "", "app name");
+            dassert(app.app_name.length() > 0, "'[%s] app_name' not specified", s);
             app.app_type = dsn_config_get_value_string(s,
-                "app_type", "", "replication app type-name");
-            dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
+                "app_type", "", "app type-name");
+            dassert(app.app_type.length() > 0, "'[%s] app_type' not specified", s);
             app.partition_count = (int)dsn_config_get_value_uint64(s,
                 "partition_count", 1, "how many partitions the app should have");
             app.status = AS_CREATING;
