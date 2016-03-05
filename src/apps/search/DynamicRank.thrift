@@ -4,7 +4,7 @@ namespace csharp dsn.app.search
 
 struct Rank
 {
-	1: i32 Value;
+    1: i32 Value;
 }
 
 struct DocId

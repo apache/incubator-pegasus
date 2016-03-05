@@ -114,6 +114,7 @@ namespace rDSN.Tron.ControlPanel
             var asm = Assembly.LoadFrom(Path.Combine("tmp", app_name + ".Tron.Spec.dll"));
                 
             var cls = new ServicePackage();
+            cls.Name = app_name;
             cls.Spec.MainSpecFile = cls.MainSpec = Path.GetFileName(args[2]);
             cls.Spec.SType = idl_type;
             cls.Spec.IsRdsnRpc = is_rdsn_rpc;

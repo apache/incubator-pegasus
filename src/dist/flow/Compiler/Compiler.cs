@@ -186,6 +186,7 @@ namespace rDSN.Tron.Compiler
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));
+                sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".main.composed.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".code.definition.cs"));
             }

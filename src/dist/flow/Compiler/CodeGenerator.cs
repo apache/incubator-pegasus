@@ -76,9 +76,14 @@ namespace rDSN.Tron.Compiler
             _builder.BeginBlock();
             BuildServiceClientsRdsn();
             BuildConstructorRdsn();
+            //thrift or protobuf
             BuildServiceCallsRdsn(_appClassName);
             foreach (var c in contexts)
-                BuildQueryRdsn(_appClassName, ServiceContract.GetServiceCalls(service), c);
+                //never change
+                BuildQueryRdsn(c);
+
+            //always thrift
+            BuildServer(_appClassName, ServiceContract.GetServiceCalls(service));
 
             _builder.EndBlock();
 
@@ -124,6 +129,7 @@ namespace rDSN.Tron.Compiler
             BuildServiceCalls();
             foreach (var c in contexts)
                 BuildQuery(c);
+
             
             _builder.EndBlock();
             
@@ -200,14 +206,27 @@ namespace rDSN.Tron.Compiler
 
                 _builder.AppendLine("private " + respTypeName + " " + call + "( " + reqTypeName + " req)");
                 _builder.BeginBlock();
-                _builder.AppendLine("var request = new " + s.Value.Schema.Name + "." + callName + "_args();");
 
-                var thriftArgName = s.Key.Method.GetParameters()[0].Name;
-                var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
-                _builder.AppendLine("request." + upperedThriftArgName + " = req;");
-                _builder.AppendLine(s.Value.Schema.Name + "." + callName + "_result resp;");
-                _builder.AppendLine(svcName + "." + callName + "(request, out resp);");
-                _builder.AppendLine("return resp.Success;");
+                if (s.Value.Spec.SType == ServiceSpecType.Thrift_0_9)
+                {
+                    _builder.AppendLine("var request = new " + s.Value.Schema.Name + "." + callName + "_args();");
+                    var thriftArgName = s.Key.Method.GetParameters()[0].Name;
+                    var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
+                    _builder.AppendLine("request." + upperedThriftArgName + " = req;");
+                    _builder.AppendLine(s.Value.Schema.Name + "." + callName + "_result resp;");
+                    _builder.AppendLine(svcName + "." + callName + "(request, out resp);");
+                    _builder.AppendLine("return resp.Success;");
+                }
+                else if (s.Value.Spec.SType == ServiceSpecType.Proto_Buffer_1_0)
+                {
+                    _builder.AppendLine(respTypeName + " resp;");
+                    _builder.AppendLine(svcName + "." + callName + "(req, out resp);");
+                    _builder.AppendLine("return resp;");
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
                 _builder.EndBlock();
                 _builder.AppendLine();
             }
@@ -218,7 +237,7 @@ namespace rDSN.Tron.Compiler
             
         }
 
-        private void BuildQueryRdsn(string serviceName, MethodInfo[] methods, QueryContext c)
+        private void BuildQueryRdsn(QueryContext c)
         {
             _builder.AppendLine("public " + c.OutputType.GetGenericArguments()[0].FullName.GetCompilableTypeName()
                         + " " + c.Name + "(" + c.InputType.GetCompilableTypeName(_rewrittenTypes) + " request)");
@@ -247,6 +266,10 @@ namespace rDSN.Tron.Compiler
             _builder.AppendLine("}");
             _builder.AppendLine();
 
+        }
+
+        private void BuildServer(string serviceName, MethodInfo[] methods)
+        {
             foreach (var m in methods)
             {
                 var resp_type = serviceName + "." + m.Name + "_result";
@@ -259,6 +282,7 @@ namespace rDSN.Tron.Compiler
                 _builder.AppendLine();
             }
         }
+
 
         private void BuildQuery(QueryContext c)
         {

@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dsn.dev.csharp", "..\..\dev
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "echo.csharp", "..\..\apps\echo.csharp\echo.csharp.csproj", "{1243D2B1-6270-47FE-A886-8F0B0CEBA9E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sc", "sc\sc.csproj", "{EAA90C8C-50C5-4FFB-B33B-F53C0831C276}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "scproto", "sc\scproto.csproj", "{EAA90C8C-50C5-4FFB-B33B-F53C0831C276}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

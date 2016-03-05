@@ -5,7 +5,7 @@ using Thrift.Transport;
 
 namespace dsn.dev.csharp
 {
-    public static partial class ThriftJsonHelper
+    internal static partial class ThriftJsonHelper
     {
         public static void Read<T>(this Stream rs, out T val) where T : TBase, new()
         {
