@@ -283,6 +283,8 @@ namespace dsn
                 }
 
                 app.reset(new layer1_app_info(proposal));
+
+                // package dir as work-dir/package-id
                 app->package_dir = utils::filesystem::path_combine(_working_dir, proposal.config.package_id);
 
 
@@ -294,8 +296,8 @@ namespace dsn
 //# error "not supported yet"
 # endif
 
-                std::string runner_path = utils::filesystem::path_combine(app->package_dir, app->configuration.package_id);
-                app->runner_script = utils::filesystem::path_combine(runner_path, runner);
+                // as work-dir/package-id/run.cmd
+                app->runner_script = utils::filesystem::path_combine(app->package_dir, runner);
 
                 _apps.emplace(app->configuration.gpid, app);
             }
@@ -307,32 +309,28 @@ namespace dsn
                 kill_app(std::move(old_app));
             
             // check and start
-            std::string package_dir = app->package_dir;
             if (app->resource_ready)
             {                
-                app->package_dir = utils::filesystem::path_combine(app->package_dir, app->configuration.package_id);
                 start_app(std::move(app));
             }
 
             // download package first if necesary
             else
             {
-                utils::filesystem::create_directory(package_dir);
-
                 // TODO: better way to download package from app store 
                 std::vector<std::string> files{ app->configuration.package_id + ".7z" };
 
                 dinfo("start downloading package %s from %s to %s",
                     app->configuration.package_id.c_str(),
                     _package_server.to_string(),
-                    app->package_dir.c_str()
+                    _working_dir.c_str()
                     );
 
                 file::copy_remote_files(
                     _package_server,
                     _package_dir_on_package_server,
                     files,
-                    package_dir,
+                    _working_dir,
                     true,
                     LPC_DAEMON_DOWNLOAD_PACKAGE,
                     this,
@@ -343,7 +341,7 @@ namespace dsn
 
                             // TODO: using zip lib instead
                             // 
-                            std::string command = "7z x " + cap_app->package_dir + '/' + cap_app->configuration.package_id + ".7z -y -o" + cap_app->package_dir;
+                            std::string command = "7z x " + _working_dir + '/' + cap_app->configuration.package_id + ".7z -y -o" + _working_dir;
                             // decompress when completed
                             system(command.c_str());
 
@@ -423,7 +421,7 @@ namespace dsn
             {
                 uint32_t port = (uint32_t)dsn_random32(_app_port_min, _app_port_max);
 
-                // set up working dir
+                // set up working dir as _working_dir/package-id/gpid.port
                 {
                     std::stringstream ss;
                     ss << app->configuration.gpid.app_id << "." << app->configuration.gpid.pidx << "." << port;
@@ -438,7 +436,7 @@ namespace dsn
                 std::stringstream ss;
 # ifdef _WIN32
                 ss << "cmd.exe /k SET port=" << port;
-                ss << " && SET package_dir=" << app->package_dir << "\\" << app->configuration.package_id;
+                ss << " && SET package_dir=" << app->package_dir;
                 ss << "&& CALL " << app->runner_script;
 # else
 //# error not implemented

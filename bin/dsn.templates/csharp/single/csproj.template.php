@@ -131,6 +131,12 @@ echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
     <None Include="${MY_CURRENT_SOURCE_DIR}\config.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="${MY_CURRENT_SOURCE_DIR}\config.appstore.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="${MY_CURRENT_SOURCE_DIR}\run.cmd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
