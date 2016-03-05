@@ -341,7 +341,7 @@ namespace dsn
 
                             // TODO: using zip lib instead
                             // 
-                            std::string command = "7z x " + _working_dir + '/' + cap_app->configuration.package_id + ".7z -y -o" + cap_app->package_dir;
+                            std::string command = "7z x " + _working_dir + '/' + cap_app->configuration.package_id + ".7z -y -o" + _working_dir;
                             // decompress when completed
                             system(command.c_str());
 
