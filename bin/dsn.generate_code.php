@@ -219,10 +219,13 @@ function generate_files_from_dir($dr)
         if (is_dir($dr."/".$template))
             continue;
 
+        // special files with which prefix are not neded
         if ($template == "config.ini.php"
          || $template == "CMakeLists.txt.php"
          || $template == "App.config.php"
          || $template == "Dockerfile.php"
+         || $template == "run.cmd.php"
+         || $template == "config.appstore.ini.php"
            )
             $output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
         else
