@@ -68,7 +68,7 @@ else
     $g_mode = "single";
 }
     
-if ($g_mode != "single" && $g_mode != "replication")
+if ($g_mode != "single" && $g_mode != "replication" && $g_mode != "layer3")
 {
     echo "invalid mode '$g_mode'".PHP_EOL;
     usage();

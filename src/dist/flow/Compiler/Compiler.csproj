@@ -42,19 +42,6 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bond">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Interfaces, Version=3.0.3.0, Culture=neutral, PublicKeyToken=cf7230938fec607f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.Rpc">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.Rpc.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bond.TypeProvider">
-      <HintPath>..\external\bond\amd64\Microsoft.Bond.TypeProvider.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.QualityTools.Testing.Fakes, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -69,7 +56,6 @@
     <Compile Include="CodeGenerator.cs" />
     <Compile Include="Compiler.cs" />
     <Compile Include="Instruction.cs" />
-    <Compile Include="LocalService.cs" />
     <Compile Include="PrimitiveGraphBuilder.cs" />
     <Compile Include="Expression2Code.cs" />
     <Compile Include="QueryContext.cs" />

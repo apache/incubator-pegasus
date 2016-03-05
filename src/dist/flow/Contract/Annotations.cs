@@ -76,19 +76,7 @@ namespace rDSN.Tron.Contract
     public class UpCall : System.Attribute
     {
     }
-
-    [System.AttributeUsage(AttributeTargets.Field)]
-    public class BondAttr : System.Attribute
-    {
-        public BondAttr()
-        {
-            Index = -1;
-        }
-
-        public int Index { get; set; }
-    }
-
-    
+  
 }
 
 
@@ -110,7 +98,7 @@ namespace IDL
         /// to represent the source type
         /// </summary>
         /// <value>
-        /// bond, proto, thrift, etc.
+        /// proto, thrift, etc.
         /// </value>
         public SchemaAttribute(string n, string v)
         {

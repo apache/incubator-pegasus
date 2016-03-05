@@ -85,8 +85,6 @@ namespace rDSN.Tron.LanguageProvider
         {
             switch (name)
             {
-                case "bond":
-                    return new BondGenerator();
                 case "proto":
                     return new ProtoGenerator();
                 case "thrift":
@@ -100,8 +98,6 @@ namespace rDSN.Tron.LanguageProvider
         {
             switch (t)
             {
-                case ServiceSpecType.Bond_3_0:
-                    return new BondGenerator();
                 case ServiceSpecType.Proto_Buffer_1_0:
                     return new ProtoGenerator();
                 case ServiceSpecType.Thrift_0_9:
@@ -142,7 +138,7 @@ namespace rDSN.Tron.LanguageProvider
 
         /// <summary>
         /// In case some structs have dependency problems
-        /// while bond does not support forward type search.
+        /// e.g., does not support forward type search.
         /// Sort the type list according to their dependency relationships
         /// </summary>
         protected void SortTypeByDependency(ref List<Type> structs)
@@ -194,182 +190,6 @@ namespace rDSN.Tron.LanguageProvider
 
     }
 
-    public class BondGenerator : IdlGenerator
-    {
-        public BondGenerator() : base() { }
-
-        public override void GenerateHeader()
-        {
-            var nspace = asm.GetTypes().Select(t => t.Namespace).Distinct().First();
-            c.AppendLine("namespace " + nspace);
-            c.AppendLine();
-        }
-        public override void GenerateEnums()
-        {
-            var enums = asm.GetExportedTypes().Where(t => t.IsEnum);
-            foreach (var e in enums)
-            {
-                c.AppendLine("enum " + e.Name);
-                c.BeginBlock();
-                var fields = e.GetFields().ToList();
-                fields.RemoveAt(0);
-                foreach (var member in fields)
-                {
-                    string defaultValue = "";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
-                    if (fieldAttribute.defaultValue != null)
-                    {
-                        defaultValue = " = " + fieldAttribute.defaultValue;
-                    }
-                    c.AppendLine(member.Name + defaultValue);
-                }
-                c.EndBlock();
-                c.AppendLine();
-            }
-
-        }
-
-        public override void GenerateStructs()
-        {
-            // class is allowed here to support inheritance in bond
-            // if we don't want to support class definition in C#, just delete the "t.IsClass"
-            var structs = asm.GetExportedTypes().Where(t => (t.IsValueType || t.IsClass) && !t.IsEnum).ToList();
-            SortTypeByDependency(ref structs);
-            foreach (var s in structs)
-            {
-                var fields = s.GetFields().ToList();
-                if (s.BaseType.Namespace != "System") // has parent class
-                {
-                    c.AppendLine("struct " + s.Name + " : " + s.BaseType.Name);
-                    var baseFields = s.BaseType.GetFields();
-                    fields = fields.Where(f => baseFields.Count(bf => bf.Name == f.Name) == 0).ToList();
-                }
-                else
-                {
-                    c.AppendLine("struct " + s.Name);
-                }
-
-                c.BeginBlock();
-                int lineNumber = 0;
-                foreach (var member in fields)
-                {
-                    string modifier = "";
-                    string defaultValue = "";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
-                    if (fieldAttribute != null)
-                    {
-                        lineNumber = fieldAttribute.index;
-                        modifier = fieldAttribute.modifier;// == "optional" ? "" : fieldAttribute.modifier;
-                        defaultValue = fieldAttribute.defaultValue;
-                        if (defaultValue != null)
-                        {
-                            defaultValue = " = " + defaultValue;
-                        }
-
-                    }
-
-                    c.AppendLine(lineNumber + ": " + modifier + " " + CastToIdlType(member.FieldType) + " " + member.Name + defaultValue + ";");
-
-
-                }
-                c.EndBlock();
-                c.AppendLine();
-            }
-
-        }
-
-        public override void GenerateApis()
-        {
-            var structs = asm.GetExportedTypes().Where(t => t.IsInterface && t.IsPublic);     // select the interface types
-            foreach (var s in structs)
-            {
-                var serviceMethods = s.GetMethods().ToList();
-                foreach (var parent in s.GetInterfaces())  // parent interface's methods
-                {
-                    serviceMethods.AddRange(parent.GetMethods());
-                }
-
-                c.AppendLine("service " + s.Name);
-                c.BeginBlock();
-                foreach (var method in serviceMethods)
-                {
-                    var paramList = method.GetParameters().Select(p => CastToIdlType(p.ParameterType) + " " + p.Name);
-                    if (paramList.Count() > 1)
-                    {
-                        Console.WriteLine("Error: Only one parameter is supported by bond service definition...");
-                    }
-                    c.AppendLine(CastToIdlType(method.ReturnType) + " " + method.Name + "(" + string.Join(", ", paramList) + ");");
-                    Console.WriteLine();
-                }
-                c.EndBlock();
-                c.AppendLine();
-            }
-
-        }
-
-        /// <summary>
-        /// Cast the C# Type to Bond Type
-        /// Do not take the prefix.
-        /// </summary>
-        /// <example>
-        ///     system.int32        =>      int32
-        ///     system.Double       =>      double
-        ///     system.string       =>      string
-        ///     namespace.typename  =>      typename
-        ///     composite type      =>      simplified type, no prefix
-        /// </example>
-        /// <param name="s">C# code type</param>
-        /// <returns>mapped bond type string</returns>
-        protected override string CastToIdlType(Type s)
-        {
-            if (!s.Namespace.StartsWith("System"))
-            {
-                return s.Name;
-            }
-            else if (s.IsGenericType == true)
-            {
-                var genericTypeName = IdlTypeMaps[s.Name.Split('`').First()];
-                var genericParamList = s.GenericTypeArguments.Select(p => CastToIdlType(p));
-                return genericTypeName + "<" + string.Join(", ", genericParamList) + ">";
-            }
-            else if (IdlTypeMaps.ContainsKey(s.Name))
-            {
-                return IdlTypeMaps[s.Name];
-            }
-            else
-            {
-                return s.Name.ToLower();
-            }
-
-        }
-
-
-        private Dictionary<string, string> IdlTypeMaps = new Dictionary<string, string>()
-        {
-            // generic types
-            {"List"         , "vector"},
-            {"Dictionary"   , "map"},
-
-            // system types
-            {"Boolean"      , "bool"},
-            {"Char"         , "string"},
-            {"Decimal"      , "double"},
-            {"Double"       , "double"},
-            {"Single"       , "float"},
-            {"Int16"        , "int16"},
-            {"UInt16"       , "uint16"},
-            {"Int32"        , "int32"},
-            {"UInt32"       , "uint32"},
-            {"Int64"        , "int64"},
-            {"UInt64"       , "uint64"},
-            //{"Object"       , "object"}       // do not support object？
-             //{"Byte"         , "byte"},        // do not support byte?
-            //{"SByte"        , "sbyte"},
-            
-        };
-
-    }
-
     public class ProtoGenerator : IdlGenerator
     {
         public ProtoGenerator()
@@ -414,7 +234,7 @@ namespace rDSN.Tron.LanguageProvider
 
         public override void GenerateStructs()
         {
-            // class is allowed here to support inheritance in bond
+            // class is allowed here to support inheritance
             // if we don't want to support class definition in C#, just delete the "t.IsClass"
             var structs = asm.GetExportedTypes().Where(t => (t.IsValueType || t.IsClass) && !t.IsEnum).ToList();
             if (!supportForwardSearch)
@@ -487,7 +307,7 @@ namespace rDSN.Tron.LanguageProvider
                     var paramList = method.GetParameters().Select(p => CastToIdlType(p.ParameterType) + " " + p.Name);
                     if (paramList.Count() > 1)
                     {
-                        Console.WriteLine("Error: Only one parameter is supported by bond service definition...");
+                        Console.WriteLine("Error: Only one parameter is supported by service definition...");
                     }
 
                     c.AppendLine("rpc " + method.Name + " (" + string.Join(", ", paramList) + ") returns (" + CastToIdlType(method.ReturnType) + ");");
@@ -500,7 +320,7 @@ namespace rDSN.Tron.LanguageProvider
         }
 
         /// <summary>
-        /// Cast the C# Type to Bond Type
+        /// Cast the C# Type to IDL Type
         /// Do not take the prefix.
         /// </summary>
         /// <example>
@@ -511,7 +331,7 @@ namespace rDSN.Tron.LanguageProvider
         ///     composite type      =>      simplified type, no prefix
         /// </example>
         /// <param name="s">C# code type</param>
-        /// <returns>mapped bond type string</returns>
+        /// <returns>mapped IDL type string</returns>
         protected override string CastToIdlType(Type s)
         {
             if (!s.Namespace.StartsWith("System"))
@@ -608,7 +428,7 @@ namespace rDSN.Tron.LanguageProvider
 
         public override void GenerateStructs()
         {
-            // class is allowed here to support inheritance in bond
+            // class is allowed here to support inheritance in IDL
             // if we don't want to support class definition in C#, just delete the "t.IsClass"
             var structs = asm.GetExportedTypes().Where(t => (t.IsValueType || t.IsClass) && !t.IsEnum).ToList();
             if (!supportForwardSearch)
@@ -681,7 +501,7 @@ namespace rDSN.Tron.LanguageProvider
                     var paramList = method.GetParameters().Select(p => CastToIdlType(p.ParameterType) + " " + p.Name);
                     if (paramList.Count() > 1)
                     {
-                        Console.WriteLine("Error: Only one parameter is supported by bond service definition...");
+                        Console.WriteLine("Error: Only one parameter is supported by IDL service definition...");
                     }
 
                     c.AppendLine("rpc " + method.Name + " (" + string.Join(", ", paramList) + ") returns (" + CastToIdlType(method.ReturnType) + ");");
@@ -694,7 +514,7 @@ namespace rDSN.Tron.LanguageProvider
         }
 
         /// <summary>
-        /// Cast the C# Type to Bond Type
+        /// Cast the C# Type to IDL Type
         /// Do not take the prefix.
         /// </summary>
         /// <example>
@@ -705,7 +525,7 @@ namespace rDSN.Tron.LanguageProvider
         ///     composite type      =>      simplified type, no prefix
         /// </example>
         /// <param name="s">C# code type</param>
-        /// <returns>mapped bond type string</returns>
+        /// <returns>mapped IDL type string</returns>
         protected override string CastToIdlType(Type s)
         {
             if (!s.Namespace.StartsWith("System"))

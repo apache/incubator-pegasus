@@ -23,7 +23,7 @@
 //--------------------------------------------------------------------------------
 
 - connecting services (myservice using four services s1, s2, s3, s4 with different types)
-	- legacy services (with .thrift, .bond, or .proto interface definition file <IDL>)
+	- legacy services (with .thrift, or .proto interface definition file <IDL>)
 	     - (1) using ISpecProvider to convert IDL files => (missing! using php template)
 		       => C# data structures with annotations => s1.spec.dll (manifest *.thift)
 
@@ -40,7 +40,7 @@
 		    - link against s1.clientlib.dll
 
 
-   ISpecProvider for thrift_3_0 bond_xx_xxx
+   ISpecProvider for thrift_3_0 proto_xxx_XXX
      - string[] ToCommonSpec(ServiceSpec spec, string dir); 
 	       => used by step (1) above
 
@@ -53,11 +53,11 @@
             );
 
 @Ke
-	- indexserve.bond => e.g., IsCache.thrift
+	- indexserve.thrift => e.g., IsCache.thrift
 	    (1) generate C# service client and server using thrift.exe and thrift library
 		(2) generate C# client and C++ server using dsn.cg.bat and rdsn library
 @Tianyi
-    - xxx.thrift/.bond => xxx.spec.dll/xxx.Tron.composition.dll/xxx.clientlib.dll
+    - xxx.thrift => xxx.spec.dll/xxx.Tron.composition.dll/xxx.clientlib.dll
 	- go through the index serve example end-to-end using both legacy and rdsn applications
 	     - QU (C++, Thrift runtime)
 		 - QU2 (C#, rDSN runtime)

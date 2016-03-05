@@ -61,9 +61,6 @@ namespace rDSN.Tron.Contract
             builder.AppendLine("using System.Diagnostics;");
             builder.AppendLine("using System.IO;");
             builder.AppendLine();
-            builder.AppendLine("using BondNetlibTransport;");
-            builder.AppendLine("using BondTransport;");
-            builder.AppendLine("using Microsoft.Bond;");
             builder.AppendLine("using rDSN.Tron.Utility;");
             builder.AppendLine("using rDSN.Tron.Contract;");
             builder.AppendLine("using rDSN.Tron.Runtime;");
@@ -139,34 +136,6 @@ namespace rDSN.Tron.Contract
                 string return_value_name = thriftTypeMapping.ContainsKey(return_value_type) ? thriftTypeMapping[return_value_type] : return_value_type.FullName.GetCompilableTypeName();
                 string parameter_name = thriftTypeMapping.ContainsKey(parameter_type) ? thriftTypeMapping[parameter_type] : parameter_type.FullName.GetCompilableTypeName();
                 builder.AppendLine(return_value_name + " " + m.Name + "(" + parameter_name + " req);");
-            }
-
-            builder.EndBlock();
-            builder.AppendLine();
-
-            return builder.ToString();
-        }
-
-        public static string GenerateBondSpec(Type type, List<string> dependentSpecFiles)
-        {
-            CodeBuilder builder = new CodeBuilder();
-
-            foreach (var s in dependentSpecFiles)
-            {
-                builder.AppendLine("import \"" + s + "\"");
-            }
-
-            builder.AppendLine();
-            builder.AppendLine("namespace " + type.Namespace.ToString());
-            builder.AppendLine("service " + type.Name);
-            builder.BeginBlock();
-
-            foreach (var m in ServiceContract.GetServiceCalls(type))
-            {
-                builder.AppendLine(m.ReturnType.GetGenericArguments()[0].FullName.GetCompilableTypeName()
-                    + " " + m.Name + "(" +
-                    m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName()
-                    + " request);");
             }
 
             builder.EndBlock();
