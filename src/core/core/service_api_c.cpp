@@ -254,6 +254,23 @@ DSN_API double dsn_config_get_value_double(const char* section, const char* key,
     return dsn_all.config->get_value<double>(section, key, default_value, dsptr);
 }
 
+DSN_API int dsn_config_get_all_sections(const char** buffers, /*inout*/ int* buffer_count)
+{
+    std::vector<const char*> sections;
+    dsn_all.config->get_all_section_ptrs(sections);
+    int scount = (int)sections.size();
+
+    if (*buffer_count > scount)
+        *buffer_count = scount;
+
+    for (int i = 0; i < *buffer_count; i++)
+    {
+        buffers[i] = sections[i];
+    }
+
+    return scount;
+}
+
 DSN_API int dsn_config_get_all_keys(const char* section, const char** buffers, /*inout*/ int* buffer_count) // return all key count (may greater than buffer_count)
 {
     std::vector<const char*> keys;

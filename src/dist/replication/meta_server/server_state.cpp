@@ -490,42 +490,59 @@ std::string server_state::get_partition_path(const global_partition_id& gpid) co
 
 error_code server_state::initialize_apps()
 {
+    const char* sections[10240];
+    int scount, used_count = sizeof(sections)/sizeof(const char*);
+    scount = dsn_config_get_all_sections(sections, &used_count);
+    dassert(scount == used_count, "too many sections (>10240) defined in config files");
+
     ddebug("start to do initialize");
-    app_state app;
-    app.app_id = 1;
-    app.app_name = dsn_config_get_value_string("replication.app",
-        "app_name", "", "replication app name");
-    dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
-    app.app_type = dsn_config_get_value_string("replication.app",
-        "app_type", "", "replication app type-name");
-    dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
-    app.partition_count = (int)dsn_config_get_value_uint64("replication.app",
-        "partition_count", 1, "how many partitions the app should have");
-    app.status = AS_CREATING;
-    app.available_partitions.store(0);
 
-    app.is_stateful = dsn_config_get_value_bool("replication.app", "stateful",
-        true, "whether this is a stateful app");
-    app.package_id = dsn_config_get_value_string("replication.app", "package_id",
-        "", "package ID in app store to download the package");
+    for (int i = 0; i < used_count; i++)
+    {
+        if (strstr(sections[i], "meta_server.apps") == sections[i] 
+            // legacy hack
+            || strcmp(sections[i], "replication.app") == 0)
+        {
+            const char* s = sections[i];
 
-    _apps.push_back(app);
+            app_state app;
+            app.app_id = 1 + _apps.size();
+            app.app_name = dsn_config_get_value_string(s,
+                "app_name", "", "replication app name");
+            dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
+            app.app_type = dsn_config_get_value_string(s,
+                "app_type", "", "replication app type-name");
+            dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
+            app.partition_count = (int)dsn_config_get_value_uint64(s,
+                "partition_count", 1, "how many partitions the app should have");
+            app.status = AS_CREATING;
+            app.available_partitions.store(0);
 
-    partition_configuration pc;
-    init_partition_configuration(pc, app,
-        dsn_config_get_value_uint64("replication.app", "max_replica_count", 3, "max replica count in app"));
+            app.is_stateful = dsn_config_get_value_bool(s, "stateful",
+                true, "whether this is a stateful app");
+            app.package_id = dsn_config_get_value_string(s, "package_id",
+                "", "package ID in app store to download the package");
 
-    std::vector<partition_configuration>& partitions = _apps.back().partitions;
-    partitions.resize(app.partition_count, pc);
-    for (unsigned int i=0; i!=partitions.size(); ++i)
-        partitions[i].gpid.pidx = i;
+            _apps.push_back(app);
+
+            partition_configuration pc;
+            init_partition_configuration(pc, app,
+                dsn_config_get_value_uint64(s, "max_replica_count", 3, "max replica count in app"));
+
+            std::vector<partition_configuration>& partitions = _apps.back().partitions;
+            partitions.resize(app.partition_count, pc);
+            for (unsigned int i = 0; i != partitions.size(); ++i)
+                partitions[i].gpid.pidx = i;
+        }
+    }
 
     error_code err = sync_apps_to_remote_storage();
     if (err != ERR_OK)
     {
-        _apps.pop_back();
+        _apps.clear();
         return err;
     }
+
     return ERR_OK;
 }
 
