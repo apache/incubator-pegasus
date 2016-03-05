@@ -66,8 +66,8 @@ namespace rDSN.Tron.ControlPanel
             CommandManager.Instance().Add(new string[] { "meta", "Meta", "m", "M" }, new MetaServerController());
 
             // service store commands
-            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "PHP", "php" }, new GenerateCommonSpecCommand());
-
+            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCommonSpecCommand());
+                
             // local tools
             //CommandManager.Instance().Add(new string[] { "Generate", "generate", "g", "G" }, new GenerateCommand());
             //CommandManager.Instance().Add(new string[] { "Generatei", "generatei", "gi", "GI" }, new GenerateCompositionStubCommand());

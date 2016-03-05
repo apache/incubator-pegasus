@@ -86,8 +86,30 @@ namespace rDSN.Tron.LanguageProvider
             out LinkageInfo linkInfo
             )
         {
-            linkInfo = null;
-            return ErrorCode.Success;
+            if (spec.IsRdsnRpc)
+            {
+                linkInfo = new LinkageInfo();
+                var app_name = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
+                if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+                {
+                    CSharpCompiler.ToDiskAssembly(
+                        new string[] { Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") },
+                        new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll")},
+                        new string[] { },
+                        Path.Combine(dir, app_name + ".client.dll")
+                        );
+                    linkInfo.DynamicLibraries.Add(Path.Combine(dir, app_name + ".client.dll"));
+                    return ErrorCode.Success;
+                }
+                else
+                {
+                    return ErrorCode.ProcessStartFailed;
+                }
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
 
 

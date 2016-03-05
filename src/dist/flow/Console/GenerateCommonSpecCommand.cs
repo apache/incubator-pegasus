@@ -145,7 +145,7 @@ namespace rDSN.Tron.ControlPanel
 
         public override string Help()
         {
-            return "please post an issue at github for help";
+            return ".\\Tron.exe gcs thrift dsn .\\add.thrift";
         }
     }
 }
