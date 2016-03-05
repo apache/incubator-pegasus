@@ -32,7 +32,7 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,6 +45,7 @@ using System.Runtime.InteropServices;
 
 using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
+using System.Linq.Expressions;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -126,6 +127,13 @@ namespace rDSN.Tron.LanguageProvider
         {
             linkInfo = null;
             return ErrorCode.Success;
+        }
+
+        public void GenerateClientCall(CodeBuilder builder, MethodCallExpression call, Service svc, Dictionary<Type, string> reWrittenTypes)
+        {
+            builder.AppendLine(call.Type.GetCompilableTypeName(reWrittenTypes) + " resp;");
+            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(req, out resp);");
+            builder.AppendLine("return resp;");
         }
     }
 

@@ -35,7 +35,7 @@
  
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -160,6 +160,20 @@ namespace rDSN.Tron.LanguageProvider
         /// </summary>
         /// <returns>compiler path</returns>
         //string GetCompilerPath();
+
+        /// <summary>
+        /// generate service client call wrappers.
+        /// </summary>
+        /// <param name="builder"> code builder for codegen </param>
+        /// <param name="call"> The service call expression </param>
+        /// <param name="svc"> Service itself </param>
+        /// <param name="reWrittenTypes"> mapping of reWritten type names</param>
+        void GenerateClientCall(
+            CodeBuilder builder,
+            MethodCallExpression call,
+            Service svc,
+            Dictionary<Type, string> reWrittenTypes
+            );
     }
 
     public class SpecProviderManager : Singleton<SpecProviderManager>
