@@ -18,6 +18,13 @@ if ($idl_format == "proto")
     {
         $inc_lib = "libprotobuf.a";
     }
+} else if ($idl_format == "thrift")
+{
+    $inc_path = '${DSN_ROOT}/include/ext/';
+    if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
+    {
+        $inc_lib = "libthrift.lib";
+    }
 }
 ?>
 cmake_minimum_required(VERSION 2.8.8)
@@ -34,7 +41,11 @@ project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+file(GLOB
+    MY_PROJ_SRC
+   "${CMAKE_CURRENT_SOURCE_DIR}/thrift/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/thrift/*.h"
+)
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
@@ -43,11 +54,12 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "<?=$inc_path?>")
 
-set(MY_PROJ_LIBS "<?=$inc_lib?>")
+set(MY_PROJ_LIBS "<?=$inc_lib?>" "dsn.core.dll")
 
 set(MY_PROJ_LIB_PATH "")
 
 set(INI_FILES "")
+
 file(GLOB
     RES_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"

@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 # pragma once
 
@@ -41,7 +42,7 @@ public:
 
     void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
     {
-        <?=$f->get_first_param()->get_cpp_type()?> req;
+        <?=$f->get_cpp_request_type_name()?> req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
