@@ -49,31 +49,18 @@ namespace rDSN.Tron.ControlPanel
     {
         static void Main(string[] args)
         {
-            Configuration.Instance().Set("VerboseUDP", "false");
-            Configuration.Instance().Set("VerboseRpc", "false");
-
-            //ServiceNode.Instance().Start();
-                        
             // general commands
             CommandManager.Instance().Add(new string[] {"quit", "Quit", "q", "Q"}, new ExitCommand());
             CommandManager.Instance().Add(new string[] { "help", "Help", "h", "H" }, new HelpCommand());            
             CommandManager.Instance().Add(new string[] { "Repeat", "repeat", "r", "R" }, new RepeatCommand());            
             CommandManager.Instance().Add(new string[] { "enum", "Enum", "e", "E" }, new EnumCommand());
             CommandManager.Instance().Add(new string[] { "win", "Win", "w", "W" }, new WinBatchCommand());
-
-            // service infrastructure commands
-            CommandManager.Instance().Add(new string[] { "server", "Server", "s", "S" }, new AppServerController());
-            CommandManager.Instance().Add(new string[] { "meta", "Meta", "m", "M" }, new MetaServerController());
-
-            // service store commands
-            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCommonSpecCommand());
-                
+            
             // local tools
-            //CommandManager.Instance().Add(new string[] { "Generate", "generate", "g", "G" }, new GenerateCommand());
-            //CommandManager.Instance().Add(new string[] { "Generatei", "generatei", "gi", "GI" }, new GenerateCompositionStubCommand());
-            //CommandManager.Instance().Add(new string[] { "Generateb", "generateb", "gb", "GB" }, new GenerateIDLFileCommand());
-            //CommandManager.Instance().Add(new string[] { "Generatec", "generatec", "gc", "GC" }, new GenerateCommonInterfaceCommand());
-
+            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCompositionStubCommand());
+            CommandManager.Instance().Add(new string[] { "Generatec", "generatec", "gc", "GC" }, new GenerateCommonInterfaceCommand());
+            CommandManager.Instance().Add(new string[] { "Generateb", "generateb", "gb", "GB" }, new GenerateIDLFileCommand());
+            
             if (args.Length == 0)
             {
                 CommandManager.Instance().Run();

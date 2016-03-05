@@ -182,7 +182,7 @@ namespace rDSN.Tron.Compiler
             plan.Package.MainSpec = ServiceContract.GenerateThriftSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);
             SystemHelper.StringToFile(plan.Package.MainSpec, Path.Combine(name, plan.Package.Spec.MainSpecFile));
         
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));

@@ -100,17 +100,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppServerController.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandManager.cs" />
-    <Compile Include="GenerateCommonSpecCommand.cs" />
+    <Compile Include="GenerateCompositionStubCommand.cs" />
     <Compile Include="GenerateCommonInterface.cs" />
     <Compile Include="GenerateIDLFileCommand.cs" />
     <Compile Include="ExitCommand.cs" />
     <Compile Include="WinBatchCommand.cs" />
     <Compile Include="HelpCommand.cs" />
     <Compile Include="EnumCommand.cs" />
-    <Compile Include="MetaServerController.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RepeatCommand.cs" />

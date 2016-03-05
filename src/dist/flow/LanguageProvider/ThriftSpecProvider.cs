@@ -82,7 +82,7 @@ namespace rDSN.Tron.LanguageProvider
         {
             linkinfo = new LinkageInfo();
             var app_name = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary single") == 0)
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
             {
                 var thriftGenPath = Path.Combine(dir, "thrift");
                 CSharpCompiler.ToDiskAssembly(
