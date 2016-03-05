@@ -93,12 +93,15 @@ namespace rDSN.Tron.LanguageProvider
                 if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
                 {
                     CSharpCompiler.ToDiskAssembly(
-                        new string[] { Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") },
-                        new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll")},
+                        new string[] { Path.Combine(dir, "GProtoBinaryHelper.cs"), Path.Combine(dir, app_name + ".cs"), Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") },
+                        new string[] { Path.Combine("System.IO.dll"), Path.Combine("System.runtime.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Google.Protobuf.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll")},
                         new string[] { },
                         Path.Combine(dir, app_name + ".client.dll")
                         );
                     linkInfo.DynamicLibraries.Add(Path.Combine(dir, app_name + ".client.dll"));
+                    linkInfo.DynamicLibraries.Add(Path.Combine("System.IO.dll"));
+                    linkInfo.DynamicLibraries.Add(Path.Combine("System.runtime.dll"));
+                    linkInfo.DynamicLibraries.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Google.Protobuf.dll"));
                     return ErrorCode.Success;
                 }
                 else

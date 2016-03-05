@@ -215,7 +215,7 @@ message_ex::~message_ex()
 void message_ex::seal(bool fill_crc)
 {
     dassert  (!_is_read && _rw_committed, "seal can only be applied to write mode messages");
-    dbg_dassert(header->body_length > 0, "message %s is empty!", header->rpc_name);
+    //dbg_dassert(header->body_length > 0, "message %s is empty!", header->rpc_name);
 
     if (fill_crc)
     {
@@ -361,7 +361,7 @@ message_ex* message_ex::create_receive_message(const blob& data)
     auto data2 = data.range((int)sizeof(message_header));
     msg->buffers.push_back(data2);
 
-    dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
+    //dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
     return msg;
 }
 

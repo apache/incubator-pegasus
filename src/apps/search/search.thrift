@@ -4,17 +4,17 @@ namespace csharp dsn.app.search
 
 struct StringQuery
 {
-	1: string Query;
+    1: string Query;
 }
 
 struct ErrorResult
 {
-	1: i32 ErrorCode;
+    1: i32 ErrorCode;
 }
 
 struct Rank
 {
-	1: i32 Value;
+    1: i32 Value;
 }
 
 struct AlterativeQueryList

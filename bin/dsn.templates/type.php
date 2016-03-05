@@ -553,6 +553,12 @@ class t_field
     function __construct($name, $type_name)
     {
         $this->name = $name;
+        global $_IDL_FORMAT;
+        //XXX: this is dirty, but I dont care!
+        if ($_IDL_FORMAT != "thrift")
+        {
+            $this->name = ucfirst($name);
+        }
         $this->type_name = $type_name;
     }
     

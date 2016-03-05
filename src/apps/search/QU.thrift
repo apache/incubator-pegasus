@@ -4,7 +4,7 @@ namespace csharp dsn.app.search
 
 struct StringQuery
 {
-	1: string Query;
+    1: string Query;
 }
 
 struct AlterativeQueryList
