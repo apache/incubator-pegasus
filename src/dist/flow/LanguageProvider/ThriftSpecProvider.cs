@@ -32,7 +32,7 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,6 +45,7 @@ using System.Runtime.InteropServices;
 
 using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
+using System.Linq.Expressions;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -221,10 +222,14 @@ namespace rDSN.Tron.LanguageProvider
             }
         }
 
-
-
-
-
+        public void GenerateClientCall(CodeBuilder builder, MethodCallExpression call, Service svc, Dictionary<Type, string> reWrittenTypes)
+        {
+            var thriftArgName = call.Method.GetParameters()[0].Name;
+            var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
+            builder.AppendLine(svc.Schema.Name + "." + call.Method.Name + "_result resp;");
+            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.Schema.Name + "." + call.Method.Name + "_args(){" + upperedThriftArgName + "= req}, out resp);");
+            builder.AppendLine("return resp.Success;");
+        }
     }
 
 }
