@@ -634,6 +634,11 @@ class t_function
     
     function get_cpp_return_type()
     {
+        global $_IDL_FORMAT;
+        if ($_IDL_FORMAT == "thrift")
+        {
+            return $this->service->name."_".$this->name."_result";
+        }
         return thelpers::get_cpp_type_name($this->ret);
     }
     
@@ -650,6 +655,16 @@ class t_function
     function get_first_param()
     {
         return $this->params[0];
+    }
+    
+    function get_cpp_request_type_name()
+    {
+        global $_IDL_FORMAT;
+        if ($_IDL_FORMAT == "thrift")
+        {
+            return $this->service->name."_".$this->name."_args";
+        }
+        return $this->params[0]->get_cpp_type();
     }
     
     function get_csharp_request_type_name()
