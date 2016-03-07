@@ -43,3 +43,8 @@ IF NOT EXIST "%TOP_DIR%\ext\cmake-3.2.2" (
     CALL %bin_dir%\wget.exe --no-check-certificate http://github.com/imzhenyu/packages/blob/master/windows/cmake-3.2.2.7z?raw=true
     CALL %bin_dir%\7z.exe x cmake-3.2.2.7z -y -o"%TOP_DIR%\ext\"
 )
+
+IF NOT EXIST "%TOP_DIR%\bin\Windows\thrift.exe" (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/ykwd/packages/raw/master/rdsn/thrift.exe?raw=true
+    @move thrift.exe %TOP_DIR%\bin\Windows\
+)
