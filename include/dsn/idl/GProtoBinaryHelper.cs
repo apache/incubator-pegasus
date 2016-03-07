@@ -3,7 +3,7 @@ using Google.Protobuf;
 
 namespace dsn.dev.csharp
 {
-    public static partial class GProtoHelper
+    internal static partial class GProtoHelper
     {
         public static void Read<T>(this Stream rs, out T val) where T : IMessage, new()
         {

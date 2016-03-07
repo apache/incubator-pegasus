@@ -5,7 +5,7 @@ using Thrift.Transport;
 
 namespace dsn.dev.csharp
 {
-    public static partial class ThriftBinaryHelper
+    internal static partial class ThriftBinaryHelper
     {
         public static void Read<T>(this Stream rs, out T val) where T : TBase, new()
         {

@@ -4,22 +4,22 @@ namespace csharp dsn.app.search
 
 struct SpellCheckRequest
 {
-	1: string Word;
+    1: string Word;
 }
 
 struct SpellCheckResultEntry
 {
-	1: string Word;
-	2: double Score;
+    1: string Word;
+    2: double Score;
 }
 
 struct SpellCheckResponse
 {
-	1: list<SpellCheckResultEntry> Candidates;
+    1: list<SpellCheckResultEntry> Candidates;
 }
 
 service SpellChecker
 {
-	SpellCheckResponse Check(1:SpellCheckRequest word);
+    SpellCheckResponse Check(1:SpellCheckRequest word);
 }
 

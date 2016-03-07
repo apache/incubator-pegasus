@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 # pragma once
 # include "<?=$file_prefix?>.code.definition.h"
@@ -22,12 +23,12 @@ protected:
 <?php foreach ($svc->functions as $f) { ?>
     // <?=$f->get_rpc_code()?> 
 <?php     if ($f->is_one_way()) {?>
-    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>)
+    virtual void on_<?=$f->name?>(const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>)
     {
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
     }
 <?php     } else {?>
-    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
+    virtual void on_<?=$f->name?>(const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, ::dsn::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
     {
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
         <?=$f->get_cpp_return_type()?> resp;

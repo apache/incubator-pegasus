@@ -20,6 +20,17 @@ install(DIRECTORY ${source_dir}/src/google
 )
 
 if (WIN32)
+install(DIRECTORY ${source_dir}/thrift/lib/cpp/src/thrift
+        DESTINATION include/ext
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
+)
+install(DIRECTORY ${source_dir}/thrift/lib/cpp/boost
+        DESTINATION include/ext
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
+)
+endif()
+
+if (WIN32)
     install(FILES ${PROJECT_BINARY_DIR}/lib/protoc.exe
             DESTINATION $ENV{DSN_ROOT}/bin/Windows)
 else()

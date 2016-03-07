@@ -19,8 +19,18 @@ $idl_format = $argv[5];
 
 <?php if ($idl_type == "thrift") { ?>
 
-# include <dsn/thrift_helper.h>
-# include "<?=$_PROG->name?>_types.h" 
+<?php       if ($idl_format == "binary") {?>
+// define DSN_IDL_BINARY to use binary format to send rpc request/response
+#define DSN_IDL_BINARY
+<?php       } else if ($idl_format == "json") {?>
+// define DSN_IDL_JSON to use json format to send rpc request/response
+#define DSN_IDL_JSON
+
+<?php       }?>
+
+# include <dsn/idl/thrift_helper.h>
+# include "thrift/<?=$_PROG->name?>_types.h" 
+# include "thrift/<?=$_PROG->name?>.h"
 
 <?php } else if ($idl_type == "proto") {?>
 

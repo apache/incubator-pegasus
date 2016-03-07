@@ -153,7 +153,9 @@ case "thrift":
     break;
 case "proto":
     {
-        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".$g_idl;
+        $fuck = dirname($g_idl);
+        copy($g_idl, "./" + basename($g_idl));
+        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".basename($g_idl);
         echo "exec: ".$command.PHP_EOL;
         system($command);
         if (!file_exists($g_idl_php))

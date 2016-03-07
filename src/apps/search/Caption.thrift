@@ -4,7 +4,7 @@ namespace csharp dsn.app.search
 
 struct ErrorResult
 {
-	1: i32 ErrorCode;
+    1: i32 ErrorCode;
 }
 
 struct DocId

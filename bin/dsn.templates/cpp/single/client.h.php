@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 # pragma once
 # include "<?=$file_prefix?>.code.definition.h"
@@ -24,7 +25,7 @@ public:
 <?php
 $keys = array();
 foreach ($svc->functions as $f)
-    $keys[$f->get_first_param()->get_cpp_type()] = 1;
+    $keys[$f->get_cpp_request_type_name()] = 1;
     
     
 foreach ($keys as $k => $v)
@@ -38,7 +39,7 @@ foreach ($keys as $k => $v)
     // ---------- call <?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
         int hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
@@ -49,7 +50,7 @@ foreach ($keys as $k => $v)
 <?php    } else { ?>
     // - synchronous 
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
@@ -70,10 +71,10 @@ foreach ($keys as $k => $v)
             );
     }
     
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?>  
+    // - asynchronous with on-stack <?=$f->get_cpp_request_type_name()?> and <?=$f->get_cpp_return_type()?>  
     template<typename TCallback>
     ::dsn::task_ptr <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
