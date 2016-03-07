@@ -30,7 +30,9 @@ $idl_format = $argv[5];
 
 # include <dsn/idl/thrift_helper.h>
 # include "thrift/<?=$_PROG->name?>_types.h" 
-# include "thrift/<?=$_PROG->name?>.h"
+<?php foreach ($_PROG->services as $svc) { ?>
+# include "thrift/<?=$svc->name?>.h"
+<?php } ?>
 
 <?php } else if ($idl_type == "proto") {?>
 

@@ -57,7 +57,7 @@ struct StaticRankResult
 struct PerDocRank
 {
     1: DocId Id;
-    2: Rank  Rank;
+    2: Rank  RankValue;
 }
         
 struct Caption
