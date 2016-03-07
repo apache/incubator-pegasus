@@ -62,7 +62,7 @@ namespace rDSN.Tron.LanguageProvider
             specType = t;
         }
 
-        public ServiceSpecType GetType()
+        public ServiceSpecType GetSpecType()
         {
             return specType;
         }

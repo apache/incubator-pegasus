@@ -9,6 +9,7 @@ for /f %%f in ('dir /b %cdir%') do (
     cd build
     cmake ..
     
+    
     cd /d %cdir%
     Tron.exe gcs thrift dsn %cdir%\%%f
 )

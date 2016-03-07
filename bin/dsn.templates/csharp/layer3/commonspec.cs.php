@@ -10,8 +10,8 @@ using rDSN.Tron.Contract;
 
 namespace <?=$_PROG->get_csharp_namespace()?> 
 {
+    <?php foreach ($_PROG->services as $svc) { ?> 
     [TronService]
-    <?php foreach ($_PROG->services as $svc) { ?>
     public interface <?=$svc->name?> {
         <?php foreach ($svc->functions as $f) { ?>
         <?=$f->get_csharp_return_type()?> <?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>);
@@ -20,7 +20,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     <?php } ?>
 
 
-    <?php foreach ($_PROG->structs as $s) { ?>
+    <?php foreach ($_PROG->structs as $s) { ?> 
     public class <?=$s->get_csharp_name()?>
     {   
         <?php foreach ($s->fields as $fld) { ?>
@@ -29,7 +29,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     }
     <?php } ?>
 
-    <?php foreach ($_PROG->enums as $em) { ?>
+    <?php foreach ($_PROG->enums as $em) { ?> 
     public enum <?=$em->get_csharp_name()?> {
         <?php foreach ($em->values as $k => $v) { ?>
         <?=$k?> = <?=$v?>,

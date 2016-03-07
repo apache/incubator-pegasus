@@ -46,7 +46,11 @@ namespace rDSN.Tron.ControlPanel
 {
     public class EnumCommand : Command
     {
-        private static HashSet<string> _blackList = new HashSet<string>(Configuration.Instance().GetSection("BlackList").Select(k => k.Key));
+        private static HashSet<string> _blackList = new HashSet<string>(
+            Configuration.Instance().GetSection("BlackList") != null ? 
+            Configuration.Instance().GetSection("BlackList").Select(k => k.Key) :
+            new string[]{}
+            );
 
         public override bool Execute(List<string> args)
         {

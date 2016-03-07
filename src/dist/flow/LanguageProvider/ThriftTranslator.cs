@@ -60,7 +60,7 @@ namespace rDSN.Tron.LanguageProvider
 
         public override bool ToCommonInterface(string dir, string file, string outDir, List<string> args, bool needCompiled = false)
         {
-            var compilerPath = LanguageHelper.GetCompilerPath(GetType());
+            var compilerPath = LanguageHelper.GetCompilerPath(GetSpecType());
             if (compilerPath == "")
             {
                 return false;

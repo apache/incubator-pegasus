@@ -134,12 +134,19 @@ namespace rDSN.Tron.ControlPanel
             writer.Write(c.ToString());
             writer.Close();
 
-            CSharpCompiler.ToDiskAssembly(new string[] { Path.Combine("tmp", app_name + ".commonspec.cs"),  Path.Combine("tmp", app_name + ".Tron.Composition.cs") },
+            if (CSharpCompiler.ToDiskAssembly(new string[] { Path.Combine("tmp", app_name + ".commonspec.cs"), Path.Combine("tmp", app_name + ".Tron.Composition.cs") },
                 new string[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
                 new string[] { args[2] },
                 Path.Combine("tmp", app_name + ".Tron.Composition.dll"),
                 false, true
-                );
+                ))
+            {
+                Console.WriteLine("Generate success for " + Directory.GetCurrentDirectory() + "\\tmp\\" + app_name + ".Tron.Composition.dll");
+            }
+            else
+            {
+                Console.WriteLine("generate composition stub failed");
+            }
 
             return true;
         }
