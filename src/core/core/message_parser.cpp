@@ -130,27 +130,40 @@ namespace dsn {
     {
     }
 
+    void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
+    {
+        result.hdr_type = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        result.total_length = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        result.body_offset = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        result.opt.o = be64toh( *(int64_t*)(buffer) );
+    }
+
     message_ex* dsn_message_parser::receive_message_with_thrift_header(int read_length, /*out*/int& read_next)
     {
         if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
         {
-            dsn_thrift_header* header = (dsn_thrift_header*)_read_buffer.data();
-
+            dsn_thrift_header header;
+            read_thrift_header_from_buffer(header, _read_buffer.data());
             // msg done
-            if ( _read_buffer_occupied >= header->total_length)
+            if ( _read_buffer_occupied >= header.total_length)
             {
-                dsn::blob message_data = _read_buffer.range(0, header->total_length);
-                message_ex* msg = thrift_header_parser::parse_dsn_message(header, message_data);
+                dsn::blob message_data = _read_buffer.range(0, header.total_length);
+                message_ex* msg = thrift_header_parser::parse_dsn_message(&header, message_data);
 
-                _read_buffer = _read_buffer.range(header->total_length);
-                _read_buffer_occupied -= header->total_length;
+                _read_buffer = _read_buffer.range(header.total_length);
+                _read_buffer_occupied -= header.total_length;
                 read_next = sizeof(int32_t);
 
                 return msg;
             }
             else
             {
-                read_next = header->total_length - _read_buffer_occupied;
+                read_next = header.total_length - _read_buffer_occupied;
                 return nullptr;
             }
         }

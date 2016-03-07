@@ -480,7 +480,6 @@ message_ex* message_ex::create_response()
 #ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
     msg->_value_id = header->context.u.is_response_in_piece;
     msg->_resp_adjusted = false;
-    strncpy(msg->_remote_rpc_name, _remote_rpc_name, DSN_MAX_TASK_CODE_NAME_LENGTH);
     if (hdr.hdr_type == hdr_dsn_thrift)
         thrift_header_parser::add_prefix_for_thrift_response(msg);
 #endif

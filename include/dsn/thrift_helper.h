@@ -342,6 +342,54 @@ namespace dsn {
             proto.skip(ftype);
     }
 
+    class char_ptr
+    {
+    private:
+        const char* ptr;
+        int length;
+    public:
+        char_ptr(const char* p, int len): ptr(p), length(len) {}
+        std::size_t size() const { return length; }
+        const char* data() const { return ptr; }
+    };
+
+    class blob_string
+    {
+    private:
+        blob& _buffer;
+    public:
+        blob_string(blob& bb): _buffer(bb) {}
+
+        void clear()
+        {
+            _buffer.assign(std::shared_ptr<char>(nullptr), 0, 0);
+        }
+        void resize(std::size_t new_size)
+        {
+            std::shared_ptr<char> b(new char[new_size], std::default_delete<char[]>());
+            _buffer.assign(b, 0, new_size);
+        }
+        void assign(const char* ptr, std::size_t size)
+        {
+            std::shared_ptr<char> b(new char[size], std::default_delete<char[]>());
+            memcpy(b.get(), ptr, size);
+            _buffer.assign(b, 0, size);
+        }
+        const char* data() const
+        {
+            return _buffer.data();
+        }
+        size_t size() const
+        {
+            return _buffer.length();
+        }
+
+        char& operator [](int pos)
+        {
+            return const_cast<char*>(_buffer.data())[pos];
+        }
+    };
+
     inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     {
         return iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
@@ -362,27 +410,24 @@ namespace dsn {
 
     inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        std::string str(to_string());
-        return oprot->writeString(str);
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        const char* name = to_string();
+        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
 
     inline uint32_t blob::read(apache::thrift::protocol::TProtocol *iprot)
     {
-        std::string ptr;
-        uint32_t xfer = iprot->readString(ptr);
-
-        //TODO: need something to do to resolve the memory copy
-        std::shared_ptr<char> buffer(new char [ptr.size()], std::default_delete<char[]>());
-        memcpy(buffer.get(), ptr.c_str(), ptr.size());
-        assign(buffer, 0, ptr.size());
-        return xfer;
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        blob_string str(*this);
+        return binary_proto->readString<blob_string>(str);
     }
 
     inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        //TODO: need something to do to resolve the memory copy
-        std::string ptr(_data, _length);
-        return oprot->writeString(ptr);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        return binary_proto->writeString<blob_string>(blob_string(const_cast<blob&>(*this)));
     }
 
     inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
@@ -395,8 +440,10 @@ namespace dsn {
 
     inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        std::string ec_string(to_string());
-        return oprot->writeString(ec_string);
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        const char* name = to_string();
+        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
 
     typedef union
@@ -440,12 +487,7 @@ namespace dsn {
             memset(dsn_hdr, 0, sizeof(*dsn_hdr));
             dsn_hdr->hdr_type = hdr_dsn_thrift;
             dsn_hdr->body_length = header->total_length - header->body_offset;
-            std::size_t pos = fname.find_first_of('@');
-            if (pos == std::string::npos)
-                pos = 0;
-
-            strncpy(dsn_hdr->rpc_name, fname.c_str()+pos+1, DSN_MAX_TASK_CODE_NAME_LENGTH);
-            strncpy(msg->_remote_rpc_name, fname.c_str(), pos);
+            strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
 
             if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
                 dsn_hdr->context.u.is_request = 1;
@@ -464,11 +506,7 @@ namespace dsn {
             boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
             ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
 
-            // remove the "_ACK" postfix
-            std::string call_rpc_name = std::string(msg->_remote_rpc_name) + "@" + std::string(msg->header->rpc_name);
-            call_rpc_name.erase(call_rpc_name.length() - 4);
-
-            msg_proto.writeMessageBegin(call_rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
+            msg_proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
             msg_proto.writeStructBegin(""); //resp args
             if (msg->header->context.u.is_response_in_piece)
             {

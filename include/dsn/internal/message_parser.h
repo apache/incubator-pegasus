@@ -137,7 +137,7 @@ namespace dsn
         dsn_message_parser(int buffer_block_size, bool is_write_only);
         int32_t get_message_subtype()
         {
-            return *((int32_t*)_read_buffer.data());
+            return be32toh(*((int32_t*)_read_buffer.data()));
         }
         message_ex* receive_message_with_thrift_header(int read_length, /*out*/ int& read_next);
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
