@@ -522,7 +522,11 @@ namespace dsn
             if (!app->exited && app->process_handle)
             {
 # ifdef _WIN32
-                ::TerminateProcess(app->process_handle, 0);
+                std::ostringstream pid;
+                std::string command;
+                pid << GetProcessId(app->process_handle);
+                command = "TASKKILL /F /T /PID " + pid.str();
+                system(command.c_str());
                 ::CloseHandle(app->process_handle);
                 app->process_handle = nullptr;
 # else
