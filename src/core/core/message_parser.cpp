@@ -140,6 +140,8 @@ namespace dsn {
         buffer += sizeof(int32_t);
         result.body_offset = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
+        result.request_hash = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
         result.opt.o = be64toh( *(int64_t*)(buffer) );
     }
 

@@ -462,6 +462,7 @@ namespace dsn {
         int32_t hdr_crc32;
         int32_t total_length;
         int32_t body_offset;
+        int32_t request_hash;
         dsn_thrift_header_options opt;
     };
 
@@ -495,6 +496,7 @@ namespace dsn {
             dsn_hdr->id = seqid;
             dsn_hdr->context.u.is_replication_needed = header->opt.u.is_replication_needed;
             dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
+            dsn_hdr->client.hash = header->request_hash;
 
             iprot.readStructBegin(fname);
             return msg;
@@ -524,11 +526,11 @@ namespace dsn {
             if (msg->header->context.u.is_response_in_piece)
             {
                 msg_proto.writeFieldStop(); // for all pieces
-                msg_proto.writeStructEnd(); // matched with line 484
+                msg_proto.writeStructEnd();
             }
             //after all fields, write a field stop
             msg_proto.writeFieldStop();
-            //writestruct end, this is because all thirft returing values are in a struct
+            //writestruct end, this is because all thirft returning values are in a struct
             msg_proto.writeStructEnd();
             //write message end, which indicate the end of a thrift message
             msg_proto.writeMessageEnd();
