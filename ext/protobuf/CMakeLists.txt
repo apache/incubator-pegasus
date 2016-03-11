@@ -1,40 +1,44 @@
-set(project_name protobuf)
-set(target_url  https://github.com/ykwd/protobuf.git)
-set(my_cmake_args "")
-set(target_bin_subdir cmake)
-if(WIN32)
-    set(target_binaries libprotobufd.lib)
-else()
-    set(target_binaries libprotobuf.a protoc)
-endif()
+include(ExternalProject)
 
-include(${PROJECT_SOURCE_DIR}/bin/dsn.ext.cmake)
+set(PROTOBUF_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/protobuf")
 
-# Specify include dir
-set(PROTOBUF_INCLUDE_DIRS ${source_dir}/src PARENT_SCOPE)
-set(PROTOBUF_LIB_DIR ${my_binary_dir} PARENT_SCOPE)
-
-install(DIRECTORY ${source_dir}/src/google
-        DESTINATION include/ext/protoc
-        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+set (PROTOBUF_CMAKE_ARGS 
+    "-Dprotobuf_BUILD_TESTS=OFF;"
+    "-DCMAKE_INSTALL_PREFIX=${PROTOBUF_INSTALL_PREFIX};"
+    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE};"
 )
 
 if (WIN32)
-install(DIRECTORY ${source_dir}/thrift/lib/cpp/src/thrift
-        DESTINATION include/ext
-        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
-)
-install(DIRECTORY ${source_dir}/thrift/lib/cpp/boost
-        DESTINATION include/ext
-        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
-)
-endif()
-
-if (WIN32)
-    install(FILES ${PROJECT_BINARY_DIR}/lib/protoc.exe
-            DESTINATION $ENV{DSN_ROOT}/bin/Windows)
-else()
-    install(FILES ${PROJECT_BINARY_DIR}/lib/protoc
-            DESTINATION ${PROJECT_BINARY_DIR}/output/bin/Linux
-            PERMISSIONS OWNER_EXECUTE)
+    list (APPEND PROTOBUF_CMAKE_ARGS "-DWITH_CSHARP=ON;")
 endif ()
+
+ExternalProject_Add(protobuf
+    GIT_REPOSITORY https://github.com/ykwd/protobuf.git
+    GIT_TAG rdsn
+    CMAKE_ARGS ${PROTOBUF_CMAKE_ARGS}
+)
+
+install(DIRECTORY ${PROTOBUF_INSTALL_PREFIX}/include/google
+    DESTINATION include/ext
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+install(DIRECTORY ${PROTOBUF_INSTALL_PREFIX}/lib
+        DESTINATION ./
+    FILES_MATCHING PATTERN "*.lib" PATTERN "*.dll" PATTERN "*.so" PATTERN "*.a" PATTERN "cmake" EXCLUDE
+)
+
+if (WIN32)
+    install(FILES ${PROTOBUF_INSTALL_PREFIX}/bin/protoc.exe
+        DESTINATION bin/Windows
+    )
+else()
+    install(FILES ${PROTOBUF_INSTALL_PREFIX}/bin/protoc
+        DESTINATION bin/Linux
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    )
+endif ()
+
+# Specify source dir
+set(PROTOBUF_INCLUDE_DIR ${PROTOBUF_INSTALL_PREFIX}/include PARENT_SCOPE)
+set(PROTOBUF_LIB_DIR ${PROTOBUF_INSTALL_PREFIX}/lib)

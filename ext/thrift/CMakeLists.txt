@@ -1,21 +1,60 @@
 include(ExternalProject)
 
-set(target_dir ${PROJECT_BINARY_DIR}/thrift/lib)
+set(THRIFT_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/thrift")
 
-if(WIN32)
-    set(install_cmd make install)
-else()
-    set(install_cmd COMMAND make install COMMAND ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so.0.9.3" "${PROJECT_BINARY_DIR}/lib/" COMMAND ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so" "${PROJECT_BINARY_DIR}/lib/")
-endif()
-
-ExternalProject_Add(libthrift
-    GIT_REPOSITORY git@github.com:apache/thrift.git
-    GIT_TAG 0.9.3
-    CMAKE_ARGS "-DWITH_JAVA=OFF;-DWITH_PYTHON=OFF;-DBUILD_TESTING=OFF;-DBUILD_EXAMPLES=OFF;-DWITH_STATIC_LIB=OFF;-DWITH_QT5=OFF;-DWITH_QT4=OFF;-DWITH_OPENSSL=OFF;-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/thrift"
-    INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-    INSTALL_COMMAND ${install_cmd}
+set (THRIFT_CMAKE_ARGS
+    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE};"
+    "-DWITH_JAVA=OFF;"
+    "-DWITH_PYTHON=OFF;"
+    "-DWITH_C_GLIB=OFF;"
+    "-DWITH_CPP=ON;"
+    "-DBUILD_TESTING=OFF;"
+    "-DBUILD_EXAMPLES=OFF;"
+    "-DWITH_QT5=OFF;"
+    "-DWITH_QT4=OFF;"
+    "-DWITH_OPENSSL=OFF;"
+    "-DBUILD_COMPILER=OFF;"
+    "-DBUILD_TUTORIALS=OFF;"
+    "-DCMAKE_INSTALL_PREFIX=${THRIFT_INSTALL_PREFIX};"
 )
 
+if (WIN32)
+    list(APPEND THRIFT_CMAKE_ARGS
+        "${THRIFT_CMAKE_ARGS}"
+        "-DBUILD_CSHARP=ON;"
+        "-DWITH_MT=ON;"
+        "-DWITH_SHARED_LIB=OFF;"
+        "-DBOOST_INCLUDEDIR=${BOOST_INCLUDEDIR};"
+        "-DBOOST_LIBRARYDIR=${BOOST_LIBRARYDIR};"
+    )
+else ()
+    list(APPEND THRIFT_CMAKE_ARGS
+        "-DWITH_STATIC_LIB=OFF;"
+    )
+endif ()
+
+ExternalProject_Add(thrift
+    GIT_REPOSITORY https://github.com/ykwd/thrift.git
+    CMAKE_ARGS ${THRIFT_CMAKE_ARGS}
+)
+
+install(DIRECTORY ${THRIFT_INSTALL_PREFIX}/include/thrift
+    DESTINATION include/ext
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
+)
+
+install(DIRECTORY ${THRIFT_INSTALL_PREFIX}/lib
+    DESTINATION ./
+    FILES_MATCHING PATTERN "*.lib" PATTERN "*.dll" PATTERN "*.so*" PATTERN "*.a*"
+)
+
+if (WIN32)
+    install(DIRECTORY ${BOOST_INCLUDEDIR}/boost
+        DESTINATION include/ext
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+    )
+endif ()
+
 # Specify source dir
-set(THRIFT_INCLUDE_DIR ${PROJECT_BINARY_DIR}/thrift/include PARENT_SCOPE)
-set(THRIFT_LIB_DIR ${PROJECT_BINARY_DIR}/lib)
+set(THRIFT_INCLUDE_DIR ${THRIFT_INSTALL_PREFIX}/include PARENT_SCOPE)
+set(THRIFT_LIB_DIR ${THRIFT_INSTALL_PREFIX}/lib)

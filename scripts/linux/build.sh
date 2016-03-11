@@ -115,6 +115,14 @@ then
     rm -rf $BUILD_DIR
 fi
 
+if [ ! -f "$ROOT/bin/Linux/thrift" ]
+then
+    echo "Downloading thrift..."
+    wget --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift
+    chmod u+x thrift
+    mv thrift $ROOT/bin/Linux
+fi
+
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."

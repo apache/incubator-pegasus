@@ -31,10 +31,7 @@ endif()
 dsn_common_setup()
 dsn_add_pseudo_projects()
 
-if(DSN_SERIALIZATION_TYPE STREQUAL "thrift")
-    add_subdirectory(ext/thrift)
-endif()
-
+add_subdirectory(ext/thrift)
 add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)
 add_subdirectory(ext/rapidjson)

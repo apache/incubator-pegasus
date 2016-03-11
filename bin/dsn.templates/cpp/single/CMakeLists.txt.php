@@ -6,24 +6,25 @@ $idl_format = $argv[4];
 
 global $inc_path;
 global $inc_lib;
-$inc_path = "";
 $inc_lib = "";
+$inc_path = '${DSN_ROOT}/include/ext';
 if ($idl_format == "proto")
 {
-    $inc_path = '${DSN_ROOT}/include/ext/protoc';
     if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
     {
-        $inc_lib = "libprotobufd.lib";
+        $inc_lib = "libprotobufd.lib dsn.core.dll";
     } else
     {
-        $inc_lib = "libprotobuf.a";
+        $inc_lib = "libprotobuf.a libdsn.core.so";
     }
 } else if ($idl_format == "thrift")
 {
-    $inc_path = '${DSN_ROOT}/include/ext/';
     if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
     {
-        $inc_lib = "libthrift.lib";
+         $inc_lib = "thriftmt.lib dsn.core.dll";
+    } else
+    {
+        $inc_lib = "libthrift.so libdsn.core.so";
     }
 }
 ?>
@@ -54,7 +55,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "<?=$inc_path?>")
 
-set(MY_PROJ_LIBS "<?=$inc_lib?>" "dsn.core.dll")
+set(MY_PROJ_LIBS <?=$inc_lib?>)
 
 set(MY_PROJ_LIB_PATH "")
 
