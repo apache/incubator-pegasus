@@ -1,0 +1,35 @@
+{% extends "static/view/template.html" %}
+{% block body %}
+<div class="container">
+
+	<div class="page-header">
+	</div>
+
+	<div class="page-header">
+        <h1> <font color= #333333><center>Client Local Interface</center></font>
+			<small><center><font color= #778899>type 'h' to see profiling commands</font></center></small>
+		</h1>
+	</div>
+
+</div>
+
+<link href="http://terminal.jcubic.pl/css/jquery.terminal.css" rel="stylesheet" type="text/css">
+<script language="JavaScript" type="text/javascript" src="http://terminal.jcubic.pl/js/jquery.terminal-min.js"></script>
+ <div id="term_demo"></div>
+    <script>
+    jQuery(function($, undefined) {
+    $('#term_demo').terminal(function(command, term) {
+        if (command !== '') {
+	    var xmlHttp = new XMLHttpRequest();
+    	    xmlHttp.open( "GET", "/api/cli?command="+encodeURIComponent(command), false ); // false for synchronous request
+            xmlHttp.send( null );
+            var result = xmlHttp.responseText; 
+            term.echo(String(result));
+        }
+    }, {
+        greetings: 'rDSN Remote Interface',
+        name: 'js_demo',
+        prompt: 'Cli> '});
+});
+    </script>
+{% endblock %}

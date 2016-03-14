@@ -1,0 +1,90 @@
+{% extends "static/view/template.html" %}
+{% block body %}
+<div class="container">
+
+	<div class="page-header">
+	</div>
+
+	<div class="page-header">
+        <h1> <font color= #333333><center>Latency Breakdown</center></font>
+			<small><center><font color= #778899>Dig deeper into latency</font></center></small>
+		</h1>
+	</div>
+
+</div>
+
+<div class="dropdown">
+<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"  data-toggle="tooltip" title="Choose percentile type">
+	Show Percent ({{CURR_PERCENT}}%) <span class="caret"></span></button>
+	<ul class="dropdown-menu" role="menu">
+        <li><a href="?task_code={{TASK_CODE}}&curr_percent=50">50%</a></li>
+		<li><a href="?task_code={{TASK_CODE}}&curr_percent=90">90%</a></li>
+		<li><a href="?task_code={{TASK_CODE}}&curr_percent=95">95%</a></li>
+		<li><a href="?task_code={{TASK_CODE}}&curr_percent=99">99%</a></li>
+		<li><a href="?task_code={{TASK_CODE}}&curr_percent=999">99.9%</a></li>
+	</ul>
+</div>
+{% include "static/view/head.html" %}
+<div id="chart"></div>
+<script>
+var chart = c3.generate({
+		size: {
+        height: 500,
+        width: 1000
+    },
+    data: {
+        columns: [
+	    ['net(call)' {% for data in TABLEDATA.nc %},{{data}}{% endfor %}],
+            ['queue(server)' {% for data in TABLEDATA.qs %},{{data}}{% endfor %}],
+            ['exec(server)' {% for data in TABLEDATA.es %},{{data}}{% endfor %}],
+            ['net(reply)' {% for data in TABLEDATA.nr %},{{data}}{% endfor %}],
+            ['queue(client)' {% for data in TABLEDATA.qc %},{{data}}{% endfor %}],
+            ['exec(client)' {% for data in TABLEDATA.ec %},{{data}}{% endfor %}],
+            ['aio' {% for data in TABLEDATA.a %},{{data}}{% endfor %}],
+        ],
+        type: 'bar',
+	colors: {
+            "net(call)": '#F08080',
+            "queue(server)": '#1F77B4',
+            "exec(server)": '#FF7F0E',
+            "net(reply)": '#AFCAE0',
+            "queue(client)": '#D62728',
+            "exec(client)": '#9467BD',
+            "aio": '#00FF00',
+        },
+        groups: [
+            ['net(call)', 'queue(server)','exec(server)','net(reply)','queue(client)','exec(client)']
+        ]
+    },
+    grid: {
+        y: {
+            lines: [{value:0}]
+        }
+    },
+	  
+     axis: {
+        x: {
+            type: 'category',
+	    label: 'task code',
+	    {% if IFCOMPARE=='yes'%}
+	    tick: {
+                rotate: 75,
+                multiline: false
+            },
+	    {% endif %}
+categories: ['{{TASK_CODE}}' {% if IFCOMPARE=='yes'%}{% for item in COMPARE_LIST %},'{{item}}'{% endfor %}{% endif %}]
+	    /*
+	       categories: ['RPC_NFS_COPY', 'RPC_NFS_GET_FILE_SIZE', 'RPC_DSN_CLI_CALL']
+	       */
+        },
+	y:{
+		label: 'ns',
+        tick: {
+                format: d3.format(",")
+            }
+	}
+	}
+});
+</script>
+{% include "static/view/tail.html" %}
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "static/view/template.html" %}
+{% block body %}
+<div class="container">
+
+	<div class="page-header">
+	</div>
+
+	<div class="page-header">
+        <h1> <font color= #333333><center>Task Sample</center></font>
+			<small><center><font color= #778899>Latency distributions of tasks</font></center></small>
+		</h1>
+	</div>
+
+</div>
+
+{% include "static/view/head.html" %}
+
+
+<div id="chart"></div>
+<script>
+var chart = c3.generate({
+    data: {
+        xs: {
+	{% for item in XTITLES %}
+	    "{{item}}":"x",
+	{% endfor %}
+    {% if REMOTE_MODE == 'yes' %}
+	    {% for item in XTITLES2 %}
+	        "{{item}}":"x2",
+	    {% endfor %}
+    {% endif %}
+        },
+        // iris data from R
+        columns: [
+    {% if REMOTE_MODE == 'yes' %}
+        ["x"{% for i in range(TABLEDATA[0]|length+1) %},{{i*100.0/(TABLEDATA[0]|length)}}{% endfor %}],
+        ["x2"{% for i in range(TABLEDATA[3]|length+1) %},{{i*100.0/(TABLEDATA[3]|length)}}{% endfor %}],
+    {% else  %}
+        ["x"{% for i in range(jinja_max(TABLEDATA[0]|length,TABLEDATA[3]|length)+1) %},{{i*100.0/(jinja_max(TABLEDATA[0]|length,TABLEDATA[3]|length))}}{% endfor %}],
+    {% endif %}
+	{% for row in TABLEDATA %}
+	[{% for item in row %}{% if item==row[0] %} "{{item}}",{% else %}{{item}},{% endif %}{% endfor %}],
+	{% endfor %}
+        ],
+        type: 'scatter',
+        colors: {
+            'QUEUE(ns)@server': '#1F77B4',
+            'EXEC(ns)@server': '#FF7F0E',
+            'RPC.SERVER(ns)@server': '#2CA02C',
+            'QUEUE(ns)@client': '#D62728',
+            'EXEC(ns)@client': '#9467BD',
+            'RPC.CLIENT(ns)@client': '#8C564B',
+            'AIO.LATENCY(ns)': '#00FF00',
+        },
+    },
+    subchart: {
+        show: true
+    },
+    axis: {
+        x: {
+            label: 'Samples(%)',
+            tick: {
+                fit: false
+            }
+        },
+        y: {
+            label: 'Latency (ns)',
+            tick: {
+                format: d3.format(",")
+            }
+        }
+    }
+});
+</script>
+
+{% include "static/view/tail.html" %}
+{% endblock %}

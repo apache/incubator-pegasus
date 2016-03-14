@@ -1,0 +1,79 @@
+{% extends "static/view/template.html" %}
+{% block body %}
+<div class="container">
+
+	<div class="page-header">
+	</div>
+
+	<div class="page-header">
+        <h1> <font color= #333333><center>Realtime Value Display</center></font>
+			<small><center><font color= #778899>Dynamically display task latency</font></center></small>
+		</h1>
+	</div>
+
+</div>
+
+{% include "static/view/head.html" %}
+<div id="chart"></div>
+<script>
+var chart = c3.generate({
+    data: {
+        x: 'x',
+        columns: [
+            ['x' {% for i in range(20) %}, {{i}}{% endfor %} ],
+	        {% for row in TABLEDATA %}['{{row.name}}' {% for i in range(20) %},0{% endfor %} ],{% endfor %}
+        ],
+        colors: {
+            'QUEUE(ns)@server': '#1F77B4',
+            'EXEC(ns)@server': '#FF7F0E',
+            'RPC.SERVER(ns)@server': '#2CA02C',
+            'QUEUE(ns)@client': '#D62728',
+            'EXEC(ns)@client': '#9467BD',
+            'RPC.CLIENT(ns)@client': '#8C564B',
+            "AIO.LATENCY(ns)": '#00FF00',
+        },
+    },
+    axis: {
+        x: {
+            show:false,
+        },
+        y : {
+            tick: {
+                format: d3.format(",")
+            }
+        }
+    },
+    
+});
+
+function updateData(a)
+{
+	$.get("/api/value?task_code={{TASK_CODE}}", function(data, status){
+	    var message = JSON.parse(data);
+	    var arr = [0,0,0,0,0,0];
+	    for (var i = 0; i < message.data.length; i++) {
+            arr[i] = (message.data)[i].value;
+        }
+
+        chart.flow({
+            columns: [
+                ['x', a],
+	            {% for i in range(TABLEDATA|length) %}['{{TABLEDATA[i].name}}',arr[{{i}}]],{% endfor %}
+            ],
+	        duration:1000,
+	        done:function(){
+                chart.xgrids.add([{value: a, text:message.time,class:'hoge'}]);
+                setTimeout(function () {
+                    updateData(a+1);
+                },0);
+    	    }
+	    });
+
+    });
+}
+updateData(20);
+
+
+</script>
+{% include "static/view/tail.html" %}
+{% endblock %}

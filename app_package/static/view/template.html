@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rDSN</title>
+
+<!-- Bootstrap -->
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+<link href="css/c3.css" rel="stylesheet" type="text/css">
+<style type="text/css"> <!-- body { background-image: url(); } --> </style>
+<link href="http://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Lato" rel="stylesheet" type="text/css">
+<link href="css/bootstrap-tour.min.css" rel="stylesheet" type="text/css">
+
+<!-- Load d3.js and c3.js -->
+<script src="js/d3.min.js"></script>
+<script src="js/c3.min.js"></script>
+<script src="js/bootstrap-tour.min.js"></script>
+
+
+</head>
+<style>
+body {
+      font: 400 15px Lato, sans-serif;
+      line-height: 1.8;
+      color: #818181;
+  }
+  h2 {
+      font-size: 24px;
+      text-transform: uppercase;
+      color: #303030;
+      font-weight: 600;
+      margin-bottom: 30px;
+  }
+  h4 {
+      font-size: 19px;
+      line-height: 1.375em;
+      color: #303030;
+      font-weight: 400;
+      margin-bottom: 30px;
+  }  
+</style>
+<body>
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.9/js/jquery.dataTables.min.js"></script>
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script>
+// Instance the tour
+var StartUpTour = new Tour({
+  name: Math.floor(Math.random()*1000),
+  autoscroll:true,
+  steps: [
+  {
+    element: "#StartUp_Start",
+    placement: "bottom",
+    title: "Welcome to rDSN Quick Start-up!",
+    content: "This small tutorial is for you to quickly grasp the basic concepts and flows"
+  },
+]});
+var TimeOutTour = new Tour({
+  name: Math.floor(Math.random()*1000),
+  autoscroll:true,
+  steps: [
+  {
+    path: "/",
+    element: "#TimeOut_Start",
+    placement: "bottom",
+    title: "Timeout Analysis",
+    content: "This tool is to help developers to tackle the problem that some external-facing tasks experience continuous time-outs"
+  },
+  {
+    path: "/table.html",
+    element: "#TimeOut_Table",
+    placement: "top",
+    title: "identify which task expeinces time-out",
+    content: "This tool is to help developers to tackle the problem that some external-facing tasks experience continuous time-outs"
+  },
+]});
+
+StartUpTour.init();
+TimeOutTour.init();
+</script>
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="main.html">rDSN.WebStudio</a>
+	</div>
+	<div>
+		<ul class="nav navbar-nav">
+			<li><a href="main.html" data-toggle="tooltip bottom" title="A overview of the whole system"><span class="glyphicon glyphicon-home"></span> Overview</a></li>
+            <li class="dropdown">
+			    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-wrench"></span> Tool<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="analyzer.html" data-toggle="tooltip right" title="Build your own counter view with analyzer!"><span class="glyphicon glyphicon-star"></span>Analyzer</a></li>
+                    <li><a href="cli.html" data-toggle="tooltip right" title="A query interface, type h for more info"><span class="glyphicon glyphicon-console"></span> Cli</a></li>
+                    <li><a href="bash.html" data-toggle="tooltip right" title="A bash interface"><span class="glyphicon glyphicon-console"></span> Bash</a></li>
+                    <li><a href="configure.html" data-toggle="tooltip right" title="Show all configuration with descriptions"><span class="glyphicon glyphicon-list-alt"></span> Configuration</a></li>
+                </ul>
+            </li>
+            <li class="dropdown">
+			    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-fire"></span> Beta<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="table.html" data-toggle="tooltip right" title="A table showing all counter info for all task codes"><span class="glyphicon glyphicon-align-justify"></span>Table</a></li>
+                    <li><a href="sample.html?task_code={{TASK_CODE}}" data-toggle="tooltip right" title="A scatter plot showing counter sample data"><span class="glyphicon glyphicon-picture"></span>Sample</a></li>
+                    <li><a href="value.html?task_code={{TASK_CODE}}" data-toggle="tooltip right" title="A real-time line plot showing counter sample data"><span class="glyphicon glyphicon-eye-open"></span>Value</a></li>
+                    <li><a href="bar.html?task_code={{TASK_CODE}}" data-toggle="tooltip right" title="A bar plot showing latency time structure"><span class="glyphicon glyphicon-indent-left"></span>Breakdown</a></li>
+                    <li><a href="queue.html" data-toggle="tooltip right" title="A bar plot showing all queues sorted by task pending number"><span class="glyphicon glyphicon-signal"></span>Queue</a></li>
+			        <li><a href="editor.html" data-toggle="tooltip right" title="An online editor for editing files"><span class="glyphicon glyphicon-pencil"></span>Vim</a></li>
+			        <li><a href="multicmd.html" data-toggle="tooltip right" title="An online editor for editing files"><span class="glyphicon glyphicon-bullhorn"></span>Multi-node Command</a></li>
+                </ul>
+            </li>
+			<li><a href="fileview.html" data-toggle="tooltip bottom" title="Show app folder content"><span class="glyphicon glyphicon-folder-open"></span> AppFolder</a></li>
+			<li><a href="store.html" data-toggle="tooltip bottom" title="Go to service store to deploy"><span class="glyphicon glyphicon-shopping-cart"></span> Store</a></li>
+            <!-- <li><a href="service.html" data-toggle="tooltip bottom" title="Check deployed services"><span class="glyphicon glyphicon-cloud"></span> Service</a></li> -->
+			<li><a href="service_meta.html" data-toggle="tooltip bottom" title="Check deployed services"><span class="glyphicon glyphicon-plane"></span> Service</a></li>
+			<li><a href="machine.html" data-toggle="tooltip bottom" title="Check machines"><span class="glyphicon glyphicon-tower"></span> Machine</a></li>
+
+		</ul>
+	</div>
+</nav>
+
+{% block body %}
+{% endblock %}
+<script>
+$(document).ready(function(){
+
+        $('[data-toggle="tooltip bottom"]').tooltip({placement: "bottom"}); 
+        $('[data-toggle="tooltip right"]').tooltip({placement: "right"}); 
+});
+</script>
+</body>
+</html>
+
+
