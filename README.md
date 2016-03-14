@@ -3,7 +3,7 @@
 
 ##Overview
 
-**rDSN.WebStudio** (previously known as**rDSN.Monitor**) is the web panel for rDSN.
+**rDSN.WebStudio** (previously known as **rDSN.Monitor**) is the web panel for rDSN.
 
 ![Main Screen](https://raw.githubusercontent.com/mcfatealan/rDSN.Screenshots/master/main.png)
 
