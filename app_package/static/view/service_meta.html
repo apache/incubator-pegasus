@@ -7,12 +7,6 @@
     cursor: pointer;
 }
 
-body {
-  font-family: Helvetica Neue, Arial, sans-serif;
-  font-size: 14px;
-  color: #444;
-}
-
 table {
   width: 80%;
   border: 2px solid #C63D0F;
@@ -51,7 +45,16 @@ th, td {
             </h1>
         </div>
     </div>
-   
+    
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <h3 v-if="filterKey!=''">
+                Filtered By: {{filterKey}} &nbsp<span class="glyphicon glyphicon-remove" style="font-size: 0.75em;" onclick="window.location.href = 'service_meta.html';"></span>
+            </h3>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
