@@ -39,18 +39,18 @@ foreach ($keys as $k => $v)
     // ---------- call <?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
-        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& args,
         int hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, get_partition_hash(<?=$f->get_first_param()->name?>));
+            <?=$f->get_rpc_code()?>, args, hash, get_partition_hash(args));
     }
 <?php    } else { ?>
     // - synchronous 
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
-        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& args,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
         int hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
@@ -60,13 +60,13 @@ foreach ($keys as $k => $v)
             ::dsn::rpc::call(
                 server_addr.unwrap_or(_server),
                 <?=$f->get_rpc_code()?>,
-                <?=$f->get_first_param()->name?>,
+                args,
                 nullptr,
                 empty_callback,
                 hash,
                 timeout,
                 0,
-                get_partition_hash(<?=$f->get_first_param()->name?>)
+                get_partition_hash(args)
                 )
             );
     }
@@ -74,7 +74,7 @@ foreach ($keys as $k => $v)
     // - asynchronous with on-stack <?=$f->get_cpp_request_type_name()?> and <?=$f->get_cpp_return_type()?>  
     template<typename TCallback>
     ::dsn::task_ptr <?=$f->name?>(
-        const <?=$f->get_cpp_request_type_name()?>& <?=$f->get_first_param()->name?>, 
+        const <?=$f->get_cpp_request_type_name()?>& args,
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_hash = 0,
@@ -85,13 +85,13 @@ foreach ($keys as $k => $v)
         return ::dsn::rpc::call(
                     server_addr.unwrap_or(_server), 
                     <?=$f->get_rpc_code()?>, 
-                    <?=$f->get_first_param()->name?>, 
+                    args,
                     this,
                     std::forward<TCallback>(callback),
                     request_hash, 
                     timeout, 
                     reply_hash,
-                    get_partition_hash(<?=$f->get_first_param()->name?>)
+                    get_partition_hash(args)
                     );
     }
 <?php    }?>
