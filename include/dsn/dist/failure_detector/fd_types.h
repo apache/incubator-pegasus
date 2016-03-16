@@ -35,7 +35,9 @@ class beacon_msg {
  public:
 
   beacon_msg(const beacon_msg&);
+  beacon_msg(beacon_msg&&);
   beacon_msg& operator=(const beacon_msg&);
+  beacon_msg& operator=(beacon_msg&&);
   beacon_msg() : time(0) {
   }
 
@@ -95,7 +97,9 @@ class beacon_ack {
  public:
 
   beacon_ack(const beacon_ack&);
+  beacon_ack(beacon_ack&&);
   beacon_ack& operator=(const beacon_ack&);
+  beacon_ack& operator=(beacon_ack&&);
   beacon_ack() : time(0), is_master(0), allowed(0) {
   }
 
