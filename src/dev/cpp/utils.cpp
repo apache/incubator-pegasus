@@ -327,6 +327,9 @@ namespace  dsn
 
     binary_writer::binary_writer(int reserveBufferSize)
     {
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+        _p_value_id = &_default_value_id;
+#endif
         _total_size = 0;
         _buffers.reserve(1);
         _reserved_size_per_buffer = (reserveBufferSize == 0) ? _reserved_size_per_buffer_static : reserveBufferSize;
@@ -337,6 +340,9 @@ namespace  dsn
 
     binary_writer::binary_writer(blob& buffer)
     {
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+        _p_value_id = &_default_value_id;
+#endif
         _total_size = 0;
         _buffers.reserve(1);
         _reserved_size_per_buffer = _reserved_size_per_buffer_static;

@@ -38,6 +38,7 @@
 # include <dsn/internal/network.h>
 # include "task_engine.h"
 # include "transient_memory.h"
+# include <dsn/thrift_helper.h>
 
 using namespace dsn::utils;
 
@@ -264,13 +265,14 @@ bool message_ex::is_right_header() const
 
 /*static*/ bool message_ex::is_right_header(char* hdr)
 {
-    int32_t crc32 = *(int32_t*)hdr;
+    int32_t* pcrc = (reinterpret_cast<int32_t*>(hdr))+1;
+    int32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID)
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
-        *(int32_t*)hdr = CRC_INVALID;
+        *pcrc = CRC_INVALID;
         bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
-        *(int32_t*)hdr = crc32;
+        *pcrc = crc32;
         return r;
     }
 
@@ -409,11 +411,15 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+    msg->_value_id = 0;
+#endif
     msg->prepare_buffer_header();
 
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
+    hdr.hdr_type = hdr_dsn_default;
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
     hdr.client.hash = request_hash;
@@ -471,7 +477,13 @@ message_ex* message_ex::create_response()
     msg->to_address = header->from_address;
     msg->io_session = io_session;
 
-    // join point 
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+    msg->_value_id = header->context.u.is_response_in_piece;
+    msg->_resp_adjusted = false;
+    if (hdr.hdr_type == hdr_dsn_thrift)
+        thrift_header_parser::add_prefix_for_thrift_response(msg);
+#endif
+    // join point
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);
 
     return msg;

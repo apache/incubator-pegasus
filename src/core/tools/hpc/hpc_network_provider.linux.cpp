@@ -243,6 +243,8 @@ namespace dsn
 
                     while (msg != nullptr)
                     {
+                        if (msg->header->from_address.is_invalid())
+                            msg->header->from_address = _remote_addr;
                         this->on_read_completed(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }

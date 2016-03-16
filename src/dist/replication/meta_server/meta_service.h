@@ -94,7 +94,7 @@ private:
     void on_config_changed(global_partition_id gpid);
 
     // common routines
-    bool check_primary(dsn_message_t req);
+    int check_primary(dsn_message_t req);
 
 private:
     friend class meta_server_failure_detector;

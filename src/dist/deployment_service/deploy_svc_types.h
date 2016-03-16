@@ -22,8 +22,10 @@
 namespace dsn { namespace dist {
 
 
+extern const std::map<int, const char*> _cluster_type_VALUES_TO_NAMES;
 
 
+extern const std::map<int, const char*> _service_status_VALUES_TO_NAMES;
 
 class deploy_request;
 
@@ -48,7 +50,9 @@ class deploy_request {
  public:
 
   deploy_request(const deploy_request&);
+  deploy_request(deploy_request&&);
   deploy_request& operator=(const deploy_request&);
+  deploy_request& operator=(deploy_request&&);
   deploy_request() : package_id(), package_full_path(), cluster_name(), name() {
   }
 
@@ -119,7 +123,9 @@ class deploy_info {
  public:
 
   deploy_info(const deploy_info&);
+  deploy_info(deploy_info&&);
   deploy_info& operator=(const deploy_info&);
+  deploy_info& operator=(deploy_info&&);
   deploy_info() : package_id(), name(), service_url(), cluster(), status((service_status)0) {
   }
 
@@ -190,7 +196,9 @@ class deploy_info_list {
  public:
 
   deploy_info_list(const deploy_info_list&);
+  deploy_info_list(deploy_info_list&&);
   deploy_info_list& operator=(const deploy_info_list&);
+  deploy_info_list& operator=(deploy_info_list&&);
   deploy_info_list() {
   }
 
@@ -237,7 +245,9 @@ class cluster_info {
  public:
 
   cluster_info(const cluster_info&);
+  cluster_info(cluster_info&&);
   cluster_info& operator=(const cluster_info&);
+  cluster_info& operator=(cluster_info&&);
   cluster_info() : name(), type((cluster_type)0) {
   }
 
@@ -288,7 +298,9 @@ class cluster_list {
  public:
 
   cluster_list(const cluster_list&);
+  cluster_list(cluster_list&&);
   cluster_list& operator=(const cluster_list&);
+  cluster_list& operator=(cluster_list&&);
   cluster_list() {
   }
 
