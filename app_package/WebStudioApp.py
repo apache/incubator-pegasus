@@ -417,7 +417,7 @@ class PageFileViewHandler(BaseHandler):
 
 class PageAnalyzerHandler(BaseHandler):
     def get(self):
-        self.render_template('analyzer.html')
+        self.render_template_Vue('analyzer.html')
 
 
 class PageCounterViewHandler(BaseHandler):
