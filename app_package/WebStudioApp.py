@@ -148,21 +148,11 @@ class BaseHandler(webapp2.RequestHandler):
 #webapp2 handlers
 class PageMainHandler(BaseHandler):
     def get(self):
-        params = {}
-        params['IFMETA'] = 'meta' in Native.dsn_cli_run('engine')
-        self.render_template('main.html',params)
+        self.render_template('main.html')
 
 class PageTableHandler(BaseHandler):
     def get(self):
-        queryRes = ast.literal_eval(Native.dsn_cli_run('pq table'))
-        curr_percent = self.request.get('curr_percent')
-        if curr_percent == '':
-            curr_percent = '50'
-        params = {
-            'TABLE': queryRes,
-            'CURR_PERCENT': curr_percent,
-        }
-        self.render_template('table.html',params)
+        self.render_template_Vue('table.html')
 
 class PageSampleHandler(BaseHandler):
     def get(self):
