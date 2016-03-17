@@ -23,7 +23,6 @@ import mimetypes
 import shutil
 import sqlite3
 import platform
-import uuid
 import socket
 
 sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/app_package')
@@ -428,6 +427,13 @@ class PageStoreHandler(BaseHandler):
     def get(self):
         self.render_template_Vue('store.html')
     def post(self):
+        def updateSQL(newstate, c, conn, if_close=False):
+            sql_cmd = "UPDATE pack SET register_state='" + newstate + "' WHERE name='" + file_name + "';"
+            c.execute(sql_cmd)
+            conn.commit()
+            if if_close:
+                conn.close()
+
         raw_file = self.request.get('fileToUpload')
         raw_icon = self.request.get('iconToUpload')
         file_name = self.request.get('file_name')
@@ -439,76 +445,19 @@ class PageStoreHandler(BaseHandler):
         server_type = self.request.get('server_type')
         parameters = self.request.get('parameters')
         if_stateful = self.request.get('if_stateful')
-        uuid_val = file_name 
+        register_state = 'REGISTER_PROCESS_INIT'
 
-        pack_dir = os.path.join(GetWebStudioDirPath(),'local','pack')
-        if not os.path.exists(pack_dir):
-            os.makedirs(pack_dir)
-
-        bin_dir = os.path.join(os.path.dirname(GetWebStudioDirPath()),'bin')
-        if not os.path.exists(bin_dir):
-            self.response.write('Error: cannot find ./bin folder')
-            return
-
-        savedFile = open(os.path.join(pack_dir, uuid_val + '.7z'), 'wb')
-        savedFile.write(raw_file)
-        savedFile.close()
-
-        iconFile = open(os.path.join(pack_dir,uuid_val + '.jpg'), 'wb')
-        iconFile.write(raw_icon)
-        iconFile.close()
-
-        schemaFile = open(os.path.join(pack_dir, uuid_val + '.' + schema_type), 'wb')
-        schemaFile.write(schema_info)
-        schemaFile.close()
-
-        loc_of_7z = ''
-        #to detect if 7z exists
-        os_type = platform.system()
-        if os_type == 'Windows':
-            loc_of_7z = os.path.join(bin_dir,'7z.exe')
-        elif os_type == 'Linux':
-            loc_of_7z = os.path.join(bin_dir,'7z')
-        if loc_of_7z =='':
-            self.response.write('Error: cannot find 7z')
-            return
-
-        subprocess.call([loc_of_7z,'x', os.path.join(pack_dir, uuid_val) + '.7z','-y','-o'+os.path.join(pack_dir, uuid_val)])
-
-        loc_of_tron = ''
-        #to detect if Tron exists
-        if os_type == 'Windows':
-            loc_of_tron = os.path.join(bin_dir,'Tron.exe')
-        elif os_type == 'Linux':
-            loc_of_tron = os.path.join(bin_dir,'Tron')
-        if loc_of_tron =='':
-            self.response.write('Error: cannot find Tron')
-            return
-
-        from subprocess import Popen, PIPE
-        p = Popen([loc_of_tron,'gcs','thrift','dsn', os.path.join(pack_dir,uuid_val + '.thrift')],stdin=subprocess.PIPE,stdout=subprocess.PIPE,cwd=bin_dir)
-        while p.poll() is None:
-            print p.stdout.readline()
-
-        os.rename(os.path.join(bin_dir,'tmp',uuid_val+'.Tron.Composition.dll'), os.path.join(pack_dir,uuid_val,file_name+'.Tron.Composition.dll'))
-
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text,\
-            uuid text, cluster_type text, schema_info text, schema_type text, server_type text,\
+            register_state text, cluster_type text, schema_info text, schema_type text, server_type text,\
             parameters text, if_stateful text)")
 
-        c.execute("SELECT * FROM pack WHERE name = '" + file_name + "'")
-        if c.fetchall()!=[]:
-            conn.close()
-            self.response.write('Upload fail! App "'+ file_name +'" already exists!')
-            return
-        
         sql_cmd = "INSERT INTO pack VALUES " \
                 + "('" + file_name \
                 + "','" + author \
                 + "','" + description \
-                + "','" + uuid_val \
+                + "','" + register_state \
                 + "','" + cluster_type \
                 + "','" + schema_info \
                 + "','" + schema_type \
@@ -520,7 +469,75 @@ class PageStoreHandler(BaseHandler):
         c.execute(sql_cmd)
         conn.commit()
 
-        conn.close()
+        pack_dir = os.path.join(GetWebStudioDirPath(),'local','pack')
+        if not os.path.exists(pack_dir):
+            os.makedirs(pack_dir)
+
+        bin_dir = os.path.join(os.path.dirname(GetWebStudioDirPath()),'bin')
+        if not os.path.exists(bin_dir):
+            updateSQL('ERR_NO_BIN_FOLDER',c,conn,True)
+            return webapp2.redirect('/store.html')
+
+        updateSQL('WRITING_7Z_FILE',c,conn)
+
+        savedFile = open(os.path.join(pack_dir, file_name + '.7z'), 'wb')
+        savedFile.write(raw_file)
+        savedFile.close()
+
+        updateSQL('WRITING_iCON_FILE',c,conn)
+
+        iconFile = open(os.path.join(pack_dir,file_name + '.jpg'), 'wb')
+        iconFile.write(raw_icon)
+        iconFile.close()
+
+        updateSQL('WRITING_SCHEMA_FILE',c,conn)
+
+        schemaFile = open(os.path.join(pack_dir, file_name + '.' + schema_type), 'wb')
+        schemaFile.write(schema_info)
+        schemaFile.close()
+
+        loc_of_7z = ''
+        #to detect if 7z exists
+        os_type = platform.system()
+        if os_type == 'Windows':
+            loc_of_7z = os.path.join(bin_dir,'7z.exe')
+        elif os_type == 'Linux':
+            loc_of_7z = os.path.join(bin_dir,'7z')
+        if loc_of_7z =='':
+            updateSQL('ERR_NO_7Z',c,conn,True)
+            return webapp2.redirect('/store.html')
+
+        updateSQL('EXTRACTING_7Z_FILE',c,conn)
+
+        subprocess.call([loc_of_7z,'x', os.path.join(pack_dir, file_name) + '.7z','-y','-o'+os.path.join(pack_dir, file_name)])
+        if not os.path.exists(os.path.join(pack_dir, file_name)):
+            updateSQL('ERR_7Z_EXTRACT_FAIL',c,conn,True)
+            return webapp2.redirect('/store.html')
+
+        loc_of_tron = ''
+        #to detect if Tron exists
+        if os_type == 'Windows':
+            loc_of_tron = os.path.join(bin_dir,'Tron.exe')
+        elif os_type == 'Linux':
+            loc_of_tron = os.path.join(bin_dir,'Tron')
+        if loc_of_tron =='':
+            updateSQL('ERR_NO_TRON',c,conn,True)
+            return webapp2.redirect('/store.html')
+
+        updateSQL('TRON_GENERATING_DLL',c,conn)
+
+        from subprocess import Popen, PIPE
+        p = Popen([loc_of_tron,'gcs','thrift','dsn', os.path.join(pack_dir,file_name + '.thrift')],stdin=subprocess.PIPE,stdout=subprocess.PIPE,cwd=bin_dir)
+        while p.poll() is None:
+            print p.stdout.readline()
+
+        if not os.path.exists(os.path.join(bin_dir,'tmp',file_name+'.Tron.Composition.dll')):
+            updateSQL('ERR_TRON_GENERATE_DLL_FAIL',c,conn,True)
+            return webapp2.redirect('/store.html')
+
+        os.rename(os.path.join(bin_dir,'tmp',file_name+'.Tron.Composition.dll'), os.path.join(pack_dir,file_name,file_name+'.Tron.Composition.dll'))
+
+        updateSQL('SUCCESS',c,conn,True)
 
         return webapp2.redirect('/store.html')
 
@@ -600,7 +617,7 @@ class ApiSaveViewHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS view (name text, author text, description text, counterList text, graphtype text, interval text)")
         c.execute("DELETE FROM view WHERE name = '" + name + "';")
@@ -620,7 +637,7 @@ class ApiLoadViewHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS view (name text, author text, description text, counterList text, graphtype text, interval text)")
         for view in c.execute('SELECT * FROM view'):
@@ -636,7 +653,7 @@ class ApiDelViewHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS view (name text, author text, description text, counterList text, graphtype text, interval text)")
         c.execute("DELETE FROM view WHERE name = '" + name + "';")
@@ -653,11 +670,11 @@ class ApiLoadPackHandler(BaseHandler):
         if not os.path.exists(pack_dir):
             os.makedirs(pack_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
-        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, uuid text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text, if_stateful text)")
+        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, register_state text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text, if_stateful text)")
         for pack in c.execute('SELECT * FROM pack'):
-            packList.append({'name':pack[0],'author':pack[1],'description':pack[2],'uuid':pack[3],'cluster_type':pack[4],'if_stateful':pack[9]})
+            packList.append({'name':pack[0],'author':pack[1],'description':pack[2],'register_state':pack[3],'cluster_type':pack[4],'if_stateful':pack[9]})
         conn.close()
         
         self.SendJson(packList)    
@@ -674,11 +691,11 @@ class ApiPackDetailHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
-        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, uuid text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text, if_stateful text)")
+        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, register_state text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text, if_stateful text)")
 
-        c.execute("SELECT * FROM pack WHERE uuid = '" + pack_id + "'")
+        c.execute("SELECT * FROM pack WHERE register_state = '" + pack_id + "'")
         pack_info = c.fetchone()
         conn.close()
 
@@ -701,9 +718,9 @@ class ApiDelPackHandler(BaseHandler):
         if not os.path.exists(pack_dir):
             os.makedirs(pack_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
-        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, uuid text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text)")
+        c.execute("CREATE TABLE IF NOT EXISTS pack (name text, author text, desciprtion text, register_state text, cluster_type text, schema_info text, schema_type text, server_type text, parameters text)")
 
         c.execute("SELECT * FROM pack WHERE name = '" + packName + "'")
         packInfo = c.fetchone()
@@ -717,9 +734,10 @@ class ApiDelPackHandler(BaseHandler):
         conn.close()
 
         try:
-            shutil.rmtree(os.path.join(pack_dir,packInfo[3]))
-            os.remove(os.path.join(pack_dir,packInfo[3]+'.jpg'))
-            os.remove(os.path.join(pack_dir,packInfo[3]+'.7z'))
+            shutil.rmtree(os.path.join(pack_dir,packInfo[0]))
+            os.remove(os.path.join(pack_dir,packInfo[0]+'.jpg'))
+            os.remove(os.path.join(pack_dir,packInfo[0]+'.7z'))
+            os.remove(os.path.join(pack_dir,packInfo[0]+'.thrift'))
         
             self.response.write('success')
         except:
@@ -755,7 +773,7 @@ class ApiSaveScenarioHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS scenario (name text, author text, desciprtion text, machines text, cmdtext text, interval text, times text)")
         c.execute("DELETE FROM scenario WHERE name = '" + name + "';")
@@ -775,7 +793,7 @@ class ApiLoadScenarioHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS scenario (name text, author text, desciprtion text, machines text, cmdtext text, interval text, times text)")
         for scenario in c.execute('SELECT * FROM scenario'):
@@ -791,7 +809,7 @@ class ApiDelScenarioHandler(BaseHandler):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
 
-        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'monitor.db')
+        conn = sqlite3.connect(GetWebStudioDirPath()+'/local/'+'data.db')
         c = conn.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS scenario (name text, author text, desciprtion text, machines text, cmdtext text)")
         c.execute("DELETE FROM scenario WHERE name = '" + name + "';")

@@ -4,6 +4,18 @@ document.getElementById("iconToUpload").onchange = function () {
 
 document.getElementById("fileToUpload").onchange = function () {
     $('#packname').val(document.forms["fileForm"]["fileToUpload"].value.replace(/^.*[\\\/]/, '').slice(0, -3));
+    var flag = true;
+    for(index in vm.$data.packList)
+    {
+        if(vm.$data.packList[index].name == $('#packname').val())
+        {
+            vm.$set('ifNameDuplicated', true);
+            flag = false;
+            break;
+        }
+    }
+    if(flag)
+        vm.$set('ifNameDuplicated', false);
     document.getElementById("filepath").value = this.value.replace(/^.*[\\\/]/, '');
 };
 
@@ -23,7 +35,6 @@ function validateForm() {
     {
         document.forms["fileForm"]["file_name"].value = $('#packname').val();
     }
-
     
     document.forms["fileForm"]["author"].value = $('#author').val();
     document.forms["fileForm"]["description"].value = $('#description').val();
@@ -75,6 +86,8 @@ var vm = new Vue({
         newKey: '',
         newValue: '',
         paramList: [],
+
+        ifNameDuplicated: false,
 
         clusterList: [
             {name:'kubernetes', active:false},
@@ -172,7 +185,20 @@ var vm = new Vue({
         {
             this.clusterList[index].active = !(this.clusterList[index].active);
         },
-     
+
+        updatePackList: function()
+        {
+            var self = this;
+            $.post("/api/pack/load", {
+                }, function(data){
+                    self.packList = JSON.parse(data);
+                    for(index in self.packList)
+                    {
+                        self.packList[index].imgsrc = "local/pack/" + self.packList[index].name + ".jpg";
+                    }
+                }   
+            );
+        }
     },
     ready: function ()
     {
@@ -183,16 +209,10 @@ var vm = new Vue({
                 self.commonPort = window.location.href.split("/")[2].split(":")[1];
             }
         );
-
-        $.post("/api/pack/load", {
-            }, function(data){
-                self.packList = JSON.parse(data);
-                for(index in self.packList)
-                {
-                    self.packList[index].imgsrc = "local/pack/" + self.packList[index].name + ".jpg";
-                }
-            }   
-        );
+        self.updatePackList();    
+        setInterval(function () {
+            self.updatePackList();    
+        }, 1000);
     }
 });
 

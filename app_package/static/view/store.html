@@ -103,6 +103,7 @@ th, td {
                 <th>Name</th>
                 <th>Author</th>
                 <th>Description</th>
+                <th>Register State</th>
                 <th>Files</th>
                 <th>Details</th>
                 <th>Composition Stub</th>
@@ -117,6 +118,7 @@ th, td {
                     <td>{{pack.name}}</td> 
                     <td>{{pack.author}}</td> 
                     <td>{{pack.description}}</td> 
+                    <td>{{pack.register_state}}</td> 
                     <td><span class="glyphicon glyphicon-file" aria-hidden="true" @click="gotoFile(pack.name)"></span></td>
                     <td><span class="glyphicon glyphicon-list-alt" aria-hidden="true" @click="showDetail(pack.name)"></span></td>
                     <td><a href="local/pack/{{pack.name}}/{{pack.name}}.Tron.Composition.dll" download><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span></a></td>
@@ -185,6 +187,7 @@ th, td {
                         <div class="col-xs-12">
                             <input id="filepath" placeholder="Choose File" disabled="disabled" />
                             <div class="fileUpload btn btn-warning"><span>Select Package</span><input type="file" name="fileToUpload" id="fileToUpload" class="upload" accept=".7z"></div>
+                            <h4 v-if="ifNameDuplicated"><font color="red">Package name duplicated!</font></h4>
                         </div>
                     </div>
                     <input id="source" name="source" type="hidden" value=""></input>
@@ -206,7 +209,7 @@ th, td {
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
             <div class = "pull-right">
-                <button type="button" class="btn btn-info" data-toggle="modal" data-dismiss="modal" data-target="#uploadpack2">Next</button>
+                <button type="button" class="btn btn-info" data-toggle="modal" data-dismiss="modal" data-target="#uploadpack2" v-if="ifNameDuplicated == false">Next</button>
             </div>
           </div>
         </div>
