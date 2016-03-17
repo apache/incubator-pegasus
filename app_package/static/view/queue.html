@@ -1,56 +1,20 @@
 {% extends "static/view/template.html" %}
 {% block body %}
-<div class="container">
 
-	<div class="page-header">
-	</div>
+<div id="app">
+    <div class="container">
+        <div class="page-header">
+        </div>
 
-	<div class="page-header">
-        <h1> <font color= #333333><center>Queue</center></font>
-			<small><center><font color= #778899>Longest queues of your system listed here</font></center></small>
-		</h1>
-	</div>
+        <div class="page-header">
+            <h1> <font color= #333333><center>Queue</center></font>
+                <small><center><font color= #778899>Longest queues of your system listed here</font></center></small>
+            </h1>
+        </div>
 
+    </div>
+    <div id="chart"></div>
 </div>
-
-<div id="chart"></div>
-<script>
-var chart = c3.generate({
-		size: {
-        height: 720,
-    },
-    data: {
-        columns: [
-        ['queue length'{% for data in TABLEDATA %},{{data}}{% endfor %}]
-        ],
-        type: 'bar',
-    },
-    grid: {
-        y: {
-            lines: [{value:0}]
-        }
-    },
-	  
-     axis: {
-        x: {
-            type: 'category',
-	    label: 'task code',
-	    tick: {
-                rotate: 75,
-                multiline: false
-            },
-categories: [{% for item in QUEUE_LIST %}'{{item}}',{% endfor %}]
-	    /*
-	       categories: ['RPC_NFS_COPY', 'RPC_NFS_GET_FILE_SIZE', 'RPC_DSN_CLI_CALL']
-	       */
-        },
-	y:{
-		label: 'queue length',
-        tick: {
-                format: d3.format(",")
-        }
-	}
-	}
-});
-</script>
+<script src="js/vue.js"></script>
+<script src="js/queue.js"></script>
 {% endblock %}

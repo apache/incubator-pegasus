@@ -271,17 +271,7 @@ class PageBarHandler(BaseHandler):
 
 class PageQueueHandler(BaseHandler):
     def get(self):
-        params = {}
-        queryRes = json.loads(Native.dsn_cli_run('system.queue'))
-        query_list = []
-        for app in queryRes:
-            for pool in app['thread_pool']:
-                    for queue in pool['pool_queue']:
-                        query_list.append({"queue_name":app['app_name']+'@'+pool['pool_name']+'@'+queue['name'],"queue_num":queue['num']})
-        query_list = sorted(query_list, key=lambda queue: queue['queue_num'],reverse=True)[:8]
-        params['QUEUE_LIST'] = map((lambda queue: queue['queue_name']),query_list)
-        params['TABLEDATA'] = map((lambda queue: queue['queue_num']),query_list)
-        self.render_template('queue.html',params)
+        self.render_template_Vue('queue.html')
 
 class PageCliHandler(BaseHandler):
     def get(self):
