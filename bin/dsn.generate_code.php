@@ -153,9 +153,8 @@ case "thrift":
     break;
 case "proto":
     {
-        $fuck = dirname($g_idl);
-        copy($g_idl, "./" + basename($g_idl));
-        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".basename($g_idl);
+        $g_idl_dir = dirname($g_idl);
+        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".$g_idl." -I=".$g_idl_dir;
         echo "exec: ".$command.PHP_EOL;
         system($command);
         if (!file_exists($g_idl_php))
@@ -164,7 +163,7 @@ case "proto":
             exit(0);
         }
 
-        $command = $g_cg_dir."/".$os_name."/protoc --".$g_lang."_out=".$g_out_dir." ".$g_idl;
+        $command = $g_cg_dir."/".$os_name."/protoc --".$g_lang."_out=".$g_out_dir." ".$g_idl." -I=".$g_idl_dir;
         echo "exec: ".$command.PHP_EOL;
         system($command);
     }
