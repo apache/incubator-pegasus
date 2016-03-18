@@ -9,7 +9,7 @@ var vm = new Vue({
         update: function ()
         {
             var self = this;
-            $.post("http://srgsi-02:8088/api/cli", {
+            $.post("/api/cli", {
                 command: "system.queue"
             }, function(data){
                 data = JSON.parse(data);
