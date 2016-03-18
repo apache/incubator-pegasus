@@ -9,7 +9,7 @@ else()
 endif()
 
 ExternalProject_Add(libthrift
-    URL https://raw.githubusercontent.com/shengofsun/packages/master/thrift-0.9.3.tar.gz
+    GIT_REPOSITORY https://github.com/shengofsun/thrift.git
     CMAKE_ARGS "-DWITH_JAVA=OFF;-DWITH_PYTHON=OFF;-DBUILD_TESTING=OFF;-DBUILD_EXAMPLES=OFF;-DWITH_STATIC_LIB=OFF;-DWITH_QT5=OFF;-DWITH_QT4=OFF;-DWITH_OPENSSL=OFF;-DWITH_ZLIB=OFF;-DWITH_LIBEVENT=OFF;-DWITH_C_GLIB=OFF;-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/thrift"
     INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
     INSTALL_COMMAND ${install_cmd}
