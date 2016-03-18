@@ -457,7 +457,7 @@ namespace dsn
 
         static const char* inteface = dsn_config_get_value_string(
             "network", "primary_interface",
-            "", "network interface name used to init primary ipv4 address, if empty, means using the first non-loopback ipv4 address");
+            "", "network interface name used to init primary ipv4 address, if empty, means using the first \"eth\" prefixed non-loopback ipv4 address");
 
         uint32_t ip = 0;
 
