@@ -21,13 +21,13 @@ $idl_type = $argv[4];
 
 <?php if ($idl_type == "thrift") { ?>
 
-# include <dsn/thrift_helper.h>
+# include <dsn/idl/thrift_helper.h>
 # include "<?=$_PROG->name?>_types.h" 
 
 <?php } else if ($idl_type == "proto") {?>
 
 # include "<?=$_PROG->name?>.pb.h"
-# include <dsn/gproto_helper.h>
+# include <dsn/idl/gproto_helper.h>
 
 <?php } else { ?>
 # error not supported idl type <?=$idl_type?> 
