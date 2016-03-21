@@ -130,27 +130,12 @@ namespace dsn {
     {
     }
 
-    void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
-    {
-        result.hdr_type = be32toh( *(int32_t*)(buffer) );
-        buffer += sizeof(int32_t);
-        result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
-        buffer += sizeof(int32_t);
-        result.total_length = be32toh( *(int32_t*)(buffer) );
-        buffer += sizeof(int32_t);
-        result.body_offset = be32toh( *(int32_t*)(buffer) );
-        buffer += sizeof(int32_t);
-        result.request_hash = be32toh( *(int32_t*)(buffer) );
-        buffer += sizeof(int32_t);
-        result.opt.o = be64toh( *(int64_t*)(buffer) );
-    }
-
     message_ex* dsn_message_parser::receive_message_with_thrift_header(int read_length, /*out*/int& read_next)
     {
         if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
         {
             dsn_thrift_header header;
-            read_thrift_header_from_buffer(header, _read_buffer.data());
+            thrift_header_parser::read_thrift_header_from_buffer(header, _read_buffer.data());
             // msg done
             if ( _read_buffer_occupied >= header.total_length)
             {

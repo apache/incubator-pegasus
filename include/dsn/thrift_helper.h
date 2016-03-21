@@ -469,6 +469,26 @@ namespace dsn {
     class thrift_header_parser
     {
     public:
+        static void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
+        {
+#ifdef _WIN32
+#define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
+#define be32toh(x) ( (be16toh((x)>>16)&65535) | (be16toh((x)&65535)<<16) )
+#define be64toh(x) ( (be32toh((x)>>32)&0xffffffff) | ( be32toh( (x)&0xffffffff ) << 32 ) )
+#endif
+            result.hdr_type = be32toh( *(int32_t*)(buffer) );
+            buffer += sizeof(int32_t);
+            result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
+            buffer += sizeof(int32_t);
+            result.total_length = be32toh( *(int32_t*)(buffer) );
+            buffer += sizeof(int32_t);
+            result.body_offset = be32toh( *(int32_t*)(buffer) );
+            buffer += sizeof(int32_t);
+            result.request_hash = be32toh( *(int32_t*)(buffer) );
+            buffer += sizeof(int32_t);
+            result.opt.o = be64toh( *(int64_t*)(buffer) );
+        }
+
         static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data)
         {
             dsn::blob message_content = message_data.range(header->body_offset);
