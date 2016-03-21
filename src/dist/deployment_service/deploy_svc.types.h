@@ -20,36 +20,9 @@
 
 # else // use rDSN's data encoding/decoding
 
+# include <dsn/dist/cluster_scheduler.h>
+
 namespace dsn { namespace dist { 
-    // ---------- cluster_type -------------
-    enum cluster_type
-    {
-        cstype_kubernetes = 0,
-        cstype_docker = 1,
-        cstype_bare_medal_linux = 2,
-        cstype_bare_medal_windows = 3,
-        cstype_yarn_on_linux = 4,
-        cstype_yarn_on_windows = 5,
-        cstype_mesos_on_linux = 6,
-        cstype_mesos_on_windows = 7,
-    };
-
-    DEFINE_POD_SERIALIZATION(cluster_type);
-
-    // ---------- service_status -------------
-    enum service_status
-    {
-        SS_PREPARE_RESOURCE = 0,
-        SS_DEPLOYING = 1,
-        SS_RUNNING = 2,
-        SS_FAILOVER = 3,
-        SS_FAILED = 4,
-        SS_COUNT = 5,
-        SS_INVALID = 6,
-    };
-
-    DEFINE_POD_SERIALIZATION(service_status);
-
     // ---------- deploy_request -------------
     struct deploy_request
     {

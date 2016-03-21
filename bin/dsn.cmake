@@ -355,9 +355,9 @@ function(dsn_add_project)
     endif()
     
     ms_add_project("${MY_PROJ_LANG}" "${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}" "${MY_DO_INSTALL}")
-    #if(DSN_BUILD_RUNTIME AND (DSN_SERIALIZATION_TYPE STREQUAL "thrift"))
-    add_dependencies(${MY_PROJ_NAME} libthrift)
-    #endif()
+    if(DSN_SERIALIZATION_TYPE STREQUAL "thrift")
+        add_dependencies(${MY_PROJ_NAME} libthrift)
+    endif()
 endfunction(dsn_add_project)
 
 function(dsn_add_cs_shared_library)

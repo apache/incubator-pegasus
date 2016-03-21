@@ -38,7 +38,10 @@
 # include <dsn/internal/network.h>
 # include "task_engine.h"
 # include "transient_memory.h"
+
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 # include <dsn/thrift_helper.h>
+#endif
 
 using namespace dsn::utils;
 

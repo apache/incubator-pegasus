@@ -35,7 +35,10 @@
 
 # include <dsn/internal/message_parser.h>
 # include <dsn/service_api_c.h>
+
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 # include <dsn/thrift_helper.h>
+#endif
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -132,6 +135,7 @@ namespace dsn {
 
     message_ex* dsn_message_parser::receive_message_with_thrift_header(int read_length, /*out*/int& read_next)
     {
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
         if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
         {
             dsn_thrift_header header;
@@ -159,6 +163,9 @@ namespace dsn {
             read_next = sizeof(dsn_thrift_header) - _read_buffer_occupied;
             return nullptr;
         }
+#else
+        dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+#endif
     }
 
     message_ex* dsn_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
@@ -210,7 +217,13 @@ namespace dsn {
     int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers)
     {
         if (msg->header->hdr_type == hdr_dsn_thrift)
+        {
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
             return thrift_header_parser::prepare_buffers_on_send(msg, offset, buffers);
+#else
+            dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+#endif
+        }
 
         int i = 0;        
         for (auto& buf : msg->buffers)
@@ -233,7 +246,13 @@ namespace dsn {
     int dsn_message_parser::get_send_buffers_count_and_total_length(message_ex* msg, int* total_length)
     {
         if (msg->header->hdr_type == hdr_dsn_thrift)
+        {
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
             return thrift_header_parser::get_send_buffers_count_and_total_length(msg, total_length);
+#else
+            dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+#endif
+        }
 
         *total_length = (int)msg->body_size() + sizeof(message_header);
         return (int)msg->buffers.size();
