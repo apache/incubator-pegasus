@@ -1,11 +1,13 @@
 include(ExternalProject)
 
 set(target_dir ${PROJECT_BINARY_DIR}/thrift/lib)
+
 if(WIN32)
     set(install_cmd make install)
 else()
     set(cp_target_file ${CMAKE_COMMAND} -E copy "${target_dir}/libthrift.so" "${PROJECT_BINARY_DIR}/lib")
-    set(install_cmd COMMAND make install COMMAND ${cp_target_file})
+    set(cp_include_files ${CMAKE_COMMAND} -E copy_directory "${PROJECT_BINARY_DIR}/thrift/include" "${CMAKE_SOURCE_DIR}/include")
+    set(install_cmd COMMAND make install COMMAND ${cp_target_file} COMMAND ${cp_include_files})
 endif()
 
 ExternalProject_Add(libthrift
@@ -17,11 +19,3 @@ ExternalProject_Add(libthrift
 
 # Specify source dir
 set(THRIFT_INCLUDE_DIR ${PROJECT_BINARY_DIR}/thrift/include PARENT_SCOPE)
-
-if(WIN32)
-    message(FATAL_ERROR "not installed on windows")
-else()
-    install(DIRECTORY ${PROJECT_BINARY_DIR}/thrift/include/thrift
-            DESTINATION include/
-    )
-endif()
