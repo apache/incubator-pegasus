@@ -819,6 +819,35 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
 
                         (*pris)[pri] = request;
                     }
+
+                    for (auto& pri : it->second.partitions)
+                    {
+                        app_state& app = _apps[pri.app_id - 1];                        
+
+                        // skip primary
+                        if (!app.is_stateful)
+                        {
+                            partition_configuration& old = app.partitions[pri.pidx];
+                            auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                            request->type = CT_REMOVE;
+                            request->host_node = it->first;
+
+                            for (int i = 0; i < (int)old.secondaries.size(); i++)
+                            {
+                                if (old.secondaries[i] == it->first)
+                                {
+                                    request->node = old.last_drops[i];
+                                    break;
+                                }
+                            }
+
+                            dassert(!request->node.is_invalid(), "");
+                            
+                            request->config = old;
+
+                            (*pris)[pri] = request;
+                        }
+                    }
                 }
             }   
         }   
@@ -1331,7 +1360,8 @@ void server_state::update_configuration(
                 if (CT_REMOVE == req->type)
                 {
                     // not found
-                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end())
+                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
+                        std::find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
                     {
                         write = false;
                         response.err = ERR_OK;
@@ -1595,10 +1625,14 @@ void server_state::update_configuration_internal(const configuration_update_requ
             if (CT_REMOVE == request.type)
             {
                 // remove working node address
-                std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
+                auto it1 = std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
+                dassert(it1 != pcs.worker_replicas().end(), "node must exit in the given vector");
+                pcs.worker_replicas().erase(it1);
 
                 // remove host node address
-                std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
+                it1 = std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
+                dassert(it1 != pcs.host_replicas().end(), "node must exit in the given vector");
+                pcs.host_replicas().erase(it1);
 
                 auto it = _nodes.find(request.host_node);
                 dassert(it != _nodes.end(), "");

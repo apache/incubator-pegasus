@@ -776,7 +776,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     ::unmarshall(req, *request);
 
-    if (_state->freezed())
+    if (_state->freezed() && request->is_stateful)
     {
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request->config.gpid, response.config);
@@ -839,9 +839,6 @@ void meta_service::on_balancer_proposal(dsn_message_t req)
 void meta_service::on_load_balance_timer()
 {
     if (!_started)
-        return;
-
-    if (_state->freezed())
         return;
 
     if (_failure_detector->is_primary())
