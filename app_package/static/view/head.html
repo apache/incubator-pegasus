@@ -1,65 +1,8 @@
-<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
-<style>
-  .ui-autocomplete {
-    max-height: 400px;
-    overflow-y: auto;
-    /* prevent horizontal scrollbar */
-    overflow-x: hidden;
-  }
-  /* IE 6 doesn't support max-height
-   * we use height instead, but this forces the menu to always be this tall
-   */
-  * html .ui-autocomplete {
-    height: 400px;
-  }
-  </style>
-<script>
-  $(function() {
-    var availableTags = [
-    {% for task in TASK_LIST%}
-		"{{task}}",
-	{% endfor %}
-    ];
-    $( "#task" ).autocomplete({
-        source: availableTags,
-        select: function(event, ui) { 
-            window.location.href = '{{PAGE}}?task_code='+ui.item.value;
-        }
-    });
-
-    document.getElementById('connect').onkeypress = function(e){
-        if (!e) e = window.event;
-        var keyCode = e.keyCode || e.which;
-        if (keyCode == '13'){
-            window.location.href = '{{PAGE}}?task_code={{TASK_CODE}}&remote_address='+document.getElementById('connect').value;
-            return false;
-        }
-    }
-    
-  });
-  </script>
-<div class="ui-widget">
-  <label for="task" data-toggle="tooltip" title="search tasks to jump">Goto task:  </label>
-  <input id="task" data-toggle="tooltip" title="search tasks to jump">
-
-  {% if PAGE=='sample.html' or PAGE=='bar.html'%}
-  <label for="connect" data-toggle="tooltip" title="For RPCs, you can only get half latency data on one side, input the remote address and port to enable monitor to combine the data">Connect:  </label>
-  <input id="connect" data-toggle="tooltip" title="For RPCs, you can only get half latency data on one side, input the remote address and port to enable monitor to combine the data">
-  {% endif %}
-</div>
-
 <div class="btn-group">
-	<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"  data-toggle="tooltip" title="Choose task type">
-		{{TASK_CODE}} <span class="caret"></span></button>
-	<ul class="dropdown-menu" role="menu">
-		{% for task in TASK_LIST%}
-		<li><a href="?task_code={{task}}">{{task}}</a></li>
-		{% endfor %}
-	</ul>
-	<button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#call" data-toggle="tooltip" title="Show caller and callee of the current task">Caller/Callee tasks</button>
-	<button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#linkgraph" data-toggle="tooltip" title="Show a link graph displaying the calling relations, blue means being called, red means to call">Call link graph</button>
-	<button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#sharer" data-toggle="tooltip" title="Tasks in one thread may affect each other by sharing the same queue, here lists all the other tasks in the same thread of this task">Tasks sharing the same threads</button>
+	<button class="btn btn-primary dropdown-toggle" @click="collapse">Open task list</button>
+    <button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#call">Caller/Callee tasks</button>
+	<button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#linkgraph">Call link graph</button>
+	<button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#sharer" >Tasks sharing the same threads</button>
 	{% if COMPAREBUTTON=='yes'%}<a href="?task_code={{TASK_CODE}}&ifcompare=yes" class="btn btn-info" role="button">Compare</a>{% endif %}
 </div>
 
@@ -75,30 +18,58 @@
 				</tr>
 			</thead>
 			<tbody>
-			{% for index in range(jinja_max(CALLER_LIST|length,CALLEE_LIST|length)) %}
-			<tr>
-			{% if index < CALLER_LIST|length %}
-			<td><a href="?task_code={{CALLER_LIST[index].name}}">{{CALLER_LIST[index].name}}</a></td><td>{{CALLER_LIST[index].num}}</td>
-			{% else %}
-			<td></td><td></td>
-			{% endif %}
-			{% if index < CALLEE_LIST|length %}
-			<td><a href="?task_code={{CALLEE_LIST[index].name}}">{{CALLEE_LIST[index].name}}</a></td><td>{{CALLEE_LIST[index].num}}</td>
-			{% else %}
-			<td></td><td></td>
-			{% endif %}
-			</tr>
-			{% endfor %}
+		
 			</tbody>
 		</table>
 	</div>
 </div>
 
-<div id="linkgraph" class="collapse">
-{% if jinja_max(CALLER_LIST|length,CALLEE_LIST|length)!=0 %}
-{% include "static/view/sankey_d3.html" %}
-{% else %}<h3> Info: No call link for this task till now</h3> {% endif %}
+<style>
+.centered {  
+  position:fixed;
+  z-index: 100;  
+  top:50%;  
+  left:50%;  
+  margin:-100px 0 0 -100px;  
+  width:200px;  
+  height:200px;  
+}  
+.node rect {
+  cursor: move;
+  shape-rendering: crispEdges;
+}
 
+.node text {
+  pointer-events: none;
+  text-shadow: 1px 1px 2px #fff;
+  font-size: 0.8em;
+  font-family: sans-serif;
+}
+
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  font-size: 0.7em;
+  font-family: sans-serif;
+  padding: 3px;
+  width: auto;
+  height: auto;
+  background-color: #F2F2F2;
+  -webkit-box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.4);
+  -mox-box-shadow: 0px 0px 0px 5px rgba(0, 0, 0, 0.4);
+  box-shadow: 0px 0px 5px rbga(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.value {
+  white-space: pre-line;
+  margin: 0;
+}
+</style>
+<script src="js/sankey_d3.js"></script>
+<script src="js/bihisankey.js"></script>
+<div id="linkgraph" class="collapse">
+    <div id="chart_dep"></div>
 </div>	
 
 <div id="sharer" class="collapse">
@@ -111,9 +82,6 @@
 				</tr>
 			</thead>
 			<tbody>
-			{% for i in range(0,SHARER_LIST|length,2) %}
-			<tr><td><a href="?task_code={{ SHARER_LIST[i] }}">{{ SHARER_LIST[i] }}</a></td><td><a href="?task_code={{ SHARER_LIST[i+1] }}">{{ SHARER_LIST[i+1] }}</a></td></tr>
-			{% endfor %}
 			</tbody>
 		</table>
 	</div>

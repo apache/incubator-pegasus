@@ -154,41 +154,13 @@ class PageTableHandler(BaseHandler):
     def get(self):
         self.render_template_Vue('table.html')
 
+class PageTaskAnalyzerHandler(BaseHandler):
+    def get(self):
+        self.render_template_Vue('task_analyzer.html')
+
 class PageSampleHandler(BaseHandler):
     def get(self):
-        params = {}
-        task_code = self.request.get('task_code')
-        if task_code=='':
-            task_code = 'RPC_NFS_COPY'
-        self.geneRelate(task_code,params)
-
-        remote_address = self.request.get('remote_address')
-        remote_queryRes = []
-        if remote_address != '':
-            params['REMOTE_ADDRESS'] = remote_address
-            remote_queryRes = list(ast.literal_eval(urllib2.urlopen("http://"+remote_address+"/api/remoteCounterSample?task_code="+task_code).read()))
-            
-        queryRes = list(ast.literal_eval(Native.dsn_cli_run('pq counter_sample '+task_code)))
-        xtitles = []
-        xtitles2 = []
-        remote_mode = ''
-
-        if remote_address !='':
-            remote_mode = 'yes'
-            tabledata = [queryRes[1][index] if len(queryRes[1][index])>1 else remote_queryRes[1][index] for index in range(len(queryRes[1]))]
-            xtitles = queryRes[0][0:3]
-            xtitles2 = queryRes[0][3:6]
-        else:
-            tabledata = queryRes[1]
-            xtitles = queryRes[0]
-
-        params['PAGE'] = 'sample.html'
-        params['XTITLES'] = xtitles
-        params['XTITLES2'] = xtitles2
-        params['REMOTE_MODE'] = remote_mode
-        params['TABLEDATA'] = tabledata
-        params['COMPAREBUTTON'] = 'no'
-        self.render_template('sample.html',params)
+        self.render_template_Vue('sample.html')
 
 class PageValueHandler(BaseHandler):
     def get(self):
@@ -818,6 +790,7 @@ def start_http_server(portNum):
     ('/', PageMainHandler),
     ('/main.html', PageMainHandler),
     ('/table.html', PageTableHandler),
+    ('/task_analyzer.html', PageTaskAnalyzerHandler),
     ('/sample.html', PageSampleHandler),
     ('/value.html', PageValueHandler),
     ('/bar.html', PageBarHandler),

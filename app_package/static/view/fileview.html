@@ -40,7 +40,7 @@ Current directory:
 File listing:
 <ol class="breadcrumb">
     {% for filefolder in FILEFOLDERS %}<li><a href="?working_dir={{WORKING_DIR}}{% if WORKING_DIR!='' %}/{% endif %}{{filefolder}}&root_dir={{ROOT_DIR}}">{{filefolder}}</a></li>{% endfor %}
-    {% for file in FILES %}<li><a href="{{ROOT_DIR}}/{{WORKING_DIR}}/{{file}}">{{file}}</a></li>{% endfor %}
+    {% for file in FILES %}<li><a href="{{ROOT_DIR}}/{{WORKING_DIR}}/{{file}}" download>{{file}}</a></li>{% endfor %}
     <li><a href="?working_dir={% if DIR_LIST|length>1 %}{{DIR_LIST[-2].path}}{% else %}{% endif %}&root_dir={{ROOT_DIR}}">..</a></li>
 </ol>
 

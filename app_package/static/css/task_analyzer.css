@@ -1,6 +1,3 @@
-{% extends "static/view/template.html" %}
-{% block body %}
-<style>
 #wrapper {
     padding-left: 0;
     -webkit-transition: all 0.5s ease;
@@ -97,40 +94,47 @@
     color: #fff;
     background: none;
 }
-</style>
 
 
-<div id="app">
-    <div id="wrapper" class="toggled">
-        <div id="sidebar-wrapper">
-            <ul class="sidebar-nav">
-              <li>&nbsp</li>
-              <li class="sidebar-brand"><a href="#">Task List</a></li>
-              <li v-for="task in taskList" :class="[task==currentTask?'active':'']" @click="setcurrentTask(task)">
-                {{task}}
-              </li>
-            </ul>
-        </div>
-        <div id="page-content-wrapper" >
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="page-header">
-                    </div>
 
-                    <div class="page-header">
-                        <h1> <font color= #333333><center>Task Sample</center></font>
-                            <small><center><font color= #778899>Latency distributions of tasks</font></center></small>
-                        </h1>
-                    </div>
-                    {% include "static/view/head.html" %}
-                    <div id="chart"></div>
-                    {% include "static/view/tail.html" %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+.centered {  
+  position:fixed;
+  z-index: 100;  
+  top:50%;  
+  left:50%;  
+  margin:-100px 0 0 -100px;  
+  width:200px;  
+  height:200px;  
+}  
+.node rect {
+  cursor: move;
+  shape-rendering: crispEdges;
+}
 
-<script src="js/vue.js"></script>
-<script src="js/sample.js"></script>
-{% endblock %}
+.node text {
+  pointer-events: none;
+  text-shadow: 1px 1px 2px #fff;
+  font-size: 0.8em;
+  font-family: sans-serif;
+}
+
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  font-size: 0.7em;
+  font-family: sans-serif;
+  padding: 3px;
+  width: auto;
+  height: auto;
+  background-color: #F2F2F2;
+  -webkit-box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.4);
+  -mox-box-shadow: 0px 0px 0px 5px rgba(0, 0, 0, 0.4);
+  box-shadow: 0px 0px 5px rbga(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.value {
+  white-space: pre-line;
+  margin: 0;
+}
+

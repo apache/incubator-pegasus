@@ -20,11 +20,12 @@
     jQuery(function($, undefined) {
     $('#term_demo').terminal(function(command, term) {
         if (command !== '') {
-	    var xmlHttp = new XMLHttpRequest();
-    	    xmlHttp.open( "GET", "/api/cli?command="+encodeURIComponent(command), false ); // false for synchronous request
-            xmlHttp.send( null );
-            var result = xmlHttp.responseText; 
-            term.echo(String(result));
+             $.post("/api/cli", { 
+                command: command
+                }, function(data){ 
+                    term.echo(data);
+                }
+            );
         }
     }, {
         greetings: 'rDSN Remote Interface',

@@ -1,7 +1,8 @@
-<div id="chart_dep"></div>
-<script src="js/bihisankey.js"></script>
+var VM;
 
-<script>
+function updateSankey(nodes,links,vm)
+{
+
 var svg, tooltip, biHiSankey, path, defs, colorScale, highlightColorScale, isTransitioning;
 
 var OPACITY = {
@@ -68,7 +69,6 @@ showTooltip = function () {
       .duration(TRANSITION_DURATION)
       .style("opacity", 1);
 };
-
 colorScale = d3.scale.ordinal().domain(TYPES).range(TYPE_COLORS),
 highlightColorScale = d3.scale.ordinal().domain(TYPES).range(TYPE_HIGHLIGHT_COLORS),
 
@@ -140,7 +140,6 @@ defs.append("marker")
   .attr("orient", "auto")
   .append("path")
     .attr("d", "M 0 0 L 1 0 L 6 5 L 1 10 L 0 10 z");
-
 function update () {
   var link, linkEnter, node, nodeEnter, collapser, collapserEnter;
 
@@ -163,7 +162,8 @@ function update () {
   }
 
   function expand(node) {
-      window.location.href = '{{PAGE}}?task_code='+node.name;
+    VM.$set('currentTask',node.name);
+
     node.state = "expanded";
     node.children.forEach(function (child) {
       child.state = "collapsed";
@@ -503,75 +503,21 @@ function update () {
   collapser.exit().remove();
 
 }
+    VM = vm; 
+    biHiSankey
+        .nodes(nodes)
+        .links(links)
+        .initializeNodes(function (node) {
+           node.state = node.parent ? "contained" : "collapsed";
+        })
+        .layout(LAYOUT_INTERATIONS);
 
-var exampleNodes = [
+    disableUserInterractions(2 * TRANSITION_DURATION);
 
-{% for index in range(CALL_TASK_LIST|length) %}
-{"type":"{{CALL_TASK_LIST[index]}}","id":"i{{index}}","parent":null,"name":"{{CALL_TASK_LIST[index]}}"},
-  {"type":"{{CALL_TASK_LIST[index]}}","id":{{index}},"parent":"i{{index}}","number":"101","name":"{{CALL_TASK_LIST[index]}}"},
-{% endfor %}
-]
+    update();
 
-var exampleLinks = [
-{% for link in LINK_LIST%}
-{"source":{{link.source}}, "target":{{link.target}}, "value":{{link.value}}},
-{% endfor %}
 
-]
-
-biHiSankey
-  .nodes(exampleNodes)
-  .links(exampleLinks)
-  .initializeNodes(function (node) {
-    node.state = node.parent ? "contained" : "collapsed";
-  })
-  .layout(LAYOUT_INTERATIONS);
-
-disableUserInterractions(2 * TRANSITION_DURATION);
-
-update();
-
-</script>
-
-<style>
-.centered {  
-  position:fixed;
-  z-index: 100;  
-  top:50%;  
-  left:50%;  
-  margin:-100px 0 0 -100px;  
-  width:200px;  
-  height:200px;  
-}  
-.node rect {
-  cursor: move;
-  shape-rendering: crispEdges;
 }
 
-.node text {
-  pointer-events: none;
-  text-shadow: 1px 1px 2px #fff;
-  font-size: 0.8em;
-  font-family: sans-serif;
-}
 
-#tooltip {
-  position: absolute;
-  pointer-events: none;
-  font-size: 0.7em;
-  font-family: sans-serif;
-  padding: 3px;
-  width: auto;
-  height: auto;
-  background-color: #F2F2F2;
-  -webkit-box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.4);
-  -mox-box-shadow: 0px 0px 0px 5px rgba(0, 0, 0, 0.4);
-  box-shadow: 0px 0px 5px rbga(0, 0, 0, 0.4);
-  pointer-events: none;
-}
 
-.value {
-  white-space: pre-line;
-  margin: 0;
-}
-</style>
