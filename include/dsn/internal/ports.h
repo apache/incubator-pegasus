@@ -121,7 +121,7 @@ namespace dsn
 # endif
 # endif
 
-# ifdef WIN32_
+# ifdef _WIN32
 
 # ifndef be16toh
 # define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
