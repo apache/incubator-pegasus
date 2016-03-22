@@ -20,7 +20,7 @@
 
 # else // use rDSN's data encoding/decoding
 
-#include <dsn/dist/cluster_scheduler.h>
+# include <dsn/dist/cluster_scheduler.h>
 
 namespace dsn { namespace dist { 
     // ---------- deploy_request -------------

@@ -231,29 +231,33 @@ void meta_service::start_load_balance()
     _started = true;
 }
 
-bool meta_service::check_primary(dsn_message_t req)
+int meta_service::check_primary(dsn_message_t req)
 {
     if (!_failure_detector->is_primary())
     {
+        dsn_msg_options_t options;
+        dsn_msg_get_options(req, &options);
+        if ( options.context.u.is_forward_disabled )
+            return -1;
+
         auto primary = _failure_detector->get_primary();
         dinfo("primary address: %s", primary.to_string());
         if (!primary.is_invalid())
         {
             dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
-            return false;
+            return 0;
         }
     }
 
-    return true;
+    return 1;
 }
 
 #define META_STATUS_CHECK_ON_RPC(dsn_msg, response_struct)\
     dinfo("rpc %s called", __FUNCTION__);\
-    if ( !check_primary(dsn_msg) )\
-        return;\
-    if ( !_started )\
-    {\
-        response_struct.err = ERR_SERVICE_NOT_ACTIVE;\
+    int result = check_primary(dsn_msg);\
+    if (result == 0) return;\
+    if (result == -1 || !_started) {\
+        response_struct.err = (result==-1)?ERR_FORWARD_TO_OTHERS:ERR_SERVICE_NOT_ACTIVE;\
         reply(dsn_msg, response_struct);\
         return;\
     }\

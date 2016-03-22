@@ -295,6 +295,11 @@ namespace dsn {
     public:
         binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+        //this is used to count the marshalling content, useful for other serialization method, eg. thirft
+        int                 _default_value_id;
+        int*                _p_value_id;
+#endif
 
         virtual ~binary_writer();
 

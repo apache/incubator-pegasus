@@ -1,16 +1,5 @@
 cmake_minimum_required(VERSION 2.8.7)
 
-set(DSN_SERIALIZATION_TYPE "default")
-
-if(DSN_SERIALIZATION_TYPE STREQUAL "default")
-    message(STATUS "use default serialization method")
-elseif(DSN_SERIALIZATION_TYPE STREQUAL "thrift")
-    message(STATUS "use thrift serialization method")
-    add_definitions(-DDSN_NOT_USE_DEFAULT_SERIALIZATION)
-else()
-    message(FATAL_ERROR "not support other serialization method")
-endif()
-
 include(bin/dsn.cmake)
 #cmake_policy(SET CMP0048 NEW)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)

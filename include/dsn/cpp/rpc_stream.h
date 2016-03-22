@@ -38,6 +38,7 @@
 # include <dsn/cpp/utils.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/internal/rpc_message.h>
 
 namespace dsn
 {
@@ -97,6 +98,9 @@ namespace dsn
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+            _p_value_id = &(reinterpret_cast<dsn::message_ex*>(msg)->_value_id);
+#endif
         }
 
         // for request
@@ -105,6 +109,9 @@ namespace dsn
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+            _p_value_id = &(reinterpret_cast<dsn::message_ex*>(native_handle())->_value_id);
+#endif
         }
 
         // write buffer for rpc_write_stream is allocated from

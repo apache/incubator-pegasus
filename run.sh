@@ -49,6 +49,8 @@ function usage_build()
     echo "   -w|--warning_all  open all warnings when build, default no"
     echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
     echo "   -v|--verbose      build in verbose mode, default no"
+    echo "   -s|--serialization <thrift|proto|dsn>"
+    echo "                     specify the serialization method, default dsn"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module  specify modules to test, split by ',',"
         echo "                     e.g., \"dsn.core.tests,dsn.tests\","
@@ -58,6 +60,7 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
+    CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=dsn"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
@@ -106,6 +109,16 @@ function run_build()
                 TEST_MODULE="$2"
                 shift
                 ;;
+            -s|--serialization)
+                if [ $2 != "thrift" ] && [ $2 != "proto" ] && [ $2 != "dsn" ]; then
+                    echo "ERROR: unknown option $1 $2"
+                    echo
+                    usage_build
+                    exit -1
+                fi
+                CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=$2"
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -121,7 +134,7 @@ function run_build()
         usage_build
         exit -1
     fi
-    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+    CMAKE_OPTIONS="$CMAKE_OPTIONS" BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }
