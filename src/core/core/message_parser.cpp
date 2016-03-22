@@ -165,6 +165,8 @@ namespace dsn {
         }
 #else
         dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+        (int) read_length;
+        return nullptr;
 #endif
     }
 
@@ -222,6 +224,7 @@ namespace dsn {
             return thrift_header_parser::prepare_buffers_on_send(msg, offset, buffers);
 #else
             dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+            return -1;
 #endif
         }
 
@@ -251,6 +254,7 @@ namespace dsn {
             return thrift_header_parser::get_send_buffers_count_and_total_length(msg, total_length);
 #else
             dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+            return -1;
 #endif
         }
 
