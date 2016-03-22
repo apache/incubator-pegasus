@@ -39,8 +39,8 @@
 # include "task_engine.h"
 # include "transient_memory.h"
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
-# include <dsn/thrift_helper.h>
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+# include <dsn/idl/thrift_helper.h>
 #endif
 
 using namespace dsn::utils;
@@ -414,7 +414,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
     msg->_value_id = 0;
 #endif
     msg->prepare_buffer_header();
@@ -480,7 +480,7 @@ message_ex* message_ex::create_response()
     msg->to_address = header->from_address;
     msg->io_session = io_session;
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
     msg->_value_id = header->context.u.is_response_in_piece;
     msg->_resp_adjusted = false;
     if (hdr.hdr_type == hdr_dsn_thrift)

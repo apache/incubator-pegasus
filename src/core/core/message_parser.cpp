@@ -36,8 +36,8 @@
 # include <dsn/internal/message_parser.h>
 # include <dsn/service_api_c.h>
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
-# include <dsn/thrift_helper.h>
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+# include <dsn/idl/thrift_helper.h>
 #endif
 
 # ifdef __TITLE__
@@ -135,7 +135,7 @@ namespace dsn {
 
     message_ex* dsn_message_parser::receive_message_with_thrift_header(int read_length, /*out*/int& read_next)
     {
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
         {
             dsn_thrift_header header;
@@ -218,7 +218,7 @@ namespace dsn {
     {
         if (msg->header->hdr_type == hdr_dsn_thrift)
         {
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
             return thrift_header_parser::prepare_buffers_on_send(msg, offset, buffers);
 #else
             dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
@@ -247,7 +247,7 @@ namespace dsn {
     {
         if (msg->header->hdr_type == hdr_dsn_thrift)
         {
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
             return thrift_header_parser::get_send_buffers_count_and_total_length(msg, total_length);
 #else
             dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");

@@ -159,7 +159,7 @@ namespace dsn
         void* rw_ptr(size_t offset_begin);
         void seal(bool crc_required);
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
     public:
         //this is used to count the marshalling content, useful for other serialization method, eg. thirft
         int _value_id;

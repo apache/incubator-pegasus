@@ -38,7 +38,7 @@
 # include <dsn/cpp/auto_codes.h>
 # include <functional>
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
 # include <thrift/protocol/TProtocol.h>
 #endif
 
@@ -232,7 +232,7 @@ namespace dsn {
             return false;
         }
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
         uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 #endif
@@ -295,7 +295,7 @@ namespace dsn {
     public:
         binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         //this is used to count the marshalling content, useful for other serialization method, eg. thirft
         int                 _default_value_id;
         int*                _p_value_id;

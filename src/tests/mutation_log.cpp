@@ -348,7 +348,7 @@ TEST(replication, mutation_log)
         [&mutations, &mutation_index](mutation_ptr& mu)->bool
     {
         mutation_ptr wmu = mutations[++mutation_index];
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         EXPECT_TRUE(wmu->data.header == mu->data.header);
 #else
         EXPECT_TRUE(memcmp((const void*)&wmu->data.header,

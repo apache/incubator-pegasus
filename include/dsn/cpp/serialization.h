@@ -44,7 +44,7 @@
 # include <set>
 # include <vector>
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
 # include <dsn/idl/thrift_helper.h>
 #endif
 
@@ -64,7 +64,7 @@ inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
 
 namespace dsn {
     
-#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifndef DSN_USE_THRIFT_SERIALIZATION
 // pod types
 #define DEFINE_POD_SERIALIZATION(T) \
     inline void marshall(::dsn::binary_writer& writer, const T& val)\

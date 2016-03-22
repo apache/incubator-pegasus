@@ -219,7 +219,7 @@ def toggle_serialization_in_cpp(thrift_name):
     new_file = cpp_file + ".swapfile"
 
     os.system("pwd")
-    os.system("echo \"#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION\" > %s"%(new_file) )
+    os.system("echo \"#ifdef DSN_USE_THRIFT_SERIALIZATION\" > %s"%(new_file) )
     os.system("cat %s >> %s"%(cpp_file, new_file))
     os.system("echo \"#endif\" >> %s"%(new_file) )
 

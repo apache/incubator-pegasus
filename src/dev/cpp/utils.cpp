@@ -327,7 +327,7 @@ namespace  dsn
 
     binary_writer::binary_writer(int reserveBufferSize)
     {
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         _p_value_id = &_default_value_id;
 #endif
         _total_size = 0;
@@ -340,7 +340,7 @@ namespace  dsn
 
     binary_writer::binary_writer(blob& buffer)
     {
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         _p_value_id = &_default_value_id;
 #endif
         _total_size = 0;

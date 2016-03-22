@@ -136,7 +136,7 @@ TEST(replication, mutation_log_learn)
                 learned_decress.insert(mu->data.header.decree);
 
                 mutation_ptr wmu = mutations[mu->data.header.decree - 2];
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
                 EXPECT_TRUE(wmu->data.header == mu->data.header);
 #else
                 EXPECT_TRUE(memcmp((const void*)&wmu->data.header,

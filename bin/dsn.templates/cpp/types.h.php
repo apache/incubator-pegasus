@@ -15,9 +15,9 @@ $idl_type = $argv[4];
 //
 // !!! WARNING: not feasible for replicated service yet!!! 
 //
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
+// # define DSN_USE_THRIFT_SERIALIZATION
 
-# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+# ifdef DSN_USE_THRIFT_SERIALIZATION
 
 <?php if ($idl_type == "thrift") { ?>
 

@@ -60,7 +60,7 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=dsn"
+    CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=thrift"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""

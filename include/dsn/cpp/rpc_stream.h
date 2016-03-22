@@ -98,7 +98,7 @@ namespace dsn
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
             _p_value_id = &(reinterpret_cast<dsn::message_ex*>(msg)->_value_id);
 #endif
         }
@@ -109,7 +109,7 @@ namespace dsn
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
             _p_value_id = &(reinterpret_cast<dsn::message_ex*>(native_handle())->_value_id);
 #endif
         }

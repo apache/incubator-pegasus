@@ -49,8 +49,6 @@
 # include <dsn/tool/nfs_node_simple.h>
 # include <dsn/internal/singleton.h>
 
-//# include <dsn/thrift_helper.h>
-
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
