@@ -63,7 +63,7 @@ namespace dsn
                              // we leverage for optimization (fast rpc handler lookup)
     };
 
-#define hdr_dsn_default 0xdeaffaed
+#define hdr_dsn_default 0xdeaffaed //we made this a palindrome because sending message_header never concerns the network endian T_T
 #define hdr_dsn_thrift  0x1234abcd
 
     typedef struct message_header

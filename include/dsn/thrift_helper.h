@@ -471,11 +471,6 @@ namespace dsn {
     public:
         static void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
         {
-#ifdef _WIN32
-#define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
-#define be32toh(x) ( (be16toh((x)>>16)&65535) | (be16toh((x)&65535)<<16) )
-#define be64toh(x) ( (be32toh((x)>>32)&0xffffffff) | ( be32toh( (x)&0xffffffff ) << 32 ) )
-#endif
             result.hdr_type = be32toh( *(int32_t*)(buffer) );
             buffer += sizeof(int32_t);
             result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
