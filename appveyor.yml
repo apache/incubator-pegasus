@@ -21,6 +21,7 @@ install:
         echo "Extracting boost libs to %APPVEYOR_BUILD_FOLDER% ..."
 
         7z x boost-1.59.7z -y -o"%APPVEYOR_BUILD_FOLDER%" > null
+    - cinst php
         
 cache:
     - boost-1.59.7z
