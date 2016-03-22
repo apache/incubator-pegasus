@@ -503,6 +503,9 @@ void greedy_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
+        if (_state->freezed() && app.is_stateful)
+            continue;
+
         if (app.status != AS_AVAILABLE)
         {
             dinfo("ignore app(%s)", app.app_name.c_str());
@@ -525,6 +528,8 @@ void greedy_load_balancer::run()
 
 void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_update_request>& request)
 {
+    dassert(request->is_stateful, "only stateful services are supported right now");
+
     std::unordered_map<global_partition_id, balancer_proposal_request>::iterator it;
     global_partition_id& gpid = request->config.gpid;
     switch (request->type)
@@ -663,7 +668,7 @@ dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration
 
 bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
 {
-    if (_state->freezed())
+    if (_state->freezed() && is_stateful)
     {
         dinfo("state is freezed, node_alive count: %d, total: %d", _state->_node_live_count, _state->_nodes.size());
         return false;

@@ -62,6 +62,10 @@ void simple_load_balancer::run()
         app_state& app = _state->_apps[i];
         if (app.status != AS_AVAILABLE)
             continue;
+
+        if (_state->freezed() && app.is_stateful)
+            continue;
+
         for (int j = 0; j < app.partition_count; j++)
         {
             partition_configuration& pc = app.partitions[j];
@@ -123,7 +127,7 @@ void simple_load_balancer::run(global_partition_id gpid)
 
 void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
 {
-    if (_state->freezed())
+    if (_state->freezed() && is_stateful)
         return;
 
     configuration_update_request proposal;
@@ -205,15 +209,15 @@ void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
             {
                 bool send = true;
 
-                //for (auto& s : pc.secondaries)
-                //{
-                //    // not on the same machine
-                //    if (s.ip() == proposal.node.ip())
-                //    {
-                //        send = false;
-                //        break;
-                //    }
-                //}
+                for (auto& s : pc.secondaries)
+                {
+                    // not on the same machine
+                    if (s == proposal.node)
+                    {
+                        send = false;
+                        break;
+                    }
+                }
 
                 if (send)
                 {
