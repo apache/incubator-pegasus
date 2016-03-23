@@ -169,7 +169,10 @@ a:hover {
                                     v-model="newMachine"
                                     @keyup.enter="addMachine">
                             </li>
-                            <li class="list-group-item list-group-item-clickable" v-for="machine in machineList" @click="Machine2App(machine)" :class="[chosenMachine==machine ? 'list-group-item-primary' : '']">{{machine}}</li>
+                            <li class="list-group-item list-group-item-clickable" v-for="machine in machineList" @click="Machine2App(machine)" :class="[chosenMachine==machine ? 'list-group-item-primary' : '']">
+                                {{machine}}
+                                <span class="glyphicon glyphicon-remove pull-right" aria-hidden="true" @click="removeMachine(machine)"></span>
+                                </li>
                         </ul>
                     </div>
                 </div>

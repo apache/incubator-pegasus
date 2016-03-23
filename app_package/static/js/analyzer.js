@@ -130,6 +130,9 @@ var vm = new Vue({
             }
             self.counterQueue = [];
         },
+        removeMachine: function (machine) {
+            this.machineList.$remove(machine);
+        },
         removeCounterFromQueue: function (counter) {
             this.counterQueue.$remove(counter);
         },

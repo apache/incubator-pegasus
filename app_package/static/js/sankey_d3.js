@@ -162,7 +162,7 @@ function update () {
   }
 
   function expand(node) {
-    VM.$set('currentTask',node.name);
+    VM.setcurrentTask(node.name);
 
     node.state = "expanded";
     node.children.forEach(function (child) {

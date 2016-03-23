@@ -59,19 +59,19 @@
 .sidebar-nav li {
     display: block;
     text-decoration: none;
-    color: #DAA520;
+    color: #3F5D7D;
 }
 
 .sidebar-nav li:hover {
     text-decoration: none;
-    color: #7D1935;
+    color: #fff;
     background: #CBE32D;
     cursor: pointer;
 }
 
 .sidebar-nav li.active {
     text-decoration: none;
-    color: #7D1935;
+    color: #fff;
     background: #A8CD1B;
 }
 
@@ -83,18 +83,12 @@
     height: 65px;
     font-size: 18px;
     line-height: 60px;
-    background: #F3FAB6;
+    background: #279B61;
 }
 
 .sidebar-nav > .sidebar-brand a {
-    color: #DAA520;
-}
-
-.sidebar-nav > .sidebar-brand a:hover {
     color: #fff;
-    background: none;
 }
-
 
 
 .centered {  

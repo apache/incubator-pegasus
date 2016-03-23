@@ -1,9 +1,12 @@
+var chart;
 var vm = new Vue({
     el: '#app',
     data:{
         taskList: [],
         currentTask: '',
+        lastTask: '',
         taskFilter: '',
+
         sankeyNodes: [],
         sankeyLinks: [],
 
@@ -12,20 +15,25 @@ var vm = new Vue({
         callee_list: [],
         caller_list: [],
         sharer_list: [],
+
+        drawType: 'Sample',
     },
     components: {
     },
     methods: {
         setcurrentTask: function (task) {
+            this.lastTask = this.currentTask;
             this.currentTask = task;
+        },
+        setdrawType: function (type) {
+            this.drawType = type;
         },
         collapse: function () {
             $("#wrapper").toggleClass("toggled");
             this.if_collapsed = !this.if_collapsed;
         },
-    },
-    watch: {
-        'currentTask': function (newTask, oldTask)
+
+        updateTaskInfo: function ()
         {
             var self = this;
             var task_list, call_matrix;
@@ -44,7 +52,7 @@ var vm = new Vue({
                     self.callee_list = [];
                     self.caller_list = [];   
 
-                    task_id = task_list.indexOf(newTask);
+                    task_id = task_list.indexOf(self.currentTask);
                     
 
                     for(index =0 ; index < call_matrix[task_id].length; ++index)
@@ -139,13 +147,234 @@ var vm = new Vue({
                     
                 }
             );
+
             $.post("/api/cli", { 
-                command: "pq pool_sharer " + newTask
+                command: "pq pool_sharer " + self.currentTask
                 }, function(data){ 
                     self.sharer_list = JSON.parse(data);
                 }
             );
-        }
+
+        },
+
+        updateDrawTypeInfo: function ()
+        {
+            $( "#chart" ).remove();
+            $( "#c3_chart" ).append( "<div id='chart'></div>" );
+            
+            if(this.drawType=='Sample')
+                this.updateDrawTypeAsSample();
+            else if(this.drawType=='Value')
+                this.updateDrawTypeAsValue();
+            else if(this.drawType=='Breakdown')
+                this.updateDrawTypeAsBreakdown();
+        },
+        updateDrawTypeAsSample: function ()
+        {
+            var self = this;
+            $.post("/api/cli", { 
+                command: "pq counter_sample " + self.currentTask
+                }, function(data){ 
+                    data = JSON.parse(data);
+
+                    var xs = {};
+                    for(index in data)
+                    {
+                        xs[data[index].name] = "x";
+                    }
+
+                    var columns = [];
+                    var column = ['x'];
+                    for(i=0;i<data[0].samples.length;++i)
+                        column.push(i*100/(data[0].samples.length-1));
+                    columns.push(column);
+                    
+                    for(i=0;i<data.length;++i)
+                    {
+                        column = [data[i].name];
+                        for(j=0;j<data[i].samples.length;++j)
+                            column.push(data[i].samples[j]);
+                        columns.push(column);
+                    }
+                    chart = c3.generate({
+                        data: {
+                            xs: xs,
+                            columns: columns,
+                            type: 'scatter',
+                            colors: {
+                                'QUEUE(ns)@server': '#1F77B4',
+                                'EXEC(ns)@server': '#FF7F0E',
+                                'RPC.SERVER(ns)@server': '#2CA02C',
+                                'QUEUE(ns)@client': '#D62728',
+                                'EXEC(ns)@client': '#9467BD',
+                                'RPC.CLIENT(ns)@client': '#8C564B',
+                                'AIO.LATENCY(ns)': '#00FF00',
+                            },
+                        },
+                        subchart: {
+                            show: true
+                        },
+                        axis: {
+                            x: {
+                                label: 'Samples(%)',
+                                tick: {
+                                    fit: false
+                                }
+                            },
+                            y: {
+                                label: 'Latency (ns)',
+                                tick: {
+                                    format: d3.format(",")
+                                }
+                            }
+                        }
+                    });
+                }
+            );
+        },
+        updateDrawTypeAsValue: function ()
+        {
+            function updateData(a)
+            {
+                if(self.drawType != 'Value') return;
+                $.post("/api/cli", { 
+                    command: "pq counter_realtime " + self.currentTask
+                    }, function(data){ 
+                        data = JSON.parse(data);
+
+                        var columns = [['x', a]];
+                        for (i = 0; i < data.data.length; i++) {
+                            columns.push([(data.data)[i].name,(data.data)[i].value]);
+                        }
+                        chart.flow({
+                            columns: columns,
+                            duration:1000,
+                            done:function(){
+                                chart.xgrids.add([{value: a, text:data.time,class:'hoge'}]);
+                                setTimeout(function () {
+                                    updateData(a+1);
+                                },0);
+                            }
+                        });
+                    }
+                );
+            }
+
+            var self = this;
+
+            $.post("/api/cli", { 
+                command: "pq counter_realtime " + self.currentTask
+                }, function(data){ 
+                    data = JSON.parse(data);
+
+                    var columns = [['x', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ]];
+                    for(index in data.data)
+                    {
+                        columns.push([data.data[index].name,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+                    }
+                    chart = c3.generate({
+                        data: {
+                            x: 'x',
+                            columns: columns,
+                            colors: {
+                                'QUEUE(ns)@server': '#1F77B4',
+                                'EXEC(ns)@server': '#FF7F0E',
+                                'RPC.SERVER(ns)@server': '#2CA02C',
+                                'QUEUE(ns)@client': '#D62728',
+                                'EXEC(ns)@client': '#9467BD',
+                                'RPC.CLIENT(ns)@client': '#8C564B',
+                                "AIO.LATENCY(ns)": '#00FF00',
+                            },
+                        },
+                        axis: {
+                            x: {
+                                show:false,
+                            },
+                            y : {
+                                tick: {
+                                    format: d3.format(",")
+                                }
+                            }
+                        },
+                        
+                    });
+                    updateData(20);
+                }
+            );
+
+        },
+        updateDrawTypeAsBreakdown: function ()
+        {
+            var self = this;
+
+            $.post("/api/cli", { 
+                command: "pq counter_breakdown " + self.currentTask + " 50"
+                }, function(data){ 
+                    data = JSON.parse(data);
+
+                    chart = c3.generate({
+                        size: {
+                            height: 500,
+                            width: 1000
+                        },
+                        data: {
+                            columns: [
+                                ['net(call)',(data[0]-data[3])/2],
+                                ['queue(server)',data[1]],
+                                ['exec(server)',data[2]],
+                                ['net(reply)',(data[0]-data[3])/2],
+                                ['queue(client)',data[4]],
+                                ['exec(client)',data[5]],
+                                ['aio',data[6]],
+                            ],
+                            type: 'bar',
+                            colors: {
+                                "net(call)": '#F08080',
+                                "queue(server)": '#1F77B4',
+                                "exec(server)": '#FF7F0E',
+                                "net(reply)": '#AFCAE0',
+                                "queue(client)": '#D62728',
+                                "exec(client)": '#9467BD',
+                                "aio": '#00FF00',
+                            },
+                            groups: [
+                                ['net(call)', 'queue(server)','exec(server)','net(reply)','queue(client)','exec(client)']
+                            ]
+                        },
+                        grid: {
+                            y: {
+                                lines: [{value:0}]
+                            }
+                        },
+                          
+                        axis: {
+                            x: {
+                                type: 'category',
+                                label: 'task code',
+                                categories: [self.currentTask]
+                            },
+                            y:{
+                                label: 'ns',
+                                tick: {
+                                    format: d3.format(",")
+                                },
+                            }
+                        }
+                    });
+                }
+            );
+        },
+    },
+    watch: {
+        'currentTask': function (newTask, oldTask)
+        {
+            this.updateTaskInfo();
+            this.updateDrawTypeInfo();
+        },
+        'drawType': function (newType, oldType)
+        {
+            this.updateDrawTypeInfo();
+        },
     },
     ready: function ()
     {
