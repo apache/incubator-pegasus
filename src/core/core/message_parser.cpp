@@ -37,7 +37,7 @@
 # include <dsn/service_api_c.h>
 
 #ifdef DSN_ENABLE_THRIFT_RPC
-# include <dsn/idl/thrift_rpc.h>
+# include <dsn/internal/thrift_parser.h>
 #endif
 
 # ifdef __TITLE__

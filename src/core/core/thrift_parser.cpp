@@ -1,5 +1,7 @@
-#include <dsn/idl/thrift_rpc.h>
-#include <dsn/idl/thrift_helper.h>
+#ifdef DSN_ENABLE_THRIFT_RPC
+
+#include <dsn/internal/thrift_parser.h>
+#include <dsn/cpp/serialization_helper/thrift_helper.h>
 
 namespace dsn{
 
@@ -124,3 +126,4 @@ int thrift_header_parser::get_send_buffers_count_and_total_length(message_ex* ms
     return msg->buffers.size();
 }
 }
+#endif

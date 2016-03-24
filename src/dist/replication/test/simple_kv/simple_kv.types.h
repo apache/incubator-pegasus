@@ -14,7 +14,7 @@
 # ifdef DSN_USE_THRIFT_SERIALIZATION
 
 
-# include <dsn/idl/thrift_helper.h>
+
 # include "simple_kv_types.h" 
 
 
