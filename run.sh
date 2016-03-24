@@ -40,6 +40,8 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
+    echo "   -s|--serialize    serialize type: dsn|thrift|proto, default is thrift"
+    echo "   -g|--git          git source of ext module: github|git, default is github"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
     echo "                     the number of jobs to run simultaneously, default 8"
@@ -47,10 +49,8 @@ function usage_build()
     echo "                     specify customized boost directory,"
     echo "                     if not set, then use the system boost"
     echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
+    echo "   --enable_gcov     generate gcov code coverage report, default no"
     echo "   -v|--verbose      build in verbose mode, default no"
-    echo "   -s|--serialization <thrift|proto|dsn>"
-    echo "                     specify the serialization method, default dsn"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module  specify modules to test, split by ',',"
         echo "                     e.g., \"dsn.core.tests,dsn.tests\","
@@ -60,7 +60,8 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=thrift"
+    SERIALIZE_TYPE="thrift"
+    GIT_SOURCE="github"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
@@ -79,6 +80,14 @@ function run_build()
                 BUILD_TYPE="$2"
                 shift
                 ;;
+            -s|--serialize)
+                SERIALIZE_TYPE="$2"
+                shift
+                ;;
+            -g|--git)
+                GIT_SOURCE="$2"
+                shift
+                ;;
             -c|--clear)
                 CLEAR=YES
                 ;;
@@ -93,7 +102,7 @@ function run_build()
             -w|--warning_all)
                 WARNING_ALL=YES
                 ;;
-            -g|--enable_gcov)
+            --enable_gcov)
                 ENABLE_GCOV=YES
                 ;;
             -v|--verbose)
@@ -107,16 +116,6 @@ function run_build()
                     exit -1
                 fi
                 TEST_MODULE="$2"
-                shift
-                ;;
-            -s|--serialization)
-                if [ $2 != "thrift" ] && [ $2 != "proto" ] && [ $2 != "dsn" ]; then
-                    echo "ERROR: unknown option $1 $2"
-                    echo
-                    usage_build
-                    exit -1
-                fi
-                CMAKE_OPTIONS="-DDSN_SERIALIZATION_TYPE=$2"
                 shift
                 ;;
             *)
@@ -134,7 +133,20 @@ function run_build()
         usage_build
         exit -1
     fi
-    CMAKE_OPTIONS="$CMAKE_OPTIONS" BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+    if [ "$SERIALIZE_TYPE" != "dsn" -a "$SERIALIZE_TYPE" != "thrift" -a "$SERIALIZE_TYPE" != "protobuf" ]; then
+        echo "ERROR: invalid serialize type \"$SERIALIZE_TYPE\""
+        echo
+        usage_build
+        exit -1
+    fi
+    if [ "$GIT_SOURCE" != "github" -a "$GIT_SOURCE" != "xiaomi" ]; then
+        echo "ERROR: invalid git source \"$GIT_SOURCE\""
+        echo
+        usage_build
+        exit -1
+    fi
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" SERIALIZE_TYPE="$SERIALIZE_TYPE" \
+        GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }

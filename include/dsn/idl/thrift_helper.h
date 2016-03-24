@@ -190,6 +190,7 @@ namespace dsn {
         }
         xfer += oprot->writeListEnd();
         xfer += oprot->writeFieldEnd();
+        return xfer;
     }
 
     template <typename T>
@@ -350,9 +351,9 @@ namespace dsn {
     template<typename T>
     inline void marshall(binary_writer& writer, const T& val)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
         proto.writeFieldBegin("args", get_thrift_type(val), 0);
         marshall_base<T>(&proto, val);
         proto.writeFieldEnd();
@@ -361,8 +362,9 @@ namespace dsn {
     template<typename T>
     inline void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
-        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::binary_reader_transport trans(reader);
+        boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
         std::string fname;
         ::apache::thrift::protocol::TType ftype;
