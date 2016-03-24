@@ -36,7 +36,6 @@
 
 # pragma once
 
-# include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
 # include <dsn/cpp/rpc_stream.h>
 
@@ -45,11 +44,9 @@
 # include <thrift/protocol/TVirtualProtocol.h>
 # include <thrift/transport/TVirtualTransport.h>
 # include <thrift/TApplicationException.h>
-
 # include <type_traits>
 
 using namespace ::apache::thrift::transport;
-
 namespace dsn {
 
     class binary_reader_transport : public TVirtualTransport<binary_reader_transport>
@@ -316,17 +313,53 @@ namespace dsn {
     }
 
     template<typename T>
-    void marshall(binary_writer& writer, const T& val)
+    inline void marshall_struct_field(binary_writer& writer, const T& val, int field_id)
     {
         boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        proto.writeFieldBegin("args", get_thrift_type(val), (*writer._p_value_id)++);
+
+        proto.writeFieldBegin("args", get_thrift_type(val), field_id);
+        marshall_base<T>(&proto, val);
+        proto.writeFieldEnd();
+    }
+
+    inline void marshall_struct_begin(binary_writer& writer, dsn_msg_header_type type)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+
+        if (ht_thrift == type)
+        {
+            msg_proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
+            msg_proto.writeStructBegin("");
+        }
+    }
+
+    inline void marshall_struct_end(binary_writer& writer, dsn_msg_header_type type)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+
+        if (ht_thrift == type)
+        {
+            msg_proto.writeFieldStop(); // for all pieces
+            msg_proto.writeStructEnd();
+        }
+    }
+
+    template<typename T>
+    inline void marshall(binary_writer& writer, const T& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+
+        proto.writeFieldBegin("args", get_thrift_type(val), 0);
         marshall_base<T>(&proto, val);
         proto.writeFieldEnd();
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, /*out*/ T& val)
+    inline void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
         boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -445,157 +478,4 @@ namespace dsn {
         const char* name = to_string();
         return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
-
-    typedef union
-    {
-        struct {
-            uint64_t is_forward_msg_disabled: 1;
-            uint64_t is_replication_needed: 1;
-            uint64_t unused: 63;
-        }u;
-        uint64_t o;
-    }dsn_thrift_header_options;
-
-    struct dsn_thrift_header
-    {
-        int32_t hdr_type;
-        int32_t hdr_crc32;
-        int32_t total_length;
-        int32_t body_offset;
-        int32_t request_hash;
-        dsn_thrift_header_options opt;
-    };
-
-    class thrift_header_parser
-    {
-    public:
-        static void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
-        {
-            result.hdr_type = be32toh( *(int32_t*)(buffer) );
-            buffer += sizeof(int32_t);
-            result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
-            buffer += sizeof(int32_t);
-            result.total_length = be32toh( *(int32_t*)(buffer) );
-            buffer += sizeof(int32_t);
-            result.body_offset = be32toh( *(int32_t*)(buffer) );
-            buffer += sizeof(int32_t);
-            result.request_hash = be32toh( *(int32_t*)(buffer) );
-            buffer += sizeof(int32_t);
-            result.opt.o = be64toh( *(int64_t*)(buffer) );
-        }
-
-        static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data)
-        {
-            dsn::blob message_content = message_data.range(header->body_offset);
-            dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(message_content);
-            dsn::message_header* dsn_hdr = msg->header;
-
-            dsn::rpc_read_stream stream(msg);
-            boost::shared_ptr< ::dsn::binary_reader_transport > input_trans(new ::dsn::binary_reader_transport( stream ));
-            ::apache::thrift::protocol::TBinaryProtocol iprot(input_trans);
-
-            std::string fname;
-            ::apache::thrift::protocol::TMessageType mtype;
-            int32_t seqid;
-            iprot.readMessageBegin(fname, mtype, seqid);
-
-            dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
-            memset(dsn_hdr, 0, sizeof(*dsn_hdr));
-            dsn_hdr->hdr_type = hdr_dsn_thrift;
-            dsn_hdr->body_length = header->total_length - header->body_offset;
-            strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
-
-            if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
-                dsn_hdr->context.u.is_request = 1;
-
-            dsn_hdr->id = seqid;
-            dsn_hdr->context.u.is_replication_needed = header->opt.u.is_replication_needed;
-            dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
-            dsn_hdr->client.hash = header->request_hash;
-
-            iprot.readStructBegin(fname);
-            return msg;
-        }
-
-        static void add_prefix_for_thrift_response(message_ex* msg)
-        {
-            dsn::rpc_write_stream write_stream(msg);
-            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
-
-            msg_proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
-            msg_proto.writeStructBegin(""); //resp args
-            if (msg->header->context.u.is_response_in_piece)
-            {
-                msg_proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
-                msg_proto.writeStructBegin("");
-            }
-        }
-
-        static void add_postfix_for_thrift_response(message_ex* msg)
-        {
-            dsn::rpc_write_stream write_stream(msg);
-            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
-
-            if (msg->header->context.u.is_response_in_piece)
-            {
-                msg_proto.writeFieldStop(); // for all pieces
-                msg_proto.writeStructEnd();
-            }
-            //after all fields, write a field stop
-            msg_proto.writeFieldStop();
-            //writestruct end, this is because all thirft returning values are in a struct
-            msg_proto.writeStructEnd();
-            //write message end, which indicate the end of a thrift message
-            msg_proto.writeMessageEnd();
-        }
-
-        static void adjust_thrift_response(message_ex* msg)
-        {
-            dassert(msg->_resp_adjusted==false, "we have adjusted this");
-
-            msg->_resp_adjusted = true;
-            add_postfix_for_thrift_response(msg);
-        }
-
-        static int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/message_parser::send_buf* buffers)
-        {
-            if ( !msg->_resp_adjusted )
-                adjust_thrift_response(msg);
-
-            dassert(!msg->buffers.empty(), "buffers is not possible to be empty");
-
-            // we ignore header for thrift resp
-            offset += sizeof(message_header);
-
-            int count=0;
-            //ignore the msg header
-            for (unsigned int i=0; i!=msg->buffers.size(); ++i)
-            {
-                blob& bb = msg->buffers[i];
-                if (offset >= bb.length())
-                {
-                    offset -= bb.length();
-                    continue;
-                }
-
-                buffers[count].buf = (void*)(bb.data() + offset);
-                buffers[count].sz = (uint32_t)(bb.length() - offset);
-                offset = 0;
-                ++count;
-            }
-            return count;
-        }
-
-        static int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/int* total_length)
-        {
-            if ( !msg->_resp_adjusted )
-                adjust_thrift_response(msg);
-
-            // when send thrift message, we ignore the header
-            *total_length = msg->header->body_length;
-            return msg->buffers.size();
-        }
-    };
 }

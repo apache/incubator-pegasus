@@ -142,7 +142,10 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     }   
 
     ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
-    reply(request, error);
+
+    // well, replication layer error is 1
+    // application layer result is 2
+    reply_field(request, error, 1);
 }
 
 //error_code replica::check_and_fix_private_log_completeness()

@@ -383,11 +383,6 @@ void replica_stub::on_client_write(dsn_message_t request)
     write_request_header hdr;
     ::unmarshall(request, hdr);
 
-    dsn_msg_options_t opt;
-    dsn_msg_get_options(request, &opt);
-    opt.context.u.is_response_in_piece = 1;
-    dsn_msg_set_options(request, &opt, DSN_MSGM_CONTEXT);
-
     if (hdr.code == TASK_CODE_INVALID)
     {
         response_client_error(request, ERR_INVALID_DATA);
@@ -409,11 +404,6 @@ void replica_stub::on_client_read(dsn_message_t request)
 {
     read_request_header hdr;
     ::unmarshall(request, hdr);
-
-    dsn_msg_options_t opt;
-    dsn_msg_get_options(request, &opt);
-    opt.context.u.is_response_in_piece = 1;
-    dsn_msg_set_options(request, &opt, DSN_MSGM_CONTEXT);
 
     if (hdr.code == TASK_CODE_INVALID)
     {
@@ -901,7 +891,7 @@ void replica_stub::response_client_error(dsn_message_t request, error_code error
     }
 
     ddebug("reply client read/write, err = %s", error.to_string());
-    reply(request, error);
+    reply_field(request, error, 1);
 }
 
 void replica_stub::init_gc_for_test()

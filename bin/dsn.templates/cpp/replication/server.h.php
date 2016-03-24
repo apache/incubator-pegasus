@@ -36,7 +36,7 @@ protected:
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
     }
 <?php     } else {?>
-    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
+    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::rpc_replication_app_replier<<?=$f->get_cpp_return_type()?>>& reply)
     {
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
         <?=$f->get_cpp_return_type()?> resp;

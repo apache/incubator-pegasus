@@ -84,6 +84,42 @@ public:
     error_code store(const char* file);
 };
 
+template<typename TResponse>
+class rpc_replication_app_replier
+{
+public:
+    rpc_replication_app_replier(dsn_message_t response, error_code replication_err)
+    {
+        _response = response;
+        _replication_err = replication_err;
+    }
+
+    rpc_replication_app_replier(const rpc_replication_app_replier& r)
+    {
+        _response = r._response;
+    }
+
+    void operator () (const TResponse& resp)
+    {
+        if (_response != nullptr)
+        {
+            ::marshall_struct_begin(_response);
+            ::marshall_struct_field(_response, _replication_err, 1);
+            ::marshall_struct_field(_response, resp, 2);
+            ::marshall_struct_end(_response);
+            dsn_rpc_reply(_response);
+        }
+    }
+
+    bool is_empty() const
+    {
+        return _response == nullptr;
+    }
+private:
+    dsn_message_t _response;
+    error_code _replication_err;
+};
+
 class replication_app_base
 {
 public:
@@ -224,7 +260,7 @@ protected:
     void register_async_rpc_handler(
         dsn_task_code_t code,
         const char* name,
-        void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
+        void (T::*callback)(const TRequest&, rpc_replication_app_replier<TResponse>&)
         );
 
     void unregister_rpc_handler(dsn_task_code_t code);
@@ -304,7 +340,7 @@ template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::register_async_rpc_handler(
     dsn_task_code_t code,
     const char* name,
-    void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
+    void (T::*callback)(const TRequest&, rpc_replication_app_replier<TResponse>&)
     )
 {
     local_rpc_handler_info* h = new local_rpc_handler_info;    
@@ -316,10 +352,10 @@ inline void replication_app_base::register_async_rpc_handler(
         TRequest req;
         unmarshall(reader, req);
 
-        typedef void (T::*callback_t)(const TRequest&, rpc_replier<TResponse>&);
+        typedef void (T::*callback_t)(const TRequest&, rpc_replication_app_replier<TResponse>&);
         callback_t callback;
         memcpy((void*)&callback, (const void*)cb, sizeof(callback_t));
-        rpc_replier<TResponse> replier(response);
+        rpc_replication_app_replier<TResponse> replier(response, ERR_OK);
         (static_cast<T*>(this_)->*callback)(req, replier);
     };
 

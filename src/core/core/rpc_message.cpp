@@ -36,12 +36,13 @@
 # include <dsn/internal/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
+
+# ifdef DSN_ENABLE_THRIFT_RPC
+# include <dsn/idl/thrift_rpc.h>
+# endif
+
 # include "task_engine.h"
 # include "transient_memory.h"
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-# include <dsn/idl/thrift_helper.h>
-#endif
 
 using namespace dsn::utils;
 
@@ -166,6 +167,13 @@ DSN_API void dsn_msg_get_options(
     opts->request_hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
     opts->vnid = hdr->vnid;
+}
+
+DSN_API dsn_msg_header_type dsn_msg_get_header_type(
+    dsn_message_t msg
+    )
+{
+    return ((::dsn::message_ex*)msg)->header->hdr_type==hdr_dsn_default?ht_default:ht_thrift;
 }
 
 namespace dsn {
@@ -414,9 +422,6 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-    msg->_value_id = 0;
-#endif
     msg->prepare_buffer_header();
 
     // init header
@@ -480,12 +485,16 @@ message_ex* message_ex::create_response()
     msg->to_address = header->from_address;
     msg->io_session = io_session;
 
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-    msg->_value_id = header->context.u.is_response_in_piece;
-    msg->_resp_adjusted = false;
     if (hdr.hdr_type == hdr_dsn_thrift)
+    {
+#ifdef DSN_ENABLE_THRIFT_RPC
         thrift_header_parser::add_prefix_for_thrift_response(msg);
+        msg->is_response_adjusted_for_custom_rpc = false;
+#else
+        dassert(false, "get request with thrift header type but thrift rpc is disabled");
 #endif
+    }
+
     // join point
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);
 

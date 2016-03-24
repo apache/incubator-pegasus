@@ -62,9 +62,48 @@ inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
     unmarshall(reader, val);
 }
 
+// marshall_struct_begin, marshall_struct_field and marshall_struct_end
+// are useful when you want to marshall multiple values but
+// you can't describe it in IDL/PROTO file. This is mainly because you don't know the
+// actual types for each fields.
+// A typical situation is rDSN's replication layer and replication_app layer.
+template<typename T>
+inline void marshall_struct_field(dsn_message_t msg, const T& val, int field_id)
+{
+    ::dsn::rpc_write_stream writer(msg);
+    marshall_struct_field(writer, val, field_id);
+}
+
+inline void marshall_struct_begin(dsn_message_t msg)
+{
+    ::dsn::rpc_write_stream writer(msg);
+    marshall_struct_begin(writer, dsn_msg_get_header_type(msg));
+}
+
+inline void marshall_struct_end(dsn_message_t msg)
+{
+    ::dsn::rpc_write_stream writer(msg);
+    marshall_struct_end(writer, dsn_msg_get_header_type(msg));
+}
+
 namespace dsn {
     
 #ifndef DSN_USE_THRIFT_SERIALIZATION
+
+template<typename T>
+inline void marshall_struct_field(rpc_write_stream writer, const T& val, int)
+{
+    marshall(writer, val);
+}
+
+inline void marshall_struct_begin(rpc_writer_stream, dsn_msg_header_type)
+{
+}
+
+inline void marshall_struct_end(rpc_writer_stream, dsn_msg_header_type)
+{
+}
+
 // pod types
 #define DEFINE_POD_SERIALIZATION(T) \
     inline void marshall(::dsn::binary_writer& writer, const T& val)\

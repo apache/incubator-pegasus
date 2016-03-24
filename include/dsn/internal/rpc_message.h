@@ -63,7 +63,7 @@ namespace dsn
                              // we leverage for optimization (fast rpc handler lookup)
     };
 
-#define hdr_dsn_default 0xdeaffaed //we made this a palindrome because sending message_header never concerns the network endian T_T
+#define hdr_dsn_default 0xdeaffaed
 #define hdr_dsn_thrift  0x1234abcd
 
     typedef struct message_header
@@ -116,6 +116,7 @@ namespace dsn
         // by message queuing
         dlink                  dl;
 
+        bool                   is_response_adjusted_for_custom_rpc;
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
         ~message_ex();
@@ -158,13 +159,6 @@ namespace dsn
         size_t body_size() { return (size_t)header->body_length; }
         void* rw_ptr(size_t offset_begin);
         void seal(bool crc_required);
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-    public:
-        //this is used to count the marshalling content, useful for other serialization method, eg. thirft
-        int _value_id;
-        bool _resp_adjusted;
-#endif
     private:
         message_ex();
         void prepare_buffer_header();
