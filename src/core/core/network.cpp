@@ -167,7 +167,6 @@ namespace dsn
     {
         auto n = _messages.next();
         int bcount = 0;
-        int tlen = 0;
 
         dbg_dassert(0 == _sending_buffers.size(), "");
         dbg_dassert(0 == _sending_msgs.size(), "");
@@ -175,7 +174,7 @@ namespace dsn
         while (n != &_messages)
         {
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-            auto lcount = _parser->get_send_buffers_count_and_total_length(lmsg, &tlen);
+            auto lcount = _parser->get_send_buffers_count(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
                 break;
