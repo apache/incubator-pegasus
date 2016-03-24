@@ -316,8 +316,9 @@ namespace dsn {
     template<typename T>
     inline void marshall_struct_field(binary_writer& writer, const T& val, int field_id)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
         proto.writeFieldBegin("args", get_thrift_type(val), field_id);
         marshall_base<T>(&proto, val);
@@ -326,25 +327,27 @@ namespace dsn {
 
     inline void marshall_struct_begin(binary_writer& writer, dsn_msg_header_type type)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
         if (ht_thrift == type)
         {
-            msg_proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
-            msg_proto.writeStructBegin("");
+            proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
+            proto.writeStructBegin("");
         }
     }
 
     inline void marshall_struct_end(binary_writer& writer, dsn_msg_header_type type)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
         if (ht_thrift == type)
         {
-            msg_proto.writeFieldStop(); // for all pieces
-            msg_proto.writeStructEnd();
+            proto.writeFieldStop(); // for all pieces
+            proto.writeStructEnd();
         }
     }
 

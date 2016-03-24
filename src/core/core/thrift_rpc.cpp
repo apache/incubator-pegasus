@@ -54,8 +54,9 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
 void thrift_header_parser::add_prefix_for_thrift_response(message_ex* msg)
 {
     dsn::rpc_write_stream write_stream(msg);
-    boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-    ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+    ::dsn::binary_writer_transport trans(write_stream);
+    boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+    ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
     msg_proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
     msg_proto.writeStructBegin(""); //resp args
@@ -64,8 +65,9 @@ void thrift_header_parser::add_prefix_for_thrift_response(message_ex* msg)
 void thrift_header_parser::add_postfix_for_thrift_response(message_ex* msg)
 {
     dsn::rpc_write_stream write_stream(msg);
-    boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-    ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+    ::dsn::binary_writer_transport trans(write_stream);
+    boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+    ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
     //after all fields, write a field stop
     msg_proto.writeFieldStop();
