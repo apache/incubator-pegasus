@@ -5,6 +5,7 @@ if(DSN_GIT_SOURCE STREQUAL "github")
 elseif(DSN_GIT_SOURCE STREQUAL "xiaomi")
     set(target_url "http://git.n.xiaomi.com/pegasus/googletest.git")
 else()
+    message(STATUS "the git source" ${DSN_GIT_SOURCE})
     message(FATAL_ERROR "not support other git source")
 endif()
 
