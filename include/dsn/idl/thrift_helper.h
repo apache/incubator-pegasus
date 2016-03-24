@@ -193,6 +193,7 @@ namespace dsn {
         }
         xfer += oprot->writeListEnd();
         xfer += oprot->writeFieldEnd();
+        return xfer;
     }
 
     template <typename T>
@@ -318,8 +319,9 @@ namespace dsn {
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
         proto.writeFieldBegin("args", get_thrift_type(val), (*writer._p_value_id)++);
         marshall_base<T>(&proto, val);
         proto.writeFieldEnd();
@@ -328,8 +330,9 @@ namespace dsn {
     template<typename T>
     void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
-        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        ::dsn::binary_reader_transport trans(reader);
+        boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
         std::string fname;
         ::apache::thrift::protocol::TType ftype;
@@ -491,8 +494,9 @@ namespace dsn {
             dsn::message_header* dsn_hdr = msg->header;
 
             dsn::rpc_read_stream stream(msg);
-            boost::shared_ptr< ::dsn::binary_reader_transport > input_trans(new ::dsn::binary_reader_transport( stream ));
-            ::apache::thrift::protocol::TBinaryProtocol iprot(input_trans);
+            ::dsn::binary_reader_transport trans(stream);
+            boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
+            ::apache::thrift::protocol::TBinaryProtocol iprot(trans_ptr);
 
             std::string fname;
             ::apache::thrift::protocol::TMessageType mtype;
@@ -519,9 +523,10 @@ namespace dsn {
 
         static void add_prefix_for_thrift_response(message_ex* msg)
         {
-            dsn::rpc_write_stream write_stream(msg);
-            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+            dsn::rpc_write_stream stream(msg);
+            ::dsn::binary_writer_transport trans(stream);
+            boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+            ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
             msg_proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
             msg_proto.writeStructBegin(""); //resp args
@@ -534,9 +539,10 @@ namespace dsn {
 
         static void add_postfix_for_thrift_response(message_ex* msg)
         {
-            dsn::rpc_write_stream write_stream(msg);
-            boost::shared_ptr< ::dsn::binary_writer_transport> msg_transport(new ::dsn::binary_writer_transport(write_stream));
-            ::apache::thrift::protocol::TBinaryProtocol msg_proto(msg_transport);
+            dsn::rpc_write_stream stream(msg);
+            ::dsn::binary_writer_transport trans(stream);
+            boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+            ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
             if (msg->header->context.u.is_response_in_piece)
             {
@@ -545,7 +551,7 @@ namespace dsn {
             }
             //after all fields, write a field stop
             msg_proto.writeFieldStop();
-            //writestruct end, this is because all thirft returning values are in a struct
+            //writestruct end, this is because all thrift returning values are in a struct
             msg_proto.writeStructEnd();
             //write message end, which indicate the end of a thrift message
             msg_proto.writeMessageEnd();

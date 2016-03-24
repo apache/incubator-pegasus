@@ -161,7 +161,7 @@ namespace dsn
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
     public:
-        //this is used to count the marshalling content, useful for other serialization method, eg. thirft
+        //this is used to count the marshalling content, useful for other serialization method, eg. thrift
         int _value_id;
         bool _resp_adjusted;
 #endif
