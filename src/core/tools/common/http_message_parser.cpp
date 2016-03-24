@@ -47,6 +47,51 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
 {
     memset(&_parser_setting, 0, sizeof(_parser_setting));
     _parser.data = this;
+    _parser_setting.on_message_begin = [](http_parser* parser)->int
+    {
+        auto owner = static_cast<http_message_parser*>(parser->data);
+        owner->_received_messages.emplace(message_ex::create_receive_message_with_standalone_header(blob()));
+        return 0;
+    };
+    _parser_setting.on_header_field = [](http_parser* parser, const char *at, size_t length)->int
+    {
+        auto owner = static_cast<http_message_parser*>(parser->data);
+        if (length >= 6 && strncmp(at, "rpc_id", 3) == 0)
+        {
+            owner->response_parse_state = parsing_rpc_id;
+        }
+        else if (length >= 2 && strncmp(at, "id", 2) == 0)
+        {
+            owner->response_parse_state = parsing_id;
+        }
+        else if (length >= 8 && strncmp(at, "rpc_name", 4) == 0)
+        {
+            owner->response_parse_state = parsing_rpc_name;
+        }
+        return 0;
+    };
+    _parser_setting.on_header_value = [](http_parser* parser, const char *at, size_t length)->int
+    {
+        auto owner = static_cast<http_message_parser*>(parser->data);
+        switch(owner->response_parse_state)
+        {
+        case parsing_rpc_id:
+            owner->_received_messages.back()->header->rpc_id = std::atoi(std::string(at, length).c_str());
+            break;
+        case parsing_id:
+            owner->_received_messages.back()->header->id = std::atoi(std::string(at, length).c_str());
+            break;
+        case parsing_rpc_name:
+            dassert(length < DSN_MAX_TASK_CODE_NAME_LENGTH, "task code too long");
+            strncpy(owner->_received_messages.back()->header->rpc_name, at, length);
+            owner->_received_messages.back()->header->rpc_name[length] = 0;
+            break;
+        default:
+            ;
+        }
+        owner->response_parse_state = parsing_nothing;
+        return 0;
+    };
     _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
@@ -66,41 +111,31 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
             //error, reset parser state
             return 1;
         }
-        owner->_last_url_info.rpc_name = std::move(args[0]);
-        owner->_last_url_info.hash = std::stoi(args[1]);
+        strcpy(owner->_received_messages.back()->header->rpc_name, args[0].c_str());
+        owner->_received_messages.back()->header->client.hash = stoi(args[1]);
+        owner->_received_messages.back()->header->context.u.is_request = 1;
         return 0;
     };
     _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
         dassert(owner->_read_buffer.buffer() != nullptr, "the read buffer is not owning");
-        owner->_received_messages.emplace(
-            message_ex::create_receive_message_with_standalone_header(
-                blob(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length)));
-        strcpy(owner->_received_messages.back()->header->rpc_name, owner->_last_url_info.rpc_name.c_str());
-        owner->_received_messages.back()->header->client.hash = owner->_last_url_info.hash;
-        owner->_received_messages.back()->header->context.u.is_request = 1;
+        owner->_received_messages.back()->buffers[0].assign(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length);
         return 0;
     };
-    http_parser_init(&_parser, HTTP_REQUEST);
-    
+    http_parser_init(&_parser, HTTP_BOTH);
 }
 
 message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
 {
     read_next = 4096;
-    auto nparsed = http_parser_execute(&_parser, &_parser_setting, _read_buffer.data() + _read_buffer_occupied, read_length);
+    auto nparsed = http_parser_execute(&_parser, &_parser_setting, _read_buffer.data(), read_length);
+    _read_buffer = _read_buffer.range(nparsed);
     if (_parser.upgrade)
     {
         derror("unsupported protocol");
         return nullptr;
     }
-    if (nparsed != read_length)
-    {
-        derror("malformed http packet, we cannot handle it now");
-        return nullptr;
-    }
-    mark_read(read_length);
     if (!_received_messages.empty())
     {
         auto message = std::move(_received_messages.front());
@@ -115,23 +150,60 @@ message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/
 
 int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, send_buf* buffers)
 {
-    //skip message header for browser
-    if (offset == 0)
-    {
-        sprintf(http_header_send_buffer, "%s%s%09lld%s", header_prefix, header_contentlen_prefix, msg->body_size(), header_contentlen_suffix);
-    }
+
     int buffer_iter = 0;
-    if (offset < header_size)
+    if (msg->header->context.u.is_request)
     {
-        buffers[0].buf = http_header_send_buffer + offset;
-        buffers[0].sz = header_size - offset;
-        buffer_iter = 1;
-        offset = 0;
+        if (offset == 0) {
+            std::stringstream ss;
+            ss << "POST /" << msg->header->rpc_name << "/" << msg->header->client.hash << " HTTP/1.1\r\n";
+            ss << "Content-Type: text/plain\r\n";
+            ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
+            ss << "id: " << msg->header->id << "\r\n";
+            ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+            ss << "Content-Length: " << msg->body_size() << "\r\n";
+            ss << "\r\n";
+            request_header_send_buffer = ss.str();
+        }
+        if (offset < request_header_send_buffer.size())
+        {
+            buffers[0].buf = const_cast<char*>(request_header_send_buffer.c_str()) + offset;
+            buffers[0].sz = request_header_send_buffer.size() - offset;
+            buffer_iter = 1;
+            offset = 0;
+        }
+        else
+        {
+            offset -= request_header_send_buffer.size();
+        }
     }
     else
     {
-        offset -= header_size;
+        if (offset == 0)
+        {
+            std::stringstream ss;
+            ss << "HTTP/1.1 200 OK\r\n";
+            ss << "Content-Type: text/plain\r\n";
+            ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
+            ss << "id: " << msg->header->id << "\r\n";
+            ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+            ss << "Content-Length: " << msg->body_size() << "\r\n";
+            ss << "\r\n";
+            response_header_send_buffer = ss.str();
+        }
+        if (offset < response_header_send_buffer.size())
+        {
+            buffers[0].buf = const_cast<char*>(response_header_send_buffer.c_str()) + offset;
+            buffers[0].sz = response_header_send_buffer.size() - offset;
+            buffer_iter = 1;
+            offset = 0;
+        }
+        else
+        {
+            offset -= response_header_send_buffer.size();
+        }
     }
+    //skip message header
     offset += sizeof(message_header);
     for (auto& buf : msg->buffers)
     {
@@ -145,22 +217,12 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, se
         offset = 0;
         buffer_iter += 1;
     }
-
-    buffers[buffer_iter].buf = const_cast<char*>(suffix_padding);
-    buffers[buffer_iter].sz = sizeof(suffix_padding);
-    buffer_iter += 1;
     return buffer_iter;
 }
 
-int http_message_parser::get_send_buffers_count_and_total_length(message_ex* msg, int* total_length)
+int http_message_parser::get_send_buffers_count(message_ex* msg)
 {
-    //message + http header + suffix_padding
-    *total_length = msg->body_size() + header_size + sizeof(suffix_padding);
     return msg->buffers.size() + 2;
 }
 
-constexpr const char http_message_parser::header_prefix[];
-constexpr const char http_message_parser::header_contentlen_prefix[];
-constexpr const char http_message_parser::header_contentlen_suffix[];
-constexpr const char http_message_parser::suffix_padding[];
 }

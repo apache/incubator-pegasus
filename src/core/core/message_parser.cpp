@@ -184,9 +184,8 @@ namespace dsn {
         return i;
     }
 
-    int dsn_message_parser::get_send_buffers_count_and_total_length(message_ex* msg, int* total_length)
+    int dsn_message_parser::get_send_buffers_count(message_ex* msg)
     {
-        *total_length = (int)msg->body_size() + sizeof(message_header);
         return (int)msg->buffers.size();
     }
 

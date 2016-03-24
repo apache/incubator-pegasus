@@ -436,7 +436,7 @@ namespace dsn {
             return 0;
         }
 
-        virtual int get_send_buffers_count_and_total_length(message_ex *msg, int *total_length)
+        virtual int get_send_buffers_count(message_ex *msg)
         {
             return 0;
         }
