@@ -18,7 +18,7 @@ class <?=$_PROG->name?>_server_app :
 public:
     <?=$_PROG->name?>_server_app() {}
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_svc.open_service();
@@ -26,11 +26,12 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_svc.close_service();
 <?php } ?>
+        return ::dsn::ERR_OK;
     }
 
 private:
@@ -52,7 +53,7 @@ public:
         stop();
     }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
         if (argc < 2)
         {
@@ -77,12 +78,13 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         _timer->cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?> 
         _<?=$svc->name?>_client.reset();
 <?php } ?>
+        return ::dsn::ERR_OK;
     }
 
     void on_test_timer()
@@ -134,7 +136,7 @@ public:
         stop();
     }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -146,13 +148,15 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         if (_<?=$svc->name?>_client != nullptr)
         {
             delete _<?=$svc->name?>_client;
             _<?=$svc->name?>_client = nullptr;
         }
+        
+        return ::dsn::ERR_OK;
     }
     
 private:

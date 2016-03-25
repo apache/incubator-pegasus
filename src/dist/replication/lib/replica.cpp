@@ -38,6 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/cpp/json_helper.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -128,8 +129,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
 
     dassert (_app != nullptr, "");
 
-    rpc_read_stream reader(request);
-    _app->dispatch_rpc_call(code, reader, dsn_msg_create_response(request));
+    dsn_layer1_app_commit_rpc_request(_app->app_context(), request, true);
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)

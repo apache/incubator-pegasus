@@ -57,7 +57,7 @@ namespace dsn {
 
             virtual ::dsn::error_code start(int argc, char** argv) override;
 
-            virtual void stop(bool cleanup = false) override;
+            virtual ::dsn::error_code stop(bool cleanup = false) override;
 
         private:
             friend class ::dsn::replication::replication_checker;

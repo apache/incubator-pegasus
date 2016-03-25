@@ -57,6 +57,22 @@ DSN_API dsn_message_t dsn_msg_create_request(
     return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, request_hash, partition_hash);
 }
 
+DSN_API dsn_message_t dsn_msg_create_received_request(
+    dsn_task_code_t rpc_code,
+    void* buffer,
+    int size,
+    int request_hash
+    )
+{
+    ::dsn::blob bb((const char*)buffer, 0, size);
+    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    msg->local_rpc_code = rpc_code;
+    msg->header->client.hash = request_hash;
+
+    msg->add_ref(); // released by callers explicitly using dsn_msg_release
+    return msg;
+}
+
 DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
 {
     return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;

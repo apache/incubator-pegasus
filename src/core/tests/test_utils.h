@@ -130,8 +130,8 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    void stop(bool cleanup = false)
+    ::dsn::error_code stop(bool cleanup = false)
     {
-
+        return ERR_OK;
     }
 };

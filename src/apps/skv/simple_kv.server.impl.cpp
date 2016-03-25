@@ -48,10 +48,11 @@ namespace dsn {
     namespace replication {
         namespace application {
             
-            simple_kv_service_impl::simple_kv_service_impl(replica* replica)
-                : simple_kv_service(replica), _lock(true)
+            simple_kv_service_impl::simple_kv_service_impl()
+                : _lock(true)
             {
                 _test_file_learning = false;
+                _app_info = dsn_get_app_info_ptr(gpid());
             }
 
             // RPC_SIMPLE_KV_READ
@@ -68,7 +69,7 @@ namespace dsn {
                     }
                 }
              
-                dinfo("read %s, decree = %" PRId64 "\n", r.c_str(), last_committed_decree());
+                dinfo("read %s", r.c_str());
                 reply(r);
             }
 
@@ -80,7 +81,7 @@ namespace dsn {
                     _store[pr.key] = pr.value;
                 }                
 
-                dinfo("write %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
+                dinfo("write %s", pr.key.c_str());
                 reply(0);
             }
 
@@ -96,38 +97,28 @@ namespace dsn {
                         _store[pr.key] = pr.value;
                 }
 
-                dinfo("append %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
+                dinfo("append %s", pr.key.c_str());
                 reply(0);
             }
             
-            ::dsn::error_code simple_kv_service_impl::open(bool create_new)
+            ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
                 zauto_lock l(_lock);
-
-                init_last_commit_decree(0);
                 _last_durable_decree = 0;
-
-                if (create_new)
-                {
-                    auto& dir = data_dir();
-                    dsn::utils::filesystem::remove_path(dir);
-                    dsn::utils::filesystem::create_directory(dir);
-                }
-                else
-                {
-                    recover();
-                }
+                recover();
                 return ERR_OK;
             }
 
-            ::dsn::error_code simple_kv_service_impl::close(bool clear_state)
+            ::dsn::error_code simple_kv_service_impl::stop(bool clear_state)
             {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
+                    dsn_get_current_app_data_dir(gpid());
+
                     if (!dsn::utils::filesystem::remove_path(data_dir()))
                     {
-                        dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+                        dassert(false, "Fail to delete directory %s.", data_dir());
                     }
                 }
                 return ERR_OK;
@@ -140,11 +131,11 @@ namespace dsn {
 
                 _store.clear();
 
-                decree maxVersion = 0;
+                int64_t maxVersion = 0;
                 std::string name;
 
                 std::vector<std::string> sub_list;
-                auto& path = data_dir();
+                std::string path = data_dir();
                 if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
                 {
                     dassert(false, "Fail to get subfiles in %s.", path.c_str());
@@ -155,11 +146,11 @@ namespace dsn {
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
-                    decree version = static_cast<decree>(atoll(s.substr(strlen("checkpoint.")).c_str()));
+                    int64_t version = static_cast<int64_t>(atoll(s.substr(strlen("checkpoint.")).c_str()));
                     if (version > maxVersion)
                     {
                         maxVersion = version;
-                        name = data_dir() + "/" + s;
+                        name = std::string(data_dir()) + "/" + s;
                     }
                 }
                 sub_list.clear();
@@ -171,7 +162,7 @@ namespace dsn {
                 }
             }
 
-            void simple_kv_service_impl::recover(const std::string& name, decree version)
+            void simple_kv_service_impl::recover(const std::string& name, int64_t version)
             {
                 zauto_lock l(_lock);
 
@@ -207,18 +198,19 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                init_last_commit_decree(version);
+                _last_durable_decree = version;
             }
 
             ::dsn::error_code simple_kv_service_impl::checkpoint()
             {
                 char name[256];
-                sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(),
-                    last_committed_decree());
+                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(),
+                    last_committed_decree()
+                    );
 
                 zauto_lock l(_lock);
 
-                if (last_committed_decree() == last_durable_decree())
+                if (last_committed_decree() == _last_durable_decree)
                 {
                     dassert(utils::filesystem::file_exists(name), 
                         "checkpoint file %s is missing!",
@@ -254,26 +246,49 @@ namespace dsn {
                 os.close();
 
                 // TODO: gc checkpoints
-
                 _last_durable_decree = last_committed_decree();
                 return ERR_OK;
             }
 
             // helper routines to accelerate learning
-            ::dsn::error_code simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
+            ::dsn::error_code simple_kv_service_impl::get_checkpoint(
+                int64_t start,
+                void*   learn_request,
+                int     learn_request_size,
+                /* inout */ dsn_app_learn_state& state,
+                int state_capacity
+                )
             {
                 if (_last_durable_decree.load() > 0)
                 {
-                    state.from_decree_excluded = 0;
-                    state.to_decree_included = _last_durable_decree;
-
                     char name[256];
                     sprintf(name, "%s/checkpoint.%" PRId64,
-                        data_dir().c_str(),
+                        data_dir(),
                         _last_durable_decree.load()
                         );
 
-                    state.files.push_back(name);
+
+                    /*
+                    memory layout:
+                    learn-state
+                    char*[] for file ptrs
+                    file names
+                    */
+                    state.total_learn_state_size = strlen(name) + 1 + sizeof(char*) + sizeof(dsn_app_learn_state);
+                    if (state.total_learn_state_size > state_capacity)
+                    {
+                        return ERR_CAPACITY_EXCEEDED;
+                    }
+
+                    state.from_decree_excluded = 0;
+                    state.to_decree_included = _last_durable_decree;
+                    state.meta_state_ptr = nullptr;
+                    state.meta_state_size = 0;
+                    state.file_state_count = 1;
+                    state.files = (const char**)(&state + 1);
+                    state.files[0] = (const char*)state.files + sizeof(char*);
+                    strcpy((char*)state.files[0], name);
+
                     return ERR_OK;
                 }
                 else
@@ -284,21 +299,21 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
             {
-                if (mode == CHKPT_LEARN)
+                if (mode == DSN_CHKPT_LEARN)
                 {
                     recover(state.files[0], state.to_decree_included);
                     return ERR_OK;
                 }
                 else
                 {
-                    dassert(CHKPT_COPY == mode, "invalid mode %d", (int)mode);
-                    dassert(state.to_decree_included > _last_durable_decree, "checkpoint's decree is smaller than current");
+                    dassert(DSN_CHKPT_COPY == mode, "invalid mode %d", (int)mode);
+                    dassert(state.to_decree_included > _last_durable_decree, "checkpoint's int64_t is smaller than current");
 
                     char name[256];
                     sprintf(name, "%s/checkpoint.%" PRId64,
-                        data_dir().c_str(),
+                        data_dir(),
                         state.to_decree_included
                         );
                     std::string lname(name);

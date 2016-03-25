@@ -174,9 +174,9 @@ public:
         return ERR_OK;
     }
 
-    void stop(bool) override
+    error_code stop(bool) override
     {
-
+        return ERR_OK;
     }
 
     void on_master_config(const config_master_message& request, bool& response)
@@ -205,10 +205,12 @@ public:
 
         return ERR_OK;
     }
-    void stop(bool) override
-    {
 
+    error_code stop(bool) override
+    {
+        return ERR_OK;
     }
+
     master_fd_test* fd() { return _master_fd; }
 private:
     master_fd_test* _master_fd;
