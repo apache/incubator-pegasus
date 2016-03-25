@@ -604,10 +604,11 @@ namespace dsn
             return ::dsn::ERR_OK;
         }
 
-        void daemon::stop(bool cleanup)
+        ::dsn::error_code daemon::stop(bool cleanup)
         {
             _daemon_s_svc->close_service();
             _daemon_s_svc = nullptr;
+            return ERR_OK;
         }
 
         daemon::daemon()

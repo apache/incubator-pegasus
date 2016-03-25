@@ -39,6 +39,7 @@
 #include "mutation_log.h"
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__

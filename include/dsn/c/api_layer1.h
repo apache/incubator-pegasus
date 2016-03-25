@@ -452,7 +452,7 @@ RPC Message Utilities
 
 rpc message and buffer management
 
-all returned dsn_message_t are NOT add_ref by rDSN, so you
+all returned dsn_message_t are NOT add_ref by rDSN (unless explicitly specified), so you
 do not need to call msg_release_ref to release the msgs.  the decision is made for easier
 programming, and you may consider the later dsn_rpc_xxx calls do the resource gc work for
 you.  however, if you want to hold the message further after call dsn_rpc_xxx, you need to
@@ -520,6 +520,14 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
+
+/*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
+extern DSN_API dsn_message_t dsn_msg_create_received_request(
+                            dsn_task_code_t rpc_code,
+                            void* buffer,
+                            int size,
+                            int request_hash DEFAULT(0)
+                            );
 
 /*! type of the parameter in \ref dsn_msg_context_t */
 typedef enum dsn_msg_parameter_type_t

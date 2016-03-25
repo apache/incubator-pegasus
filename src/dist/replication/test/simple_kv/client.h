@@ -56,7 +56,7 @@ public:
     virtual ~simple_kv_client_app();
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
-    virtual void stop(bool cleanup = false) override;
+    virtual ::dsn::error_code stop(bool cleanup = false) override;
 
     void run();
 

@@ -52,7 +52,7 @@ namespace dsn
 
             virtual ::dsn::error_code start(int argc, char** argv) override;
 
-            virtual void stop(bool cleanup = false) override;
+            virtual ::dsn::error_code stop(bool cleanup = false) override;
 
         private:
             std::unique_ptr<daemon_s_service> _daemon_s_svc;

@@ -38,6 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/internal/factory_store.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -334,14 +335,14 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             count++;
         }
         response.type = LT_CACHE;
-        response.state.meta.push_back(writer.get_buffer());
+        response.state.meta = writer.get_buffer();
         ddebug(
             "%s: on_learn[%016llx]: learner = %s, learn mutation cache succeed, "
             "learn_start_decree = %" PRId64 ", prepare_start_decree = %" PRId64 ", "
             "learn_mutation_count = %d, learn_data_size = %d",
             name(), request.signature, request.learner.to_string(),
             learn_start_decree, response.prepare_start_decree,
-            count, response.state.meta[0].length()
+            count, response.state.meta.length()
             );
     }
 
@@ -502,7 +503,7 @@ void replica::on_learn_reply(
 
         if (err == ERR_OK)
         {
-            err = _app->open(true);
+            err = _app->open_internal(this, true);
             if (err != ERR_OK)
             {
                 derror(
@@ -569,8 +570,7 @@ void replica::on_learn_reply(
             );
         
         // apply incoming prepare-list
-        dassert(resp.state.meta.size() > 0, "learn mutation cache failed");
-        binary_reader reader(resp.state.meta[0]);
+        binary_reader reader(resp.state.meta);
         while (!reader.is_eof())
         {
             auto mu = mutation::read_from(reader, nullptr);
@@ -688,7 +688,7 @@ void replica::on_copy_remote_state_completed(
         if (resp.type == LT_APP)
         {
             auto start_ts = dsn_now_ns();
-            err = _app->apply_checkpoint(lstate, CHKPT_LEARN);
+            err = _app->apply_checkpoint(lstate, DSN_CHKPT_LEARN);
             if (err == ERR_OK)
             {
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
@@ -946,10 +946,9 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         );
 
     // apply in-buffer private logs
-    if (err == ERR_OK && state.meta.size() > 0)
+    if (err == ERR_OK)
     {
-        dassert(state.meta.size() == 1, "only 1 buffered private log is allowed");
-        binary_reader reader(state.meta[0]);
+        binary_reader reader(state.meta);
         while (!reader.is_eof())
         {
             auto mu = mutation::read_from_log_file(reader, nullptr);

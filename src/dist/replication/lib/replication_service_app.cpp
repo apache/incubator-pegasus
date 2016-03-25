@@ -65,13 +65,15 @@ error_code replication_service_app::start(int argc, char** argv)
     return ERR_OK;
 }
 
-void replication_service_app::stop(bool cleanup)
+error_code replication_service_app::stop(bool cleanup)
 {
     if (_stub != nullptr)
     {
         _stub->close();
         _stub = nullptr;
     }
+
+    return ERR_OK;
 }
 
 void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg, int delay_ms)

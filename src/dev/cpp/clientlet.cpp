@@ -68,14 +68,7 @@ namespace dsn
         std::set<clientlet*> _services;
         std::map<std::string, service_app*> _apps;
     };
-
-    static service_objects* dsn_apps = &(service_objects::instance());
-
-    void service_app::register_for_debugging()
-    {
-        service_objects::instance().add_app(this);
-    }
-
+    
     clientlet::clientlet(int task_bucket_count)
     {
         _tracker = dsn_task_tracker_create(task_bucket_count);

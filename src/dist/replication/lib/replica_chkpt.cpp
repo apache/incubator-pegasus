@@ -37,6 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -275,7 +276,7 @@ namespace dsn {
                     dassert(filename.find_last_of("/\\")==std::string::npos, "invalid file name");
                     filename = utils::filesystem::path_combine(chk_dir, filename);
                 }
-                _app->apply_checkpoint(resp->state, CHKPT_COPY);
+                _app->apply_checkpoint(resp->state, DSN_CHKPT_COPY);
             }
 
             _primary_states.checkpoint_task = nullptr;

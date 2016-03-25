@@ -997,7 +997,7 @@ void mutation_log::get_learn_state(
                 temp_writer.write(bb_iterator->data(), bb_iterator->length());
             }
         }
-        state.meta.push_back(temp_writer.get_buffer());
+        state.meta = temp_writer.get_buffer();
     }
 
     // flush last file so learning can learn the on-disk state

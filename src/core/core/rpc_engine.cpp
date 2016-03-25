@@ -483,6 +483,41 @@ namespace dsn {
         return handler ? new rpc_request_task(msg, handler, node) : nullptr;
     }
 
+    void rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
+    {
+        rpc_handler_info* handler = nullptr;
+
+        if (TASK_CODE_INVALID != msg->local_rpc_code)
+        {
+            utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+            handler = _vhandlers[msg->local_rpc_code]->first;
+            if (nullptr != handler)
+            {
+                handler->add_ref();
+            }
+        }
+        else
+        {
+            utils::auto_read_lock l(_handlers_lock);
+            auto it = _handlers.find(msg->header->rpc_name);
+            if (it != _handlers.end())
+            {
+                msg->local_rpc_code = it->second->code;
+                handler = it->second;
+                handler->add_ref();
+            }
+        }
+
+        if (handler)
+        {
+            handler->c_handler(msg, handler->parameter);
+        }
+        else
+        {
+            dassert(false, "msg not handled at all");
+        }
+    }
+
     //----------------------------------------------------------------------------------------------
     /*static*/ bool rpc_engine::_message_crc_required;
 

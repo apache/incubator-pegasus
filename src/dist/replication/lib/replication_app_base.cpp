@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
+# include "replication_app_base.h"
 # include "replica.h"
 # include "mutation.h"
 # include <dsn/internal/factory_store.h>
@@ -46,11 +46,6 @@
 # define __TITLE__ "replica.app_base"
 
 namespace dsn { namespace replication {
-
-void register_replica_provider(replica_app_factory f, const char* name)
-{
-    ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, ::dsn::PROVIDER_TYPE_MAIN);
-}
 
 error_code replica_init_info::load(const char* file)
 {
@@ -127,8 +122,15 @@ replication_app_base::replication_app_base(replica* replica)
     _is_delta_state_learning_supported = false;
     _batch_state = BS_NOT_BATCH;
 
+    dsn_gpid gd;
+    gd.u.app_id = replica->get_gpid().app_id;
+    gd.u.partition_index = replica->get_gpid().pidx;
+
+    _app_info = dsn_get_app_info_ptr(gd);
+    dassert(_app_info, "");
+    strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir)/sizeof(char));
+
     _replica = replica;
-    _last_committed_decree = _last_durable_decree = 0;
 
     if (!dsn::utils::filesystem::create_directory(_dir_data))
     {
@@ -147,7 +149,7 @@ void replication_app_base::reset_states()
 {
     _physical_error = 0;
     _batch_state = BS_NOT_BATCH;
-    _last_committed_decree = _last_durable_decree = 0;
+    _app_info->info.type1.last_committed_decree = 0;
 }
 
 const char* replication_app_base::replica_name() const
@@ -180,10 +182,17 @@ void replication_app_base::install_perf_counters()
 
 error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
-    auto err = open(create_new);
+    if (create_new)
+    {
+        auto& dir = data_dir();
+        dsn::utils::filesystem::remove_path(dir);
+        dsn::utils::filesystem::create_directory(dir);
+    }
+
+    auto err = open();
     if (err == ERR_OK)
     {
-        dassert(last_committed_decree() == last_durable_decree(), "");
+        _app_info->info.type1.last_committed_decree = last_durable_decree();
         if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
@@ -194,6 +203,130 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     _app_commit_decree.add(last_committed_decree());
 
     return err;
+}
+
+::dsn::error_code replication_app_base::open()
+{
+    auto gpid = _replica->get_gpid();
+    dsn_gpid gd;
+    gd.u.app_id = gpid.app_id;
+    gd.u.partition_index = gpid.pidx;
+
+    ::dsn::error_code err = dsn_layer1_app_create(gd, &_app_context);
+    if (err == ERR_OK)
+    {
+        err = dsn_layer1_app_start(_app_context);
+    }
+    return err;
+}
+
+void replication_app_base::prepare_learn_request(/*out*/ ::dsn::blob& learn_req)
+{
+    int size = 4096;
+    void* buffer = dsn_transient_malloc(size);
+    int sz2 = dsn_layer1_app_prepare_learn_request(_app_context, buffer, size);
+
+    while (sz2 > size)
+    {
+        dsn_transient_free(buffer);
+
+        size = sz2;
+        buffer = dsn_transient_malloc(size);
+        sz2 = dsn_layer1_app_prepare_learn_request(_app_context, buffer, size);
+    }
+
+    if (sz2 == 0)
+    {
+        dsn_transient_free(buffer);
+    }
+    else
+    {
+        learn_req = ::dsn::blob(
+            std::shared_ptr<char>(
+                (char*)buffer,
+                [](char* buf) { dsn_transient_free((void*)buf); }),
+            sz2
+            );
+    }
+}
+
+::dsn::error_code replication_app_base::get_checkpoint(
+    int64_t start,
+    const ::dsn::blob& learn_request,
+    learn_state& state
+    )
+{
+    dsn_app_learn_state* lstate;
+    int size = 4096;
+    void* buffer = dsn_transient_malloc(size);
+    lstate = (dsn_app_learn_state*)buffer;
+
+    error_code err = dsn_layer1_app_get_checkpoint(_app_context, start,
+        (void*)learn_request.data(),
+        learn_request.length(),
+        (dsn_app_learn_state*)buffer,
+        size
+        );
+
+    while (err == ERR_CAPACITY_EXCEEDED)
+    {
+        dsn_transient_free(buffer);
+
+        size = lstate->total_learn_state_size;
+        buffer = dsn_transient_malloc(size);
+        lstate = (dsn_app_learn_state*)buffer;
+
+        err = dsn_layer1_app_get_checkpoint(_app_context, start,
+            (void*)learn_request.data(),
+            learn_request.length(),
+            (dsn_app_learn_state*)buffer,
+            size
+            );
+    }
+
+    if (err == ERR_OK)
+    {
+        state.from_decree_excluded = lstate->from_decree_excluded;
+        state.to_decree_included = lstate->to_decree_included;
+        state.meta = dsn::blob(
+            std::shared_ptr<char>((char*)buffer, [](char* buf) { dsn_transient_free((void*)buf); }),
+            (const char*)lstate->meta_state_ptr - (const char*)buffer, 
+            lstate->meta_state_size
+            );
+
+        for (int i = 0; i < lstate->file_state_count; i++)
+        {
+            state.files.push_back(std::string(*lstate->files++));
+        }
+    }
+    else
+    {
+        dsn_transient_free(buffer);
+    }
+    return err;
+}
+
+::dsn::error_code replication_app_base::apply_checkpoint(const learn_state& state, dsn_chkpt_apply_mode mode)
+{
+    dsn_app_learn_state lstate;
+    std::vector<const char*> files;
+
+    lstate.from_decree_excluded = state.from_decree_excluded;
+    lstate.total_learn_state_size = state.to_decree_included;
+    lstate.meta_state_ptr = (void*)state.meta.data();
+    lstate.meta_state_size = state.meta.length();
+    lstate.file_state_count = (int)state.files.size();
+    if (lstate.file_state_count > 0)
+    {
+        for (auto& f : state.files)
+        {
+            files.push_back(f.c_str());
+        }
+
+        lstate.files = &files[0];
+    }
+
+    return dsn_layer1_app_apply_checkpoint(_app_context, &lstate, mode);
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)
@@ -212,19 +345,32 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
 
         const mutation_update& update = mu->data.updates[i];
-        const dsn_message_t& req = mu->client_requests[i];
+        dsn_message_t req = mu->client_requests[i];
         if (update.code != RPC_REPLICATION_WRITE_EMPTY)
         {
             dinfo("%s: mutation %s dispatch rpc call: %s",
                   _replica->name(), mu->name(), update.code.to_string());
-            binary_reader reader(update.data);
-            dsn_message_t resp = (req ? dsn_msg_create_response(req) : nullptr);
+         
+            if (req == nullptr)
+            {                
+                req = dsn_msg_create_received_request(update.code, (void*)update.data.data(), update.data.length());
+                dsn_layer1_app_commit_rpc_request(_app_context, req, true);
+                dsn_msg_release_ref(req);
+                req = nullptr;
+            }
+            else
+            {
+                dsn_layer1_app_commit_rpc_request(_app_context, req, true);
+            }
 
-            //uint64_t now = dsn_now_ns();
-            dispatch_rpc_call(update.code, reader, resp);
-            //now = dsn_now_ns() - now;
+            //binary_reader reader(update.data);
+            //dsn_message_t resp = (req ? dsn_msg_create_response(req) : nullptr);
 
-            //_app_commit_latency.set(now);
+            ////uint64_t now = dsn_now_ns();
+            //dispatch_rpc_call(update.code, reader, resp);
+            ////now = dsn_now_ns() - now;
+
+            ////_app_commit_latency.set(now);
         }
         else
         {
@@ -239,7 +385,7 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
     }
 
-    ++_last_committed_decree;
+    ++_app_info->info.type1.last_committed_decree;
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
@@ -260,40 +406,6 @@ error_code replication_app_base::update_init_info(replica* r, int64_t shared_log
 
     std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
     return _info.store(info_path.c_str());
-}
-
-void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader& reader, dsn_message_t response)
-{
-    local_rpc_handler_info* h = nullptr;
-    {
-        utils::auto_read_lock l(_handlers_lock);
-        auto it = _handlers.find(code);
-        if (it != _handlers.end())
-        {
-            h = it->second;
-            h->ref_count.fetch_add(1, std::memory_order_relaxed);
-        }
-    }
-    
-    if (h)
-    {
-        if (response)
-        {
-            // replication layer error
-            ::marshall(response, ERR_OK);
-        }
-
-        h->callback(this, h->inner_callback, reader, response);
-        if (1 == h->ref_count.fetch_sub(1, std::memory_order_release))
-        {
-            delete h;
-        }
-    }
-    else
-    {
-        dwarn("cannot find handler for rpc code %s in %s",
-            dsn_task_code_to_string(code), data_dir().c_str());
-    }    
 }
 
 }} // end namespace

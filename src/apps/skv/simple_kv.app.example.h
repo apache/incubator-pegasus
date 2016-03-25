@@ -77,11 +77,13 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
  
         _simple_kv_client.reset();
+
+        return ::dsn::ERR_OK;
     }
 
     void on_test_timer()
@@ -157,9 +159,11 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _simple_kv_client.reset();
+
+        return ::dsn::ERR_OK;
     }
     
 private:

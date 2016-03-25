@@ -158,7 +158,7 @@ namespace dsn {
                 return _service->start();
         }
 
-        void meta_service_app::stop(bool /*cleanup*/)
+        error_code meta_service_app::stop(bool /*cleanup*/)
         {
             if (_service != nullptr)
             {
@@ -166,6 +166,8 @@ namespace dsn {
                 delete _service;
                 _service = nullptr;
             }
+
+            return ERR_OK;
         }
     }
 }

@@ -44,9 +44,9 @@ public:
         return err;
     }
 
-    void stop(bool cleanup = false)
+    ::dsn::error_code stop(bool cleanup = false)
     {
-
+        return ::dsn::ERR_OK;
     }
 
     ::dsn::dist::kubernetes_cluster_scheduler _k8s;

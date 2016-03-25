@@ -435,7 +435,7 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
 
 #define mimic_app_role_name "dsn.app.mimic"
 
-static void* mimic_app_create(const char*)
+static void* mimic_app_create(const char*, dsn_gpid)
 {
     return nullptr;
 }
@@ -445,9 +445,9 @@ static dsn_error_t mimic_app_start(void* ctx, int argc, char** argv)
     return ::dsn::ERR_OK;
 }
 
-static void mimic_app_destroy(void* ctx, bool clean_up)
+static dsn_error_t mimic_app_destroy(void* ctx, bool clean_up)
 {
-    return;
+    return ::dsn::ERR_OK;
 }
 
 bool service_spec::init_app_specs()

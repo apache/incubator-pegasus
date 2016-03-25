@@ -72,9 +72,10 @@ simple_kv_client_app::~simple_kv_client_app()
     return ::dsn::ERR_OK;
 }
 
-void simple_kv_client_app::stop(bool cleanup)
+dsn::error_code simple_kv_client_app::stop(bool cleanup)
 {
     _simple_kv_client.reset();
+    return ::dsn::ERR_OK;
 }
 
 void simple_kv_client_app::run()

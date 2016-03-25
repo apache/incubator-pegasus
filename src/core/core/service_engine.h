@@ -66,17 +66,17 @@ public:
 
     error_code create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context);
 
-    error_code start_layer1_app(void* app_context, int argc, char** argv);
+    error_code start_layer1_app(void* app_context);
 
-    void destroy_layer1_app(void* app_context, bool cleanup);
+    error_code destroy_layer1_app(void* app_context, bool cleanup);
 
     bool  rpc_register_handler(void* app_context, rpc_handler_info* handler);
 
     rpc_handler_info* rpc_unregister_handler(void* app_context, dsn_task_code_t rpc_code);
 
-    void commit_layer1(void* app_context, dsn_message_t msg);
+    dsn_app_info* get_app_info(dsn_gpid gpid);
 
-private:
+public:
     struct layer1_app_info
     {
         union {
@@ -85,9 +85,12 @@ private:
         };
         
         dsn_gpid              gpid;
+        dsn_app               *role;
+        dsn_app_info   info;
         std::unique_ptr<rpc_server_dispatcher> server_dispatcher;
     };
 
+private:
     service_node  *_owner_node;
     utils::rw_lock_nr _apps_lock;
     std::unordered_map<uint64_t, std::unique_ptr<layer1_app_info> > _layer1_apps;
@@ -137,7 +140,7 @@ public:
     error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
-    dsn_error_t start_app(int argc, char** argv);
+    dsn_error_t start_app();
 
     int id() const { return _app_spec.id; }
     const char* name() const { return _app_spec.name.c_str(); }
@@ -147,14 +150,18 @@ public:
     bool  rpc_register_handler(rpc_handler_info* handler, void* layer1_app_context = nullptr);
     rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, void* layer1_app_context = nullptr);
 
+    dsn_app_info* get_l1_info() { return &_layer1_app_info; }
     layer2_handler_core& get_l2_handler() { return _layer2_handler; }
     void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
+
+    static dsn_error_t start_app(void* app_context, const std::string& args, dsn_app_start start, const std::string& app_name);
 
 private:
     union {
         void*            _app_context_ptr; // app start returns this value and used by app stop
         service_app*     _app_for_cpp; 
     };
+    dsn_app_info  _layer1_app_info;
     
     service_app_spec _app_spec;
     task_engine*     _computation;

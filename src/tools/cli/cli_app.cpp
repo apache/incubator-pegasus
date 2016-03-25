@@ -133,9 +133,9 @@ namespace dsn {
             return ERR_OK;
         }
 
-        void cli::stop(bool cleanup)
+        error_code cli::stop(bool cleanup)
         {
-            
+            return ERR_OK;
         } 
 
     }

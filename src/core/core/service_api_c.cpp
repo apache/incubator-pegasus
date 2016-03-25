@@ -1017,27 +1017,38 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     return false;
 }
 
-DSN_API const char* dsn_get_current_app_data_dir()
+DSN_API const char* dsn_get_current_app_data_dir(dsn_gpid gpid)
 {
-    return ::dsn::task::get_current_node()->spec().data_dir.c_str();
+    auto info = dsn_get_app_info_ptr(gpid);
+    return info ? info->data_dir : nullptr;
 }
 
 DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
 {
-    auto cnode = ::dsn::task::get_current_node2();
-    if (cnode != nullptr)
+    auto info = dsn_get_app_info_ptr(dsn_gpid{ 0 });
+    if (info)
     {
-        app_info->app_context_ptr = cnode->get_app_context_ptr();
-        app_info->app_id = cnode->id();
-        app_info->index = cnode->spec().index;
-        strncpy(app_info->role, cnode->spec().role_name.c_str(), sizeof(app_info->role));
-        strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
-        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
-        strncpy(app_info->data_dir, cnode->spec().data_dir.c_str(), sizeof(app_info->data_dir));
+        memcpy(app_info, info, sizeof(*info));
         return true;
     }
     else
         return false;
+}
+
+DSN_API dsn_app_info* dsn_get_app_info_ptr(dsn_gpid gpid)
+{
+    auto cnode = ::dsn::task::get_current_node2();
+    if (cnode != nullptr)
+    {
+        if (gpid.value == 0)
+            return cnode->get_l1_info();
+        else
+        {
+            return cnode->get_l2_handler().get_app_info(gpid);
+        }
+    }
+    else
+        return nullptr;
 }
 
 ::dsn::utils::notify_event s_loader_event;
