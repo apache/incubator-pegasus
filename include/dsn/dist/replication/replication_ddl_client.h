@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     ddl client interface
+ *     replication ddl client
  *
  * Revision history:
  *     2015-12-30, xiaotz, first version
@@ -39,10 +39,10 @@
 
 namespace dsn{ namespace replication{
 
-class client_ddl : public clientlet
+class replication_ddl_client : public clientlet
 {
 public:
-    client_ddl(const std::vector<dsn::rpc_address>& meta_servers);
+    replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count);
 
