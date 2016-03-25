@@ -50,13 +50,13 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
     _parser_setting.on_message_begin = [](http_parser* parser)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
-        owner->_received_messages.emplace(message_ex::create_receive_message_with_standalone_header(blob()));
+        owner->_current_message.reset(message_ex::create_receive_message_with_standalone_header(blob()));
         return 0;
     };
     _parser_setting.on_header_field = [](http_parser* parser, const char *at, size_t length)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
-        if (length >= 6 && strncmp(at, "rpc_id", 3) == 0)
+        if (length >= 6 && strncmp(at, "rpc_id", 6) == 0)
         {
             owner->response_parse_state = parsing_rpc_id;
         }
@@ -64,7 +64,7 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
         {
             owner->response_parse_state = parsing_id;
         }
-        else if (length >= 8 && strncmp(at, "rpc_name", 4) == 0)
+        else if (length >= 8 && strncmp(at, "rpc_name", 8) == 0)
         {
             owner->response_parse_state = parsing_rpc_name;
         }
@@ -76,15 +76,15 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
         switch(owner->response_parse_state)
         {
         case parsing_rpc_id:
-            owner->_received_messages.back()->header->rpc_id = std::atoi(std::string(at, length).c_str());
+            owner->_current_message->header->rpc_id = std::atoi(std::string(at, length).c_str());
             break;
         case parsing_id:
-            owner->_received_messages.back()->header->id = std::atoi(std::string(at, length).c_str());
+            owner->_current_message->header->id = std::atoi(std::string(at, length).c_str());
             break;
         case parsing_rpc_name:
             dassert(length < DSN_MAX_TASK_CODE_NAME_LENGTH, "task code too long");
-            strncpy(owner->_received_messages.back()->header->rpc_name, at, length);
-            owner->_received_messages.back()->header->rpc_name[length] = 0;
+            strncpy(owner->_current_message->header->rpc_name, at, length);
+            owner->_current_message->header->rpc_name[length] = 0;
             break;
         default:
             ;
@@ -111,16 +111,18 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
             //error, reset parser state
             return 1;
         }
-        strcpy(owner->_received_messages.back()->header->rpc_name, args[0].c_str());
-        owner->_received_messages.back()->header->client.hash = stoi(args[1]);
-        owner->_received_messages.back()->header->context.u.is_request = 1;
+        strcpy(owner->_current_message->header->rpc_name, args[0].c_str());
+        owner->_current_message->header->client.hash = stoi(args[1]);
+        owner->_current_message->header->context.u.is_request = 1;
         return 0;
     };
     _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
     {
+        derror("%s\n", std::string(at, length).c_str());
         auto owner = static_cast<http_message_parser*>(parser->data);
         dassert(owner->_read_buffer.buffer() != nullptr, "the read buffer is not owning");
-        owner->_received_messages.back()->buffers[0].assign(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length);
+        owner->_current_message->buffers[0].assign(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length);
+        owner->_received_messages.emplace(std::move(owner->_current_message));
         return 0;
     };
     http_parser_init(&_parser, HTTP_BOTH);
@@ -183,7 +185,9 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, se
         {
             std::stringstream ss;
             ss << "HTTP/1.1 200 OK\r\n";
+            ss << "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin\r\n";
             ss << "Content-Type: text/plain\r\n";
+            ss << "Access-Control-Allow-Origin: *\r\n";
             ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
             ss << "id: " << msg->header->id << "\r\n";
             ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
