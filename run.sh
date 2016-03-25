@@ -14,6 +14,7 @@ function usage()
     echo "   test        test the system"
     echo "   start_zk    start the local single zookeeper server"
     echo "   stop_zk     stop the local single zookeeper server"
+    echo "   clear_zk    stop the local single zookeeper server and clear the data"
     echo "   format      check the code format"
     echo "   publish     publish the program"
     echo "   publish_docker"
@@ -244,6 +245,43 @@ function run_stop_zk()
 }
 
 #####################
+## clear_zk
+#####################
+function usage_clear_zk()
+{
+    echo "Options for subcommand 'clear_zk':"
+    echo "   -h|--help         print the help info"
+    echo "   -d|--install_dir <dir>"
+    echo "                     zookeeper install directory,"
+    echo "                     if not set, then default is './.zk_install'"
+}
+function run_clear_zk()
+{
+    INSTALL_DIR=`pwd`/.zk_install
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+            -h|--help)
+                usage_clear_zk
+                exit 0
+                ;;
+            -d|--install_dir)
+                INSTALL_DIR=$2
+                shift
+                ;;
+            *)
+                echo "ERROR: unknown option \"$key\""
+                echo
+                usage_clear__zk
+                exit -1
+                ;;
+        esac
+        shift
+    done
+    INSTALL_DIR="$INSTALL_DIR" $scripts_dir/clear_zk.sh
+}
+
+#####################
 ## format
 #####################
 function usage_format()
@@ -299,6 +337,9 @@ case $cmd in
     stop_zk)
         shift
         run_stop_zk $* ;;
+    clear_zk)
+        shift
+        run_clear_zk $* ;;
     format)
         shift
         run_format $* ;;
