@@ -185,16 +185,17 @@ namespace dsn {
                         {
                             derror("invalid udp packet");
                         }
-                    
-                        message->to_address = address();
-
-                        if (message->header->context.u.is_request)
-                        {
-                            on_recv_request(message, 0);
-                        }
                         else
                         {
-                            on_recv_reply(message->header->id, message, 0);
+                            message->to_address = address();
+                            if (message->header->context.u.is_request)
+                            {
+                                on_recv_request(message, 0);
+                            }
+                            else
+                            {
+                                on_recv_reply(message->header->id, message, 0);
+                            }
                         }
                     }
 

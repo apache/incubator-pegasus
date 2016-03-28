@@ -68,6 +68,7 @@ namespace dsn
         int read_buffer_capacity() const;
 
         // after read, see if we can compose a message
+        // if read_next returns -1, it indicates that the message is with wrong checksum
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer
@@ -133,6 +134,8 @@ namespace dsn
 
     class dsn_message_parser : public message_parser
     {
+    private:
+        bool _header_checked;
     public:
         dsn_message_parser(int buffer_block_size, bool is_write_only);
 

@@ -241,10 +241,16 @@ namespace dsn
                 {
                     message_ex* msg = _parser->get_message_on_receive(sz, read_next);
 
-                    while (msg != nullptr)
+                    while (read_next != -1  && msg != nullptr)
                     {
                         this->on_read_completed(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
+                    }
+                    if (read_next == -1)
+                    {
+                        derror("(s = %d) recv failed, err = %s", _socket, "message wrong checksum");
+                        on_failure();
+                        break;
                     }
                 }
                 else
