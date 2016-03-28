@@ -165,7 +165,7 @@ namespace rDSN.Tron.Compiler
         {
             foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
             {
-                _builder.AppendLine("private " + s.Value.Schema.FullName.GetCompilableTypeName() + "Client " + s.Key.Member.Name + " = new " + s.Value.Schema.FullName.GetCompilableTypeName() + "Client(new RpcAddress(\"" + s.Value.URL + "\"));");
+                _builder.AppendLine("private " + s.Value.TypeName() + "Client " + s.Key.Member.Name + " = new " + s.Value.TypeName() + "Client(new RpcAddress(\"" + s.Value.URL + "\"));");
                 _builder.AppendLine();
             }
         }
@@ -184,7 +184,7 @@ namespace rDSN.Tron.Compiler
                 string callName = s.Key.Method.Name;
                 string respTypeName = s.Key.Type.GetCompilableTypeName(_rewrittenTypes);
                 string reqTypeName = s.Key.Arguments[0].Type.GetCompilableTypeName(_rewrittenTypes);
-                string call = "Call_" + s.Value.Schema.Name + "_" + callName;
+                string call = "Call_" + s.Value.PlainTypeName() + "_" + callName;
 
                 if (!calls.Add(call + ":" + reqTypeName))
                     continue;

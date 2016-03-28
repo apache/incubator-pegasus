@@ -54,7 +54,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public new ServiceSpecType GetType()
         {
-            return ServiceSpecType.Thrift_0_9;
+            return ServiceSpecType.thrift;
         }
 
         public string[] ToCommonSpec(ServiceSpec spec, string dir)
@@ -88,7 +88,7 @@ namespace rDSN.Tron.LanguageProvider
                 var thriftGenPath = Path.Combine(dir, "thrift");
                 CSharpCompiler.ToDiskAssembly(
                     new string[] { Path.Combine(dir, "ThriftBinaryHelper.cs"), Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") }.Concat(Directory.GetFiles(thriftGenPath, "*.cs", SearchOption.AllDirectories)).ToArray(),
-                    new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "Windows", "Thrift.dll") },
+                    new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Thrift.dll") },
                     new string[] { },
                     Path.Combine(dir, app_name + ".client.dll")
                     );
@@ -226,8 +226,8 @@ namespace rDSN.Tron.LanguageProvider
         {
             var thriftArgName = call.Method.GetParameters()[0].Name;
             var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
-            builder.AppendLine(svc.Schema.Name + "." + call.Method.Name + "_result resp;");
-            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.Schema.Name + "." + call.Method.Name + "_args(){" + upperedThriftArgName + "= req}, out resp);");
+            builder.AppendLine(svc.TypeName() + "." + call.Method.Name + "_result resp;");
+            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.TypeName() + "." + call.Method.Name + "_args(){" + upperedThriftArgName + "= req}, out resp);");
             builder.AppendLine("return resp.Success;");
         }
     }
