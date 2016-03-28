@@ -4,8 +4,7 @@ if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
 cat gtest.filter | while read -r -a line; do
-    echo GTEST_FILTER=\"${line[1]}\" ./dsn.core.tests ${line[0]}
-    echo "============ run dsn.core.tests $test_case ============"
+    echo "============ run dsn.core.tests ${line[0]} with gtest_filter ${line[1]} ============"
     ./clear.sh
     output_xml="${REPORT_DIR}/dsn.core.tests_${test_case/.ini/.xml}"
     export GTEST_OUTPUT="xml:${output_xml}"
