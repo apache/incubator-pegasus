@@ -44,8 +44,12 @@ project(${MY_PROJ_NAME} C CXX)
 # You can manually set MY_PROJ_SRC to include source files under other directories.
 file(GLOB
     MY_PROJ_SRC
+<?php if ($idl_format == "thrift") { ?>
    "${CMAKE_CURRENT_SOURCE_DIR}/thrift/*.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/thrift/*.h"
+<?php } else { ?>
+    ""
+<?php } ?>
 )
 
 # Search mode for source files under CURRENT project directory?
