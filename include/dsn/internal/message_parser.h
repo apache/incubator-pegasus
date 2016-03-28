@@ -68,7 +68,8 @@ namespace dsn
         int read_buffer_capacity() const;
 
         // after read, see if we can compose a message
-        // if read_next returns -1, it indicates that the message is with wrong checksum
+        // if read_next returns -1, it indicates that the message is with wrong checksum, in this caes, the returning
+        // message_ex should be nullptr
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer

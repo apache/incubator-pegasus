@@ -142,10 +142,9 @@ namespace dsn {
                 //we just remove all data received when encounter checksum fail
                 _read_buffer_occupied = 0;
                 return nullptr;
-
-                _header_checked = true;
             }
 
+            _header_checked = true;
             int msg_sz = sizeof(message_header) +
                 message_ex::get_body_length((char*)_read_buffer.data());
 
