@@ -135,23 +135,26 @@ namespace dsn {
 
         if (_read_buffer_occupied >= sizeof(message_header))
         {            
-            if ( !_header_checked && !message_ex::is_right_header((char*)_read_buffer.data()) )
+            if (!_header_checked)
             {
-                derror("receive message header check failed for message");
-                read_next = -1;
-                //we just remove all data received when encounter checksum fail
-                _read_buffer_occupied = 0;
-                return nullptr;
+                if (!message_ex::is_right_header((char*)_read_buffer.data()))
+                {
+                    derror("receive message header check failed for message");
+                    read_next = -1;
+
+                    truncate_read();
+                    return nullptr;
+                }
+                else
+                    _header_checked = true;
             }
 
-            _header_checked = true;
             int msg_sz = sizeof(message_header) +
                 message_ex::get_body_length((char*)_read_buffer.data());
 
             // msg done
             if (_read_buffer_occupied >= msg_sz)
             {
-                _header_checked = false;
                 auto msg_bb = _read_buffer.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
                 if ( !msg->is_right_body(false) )
@@ -160,14 +163,17 @@ namespace dsn {
                     read_next = -1;
                     derror("body check failed for message, id: %d, rpc_name: %s, from: %s",
                           header->id, header->rpc_name, header->from_address.to_string());
-                    //we just remove all data received when encounter checksum fail
-                    _read_buffer_occupied = 0;
+
+                    truncate_read();
+                    _header_checked = false;
                     return nullptr;
                 }
                 else
                 {
                     _read_buffer = _read_buffer.range(msg_sz);
                     _read_buffer_occupied -= msg_sz;
+                    _header_checked = false;
+
                     read_next = sizeof(message_header);
                     return msg;
                 }
