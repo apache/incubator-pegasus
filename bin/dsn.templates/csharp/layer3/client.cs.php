@@ -38,12 +38,12 @@ foreach ($keys as $k => $v)
         // ---------- call <?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
         public void <?=$f->name?>(
-            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
+            <?=$f->get_csharp_request_type_name()?> args,
             int hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
-            s.Write(<?=$f->get_first_param()->name?>);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash, GetPartitionHash(args));
+            s.Write(args);
             s.Flush();
             
             RpcCallOneWay(server != null ? server : _server, s);
@@ -51,14 +51,14 @@ foreach ($keys as $k => $v)
 <?php    } else { ?>
         // - synchronous 
         public ErrorCode <?=$f->name?>(
-            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
+            <?=$f->get_csharp_request_type_name()?> args,
             out <?=$f->get_csharp_return_type()?> resp, 
             int timeout_milliseconds = 0, 
             int hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
-            s.Write(<?=$f->get_first_param()->name?>);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash, GetPartitionHash(args));
+            s.Write(args);
             s.Flush();
             
             var respStream = RpcCallSync(server != null ? server : _server, s);
@@ -77,15 +77,15 @@ foreach ($keys as $k => $v)
         // - asynchronous with on-stack <?=$f->get_csharp_request_type_name()?> and <?=$f->get_csharp_return_type()?> 
         public delegate void <?=$f->name?>Callback(ErrorCode err, <?=$f->get_csharp_return_type()?> resp);
         public void <?=$f->name?>(
-            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
+            <?=$f->get_csharp_request_type_name()?> args,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_hash = 0,
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
-            s.Write(<?=$f->get_first_param()->name?>);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(args));
+            s.Write(args);
             s.Flush();
             
             RpcCallAsync(
@@ -103,15 +103,15 @@ foreach ($keys as $k => $v)
         }        
         
         public SafeTaskHandle <?=$f->name?>2(
-            <?=$f->get_csharp_request_type_name()?> <?=$f->get_first_param()->name?>,
+            <?=$f->get_csharp_request_type_name()?> args,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_hash = 0,
             int request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(<?=$f->get_first_param()->name?>));
-            s.Write(<?=$f->get_first_param()->name?>);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(args));
+            s.Write(args);
             s.Flush();
             
             return RpcCallAsync2(

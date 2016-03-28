@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 
 using global::System;
@@ -14,7 +15,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     [TronService]
     public interface <?=$svc->name?> {
         <?php foreach ($svc->functions as $f) { ?>
-        <?=$f->get_csharp_return_type()?> <?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>);
+        <?=$f->get_csharp_return_type()?> <?=$f->name?>(<?=$f->get_csharp_request_type_name()?> args);
         <?php } ?>
     }
     <?php } ?>
