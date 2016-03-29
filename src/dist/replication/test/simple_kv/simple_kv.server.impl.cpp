@@ -47,7 +47,7 @@ namespace dsn {
                 : _lock(true)
             {
                 _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-                _app_info = dsn_get_app_info_ptr(gpid());
+                _app_info = nullptr;
 
                 ddebug("simple_kv_service_impl inited");
             }
@@ -98,6 +98,8 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
+                _app_info = dsn_get_app_info_ptr(gpid());
+
                 if (s_simple_kv_open_fail)
                 {
                     return ERR_CORRUPTION;
