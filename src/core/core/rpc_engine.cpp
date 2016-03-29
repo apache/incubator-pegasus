@@ -514,8 +514,6 @@ namespace dsn {
     }
 
     //----------------------------------------------------------------------------------------------
-    /*static*/ bool rpc_engine::_message_crc_required;
-
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
         : _config(config), _node(node), _rpc_matcher(this)
     {
@@ -523,9 +521,6 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _message_crc_required = config->get_value<bool>(
-            "network", "message_crc_required", false,
-            "whether crc is enabled for network messages");
     }
     
     //
@@ -780,13 +775,14 @@ namespace dsn {
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto& hdr = *request->header;
+        task_spec* sp = task_spec::get(request->local_rpc_code);
 
         hdr.from_address = primary_address();
         hdr.rpc_id = dsn_random64(
             std::numeric_limits<decltype(hdr.rpc_id)>::min(),
             std::numeric_limits<decltype(hdr.rpc_id)>::max()
             );
-        request->seal(_message_crc_required);
+        request->seal(sp->rpc_message_crc_required);
 
         call_address(request->server_address, request, call);
     }
@@ -847,7 +843,7 @@ namespace dsn {
                         {
                             hdr2->gpid = result.gpid;
                             hdr2->client.hash = dsn_gpid_to_hash(result.gpid);
-                            request->seal(_message_crc_required);
+                            request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
                         }
 
                         call_address(result.address, request, call);
@@ -938,7 +934,7 @@ namespace dsn {
         }
         if (need_seal)
         {
-            request->seal(_message_crc_required);
+            request->seal(sp->rpc_message_crc_required);
         }
 
         // join point and possible fault injection
@@ -978,9 +974,9 @@ namespace dsn {
     void rpc_engine::reply(message_ex* response, error_code err)
     {
         response->header->server.error = err;
-        response->seal(_message_crc_required);
-
         auto sp = task_spec::get(response->local_rpc_code);
+        response->seal(sp->rpc_message_crc_required);
+
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
         
         auto s = response->io_session.get();

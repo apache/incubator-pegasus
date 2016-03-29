@@ -120,8 +120,15 @@ replication_app_base::replication_app_base(replica* replica)
     _dir_learn = replica->dir() + "/learn";
     _batch_state = BS_NOT_BATCH;
 
-    _app_info = nullptr;
     _replica = replica;
+
+    dsn_gpid gd;
+    gd.u.app_id = replica->get_gpid().app_id;
+    gd.u.partition_index = replica->get_gpid().pidx;
+
+    _app_info = dsn_get_app_info_ptr(gd);
+    dassert(_app_info, "");
+    strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir) / sizeof(char));
 
     install_perf_counters();
 }
@@ -212,13 +219,6 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     ::dsn::error_code err = dsn_layer1_app_create(gd, &_app_context);
     if (err == ERR_OK)
     {
-        if (nullptr == _app_info)
-        {
-            _app_info = dsn_get_app_info_ptr(gd);
-            dassert(_app_info, "");
-            strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir) / sizeof(char));
-        }
-
         err = dsn_layer1_app_start(_app_context);
     }
     return err;

@@ -52,7 +52,7 @@ namespace dsn {
                 : _lock(true)
             {
                 _test_file_learning = false;
-                _app_info = nullptr;                
+                _app_info = dsn_get_app_info_ptr(gpid());
             }
 
             // RPC_SIMPLE_KV_READ
@@ -103,8 +103,6 @@ namespace dsn {
             
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _app_info = dsn_get_app_info_ptr(gpid());
-
                 {
                     zauto_lock l(_lock);
                     set_last_durable_decree(0);

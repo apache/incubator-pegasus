@@ -57,19 +57,12 @@ public:
     {
         if (argc < 2)
         {
-            printf ("Usage: <exe> server-host server-port or service-url\n");
+            printf ("Usage: <exe> server-host:server-port or service-url\n");
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
 
-        if (argc == 2)
-        {
-            // mem leak for uri-build, but we don't care here as it is once only
-            _server.assign_uri(dsn_uri_build(argv[1]));
-        }
-        else
-        {
-            _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
-        }
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        _server = url_host_address(argv[1]);
             
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(_server));
@@ -113,7 +106,7 @@ foreach ($_PROG->services as $svc)
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::rpc_address _server;
+    ::dsn::url_host_address _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
     std::unique_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
