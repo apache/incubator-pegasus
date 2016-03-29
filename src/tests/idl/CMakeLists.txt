@@ -23,6 +23,11 @@ set(MY_PROJ_LIB_PATH
 )
 
 # Extra files that will be installed
+
+if (UNIX)
+    set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
+endif ()
+
 set(MY_PROJ_BINDIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
@@ -38,6 +43,8 @@ if (WIN32)
     STRING(REGEX REPLACE "/" "\\\\" WIN_SOURCE_TOP_DIR ${CMAKE_SOURCE_DIR})
     STRING(REGEX REPLACE "/" "\\\\" WIN_BINARY_TOP_DIR ${CMAKE_BINARY_DIR})
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/resources/sbin/mock_install.cmd.template" "${CMAKE_CURRENT_SOURCE_DIR}/resources/sbin/mock_install.cmd")
+else ()
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/resources/sbin/run.sh.template" "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
 endif ()
 
 dsn_add_executable()

@@ -45,7 +45,8 @@ enum Language {lang_cpp, lang_csharp};
 enum IDL{idl_protobuf, idl_thrift};
 enum Format{format_binary, format_json};
 
-std::string ROOT;
+std::string DSN_ROOT;
+std::string RESOURCE_ROOT;
 
 std::string file(const std::string &val)
 {
@@ -82,7 +83,12 @@ void execute(std::string cmd, bool &result)
 
 void copy_file(const std::string& src, const std::string& dst, bool &result)
 {
-    std::string cmd = std::string("copy /Y ") + src + " " + dst;
+#ifdef _WIN32
+    std::string cmd = std::string("copy /Y ");
+#else
+    std::string cmd = std::string("cp -f ");
+#endif
+    cmd += src + " " + dst;
     execute(cmd, result);
 }
 
@@ -94,18 +100,31 @@ void create_dir(const char* dir, bool &result)
 
 void rm_dir(const char* dir, bool &result)
 {
+#ifdef _WIN32
     std::string cmd = std::string("rd /S /Q ") + file(dir);
+#else
+    std::string cmd = std::string("rm -rf ") + file(dir);
+#endif
     execute(cmd, result);
 }
 
 void cmake(Language lang, bool &result)
 {
     create_dir("builder", result);
-    execute(std::string("cd builder && cmake ") + file("../src") + std::string(" -DCMAKE_GENERATOR_PLATFORM=x64"), result);
+    std::string cmake_cmd = std::string("cd builder && cmake ") + file("../src");
+#ifdef _WIN32
+    cmake_cmd += std::string(" -DCMAKE_GENERATOR_PLATFORM=x64");
+#endif
+    execute(cmake_cmd, result);
     if (lang == lang_cpp)
     {
+#ifdef _WIN32
         execute(std::string("msbuild ") + file("builder/counter.sln"), result);
         execute(file("builder/bin/counter/Debug/counter.exe") + " " + file("builder/bin/counter/config.ini"), result);
+#else
+        execute(std::string("cd builder && make "), result);
+        execute(file("builder/bin/counter/counter") + " " + file("builder/bin/counter/config.ini"), result);
+#endif
     }
     else
     {
@@ -116,7 +135,12 @@ void cmake(Language lang, bool &result)
 bool test_code_generation(Language lang, IDL idl, Format format)
 {
     bool result = true;
-    std::string codegen_cmd = combine(ROOT, "rdsn/bin/dsn.cg.bat")\
+#ifdef _WIN32
+    std::string codegen_bash("bin/dsn.cg.bat");
+#else
+    std::string codegen_bash("bin/dsn.cg.sh");
+#endif
+    std::string codegen_cmd = combine(DSN_ROOT, codegen_bash)\
         + std::string(" counter.")\
         + (idl == idl_protobuf ? "proto" : "thrift")\
         + (lang == lang_cpp ? " cpp" : " csharp")\
@@ -125,7 +149,7 @@ bool test_code_generation(Language lang, IDL idl, Format format)
         + " single";
     create_dir("src", result);
     execute(codegen_cmd, result);
-    std::vector <std::string> src_files;
+    std::vector<std::string> src_files;
     std::string src_subdir(idl == idl_protobuf ? "protobuf" : "thrift");
     std::string src_root(lang == lang_cpp ? "repo/cpp" : "repo/csharp");
     if (lang == lang_cpp)
@@ -146,7 +170,7 @@ bool test_code_generation(Language lang, IDL idl, Format format)
     }
     for (auto i : src_files)
     {
-        copy_file(combine(combine(ROOT, src_root), i), file("src"), result);
+        copy_file(combine(combine(RESOURCE_ROOT, src_root), i), file("src"), result);
     }
     cmake(lang, result);
     rm_dir("data", result);
@@ -158,10 +182,15 @@ bool test_code_generation(Language lang, IDL idl, Format format)
 bool prepare()
 {
     bool ret = true;
-    copy_file(combine(ROOT, "repo/counter.proto"), file("./"), ret);
-    copy_file(combine(ROOT, "repo/counter.proto.annotations"), file("./"), ret);
-    copy_file(combine(ROOT, "repo/counter.thrift"), file("./"), ret);
-    copy_file(combine(ROOT, "repo/counter.thrift.annotations"), file("./"), ret);
+    std::vector<std::string> idl_files;
+    idl_files.push_back("repo/counter.proto");
+    idl_files.push_back("repo/counter.proto.annotations");
+    idl_files.push_back("repo/counter.thrift");
+    idl_files.push_back("repo/counter.thrift.annotations");
+    for (auto i : idl_files)
+    {
+        copy_file(combine(RESOURCE_ROOT, i), file("./"), ret);
+    }
     return ret;
 }
 
@@ -175,6 +204,8 @@ TEST(TEST_PROTOBUF_HELPER, CPP_JSON)
     EXPECT_TRUE(test_code_generation(lang_cpp, idl_protobuf, format_json));
 }
 
+#ifdef WIN32
+
 TEST(TEST_PROTOBUF_HELPER, CSHARP_BINARY)
 {
     EXPECT_TRUE(test_code_generation(lang_csharp, idl_protobuf, format_binary));
@@ -184,6 +215,8 @@ TEST(TEST_PROTOBUF_HELPER, CSHARP_JSON)
 {
     EXPECT_TRUE(test_code_generation(lang_csharp, idl_protobuf, format_json));
 }
+
+#endif
 
 TEST(TEST_THRIFT_HELPER, CPP_BINARY)
 {
@@ -195,6 +228,8 @@ TEST(TEST_THRIFT_HELPER, CPP_JSON)
     EXPECT_TRUE(test_code_generation(lang_cpp, idl_thrift, format_json));
 }
 
+#ifdef WIN32
+
 TEST(TEST_THRIFT_HELPER, CSHARP_BINARY)
 {
     EXPECT_TRUE(test_code_generation(lang_csharp, idl_thrift, format_binary));
@@ -205,16 +240,23 @@ TEST(TEST_THRIFT_HELPER, CSHARP_JSON)
     EXPECT_TRUE(test_code_generation(lang_csharp, idl_thrift, format_json));
 }
 
+#endif
+
 GTEST_API_ int main(int argc, char **argv)
 {
-    if (argc != 2)
+    if (argc != 3)
     {
         std::cout << "invalid parameters" << std::endl;
         return 1;
     }
-    // ROOT is the path where directory "rdsn" and "repo" exist
-    ROOT = std::string(argv[1]);
-    prepare();
+    // DSN_ROOT is the path where directory "rdsn" exists
+    // RESOURCE_ROOT is the path where directory "repo" exists
+    DSN_ROOT = std::string(argv[1]);
+    RESOURCE_ROOT = std::string(argv[2]);
+    if (!prepare())
+    {
+        return 1;
+    }
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
