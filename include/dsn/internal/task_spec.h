@@ -207,6 +207,8 @@ public:
     bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
     network_header_format  rpc_call_header_format;
     rpc_channel            rpc_call_channel;
+    bool                   rpc_message_crc_required;
+
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
     throttling_mode_t      rpc_request_throttling_mode; // 
@@ -267,6 +269,7 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD(bool, bool, randomize_timer_delay_if_zero, false, "whether to randomize the timer delay to random(0, timer_interval), if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
+    CONFIG_FLD(bool, bool, rpc_message_crc_required, false, "whether to calculate the crc checksum when send request/response")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
     CONFIG_FLD_ENUM(throttling_mode_t, rpc_request_throttling_mode, TM_NONE, TM_INVALID, false, "throttling mode for rpc requets: TM_NONE, TM_REJECT, TM_DELAY when queue length > pool.queue_length_throttling_threshold")

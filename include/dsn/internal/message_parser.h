@@ -67,7 +67,7 @@ namespace dsn
         void* read_buffer_ptr(int read_next);
         int read_buffer_capacity() const;
 
-        // after read, see if we can compose a message
+        // after read, see if we can compose a message 
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer
@@ -133,6 +133,8 @@ namespace dsn
 
     class dsn_message_parser : public message_parser
     {
+    private:
+        bool _header_checked;
     public:
         dsn_message_parser(int buffer_block_size, bool is_write_only);
 
@@ -141,5 +143,11 @@ namespace dsn
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 
         virtual int get_send_buffers_count(message_ex* msg) override;
+
+        virtual void truncate_read() override
+        {
+            _header_checked = false;
+            _read_buffer_occupied = 0;
+        }
     };
 }

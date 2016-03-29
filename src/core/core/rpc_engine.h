@@ -193,7 +193,6 @@ private:
     std::unique_ptr<uri_resolver_manager>            _uri_resolver_mgr;
     
     volatile bool                 _is_running;
-    static bool                   _message_crc_required;
 };
 
 // ------------------------ inline implementations --------------------

@@ -3,12 +3,13 @@
 if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
-for test_case in `ls config-test*.ini`; do
-    echo "============ run dsn.core.tests $test_case ============"
+cat gtest.filter | while read -r -a line; do
+    echo "============ run dsn.core.tests ${line[0]} with gtest_filter ${line[1]} ============"
     ./clear.sh
     output_xml="${REPORT_DIR}/dsn.core.tests_${test_case/.ini/.xml}"
     export GTEST_OUTPUT="xml:${output_xml}"
-    ./dsn.core.tests ${test_case} <command.txt
+    GTEST_FILTER=${line[1]} ./dsn.core.tests ${line[0]} < command.txt
+
     if [ $? -ne 0 ]; then
         echo "run dsn.core.tests $test_case failed"
         echo "---- ls ----"
