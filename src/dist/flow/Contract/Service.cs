@@ -93,9 +93,8 @@ namespace rDSN.Tron.Contract
     /// </summary>
     public class Service
     {
-        public Service(Type schema, string package, string url, string name = "")
+        public Service(string package, string url, string name = "")
         {
-            Schema = schema;
             PackageName = package;
             URL = url;
             Name = ((name != null && name != "") ? name : url);
@@ -103,12 +102,7 @@ namespace rDSN.Tron.Contract
             Properties = new ServiceProperty();
             Spec = new ServiceSpec();
         }
-
-        /// <summary>
-        /// schema of the service, with which we know what methods and streams it provides.
-        /// </summary>
-        public Type Schema { get; private set; }
-
+        
         /// <summary>
         /// package name for this service (the package is published and stored in a service store)
         /// with the package, the service can be deployed with a deployment service
@@ -136,6 +130,17 @@ namespace rDSN.Tron.Contract
         /// </summary>
         public ServiceSpec Spec { get; private set; }
 
+        public string TypeName ()
+        {
+            return (GetType().Namespace + "." + GetType().Name.Substring("Service_".Length));
+        }
+
+        public string PlainTypeName ()
+        {
+            return TypeName().Replace('.', '_');
+        }
+
+
         public ServiceSpec ExtractSpec()
         {
             if (Spec.Directory == "")
@@ -155,7 +160,7 @@ namespace rDSN.Tron.Contract
                 {
                     if (!File.Exists(Path.Combine(Spec.Directory, f)))
                     {
-                        var stream = Schema.Assembly.GetManifestResourceStream(f);
+                        var stream = GetType().Assembly.GetManifestResourceStream(f);
                         using (Stream file = File.Create(Path.Combine(Spec.Directory, f)))
                         {
                             int len;

@@ -53,7 +53,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public ThriftTranslator() : base()
         {
-            specType = ServiceSpecType.Thrift_0_9;
+            specType = ServiceSpecType.thrift;
         }
 
         public ThriftTranslator(ServiceSpecType t) : base(t) { }
