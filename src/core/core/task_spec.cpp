@@ -87,7 +87,8 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
     on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str()),
     rpc_call_channel(RPC_CHANNEL_TCP),
-    rpc_call_header_format(NET_HDR_DSN)
+    rpc_call_header_format(NET_HDR_DSN),
+    rpc_message_crc_required(false)
 {
     dassert (
         strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 
