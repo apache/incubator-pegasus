@@ -24,22 +24,22 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/dist/replication.h>
+
 # include "simple_kv.code.definition.h"
 # include <iostream>
 
 namespace dsn { namespace replication { namespace test { 
 class simple_kv_service 
-    : public ::dsn::replication::replication_app_base
+    : public serverlet<simple_kv_service>
 {
 public:
-    simple_kv_service(::dsn::replication::replica* replica) 
-        : ::dsn::replication::replication_app_base(replica)
+    simple_kv_service()
+        : ::dsn::serverlet<simple_kv_service>("simple_kv")
     {
         open_service();
     }
-    
-    virtual ~simple_kv_service() 
+
+    virtual ~simple_kv_service()
     {
         close_service();
     }

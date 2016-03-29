@@ -42,16 +42,13 @@
 
 static void dsn_app_registration()
 {
-    // register replication application provider
-    // dsn::replication::register_replica_provider< ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
-
     // register all possible services
-    dsn::register_app_with_type_1_replication_support< ::dsn::replication::application::simple_kv_service_impl>("simple-kv");
+    dsn::register_app_with_type_1_replication_support< ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
     
     dsn::register_app< ::dsn::replication::application::simple_kv_client_app>("client");
     dsn::register_app< ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 
-    dsn::replication::install_checkers();
+    //dsn::replication::install_checkers();
 }
 
 # if defined(DSN_RUN_USE_SVCHOST)

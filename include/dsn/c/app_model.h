@@ -293,30 +293,30 @@ enum dsn_chkpt_apply_mode
     DSN_CHKPT_LEARN
 };
 
-typedef dsn_error_t (*dsn_layer2_checkpoint)(
+typedef dsn_error_t (*dsn_app_checkpoint)(
     void* ///< context from dsn_app_create
     );
 
-typedef dsn_error_t(*dsn_layer2_checkpoint_async)(
+typedef dsn_error_t(*dsn_app_checkpoint_async)(
     void* ///< context from dsn_app_create
     );
 
-typedef int(*dsn_layer2_prepare_learn_request)(
+typedef int(*dsn_app_prepare_get_checkpoint)(
     void*,    ///< context from dsn_app_create
     void*,    ///< buffer for filling in learn request
     int       ///< buffer capacity
     );
 
-typedef int(*dsn_layer2_get_checkpoint)(
+typedef int(*dsn_app_get_checkpoint)(
     void*,    ///< context from dsn_app_create
     int64_t,  ///< start decree
-    void*,    ///< learn request from prepare_learn_request
+    void*,    ///< learn request from prepare_get_checkpoint
     int,      ///< learn request size
     dsn_app_learn_state*, ///< learn state buffer to be filled in
     int       ///< learn state buffer capacity
     );
 
-typedef int(*dsn_layer2_apply_checkpoint)(
+typedef int(*dsn_app_apply_checkpoint)(
     void*,                      ///< context from dsn_app_create
     const dsn_app_learn_state*, ///< learn state
     dsn_chkpt_apply_mode        ///< checkpoint apply mode
@@ -336,6 +336,10 @@ struct dsn_app_cross_layer_shared_info_type_1
     int64_t last_committed_decree;
     // from layer 1 to layer 2
     int64_t last_durable_decree;
+    // physical error (e.g., io error) indicates the app needs to be dropped
+    int32_t  physical_error;
+
+    int32_t  dummy;
 };
 
 /*!
@@ -364,11 +368,11 @@ typedef struct dsn_app
 
     struct layer2_app_type_1_callbacks
     {
-        dsn_layer2_checkpoint              chkpt;
-        dsn_layer2_checkpoint_async        chkpt_async;
-        dsn_layer2_prepare_learn_request   learn_prepare; ///< optional
-        dsn_layer2_get_checkpoint          chkpt_get;
-        dsn_layer2_apply_checkpoint        chkpt_apply;
+        dsn_app_checkpoint              chkpt;
+        dsn_app_checkpoint_async        chkpt_async;
+        dsn_app_prepare_get_checkpoint  checkpoint_get_prepare; ///< optional
+        dsn_app_get_checkpoint          chkpt_get;
+        dsn_app_apply_checkpoint        chkpt_apply;
     } layer2_apps_type_1;
 
     /*! TODO: layer 3 app definition */

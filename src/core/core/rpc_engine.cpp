@@ -210,25 +210,14 @@ namespace dsn {
                 }
             }
 
-            // injector
+            // failure injection not applied
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
-
-                if (ERR_OK == err)
-                    call->enqueue(err, reply);
-                else
-                {
-                    call->enqueue(err, nullptr);
-
-                    // because (1) initially, the ref count is zero
-                    //         (2) upper apps may call add_ref already
-                    call->add_ref();
-                    call->release_ref();
-                }
+                call->enqueue(err, reply);
             }
 
-            // release the task when necessary
+            // failure injection applied
             else
             {
                 ddebug("rpc reply %s is dropped (fault inject), rpc_id = %016llx",
@@ -242,11 +231,6 @@ namespace dsn {
                 dassert(reply->get_count() == 0,
                     "reply should not be referenced by anybody so far");
                 delete reply;
-
-                // because (1) initially, the ref count is zero
-                //         (2) upper apps may call add_ref already
-                call->add_ref();
-                call->release_ref();
             }
         }
 
@@ -404,6 +388,17 @@ namespace dsn {
             h = new std::pair<rpc_handler_info*, utils::rw_lock_nr>();
             h->first = nullptr;
         }
+    }
+
+    rpc_server_dispatcher::~rpc_server_dispatcher()
+    {
+        for (auto& h : _vhandlers)
+        {
+            delete h;
+        }
+        _vhandlers.clear();
+
+        dassert(_handlers.size() == 0, "please make sure all rpc handlers are unregistered at this point");
     }
 
     bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
@@ -732,7 +727,8 @@ namespace dsn {
 
             // handle replication
             auto sp = task_spec::get(code);
-            if (sp->rpc_request_layer2_handler_required)
+            //if (sp->rpc_request_layer2_handler_required)
+            if (msg->header->gpid.value != 0)
             {
                 _node->handle_l2_rpc_request(msg->header->gpid, sp->rpc_request_is_write_operation, (dsn_message_t)(msg), delay_ms);
                 return;
@@ -1034,6 +1030,10 @@ namespace dsn {
         }
 
         // not connetion oriented network, we always use the named network to send msgs
+        else if (response->to_address.is_invalid())
+        {
+            no_fail = false;
+        }
         else
         {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,

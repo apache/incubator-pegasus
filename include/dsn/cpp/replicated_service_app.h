@@ -67,7 +67,7 @@ namespace dsn
         //   <= capacity - learn request is prepared ready
         //   > capacity - buffer is not enough, caller should allocate a bigger buffer and try again
         //
-        virtual int prepare_learn_request(void* buffer, int capacity) { return 0; }
+        virtual int prepare_get_checkpoint(void* buffer, int capacity) { return 0; }
 
         // 
         // Learn [start, infinite) from remote replicas (learner)
@@ -124,10 +124,10 @@ namespace dsn
             return sapp->checkpoint_async();
         }
 
-        static int app_prepare_learn_request(void* app, void* buffer, int capacity)
+        static int app_prepare_get_checkpoint(void* app, void* buffer, int capacity)
         {
             auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->prepare_learn_request(buffer, capacity);
+            return sapp->prepare_get_checkpoint(buffer, capacity);
         }
         
         static dsn_error_t app_get_checkpoint(
@@ -164,7 +164,7 @@ namespace dsn
 
         app.layer2_apps_type_1.chkpt = replicated_service_app_type_1::app_checkpoint;
         app.layer2_apps_type_1.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
-        app.layer2_apps_type_1.learn_prepare = replicated_service_app_type_1::app_prepare_learn_request;
+        app.layer2_apps_type_1.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
         app.layer2_apps_type_1.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2_apps_type_1.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
 

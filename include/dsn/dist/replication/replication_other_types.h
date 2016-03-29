@@ -177,6 +177,14 @@ namespace dsn {
                    pc1.secondaries == pc2.secondaries &&
                    pc1.last_committed_decree == pc2.last_committed_decree;
         }
+        
+        class replica_helper
+        {
+        public:
+            static bool remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList);
+            static bool get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config);
+            static void load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& servers, const char* section = "replication.meta_servers");
+        };
     }
 
     inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)

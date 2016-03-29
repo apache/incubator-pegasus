@@ -157,13 +157,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
 
-    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this));
-    if (nullptr == _app)
-    {
-        derror( "%s: app type %s not found", name(), _app_type.c_str());
-        return ERR_OBJECT_NOT_FOUND;
-    }
-
+    _app.reset(new replication_app_base(this));
     error_code err = _app->open_internal(
         this,
         create_new
@@ -174,8 +168,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (!_options->log_private_disabled
-            || !_app->is_delta_state_learning_supported())
+        if (!_options->log_private_disabled/*
+            || !_app->is_delta_state_learning_supported()*/)
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
 

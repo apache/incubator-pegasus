@@ -74,9 +74,9 @@ namespace dsn {
             if (status() != PS_PRIMARY && status() != PS_SECONDARY)
                 return;
 
-            // no need to checkpoint
-            if (_app->is_delta_state_learning_supported())
-                return;
+            //// no need to checkpoint
+            //if (_app->is_delta_state_learning_supported())
+            //    return;
 
             auto err = _app->checkpoint_async();
             if (err != ERR_NOT_IMPLEMENTED)

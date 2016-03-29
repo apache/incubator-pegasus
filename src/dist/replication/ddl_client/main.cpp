@@ -1,4 +1,5 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
+
 #include <iostream>
 
 using namespace dsn::replication;
@@ -104,7 +105,7 @@ int main(int argc, char** argv)
     std::cout << "Init succeed" << std::endl;
 
     std::vector<dsn::rpc_address> meta_servers;
-    dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+    dsn::replication::replica_helper::load_meta_servers(meta_servers);
     replication_ddl_client client(meta_servers);
     std::string command = argv[2];
 

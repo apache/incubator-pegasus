@@ -116,40 +116,22 @@ error_code replica_init_info::store(const char* file)
 
 replication_app_base::replication_app_base(replica* replica)
 {
-    _physical_error = 0;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
-    _is_delta_state_learning_supported = false;
     _batch_state = BS_NOT_BATCH;
 
-    dsn_gpid gd;
-    gd.u.app_id = replica->get_gpid().app_id;
-    gd.u.partition_index = replica->get_gpid().pidx;
-
-    _app_info = dsn_get_app_info_ptr(gd);
-    dassert(_app_info, "");
-    strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir)/sizeof(char));
-
+    _app_info = nullptr;
     _replica = replica;
-
-    if (!dsn::utils::filesystem::create_directory(_dir_data))
-    {
-        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
-    }
-
-    if (!dsn::utils::filesystem::create_directory(_dir_learn))
-    {
-        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
-    }
 
     install_perf_counters();
 }
 
 void replication_app_base::reset_states()
 {
-    _physical_error = 0;
     _batch_state = BS_NOT_BATCH;
     _app_info->info.type1.last_committed_decree = 0;
+    _app_info->info.type1.last_durable_decree = 0;
+    _app_info->info.type1.physical_error = 0;
 }
 
 const char* replication_app_base::replica_name() const
@@ -182,7 +164,7 @@ void replication_app_base::install_perf_counters()
 
 void replication_app_base::reset_counters_after_learning()
 {
-    _app_commit_decree.set(_last_committed_decree.load());
+    _app_commit_decree.set(last_committed_decree());
 }
 
 error_code replication_app_base::open_internal(replica* r, bool create_new)
@@ -192,6 +174,16 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         auto& dir = data_dir();
         dsn::utils::filesystem::remove_path(dir);
         dsn::utils::filesystem::create_directory(dir);
+    }
+    
+    if (!dsn::utils::filesystem::create_directory(_dir_data))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+    }
+
+    if (!dsn::utils::filesystem::create_directory(_dir_learn))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
     }
 
     auto err = open();
@@ -203,10 +195,10 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
         }
+
+        _app_commit_decree.add(last_committed_decree());
     }
-
-    _app_commit_decree.add(last_committed_decree());
-
+    
     return err;
 }
 
@@ -220,12 +212,19 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     ::dsn::error_code err = dsn_layer1_app_create(gd, &_app_context);
     if (err == ERR_OK)
     {
+        if (nullptr == _app_info)
+        {
+            _app_info = dsn_get_app_info_ptr(gd);
+            dassert(_app_info, "");
+            strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir) / sizeof(char));
+        }
+
         err = dsn_layer1_app_start(_app_context);
     }
     return err;
 }
 
-void replication_app_base::prepare_learn_request(/*out*/ ::dsn::blob& learn_req)
+void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req)
 {
     int size = 4096;
     void* buffer = dsn_transient_malloc(size);
@@ -382,10 +381,10 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             // empty mutation write
         }
 
-        if (_physical_error != 0)
+        if (_app_info->info.type1.physical_error != 0)
         {
             derror("%s: physical error %d occurs in replication local app %s",
-                   _replica->name(), _physical_error, data_dir().c_str());
+                   _replica->name(), _app_info->info.type1.physical_error, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
         }
     }

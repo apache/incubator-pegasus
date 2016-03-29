@@ -35,6 +35,7 @@
 
 # include "client.h"
 # include "case.h"
+# include <dsn/dist/replication/replication_other_types.h>
 
 # include <sstream>
 
@@ -60,9 +61,18 @@ simple_kv_client_app::~simple_kv_client_app()
         return ::dsn::ERR_INVALID_PARAMETERS;
 
     std::vector<rpc_address> meta_servers;
-    ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+    replica_helper::load_meta_servers(meta_servers);
 
-    _simple_kv_client.reset(new simple_kv_client_wrapper(meta_servers, argv[1]));
+    rpc_address _meta_server_group;
+    _meta_server_group.assign_group(dsn_group_build("meta-servers"));
+    for (auto& ms : meta_servers)
+    {
+        dsn_group_add(_meta_server_group.group_handle(), ms.c_addr());
+    }
+
+    // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+    _service_addr = url_host_address(argv[1]);
+    _simple_kv_client.reset(new simple_kv_client(_service_addr));
 
     dsn::tasking::enqueue(
             LPC_SIMPLE_KV_TEST,
@@ -139,7 +149,14 @@ void simple_kv_client_app::begin_write(int id, const std::string& key, const std
 
 void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node)
 {
-    _simple_kv_client->send_config_to_meta(receiver, type, node);
+    dsn_message_t request = dsn_msg_create_request(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND, 30000);
+
+    ::marshall(request, g_default_gpid);
+    ::marshall(request, receiver);
+    ::marshall(request, type);
+    ::marshall(request, node);
+
+    dsn_rpc_call_one_way(_meta_server_group.c_addr(), request);
 }
 
 struct read_context

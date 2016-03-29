@@ -178,7 +178,7 @@ void replica::init_learn(uint64_t signature)
     request.last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request.learner = _stub->_primary_address;
     request.signature = _potential_secondary_states.learning_signature;
-    _app->prepare_learn_request(request.app_specific_learn_request);
+    _app->prepare_get_checkpoint(request.app_specific_learn_request);
 
     ddebug(
         "%s: init_learn[%016llx]: learnee = %s, learn duration = %" PRIu64 " ms, local_committed_decree = %" PRId64 ", "
@@ -348,8 +348,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
 
     // learn delta state or checkpoint
     // in this case, the state on the PS is still incomplete
-    else if (_app->is_delta_state_learning_supported() 
-        || learn_start_decree <= _app->last_durable_decree())
+    else if (/*_app->is_delta_state_learning_supported() 
+        ||*/ learn_start_decree <= _app->last_durable_decree())
     {
         ::dsn::error_code err = _app->get_checkpoint(
             learn_start_decree, 

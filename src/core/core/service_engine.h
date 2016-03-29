@@ -70,9 +70,9 @@ public:
 
     error_code destroy_layer1_app(void* app_context, bool cleanup);
 
-    bool  rpc_register_handler(void* app_context, rpc_handler_info* handler);
+    bool  rpc_register_handler(dsn_gpid gpid, rpc_handler_info* handler);
 
-    rpc_handler_info* rpc_unregister_handler(void* app_context, dsn_task_code_t rpc_code);
+    rpc_handler_info* rpc_unregister_handler(dsn_gpid gpid, dsn_task_code_t rpc_code);
 
     dsn_app_info* get_app_info(dsn_gpid gpid);
 
@@ -147,8 +147,8 @@ public:
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
 
-    bool  rpc_register_handler(rpc_handler_info* handler, void* layer1_app_context = nullptr);
-    rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, void* layer1_app_context = nullptr);
+    bool  rpc_register_handler(rpc_handler_info* handler, dsn_gpid gpid);
+    rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
 
     dsn_app_info* get_l1_info() { return &_layer1_app_info; }
     layer2_handler_core& get_l2_handler() { return _layer2_handler; }

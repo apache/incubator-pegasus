@@ -45,7 +45,7 @@ namespace test {
     class test_checker;
 }
 class replication_service_app :
-    public ::dsn::dist::layer2_handler
+    public ::dsn::layer2_handler
 {
 public:
     replication_service_app();

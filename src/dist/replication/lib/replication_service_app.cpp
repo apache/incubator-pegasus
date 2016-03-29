@@ -36,18 +36,23 @@
 
 # include "replication_common.h"
 # include "replica_stub.h"
+# include <dsn/dist/replication/replication_service_app.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "replica.service_app"
 
-// TODO: enabled after server-side layer2 application mode is done
-//# include <dsn/internal/module_init.cpp.h>
-//
-//MODULE_INIT_BEGIN
-//    dsn::register_app< ::dsn::replication::replication_service_app>("meta");
-//MODULE_INIT_END
+# ifdef DSN_REPLICATION_TYPE_1_DYNAMIC_LIB
+
+# include <dsn/internal/module_init.cpp.h>
+
+MODULE_INIT_BEGIN
+    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
+MODULE_INIT_END
+
+# endif
+
 
 namespace dsn { namespace replication {
 

@@ -43,13 +43,6 @@ namespace dsn
 {
     namespace dist
     {
-        //error code
-        DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
-        DEFINE_ERR_CODE(ERR_APP_EXIST)
-        DEFINE_ERR_CODE(ERR_APP_NOT_EXIST)
-        DEFINE_ERR_CODE(ERR_BUSY_CREATING)
-        DEFINE_ERR_CODE(ERR_BUSY_DROPPING)
-
 #pragma pack(push, 4)
         class partition_resolver_simple
             : public partition_resolver,

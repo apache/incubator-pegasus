@@ -47,7 +47,7 @@ replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_addres
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
-dsn::error_code replication_client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::string& package_id, bool is_stateless)
+dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::string& package_id, bool is_stateless)
 {
     if(partition_count < 1)
     {

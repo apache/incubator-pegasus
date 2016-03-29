@@ -92,7 +92,18 @@ public:
     //
     error_code close(bool clear_state)
     {
-        return dsn_layer1_app_destroy(_app_context, clear_state);
+        if (_app_context)
+        {
+            auto ctx = _app_context;
+            _app_info = nullptr;
+            _app_context = nullptr;
+
+            return dsn_layer1_app_destroy(ctx, clear_state);
+        }
+        else
+        {
+            return ERR_SERVICE_NOT_ACTIVE;
+        }
     }
 
     //
@@ -125,7 +136,7 @@ public:
     // prepare an app-specific learning request (on learner, to be sent to learneee
     // and used by method get_checkpoint), so that the learning process is more efficient
     //
-    void prepare_learn_request(/*out*/ ::dsn::blob& learn_req);
+    void prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req);
 
     // 
     // Learn [start, infinite) from remote replicas (learner)
@@ -177,14 +188,9 @@ public:
     const char* replica_name() const;
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
-    bool is_delta_state_learning_supported() const { return _is_delta_state_learning_supported; }
     ::dsn::replication::decree last_committed_decree() const { return _app_info->info.type1.last_committed_decree; }
     void* app_context() { return _app_context; }
-    //
-    // set physical error (e.g., disk error) so that the app is dropped by replication later
-    //
-    void set_physical_error(int err) { _physical_error = err; }
-    void set_delta_state_learning_supported() { _is_delta_state_learning_supported = true; }
+    void reset_counters_after_learning();
 
 protected:
 
@@ -219,8 +225,6 @@ private:
     std::string _dir_learn;
     replica*    _replica;
 
-    int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
-    bool        _is_delta_state_learning_supported;
     replica_init_info    _info;
     batch_state         _batch_state;
     dsn_app_info *_app_info;

@@ -686,17 +686,17 @@ extern DSN_API bool          dsn_rpc_register_handler(
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
                                 void* context,
-                                void* layer1_app_context DEFAULT(nullptr)
+                                dsn_gpid gpid DEFAULT(dsn_gpid{ 0 })
                                 );
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref dsn_rpc_register_handler  */
 extern DSN_API void*         dsn_rpc_unregiser_handler(
                                 dsn_task_code_t code,
-                                void* layer1_app_context DEFAULT(nullptr)
+                                dsn_gpid gpid DEFAULT(dsn_gpid{ 0 })
                                 );
 
 /*! reply with a response which is created using dsn_msg_create_response */
-extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+extern DSN_API void          dsn_rpc_reply(dsn_message_t response, dsn_error_t err DEFAULT(0));
 
 /*! forward the request to another server instead */
 extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);

@@ -39,16 +39,6 @@
 
 namespace dsn { namespace replication { namespace test {
 
-class simple_kv_client_wrapper : public simple_kv_client
-{
-public:
-    simple_kv_client_wrapper(
-        const std::vector<rpc_address>& meta_servers,
-        const char* app_name)
-        : simple_kv_client(meta_servers, app_name) {}
-    virtual ~simple_kv_client_wrapper() {}
-};
-
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
@@ -65,6 +55,8 @@ public:
     void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node);
 private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
+    rpc_address _meta_server_group;
+    url_host_address _service_addr;
 };
 
 }}}

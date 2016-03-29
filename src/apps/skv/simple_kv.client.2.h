@@ -12,10 +12,17 @@ public:
     simple_kv_client2() { }
     virtual ~simple_kv_client2() {}
 
-    // from requests to partition index
+    // from requests to partition hash
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-    virtual uint64_t get_key_hash(const std::string& key) { return 0; }
-    virtual uint64_t get_key_hash(const kv_pair& key) { return 0; }
+    virtual uint64_t get_key_hash(const std::string& key) 
+    {
+        return dsn_crc64_compute(key.c_str(), key.size(), 0);
+    }
+
+    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) 
+    {
+        return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
+    }
  
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
     // - synchronous 

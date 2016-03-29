@@ -607,7 +607,13 @@ DSN_API dsn_address_t dsn_primary_address()
     return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
-DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param, void* layer1_app_context)
+DSN_API bool dsn_rpc_register_handler(
+    dsn_task_code_t code,
+    const char* name, 
+    dsn_rpc_request_handler_t cb, 
+    void* param, 
+    dsn_gpid gpid
+    )
 {
     ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
@@ -616,7 +622,7 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
 
     h->add_ref();
 
-    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, layer1_app_context);
+    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, gpid);
     if (!r)
     {
         delete h;
@@ -624,9 +630,9 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
     return r;
 }
 
-DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, void* layer1_app_context)
+DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, dsn_gpid gpid)
 {
-    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, layer1_app_context);
+    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, gpid);
     void* param = nullptr;
 
     if (nullptr != h)
@@ -701,10 +707,10 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn_message_t response)
+DSN_API void dsn_rpc_reply(dsn_message_t response, dsn_error_t err)
 {
     auto msg = ((::dsn::message_ex*)response);
-    ::dsn::task::get_current_rpc()->reply(msg);
+    ::dsn::task::get_current_rpc()->reply(msg, err);
 }
 
 DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
@@ -1396,4 +1402,77 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));
     }
     return i;
+}
+
+
+DSN_API dsn_error_t dsn_layer1_app_create(dsn_gpid gpid, /*our*/ void** app_context)
+{
+    return ::dsn::task::get_current_node2()->get_l2_handler().create_layer1_app(gpid, app_context);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_start(void* app_context)
+{
+    return ::dsn::task::get_current_node2()->get_l2_handler().start_layer1_app(app_context);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_destroy(void* app_context, bool cleanup)
+{
+    return ::dsn::task::get_current_node2()->get_l2_handler().destroy_layer1_app(app_context, cleanup);
+}
+
+DSN_API void dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t msg, bool exec_inline)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+
+    if (exec_inline)
+    {
+        app->server_dispatcher->on_request_with_inline_execution((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
+    }
+    else
+    {
+        auto tsk = app->server_dispatcher->on_request((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
+        if (tsk)
+            tsk->enqueue();
+        else
+        {
+            dassert(false, "to be handled");
+        }
+    }
+}
+
+DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.chkpt(app->app_context);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.chkpt_async(app->app_context);
+}
+
+DSN_API int dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.checkpoint_get_prepare(app->app_context, buffer, capacity);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
+    void* app_context,
+    int64_t start,
+    void*   learn_request,
+    int     learn_request_size,
+    /* inout */ dsn_app_learn_state* state,
+    int state_capacity
+    )
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.chkpt_get(app->app_context, start, learn_request, learn_request_size, state, state_capacity);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.chkpt_apply(app->app_context, state, mode);
 }

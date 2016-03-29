@@ -582,7 +582,6 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
 
     if (nullptr != reply)
     {
-        dassert(err == ERR_OK, "error code must be success when reply is present");
         reply->add_ref(); // released in dctor
     }
 

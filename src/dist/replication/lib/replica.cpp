@@ -141,7 +141,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     }   
 
     ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
-    reply(request, error);
+    dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
 //error_code replica::check_and_fix_private_log_completeness()
