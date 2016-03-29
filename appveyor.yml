@@ -5,6 +5,8 @@ environment:
     DSN_BOOST: boost_1_59_0
     DSN_BOOST_LIB: lib64-msvc-14.0
     DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_59_0_vc14_amd64.7z?raw=true
+    DSN_THRIFT_EXE: https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift.exe?raw=true
+    DSN_CMAKE_BUILD_TYPE: Debug
 
 install:
     - ps: >-
@@ -17,14 +19,26 @@ install:
             appveyor DownloadFile "${env:DSN_BOOST_PKG}" -FileName boost-1.59.7z -Timeout 1200000
         }
 
+        if (!(Test-Path thrift.exe)) {
+
+            echo "Downloading thrift.exe from ${env:DSN_THRIFT_EXE} ..."
+
+            appveyor DownloadFile "${env:DSN_THRIFT_EXE}" -FileName thrift.exe -Timeout 1200000
+        }
+
     - cmd: >-
         echo "Extracting boost libs to %APPVEYOR_BUILD_FOLDER% ..."
 
         7z x boost-1.59.7z -y -o"%APPVEYOR_BUILD_FOLDER%" > null
+
+        copy /Y thrift.exe bin\Windows\
+
     - cinst php
         
 cache:
     - boost-1.59.7z
+
+    - thrift.exe
 
 before_build:
     - cmd: >-        
@@ -40,8 +54,10 @@ before_build:
 
 build_script:
     - cmd: >-
-        msbuild dsn.sln /t:Rebuild /p:Configuration=Debug
+        msbuild dsn.sln /t:Rebuild /p:Configuration=Debug /m
         
 test_script:
     - cmd: >-
+        SET PATH=C:\tools\php\;%PATH%
+
         ..\run.cmd test Debug .\
