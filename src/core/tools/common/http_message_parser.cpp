@@ -98,6 +98,7 @@ message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/
     if (nparsed != read_length)
     {
         derror("malformed http packet, we cannot handle it now");
+        read_next = -1;
         return nullptr;
     }
     mark_read(read_length);

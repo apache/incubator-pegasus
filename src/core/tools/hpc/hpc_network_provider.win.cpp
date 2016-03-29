@@ -362,7 +362,15 @@ namespace dsn
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
 
-                    start_read_next(read_next);
+                    if (read_next == -1)
+                    {
+                        derror("(s = %d) recv failed, err = %s", _socket, "message with wrong checksum");
+                        on_failure();
+                    }
+                    else
+                    {
+                        start_read_next(read_next);
+                    }
                 }
 
                 release_ref();

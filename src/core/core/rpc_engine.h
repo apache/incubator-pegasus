@@ -180,7 +180,6 @@ private:
     std::unordered_map<uint64_t, rpc_server_dispatcher*> _vnodes;
     
     volatile bool                 _is_running;
-    static bool                   _message_crc_required;
 };
 
 // ------------------------ inline implementations --------------------
