@@ -7,7 +7,7 @@ $file_prefix = $argv[3];
 # include "<?=$file_prefix?>.code.definition.h"
 # include <iostream>
 
-<?=$_PROG->get_cpp_namespace_begin()?>
+<?=$_PROG->get_cpp_namespace_begin().PHP_EOL?>
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_service 
@@ -57,4 +57,4 @@ public:
 };
 
 <?php } ?>
-<?=$_PROG->get_cpp_namespace_end()?>
+<?=$_PROG->get_cpp_namespace_end().PHP_EOL?>

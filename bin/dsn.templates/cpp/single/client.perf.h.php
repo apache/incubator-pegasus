@@ -7,8 +7,7 @@ $file_prefix = $argv[3];
 
 # include "<?=$file_prefix?>.client.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?>
-
+<?=$_PROG->get_cpp_namespace_begin().PHP_EOL?>
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client
     : public <?=$svc->name?>_client,
@@ -39,14 +38,16 @@ public:
     }
 <?php foreach ($svc->functions as $f) { ?>
 
-    void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
+    virtual void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
     {
         <?=$f->get_first_param()->get_cpp_type()?> req;
+
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
+
         <?=$f->name?>(
             req,
             [this, context = prepare_send_one()](error_code err, <?=$f->get_cpp_return_type()?>&& resp)
@@ -60,4 +61,4 @@ public:
 };
 <?php } ?>
 
-<?=$_PROG->get_cpp_namespace_end()?>
+<?=$_PROG->get_cpp_namespace_end().PHP_EOL?>
