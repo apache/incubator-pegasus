@@ -54,7 +54,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public new ServiceSpecType GetType()
         {
-            return ServiceSpecType.Proto_Buffer_1_0;
+            return ServiceSpecType.proto;
 
         }
 

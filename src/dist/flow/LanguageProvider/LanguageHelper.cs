@@ -74,10 +74,10 @@ namespace rDSN.Tron.LanguageProvider
            var prefix = "..\\..\\external\\";
            switch(t)
            {
-               case ServiceSpecType.Proto_Buffer_1_0:
+               case ServiceSpecType.proto:
                    path = prefix + "protobuf\\protoc.exe";
                    break;
-               case ServiceSpecType.Thrift_0_9:
+               case ServiceSpecType.thrift:
                    path = prefix + "thrift\\thrift.exe";
                    break;
                default:

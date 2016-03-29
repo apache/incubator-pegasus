@@ -57,6 +57,7 @@ namespace dsn
     private:
         http_parser _parser;
         http_parser_settings _parser_setting;
+        std::unique_ptr<message_ex> _current_message;
         std::queue<std::unique_ptr<message_ex>> _received_messages;
         enum
         {
