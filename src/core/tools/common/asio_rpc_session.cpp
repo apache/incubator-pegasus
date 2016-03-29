@@ -102,7 +102,7 @@ namespace dsn {
                     int read_next;
                     message_ex* msg = _parser->get_message_on_receive((int)length, read_next);
 
-                    while (read_next != -1 && msg != nullptr)
+                    while (msg != nullptr)
                     {
                         this->on_message_read(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
