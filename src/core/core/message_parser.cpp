@@ -134,19 +134,21 @@ namespace dsn {
         mark_read(read_length);
 
         if (_read_buffer_occupied >= sizeof(message_header))
-        {            
+        {
             if (!_header_checked)
             {
                 if (!message_ex::is_right_header((char*)_read_buffer.data()))
                 {
                     derror("receive message header check failed for message");
-                    read_next = -1;
 
                     truncate_read();
+                    read_next = -1;
                     return nullptr;
                 }
                 else
+                {
                     _header_checked = true;
+                }
             }
 
             int msg_sz = sizeof(message_header) +
@@ -157,15 +159,14 @@ namespace dsn {
             {
                 auto msg_bb = _read_buffer.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
-                if ( !msg->is_right_body(false) )
+                if (!msg->is_right_body(false))
                 {
                     message_header* header = (message_header*)_read_buffer.data();
-                    read_next = -1;
                     derror("body check failed for message, id: %d, rpc_name: %s, from: %s",
                           header->id, header->rpc_name, header->from_address.to_string());
 
                     truncate_read();
-                    _header_checked = false;
+                    read_next = -1;
                     return nullptr;
                 }
                 else

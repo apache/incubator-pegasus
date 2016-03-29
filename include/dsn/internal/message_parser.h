@@ -145,5 +145,11 @@ namespace dsn
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 
         virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) override;
+
+        virtual void truncate_read() override
+        {
+            _header_checked = false;
+            _read_buffer_occupied = 0;
+        }
     };
 }
