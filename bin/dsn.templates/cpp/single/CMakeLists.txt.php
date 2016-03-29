@@ -12,7 +12,7 @@ if ($idl_format == "proto")
 {
     if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
     {
-        $inc_lib = "libprotobufd.lib dsn.core.dll";
+        $inc_lib = "libprotobuf.lib dsn.core.dll";
     } else
     {
         $inc_lib = "libprotobuf.a libdsn.core.so";
