@@ -39,6 +39,12 @@ cd ..\dsn.tests
 ::%build_type%\dsn.tests.exe config-test.ini
 ::@CALL clear.cmd
 
+cd ..\dsn.idl.tests
+
+CALL  sbin\mock_install.cmd %TOP_DIR% %build_type% %build_dir%
+CALL  sbin\test.cmd %cd% %TOP_DIR%\ext\cmake-3.2.2\bin
+@CALL sbin\clear.cmd
+
 popd
 
 goto exit

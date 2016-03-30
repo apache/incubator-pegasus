@@ -1,0 +1,11 @@
+#!/bin/bash
+
+export DSN_ROOT=${CMAKE_INSTALL_PREFIX}
+export PATH=$DSN_ROOT/bin:$PATH
+export LIBRARY_PATH=$DSN_ROOT/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$LD_LIBRARY_PATH
+
+./dsn.idl.tests $DSN_ROOT ./
+
+rm counter.*
+rm -rf log
