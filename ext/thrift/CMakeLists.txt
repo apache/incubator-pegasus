@@ -49,12 +49,14 @@ install(DIRECTORY ${THRIFT_INSTALL_PREFIX}/lib
 )
 
 if (WIN32)
-    install(DIRECTORY ${BOOST_INCLUDEDIR}/boost
-        DESTINATION include/ext
-        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
-    )
+    STRING(REGEX REPLACE "/" "\\\\" WIN_BOOST_INCLUDE_DIR ${BOOST_INCLUDEDIR})
+    STRING(REGEX REPLACE "/" "\\\\" WIN_INSTALL_BOOST_DIR ${CMAKE_INSTALL_PREFIX}/include/ext/boost)
+
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/install_boost.cmd.template" "${CMAKE_CURRENT_SOURCE_DIR}/install_boost.cmd")
+
+    install(CODE "execute_process(COMMAND \"${CMAKE_CURRENT_SOURCE_DIR}/install_boost.cmd\")")
 endif ()
 
 # Specify source dir
 set(THRIFT_INCLUDE_DIR ${THRIFT_INSTALL_PREFIX}/include PARENT_SCOPE)
-set(THRIFT_LIB_DIR ${THRIFT_INSTALL_PREFIX}/lib)
+set(THRIFT_LIB_DIR ${THRIFT_INSTALL_PREFIX}/lib PARENT_SCOPE)

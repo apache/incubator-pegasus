@@ -277,6 +277,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void dsn_run(int argc, string[] argv, bool sleep_after_init);
 
+        [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi), SuppressUnmanagedCodeSecurity]
+        public extern static void dsn_exit(int code);
+
         //------------------------------------------------------------------------------
         //
         // common utilities

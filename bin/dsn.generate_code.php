@@ -145,7 +145,10 @@ case "thrift":
             echo "failed invoke thrift tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
-        mkdir($g_out_dir."/thrift");
+        if (!file_exists($g_out_dir."/thrift"))
+        {
+            mkdir($g_out_dir."/thrift");
+        }
         $command = $g_cg_dir."/".$os_name."/thrift --gen ".$g_lang." -out ".$g_out_dir."/thrift ".$g_idl;
         echo "exec: ".$command.PHP_EOL;
         system($command);
