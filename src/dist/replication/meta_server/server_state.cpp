@@ -1192,10 +1192,9 @@ void server_state::update_configuration(
     std::function<void()> callback)
 {
     bool write;
-    configuration_update_response response; 
-
+    configuration_update_response response;
     {
-        zauto_read_lock l(_lock);
+        zauto_write_lock l(_lock);
         app_state& app = _apps[req->config.gpid.app_id - 1];
         partition_configuration& old = app.partitions[req->config.gpid.pidx];
         if (is_partition_config_equal(old, req->config))
@@ -1315,21 +1314,24 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
 
 void server_state::exec_pending_request(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
 {
-    zauto_write_lock l(_lock);
     configuration_update_response resp;
-    auto iter = _pending_requests.find(req->config.gpid);
-    dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", req->config.gpid.app_id, req->config.gpid.pidx);
-
-    update_configuration_internal(*req, resp);
+    std::function<void ()> callback;
+    {
+        zauto_write_lock l(_lock);
+        auto iter = _pending_requests.find(req->config.gpid);
+        callback = std::move(iter->second);
+        dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", req->config.gpid.app_id, req->config.gpid.pidx);
+        update_configuration_internal(*req, resp);
+        _pending_requests.erase(iter);
+    }
     if (request_msg)
     {
         reply(request_msg, resp);
     }
-    if (iter->second)
+    if (callback)
     {
-        iter->second();
+        callback();
     }
-    _pending_requests.erase(iter);
 }
 
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
