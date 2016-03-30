@@ -1,8 +1,8 @@
 ﻿import sys
 import os
 import inspect
-import threading
 sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/app_package')
+
 from WebStudioApp import *
 
 def start_dsn():

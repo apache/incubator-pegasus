@@ -60,7 +60,7 @@ var vm = new Vue({
                                 {
                                     if(par.primary!='invalid address')
                                     {
-                                        par.membership += 'P: ("' + par.primary + '"),\n ';
+                                        par.membership += 'P: ("' + par.primary + '"), ';
                                         
                                     }
                                     else

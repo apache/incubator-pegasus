@@ -2,11 +2,20 @@ var vm = new Vue({
     el: '#app',
     data:{
         tableData: '',
+        filterKey: '',
+    
+        percentList: ['50%','90%','95%','99%','999%']
     },
     components: {
     },
     methods: {
 
+    },
+    watch: {
+        filterKey: function (newKey, oldKey)
+        {
+            $('#table').DataTable().search(newKey).draw();
+        }
     },
     ready: function ()
     {

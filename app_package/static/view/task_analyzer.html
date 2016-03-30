@@ -29,7 +29,7 @@
                             <input placeholder="Filtering task display.." v-model="taskFilter" v-if="if_collapsed == false">
                     </div>
                     <div class="row">
-                        <div class="col-xs-8">
+                        <div class="col-xs-6">
                             <button class="btn btn-info dropdown-toggle" @click="collapse">
                                 <div v-if="if_collapsed">>></div>
                                 <div v-else><<</div>
@@ -40,11 +40,17 @@
 	                        <button class="btn btn-primary dropdown-toggle" data-toggle="collapse" data-target="#sharer" >Tasks sharing the same threads</button>
 	                        <button class="btn btn-info" @click="setcurrentTask(lastTask)" data-toggle="tooltip bottom" title="Back to last task"><</button>
                         </div>
-                        <div class="col-xs-1">
+                        <div class="col-xs-3">
+                            <input placeholder="Link to machineName:port"
+                                   v-model="remoteMachine"
+                                   v-if="drawType == 'Distribution' || drawType == 'Breakdown'" 
+                                   size="30"
+                                   @keyup.enter="linkRemoteMachine"
+                                   data-toggle="tooltip bottom" title="For tasks across machines, we can only get half data on one side (server/client), so you need to fill in the webstudio address of another machine to combine them">
                         </div>
                         <div class="col-xs-3">
-                            <button class="btn dropdown-toggle" :class="[drawType=='Sample'?'btn-warning':'']" @click="setdrawType('Sample')">Sample</button>
-                            <button class="btn dropdown-toggle" :class="[drawType=='Value'?'btn-warning':'']" @click="setdrawType('Value')">Value</button>
+                            <button class="btn dropdown-toggle" :class="[drawType=='Distribution'?'btn-warning':'']" @click="setdrawType('Distribution')">Distribution</button>
+                            <button class="btn dropdown-toggle" :class="[drawType=='Realtime'?'btn-warning':'']" @click="setdrawType('Realtime')">Realtime</button>
                             <button class="btn dropdown-toggle" :class="[drawType=='Breakdown'?'btn-warning':'']" @click="setdrawType('Breakdown')">Breakdown</button>
                         </div>
                     </div>

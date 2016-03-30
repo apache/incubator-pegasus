@@ -16,7 +16,9 @@ var vm = new Vue({
         caller_list: [],
         sharer_list: [],
 
-        drawType: 'Sample',
+        drawType: 'Distribution',
+
+        remoteMachine: '',
     },
     components: {
     },
@@ -54,69 +56,60 @@ var vm = new Vue({
 
                     task_id = task_list.indexOf(self.currentTask);
                     
-
                     for(index =0 ; index < call_matrix[task_id].length; ++index)
                     {
                         if(call_matrix[task_id][index]!=0 && task_id!=index)
                         {
-                            self.sankeyNodes.push(
-                                {
-                                    "type": task_list[index],
-                                    "id": "i"+index,
-                                    "parent": null,
-                                    "name": task_list[index]
-                                }
-                            );
-                            self.sankeyNodes.push(
-                                {
-                                    "type": task_list[index],
-                                    "id": index,
-                                    "parent": "i"+index,
-                                    "number": "101",
-                                    "name": task_list[index]
-                                }
-                            );
+                            self.sankeyNodes.push({
+                                "type": task_list[index],
+                                "id": "i"+index,
+                                "parent": null,
+                                "name": task_list[index]
+                            });
+                            self.sankeyNodes.push({
+                                "type": task_list[index],
+                                "id": index,
+                                "parent": "i"+index,
+                                "number": "101",
+                                "name": task_list[index]
+                            });
 
-                            self.sankeyLinks.push(
-                                {
-                                    "source":task_id,
-                                    "target":index,
-                                    "value":call_matrix[task_id][index]
-                                }
-                            );
+                            self.sankeyLinks.push({
+                                "source":task_id,
+                                "target":index,
+                                "value":call_matrix[task_id][index]
+                            });
 
-                            self.callee_list.push({"name": task_list[index], "num": call_matrix[task_id][index]});
+                            self.callee_list.push({
+                                "name": task_list[index],
+                                "num": call_matrix[task_id][index]
+                            });
                         }
                     }
                     for(index =0 ; index < call_matrix[task_id].length; ++index)
                     {
                         if(call_matrix[index][task_id]!=0 && task_id!=index)
                         {
-                            self.sankeyNodes.push(
-                                {
-                                    "type": task_list[index],
-                                    "id": "i"+index,
-                                    "parent": null,
-                                    "name": task_list[index]
-                                }
-                            );
-                            self.sankeyNodes.push(
-                                {
-                                    "type": task_list[index],
-                                    "id": index,
-                                    "parent": "i"+index,
-                                    "number": "101",
-                                    "name": task_list[index]
-                                }
-                            );
+                            self.sankeyNodes.push({
+                                "type": task_list[index],
+                                "id": "i"+index,
+                                "parent": null,
+                                "name": task_list[index]
+                            });
 
-                            self.sankeyLinks.push(
-                                {
-                                    "source":index,
-                                    "target":task_id,
-                                    "value":call_matrix[index][task_id]
-                                }
-                            );
+                            self.sankeyNodes.push({
+                                "type": task_list[index],
+                                "id": index,
+                                "parent": "i"+index,
+                                "number": "101",
+                                "name": task_list[index]
+                            });
+
+                            self.sankeyLinks.push({
+                                "source":index,
+                                "target":task_id,
+                                "value":call_matrix[index][task_id]
+                            });
 
                             self.caller_list.push({"name": task_list[index], "num": call_matrix[index][task_id]});
                         }
@@ -124,23 +117,19 @@ var vm = new Vue({
 
                     if(self.sankeyLinks.length>0)
                     {
-                        self.sankeyNodes.push(
-                            {
-                                "type": task_list[task_id],
-                                "id": "i"+task_id,
-                                "parent": null,
-                                "name": task_list[task_id]
-                            }
-                        );
-                        self.sankeyNodes.push(
-                            {
-                                "type": task_list[task_id],
-                                "id": task_id,
-                                "parent": "i"+task_id,
-                                "number": "101",
-                                "name": task_list[task_id]
-                            }
-                        );
+                        self.sankeyNodes.push({
+                            "type": task_list[task_id],
+                            "id": "i"+task_id,
+                            "parent": null,
+                            "name": task_list[task_id]
+                        });
+                        self.sankeyNodes.push({
+                            "type": task_list[task_id],
+                            "id": task_id,
+                            "parent": "i"+task_id,
+                            "number": "101",
+                            "name": task_list[task_id]
+                        });
 
                         updateSankey(self.sankeyNodes,self.sankeyLinks,vm);
                     }
@@ -162,14 +151,14 @@ var vm = new Vue({
             $( "#chart" ).remove();
             $( "#c3_chart" ).append( "<div id='chart'></div>" );
             
-            if(this.drawType=='Sample')
-                this.updateDrawTypeAsSample();
-            else if(this.drawType=='Value')
-                this.updateDrawTypeAsValue();
+            if(this.drawType=='Distribution')
+                this.updateDrawTypeAsDistribution();
+            else if(this.drawType=='Realtime')
+                this.updateDrawTypeAsRealtime();
             else if(this.drawType=='Breakdown')
                 this.updateDrawTypeAsBreakdown();
         },
-        updateDrawTypeAsSample: function ()
+        updateDrawTypeAsDistribution: function ()
         {
             var self = this;
             $.post("/api/cli", { 
@@ -178,17 +167,26 @@ var vm = new Vue({
                     data = JSON.parse(data);
 
                     var xs = {};
+                    var columns = [];
+                    var column = []; 
+                    var length_list = [];
+                    var x_length = 0;
+
                     for(index in data)
                     {
-                        xs[data[index].name] = "x";
+                        if(data[index].samples.length>0)
+                        {
+                            xs[data[index].name] = "x";
+                            length_list.push(data[index].samples.length);
+                        }
                     }
 
-                    var columns = [];
-                    var column = ['x'];
-                    for(i=0;i<data[0].samples.length;++i)
-                        column.push(i*100/(data[0].samples.length-1));
+                    column = ['x'];
+                    x_length = Math.max.apply(Math,length_list);
+                    for(i=0;i<x_length;++i)
+                        column.push(i*100/(x_length-1));
                     columns.push(column);
-                    
+                        
                     for(i=0;i<data.length;++i)
                     {
                         column = [data[i].name];
@@ -196,6 +194,43 @@ var vm = new Vue({
                             column.push(data[i].samples[j]);
                         columns.push(column);
                     }
+
+                    if(self.remoteMachine != '')
+                    {
+                        $.ajax({
+                          type: 'POST',
+                          url: "http://" + self.remoteMachine + "/api/cli",
+                          data: {command: "pq counter_sample " + self.currentTask},
+                          async:false
+                        })
+                        .done(function( data ) {
+                            data = JSON.parse(data);
+                            length_list = [];
+                            for(index in data)
+                            {
+                                if(data[index].samples.length>0)
+                                {
+                                    xs[data[index].name] = "x2";
+                                    length_list.push(data[index].samples.length);
+                                }
+                            }
+
+                            column = ['x2'];
+                            x_length = Math.max.apply(Math,length_list);
+                            for(i=0;i<x_length;++i)
+                                column.push(i*100/(x_length-1));
+                            columns.push(column);
+
+                            for(i=0;i<data.length;++i)
+                            {
+                                column = [data[i].name];
+                                for(j=0;j<data[i].samples.length;++j)
+                                    column.push(data[i].samples[j]);
+                                columns.push(column);
+                            }
+                        });
+                    }
+
                     chart = c3.generate({
                         data: {
                             xs: xs,
@@ -232,11 +267,11 @@ var vm = new Vue({
                 }
             );
         },
-        updateDrawTypeAsValue: function ()
+        updateDrawTypeAsRealtime: function ()
         {
-            function updateData(a)
+            function updateData(task, a)
             {
-                if(self.drawType != 'Value') return;
+                if(self.drawType != 'Realtime' || task != self.currentTask) return;
                 $.post("/api/cli", { 
                     command: "pq counter_realtime " + self.currentTask
                     }, function(data){ 
@@ -252,7 +287,7 @@ var vm = new Vue({
                             done:function(){
                                 chart.xgrids.add([{value: a, text:data.time,class:'hoge'}]);
                                 setTimeout(function () {
-                                    updateData(a+1);
+                                    updateData(task, a+1);
                                 },0);
                             }
                         });
@@ -298,7 +333,7 @@ var vm = new Vue({
                         },
                         
                     });
-                    updateData(20);
+                    updateData(self.currentTask, 20);
                 }
             );
 
@@ -311,6 +346,24 @@ var vm = new Vue({
                 command: "pq counter_breakdown " + self.currentTask + " 50"
                 }, function(data){ 
                     data = JSON.parse(data);
+                    
+                    if(self.remoteMachine != '')
+                    {
+                        $.ajax({
+                          type: 'POST',
+                          url: "http://" + self.remoteMachine + "/api/cli",
+                          data: {command: "pq counter_breakdown " + self.currentTask + " 50"},
+                          async:false
+                        })
+                        .done(function( data2 ) {
+                            data2 = JSON.parse(data2);
+                        
+                            for(index in data)
+                            {
+                                data[index] = (data[index]!=0)?data[index]:data2[index];
+                            }
+                        });
+                    }
 
                     chart = c3.generate({
                         size: {
@@ -364,6 +417,10 @@ var vm = new Vue({
                 }
             );
         },
+        linkRemoteMachine: function()
+        {
+            this.updateDrawTypeInfo();
+        }
     },
     watch: {
         'currentTask': function (newTask, oldTask)
@@ -382,11 +439,15 @@ var vm = new Vue({
         
         $.post("/api/cli", { 
             command: "pq task_list"
-            }, function(data){ 
+            }, function(data){
+                if(data.indexOf('unknown command') > -1) 
+                    self.setcurrentTask('Profiler is not opened. Please set "toolets = profiler" in the config file');
+                    
                 self.taskList = JSON.parse(data);
+                self.setcurrentTask(self.taskList[0]);
                 
             }
-        );
+        )
     }
 });
 
