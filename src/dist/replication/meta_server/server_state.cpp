@@ -1186,52 +1186,6 @@ void server_state::list_nodes(dsn_message_t msg)
     reply(msg, response);
 }
 
-void server_state::update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi)
-{
-    std::string partition_path = get_partition_path(wi->req->config.gpid);
-    blob config;
-    marshall_json(config, wi->req->config);
-    _storage->set_data(
-        partition_path,
-        config,
-        LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-        [this, wi](error_code ec)
-        {
-            global_partition_id gpid = wi->req->config.gpid;
-            if (ec == ERR_OK)
-            {
-                {
-                    zauto_lock l(_pending_requests_lock);
-                    _pending_requests[gpid][wi->ballot] = *wi;
-                }
-                exec_pending_requests(gpid);
-            }
-            else if (ec == ERR_TIMEOUT)
-            {
-                // well, if we have message need to resposne,
-                // we just ignore it. After all, the sender will
-                // resend it
-                if (wi->msg)
-                {
-                    dsn_msg_release_ref(wi->msg);
-                }
-                else
-                {
-                    tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-                        this,
-                        std::bind(&server_state::update_configuration_on_remote, this, wi),
-                        0,
-                        std::chrono::milliseconds(1000));
-                }
-            }
-            else
-            {
-                dassert(false, "we can't handle this, err(%s)", ec.to_string());
-            }
-        }
-        );
-}
-
 void server_state::update_configuration(
     std::shared_ptr<configuration_update_request>& req,
     dsn_message_t request_msg, 
@@ -1261,10 +1215,33 @@ void server_state::update_configuration(
             response.err = ERR_INVALID_VERSION;
             response.config = old;
         }
+        else if (_pending_requests.find(req->config.gpid) != _pending_requests.end())
+        {
+            dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot);
+            return;
+        }
         else
         {
             write = true;
             req->config.last_drops = old.last_drops;
+
+            // maintain dropouts
+            switch (req->type)
+            {
+            case CT_ASSIGN_PRIMARY:
+            case CT_ADD_SECONDARY:
+            case CT_UPGRADE_TO_SECONDARY:
+                maintain_drops(req->config.last_drops, req->node, true);
+                break;
+            case CT_DOWNGRADE_TO_INACTIVE:
+            case CT_REMOVE:
+                //only maintain last drops for primary
+                if (req->config.primary.is_invalid())
+                    maintain_drops(req->config.last_drops, req->node, false);
+                break;
+            }
+            _pending_requests.emplace(req->config.gpid, callback);
         }
     }
 
@@ -1281,79 +1258,78 @@ void server_state::update_configuration(
     }
     else
     {
-        if (request_msg)
-        {
-            dsn_msg_add_ref(request_msg);
-        }
-
-        // maintain dropouts
-        switch (req->type)
-        {
-        case CT_ASSIGN_PRIMARY:
-        case CT_ADD_SECONDARY:
-        case CT_UPGRADE_TO_SECONDARY:
-            maintain_drops(req->config.last_drops, req->node, true);
-            break;
-        case CT_DOWNGRADE_TO_INACTIVE:
-        case CT_REMOVE:
-            //only maintain last drops for primary
-            if (req->config.primary.is_invalid())
-                maintain_drops(req->config.last_drops, req->node, false);
-            break;
-        }
-
-        std::shared_ptr<storage_work_item> wi(new storage_work_item());
-        wi->ballot = req->config.ballot;
-        wi->req = req;
-        wi->msg = request_msg;
-        wi->callback = callback;
-        update_configuration_on_remote(wi);
+        update_configuration_on_remote(req, request_msg);
     }
 }
 
-void server_state::exec_pending_requests(global_partition_id gpid)
+void server_state::update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
 {
-    do
-    {
-        storage_work_item wi;
-        {
-            zauto_lock l(_pending_requests_lock);
-            auto& part = _pending_requests[gpid];
-            if (part.size() == 0)
-                return;
+    std::string partition_path = get_partition_path(req->config.gpid);
+    blob config;
+    marshall_json(config, req->config);
 
-            storage_work_item& fwi = part.begin()->second;
+    if (request_msg)
+    {
+        dsn_msg_add_ref(request_msg);
+    }
+    _storage->set_data(
+        partition_path,
+        config,
+        LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+        [this, req, request_msg](error_code ec)
+        {
+            if (ec == ERR_OK)
             {
-                zauto_read_lock l2(_lock);
-                app_state& app = _apps[gpid.app_id - 1];
-                partition_configuration& old = app.partitions[gpid.pidx];
-                if (old.ballot + 1 != fwi.ballot)
+                exec_pending_request(req, request_msg);
+            }
+            else if (ec == ERR_TIMEOUT)
+            {
+                // well, if we have message need to resposne,
+                // we just ignore it. After all, the sender will
+                // resend it
+                if (request_msg)
                 {
-                    return;
+                    zauto_write_lock l(_lock);
+                    _pending_requests.erase(req->config.gpid);
+                }
+                else
+                {
+                    tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
+                        this,
+                        std::bind(&server_state::update_configuration_on_remote, this, req, request_msg),
+                        0,
+                        std::chrono::milliseconds(1000));
                 }
             }
+            else
+            {
+                dassert(false, "we can't handle this, err(%s)", ec.to_string());
+            }
+            if (request_msg)
+            {
+                dsn_msg_release_ref(request_msg);
+            }
+        }
+        );
+}
 
-            wi = fwi;
-            part.erase(part.begin());
-        }
-        
-        configuration_update_response resp;
-        {
-            zauto_write_lock l(_lock);
-            update_configuration_internal(*wi.req, resp);
-        }
+void server_state::exec_pending_request(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
+{
+    zauto_write_lock l(_lock);
+    configuration_update_response resp;
+    auto iter = _pending_requests.find(req->config.gpid);
+    dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", req->config.gpid.app_id, req->config.gpid.pidx);
 
-        if (wi.msg)
-        {
-            reply(wi.msg, resp);
-            dsn_msg_release_ref(wi.msg);
-        }
-
-        if (wi.callback)
-        {
-            wi.callback();
-        }
-    } while (true);
+    update_configuration_internal(*req, resp);
+    if (request_msg)
+    {
+        reply(request_msg, resp);
+    }
+    if (iter->second)
+    {
+        iter->second();
+    }
+    _pending_requests.erase(iter);
 }
 
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
@@ -1362,13 +1338,10 @@ void server_state::update_configuration_internal(const configuration_update_requ
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
     if (old.ballot + 1 != request.config.ballot)
     {
-        response.err = ERR_INVALID_VERSION;
-        response.config = old;
+        dassert(false, "invalid request");
     }
     else
     {
-        // TODO: update _storage first
-
         response.err = ERR_OK;
         response.config = request.config;
         
