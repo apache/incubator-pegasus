@@ -1257,6 +1257,10 @@ void server_state::update_configuration(
     }
     else
     {
+        if (request_msg)
+        {
+            dsn_msg_add_ref(request_msg);
+        }
         update_configuration_on_remote(req, request_msg);
     }
 }
@@ -1267,10 +1271,6 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
     blob config;
     marshall_json(config, req->config);
 
-    if (request_msg)
-    {
-        dsn_msg_add_ref(request_msg);
-    }
     _storage->set_data(
         partition_path,
         config,
@@ -1290,12 +1290,13 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
                 {
                     zauto_write_lock l(_lock);
                     _pending_requests.erase(req->config.gpid);
+                    dsn_msg_release_ref(request_msg);
                 }
                 else
                 {
                     tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
                         this,
-                        std::bind(&server_state::update_configuration_on_remote, this, req, request_msg),
+                        std::bind(&server_state::update_configuration_on_remote, this, req, nullptr),
                         0,
                         std::chrono::milliseconds(1000));
                 }
@@ -1304,12 +1305,8 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
             {
                 dassert(false, "we can't handle this, err(%s)", ec.to_string());
             }
-            if (request_msg)
-            {
-                dsn_msg_release_ref(request_msg);
-            }
         }
-        );
+    );
 }
 
 void server_state::exec_pending_request(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
@@ -1327,6 +1324,7 @@ void server_state::exec_pending_request(const std::shared_ptr<configuration_upda
     if (request_msg)
     {
         reply(request_msg, resp);
+        dsn_msg_release_ref(request_msg);
     }
     if (callback)
     {
