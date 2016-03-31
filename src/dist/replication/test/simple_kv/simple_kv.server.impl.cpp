@@ -99,6 +99,7 @@ namespace dsn {
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
                 _app_info = dsn_get_app_info_ptr(gpid());
+                open_service(gpid());
 
                 if (s_simple_kv_open_fail)
                 {
@@ -118,6 +119,7 @@ namespace dsn {
                     return ERR_CORRUPTION;
                 }
 
+                close_service(gpid());
                 dsn::service::zauto_lock l(_lock);
                 if (clear_state)
                 {

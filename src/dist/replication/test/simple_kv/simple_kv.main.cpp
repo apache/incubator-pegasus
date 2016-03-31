@@ -50,7 +50,7 @@ void dsn_app_registration()
     dsn::register_app<dsn::replication::replication_service_app>("replica");
     dsn::register_app<dsn::service::meta_service_app>("meta");
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
-
+    dsn::register_app_with_type_1_replication_support< ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
     //dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
 
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");

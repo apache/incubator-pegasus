@@ -39,8 +39,6 @@
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
-# include <dsn/dist/replication/meta_service_app.h>
-# include <dsn/dist/replication/replication_service_app.h>
 
 namespace dsn
 {

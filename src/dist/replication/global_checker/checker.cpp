@@ -36,6 +36,9 @@
 
 # include <dsn/dist/replication/replication.global_check.h>
 # include <dsn/tool/global_checker.h>
+# include <dsn/dist/replication/meta_service_app.h>
+# include <dsn/dist/replication/replication_service_app.h>
+
 # include "replica.h"
 # include "replica_stub.h"
 # include "meta_service.h"

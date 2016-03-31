@@ -34,6 +34,7 @@
  */
 
 # include <dsn/dist/replication.h>
+# include <dsn/dist/replication/meta_service_app.h>
 # include "server_state.h"
 # include "meta_service.h"
 # include "distributed_lock_service_simple.h"
