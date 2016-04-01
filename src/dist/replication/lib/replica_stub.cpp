@@ -318,9 +318,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     // init livenessmonitor
     dassert (NS_Disconnected == _state, "");
+    _failure_detector = new replication_failure_detector(this, _options.meta_servers);
     if (_options.fd_disabled == false)
     {
-        _failure_detector = new replication_failure_detector(this, _options.meta_servers);
         err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
