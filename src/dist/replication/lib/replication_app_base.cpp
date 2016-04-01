@@ -312,10 +312,11 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
     std::vector<const char*> files;
 
     lstate.from_decree_excluded = state.from_decree_excluded;
-    lstate.total_learn_state_size = state.to_decree_included;
+    lstate.to_decree_included = state.to_decree_included;
     lstate.meta_state_ptr = (void*)state.meta.data();
     lstate.meta_state_size = state.meta.length();
     lstate.file_state_count = (int)state.files.size();
+    lstate.total_learn_state_size = 0;
     if (lstate.file_state_count > 0)
     {
         for (auto& f : state.files)
