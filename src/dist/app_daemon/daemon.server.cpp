@@ -41,7 +41,7 @@
  
 using namespace ::dsn::replication;
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(daemon)
     dsn::register_app< ::dsn::dist::daemon>("daemon");
 MODULE_INIT_END
 

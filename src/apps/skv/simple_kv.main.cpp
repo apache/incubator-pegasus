@@ -55,7 +55,7 @@ static void dsn_app_registration()
 
 # include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(simple_kv)
     dsn_app_registration();
 MODULE_INIT_END
 

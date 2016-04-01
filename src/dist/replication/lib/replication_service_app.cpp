@@ -47,7 +47,7 @@
 
 # include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(replication_type1)
     dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
 MODULE_INIT_END
 

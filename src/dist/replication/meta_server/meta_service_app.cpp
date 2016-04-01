@@ -49,7 +49,7 @@
 
 # include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(meta)
     dsn::register_app< ::dsn::service::meta_service_app>("meta");
 MODULE_INIT_END
 
