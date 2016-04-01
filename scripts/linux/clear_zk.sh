@@ -16,5 +16,7 @@ ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
 if [ -d "$ZOOKEEPER_HOME" ]
 then
     $ZOOKEEPER_HOME/bin/zkServer.sh stop
+    rm -rf $ZOOKEEPER_HOME/data &>/dev/null
+    echo "Clearing zookeeper ... CLEARED"
 fi
 

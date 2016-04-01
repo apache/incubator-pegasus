@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.ddlclient)
+set(MY_PROJ_NAME dsn.tools.ddlclient)
 add_definitions(-DDSN_IN_CORE)
 set(DSN_IN_CORE "TRUE")
 
@@ -22,6 +22,7 @@ set(MY_PROJ_LIBS dsn.tools.nfs
     dsn.tools.common
     dsn.corelib
     dsn.replication.clientlib
+    dsn.replication.ddlclient
     )
 
 set(MY_PROJ_LIB_PATH)

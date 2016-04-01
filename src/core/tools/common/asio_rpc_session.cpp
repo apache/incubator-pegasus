@@ -109,8 +109,14 @@ namespace dsn {
                         this->on_message_read(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
-                     
-                    start_read_next(read_next);
+
+                    if (read_next == -1)
+                    {
+                        derror("asio read from %s failed: %s", _remote_addr.to_string(), "checksum not correct");
+                        on_failure();
+                    }
+                    else
+                        start_read_next(read_next);
                 }
 
                 release_ref();

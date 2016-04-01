@@ -26,29 +26,28 @@
 
 /*
  * Description:
- *     ddl client implementation
+ *     replication ddl client implementation
  *
  * Revision history:
  *     2015-12-30, xiaotz, first version
  */
 
-#include <dsn/dist/replication.h>
+#include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
-#include "client_ddl.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 
 namespace dsn{ namespace replication{
 
-client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
+replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers)
 {
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     for (auto& m : meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
-dsn::error_code client_ddl::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
+dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
 {
     if(partition_count < 1)
     {
@@ -62,13 +61,13 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
         return ERR_INVALID_PARAMETERS;
     }
 
-    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
     {
         std::cout << "create app " << app_name << " failed: invalid app_name" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
 
-    if(app_type.empty() || !std::all_of(app_type.cbegin(),app_type.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    if(app_type.empty() || !std::all_of(app_type.cbegin(),app_type.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
     {
         std::cout << "create app " << app_name << " failed: invalid app_type" << std::endl;
         return ERR_INVALID_PARAMETERS;
@@ -155,9 +154,9 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::drop_app(const std::string& app_name)
+dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
 {
-    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
 
     std::shared_ptr<configuration_drop_app_request> req(new configuration_drop_app_request());
@@ -183,7 +182,7 @@ dsn::error_code client_ddl::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -237,7 +236,7 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
     req->status = status;
@@ -285,9 +284,9 @@ dsn::error_code client_ddl::list_nodes(const dsn::replication::node_status statu
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
-    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
 
     std::shared_ptr<configuration_query_by_index_request> req(new configuration_query_by_index_request());
@@ -356,7 +355,7 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::control_meta_balancer_migration(bool start)
+dsn::error_code replication_ddl_client::control_meta_balancer_migration(bool start)
 {
     std::shared_ptr<control_balancer_migration_request> req(new control_balancer_migration_request());
     req->enable_migration = start;
@@ -372,7 +371,7 @@ dsn::error_code client_ddl::control_meta_balancer_migration(bool start)
     return resp.err;
 }
 
-dsn::error_code client_ddl::send_balancer_proposal(const balancer_proposal_request &request)
+dsn::error_code replication_ddl_client::send_balancer_proposal(const balancer_proposal_request &request)
 {
     std::shared_ptr<balancer_proposal_request> req(new balancer_proposal_request(request));
 
@@ -387,12 +386,12 @@ dsn::error_code client_ddl::send_balancer_proposal(const balancer_proposal_reque
     return resp.err;
 }
 
-bool client_ddl::valid_app_char(int c)
+bool replication_ddl_client::valid_app_char(int c)
 {
     return (bool)std::isalnum(c) || c == '_' || c == '.';
 }
 
-void client_ddl::end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
+void replication_ddl_client::end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
 {
     if(err == dsn::ERR_TIMEOUT && retry_times < 5)
     {

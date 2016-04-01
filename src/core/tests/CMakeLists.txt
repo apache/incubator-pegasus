@@ -38,8 +38,9 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-no-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-null-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-sample.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-corrupt-message.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-2.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-fastrun.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test-posix-aio.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test-sim.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-unmatch-section.ini"
@@ -49,6 +50,7 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.cmd"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/gtest.filter"
 )
 
 dsn_add_executable()

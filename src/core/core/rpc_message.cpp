@@ -616,7 +616,7 @@ void message_ex::read_commit(size_t size)
 
 void* message_ex::rw_ptr(size_t offset_begin)
 {
-    // printf("%p %s\n", this, __FUNCTION__);
+    //printf("%p %s\n", this, __FUNCTION__);
     int i_max = (int)this->buffers.size();
 
     if (!_is_read)
