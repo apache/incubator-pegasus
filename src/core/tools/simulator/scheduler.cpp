@@ -114,6 +114,7 @@ scheduler::scheduler(void)
 {
     _time_ns = 0;
     _running = false;
+    _running_thread = nullptr;
     task_worker::on_create.put_back(on_task_worker_create, "simulation.on_task_worker_create");
     task_worker::on_start.put_back(on_task_worker_start, "simulation.on_task_worker_start");
         
@@ -272,7 +273,8 @@ void scheduler::schedule()
         if (ready_workers.size() > 0)
         {
             int i = dsn_random32(0, (uint32_t)ready_workers.size() - 1);
-            _threads[ready_workers[i]]->runnable.release();
+            _running_thread = _threads[ready_workers[i]];
+            _running_thread->runnable.release();
             
             _is_scheduling = false;
             return;

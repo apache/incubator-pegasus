@@ -145,23 +145,20 @@ public:
     int id() const { return _app_spec.id; }
     const char* name() const { return _app_spec.name.c_str(); }
     const service_app_spec& spec() const { return _app_spec;  }
-    void* get_app_context_ptr() const { return _app_context_ptr; }
+    void* get_app_context_ptr() const { return _app_info.app.app_context_ptr; }
 
     bool  rpc_register_handler(rpc_handler_info* handler, dsn_gpid gpid);
     rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
 
-    dsn_app_info* get_l1_info() { return &_layer1_app_info; }
+    dsn_app_info* get_l1_info() { return &_app_info; }
+    dsn_app* get_l2_app_role() { return _hosted_app_role; }
     layer2_handler_core& get_l2_handler() { return _layer2_handler; }
     void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
 
     static dsn_error_t start_app(void* app_context, const std::string& args, dsn_app_start start, const std::string& app_name);
 
 private:
-    union {
-        void*            _app_context_ptr; // app start returns this value and used by app stop
-        service_app*     _app_for_cpp; 
-    };
-    dsn_app_info  _layer1_app_info;
+    dsn_app_info  _app_info;
     
     service_app_spec _app_spec;
     task_engine*     _computation;
@@ -172,7 +169,7 @@ private:
 
     // when this app is hosted by a layer2 handler app
     layer2_handler_core                         _layer2_handler;
-    dsn_app                                     *_layer2_role;
+    dsn_app                                     *_hosted_app_role;
 
 private:
     error_code init_io_engine(io_engine& io, ioe_mode mode);

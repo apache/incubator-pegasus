@@ -64,11 +64,11 @@ namespace dsn {
                 {
                     if (0 == strcmp(app.type, "meta"))
                     {
-                        _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
+                        _meta_servers.push_back((meta_service_app*)app.app.app_context_ptr);
                     }
                     else if (0 == strcmp(app.type, "replica"))
                     {
-                        _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
+                        _replica_servers.push_back((replication_service_app*)app.app.app_context_ptr);
                     }
                 }
             }

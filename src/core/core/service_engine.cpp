@@ -63,25 +63,24 @@ service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _app_context_ptr = nullptr;
-    _layer2_role = nullptr;
+    _hosted_app_role = nullptr;
 
-    memset(&_layer1_app_info, 0, sizeof(_layer1_app_info));
-    _layer1_app_info.app_context_ptr = _app_context_ptr;
-    _layer1_app_info.app_id = id();
-    _layer1_app_info.index = spec().index;
-    strncpy(_layer1_app_info.role, spec().role_name.c_str(), sizeof(_layer1_app_info.role));
-    strncpy(_layer1_app_info.type, spec().type.c_str(), sizeof(_layer1_app_info.type));
-    strncpy(_layer1_app_info.name, spec().name.c_str(), sizeof(_layer1_app_info.name));
-    strncpy(_layer1_app_info.data_dir, spec().data_dir.c_str(), sizeof(_layer1_app_info.data_dir));
+    memset(&_app_info, 0, sizeof(_app_info));
+    _app_info.app.app_context_ptr = nullptr;
+    _app_info.app_id = id();
+    _app_info.index = spec().index;
+    strncpy(_app_info.role, spec().role_name.c_str(), sizeof(_app_info.role));
+    strncpy(_app_info.type, spec().type.c_str(), sizeof(_app_info.type));
+    strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
+    strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
 
-    if (!app_spec.layer2_handler_type_name.empty())
+    if (!app_spec.hosted_app_type_name.empty())
     {
         auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
-        if (!store.get(_app_spec.layer2_handler_type_name, _layer2_role))
+        if (!store.get(_app_spec.hosted_app_type_name, _hosted_app_role))
         {
             dassert(false, "service app type name '%s' not registered\n",
-                _app_spec.layer2_handler_type_name.c_str());
+                _app_spec.hosted_app_type_name.c_str());
         }
     }
 }
@@ -284,14 +283,7 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
 
 dsn_error_t service_node::start_app()
 {
-    if (_layer2_role)
-    {
-        return start_app(_app_context_ptr, spec().layer2_handler_arguments, _layer2_role->layer1.start, spec().name);
-    }
-    else
-    {
-        return start_app(_app_context_ptr, spec().arguments, _app_spec.role->layer1.start, spec().name);
-    }
+    return start_app(_app_info.app.app_context_ptr, spec().arguments, _app_spec.role->layer1.start, spec().name);
 }
 
 dsn_error_t service_node::start_app(void* app_context, const std::string& sargs, dsn_app_start start, const std::string& app_name)
@@ -373,27 +365,20 @@ error_code service_node::start()
 
     // create app
     {
-        dsn_gpid gpid;
-        gpid.value = 0;
-
         ::dsn::tools::node_scoper scoper(this);
-        if (nullptr == _layer2_role)
-        {
-            _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name, gpid);
-        }   
-        else
-        {
-            _app_context_ptr = _layer2_role->layer1.create(_layer2_role->type_name, gpid);
-            auto layer2_app = dynamic_cast<layer2_handler*> ((service_app*)_app_context_ptr);
-
-            dassert(nullptr != layer2_app,
-                "service app with type '%s' is not a layer2 handler app, please make sure create the app by inheriting class layer2_handler ",
-                _layer2_role->type_name
-                );
-        }
+        _app_info.app.app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name, dsn_gpid{ 0 });
     }
 
-    _layer1_app_info.app_context_ptr = _app_context_ptr;
+    // check if this app is going to host other apps
+    if (_hosted_app_role != nullptr)
+    {
+        auto framework = dynamic_cast<layer2_handler*> ((service_app*)_app_info.app.app_context_ptr);
+
+        dassert(nullptr != framework,
+            "service app with type '%s' is not a layer2 handler app, please make sure create the app by inheriting class layer2_handler ",
+            _app_spec.role->type_name
+            );
+    }
     return err;
 }
 
@@ -478,7 +463,7 @@ void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_messa
 {
     auto msg = (message_ex*)(req);
 
-    if (nullptr == _layer2_role)
+    if (nullptr == _hosted_app_role)
     {
         dwarn(
             "skip recved message with type %s from %s, rpc_id = %016llx, as replicator is required but not insalled on server",
@@ -493,7 +478,7 @@ void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_messa
     }
     else
     {
-        _layer2_role->layer2_frameworks.on_rpc_request(_app_context_ptr, gpid, is_write, req, delay);
+        _app_spec.role->layer2_frameworks.on_rpc_request(_app_info.app.app_context_ptr, gpid, is_write, req, delay);
     }
 }
 
@@ -521,14 +506,14 @@ error_code layer2_handler_core::create_layer1_app(dsn_gpid gpid, /*our*/ void** 
         {
             app = new layer2_handler_core::layer1_app_info();
             app->gpid = gpid;
-            app->role = _owner_node->spec().role;
+            app->role = _owner_node->get_l2_app_role();
             app->server_dispatcher.reset(new rpc_server_dispatcher());
 
             memset(&app->info, 0, sizeof(app->info));
             app->info.app_id = gpid.u.app_id;
             app->info.index = gpid.u.partition_index;
             strncpy(app->info.role, _owner_node->spec().role_name.c_str(), sizeof(app->info.role));
-            strncpy(app->info.type, _owner_node->spec().type.c_str(), sizeof(app->info.type));
+            strncpy(app->info.type, _owner_node->spec().hosted_app_type_name.c_str(), sizeof(app->info.type));
             strncpy(app->info.name, _owner_node->spec().name.c_str(), sizeof(app->info.name));
             strncpy(app->info.data_dir, _owner_node->spec().data_dir.c_str(), sizeof(app->info.data_dir));
 
@@ -538,7 +523,7 @@ error_code layer2_handler_core::create_layer1_app(dsn_gpid gpid, /*our*/ void** 
     }
 
     app->app_context = app->role->layer1.create(_owner_node->spec().role->type_name, gpid);
-    app->info.app_context_ptr = app->app_context;
+    app->info.app.app_context_ptr = app->app_context;
     *app_context = app;
     return ERR_OK;
 }
@@ -547,8 +532,8 @@ error_code layer2_handler_core::start_layer1_app(void* app_context)
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
 
-    return service_node::start_app(app->info.app_context_ptr,
-        _owner_node->spec().arguments,
+    return service_node::start_app(app->info.app.app_context_ptr,
+        _owner_node->spec().hosted_app_arguments,
         app->role->layer1.start,
         _owner_node->spec().name
         );

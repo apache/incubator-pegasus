@@ -38,6 +38,7 @@
 # include <dsn/c/api_common.h>
 
 # ifdef __cplusplus
+namespace dsn { class service_app; }
 extern "C" {
 # endif
 
@@ -390,7 +391,13 @@ typedef struct dsn_app_info
     //
     // layer 1 information
     //
-    void* app_context_ptr;                    ///< returned by dsn_app_create
+    union {
+        void* app_context_ptr;                    ///< returned by dsn_app_create
+# ifdef __cplusplus
+        ::dsn::service_app *app_ptr_cpp;
+# endif
+    } app;
+    
     int   app_id;                             ///< app id, see \ref service_app_spec for more details.
     int   index;                              ///< app role index
     char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app role name

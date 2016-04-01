@@ -1394,7 +1394,7 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
 
         dsn::service_node* node = kv.second;
         dsn_app_info& info = info_buffer[i++];
-        info.app_context_ptr = node->get_app_context_ptr();
+        info.app.app_context_ptr = node->get_app_context_ptr();
         info.app_id = node->id();
         info.index = node->spec().index;
         strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));
