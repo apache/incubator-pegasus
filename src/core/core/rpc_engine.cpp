@@ -813,8 +813,13 @@ namespace dsn {
         {
             if (call)
             {
-                call->add_hook(
-                    [](dsn_error_t err, dsn_message_t req, dsn_message_t, void*)
+                call->replace_callback(
+                    [](dsn_rpc_response_handler_t callback,
+                        dsn_error_t err,
+                        dsn_message_t req,
+                        dsn_message_t resp,
+                        void* context,
+                        uint64_t timeout_ts_ms)
                     {
                         auto req2 = (message_ex*)(req);
                         if (req2->header->gpid.value != 0 && err != ERR_OK && err != ERR_HANDLER_NOT_FOUND)
@@ -823,11 +828,25 @@ namespace dsn {
                             if (nullptr != resolver)
                             {
                                 resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
+
+                                // still got time, retry
+                                int64_t nms = dsn_now_ms();
+                                if (nms + 1 < timeout_ts_ms)
+                                {
+                                    req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
+                                    auto call2 = dsn_rpc_create_response_task(req, callback, context, task::get_current_task()->hash(), task::get_current_task()->tracker());
+                                    ((rpc_response_task*)(call2))->set_caller_pool((dynamic_cast<rpc_response_task*>(task::get_current_task()))->caller_pool());
+                                    dsn_rpc_call(req2->server_address.c_addr(), call2);
+                                    return;
+                                }
                             }
                         }
+                        
+                        // any other cases (except return above)
+                        if (callback)
+                            callback(err, req, resp, context);
                     },
-                    nullptr,
-                    true
+                    dsn_now_ms() + hdr.client.timeout_ms
                     );
             }
 

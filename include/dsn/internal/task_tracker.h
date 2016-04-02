@@ -57,6 +57,7 @@ namespace dsn
         virtual ~trackable_task();
 
         void set_tracker(task_tracker* owner, dsn_task_t task);
+        task_tracker* tracker() { return _owner; }
 
     private:
         friend class task_tracker;
