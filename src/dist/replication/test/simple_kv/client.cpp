@@ -63,7 +63,6 @@ simple_kv_client_app::~simple_kv_client_app()
     std::vector<rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
-    rpc_address _meta_server_group;
     _meta_server_group.assign_group(dsn_group_build("meta-servers"));
     for (auto& ms : meta_servers)
     {
