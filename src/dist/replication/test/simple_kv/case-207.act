@@ -33,7 +33,7 @@ client:begin_write:id=10,key=k10,value=v10,timeout=0
 state:{{r1,pri,2,10,10},{r2,sec,2,10,10}}
 
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+wait:on_rpc_call:rpc_name=LPC_REPLICATION_CLIENT_READ,from=c,to=r1
 client:end_read:id=1,err=err_ok,resp=v1
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=v2
@@ -86,7 +86,7 @@ state:{{r2,sec,6,0},{r3,pri,6,0}}
 
 # check r3 data corrent
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r3
+wait:on_rpc_call:rpc_name=LPC_REPLICATION_CLIENT_READ,from=c,to=r3
 client:end_read:id=1,err=err_ok,resp=<<not-exist>>
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=<<not-exist>>
@@ -117,7 +117,7 @@ state:{{r2,pri,8,0},{r3,sec,8,0}}
 
 # check r2 data corrent
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r2
+wait:on_rpc_call:rpc_name=LPC_REPLICATION_CLIENT_READ,from=c,to=r2
 client:end_read:id=1,err=err_ok,resp=<<not-exist>>
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=<<not-exist>>
