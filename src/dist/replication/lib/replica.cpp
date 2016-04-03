@@ -132,7 +132,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     dsn_layer1_app_commit_rpc_request(_app->app_context(), request, true);
 }
 
-void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)
+void replica::response_client_message(dsn_message_t request, error_code error)
 {
     if (nullptr == request)
     {

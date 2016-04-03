@@ -178,7 +178,7 @@ public:
     //    
     ::dsn::replication::decree last_durable_decree() 
     {
-        return _app_info->info.type1.last_durable_decree;
+        return _app_info ? _app_info->info.type1.last_durable_decree : 0;
     }
 
 public:
@@ -188,7 +188,7 @@ public:
     const char* replica_name() const;
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
-    ::dsn::replication::decree last_committed_decree() const { return _app_info->info.type1.last_committed_decree; }
+    ::dsn::replication::decree last_committed_decree() const { return _app_info ? _app_info->info.type1.last_committed_decree : 0; }
     void* app_context() { return _app_context; }
     void reset_counters_after_learning();
 

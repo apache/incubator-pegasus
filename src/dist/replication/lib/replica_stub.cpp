@@ -950,7 +950,7 @@ void replica_stub::response_client_error(dsn_message_t request, error_code error
     }
 
     ddebug("reply client read/write, err = %s", error.to_string());
-    reply(request, error);
+    dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
 void replica_stub::init_gc_for_test()
