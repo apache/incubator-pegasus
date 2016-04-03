@@ -544,6 +544,7 @@ error_code layer2_handler_core::destroy_layer1_app(void* app_context, bool clean
     auto app = (layer2_handler_core::layer1_app_info*)(app_context);
     error_code err = app->role->layer1.destroy(app->app_context, cleanup);
 
+    if (err == ERR_OK)
     {
         utils::auto_write_lock l(_apps_lock);
         auto it = _layer1_apps.find(app->gpid.value);
@@ -559,6 +560,13 @@ error_code layer2_handler_core::destroy_layer1_app(void* app_context, bool clean
                 app->gpid.u.partition_index
                 );
         }
+    }
+    else
+    {
+        derror("destroy layer 1 app %s failed, err = %s",
+            app->info.name,
+            err.to_string()
+            );
     }
 
     return err;

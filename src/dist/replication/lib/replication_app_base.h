@@ -94,11 +94,14 @@ public:
     {
         if (_app_context)
         {
-            auto ctx = _app_context;
-            _app_info = nullptr;
-            _app_context = nullptr;
+            auto err = dsn_layer1_app_destroy(_app_context, clear_state);
+            if (err == ERR_OK)
+            {
+                _app_info = nullptr;
+                _app_context = nullptr;
+            }
 
-            return dsn_layer1_app_destroy(ctx, clear_state);
+            return err;
         }
         else
         {
