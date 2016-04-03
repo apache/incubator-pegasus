@@ -40,19 +40,19 @@ foreach ($keys as $k => $v)
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
         const <?=$f->get_cpp_request_type_name()?>& args,
-        int hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
-            <?=$f->get_rpc_code()?>, args, hash, get_partition_hash(args));
+            <?=$f->get_rpc_code()?>, args, thread_hash, get_partition_hash(args));
     }
 <?php    } else { ?>
     // - synchronous 
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_cpp_request_type_name()?>& args,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -63,7 +63,7 @@ foreach ($keys as $k => $v)
                 args,
                 nullptr,
                 empty_callback,
-                hash,
+                thread_hash,
                 timeout,
                 0,
                 get_partition_hash(args)

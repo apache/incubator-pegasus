@@ -646,20 +646,20 @@ DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, dsn_gpid gpid)
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, 
-    void* context, int reply_hash, dsn_task_tracker_t tracker)
+    void* context, int reply_thread_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task_ex(dsn_message_t request, dsn_rpc_response_handler_t cb, 
     dsn_task_cancelled_handler_t on_cancel,
-    void* context, int reply_hash, dsn_task_tracker_t tracker)
+    void* context, int reply_thread_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }

@@ -67,11 +67,11 @@ private:
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             int timeout_milliseconds= 0,
-            int reply_hash = 0
+            int reply_thread_hash = 0
             )
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
-        task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_hash);
+        task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_thread_hash);
         ::marshall(msg, *req);
         rpc::call(
             _meta_servers,

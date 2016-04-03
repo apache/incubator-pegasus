@@ -493,7 +493,7 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param request_hash          if the task code is bound to a partitioned thread pool,
+ \param thread_hash          if the task code is bound to a partitioned thread pool,
    a thread hash is needed to specify which thread in the pool should handle the request
 
  \param partition_hash        if the target service is partitioned,
@@ -505,7 +505,7 @@ rpc message read/write
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int request_hash DEFAULT(0),
+                                int thread_hash DEFAULT(0),
                                 uint64_t partition_hash DEFAULT(0)
                                 );
 
@@ -526,7 +526,7 @@ extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_task_code_t rpc_code,
                             void* buffer,
                             int size,
-                            int request_hash DEFAULT(0)
+                            int thread_hash DEFAULT(0)
                             );
 
 /*! type of the parameter in \ref dsn_msg_context_t */
@@ -573,7 +573,7 @@ inline int dsn_gpid_to_hash(dsn_gpid gpid)
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               request_hash; ///< thread hash on RPC server
+    int               thread_hash; ///< thread hash on RPC server
     dsn_gpid  gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
@@ -718,7 +718,7 @@ create a callback task to handle the response message from RPC server, or timeou
 \param cb               callback to handle rpc response or timeout, unlike the other
  kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
 \param context          context used by cb
-\param reply_hash       if the curren thread pool is partitioned, this specify which thread
+\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
  to execute the callback
 \param tracker          task tracker bound to the response task
 
@@ -728,7 +728,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* context, 
-                                int reply_hash DEFAULT(0),
+                                int reply_thread_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
@@ -740,7 +740,7 @@ create a callback task to handle the response message from RPC server, or timeou
  kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
 \param on_cancel        callback executed on task being-cancelled
 \param context          context used by cb
-\param reply_hash       if the curren thread pool is partitioned, this specify which thread
+\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
  to execute the callback
 \param tracker          task tracker bound to the response task
 
@@ -751,7 +751,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task_ex(
                                 dsn_rpc_response_handler_t cb, 
                                 dsn_task_cancelled_handler_t on_cancel,
                                 void* context, 
-                                int reply_hash DEFAULT(0),
+                                int reply_thread_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 

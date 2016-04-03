@@ -14,12 +14,12 @@ public:
 
     // from requests to partition hash
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-    virtual uint64_t get_key_hash(const std::string& key) 
+    virtual uint64_t get_partition_hash(const std::string& key) 
     {
         return dsn_crc64_compute(key.c_str(), key.size(), 0);
     }
 
-    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) 
+    virtual uint64_t get_partition_hash(const ::dsn::replication::application::kv_pair& key) 
     {
         return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
     }
@@ -43,7 +43,7 @@ public:
                 hash,
                 timeout,
                 0,
-                get_key_hash(key)
+                get_partition_hash(key)
                 )
             );
     }
@@ -54,8 +54,8 @@ public:
         const std::string& key, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -65,10 +65,10 @@ public:
                     key, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash,
-                    get_key_hash(key)
+                    reply_thread_hash,
+                    get_partition_hash(key)
                     );
     }
  
@@ -91,7 +91,7 @@ public:
                 hash,
                 timeout,
                 0,
-                get_key_hash(pr)
+                get_partition_hash(pr)
                 )
             );
     }
@@ -102,8 +102,8 @@ public:
         const kv_pair& pr, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -113,10 +113,10 @@ public:
                     pr, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash,
-                    get_key_hash(pr)
+                    reply_thread_hash,
+                    get_partition_hash(pr)
                     );
     }
  
@@ -139,7 +139,7 @@ public:
                 hash,
                 timeout,
                 0,
-                get_key_hash(pr)
+                get_partition_hash(pr)
                 )
             );
     }
@@ -150,8 +150,8 @@ public:
         const kv_pair& pr, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -161,10 +161,10 @@ public:
                     pr, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash,
-                    get_key_hash(pr)
+                    reply_thread_hash,
+                    get_partition_hash(pr)
                     );
     }
 

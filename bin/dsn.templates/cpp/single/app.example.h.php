@@ -55,7 +55,7 @@ public:
 
     virtual ::dsn::error_code start(int argc, char** argv) override
     {
-        if (argc < 2)
+        if (argc < 1)
         {
             printf ("Usage: <exe> server-host:server-port or service-url\n");
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -131,10 +131,11 @@ public:
 
     virtual ::dsn::error_code start(int argc, char** argv) override
     {
-        if (argc < 2)
+        if (argc < 1)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        _server = url_host_address(argv[1]);
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();

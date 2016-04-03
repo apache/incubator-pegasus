@@ -839,6 +839,12 @@ namespace dsn {
                                     dsn_rpc_call(req2->server_address.c_addr(), call2);
                                     return;
                                 }
+                                else
+                                {
+                                    derror("service access failed (%s), no more time for further tries, set error = ERR_TIMEOUT",
+                                        error_code(err).to_string());
+                                    err = ERR_TIMEOUT;
+                                }
                             }
                         }
                         

@@ -96,7 +96,7 @@ namespace dsn
         }
     }
 
-    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_hash)
+    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_thread_hash)
     {
         task_ptr tsk = new safe_task_handle;
         //do not add_ref here
@@ -104,7 +104,7 @@ namespace dsn
             request,
             nullptr,
             nullptr,
-            reply_hash,
+            reply_thread_hash,
             svc ? svc->tracker() : nullptr
             );
         tsk->set_task_info(t);
