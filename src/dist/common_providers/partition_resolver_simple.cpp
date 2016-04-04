@@ -95,7 +95,7 @@ namespace dsn
                     _app_id, partition_index, err.to_string());
 
                 {
-                    zauto_read_lock l(_config_lock);
+                    zauto_write_lock l(_config_lock);
                     _config_cache.erase(partition_index);
                 }
             }
@@ -238,64 +238,6 @@ namespace dsn
                 }
             }
         }
-        
-        ///*callback*/
-        //void partition_resolver_simple::replica_rw_reply(
-        //    error_code err,
-        //    dsn_message_t request,
-        //    dsn_message_t response,
-        //    request_context_ptr rc
-        //    )
-        //{
-        //    {
-        //        zauto_lock l(rc->lock);
-        //        if (rc->completed)
-        //        {
-        //            //dinfo("already time out before replica reply");
-        //            err.end_tracking();
-        //            return;
-        //        }
-        //    }
-
-        //    if (err != ERR_OK)
-        //    {
-        //        goto Retry;
-        //    }
-
-        //    ::unmarshall(response, err);
-
-        //    //
-        //    // some error codes do not need retry
-        //    //
-        //    if (err == ERR_OK || err == ERR_HANDLER_NOT_FOUND)
-        //    {
-        //        end_request(rc, err, response);
-        //        return;
-        //    }
-
-        //    // retry 
-        //    else
-        //    {
-        //        dsn::rpc_address adr = dsn_msg_from_address(response);
-        //    }
-
-        //Retry:
-        //    dinfo("%s.client: get error %s from replica with index %d",
-        //        _app_path.c_str(),
-        //        err.to_string(),
-        //        rc->partition_index
-        //        );
-
-        //    // clear partition configuration as it could be wrong
-        //    {
-        //        zauto_write_lock l(_config_lock);
-        //        _config_cache.erase(rc->partition_index);
-        //    }
-
-        //    // then retry
-        //    call(rc.get(), false);
-        //}
-
 
         /*send rpc*/
         dsn::task_ptr partition_resolver_simple::query_partition_config(int partition_index)
