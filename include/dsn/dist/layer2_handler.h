@@ -54,36 +54,33 @@ namespace dsn
     class service_node;
     class layer2_handler_core;
 
-    namespace dist
+    class layer2_handler : public service_app
     {
-        class layer2_handler : public service_app
+    public:
+        virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) = 0;
+
+    public:
+        static void on_layer2_rpc_request(void* app, dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay)
         {
-        public:
-            virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) = 0;
-
-        public:
-            static void on_layer2_rpc_request(void* app, dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay)
-            {
-                auto sapp = (layer2_handler*)app;
-                return sapp->on_request(gpid, is_write, msg, delay);
-            }
-        };
-
-        /*! C++ wrapper of the \ref dsn_register_app function for layer 2 frameworks */
-        template<typename TServiceApp>
-        void register_app(const char* type_name, uint64_t mask)
-        {
-            dsn_app app;
-            memset(&app, 0, sizeof(app));
-            app.mask = mask;
-            strncpy(app.type_name, type_name, sizeof(app.type_name));
-            app.layer1.create = service_app::app_create<TServiceApp>;
-            app.layer1.start = service_app::app_start;
-            app.layer1.destroy = service_app::app_destroy;
-
-            app.layer2.on_rpc_request = layer2_handler::on_layer2_rpc_request;
-
-            dsn_register_app(&app);
+            auto sapp = (layer2_handler*)app;
+            return sapp->on_request(gpid, is_write, msg, delay);
         }
+    };
+
+    /*! C++ wrapper of the \ref dsn_register_app function for layer 2 frameworks */
+    template<typename TServiceApp>
+    void register_layer2_framework(const char* type_name, uint64_t framework_mask)
+    {
+        dsn_app app;
+        memset(&app, 0, sizeof(app));
+        app.mask = framework_mask;
+        strncpy(app.type_name, type_name, sizeof(app.type_name));
+        app.layer1.create = service_app::app_create<TServiceApp>;
+        app.layer1.start = service_app::app_start;
+        app.layer1.destroy = service_app::app_destroy;
+
+        app.layer2_frameworks.on_rpc_request = layer2_handler::on_layer2_rpc_request;
+
+        dsn_register_app(&app);
     }
 }

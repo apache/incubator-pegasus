@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     ddl client interface
+ *     replication ddl client
  *
  * Revision history:
  *     2015-12-30, xiaotz, first version
@@ -39,10 +39,10 @@
 
 namespace dsn{ namespace replication{
 
-class client_ddl : public clientlet
+class replication_ddl_client : public clientlet
 {
 public:
-    client_ddl(const std::vector<dsn::rpc_address>& meta_servers);
+    replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::string& package_id, bool is_stateless);
 
@@ -67,11 +67,11 @@ private:
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             int timeout_milliseconds= 0,
-            int reply_hash = 0
+            int reply_thread_hash = 0
             )
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
-        task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_hash);
+        task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_thread_hash);
         ::marshall(msg, *req);
         rpc::call(
             _meta_servers,

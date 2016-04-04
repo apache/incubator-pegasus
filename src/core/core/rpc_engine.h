@@ -107,9 +107,12 @@ class rpc_server_dispatcher
 {
 public:
     rpc_server_dispatcher();
+    ~rpc_server_dispatcher();
+
     bool  register_rpc_handler(rpc_handler_info* handler);
     rpc_handler_info* unregister_rpc_handler(dsn_task_code_t rpc_code);
     rpc_request_task* on_request(message_ex* msg, service_node* node);
+    void              on_request_with_inline_execution(message_ex* msg, service_node* node);
     int handler_count() const 
     {
         utils::auto_read_lock l(_handlers_lock); 
@@ -190,7 +193,6 @@ private:
     std::unique_ptr<uri_resolver_manager>            _uri_resolver_mgr;
     
     volatile bool                 _is_running;
-    static bool                   _message_crc_required;
 };
 
 // ------------------------ inline implementations --------------------

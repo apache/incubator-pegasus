@@ -68,14 +68,7 @@ namespace dsn
         std::set<clientlet*> _services;
         std::map<std::string, service_app*> _apps;
     };
-
-    static service_objects* dsn_apps = &(service_objects::instance());
-
-    void service_app::register_for_debugging()
-    {
-        service_objects::instance().add_app(this);
-    }
-
+    
     clientlet::clientlet(int task_bucket_count)
     {
         _tracker = dsn_task_tracker_create(task_bucket_count);
@@ -103,7 +96,7 @@ namespace dsn
         }
     }
 
-    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_hash)
+    task_ptr rpc::create_rpc_response_task(dsn_message_t request, clientlet* svc, empty_callback_t, int reply_thread_hash)
     {
         task_ptr tsk = new safe_task_handle;
         //do not add_ref here
@@ -111,7 +104,7 @@ namespace dsn
             request,
             nullptr,
             nullptr,
-            reply_hash,
+            reply_thread_hash,
             svc ? svc->tracker() : nullptr
             );
         tsk->set_task_info(t);

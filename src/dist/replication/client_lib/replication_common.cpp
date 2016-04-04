@@ -405,4 +405,31 @@ void replication_options::sanity_check()
     }
 }
 
+void replica_helper::load_meta_servers(
+    /*out*/ std::vector<dsn::rpc_address>& servers,
+    const char* section)
+{
+    // read meta_servers from machine list file
+    servers.clear();
+
+    const char* server_ss[10];
+    int capacity = 10, need_count;
+    need_count = dsn_config_get_all_keys(section, server_ss, &capacity);
+    dassert(need_count <= capacity, "too many meta servers specified in config [%s]", section);
+
+    for (int i = 0; i < capacity; i++)
+    {
+        std::string s(server_ss[i]);
+
+        // name:port
+        auto pos1 = s.find_first_of(':');
+        if (pos1 != std::string::npos)
+        {
+            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            servers.push_back(ep);
+        }
+    }
+    dassert(servers.size() > 0, "no meta server specified in config [%s]", section);
+}
+
 }} // end namespace

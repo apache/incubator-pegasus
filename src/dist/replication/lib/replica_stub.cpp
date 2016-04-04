@@ -39,6 +39,7 @@
 #include "mutation_log.h"
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -949,7 +950,7 @@ void replica_stub::response_client_error(dsn_message_t request, error_code error
     }
 
     ddebug("reply client read/write, err = %s", error.to_string());
-    reply(request, error);
+    dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
 void replica_stub::init_gc_for_test()

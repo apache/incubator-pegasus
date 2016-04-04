@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
 # include <dsn/internal/module_int.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(deploy_svc)
     dsn_app_registration();
 MODULE_INIT_END
 

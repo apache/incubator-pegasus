@@ -38,21 +38,21 @@ protected:
 <?php } ?>
     
 public:
-    void open_service()
+    void open_service(dsn_gpid gpid)
     {
 <?php foreach ($svc->functions as $f) { ?>
 <?php     if ($f->is_one_way()) {?>
-        this->register_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>);
+        this->register_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>, gpid);
 <?php     } else {?>
-        this->register_async_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>);
+        this->register_async_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>, gpid);
 <?php     } ?>
 <?php } ?>
     }
 
-    void close_service()
+    void close_service(dsn_gpid gpid)
     {
 <?php foreach ($svc->functions as $f) { ?>
-        this->unregister_rpc_handler(<?=$f->get_rpc_code()?>);
+        this->unregister_rpc_handler(<?=$f->get_rpc_code()?>, gpid);
 <?php } ?>
     }
 };

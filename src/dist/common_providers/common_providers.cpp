@@ -32,9 +32,6 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-
-# pragma once
-
 # include "partition_resolver_simple.h"
 # include <dsn/internal/factory_store.h>
 

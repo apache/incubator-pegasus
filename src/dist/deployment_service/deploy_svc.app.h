@@ -18,9 +18,10 @@ public:
         return _deploy_svc_svc.start();
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _deploy_svc_svc.close_service();
+        return ERR_OK;
     }
 
 private:
@@ -54,7 +55,7 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
  
@@ -63,6 +64,7 @@ public:
             delete _deploy_svc_client;
             _deploy_svc_client = nullptr;
         }
+        return ERR_OK;
     }
 
     void on_test_timer()
@@ -144,13 +146,14 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         if (_deploy_svc_client != nullptr)
         {
             delete _deploy_svc_client;
             _deploy_svc_client = nullptr;
         }
+        return ERR_OK;
     }
     
 private:

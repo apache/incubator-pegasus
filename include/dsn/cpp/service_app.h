@@ -57,27 +57,31 @@ namespace dsn
 
         virtual ::dsn::error_code start(int argc, char** argv) = 0;
 
-        virtual void stop(bool cleanup = false) = 0;
+        virtual ::dsn::error_code stop(bool cleanup = false) = 0;
 
+        //
+        // inquery routines
+        //
         bool is_started() const { return _started; }
 
         ::dsn::rpc_address primary_address() const { return _address; }
 
         const std::string& name() const { return _name; }
 
+        dsn_gpid gpid() const { return _gpid; }
+        
     private:
-        void register_for_debugging();
-
-    private:
-        bool          _started;
+        bool               _started;
         ::dsn::rpc_address _address;
-        std::string   _name;
+        std::string        _name;
+        dsn_gpid           _gpid;
 
     public:
         template<typename TServiceApp>
-        static void* app_create(const char* /*tname*/)
+        static void* app_create(const char* /*tname*/, dsn_gpid gpid)
         {
             auto svc =  new TServiceApp();
+            svc->_gpid = gpid;
             return (void*)(dynamic_cast<service_app*>(svc));
         }
 
@@ -90,17 +94,17 @@ namespace dsn
             auto r = sapp->start(argc, argv);
             if (r == ::dsn::ERR_OK)
             {
-                sapp->_started = true;                
-                sapp->register_for_debugging();
+                sapp->_started = true;
             }
             return r;
         }
 
-        static void app_destroy(void* app, bool cleanup)
+        static dsn_error_t app_destroy(void* app, bool cleanup)
         {
             service_app* sapp = (service_app*)(app);
-            sapp->stop(cleanup);
-            sapp->_started = false;
+            auto err = sapp->stop(cleanup);
+            if (ERR_OK == err) sapp->_started = false;
+            return err;
         }
     };
 

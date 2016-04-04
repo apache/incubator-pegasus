@@ -112,7 +112,8 @@ struct service_app_spec
     std::string          dmodule_bridge_arguments; 
     dsn_app              *role;
 
-    std::string          layer2_handler_type_name; // empty for no layer2 handler
+    std::string          hosted_app_type_name; // empty if type is not layer 2 framework
+    std::string          hosted_app_arguments; 
 
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
@@ -129,7 +130,7 @@ struct service_app_spec
 
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
-    CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
+    CONFIG_FLD_STRING(arguments, "", "arguments for the (layer 1) app instances")    
     CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
     CONFIG_FLD_STRING(dmodule_bridge_arguments, "",
         "\n; when the service cannot automatically register its app types into rdsn \n"
@@ -143,7 +144,8 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
     CONFIG_FLD(int, uint64, count, 1, "count of app instances for this type (ports are automatically calculated accordingly to avoid confliction)")
     CONFIG_FLD(bool, bool, run, true, "whether to run the app instances or not")
-    CONFIG_FLD_STRING(layer2_handler_type_name, "", "registered app name as layer2 handler, which is used to host the current layer1 app designated by type")
+    CONFIG_FLD_STRING(hosted_app_type_name, "", "registered app name as hosted apps for layer 2 frameworks whose types are designated by type")
+    CONFIG_FLD_STRING(hosted_app_arguments, "", "arguments for the hosted app instances inside layer 2 frameworks")
 CONFIG_END
 
 struct service_spec

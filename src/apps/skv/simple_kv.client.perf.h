@@ -34,24 +34,24 @@
  */
 
 # pragma once
-# include "simple_kv.client.h"
+# include "simple_kv.client.2.h"
 
 namespace dsn { namespace replication { namespace application {  
 
  
 class simple_kv_perf_test_client 
-    : public simple_kv_client, 
+    : public simple_kv_client2, 
       public ::dsn::service::perf_client_helper 
 {
 public:
-    using simple_kv_client::simple_kv_client;
+    using simple_kv_client2::simple_kv_client2;
 
-    virtual uint64_t get_key_hash(const std::string& key) override
+    virtual uint64_t get_partition_hash(const std::string& key) override
     {
         return dsn_crc64_compute(key.c_str(), key.size(), 0);
     }
 
-    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
+    virtual uint64_t get_partition_hash(const ::dsn::replication::application::kv_pair& key) override
     {
         return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
     }

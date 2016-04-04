@@ -37,24 +37,3 @@
 # include <dsn/internal/task.h>
 # include "service_engine.h"
 # include "rpc_engine.h"
-
-
-DSN_API dsn_error_t dsn_create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().create_layer1_app(gpid, app_context);
-}
-
-DSN_API dsn_error_t dsn_start_layer1_app(void* app_context, int argc, char** argv)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().start_layer1_app(app_context, argc, argv);
-}
-
-DSN_API void dsn_destroy_layer1_app(void* app_context, bool cleanup)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().destroy_layer1_app(app_context, cleanup);
-}
-
-DSN_API void dsn_handle_layer1_rpc_request(void* app_context, dsn_message_t msg)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().commit_layer1(app_context, msg);
-}

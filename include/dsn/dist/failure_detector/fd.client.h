@@ -76,8 +76,8 @@ public:
         const beacon_msg& beacon, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -87,9 +87,9 @@ public:
                     beacon, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 

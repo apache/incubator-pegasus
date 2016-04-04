@@ -174,9 +174,9 @@ public:
         return ERR_OK;
     }
 
-    void stop(bool) override
+    error_code stop(bool) override
     {
-
+        return ERR_OK;
     }
 
     void on_master_config(const config_master_message& request, bool& response)
@@ -205,10 +205,12 @@ public:
 
         return ERR_OK;
     }
-    void stop(bool) override
-    {
 
+    error_code stop(bool) override
+    {
+        return ERR_OK;
     }
+
     master_fd_test* fd() { return _master_fd; }
 private:
     master_fd_test* _master_fd;
@@ -252,13 +254,13 @@ bool get_worker_and_master(test_worker* &worker, std::vector<test_master*> &mast
         if ( strcmp(all_apps[i].type, "worker")==0 ) {
             if (worker!=nullptr)
                 return false;
-            worker = reinterpret_cast<test_worker*>(all_apps[i].app_context_ptr);
+            worker = reinterpret_cast<test_worker*>(all_apps[i].app.app_context_ptr);
         }
         else if ( strcmp(all_apps[i].type, "master")==0 ) {
             int index = all_apps[i].index-1;
             if (index>=masters.size() || masters[index]!=nullptr)
                 return false;
-            masters[index] = reinterpret_cast<test_master*>(all_apps[i].app_context_ptr);
+            masters[index] = reinterpret_cast<test_master*>(all_apps[i].app.app_context_ptr);
         }
     }
 

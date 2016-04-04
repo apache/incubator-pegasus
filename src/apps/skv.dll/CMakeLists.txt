@@ -15,13 +15,7 @@ set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../skv")
 
 set(MY_BOOST_PACKAGES system)
 
-set(MY_PROJ_LIBS
-    dsn.replication.global_checker 
-    dsn.replication 
-    dsn.replication.clientlib 
-    dsn.failure_detector.multimaster 
-    dsn.failure_detector
-    )
+set(MY_PROJ_LIBS "")
 
 set(MY_PROJ_LIB_PATH "${ZOOKEEPER_LIB_DIR}")
 

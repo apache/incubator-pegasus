@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.ddlclient)
+set(MY_PROJ_NAME dsn.tools.ddlclient)
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
@@ -11,6 +11,7 @@ set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS 
     dsn.replication.clientlib
+    dsn.replication.ddlclient
     )
 
 set(MY_PROJ_LIB_PATH)

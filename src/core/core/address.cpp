@@ -122,11 +122,13 @@ DSN_API uint32_t dsn_ipv4_from_host(const char* name)
     return (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
+// if network_interface is "", then return the first "eth" prefixed non-loopback ipv4 address.
 DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 {
     uint32_t ret = 0;
 
 # ifndef _WIN32
+    static const char loopback[4] = { 127, 0, 0, 1 };
     struct ifaddrs* ifa = nullptr;
     if (getifaddrs(&ifa) == 0)
     {
@@ -134,11 +136,15 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
         while (i != nullptr)
         {
             if (i->ifa_name != nullptr &&
-                strcmp(i->ifa_name, network_interface) == 0 &&
                 i->ifa_addr != nullptr && 
                 i->ifa_addr->sa_family == AF_INET
                 )
             {
+                if (strcmp(i->ifa_name, network_interface) == 0 ||
+                        (network_interface[0] == '\0'
+                         && strncmp(i->ifa_name, "eth", 3) == 0
+                         && strncmp((const char*)&((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr, loopback, 4) != 0)
+                   )
                 ret = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
                 break;
             }

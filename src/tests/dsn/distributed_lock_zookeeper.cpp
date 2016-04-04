@@ -76,12 +76,13 @@ public:
             unlock_task->wait();
             task_pair.second->cancel(false);
         }
+
         return ERR_OK;
     }
 
-    void stop(bool cleanup) 
+    error_code stop(bool cleanup) override
     {
-        
+        return ERR_OK;
     }
 
 private:

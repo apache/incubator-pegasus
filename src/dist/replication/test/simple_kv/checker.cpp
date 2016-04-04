@@ -79,14 +79,14 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
     {
         if (0 == strcmp(app.type, "meta"))
         {
-            meta_service_app* meta_app = (meta_service_app*)app.app_context_ptr;
+            meta_service_app* meta_app = (meta_service_app*)app.app.app_context_ptr;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                         std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             _meta_servers.push_back(meta_app);
         }
         else if (0 == strcmp(app.type, "replica"))
         {
-            replication_service_app* replica_app = (replication_service_app*)app.app_context_ptr;
+            replication_service_app* replica_app = (replication_service_app*)app.app.app_context_ptr;
             replica_app->_stub->set_replica_state_subscriber_for_test(
                         std::bind(&test_checker::on_replica_state_change, this,
                                   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),

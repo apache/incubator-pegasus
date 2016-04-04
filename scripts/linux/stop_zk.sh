@@ -13,5 +13,8 @@ cd $INSTALL_DIR
 
 ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
 
-$ZOOKEEPER_HOME/bin/zkServer.sh stop
+if [ -d "$ZOOKEEPER_HOME" ]
+then
+    $ZOOKEEPER_HOME/bin/zkServer.sh stop
+fi
 

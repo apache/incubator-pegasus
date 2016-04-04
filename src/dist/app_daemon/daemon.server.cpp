@@ -41,7 +41,7 @@
  
 using namespace ::dsn::replication;
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(daemon)
     dsn::register_app< ::dsn::dist::daemon>("daemon");
 MODULE_INIT_END
 
@@ -788,10 +788,11 @@ namespace dsn
             return ::dsn::ERR_OK;
         }
 
-        void daemon::stop(bool cleanup)
+        ::dsn::error_code daemon::stop(bool cleanup)
         {
             _daemon_s_svc->close_service();
             _daemon_s_svc = nullptr;
+            return ERR_OK;
         }
 
         daemon::daemon()
