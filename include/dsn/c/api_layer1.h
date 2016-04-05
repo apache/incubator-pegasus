@@ -529,13 +529,27 @@ typedef enum dsn_msg_parameter_type_t
 
 } dsn_msg_parameter_type_t;
 
+enum dsn_msg_serialize_format
+{
+    DSF_DSN_BINARY,
+    DSF_THRIFT_BINARY,
+    DSF_THRIFT_COMPACT,
+    DSF_THRIFT_JSON,
+    DSF_PROTOC_BINARY,
+    DSF_PROTOC_JSON,
+
+    DSF_COUNT,
+    DSF_INVALID
+};
+
 /*! RPC message context */
 typedef union dsn_msg_context_t
 {
     struct {
         uint64_t is_request : 1;           ///< whether the RPC message is a request or response
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
-        uint64_t unused : 9;               ///< not used yet
+        uint64_t unused : 5;               ///< not used yet
+        uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
         uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
@@ -606,6 +620,10 @@ extern DSN_API void         dsn_msg_get_options(
                                 dsn_message_t msg,
                                 /*out*/ dsn_msg_options_t* opts
                                 );
+
+DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt);
+
+DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg);
 
 /*! get message body size */
 extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);

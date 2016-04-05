@@ -285,7 +285,7 @@ void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader
         if (response)
         {
             // replication layer error
-            ::marshall(response, ERR_OK);
+            ::dsn::marshall(response, ERR_OK);
         }
 
         h->callback(this, h->inner_callback, reader, response);

@@ -348,7 +348,7 @@ void replica::update_configuration_on_meta_server(config_type type, ::dsn::rpc_a
     request->type = type;
     request->node = node;
 
-    ::marshall(msg, *request);
+    ::dsn::marshall(msg, *request);
 
     if (nullptr != _primary_states.reconfiguration_task)
     {
@@ -382,7 +382,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     configuration_update_response resp;
     if (err == ERR_OK)
     {
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
         err = resp.err;
     }
 

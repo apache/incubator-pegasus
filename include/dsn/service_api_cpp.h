@@ -39,7 +39,7 @@
 //# include <dsn/internal/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/config_helper.h>
-# include <dsn/cpp/serialization.h>
+# include <dsn/cpp/serialization_manager.h>
 # include <dsn/cpp/rpc_stream.h>
 # include <dsn/cpp/zlocks.h>
 # include <dsn/cpp/clientlet.h>

@@ -140,7 +140,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->completed = false;
 
     size_t offset = dsn_msg_body_size(request);
-    ::marshall(request, rc->write_header);
+    ::dsn::marshall(request, rc->write_header);
     rc->header_pos = (char*)dsn_msg_rw_ptr(request, offset);
 
     return rc;
@@ -176,7 +176,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->completed = false;
 
     size_t offset = dsn_msg_body_size(request);
-    ::marshall(request, rc->read_header);
+    ::dsn::marshall(request, rc->read_header);
     rc->header_pos = (char*)dsn_msg_rw_ptr(request, offset);
 
     return rc;
@@ -383,7 +383,7 @@ void replication_app_client_base::replica_rw_reply(
         goto Retry;
     }
 
-    ::unmarshall(response, err);
+    ::dsn::unmarshall(response, err);
 
     //
     // some error codes do not need retry
@@ -426,7 +426,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     if (err == ERR_OK)
     {
         configuration_query_by_index_response resp;
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
         if (resp.err == ERR_OK)
         {
             zauto_write_lock l(_config_lock);
@@ -553,7 +553,7 @@ dsn::task_ptr replication_app_client_base::query_partition_config(request_contex
     {
         req.partition_indices.push_back(request->partition_index);
     }
-    ::marshall(msg, req);
+    ::dsn::marshall(msg, req);
 
     rpc_address target(_meta_servers);
     return rpc::call(

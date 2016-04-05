@@ -443,7 +443,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     }
     else
     {
-        ::unmarshall(reply, resp);
+        ::dsn::unmarshall(reply, resp);
     }
     
     ddebug(

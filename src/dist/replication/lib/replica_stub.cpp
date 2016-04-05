@@ -439,7 +439,7 @@ void replica_stub::on_client_read(global_partition_id gpid, dsn_message_t reques
 void replica_stub::on_client_write2(dsn_message_t request)
 {
     write_request_header hdr;
-    ::unmarshall(request, hdr);
+    ::dsn::unmarshall(request, hdr);
 
     if (hdr.code == TASK_CODE_INVALID)
     {
@@ -461,7 +461,7 @@ void replica_stub::on_client_write2(dsn_message_t request)
 void replica_stub::on_client_read2(dsn_message_t request)
 {
     read_request_header hdr;
-    ::unmarshall(request, hdr);
+    ::dsn::unmarshall(request, hdr);
 
     if (hdr.code == TASK_CODE_INVALID)
     {
@@ -558,7 +558,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
 void replica_stub::on_prepare(dsn_message_t request)
 {
     global_partition_id gpid;
-    ::unmarshall(request, gpid);    
+    ::dsn::unmarshall(request, gpid);
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -607,7 +607,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 void replica_stub::on_learn(dsn_message_t msg)
 {
     learn_request request;
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
 
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
@@ -720,7 +720,7 @@ void replica_stub::query_configuration_by_node()
 
     configuration_query_by_node_request req;
     req.node = _primary_address;
-    ::marshall(msg, req);
+    ::dsn::marshall(msg, req);
 
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
@@ -778,7 +778,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         configuration_query_by_node_response resp;
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
 
         if (resp.err != ERR_OK)
             return;
@@ -890,7 +890,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         return;
     }
 
-    ::marshall(msg, *request);
+    ::dsn::marshall(msg, *request);
 
     rpc_address target(_failure_detector->get_servers());
     rpc::call(

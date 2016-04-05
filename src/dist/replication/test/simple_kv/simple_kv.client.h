@@ -174,10 +174,10 @@ public:
         dsn::rpc_address meta_servers = replication_app_client_base::get_meta_servers();
         dsn_message_t request = dsn_msg_create_request(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND, 30000);
 
-        ::marshall(request, g_default_gpid);
-        ::marshall(request, receiver);
-        ::marshall(request, type);
-        ::marshall(request, node);
+        ::dsn::marshall(request, g_default_gpid);
+        ::dsn::marshall(request, receiver);
+        ::dsn::marshall(request, type);
+        ::dsn::marshall(request, node);
 
         dsn_rpc_call_one_way(meta_servers.c_addr(), request);
     }

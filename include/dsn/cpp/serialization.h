@@ -48,20 +48,6 @@
 # include <dsn/thrift_helper.h>
 #endif
 
-template<typename T>
-inline void marshall(dsn_message_t msg, const T& val)
-{
-    ::dsn::rpc_write_stream writer(msg);
-    marshall(writer, val);
-}
-
-template<typename T>
-inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
-{
-    ::dsn::rpc_read_stream reader(msg);
-    unmarshall(reader, val);
-}
-
 namespace dsn {
     
 #ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION

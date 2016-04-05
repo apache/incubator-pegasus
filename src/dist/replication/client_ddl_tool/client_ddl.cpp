@@ -95,7 +95,7 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     }
 
     dsn::replication::configuration_create_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         std::cout << "create app " << app_name << " failed: [create] received server error: " << resp.err.to_string() << std::endl;
@@ -130,7 +130,7 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
         }
 
         dsn::replication::configuration_query_by_index_response query_resp;
-        ::unmarshall(query_task->response(), query_resp);
+        ::dsn::unmarshall(query_task->response(), query_resp);
         if(query_resp.err != dsn::ERR_OK)
         {
             std::cout << "create app " << app_name << " failed: [query] received server error: " << query_resp.err.to_string() << std::endl;
@@ -177,7 +177,7 @@ dsn::error_code client_ddl::drop_app(const std::string& app_name)
     }
 
     dsn::replication::configuration_drop_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -201,7 +201,7 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
     }
 
     dsn::replication::configuration_list_apps_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -259,7 +259,7 @@ dsn::error_code client_ddl::list_nodes(const dsn::replication::node_status statu
     }
 
     dsn::replication::configuration_list_nodes_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -311,7 +311,7 @@ dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed,
     }
 
     dsn::replication::configuration_query_by_index_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -374,7 +374,7 @@ dsn::error_code client_ddl::control_meta_balancer_migration(bool start)
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::control_balancer_migration_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 
@@ -389,7 +389,7 @@ dsn::error_code client_ddl::send_balancer_proposal(const balancer_proposal_reque
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::balancer_proposal_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 

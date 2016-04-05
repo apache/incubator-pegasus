@@ -149,7 +149,7 @@ namespace dsn {
         if (err == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;
-            ::unmarshall((dsn_message_t)reply, addr);
+            ::dsn::unmarshall((dsn_message_t)reply, addr);
 
             // TODO(qinzuoyan): handle the case of forwarding to itself where addr == req->to_address.
 
@@ -1036,7 +1036,7 @@ namespace dsn {
         if (request->header->from_address.port() <= MAX_CLIENT_PORT)
         {
             auto resp = request->create_response();
-            ::marshall(resp, address);
+            ::dsn::marshall(resp, address);
             ::dsn::task::get_current_rpc()->reply(resp, ::dsn::ERR_FORWARD_TO_OTHERS);
         }
 

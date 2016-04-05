@@ -38,7 +38,7 @@
 # include <thread>
 # include <sstream>
 # include <dsn/cpp/utils.h>
-# include <dsn/cpp/serialization.h>
+# include <dsn/cpp/serialization_manager.h>
 # include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 # include <dsn/internal/task.h>
@@ -259,8 +259,8 @@ namespace dsn {
                 ::dsn::rpc_read_stream response;
                 
                 dsn_message_t msg = dsn_msg_create_request(RPC_DSN_CLI_CALL, 0, 0);
-                ::marshall(msg, cmd);
-                ::marshall(msg, args);
+                ::dsn::marshall(msg, cmd);
+                ::dsn::marshall(msg, args);
                 auto resp = dsn_rpc_call_wait(h->address.c_addr(), msg);
                 if (resp != nullptr)
                 {
@@ -317,7 +317,7 @@ namespace dsn {
         run_command(cli_command.cmd, cli_command.arguments, result);
 
         auto resp = dsn_msg_create_response(req);
-        ::marshall(resp, result);
+        ::dsn::marshall(resp, result);
         dsn_rpc_reply(resp);
     }
 

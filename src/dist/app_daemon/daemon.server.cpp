@@ -601,7 +601,7 @@ namespace dsn
                 app->configuration.secondaries.emplace_back(node);
             }
 
-            ::marshall(msg, *request);
+            ::dsn::marshall(msg, *request);
 
             rpc::call(
                 _fd->get_servers(),
@@ -628,7 +628,7 @@ namespace dsn
             configuration_update_response resp;
             if (err == ERR_OK)
             {
-                ::unmarshall(response, resp);
+                ::dsn::unmarshall(response, resp);
                 err = resp.err;
             }
             else if (err == ERR_TIMEOUT)

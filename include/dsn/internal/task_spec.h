@@ -150,6 +150,16 @@ ENUM_BEGIN(throttling_mode_t, TM_INVALID)
     ENUM_REG(TM_DELAY)
 ENUM_END(throttling_mode_t)
 
+
+ENUM_BEGIN(dsn_msg_serialize_format, DSF_INVALID)
+    ENUM_REG(DSF_DSN_BINARY)
+    ENUM_REG(DSF_THRIFT_BINARY)
+    ENUM_REG(DSF_THRIFT_COMPACT)
+    ENUM_REG(DSF_THRIFT_JSON)
+    ENUM_REG(DSF_PROTOC_BINARY)
+    ENUM_REG(DSF_PROTOC_JSON)
+ENUM_END(dsn_msg_serialize_format)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
@@ -205,7 +215,8 @@ public:
     // for other tasks - allow-inline allows a task being execution in io-thread
     bool                   allow_inline;
     bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
-    network_header_format  rpc_call_header_format;
+    network_header_format    rpc_call_header_format;
+    dsn_msg_serialize_format rpc_msg_payload_serialize_default_format;
     rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
@@ -266,6 +277,7 @@ CONFIG_BEGIN(task_spec)
         )
     CONFIG_FLD(bool, bool, randomize_timer_delay_if_zero, false, "whether to randomize the timer delay to random(0, timer_interval), if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
+    CONFIG_FLD_ENUM(dsn_msg_serialize_format, rpc_msg_payload_serialize_default_format, DSF_DSN_BINARY, DSF_INVALID, false, "what kind of payload serialization format for this kind of msgs")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")

@@ -37,6 +37,7 @@
 
 # include <dsn/cpp/task_helper.h>
 # include <dsn/cpp/function_traits.h>
+# include <dsn/cpp/serialization_manager.h>
 
 namespace dsn
 { 
@@ -271,7 +272,7 @@ namespace dsn
                     typename is_typed_rpc_callback<TCallback>::response_t response;
                     if (err == ERR_OK)
                     {
-                        ::unmarshall(resp, response);
+                        ::dsn::unmarshall(resp, response);
                     }
                     cb_fwd(err, std::move(response));
                 },
@@ -302,11 +303,21 @@ namespace dsn
             int request_hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0,
-            uint64_t partition_hash = 0
+            uint64_t partition_hash = 0,
+            dsn_msg_serialize_format format = DSF_INVALID
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
-            ::marshall(msg, std::forward<TRequest>(req));
+            if (format == DSF_INVALID)
+            {
+                ::dsn::marshall(msg, std::forward<TRequest>(req));
+            }
+            else
+            {
+                dsn_msg_set_serailize_format(msg, format);
+                ::dsn::marshall(msg, std::forward<TRequest>(req), format);
+            }
+
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
         }
 
@@ -337,7 +348,7 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
-            ::marshall(msg, std::forward<TRequest>(req));
+            ::dsn::marshall(msg, std::forward<TRequest>(req));
             return rpc_message_helper(msg);
         }
 
@@ -357,25 +368,34 @@ namespace dsn
         void call_one_way_typed(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
-            const TRequest& req,
+            TRequest&& req,
             int request_hash = 0,
-            uint64_t partition_hash = 0
+            uint64_t partition_hash = 0,
+            dsn_msg_serialize_format format = DSF_INVALID
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, 0, request_hash, partition_hash);
-            ::marshall(msg, req);
+            if (format == DSF_INVALID)
+            {
+                ::dsn::marshall(msg, std::forward<TRequest>(req));
+            }
+            else
+            {
+                dsn_msg_set_serailize_format(msg, format);
+                ::dsn::marshall(msg, std::forward<TRequest>(req), format);
+            }
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }
         
         template<typename TResponse>
-        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
+        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(safe_task_handle* task)
         {
             task->wait();
             std::pair< ::dsn::error_code, TResponse> result;
             result.first = task->error();
             if (task->error() == ::dsn::ERR_OK)
             {
-                ::unmarshall(task->response(), result.second);
+                ::dsn::unmarshall(task->response(), result.second);
             }
             return result;
         }
@@ -384,12 +404,12 @@ namespace dsn
         std::pair< ::dsn::error_code, TResponse> call_wait(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
-            const TRequest& req,
+            TRequest&& req,
             int hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0)
             )
         {
-            return wait_and_unwrap<TResponse>(call(server, code, req, nullptr, empty_callback, hash, timeout));
+            return wait_and_unwrap<TResponse>(call(server, code, std::forward<TRequest>(req), nullptr, empty_callback, hash, timeout));
         }
     }
     /*@}*/

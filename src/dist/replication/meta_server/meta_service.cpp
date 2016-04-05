@@ -691,7 +691,7 @@ void meta_service::on_create_app(dsn_message_t req)
     META_STATUS_CHECK_ON_RPC(req, response);
 
     configuration_create_app_request request;
-    unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     _state->create_app(request, response);
     reply(req, response);
 }
@@ -702,7 +702,7 @@ void meta_service::on_drop_app(dsn_message_t req)
     META_STATUS_CHECK_ON_RPC(req, response);
 
     configuration_drop_app_request request;
-    unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     _state->drop_app(request, response);
     reply(req, response);
 }
@@ -734,7 +734,7 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
     configuration_query_by_node_response response;
     META_STATUS_CHECK_ON_RPC(msg, response);
 
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
     _state->query_configuration_by_node(request, response);
     reply(msg, response);    
 }
@@ -745,7 +745,7 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
     configuration_query_by_index_response response;
     META_STATUS_CHECK_ON_RPC(msg, response);
 
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
 }
@@ -760,10 +760,10 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
     config_type type;
     rpc_address node;
 
-    ::unmarshall(req, gpid);
-    ::unmarshall(req, receiver);
-    ::unmarshall(req, type);
-    ::unmarshall(req, node);
+    ::dsn::unmarshall(req, gpid);
+    ::dsn::unmarshall(req, receiver);
+    ::dsn::unmarshall(req, type);
+    ::dsn::unmarshall(req, node);
 
     _balancer->explictly_send_proposal(gpid, receiver, type, node);
 }
@@ -774,7 +774,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
     META_STATUS_CHECK_ON_RPC(req, response);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-    ::unmarshall(req, *request);
+    ::dsn::unmarshall(req, *request);
 
     if (_state->freezed())
     {
@@ -814,7 +814,7 @@ void meta_service::on_control_balancer_migration(dsn_message_t req)
     control_balancer_migration_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    ::unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     _balancer->on_control_migration(request, response);
     reply(req, response);
 }
@@ -825,7 +825,7 @@ void meta_service::on_balancer_proposal(dsn_message_t req)
     balancer_proposal_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    ::unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
           request.gpid.app_id, request.gpid.pidx,
           enum_to_string(request.type),
