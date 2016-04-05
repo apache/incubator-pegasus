@@ -210,25 +210,14 @@ namespace dsn {
                 }
             }
 
-            // injector
+            // failure injection not applied
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
-
-                if (ERR_OK == err)
-                    call->enqueue(err, reply);
-                else
-                {
-                    call->enqueue(err, nullptr);
-
-                    // because (1) initially, the ref count is zero
-                    //         (2) upper apps may call add_ref already
-                    call->add_ref();
-                    call->release_ref();
-                }
+                call->enqueue(err, reply);
             }
 
-            // release the task when necessary
+            // failure injection applied
             else
             {
                 ddebug("rpc reply %s is dropped (fault inject), rpc_id = %016llx",
@@ -242,11 +231,6 @@ namespace dsn {
                 dassert(reply->get_count() == 0,
                     "reply should not be referenced by anybody so far");
                 delete reply;
-
-                // because (1) initially, the ref count is zero
-                //         (2) upper apps may call add_ref already
-                call->add_ref();
-                call->release_ref();
             }
         }
 
@@ -406,6 +390,17 @@ namespace dsn {
         }
     }
 
+    rpc_server_dispatcher::~rpc_server_dispatcher()
+    {
+        for (auto& h : _vhandlers)
+        {
+            delete h;
+        }
+        _vhandlers.clear();
+
+        dassert(_handlers.size() == 0, "please make sure all rpc handlers are unregistered at this point");
+    }
+
     bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
     {
         auto name = std::string(dsn_task_code_to_string(handler->code));
@@ -483,9 +478,42 @@ namespace dsn {
         return handler ? new rpc_request_task(msg, handler, node) : nullptr;
     }
 
-    //----------------------------------------------------------------------------------------------
-    /*static*/ bool rpc_engine::_message_crc_required;
+    void rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
+    {
+        rpc_handler_info* handler = nullptr;
 
+        if (TASK_CODE_INVALID != msg->local_rpc_code)
+        {
+            utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+            handler = _vhandlers[msg->local_rpc_code]->first;
+            if (nullptr != handler)
+            {
+                handler->add_ref();
+            }
+        }
+        else
+        {
+            utils::auto_read_lock l(_handlers_lock);
+            auto it = _handlers.find(msg->header->rpc_name);
+            if (it != _handlers.end())
+            {
+                msg->local_rpc_code = it->second->code;
+                handler = it->second;
+                handler->add_ref();
+            }
+        }
+
+        if (handler)
+        {
+            handler->c_handler(msg, handler->parameter);
+        }
+        else
+        {
+            dassert(false, "msg not handled at all");
+        }
+    }
+
+    //----------------------------------------------------------------------------------------------
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
         : _config(config), _node(node), _rpc_matcher(this)
     {
@@ -493,9 +521,6 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _message_crc_required = config->get_value<bool>(
-            "network", "message_crc_required", false,
-            "whether crc is enabled for network messages");
     }
     
     //
@@ -697,7 +722,8 @@ namespace dsn {
 
             // handle replication
             auto sp = task_spec::get(code);
-            if (sp->rpc_request_layer2_handler_required)
+            //if (sp->rpc_request_layer2_handler_required)
+            if (msg->header->gpid.value != 0)
             {
                 _node->handle_l2_rpc_request(msg->header->gpid, sp->rpc_request_is_write_operation, (dsn_message_t)(msg), delay_ms);
                 return;
@@ -749,13 +775,14 @@ namespace dsn {
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto& hdr = *request->header;
+        task_spec* sp = task_spec::get(request->local_rpc_code);
 
         hdr.from_address = primary_address();
         hdr.rpc_id = dsn_random64(
             std::numeric_limits<decltype(hdr.rpc_id)>::min(),
             std::numeric_limits<decltype(hdr.rpc_id)>::max()
             );
-        request->seal(_message_crc_required);
+        request->seal(sp->rpc_message_crc_required);
 
         call_address(request->server_address, request, call);
     }
@@ -786,8 +813,13 @@ namespace dsn {
         {
             if (call)
             {
-                call->add_hook(
-                    [](dsn_error_t err, dsn_message_t req, dsn_message_t, void*)
+                call->replace_callback(
+                    [](dsn_rpc_response_handler_t callback,
+                        dsn_error_t err,
+                        dsn_message_t req,
+                        dsn_message_t resp,
+                        void* context,
+                        uint64_t timeout_ts_ms)
                     {
                         auto req2 = (message_ex*)(req);
                         if (req2->header->gpid.value != 0 && err != ERR_OK && err != ERR_HANDLER_NOT_FOUND)
@@ -796,11 +828,31 @@ namespace dsn {
                             if (nullptr != resolver)
                             {
                                 resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
+
+                                // still got time, retry
+                                int64_t nms = dsn_now_ms();
+                                if (nms + 1 < timeout_ts_ms)
+                                {
+                                    req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
+                                    auto call2 = dsn_rpc_create_response_task(req, callback, context, task::get_current_task()->hash(), task::get_current_task()->tracker());
+                                    ((rpc_response_task*)(call2))->set_caller_pool((dynamic_cast<rpc_response_task*>(task::get_current_task()))->caller_pool());
+                                    dsn_rpc_call(req2->server_address.c_addr(), call2);
+                                    return;
+                                }
+                                else
+                                {
+                                    derror("service access failed (%s), no more time for further tries, set error = ERR_TIMEOUT",
+                                        error_code(err).to_string());
+                                    err = ERR_TIMEOUT;
+                                }
                             }
                         }
+                        
+                        // any other cases (except return above)
+                        if (callback)
+                            callback(err, req, resp, context);
                     },
-                    nullptr,
-                    true
+                    dsn_now_ms() + hdr.client.timeout_ms
                     );
             }
 
@@ -816,7 +868,7 @@ namespace dsn {
                         {
                             hdr2->gpid = result.gpid;
                             hdr2->client.hash = dsn_gpid_to_hash(result.gpid);
-                            request->seal(_message_crc_required);
+                            request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
                         }
 
                         call_address(result.address, request, call);
@@ -907,7 +959,7 @@ namespace dsn {
         }
         if (need_seal)
         {
-            request->seal(_message_crc_required);
+            request->seal(sp->rpc_message_crc_required);
         }
 
         // join point and possible fault injection
@@ -947,9 +999,9 @@ namespace dsn {
     void rpc_engine::reply(message_ex* response, error_code err)
     {
         response->header->server.error = err;
-        response->seal(_message_crc_required);
-
         auto sp = task_spec::get(response->local_rpc_code);
+        response->seal(sp->rpc_message_crc_required);
+
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
         
         auto s = response->io_session.get();
@@ -999,6 +1051,10 @@ namespace dsn {
         }
 
         // not connetion oriented network, we always use the named network to send msgs
+        else if (response->to_address.is_invalid())
+        {
+            no_fail = false;
+        }
         else
         {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,

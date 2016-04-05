@@ -122,6 +122,7 @@ private:
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;
+    sim_worker_state*              _running_thread;
     static __thread bool           _is_scheduling;
 
     struct checker_info

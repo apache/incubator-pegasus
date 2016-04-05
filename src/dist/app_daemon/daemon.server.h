@@ -81,7 +81,8 @@ namespace dsn
             };
 
             ::dsn::service::zrwlock_nr _lock;
-            std::unordered_map< ::dsn::replication::global_partition_id, std::shared_ptr<layer1_app_info>> _apps;
+            typedef std::unordered_map< ::dsn::replication::global_partition_id, std::shared_ptr<layer1_app_info>> apps;
+            apps _apps;
             std::atomic<bool> _online;
 
             std::string _working_dir;
@@ -89,7 +90,10 @@ namespace dsn
             std::string _package_dir_on_package_server;
             uint32_t    _app_port_min; // inclusive
             uint32_t    _app_port_max; // inclusive
-            task_ptr _app_check_timer;
+            uint32_t    _config_sync_interval_seconds; 
+            
+            task_ptr    _app_check_timer;
+            task_ptr    _config_sync_timer;            
             dsn_handle_t _cli_kill_partition;
             
 # ifdef _WIN32
@@ -111,6 +115,9 @@ namespace dsn
                 ::dsn::replication::config_type type, std::shared_ptr<layer1_app_info> &&  app,
                 error_code err, dsn_message_t request, dsn_message_t response
                 );
+
+            void query_configuration_by_node();
+            void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t resp);
 
             void check_apps();
 

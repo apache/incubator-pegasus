@@ -136,7 +136,7 @@ public:
 private:
     // common helpers
     void init_state();
-    void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
+    void response_client_message(dsn_message_t request, error_code error);    
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);    
         

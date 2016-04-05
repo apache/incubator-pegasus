@@ -586,8 +586,8 @@ function(dsn_add_pseudo_projects)
     if(DSN_BUILD_RUNTIME AND MSVC_IDE)
         file(GLOB_RECURSE
             PROJ_SRC
-            "${CMAKE_SOURCE_DIR}/include/*.h"
-            "${CMAKE_SOURCE_DIR}/include/*.hpp"
+            "${CMAKE_SOURCE_DIR}/include/dsn/*.h"
+            "${CMAKE_SOURCE_DIR}/include/dsn/*.hpp"
             )
         add_custom_target("dsn.include" SOURCES ${PROJ_SRC})
     endif()

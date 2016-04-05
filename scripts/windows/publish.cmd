@@ -2,7 +2,7 @@ SET cmd=%1
 SET app_name=%2
 SET build_dir=%~f3
 SET build_type=%4
-SET monitor_url=%5
+SET webstudio_url=%5
 SET bin_dir=%~dp0
 
 IF "%app_name%" EQU "" (
@@ -35,11 +35,11 @@ IF "%bt_valid%" EQU "0" (
     GOTO error
 )
 COPY /Y %build_dir%\bin\%build_type%\dsn.core.pdb .\skv\%app%
-CALL %bin_dir%\publish.%app_name%.cmd %cmd% %build_dir% %build_type% %monitor_url%
+CALL %bin_dir%\publish.%app_name%.cmd %cmd% %build_dir% %build_type% %webstudio_url%
 GOTO exit
 
 :error    
-    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd publish|republish app_name build_dir build_type(Debug|Release|RelWithDebInfo|MinSizeRel) [monitor_package_url]"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd publish|republish app_name build_dir build_type(Debug|Release|RelWithDebInfo|MinSizeRel) [webstudio_package_url]"
 
 :exit
 

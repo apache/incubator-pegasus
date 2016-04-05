@@ -50,11 +50,27 @@ using namespace dsn::utils;
 DSN_API dsn_message_t dsn_msg_create_request(
     dsn_task_code_t rpc_code, 
     int timeout_milliseconds, 
-    int request_hash, 
+    int thread_hash, 
     uint64_t partition_hash
     )
 {
-    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, request_hash, partition_hash);
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, thread_hash, partition_hash);
+}
+
+DSN_API dsn_message_t dsn_msg_create_received_request(
+    dsn_task_code_t rpc_code,
+    void* buffer,
+    int size,
+    int thread_hash
+    )
+{
+    ::dsn::blob bb((const char*)buffer, 0, size);
+    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    msg->local_rpc_code = rpc_code;
+    msg->header->client.hash = thread_hash;
+
+    msg->add_ref(); // released by callers explicitly using dsn_msg_release
+    return msg;
 }
 
 DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
@@ -163,7 +179,7 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_HASH)
     {
-        hdr->client.hash = opts->request_hash;
+        hdr->client.hash = opts->thread_hash;
     }
     
     if (mask & DSN_MSGM_VNID)
@@ -196,7 +212,7 @@ DSN_API void dsn_msg_get_options(
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
     opts->context = hdr->context;
-    opts->request_hash = hdr->client.hash;
+    opts->thread_hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
     opts->gpid = hdr->gpid;
 }
@@ -443,7 +459,7 @@ message_ex* message_ex::copy_and_prepare_send()
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int request_hash, uint64_t partition_hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int thread_hash, uint64_t partition_hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -454,7 +470,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     memset(&hdr, 0, sizeof(hdr));
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
-    hdr.client.hash = request_hash;
+    hdr.client.hash = thread_hash;
 
     if (0 == timeout_milliseconds)
     {
@@ -630,7 +646,7 @@ void message_ex::read_commit(size_t size)
 
 void* message_ex::rw_ptr(size_t offset_begin)
 {
-    // printf("%p %s\n", this, __FUNCTION__);
+    //printf("%p %s\n", this, __FUNCTION__);
     int i_max = (int)this->buffers.size();
 
     if (!_is_read)

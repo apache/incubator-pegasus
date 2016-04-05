@@ -18,7 +18,7 @@ class <?=$_PROG->name?>_server_app :
 public:
     <?=$_PROG->name?>_server_app() {}
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_svc.open_service();
@@ -26,11 +26,12 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_svc.close_service();
 <?php } ?>
+        return ::dsn::ERR_OK;
     }
 
 private:
@@ -52,23 +53,16 @@ public:
         stop();
     }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
-        if (argc < 2)
+        if (argc < 1)
         {
-            printf ("Usage: <exe> server-host server-port or service-url\n");
+            printf ("Usage: <exe> server-host:server-port or service-url\n");
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
 
-        if (argc == 2)
-        {
-            // mem leak for uri-build, but we don't care here as it is once only
-            _server.assign_uri(dsn_uri_build(argv[1]));
-        }
-        else
-        {
-            _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
-        }
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        _server = url_host_address(argv[1]);
             
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(_server));
@@ -77,12 +71,13 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         _timer->cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?> 
         _<?=$svc->name?>_client.reset();
 <?php } ?>
+        return ::dsn::ERR_OK;
     }
 
     void on_test_timer()
@@ -111,7 +106,7 @@ foreach ($_PROG->services as $svc)
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::rpc_address _server;
+    ::dsn::url_host_address _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
     std::unique_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
@@ -134,25 +129,28 @@ public:
         stop();
     }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv) override
     {
-        if (argc < 2)
+        if (argc < 1)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        _server = url_host_address(argv[1]);
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         if (_<?=$svc->name?>_client != nullptr)
         {
             delete _<?=$svc->name?>_client;
             _<?=$svc->name?>_client = nullptr;
         }
+        
+        return ::dsn::ERR_OK;
     }
     
 private:

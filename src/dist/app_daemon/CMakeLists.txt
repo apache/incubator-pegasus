@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME "dsn.daemon")
+set(MY_PROJ_NAME dsn.layer2.stateless)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.

@@ -119,7 +119,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
         size_t size;
         bool r = dsn_msg_read_next(request, &ptr, &size);
         dassert(r, "payload is not present");
-        dsn_msg_read_commit(request, size);
+        dsn_msg_read_commit(request, 0); // so we can re-read the request buffer in replicated app
         update.data.assign((char*)ptr, 0, (int)size);
 
         _appro_data_bytes += sizeof(int) + (int)size; // data size

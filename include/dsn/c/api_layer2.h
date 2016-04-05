@@ -59,13 +59,30 @@ Creates layer 1 application.
 
 \return error code: ERR_OK, ERR_SERVICE_ALREADY_EXIST (app_context is also valid)
 */
-extern DSN_API dsn_error_t dsn_create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context);
+extern DSN_API dsn_error_t dsn_layer1_app_create(dsn_gpid gpid, /*our*/ void** app_context);
 
-extern DSN_API dsn_error_t dsn_start_layer1_app(void* app_context, int argc, char** argv);
+extern DSN_API dsn_error_t dsn_layer1_app_start(void* app_context);
 
-extern DSN_API void        dsn_destroy_layer1_app(void* app_context, bool cleanup);
+extern DSN_API dsn_error_t dsn_layer1_app_destroy(void* app_context, bool cleanup);
 
-extern DSN_API void        dsn_handle_layer1_rpc_request(void* app_context, dsn_message_t msg);
+extern DSN_API void        dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t msg, bool exec_inline);
+
+extern DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context);
+
+extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context);
+
+extern DSN_API int         dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity);
+
+extern DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
+                                void* app_context,
+                                int64_t start,
+                                void*   learn_request,
+                                int     learn_request_size,
+                                /* inout */ dsn_app_learn_state* state,
+                                int state_capacity
+                                );
+
+extern DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode);
 
 /*@}*/
 

@@ -230,7 +230,7 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             empty_callback_t,
-            int reply_hash = 0);
+            int reply_thread_hash = 0);
 
         template<typename TCallback>
         typename std::enable_if<is_raw_rpc_callback<TCallback>::value, task_ptr>::type
@@ -238,7 +238,7 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             TCallback&& callback,
-            int reply_hash = 0)
+            int reply_thread_hash = 0)
         {
             using callback_storage_t = typename std::remove_reference<TCallback>::type;
             auto tsk = new transient_safe_task<callback_storage_t>(std::forward<TCallback>(callback));
@@ -249,7 +249,7 @@ namespace dsn
                 transient_safe_task<callback_storage_t >::exec_rpc_response,
                 transient_safe_task<callback_storage_t >::on_cancel,
                 tsk,
-                reply_hash,
+                reply_thread_hash,
                 svc ? svc->tracker() : nullptr
                 );
             tsk->set_task_info(t);
@@ -262,7 +262,7 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             TCallback&& callback,
-            int reply_hash = 0)
+            int reply_thread_hash = 0)
         {
             return create_rpc_response_task(
                 request,
@@ -276,7 +276,7 @@ namespace dsn
                     }
                     cb_fwd(err, std::move(response));
                 },
-                reply_hash);
+                reply_thread_hash);
         }
 
         template<typename TCallback>
@@ -285,10 +285,10 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             TCallback&& callback,
-            int reply_hash = 0
+            int reply_thread_hash = 0
             )
         {
-            task_ptr t = create_rpc_response_task(request, svc, std::forward<TCallback>(callback), reply_hash);
+            task_ptr t = create_rpc_response_task(request, svc, std::forward<TCallback>(callback), reply_thread_hash);
             dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;
         }
@@ -300,25 +300,15 @@ namespace dsn
             TRequest&& req,
             clientlet* owner,
             TCallback&& callback,
-            int request_hash = 0,
+            int thread_hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int reply_hash = 0,
-            uint64_t partition_hash = 0,
-            dsn_msg_serialize_format format = DSF_INVALID
+            int reply_thread_hash = 0,
+            uint64_t partition_hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
-            if (format == DSF_INVALID)
-            {
-                ::dsn::marshall(msg, std::forward<TRequest>(req));
-            }
-            else
-            {
-                dsn_msg_set_serailize_format(msg, format);
-                ::dsn::marshall(msg, std::forward<TRequest>(req), format);
-            }
-
-            return call(server, msg, owner, std::forward<TCallback>(callback), reply_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
+            ::dsn::marshall(msg, std::forward<TRequest>(req));
+            return call(server, msg, owner, std::forward<TCallback>(callback), reply_thread_hash);
         }
 
         struct rpc_message_helper
@@ -330,9 +320,9 @@ namespace dsn
                 ::dsn::rpc_address server,
                 clientlet* owner,
                 TCallback&& callback,
-                int reply_hash = 0)
+                int reply_thread_hash = 0)
             {
-                return ::dsn::rpc::call(server, request, owner, std::forward<TCallback>(callback), reply_hash);
+                return ::dsn::rpc::call(server, request, owner, std::forward<TCallback>(callback), reply_thread_hash);
             }
         private:
             dsn_message_t request;
@@ -342,12 +332,12 @@ namespace dsn
         rpc_message_helper create_message(
             dsn_task_code_t code,
             TRequest&& req,
-            int request_hash = 0,
+            int thread_hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             uint64_t partition_hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), request_hash, partition_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
             ::dsn::marshall(msg, std::forward<TRequest>(req));
             return rpc_message_helper(msg);
         }
@@ -368,22 +358,13 @@ namespace dsn
         void call_one_way_typed(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
-            TRequest&& req,
-            int request_hash = 0,
-            uint64_t partition_hash = 0,
-            dsn_msg_serialize_format format = DSF_INVALID
+            const TRequest& req,
+            int thread_hash = 0,
+            uint64_t partition_hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, 0, request_hash, partition_hash);
-            if (format == DSF_INVALID)
-            {
-                ::dsn::marshall(msg, std::forward<TRequest>(req));
-            }
-            else
-            {
-                dsn_msg_set_serailize_format(msg, format);
-                ::dsn::marshall(msg, std::forward<TRequest>(req), format);
-            }
+            dsn_message_t msg = dsn_msg_create_request(code, 0, thread_hash, partition_hash);
+            ::dsn::marshall(msg, req);
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }
         

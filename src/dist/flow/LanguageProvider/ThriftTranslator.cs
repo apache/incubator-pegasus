@@ -53,14 +53,14 @@ namespace rDSN.Tron.LanguageProvider
     {
         public ThriftTranslator() : base()
         {
-            specType = ServiceSpecType.Thrift_0_9;
+            specType = ServiceSpecType.thrift;
         }
 
         public ThriftTranslator(ServiceSpecType t) : base(t) { }
 
         public override bool ToCommonInterface(string dir, string file, string outDir, List<string> args, bool needCompiled = false)
         {
-            var compilerPath = LanguageHelper.GetCompilerPath(GetType());
+            var compilerPath = LanguageHelper.GetCompilerPath(GetSpecType());
             if (compilerPath == "")
             {
                 return false;

@@ -36,6 +36,9 @@
 
 # include <dsn/dist/replication/replication.global_check.h>
 # include <dsn/tool/global_checker.h>
+# include <dsn/dist/replication/meta_service_app.h>
+# include <dsn/dist/replication/replication_service_app.h>
+
 # include "replica.h"
 # include "replica_stub.h"
 # include "meta_service.h"
@@ -61,11 +64,11 @@ namespace dsn {
                 {
                     if (0 == strcmp(app.type, "meta"))
                     {
-                        _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
+                        _meta_servers.push_back((meta_service_app*)app.app.app_context_ptr);
                     }
                     else if (0 == strcmp(app.type, "replica"))
                     {
-                        _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
+                        _replica_servers.push_back((replication_service_app*)app.app.app_context_ptr);
                     }
                 }
             }

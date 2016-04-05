@@ -403,6 +403,15 @@ void task::enqueue(task_worker_pool* pool)
 {
     this->add_ref(); // released in exec_internal (even when cancelled)
 
+    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
+        "(1). thread pool not designatd in '[%s] pools'; "
+        "(2). the caller is executed in io threads "
+        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
+        dsn_threadpool_code_to_string(_spec->pool_code),
+        _node->spec().config_section.c_str(),
+        _spec->name.c_str()
+        );
+
     if (spec().type == TASK_TYPE_COMPUTE)
     {
         spec().on_task_enqueue.execute(task::get_current_task(), this);
@@ -452,15 +461,6 @@ void task::enqueue(task_worker_pool* pool)
     }
 
     // normal path
-    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
-        "(1). thread pool not designatd in '[%s] pools'; "
-        "(2). the caller is executed in io threads "
-        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
-        dsn_threadpool_code_to_string(_spec->pool_code),
-        _node->spec().config_section.c_str(),
-        _spec->name.c_str()
-        );
-
     pool->enqueue(this);
 }
 
@@ -582,7 +582,6 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
 
     if (nullptr != reply)
     {
-        dassert(err == ERR_OK, "error code must be success when reply is present");
         reply->add_ref(); // released in dctor
     }
 
@@ -602,7 +601,7 @@ void rpc_response_task::enqueue()
     }
 }
 
-void rpc_response_task::add_hook(dsn_rpc_response_handler_t callback, void* context, bool is_before_hook)
+void rpc_response_task::replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context)
 {
     struct hook_context : public transient_object
     {
@@ -610,10 +609,8 @@ void rpc_response_task::add_hook(dsn_rpc_response_handler_t callback, void* cont
         dsn_task_cancelled_handler_t old_on_cancel;
         void* old_context;
 
-        dsn_rpc_response_handler_t new_callback;
-        void* new_context;
-
-        bool is_before_hook;
+        dsn_rpc_response_handler_replace_t new_callback;
+        uint64_t new_context;
     };
 
     hook_context* nc = new hook_context();
@@ -622,28 +619,20 @@ void rpc_response_task::add_hook(dsn_rpc_response_handler_t callback, void* cont
     nc->old_on_cancel = _on_cancel;
     nc->new_callback = callback;
     nc->new_context = context;
-    nc->is_before_hook = is_before_hook;
 
     _context = nc;
 
     _cb = [](dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* ctx)
     {
         auto nc = (hook_context*)ctx;
-
-        if (nc->is_before_hook)
-        {
-            nc->new_callback(err, req, resp, nc->new_context);
-        }
-
-        if (nc->old_callback)
-        {
-            nc->old_callback(err, req, resp, nc->old_context);
-        }
-
-        if (!nc->is_before_hook)
-        {
-            nc->new_callback(err, req, resp, nc->new_context);
-        }
+        nc->new_callback(
+            nc->old_callback,
+            err,
+            req,
+            resp,
+            nc->old_context,
+            nc->new_context
+            );
         delete nc;
     };
 
@@ -654,9 +643,10 @@ void rpc_response_task::add_hook(dsn_rpc_response_handler_t callback, void* cont
         {
             nc->old_on_cancel(nc->old_context);
         }
-
         delete nc;
     };
+
+    _is_null = false;
 }
 
 aio_task::aio_task(

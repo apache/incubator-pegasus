@@ -21,7 +21,7 @@ pools = THREAD_POOL_DEFAULT
 [apps.client]
 name = client
 type = client
-arguments = localhost 27001
+arguments = localhost:27001
 count = 1
 run = true
 pools = THREAD_POOL_DEFAULT
@@ -30,7 +30,7 @@ pools = THREAD_POOL_DEFAULT
 [apps.client.perf.<?=$svc->name?>] 
 name = client.perf.<?=$svc->name?> 
 type = client.perf.<?=$svc->name?> 
-arguments = localhost 27001 
+arguments = localhost:27001 
 count = 1
 run = false
 <?php } ?>

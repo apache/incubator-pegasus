@@ -59,11 +59,11 @@ public class ServiceAPI
 
 public enum ServiceSpecType
 {
-	Unknown,
-	Composition,
-	Common,
-	Proto_Buffer_1_0,
-	Thrift_0_9
+	unknown,
+	composition,
+	common,
+	proto,
+	thrift
 }
 
 public class ServiceSpec

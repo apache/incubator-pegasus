@@ -40,6 +40,8 @@
 # include <dsn/internal/singleton.h>
 # include <dsn/tool/global_checker.h>
 # include "../../meta_server/server_state.h"
+# include <dsn/dist/replication/meta_service_app.h>
+# include <dsn/dist/replication/replication_service_app.h>
 
 namespace dsn { namespace replication { namespace test {
 

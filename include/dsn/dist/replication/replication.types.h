@@ -1043,7 +1043,7 @@ namespace dsn { namespace replication {
     {
         int64_t from_decree_excluded;
         int64_t to_decree_included;
-        std::vector< ::dsn::blob> meta;
+        ::dsn::blob meta;
         std::vector< std::string> files;
     };
 

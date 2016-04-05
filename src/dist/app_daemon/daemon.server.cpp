@@ -41,7 +41,7 @@
  
 using namespace ::dsn::replication;
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(daemon)
     dsn::register_app< ::dsn::dist::daemon>("daemon");
 MODULE_INIT_END
 
@@ -60,6 +60,7 @@ namespace dsn
             _package_dir_on_package_server = dsn_config_get_value_string("apps.daemon", "package_dir", "", "the dir on the app store where to download package");
             _app_port_min = (uint32_t)dsn_config_get_value_uint64("apps.daemon", "app_port_min", 59001, "the minimum port that can be assigned to app");
             _app_port_max = (uint32_t)dsn_config_get_value_uint64("apps.daemon", "app_port_max", 60001, "the maximum port that can be assigned to app");
+            _config_sync_interval_seconds = (uint32_t)dsn_config_get_value_uint64("apps.daemon", "config_sync_interval_seconds", 30, "sync configuration with meta server for every how many seconds");
 
             if (!utils::filesystem::directory_exists(_working_dir))
             {
@@ -147,8 +148,6 @@ namespace dsn
                 [=]() { this->on_master_connected(); }
                 ));
 
-            // TOOD: handle daemon fail over
-
             this->register_rpc_handler(RPC_CONFIG_PROPOSAL, "config_proposal", &daemon_s_service::on_config_proposal);
 
             auto err = _fd->start(
@@ -186,6 +185,123 @@ namespace dsn
                     delete s;
                 }
                 );
+
+            _config_sync_timer = tasking::enqueue_timer(
+                LPC_QUERY_CONFIGURATION_ALL,
+                this,
+                [this] {
+                    query_configuration_by_node(); 
+                },
+                std::chrono::seconds(_config_sync_interval_seconds)
+                );
+        }
+
+        void daemon_s_service::query_configuration_by_node()
+        {
+            if (!_online)
+            {
+                return;
+            }
+
+            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
+
+            configuration_query_by_node_request req;
+            req.node = primary_address();
+            ::dsn::marshall(msg, req);
+
+            rpc_address target(_fd->get_servers());
+            rpc::call(
+                target,
+                msg,
+                this,
+                [this](error_code err, dsn_message_t request, dsn_message_t resp)
+                {
+                    on_node_query_reply(err, request, resp);
+                }
+            );
+        }
+
+        void daemon_s_service::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
+        {
+            ddebug(
+                "%s: node view replied, err = %s",
+                primary_address().to_string(),
+                err.to_string()
+                );
+
+            if (err != ERR_OK)
+            {
+                // retry when the timer fires again later
+                return;
+            }
+            else
+            {
+                if (!_online)
+                    return;
+
+                configuration_query_by_node_response resp;
+                ::dsn::unmarshall(response, resp);
+
+                if (resp.err != ERR_OK)
+                    return;
+
+                apps sapps;
+                {
+                    ::dsn::service::zauto_read_lock l(_lock);
+                    sapps = _apps;
+                }
+                
+                // find apps on meta server but not on local daemon
+                rpc_address host = primary_address();
+                for (auto appc : resp.partitions)
+                {
+                    int i;
+                    for (i = 0; i < (int)appc.secondaries.size(); i++)
+                    {
+                        // host nodes stored in secondaries
+                        if (appc.secondaries[i] == host)
+                        {
+                            // worker nodes stored in last-drops
+                            break;
+                        }
+                    }
+
+                    dassert(i < (int)appc.secondaries.size(), 
+                        "host address %s must exist in secondary list of partition %d.%d",
+                        host.to_string(), appc.gpid.app_id, appc.gpid.pidx
+                        );
+
+                    auto it = sapps.find(appc.gpid);
+                    if (it == sapps.end())
+                    {
+                        configuration_update_request req;
+                        req.config = appc;
+                        req.is_stateful = false;
+                        req.host_node = host;
+                        req.type = CT_REMOVE;
+
+                        // worker nodes stored in last-drops
+                        req.node = appc.last_drops[i];
+
+                        std::shared_ptr<layer1_app_info> app(new layer1_app_info(req));
+                        app->exited = true;
+                        app->working_port = req.node.port();
+
+                        update_configuration_on_meta_server(CT_REMOVE, std::move(app));
+                    }
+                    else
+                    {
+                        // matched on daemon and meta server
+                        sapps.erase(it);
+                    }
+                }
+
+                // find apps on local daemon but not on meta server
+                for (auto app : sapps)
+                {
+                    kill_app(std::move(app.second));
+                }
+            }
         }
 
         void daemon_s_service::on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
@@ -479,7 +595,7 @@ namespace dsn
                 }
 
                 // sleep a while to see whether the port is usable
-                if (WAIT_TIMEOUT == ::WaitForSingleObject(app->process_handle, 6000))
+                if (WAIT_TIMEOUT == ::WaitForSingleObject(app->process_handle, 50))
                 {
                     break;
                 }
@@ -522,7 +638,11 @@ namespace dsn
             if (!app->exited && app->process_handle)
             {
 # ifdef _WIN32
-                ::TerminateProcess(app->process_handle, 0);
+                std::ostringstream pid;
+                std::string command;
+                pid << GetProcessId(app->process_handle);
+                command = "TASKKILL /F /T /PID " + pid.str();
+                system(command.c_str());
                 ::CloseHandle(app->process_handle);
                 app->process_handle = nullptr;
 # else
@@ -583,6 +703,7 @@ namespace dsn
             dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
             std::shared_ptr<configuration_update_request> request(new configuration_update_request);
+            request->is_stateful = false;
             request->config = app->configuration;
             request->type = type;
             request->node = node;
@@ -590,15 +711,24 @@ namespace dsn
 
             if (type == CT_REMOVE)
             {
-                std::remove(
+                auto it = std::remove(
                     app->configuration.secondaries.begin(),
                     app->configuration.secondaries.end(),
+                    request->host_node
+                    );
+                app->configuration.secondaries.erase(it);
+
+                it = std::remove(
+                    app->configuration.last_drops.begin(),
+                    app->configuration.last_drops.end(),
                     node
                     );
+                app->configuration.last_drops.erase(it);
             }
             else
             {
-                app->configuration.secondaries.emplace_back(node);
+                app->configuration.secondaries.emplace_back(request->host_node);
+                app->configuration.last_drops.emplace_back(node);
             }
 
             ::dsn::marshall(msg, *request);
@@ -633,7 +763,6 @@ namespace dsn
             }
             else if (err == ERR_TIMEOUT)
             {
-                // TODO: suicide after trying several times ...
                 rpc::call(
                     _fd->get_servers(),
                     request,
@@ -659,10 +788,11 @@ namespace dsn
             return ::dsn::ERR_OK;
         }
 
-        void daemon::stop(bool cleanup)
+        ::dsn::error_code daemon::stop(bool cleanup)
         {
             _daemon_s_svc->close_service();
             _daemon_s_svc = nullptr;
+            return ERR_OK;
         }
 
         daemon::daemon()

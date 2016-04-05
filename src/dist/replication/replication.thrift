@@ -117,7 +117,7 @@ struct learn_state
 {
     1:i64            from_decree_excluded;
     2:i64            to_decree_included;
-    3:list<dsn.blob> meta;
+    3:dsn.blob       meta;
     4:list<string>   files;
 }
 

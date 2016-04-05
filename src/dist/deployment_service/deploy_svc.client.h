@@ -40,8 +40,8 @@ public:
         const deploy_request& req, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -51,9 +51,9 @@ public:
                     req, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 
@@ -84,8 +84,8 @@ public:
         const std::string& service_url, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -95,9 +95,9 @@ public:
                     service_url, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 
@@ -128,8 +128,8 @@ public:
         const std::string& package_id, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -139,9 +139,9 @@ public:
                     package_id, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 
@@ -172,8 +172,8 @@ public:
         const std::string& service_url, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -183,9 +183,9 @@ public:
                     service_url, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 
@@ -216,8 +216,8 @@ public:
         const std::string& format, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        int thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -227,9 +227,9 @@ public:
                     format, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    thread_hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 

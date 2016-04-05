@@ -158,9 +158,9 @@ namespace dsn {
             return ERR_OK;
         }
 
-        void repli_app::stop(bool cleanup)
+        error_code repli_app::stop(bool cleanup)
         {
-            
+            return ::dsn::ERR_OK;
         } 
 
         std::vector<std::string> repli_app::s_args;

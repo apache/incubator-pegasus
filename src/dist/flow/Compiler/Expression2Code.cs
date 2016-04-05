@@ -802,7 +802,7 @@ namespace rDSN.Tron.Compiler
                 bool r = GetValue(node.Object, out svc);
                 Trace.Assert(r);
 
-                this.Out(" Call_" + (svc as Service).Schema.Name + "_" + node.Method.Name);
+                this.Out(" Call_" + (svc as Service).PlainTypeName() + "_" + node.Method.Name);
             }
 
             // composed serivce call hack

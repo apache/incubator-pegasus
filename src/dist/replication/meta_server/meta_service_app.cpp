@@ -34,6 +34,7 @@
  */
 
 # include <dsn/dist/replication.h>
+# include <dsn/dist/replication/meta_service_app.h>
 # include "server_state.h"
 # include "meta_service.h"
 # include "distributed_lock_service_simple.h"
@@ -48,7 +49,7 @@
 
 # include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(meta)
     dsn::register_app< ::dsn::service::meta_service_app>("meta");
 MODULE_INIT_END
 
@@ -169,7 +170,7 @@ namespace dsn {
                 return _service->start();
         }
 
-        void meta_service_app::stop(bool /*cleanup*/)
+        error_code meta_service_app::stop(bool /*cleanup*/)
         {
             if (_service != nullptr)
             {
@@ -177,6 +178,8 @@ namespace dsn {
                 delete _service;
                 _service = nullptr;
             }
+
+            return ERR_OK;
         }
     }
 }

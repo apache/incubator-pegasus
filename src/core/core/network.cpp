@@ -167,7 +167,6 @@ namespace dsn
     {
         auto n = _messages.next();
         int bcount = 0;
-        int tlen = 0;
 
         dbg_dassert(0 == _sending_buffers.size(), "");
         dbg_dassert(0 == _sending_msgs.size(), "");
@@ -175,7 +174,7 @@ namespace dsn
         while (n != &_messages)
         {
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-            auto lcount = _parser->get_send_buffers_count_and_total_length(lmsg, &tlen);
+            auto lcount = _parser->get_send_buffers_count(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
                 break;
@@ -457,7 +456,7 @@ namespace dsn
 
         static const char* inteface = dsn_config_get_value_string(
             "network", "primary_interface",
-            "eth0", "network interface name used to init primary ip address");
+            "", "network interface name used to init primary ipv4 address, if empty, means using the first \"eth\" prefixed non-loopback ipv4 address");
 
         uint32_t ip = 0;
 

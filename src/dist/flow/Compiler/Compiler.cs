@@ -117,7 +117,7 @@ namespace rDSN.Tron.Compiler
             SystemHelper.CreateOrCleanDirectory(dir);
 
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"));
-            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "Windows", "Thrift.dll"));
+            libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Thrift.dll"));
             
             string code = codeGenerator.BuildRdsn(serviceObject.GetType(), contexts.Select(c => c.Value).ToArray());
             SystemHelper.StringToFile(code, Path.Combine(dir, name + ".cs"));
@@ -156,7 +156,7 @@ namespace rDSN.Tron.Compiler
 
             // step: fill service plan
             plan.Package.Spec = new ServiceSpec();
-            plan.Package.Spec.SType = ServiceSpecType.Thrift_0_9;
+            plan.Package.Spec.SType = ServiceSpecType.thrift;
             plan.Package.Spec.MainSpecFile = serviceObject.GetType().Name + ".thrift";
             plan.Package.Spec.ReferencedSpecFiles = plan.DependentServices
                 .DistinctBy(s => s.PackageName)

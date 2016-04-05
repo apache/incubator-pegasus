@@ -33,7 +33,7 @@ client:begin_write:id=10,key=k10,value=v10,timeout=0
 state:{{r1,pri,2,10,10},{r2,sec,2,10,10}}
 
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+wait:on_rpc_call:rpc_name=RPC_SIMPLE_KV_SIMPLE_KV_READ,from=c,to=r1
 client:end_read:id=1,err=err_ok,resp=v1
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=v2
@@ -98,7 +98,7 @@ state:{{r1,sec,4,10},{r2,pri,4,10}}
 
 # check r3 data corrent
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r2
+wait:on_rpc_call:rpc_name=RPC_SIMPLE_KV_SIMPLE_KV_READ,from=c,to=r2
 client:end_read:id=1,err=err_ok,resp=v1
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=v2

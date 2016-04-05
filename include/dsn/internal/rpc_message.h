@@ -136,7 +136,7 @@ namespace dsn
         static message_ex* create_request(
             dsn_task_code_t rpc_code, 
             int timeout_milliseconds = 0,
-            int request_hash = 0, 
+            int thread_hash = 0, 
             uint64_t partition_hash = 0
             );
         static message_ex* create_receive_message_with_standalone_header(const blob& data);

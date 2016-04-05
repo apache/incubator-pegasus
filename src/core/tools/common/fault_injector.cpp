@@ -49,7 +49,11 @@ namespace dsn {
         {
             bool            fault_injection_enabled;
 
-            // io failure 
+            // io failure
+            double          rpc_request_data_corrupted_ratio;
+            double          rpc_response_data_corrupted_ratio;
+            std::string     rpc_message_data_corrupted_type;
+
             double          rpc_request_drop_ratio;
             double          rpc_response_drop_ratio;
             double          disk_read_fail_ratio;
@@ -73,8 +77,12 @@ namespace dsn {
         CONFIG_BEGIN(fj_opt)
             CONFIG_FLD(bool, bool, fault_injection_enabled, true, "whether enable fault injection")
 
-            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0.0001, "drop ratio for rpc request messages")
-            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0.001, "drop ratio for rpc response messages")
+            CONFIG_FLD(double, double, rpc_request_data_corrupted_ratio, 0, "data corrupted ratio for rpc request message")
+            CONFIG_FLD(double, double, rpc_response_data_corrupted_ratio, 0, "data corrupted ratio for rpc response message")
+            CONFIG_FLD_STRING(rpc_message_data_corrupted_type, "random", "data corrupted type: random/header/body")
+
+            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0, "drop ratio for rpc request messages")
+            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0, "drop ratio for rpc response messages")
             CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001, "failure ratio for disk read operations")
             CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001, "failure ratio for disk write operations")
 
@@ -168,6 +176,36 @@ namespace dsn {
             }
         }
 
+        static void replace_value(std::vector<blob>& buffer_list, int offset)
+        {
+            for (blob& bb: buffer_list)
+            {
+                if (offset < bb.length())
+                {
+                    (const_cast<char*>(bb.data()))[offset]++;
+                    offset = -1;
+                    break;
+                }
+                else
+                    offset -= bb.length();
+            }
+            dassert(offset == -1, "invalid offset when trying to corrupt data");
+        }
+
+        static void corrupt_data(message_ex* request, const std::string& corrupt_type)
+        {
+            if (corrupt_type == "header")
+                replace_value(request->buffers, dsn_random32(0, sizeof(message_header)-1));
+            else if (corrupt_type == "body")
+                replace_value(request->buffers, dsn_random32(0, request->body_size()-1) + sizeof(message_header));
+            else if (corrupt_type == "random")
+                replace_value(request->buffers, dsn_random32(0, request->body_size() + sizeof(message_header) - 1));
+            else
+            {
+                derror("try to inject an unknown data corrupt type: %s", corrupt_type.c_str());
+            }
+        }
+
         // return true means continue, otherwise early terminate with task::set_error_code
         static bool fault_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
@@ -179,6 +217,12 @@ namespace dsn {
             }
             else
             {
+                if (dsn_probability() < opt.rpc_request_data_corrupted_ratio)
+                {
+                    ddebug("corrupt the rpc call message from: %s, type: %s",
+                           req->header->from_address.to_string(), opt.rpc_message_data_corrupted_type.c_str());
+                    corrupt_data(req, opt.rpc_message_data_corrupted_type);
+                }
                 return true;
             }
         }
@@ -204,6 +248,12 @@ namespace dsn {
             }
             else
             {
+                if (dsn_probability() < opt.rpc_response_data_corrupted_ratio)
+                {
+                    ddebug("fault injector corrupt the rpc reply message from: %s, type: %s",
+                           msg->header->from_address.to_string(), opt.rpc_message_data_corrupted_type.c_str());
+                    corrupt_data(msg, opt.rpc_message_data_corrupted_type);
+                }
                 return true;
             }
         }
