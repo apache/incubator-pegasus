@@ -217,15 +217,12 @@ private:
     // do real work of update configuration
     void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
-    // execute all pending requests according to ballot order
-    void exec_pending_requests(global_partition_id gpid);
-
     void initialize_app(app_state& app, dsn_message_t msg);
     void do_app_drop(app_state& app, dsn_message_t msg);
     void init_app_partition_node(int app_id, int pidx);
 
-    struct storage_work_item;
-    void update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi);
+    void update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg);
+    void exec_pending_request(const std::shared_ptr<configuration_update_request> &req, dsn_message_t request_msg);
 
     // get the application_id from name, -1 for app doesn't exist
     int32_t get_app_index(const char* app_name) const;
@@ -279,18 +276,9 @@ private:
     std::atomic<bool>                 _freeze;
 
     ::dsn::dist::meta_state_service *_storage;
-    struct storage_work_item
-    {
-        int64_t ballot;
-        std::shared_ptr<configuration_update_request> req;
-        dsn_message_t msg;
-        std::function<void()> callback;
-    };
-
-    mutable zlock                     _pending_requests_lock;
     // because ballots of different gpid may conflict, we separate items by gpid
-    // gpid => <ballot, item>
-    std::map<global_partition_id, std::map<int64_t, storage_work_item> > _pending_requests;
+    // and for each gpid, only one request is allowed.
+    std::map<global_partition_id, std::function<void ()> > _pending_requests;
 
     // for test
     config_change_subscriber          _config_change_subscriber;
