@@ -21,79 +21,87 @@
 namespace dsn { namespace replication {
 
 enum partition_status {
-    PS_INVALID = 0,
-    PS_INACTIVE = 1,
-    PS_ERROR = 2,
-    PS_PRIMARY = 3,
-    PS_SECONDARY = 4,
-    PS_POTENTIAL_SECONDARY = 5
+  PS_INVALID = 0,
+  PS_INACTIVE = 1,
+  PS_ERROR = 2,
+  PS_PRIMARY = 3,
+  PS_SECONDARY = 4,
+  PS_POTENTIAL_SECONDARY = 5
 };
 
+extern const std::map<int, const char*> _partition_status_VALUES_TO_NAMES;
 
 enum read_semantic {
-    ReadInvalid = 0,
-    ReadLastUpdate = 1,
-    ReadOutdated = 2,
-    ReadSnapshot = 3
+  ReadInvalid = 0,
+  ReadLastUpdate = 1,
+  ReadOutdated = 2,
+  ReadSnapshot = 3
 };
 
+extern const std::map<int, const char*> _read_semantic_VALUES_TO_NAMES;
 
 enum learn_type {
-    LT_INVALID = 0,
-    LT_CACHE = 1,
-    LT_APP = 2,
-    LT_LOG = 3
+  LT_INVALID = 0,
+  LT_CACHE = 1,
+  LT_APP = 2,
+  LT_LOG = 3
 };
 
+extern const std::map<int, const char*> _learn_type_VALUES_TO_NAMES;
 
 enum learner_status {
-    LearningInvalid = 0,
-    LearningWithoutPrepare = 1,
-    LearningWithPrepareTransient = 2,
-    LearningWithPrepare = 3,
-    LearningSucceeded = 4,
-    LearningFailed = 5
+  LearningInvalid = 0,
+  LearningWithoutPrepare = 1,
+  LearningWithPrepareTransient = 2,
+  LearningWithPrepare = 3,
+  LearningSucceeded = 4,
+  LearningFailed = 5
 };
 
+extern const std::map<int, const char*> _learner_status_VALUES_TO_NAMES;
 
 enum config_type {
-    CT_INVALID = 0,
-    CT_ASSIGN_PRIMARY = 1,
-    CT_UPGRADE_TO_PRIMARY = 2,
-    CT_ADD_SECONDARY = 3,
-    CT_UPGRADE_TO_SECONDARY = 4,
-    CT_DOWNGRADE_TO_SECONDARY = 5,
-    CT_DOWNGRADE_TO_INACTIVE = 6,
-    CT_REMOVE = 7,
-    CT_ADD_SECONDARY_FOR_LB = 8
+  CT_INVALID = 0,
+  CT_ASSIGN_PRIMARY = 1,
+  CT_UPGRADE_TO_PRIMARY = 2,
+  CT_ADD_SECONDARY = 3,
+  CT_UPGRADE_TO_SECONDARY = 4,
+  CT_DOWNGRADE_TO_SECONDARY = 5,
+  CT_DOWNGRADE_TO_INACTIVE = 6,
+  CT_REMOVE = 7,
+  CT_ADD_SECONDARY_FOR_LB = 8
 };
 
+extern const std::map<int, const char*> _config_type_VALUES_TO_NAMES;
 
 enum app_status {
-    AS_INVALID = 0,
-    AS_AVAILABLE = 1,
-    AS_CREATING = 2,
-    AS_CREATE_FAILED = 3,
-    AS_DROPPING = 4,
-    AS_DROP_FAILED = 5,
-    AS_DROPPED = 6
+  AS_INVALID = 0,
+  AS_AVAILABLE = 1,
+  AS_CREATING = 2,
+  AS_CREATE_FAILED = 3,
+  AS_DROPPING = 4,
+  AS_DROP_FAILED = 5,
+  AS_DROPPED = 6
 };
 
+extern const std::map<int, const char*> _app_status_VALUES_TO_NAMES;
 
 enum node_status {
-    NS_INVALID = 0,
-    NS_ALIVE = 1,
-    NS_UNALIVE = 2
+  NS_INVALID = 0,
+  NS_ALIVE = 1,
+  NS_UNALIVE = 2
 };
 
+extern const std::map<int, const char*> _node_status_VALUES_TO_NAMES;
 
 enum balancer_type {
-    BT_INVALID = 0,
-    BT_MOVE_PRIMARY = 1,
-    BT_COPY_PRIMARY = 2,
-    BT_COPY_SECONDARY = 3
+  BT_INVALID = 0,
+  BT_MOVE_PRIMARY = 1,
+  BT_COPY_PRIMARY = 2,
+  BT_COPY_SECONDARY = 3
 };
 
+extern const std::map<int, const char*> _balancer_type_VALUES_TO_NAMES;
 
 class global_partition_id;
 
@@ -197,7 +205,9 @@ class global_partition_id {
   }
 
   global_partition_id(const global_partition_id&);
+  global_partition_id(global_partition_id&&);
   global_partition_id& operator=(const global_partition_id&);
+  global_partition_id& operator=(global_partition_id&&);
   global_partition_id() : app_id(-1), pidx(-1) {
   }
 
@@ -251,7 +261,9 @@ class mutation_header {
  public:
 
   mutation_header(const mutation_header&);
+  mutation_header(mutation_header&&);
   mutation_header& operator=(const mutation_header&);
+  mutation_header& operator=(mutation_header&&);
   mutation_header() : ballot(0), decree(0), log_offset(0), last_committed_decree(0) {
   }
 
@@ -318,7 +330,9 @@ class mutation_update {
  public:
 
   mutation_update(const mutation_update&);
+  mutation_update(mutation_update&&);
   mutation_update& operator=(const mutation_update&);
+  mutation_update& operator=(mutation_update&&);
   mutation_update() {
   }
 
@@ -370,7 +384,9 @@ class mutation_data {
  public:
 
   mutation_data(const mutation_data&);
+  mutation_data(mutation_data&&);
   mutation_data& operator=(const mutation_data&);
+  mutation_data& operator=(mutation_data&&);
   mutation_data() {
   }
 
@@ -428,7 +444,9 @@ class partition_configuration {
  public:
 
   partition_configuration(const partition_configuration&);
+  partition_configuration(partition_configuration&&);
   partition_configuration& operator=(const partition_configuration&);
+  partition_configuration& operator=(partition_configuration&&);
   partition_configuration() : app_type(), ballot(0), max_replica_count(0), last_committed_decree(0) {
   }
 
@@ -513,7 +531,9 @@ class replica_configuration {
  public:
 
   replica_configuration(const replica_configuration&);
+  replica_configuration(replica_configuration&&);
   replica_configuration& operator=(const replica_configuration&);
+  replica_configuration& operator=(replica_configuration&&);
   replica_configuration() : ballot(0), status((partition_status)0), learner_signature(0) {
     status = (partition_status)0;
 
@@ -582,7 +602,9 @@ class prepare_msg {
  public:
 
   prepare_msg(const prepare_msg&);
+  prepare_msg(prepare_msg&&);
   prepare_msg& operator=(const prepare_msg&);
+  prepare_msg& operator=(prepare_msg&&);
   prepare_msg() {
   }
 
@@ -636,7 +658,9 @@ class read_request_header {
  public:
 
   read_request_header(const read_request_header&);
+  read_request_header(read_request_header&&);
   read_request_header& operator=(const read_request_header&);
+  read_request_header& operator=(read_request_header&&);
   read_request_header() : semantic((read_semantic)1), version_decree(-1LL) {
     semantic = (read_semantic)1;
 
@@ -700,7 +724,9 @@ class write_request_header {
  public:
 
   write_request_header(const write_request_header&);
+  write_request_header(write_request_header&&);
   write_request_header& operator=(const write_request_header&);
+  write_request_header& operator=(write_request_header&&);
   write_request_header() {
   }
 
@@ -751,7 +777,9 @@ class rw_response_header {
  public:
 
   rw_response_header(const rw_response_header&);
+  rw_response_header(rw_response_header&&);
   rw_response_header& operator=(const rw_response_header&);
+  rw_response_header& operator=(rw_response_header&&);
   rw_response_header() {
   }
 
@@ -802,7 +830,9 @@ class prepare_ack {
  public:
 
   prepare_ack(const prepare_ack&);
+  prepare_ack(prepare_ack&&);
   prepare_ack& operator=(const prepare_ack&);
+  prepare_ack& operator=(prepare_ack&&);
   prepare_ack() : ballot(0), decree(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
   }
 
@@ -876,7 +906,9 @@ class learn_state {
  public:
 
   learn_state(const learn_state&);
+  learn_state(learn_state&&);
   learn_state& operator=(const learn_state&);
+  learn_state& operator=(learn_state&&);
   learn_state() : from_decree_excluded(0), to_decree_included(0) {
   }
 
@@ -942,7 +974,9 @@ class learn_request {
  public:
 
   learn_request(const learn_request&);
+  learn_request(learn_request&&);
   learn_request& operator=(const learn_request&);
+  learn_request& operator=(learn_request&&);
   learn_request() : signature(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
   }
 
@@ -1020,7 +1054,9 @@ class learn_response {
  public:
 
   learn_response(const learn_response&);
+  learn_response(learn_response&&);
   learn_response& operator=(const learn_response&);
+  learn_response& operator=(learn_response&&);
   learn_response() : last_committed_decree(0), prepare_start_decree(0), type((learn_type)0), base_local_dir() {
     type = (learn_type)0;
 
@@ -1106,7 +1142,9 @@ class group_check_request {
  public:
 
   group_check_request(const group_check_request&);
+  group_check_request(group_check_request&&);
   group_check_request& operator=(const group_check_request&);
+  group_check_request& operator=(group_check_request&&);
   group_check_request() : app_type(), last_committed_decree(0) {
   }
 
@@ -1173,7 +1211,9 @@ class group_check_response {
  public:
 
   group_check_response(const group_check_response&);
+  group_check_response(group_check_response&&);
   group_check_response& operator=(const group_check_response&);
+  group_check_response& operator=(group_check_response&&);
   group_check_response() : last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0), learner_status_((learner_status)0), learner_signature(0) {
     learner_status_ = (learner_status)0;
 
@@ -1255,7 +1295,9 @@ class app_info {
  public:
 
   app_info(const app_info&);
+  app_info(app_info&&);
   app_info& operator=(const app_info&);
+  app_info& operator=(app_info&&);
   app_info() : status((app_status)0), app_type(), app_name(), app_id(0), partition_count(0) {
     status = (app_status)0;
 
@@ -1324,7 +1366,9 @@ class node_info {
  public:
 
   node_info(const node_info&);
+  node_info(node_info&&);
   node_info& operator=(const node_info&);
+  node_info& operator=(node_info&&);
   node_info() : status((node_status)0) {
     status = (node_status)0;
 
@@ -1378,7 +1422,9 @@ class meta_response_header {
  public:
 
   meta_response_header(const meta_response_header&);
+  meta_response_header(meta_response_header&&);
   meta_response_header& operator=(const meta_response_header&);
+  meta_response_header& operator=(meta_response_header&&);
   meta_response_header() {
   }
 
@@ -1431,7 +1477,9 @@ class configuration_update_request {
  public:
 
   configuration_update_request(const configuration_update_request&);
+  configuration_update_request(configuration_update_request&&);
   configuration_update_request& operator=(const configuration_update_request&);
+  configuration_update_request& operator=(configuration_update_request&&);
   configuration_update_request() : type((config_type)0) {
     type = (config_type)0;
 
@@ -1490,7 +1538,9 @@ class configuration_update_response {
  public:
 
   configuration_update_response(const configuration_update_response&);
+  configuration_update_response(configuration_update_response&&);
   configuration_update_response& operator=(const configuration_update_response&);
+  configuration_update_response& operator=(configuration_update_response&&);
   configuration_update_response() {
   }
 
@@ -1545,7 +1595,9 @@ class configuration_proposal_request {
  public:
 
   configuration_proposal_request(const configuration_proposal_request&);
+  configuration_proposal_request(configuration_proposal_request&&);
   configuration_proposal_request& operator=(const configuration_proposal_request&);
+  configuration_proposal_request& operator=(configuration_proposal_request&&);
   configuration_proposal_request() : type((config_type)0), is_clean_data(false), is_upgrade(false) {
     type = (config_type)0;
 
@@ -1613,7 +1665,9 @@ class configuration_query_by_node_request {
  public:
 
   configuration_query_by_node_request(const configuration_query_by_node_request&);
+  configuration_query_by_node_request(configuration_query_by_node_request&&);
   configuration_query_by_node_request& operator=(const configuration_query_by_node_request&);
+  configuration_query_by_node_request& operator=(configuration_query_by_node_request&&);
   configuration_query_by_node_request() {
   }
 
@@ -1662,7 +1716,9 @@ class create_app_options {
  public:
 
   create_app_options(const create_app_options&);
+  create_app_options(create_app_options&&);
   create_app_options& operator=(const create_app_options&);
+  create_app_options& operator=(create_app_options&&);
   create_app_options() : partition_count(0), replica_count(0), success_if_exist(0), app_type() {
   }
 
@@ -1724,7 +1780,9 @@ class configuration_create_app_request {
  public:
 
   configuration_create_app_request(const configuration_create_app_request&);
+  configuration_create_app_request(configuration_create_app_request&&);
   configuration_create_app_request& operator=(const configuration_create_app_request&);
+  configuration_create_app_request& operator=(configuration_create_app_request&&);
   configuration_create_app_request() : app_name() {
   }
 
@@ -1775,7 +1833,9 @@ class drop_app_options {
  public:
 
   drop_app_options(const drop_app_options&);
+  drop_app_options(drop_app_options&&);
   drop_app_options& operator=(const drop_app_options&);
+  drop_app_options& operator=(drop_app_options&&);
   drop_app_options() : success_if_not_exist(0) {
   }
 
@@ -1822,7 +1882,9 @@ class configuration_drop_app_request {
  public:
 
   configuration_drop_app_request(const configuration_drop_app_request&);
+  configuration_drop_app_request(configuration_drop_app_request&&);
   configuration_drop_app_request& operator=(const configuration_drop_app_request&);
+  configuration_drop_app_request& operator=(configuration_drop_app_request&&);
   configuration_drop_app_request() : app_name() {
   }
 
@@ -1873,7 +1935,9 @@ class configuration_list_apps_request {
  public:
 
   configuration_list_apps_request(const configuration_list_apps_request&);
+  configuration_list_apps_request(configuration_list_apps_request&&);
   configuration_list_apps_request& operator=(const configuration_list_apps_request&);
+  configuration_list_apps_request& operator=(configuration_list_apps_request&&);
   configuration_list_apps_request() : status((app_status)0) {
     status = (app_status)0;
 
@@ -1921,7 +1985,9 @@ class configuration_list_nodes_request {
  public:
 
   configuration_list_nodes_request(const configuration_list_nodes_request&);
+  configuration_list_nodes_request(configuration_list_nodes_request&&);
   configuration_list_nodes_request& operator=(const configuration_list_nodes_request&);
+  configuration_list_nodes_request& operator=(configuration_list_nodes_request&&);
   configuration_list_nodes_request() : status((node_status)0) {
     status = (node_status)0;
 
@@ -1970,7 +2036,9 @@ class configuration_create_app_response {
  public:
 
   configuration_create_app_response(const configuration_create_app_response&);
+  configuration_create_app_response(configuration_create_app_response&&);
   configuration_create_app_response& operator=(const configuration_create_app_response&);
+  configuration_create_app_response& operator=(configuration_create_app_response&&);
   configuration_create_app_response() : appid(0) {
   }
 
@@ -2021,7 +2089,9 @@ class control_balancer_migration_request {
  public:
 
   control_balancer_migration_request(const control_balancer_migration_request&);
+  control_balancer_migration_request(control_balancer_migration_request&&);
   control_balancer_migration_request& operator=(const control_balancer_migration_request&);
+  control_balancer_migration_request& operator=(control_balancer_migration_request&&);
   control_balancer_migration_request() : enable_migration(0) {
   }
 
@@ -2067,7 +2137,9 @@ class control_balancer_migration_response {
  public:
 
   control_balancer_migration_response(const control_balancer_migration_response&);
+  control_balancer_migration_response(control_balancer_migration_response&&);
   control_balancer_migration_response& operator=(const control_balancer_migration_response&);
+  control_balancer_migration_response& operator=(control_balancer_migration_response&&);
   control_balancer_migration_response() {
   }
 
@@ -2116,7 +2188,9 @@ class balancer_proposal_request {
  public:
 
   balancer_proposal_request(const balancer_proposal_request&);
+  balancer_proposal_request(balancer_proposal_request&&);
   balancer_proposal_request& operator=(const balancer_proposal_request&);
+  balancer_proposal_request& operator=(balancer_proposal_request&&);
   balancer_proposal_request() : type((balancer_type)0) {
   }
 
@@ -2177,7 +2251,9 @@ class balancer_proposal_response {
  public:
 
   balancer_proposal_response(const balancer_proposal_response&);
+  balancer_proposal_response(balancer_proposal_response&&);
   balancer_proposal_response& operator=(const balancer_proposal_response&);
+  balancer_proposal_response& operator=(balancer_proposal_response&&);
   balancer_proposal_response() {
   }
 
@@ -2223,7 +2299,9 @@ class configuration_drop_app_response {
  public:
 
   configuration_drop_app_response(const configuration_drop_app_response&);
+  configuration_drop_app_response(configuration_drop_app_response&&);
   configuration_drop_app_response& operator=(const configuration_drop_app_response&);
+  configuration_drop_app_response& operator=(configuration_drop_app_response&&);
   configuration_drop_app_response() {
   }
 
@@ -2270,7 +2348,9 @@ class configuration_list_apps_response {
  public:
 
   configuration_list_apps_response(const configuration_list_apps_response&);
+  configuration_list_apps_response(configuration_list_apps_response&&);
   configuration_list_apps_response& operator=(const configuration_list_apps_response&);
+  configuration_list_apps_response& operator=(configuration_list_apps_response&&);
   configuration_list_apps_response() {
   }
 
@@ -2322,7 +2402,9 @@ class configuration_list_nodes_response {
  public:
 
   configuration_list_nodes_response(const configuration_list_nodes_response&);
+  configuration_list_nodes_response(configuration_list_nodes_response&&);
   configuration_list_nodes_response& operator=(const configuration_list_nodes_response&);
+  configuration_list_nodes_response& operator=(configuration_list_nodes_response&&);
   configuration_list_nodes_response() {
   }
 
@@ -2374,7 +2456,9 @@ class configuration_query_by_node_response {
  public:
 
   configuration_query_by_node_response(const configuration_query_by_node_response&);
+  configuration_query_by_node_response(configuration_query_by_node_response&&);
   configuration_query_by_node_response& operator=(const configuration_query_by_node_response&);
+  configuration_query_by_node_response& operator=(configuration_query_by_node_response&&);
   configuration_query_by_node_response() {
   }
 
@@ -2426,7 +2510,9 @@ class configuration_query_by_index_request {
  public:
 
   configuration_query_by_index_request(const configuration_query_by_index_request&);
+  configuration_query_by_index_request(configuration_query_by_index_request&&);
   configuration_query_by_index_request& operator=(const configuration_query_by_index_request&);
+  configuration_query_by_index_request& operator=(configuration_query_by_index_request&&);
   configuration_query_by_index_request() : app_name() {
   }
 
@@ -2480,7 +2566,9 @@ class configuration_query_by_index_response {
  public:
 
   configuration_query_by_index_response(const configuration_query_by_index_response&);
+  configuration_query_by_index_response(configuration_query_by_index_response&&);
   configuration_query_by_index_response& operator=(const configuration_query_by_index_response&);
+  configuration_query_by_index_response& operator=(configuration_query_by_index_response&&);
   configuration_query_by_index_response() : app_id(0), partition_count(0) {
   }
 
@@ -2542,7 +2630,9 @@ class query_replica_decree_request {
  public:
 
   query_replica_decree_request(const query_replica_decree_request&);
+  query_replica_decree_request(query_replica_decree_request&&);
   query_replica_decree_request& operator=(const query_replica_decree_request&);
+  query_replica_decree_request& operator=(query_replica_decree_request&&);
   query_replica_decree_request() {
   }
 
@@ -2594,7 +2684,9 @@ class query_replica_decree_response {
  public:
 
   query_replica_decree_response(const query_replica_decree_response&);
+  query_replica_decree_response(query_replica_decree_response&&);
   query_replica_decree_response& operator=(const query_replica_decree_response&);
+  query_replica_decree_response& operator=(query_replica_decree_response&&);
   query_replica_decree_response() : last_decree(0) {
   }
 
@@ -2650,7 +2742,9 @@ class replica_info {
  public:
 
   replica_info(const replica_info&);
+  replica_info(replica_info&&);
   replica_info& operator=(const replica_info&);
+  replica_info& operator=(replica_info&&);
   replica_info() : ballot(0), status((partition_status)0), last_committed_decree(0), last_prepared_decree(0), last_durable_decree(0) {
   }
 
@@ -2721,7 +2815,9 @@ class query_replica_info_request {
  public:
 
   query_replica_info_request(const query_replica_info_request&);
+  query_replica_info_request(query_replica_info_request&&);
   query_replica_info_request& operator=(const query_replica_info_request&);
+  query_replica_info_request& operator=(query_replica_info_request&&);
   query_replica_info_request() {
   }
 
@@ -2768,7 +2864,9 @@ class query_replica_info_response {
  public:
 
   query_replica_info_response(const query_replica_info_response&);
+  query_replica_info_response(query_replica_info_response&&);
   query_replica_info_response& operator=(const query_replica_info_response&);
+  query_replica_info_response& operator=(query_replica_info_response&&);
   query_replica_info_response() {
   }
 

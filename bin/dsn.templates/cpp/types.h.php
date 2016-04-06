@@ -13,25 +13,14 @@ $idl_type = $argv[4];
 // in this case, you need to use these tools to generate
 // type files with --gen=cpp etc. options
 //
-// !!! WARNING: not feasible for replicated service yet!!! 
-//
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
-# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+# if defined(DSN_USE_THRIFT_SERIALIZATION)
 
-<?php if ($idl_type == "thrift") { ?>
+# include "<?=$_PROG->name?>_types.h"
 
-# include <dsn/idl/thrift_helper.h>
-# include "<?=$_PROG->name?>_types.h" 
-
-<?php } else if ($idl_type == "proto") {?>
+# elif defined(DSN_USE_PROTO_SERIALIZATION)
 
 # include "<?=$_PROG->name?>.pb.h"
-# include <dsn/idl/gproto_helper.h>
-
-<?php } else { ?>
-# error not supported idl type <?=$idl_type?> 
-<?php } ?>
 
 # else // use rDSN's data encoding/decoding
 
