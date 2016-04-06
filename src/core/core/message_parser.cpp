@@ -140,21 +140,22 @@ namespace dsn {
         {
             dsn_thrift_header header;
             thrift_header_parser::read_thrift_header_from_buffer(header, _read_buffer.data());
+            int total_length = header.body_offset + header.body_length;
             // msg done
-            if ( _read_buffer_occupied >= header.total_length)
+            if ( _read_buffer_occupied >= total_length)
             {
-                dsn::blob message_data = _read_buffer.range(0, header.total_length);
+                dsn::blob message_data = _read_buffer.range(0, total_length);
                 message_ex* msg = thrift_header_parser::parse_dsn_message(&header, message_data);
 
-                _read_buffer = _read_buffer.range(header.total_length);
-                _read_buffer_occupied -= header.total_length;
+                _read_buffer = _read_buffer.range(total_length);
+                _read_buffer_occupied -= total_length;
                 read_next = sizeof(int32_t);
 
                 return msg;
             }
             else
             {
-                read_next = header.total_length - _read_buffer_occupied;
+                read_next = total_length - _read_buffer_occupied;
                 return nullptr;
             }
         }

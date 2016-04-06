@@ -19,9 +19,10 @@ struct dsn_thrift_header
 {
     header_type hdr_type;
     int32_t hdr_crc32;
-    int32_t total_length;
     int32_t body_offset;
+    int32_t body_length;
     int32_t request_hash;
+    int32_t client_timeout;
     dsn_thrift_header_options opt;
 };
 

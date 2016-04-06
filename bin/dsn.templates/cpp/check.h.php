@@ -7,8 +7,7 @@ $idl_type = $argv[4];
 # pragma once
 # include <dsn/tool/global_checker.h>
 
-<?=$_PROG->get_cpp_namespace_begin()?> 
-
+<?=$_PROG->get_cpp_namespace_begin().PHP_EOL?>
 class <?=$_PROG->name?>_checker 
     : public ::dsn::tools::checker
 {
@@ -55,4 +54,4 @@ private:
     //std::vector<meta_service_app*>        _meta_servers;
 };
 
-<?=$_PROG->get_cpp_namespace_end()?>
+<?=$_PROG->get_cpp_namespace_end().PHP_EOL?>

@@ -8,7 +8,7 @@ $file_prefix = $argv[3];
 # include "<?=$file_prefix?>.client.perf.h"
 # include "<?=$file_prefix?>.server.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?>
+<?=$_PROG->get_cpp_namespace_begin().PHP_EOL?>
 
 // server app example
 class <?=$_PROG->name?>_server_app : 
@@ -148,4 +148,4 @@ private:
 };
 <?php } ?>
 
-<?=$_PROG->get_cpp_namespace_end()?>
+<?=$_PROG->get_cpp_namespace_end().PHP_EOL?>

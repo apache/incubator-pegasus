@@ -8,7 +8,7 @@ $file_prefix = $argv[3];
 # include "<?=$file_prefix?>.code.definition.h"
 # include <iostream>
 
-<?=$_PROG->get_cpp_namespace_begin()?>
+<?=$_PROG->get_cpp_namespace_begin().PHP_EOL?>
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_service 
@@ -36,7 +36,7 @@ protected:
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
     }
 <?php     } else {?>
-    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::rpc_replication_app_replier<<?=$f->get_cpp_return_type()?>>& reply)
+    virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::replication::rpc_replication_app_replier<<?=$f->get_cpp_return_type()?>>& reply)
     {
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
         <?=$f->get_cpp_return_type()?> resp;
@@ -66,4 +66,4 @@ public:
 };
 
 <?php } ?>
-<?=$_PROG->get_cpp_namespace_end()?>
+<?=$_PROG->get_cpp_namespace_end().PHP_EOL?>

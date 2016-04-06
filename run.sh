@@ -62,7 +62,7 @@ function run_build()
 {
     BUILD_TYPE="debug"
     SERIALIZE_TYPE="thrift"
-    GIT_SOURCE="xiaomi"
+    GIT_SOURCE="github"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
