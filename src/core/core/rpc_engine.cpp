@@ -211,7 +211,8 @@ namespace dsn {
             // injector
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
-                call->set_delay(delay_ms);
+                if (call->delay_milliseconds() == 0)
+                    call->set_delay(delay_ms);
 
                 if (ERR_OK == err)
                     call->enqueue(err, reply);
@@ -752,7 +753,8 @@ namespace dsn {
         // injector
         if (tsk->spec().on_rpc_request_enqueue.execute(tsk, true))
         {
-            tsk->set_delay(delay_ms);
+            if (tsk->delay_milliseconds() == 0)
+                tsk->set_delay(delay_ms);
             tsk->enqueue();
         }
 

@@ -101,7 +101,7 @@ namespace dsn {
         
         static fj_opt* s_fj_opts = nullptr;
 
-        typedef uint64_extension_helper<task> task_ext_for_fj;
+        typedef uint64_extension_helper<fj_opt, task> task_ext_for_fj;
 
         static void fault_on_task_enqueue(task* caller, task* callee)
         {
