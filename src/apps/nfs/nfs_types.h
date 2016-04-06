@@ -44,7 +44,9 @@ class copy_request {
  public:
 
   copy_request(const copy_request&);
+  copy_request(copy_request&&);
   copy_request& operator=(const copy_request&);
+  copy_request& operator=(copy_request&&);
   copy_request() : source_dir(), dst_dir(), file_name(), offset(0), size(0), is_last(0), overwrite(0) {
   }
 
@@ -128,7 +130,9 @@ class copy_response {
  public:
 
   copy_response(const copy_response&);
+  copy_response(copy_response&&);
   copy_response& operator=(const copy_response&);
+  copy_response& operator=(copy_response&&);
   copy_response() : offset(0), size(0) {
   }
 
@@ -193,7 +197,9 @@ class get_file_size_request {
  public:
 
   get_file_size_request(const get_file_size_request&);
+  get_file_size_request(get_file_size_request&&);
   get_file_size_request& operator=(const get_file_size_request&);
+  get_file_size_request& operator=(get_file_size_request&&);
   get_file_size_request() : dst_dir(), source_dir(), overwrite(0) {
   }
 
@@ -261,7 +267,9 @@ class get_file_size_response {
  public:
 
   get_file_size_response(const get_file_size_response&);
+  get_file_size_response(get_file_size_response&&);
   get_file_size_response& operator=(const get_file_size_response&);
+  get_file_size_response& operator=(get_file_size_response&&);
   get_file_size_response() : error(0) {
   }
 

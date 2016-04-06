@@ -32,7 +32,9 @@ class command {
  public:
 
   command(const command&);
+  command(command&&);
   command& operator=(const command&);
+  command& operator=(command&&);
   command() : cmd() {
   }
 

@@ -48,7 +48,7 @@ inline bool operator < (const global_partition_id& l, const global_partition_id&
     return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
 }
 
-#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifndef DSN_USE_THRIFT_SERIALIZATION
 inline bool operator == (const global_partition_id& l, const global_partition_id& r)
 {
     return l.app_id == r.app_id && l.pidx == r.pidx;

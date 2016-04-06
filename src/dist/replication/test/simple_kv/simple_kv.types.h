@@ -7,16 +7,14 @@
 // in this case, you need to use these tools to generate
 // type files with --gen=cpp etc. options
 //
-// !!! WARNING: not feasible for replicated service yet!!! 
-//
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
-# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+# if defined(DSN_USE_THRIFT_SERIALIZATION)
 
+# include "simple_kv_types.h"
 
-# include <dsn/thrift_helper.h>
-# include "simple_kv_types.h" 
+# elif defined(DSN_USE_PROTO_SERIALIZATION)
 
+# include "simple_kv.pb.h"
 
 # else // use rDSN's data encoding/decoding
 
