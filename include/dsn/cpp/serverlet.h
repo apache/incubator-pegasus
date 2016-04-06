@@ -111,6 +111,8 @@ namespace dsn
         template<typename TResponse>
         void reply(dsn_message_t request, const TResponse& resp);
 
+        template<typename TResponse>
+        void reply_field(dsn_message_t request, const TResponse& resp, int field_id);
     public:
         const std::string& name() const { return _name; }
 
@@ -237,6 +239,16 @@ namespace dsn
         dsn_rpc_reply(msg);
     }
 
+    template<typename T>template<typename TResponse>
+    inline void serverlet<T>::reply_field(dsn_message_t request, const TResponse& resp, int field_id)
+    {
+        auto msg = dsn_msg_create_response(request);
+        ::marshall_struct_begin(msg);
+        ::marshall_struct_field(msg, resp, field_id);
+        ::marshall_struct_end(msg);
+
+        dsn_rpc_reply(msg);
+    }
     /*@}*/
 } // end namespace
 

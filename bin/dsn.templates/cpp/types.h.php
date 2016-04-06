@@ -13,7 +13,6 @@ $idl_type = $argv[4];
 // in this case, you need to use these tools to generate
 // type files with --gen=cpp etc. options
 //
-
 # if defined(DSN_USE_THRIFT_SERIALIZATION)
 
 # include "<?=$_PROG->name?>_types.h"

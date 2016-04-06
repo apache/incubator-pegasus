@@ -277,12 +277,6 @@ void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader
     
     if (h)
     {
-        if (response)
-        {
-            // replication layer error
-            ::marshall(response, ERR_OK);
-        }
-
         h->callback(this, h->inner_callback, reader, response);
         if (1 == h->ref_count.fetch_sub(1, std::memory_order_release))
         {

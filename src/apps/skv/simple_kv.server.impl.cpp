@@ -55,7 +55,7 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_READ
-            void simple_kv_service_impl::on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply)
+            void simple_kv_service_impl::on_read(const std::string& key, ::dsn::replication::rpc_replication_app_replier<std::string>& reply)
             {
                 std::string r;
                 {
@@ -73,7 +73,7 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_WRITE
-            void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::replication::rpc_replication_app_replier<int32_t>& reply)
             {
                 {
                     zauto_lock l(_lock);
@@ -85,7 +85,7 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_APPEND
-            void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::replication::rpc_replication_app_replier<int32_t>& reply)
             {
                 {
                     zauto_lock l(_lock);

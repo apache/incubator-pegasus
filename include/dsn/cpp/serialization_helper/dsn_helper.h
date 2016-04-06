@@ -211,4 +211,14 @@ namespace dsn {
             unmarshall(reader, v);
         }
     }
+
+    template<typename T>
+    inline void marshall_struct_field(::dsn::binary_writer& writer, const T& val, int)
+    {
+        marshall(writer, val);
+    }
+
+    inline void marshall_struct_begin(::dsn::binary_writer& writer, dsn_msg_header_type) {}
+
+    inline void marshall_struct_end(::dsn::binary_writer& writer, dsn_msg_header_type) {}
 }

@@ -314,6 +314,44 @@ namespace dsn {
     }
 
     template<typename T>
+    inline void marshall_struct_field(binary_writer& writer, const T& val, int field_id)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+
+        proto.writeFieldBegin("args", get_thrift_type(val), field_id);
+        marshall_base<T>(&proto, val);
+        proto.writeFieldEnd();
+    }
+
+    inline void marshall_struct_begin(binary_writer& writer, dsn_msg_header_type type)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+
+        if (ht_thrift == type)
+        {
+            proto.writeFieldBegin("", ::apache::thrift::protocol::T_STRUCT, 0);
+            proto.writeStructBegin("");
+        }
+    }
+
+    inline void marshall_struct_end(binary_writer& writer, dsn_msg_header_type type)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+
+        if (ht_thrift == type)
+        {
+            proto.writeFieldStop(); // for all pieces
+            proto.writeStructEnd();
+        }
+    }
+
+    template<typename T>
     inline void marshall(binary_writer& writer, const T& val)
     {
         ::dsn::binary_writer_transport trans(writer);

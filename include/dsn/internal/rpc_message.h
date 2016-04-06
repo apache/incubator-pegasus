@@ -63,8 +63,43 @@ namespace dsn
                              // we leverage for optimization (fast rpc handler lookup)
     };
 
+    struct header_type
+    {
+    public:
+        union
+        {
+            char stype[4];
+            int32_t itype;
+        } type;
+        header_type()
+        {
+            type.itype = -1;
+        }
+        header_type(const char* str)
+        {
+            memcpy(type.stype, str, sizeof(int32_t));
+        }
+        header_type(const header_type& another)
+        {
+            type.itype = another.type.itype;
+        }
+        header_type& operator=(const header_type& another)
+        {
+            type.itype = another.type.itype;
+            return *this;
+        }
+        bool operator==(const header_type& other) const
+        {
+            return type.itype==other.type.itype;
+        }
+    public:
+        static header_type hdr_dsn_default;
+        static header_type hdr_dsn_thrift;
+    };
+
     typedef struct message_header
     {
+        header_type    hdr_type;
         int32_t        hdr_crc32;
         int32_t        body_crc32;
         int32_t        body_length;
@@ -112,6 +147,7 @@ namespace dsn
         // by message queuing
         dlink                  dl;
 
+        bool                   is_response_adjusted_for_custom_rpc;
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
         ~message_ex();
@@ -154,7 +190,6 @@ namespace dsn
         size_t body_size() { return (size_t)header->body_length; }
         void* rw_ptr(size_t offset_begin);
         void seal(bool crc_required);
-
     private:
         message_ex();
         void prepare_buffer_header();

@@ -37,14 +37,14 @@ namespace dsn {
         {
         }
 
-        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replication_app_replier<int32_t>& reply)
         {
             service::zauto_lock l(_lock);
             auto rt = _counters[op.name] += op.operand;
             reply(rt);
         }
 
-        void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replication_app_replier<int32_t>& reply)
         {
             service::zauto_lock l(_lock);
 
