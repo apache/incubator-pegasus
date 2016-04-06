@@ -11,11 +11,13 @@ void thrift_header_parser::read_thrift_header_from_buffer(/*out*/dsn_thrift_head
     buffer += sizeof(int32_t);
     result.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
     buffer += sizeof(int32_t);
-    result.total_length = be32toh( *(int32_t*)(buffer) );
-    buffer += sizeof(int32_t);
     result.body_offset = be32toh( *(int32_t*)(buffer) );
     buffer += sizeof(int32_t);
+    result.body_length = be32toh( *(int32_t*)(buffer) );
+    buffer += sizeof(int32_t);
     result.request_hash = be32toh( *(int32_t*)(buffer) );
+    buffer += sizeof(int32_t);
+    result.client_timeout = be32toh( *(int32_t*)(buffer) );
     buffer += sizeof(int32_t);
     result.opt.o = be64toh( *(int64_t*)(buffer) );
 }
@@ -38,7 +40,7 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
     dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
     memset(dsn_hdr, 0, sizeof(*dsn_hdr));
     dsn_hdr->hdr_type = hdr_dsn_thrift;
-    dsn_hdr->body_length = header->total_length - header->body_offset;
+    dsn_hdr->body_length = header->body_length;
     strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
 
     if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
@@ -48,6 +50,7 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
     dsn_hdr->context.u.is_replication_needed = header->opt.u.is_replication_needed;
     dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
     dsn_hdr->client.hash = header->request_hash;
+    dsn_hdr->client.timeout_ms = header->client_timeout;
 
     iprot.readStructBegin(fname);
     return msg;

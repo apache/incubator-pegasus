@@ -123,6 +123,8 @@ namespace dsn
 
 # ifdef _WIN32
 
+// TODO(qinzuoyan) port to windows
+
 # ifndef be16toh
 # define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
 # endif
