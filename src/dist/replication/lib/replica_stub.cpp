@@ -325,6 +325,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             [=]() {this->on_meta_server_disconnected(); },
             [=]() {this->on_meta_server_connected(); }
             );
+
         err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,

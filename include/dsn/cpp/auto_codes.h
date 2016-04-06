@@ -40,7 +40,7 @@
 # include <dsn/cpp/autoref_ptr.h>
 # include <memory>
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
 # include <thrift/protocol/TProtocol.h>
 #endif
 
@@ -154,7 +154,7 @@ namespace dsn
             return _internal_code;
         }
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
         uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 #endif
@@ -346,7 +346,7 @@ namespace dsn
     # endif
         }
 
-#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifdef DSN_USE_THRIFT_SERIALIZATION
         uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
         uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 #endif

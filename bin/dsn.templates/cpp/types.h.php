@@ -19,15 +19,6 @@ $idl_format = $argv[5];
 
 <?php if ($idl_type == "thrift") { ?>
 
-<?php       if ($idl_format == "binary") {?>
-// define DSN_IDL_BINARY to use binary format to send rpc request/response
-#define DSN_IDL_BINARY
-<?php       } else if ($idl_format == "json") {?>
-// define DSN_IDL_JSON to use json format to send rpc request/response
-#define DSN_IDL_JSON
-
-<?php       }?>
-
 # include <dsn/idl/thrift_helper.h>
 # include "thrift/<?=$_PROG->name?>_types.h" 
 <?php foreach ($_PROG->services as $svc) { ?>
@@ -36,16 +27,8 @@ $idl_format = $argv[5];
 
 <?php } else if ($idl_type == "proto") {?>
 
-<?php       if ($idl_format == "binary") {?>
-// define DSN_IDL_BINARY to use binary format to send rpc request/response
-#define DSN_IDL_BINARY
-<?php       } else if ($idl_format == "json") {?>
-// define DSN_IDL_JSON to use json format to send rpc request/response
-#define DSN_IDL_JSON
-
-<?php       }?>
-# include "<?=$_PROG->name?>.pb.h"
 # include <dsn/idl/gproto_helper.h>
+# include "<?=$_PROG->name?>.pb.h"
 
 <?php } else { ?>
 // error not supported idl type <?=$idl_type?>
@@ -53,7 +36,6 @@ $idl_format = $argv[5];
 
 <?php
 echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
-
 foreach ($_PROG->enums as $em) 
 {
     echo "    // ---------- ". $em->name . " -------------". PHP_EOL;
@@ -67,7 +49,6 @@ foreach ($_PROG->enums as $em)
     echo "    DEFINE_POD_SERIALIZATION(". $em->get_cpp_name() .");".PHP_EOL;
     echo PHP_EOL;
 }
-
 foreach ($_PROG->structs as $s) 
 {
     echo "    // ---------- ". $s->name . " -------------". PHP_EOL;
@@ -93,7 +74,6 @@ foreach ($_PROG->structs as $s)
     echo "    }".PHP_EOL;
     echo PHP_EOL;
 }
-
 echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
 <?php } ?>

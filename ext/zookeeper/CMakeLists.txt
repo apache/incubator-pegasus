@@ -1,5 +1,11 @@
 set(project_name zookeeper)
-set(target_url  https://github.com/shengofsun/zookeeper_client_c.git)
+
+if(DSN_GIT_SOURCE STREQUAL "xiaomi")
+    set(target_url "http://git.n.xiaomi.com/pegasus/zookeeper_client_c.git")
+else()
+    set(target_url "https://github.com/shengofsun/zookeeper_client_c.git")
+endif()
+
 set(my_cmake_args "")
 
 if(WIN32)

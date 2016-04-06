@@ -31,23 +31,22 @@
  * Revision history:
  *     xxxx-xx-xx, author, first version
  *     2016-02-24, Weijie Sun(sunweijie[at]xiaomi.com), add support for serialization in thrift
+ *     2016-03-01, Weijie Sun(sunweijie[at]xiaomi.com), add support for rpc in thrift
  */
 
 # pragma once
 
-# include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
+# include <dsn/cpp/rpc_stream.h>
 
 # include <thrift/Thrift.h>
 # include <thrift/protocol/TBinaryProtocol.h>
 # include <thrift/protocol/TVirtualProtocol.h>
 # include <thrift/transport/TVirtualTransport.h>
 # include <thrift/TApplicationException.h>
-
 # include <type_traits>
 
 using namespace ::apache::thrift::transport;
-
 namespace dsn {
 
     class binary_reader_transport : public TVirtualTransport<binary_reader_transport>
@@ -190,8 +189,8 @@ namespace dsn {
             marshall_base(oprot, *iter);
         }
         xfer += oprot->writeListEnd();
-        xfer += oprot->writeFieldStop();
         xfer += oprot->writeFieldEnd();
+        return xfer;
     }
 
     template <typename T>
@@ -223,10 +222,10 @@ namespace dsn {
         return xfer;
     }
 
-    inline const char* to_string(const rpc_address& addr) { return ""; }
+    inline const char* to_string(const rpc_address& addr) { return addr.to_string(); }
     inline const char* to_string(const blob& blob) { return ""; }
-    inline const char* to_string(const task_code& code) { return ""; }
-    inline const char* to_string(const error_code& ec) { return ""; }
+    inline const char* to_string(const task_code& code) { return code.to_string(); }
+    inline const char* to_string(const error_code& ec) { return ec.to_string(); }
 
     template<typename T>
     class serialization_forwarder
@@ -284,21 +283,112 @@ namespace dsn {
         return serialization_forwarder<TName>::unmarshall(iproto, val);
     }
 
+#define GET_THRIFT_TYPE_MACRO(cpp_type, thrift_type) \
+    inline ::apache::thrift::protocol::TType get_thrift_type(const cpp_type&)\
+    {\
+        return ::apache::thrift::protocol::thrift_type;\
+    }\
+
+    GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
+    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
+    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
+    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
+    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
+
     template<typename T>
-    void marshall(binary_writer& writer, const T& val)
+    inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
     {
-        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        marshall_base<T>(&proto, val);
+        return ::apache::thrift::protocol::T_LIST;
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, /*out*/ T& val)
+    inline ::apache::thrift::protocol::TType get_thrift_type(const T&)
     {
-        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
-        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
-        unmarshall_base<T>(&proto, val);
+        return ::apache::thrift::protocol::T_STRUCT;
     }
+
+    template<typename T>
+    inline void marshall(binary_writer& writer, const T& val)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+        proto.writeFieldBegin("args", get_thrift_type(val), 0);
+        marshall_base<T>(&proto, val);
+        proto.writeFieldEnd();
+    }
+
+    template<typename T>
+    inline void unmarshall(binary_reader& reader, /*out*/ T& val)
+    {
+        ::dsn::binary_reader_transport trans(reader);
+        boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+
+        std::string fname;
+        ::apache::thrift::protocol::TType ftype;
+        int16_t fid;
+
+        proto.readFieldBegin(fname, ftype, fid);
+        if (ftype == get_thrift_type(val))
+            unmarshall_base<T>(&proto, val);
+        else
+            proto.skip(ftype);
+    }
+
+    class char_ptr
+    {
+    private:
+        const char* ptr;
+        int length;
+    public:
+        char_ptr(const char* p, int len): ptr(p), length(len) {}
+        std::size_t size() const { return length; }
+        const char* data() const { return ptr; }
+    };
+
+    class blob_string
+    {
+    private:
+        blob& _buffer;
+    public:
+        blob_string(blob& bb): _buffer(bb) {}
+
+        void clear()
+        {
+            _buffer.assign(std::shared_ptr<char>(nullptr), 0, 0);
+        }
+        void resize(std::size_t new_size)
+        {
+            std::shared_ptr<char> b(new char[new_size], std::default_delete<char[]>());
+            _buffer.assign(b, 0, new_size);
+        }
+        void assign(const char* ptr, std::size_t size)
+        {
+            std::shared_ptr<char> b(new char[size], std::default_delete<char[]>());
+            memcpy(b.get(), ptr, size);
+            _buffer.assign(b, 0, size);
+        }
+        const char* data() const
+        {
+            return _buffer.data();
+        }
+        size_t size() const
+        {
+            return _buffer.length();
+        }
+
+        char& operator [](int pos)
+        {
+            return const_cast<char*>(_buffer.data())[pos];
+        }
+    };
 
     inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     {
@@ -320,27 +410,24 @@ namespace dsn {
 
     inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        std::string str(to_string());
-        return oprot->writeString(str);
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        const char* name = to_string();
+        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
 
     inline uint32_t blob::read(apache::thrift::protocol::TProtocol *iprot)
     {
-        std::string ptr;
-        uint32_t xfer = iprot->readString(ptr);
-
-        //TODO: need something to do to resolve the memory copy
-        std::shared_ptr<char> buffer(new char [ptr.size()], std::default_delete<char[]>());
-        memcpy(buffer.get(), ptr.c_str(), ptr.size());
-        assign(buffer, 0, ptr.size());
-        return xfer;
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        blob_string str(*this);
+        return binary_proto->readString<blob_string>(str);
     }
 
     inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        //TODO: need something to do to resolve the memory copy
-        std::string ptr(_data, _length);
-        return oprot->writeString(ptr);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        return binary_proto->writeString<blob_string>(blob_string(const_cast<blob&>(*this)));
     }
 
     inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
@@ -353,9 +440,12 @@ namespace dsn {
 
     inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        std::string ec_string(to_string());
-        return oprot->writeString(ec_string);
+        //for optimization, it is dangerous if the oprot is not a binary proto
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        const char* name = to_string();
+        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
+<<<<<<< HEAD:include/dsn/idl/thrift_helper.h
 
     DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 
@@ -497,4 +587,6 @@ namespace dsn {
             }
         }
     };
+=======
+>>>>>>> 3cfd61002c9bb29092ba9157490c70bbbc4f560d:include/dsn/cpp/serialization_helper/thrift_helper.h
 }

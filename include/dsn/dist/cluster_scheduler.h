@@ -65,7 +65,7 @@ namespace dsn
             cstype_invalid = 8
         };
 
-#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifndef DSN_USE_THRIFT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(cluster_type);
 #endif
         ENUM_BEGIN(cluster_type, cluster_type::cstype_invalid)
@@ -92,7 +92,7 @@ namespace dsn
             SS_UNDEPLOYING = 7,
             SS_UNDEPLOYED = 8
         };
-#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
+#ifndef DSN_USE_THRIFT_SERIALIZATION
         DEFINE_POD_SERIALIZATION(service_status);
 #endif
         ENUM_BEGIN(service_status, service_status::SS_INVALID)

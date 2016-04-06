@@ -43,6 +43,7 @@ using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
 
+
 typedef std::unordered_map< ::dsn::rpc_address, partition_status> node_statuses;
 typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
