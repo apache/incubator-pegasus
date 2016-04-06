@@ -42,7 +42,7 @@ function usage_build()
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
     echo "   -s|--serialize    serialize type: dsn|thrift|gproto, default is thrift"
-    echo "   -g|--git          git source of ext module: github|git, default is github"
+    echo "   -g|--git          git source of ext module: github|xiaomi, default is github"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
     echo "                     the number of jobs to run simultaneously, default 8"
