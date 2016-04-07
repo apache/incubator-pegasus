@@ -10,11 +10,9 @@ $_IDL_FORMAT = $argv[4];
 function generate_request_helper($client, $func, $async)
 {
 ?>
-<?=$client?>.prototype.<?php if ($async) { echo "async_";} ?><?=$func->name?> = function(args, <?php if ($async) {echo "on_sucess, on_fail,";} ?> hash) {
+<?=$client?>.prototype.internal_<?php if ($async) { echo "async_";} ?><?=$func->name?> = function(args, <?php if ($async) {echo "on_success, on_fail,";} ?> hash) {
     var self = this;
-<?php if (!$async) { ?>
     var ret = null;
-<?php } ?>
     dsn_call(
         this.get_<?=$func->name?>_address(hash),
         "POST",
@@ -25,13 +23,15 @@ function generate_request_helper($client, $func, $async)
             self.unmarshall(result, ret);
             ret = ret.success;
 <?php if ($async) { ?>
-            on_sucess(ret);
+            on_success(ret);
 <?php } ?>
         },
         function(xhr, textStatus, errorThrown) {
             ret = null;
 <?php if ($async) { ?>
-            on_fail(xhr, textStatus, errorThrown);
+            if (on_fail) {
+                on_fail(xhr, textStatus, errorThrown);
+            }
 <?php } ?>
         }
     );
@@ -71,6 +71,14 @@ foreach ($_PROG->services as $svc)
         generate_request_helper($client, $func, false);
         generate_request_helper($client, $func, true);
 ?>
+<?=$client?>.prototype.<?=$func->name?> = function(obj) {
+    if (!obj.async) {
+        return this.internal_<?=$func->name?>(obj.args, obj.hash);
+    } else {
+        this.internal_async_<?=$func->name?>(obj.args, obj.on_success, obj.on_fail, obj.hash);
+    }
+}
+
 <?=$client?>.prototype.get_<?=$func->name?>_address = function(hash) {
     return this.get_address(this.url + "/" + "<?php echo $func->get_rpc_code(); ?>", hash);
 }

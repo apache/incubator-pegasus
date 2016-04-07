@@ -84,7 +84,7 @@ Thrift.DSNTransport.prototype = {
 };
 
 function dsn_call(url, method, send_data, is_async, on_success, on_fail) {
-    if ((is_async && (!onSuccess || !onFail)) || url === undefined || url === '') {
+    if ((is_async && (!on_success || !on_fail)) || url === undefined || url === '') {
         return null;
     }
     if (!method) {
