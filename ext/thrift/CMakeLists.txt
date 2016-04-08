@@ -10,6 +10,12 @@ else()
     message(FATAL_ERROR "not support other git source")
 endif()
 
+set(cmake_args "-DWITH_JAVA=OFF;-DWITH_PYTHON=OFF;-DBUILD_TESTING=OFF;-DBUILD_EXAMPLES=OFF;-DWITH_STATIC_LIB=OFF;-DWITH_QT5=OFF;-DWITH_QT4=OFF;-DWITH_OPENSSL=OFF;-DWITH_ZLIB=OFF;-DWITH_LIBEVENT=OFF;-DWITH_C_GLIB=OFF;-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/thrift")
+if(DEFINED BOOST_ROOT)
+    set(cmake_args "${cmake_args};-DBoost_NO_BOOST_CMAKE=ON;-DBOOST_ROOT=${BOOST_ROOT};-DBoost_NO_SYSTEM_PATHS=ON")
+endif()
+message(STATUS "thrift cmake args: ${cmake_args}")
+
 if(WIN32)
     set(install_cmd make install)
 else()
@@ -20,7 +26,7 @@ endif()
 
 ExternalProject_Add(libthrift
     URL ${target_url}
-    CMAKE_ARGS "-DWITH_JAVA=OFF;-DWITH_PYTHON=OFF;-DBUILD_TESTING=OFF;-DBUILD_EXAMPLES=OFF;-DWITH_STATIC_LIB=OFF;-DWITH_QT5=OFF;-DWITH_QT4=OFF;-DWITH_OPENSSL=OFF;-DWITH_ZLIB=OFF;-DWITH_LIBEVENT=OFF;-DWITH_C_GLIB=OFF;-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/thrift"
+    CMAKE_ARGS ${cmake_args}
     INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
     INSTALL_COMMAND ${install_cmd}
 )
