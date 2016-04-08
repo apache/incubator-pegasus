@@ -63,6 +63,10 @@ namespace dsn {
                     _app->last_durable_decree(),
                     _app->init_info().init_offset_in_private_log
                     );
+                if(PS_PRIMARY == status())
+                {
+                    _counter_private_log_size.set(_private_log->size() / 1000000);
+                }
             }
         }
 
