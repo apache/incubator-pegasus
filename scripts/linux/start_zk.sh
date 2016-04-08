@@ -16,6 +16,17 @@ then
     exit -1
 fi
 
+if [ -z "$GIT_SOURCE" -o "$GIT_SOURCE" == "github" ]
+then
+    download_url="https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz"
+elif [ "$GIT_SOURCE" == "xiaomi" ]
+then
+    download_url="http://git.n.xiaomi.com/pegasus/packages/raw/master/zookeeper-3.4.6.tar.gz"
+else
+    echo "ERROR: invalid git source '$GIT_SOURCE', should be github or xiaomi"
+    exit -1
+fi
+
 mkdir -p $INSTALL_DIR
 if [ $? -ne 0 ]
 then
@@ -27,7 +38,7 @@ cd $INSTALL_DIR
 
 if [ ! -f zookeeper-3.4.6.tar.gz ]; then
     echo "Downloading zookeeper..."
-    wget https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz
+    wget $download_url
     if [ $? -ne 0 ]; then
         echo "ERROR: download zookeeper failed"
         exit -1

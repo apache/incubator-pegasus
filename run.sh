@@ -200,11 +200,13 @@ function usage_start_zk()
     echo "                     zookeeper install directory,"
     echo "                     if not set, then default is './.zk_install'"
     echo "   -p|--port <port>  listen port of zookeeper, default is 12181"
+    echo "   -g|--git          git source to download zookeeper: github|xiaomi, default is github"
 }
 function run_start_zk()
 {
     INSTALL_DIR=`pwd`/.zk_install
     PORT=12181
+    GIT_SOURCE="github"
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -220,6 +222,10 @@ function run_start_zk()
                 PORT=$2
                 shift
                 ;;
+            -g|--git)
+                GIT_SOURCE=$2
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -229,7 +235,7 @@ function run_start_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $scripts_dir/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" GIT_SOURCE="$GIT_SOURCE" $scripts_dir/start_zk.sh
 }
 
 #####################
