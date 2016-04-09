@@ -48,6 +48,8 @@ public:
 
     dsn::error_code drop_app(const std::string& app_name);
 
+    dsn::error_code cluster_info(const std::string& file_name);
+
     dsn::error_code list_apps(const dsn::replication::app_status status, const std::string& file_name);
 
     dsn::error_code list_nodes(const dsn::replication::node_status status, const std::string& file_name);

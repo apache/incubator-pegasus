@@ -50,7 +50,7 @@ meta_service::meta_service()
 {
     _opts.initialize();
     // create in constructor because it may be used in checker before started
-    _state = new server_state();
+    _state = new server_state(this);
 }
 
 meta_service::~meta_service()
@@ -171,6 +171,12 @@ void meta_service::register_rpc_handlers()
         );
 
     register_rpc_handler(
+        RPC_CM_CLUSTER_INFO,
+        "RPC_CM_CLUSTER_INFO",
+        &meta_service::on_cluster_info
+        );
+
+    register_rpc_handler(
         RPC_CM_CONTROL_BALANCER_MIGRATION,
         "RPC_CM_CONTROL_BALANCER_MIGRATION",
         &meta_service::on_control_balancer_migration);
@@ -252,6 +258,11 @@ int meta_service::check_primary(dsn_message_t req)
     return 1;
 }
 
+rpc_address meta_service::get_primary()
+{
+    return _failure_detector->get_primary();
+}
+
 #define META_STATUS_CHECK_ON_RPC(dsn_msg, response_struct)\
     dinfo("rpc %s called", __FUNCTION__);\
     int result = check_primary(dsn_msg);\
@@ -289,6 +300,13 @@ void meta_service::on_list_nodes(dsn_message_t req)
     configuration_list_nodes_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
     _state->list_nodes(req);
+}
+
+void meta_service::on_cluster_info(dsn_message_t req)
+{
+    configuration_cluster_info_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
+    _state->cluster_info(req);
 }
 
 // partition server & client => meta server

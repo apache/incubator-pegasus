@@ -128,11 +128,12 @@ typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_up
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
+class meta_service;
 class server_state :
     public ::dsn::serverlet<server_state>
 {
 public:
-    server_state();
+    server_state(meta_service* meta_svc);
     virtual ~server_state();
 
     // initialize server state
@@ -187,6 +188,8 @@ public:
     void list_apps(dsn_message_t msg);
 
     void list_nodes(dsn_message_t msg);
+
+    void cluster_info(dsn_message_t msg);
 
     void unfree_if_possible_on_start();
 
@@ -255,6 +258,8 @@ private:
     friend class dsn::dist::server_load_balancer;
     friend class simple_stateful_load_balancer;
     friend class greedy_load_balancer;
+
+    meta_service*                                       _meta_svc;
 
     std::string                                         _cluster_root;
 

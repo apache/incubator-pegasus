@@ -84,6 +84,9 @@ private:
     void on_list_apps(dsn_message_t req);
     void on_list_nodes(dsn_message_t req);
 
+    // cluster info
+    void on_cluster_info(dsn_message_t req);
+
     // balacer rpc
     void on_control_balancer_migration(dsn_message_t req);
     void on_balancer_proposal(dsn_message_t req);
@@ -95,8 +98,10 @@ private:
 
     // common routines
     int check_primary(dsn_message_t req);
+    rpc_address get_primary();
 
 private:
+    friend class server_state;
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;

@@ -161,6 +161,8 @@ class configuration_list_apps_request;
 
 class configuration_list_nodes_request;
 
+class configuration_cluster_info_request;
+
 class configuration_create_app_response;
 
 class control_balancer_migration_request;
@@ -176,6 +178,8 @@ class configuration_drop_app_response;
 class configuration_list_apps_response;
 
 class configuration_list_nodes_response;
+
+class configuration_cluster_info_response;
 
 class configuration_query_by_node_response;
 
@@ -2026,6 +2030,43 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_list_node
   return out;
 }
 
+
+class configuration_cluster_info_request {
+ public:
+
+  configuration_cluster_info_request(const configuration_cluster_info_request&);
+  configuration_cluster_info_request(configuration_cluster_info_request&&);
+  configuration_cluster_info_request& operator=(const configuration_cluster_info_request&);
+  configuration_cluster_info_request& operator=(configuration_cluster_info_request&&);
+  configuration_cluster_info_request() {
+  }
+
+  virtual ~configuration_cluster_info_request() throw();
+
+  bool operator == (const configuration_cluster_info_request & /* rhs */) const
+  {
+    return true;
+  }
+  bool operator != (const configuration_cluster_info_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_cluster_info_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_cluster_info_request &a, configuration_cluster_info_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_info_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
 typedef struct _configuration_create_app_response__isset {
   _configuration_create_app_response__isset() : err(false), appid(false) {}
   bool err :1;
@@ -2441,6 +2482,66 @@ class configuration_list_nodes_response {
 void swap(configuration_list_nodes_response &a, configuration_list_nodes_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const configuration_list_nodes_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_cluster_info_response__isset {
+  _configuration_cluster_info_response__isset() : err(false), keys(false), values(false) {}
+  bool err :1;
+  bool keys :1;
+  bool values :1;
+} _configuration_cluster_info_response__isset;
+
+class configuration_cluster_info_response {
+ public:
+
+  configuration_cluster_info_response(const configuration_cluster_info_response&);
+  configuration_cluster_info_response(configuration_cluster_info_response&&);
+  configuration_cluster_info_response& operator=(const configuration_cluster_info_response&);
+  configuration_cluster_info_response& operator=(configuration_cluster_info_response&&);
+  configuration_cluster_info_response() {
+  }
+
+  virtual ~configuration_cluster_info_response() throw();
+   ::dsn::error_code err;
+  std::vector<std::string>  keys;
+  std::vector<std::string>  values;
+
+  _configuration_cluster_info_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_keys(const std::vector<std::string> & val);
+
+  void __set_values(const std::vector<std::string> & val);
+
+  bool operator == (const configuration_cluster_info_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(keys == rhs.keys))
+      return false;
+    if (!(values == rhs.values))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_cluster_info_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_cluster_info_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_cluster_info_response &a, configuration_cluster_info_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_info_response& obj)
 {
   obj.printTo(out);
   return out;

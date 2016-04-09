@@ -290,6 +290,10 @@ struct configuration_list_nodes_request
     1:node_status              status = node_status.NS_INVALID;
 }
 
+struct configuration_cluster_info_request
+{
+}
+
 // meta server => client
 struct configuration_create_app_response
 {
@@ -344,6 +348,13 @@ struct configuration_list_nodes_response
 {
     1:dsn.error_code   err;
     2:list<node_info>  infos;
+}
+
+struct configuration_cluster_info_response
+{
+    1:dsn.error_code   err;
+    2:list<string>     keys;
+    3:list<string>     values;
 }
 
 struct configuration_query_by_node_response

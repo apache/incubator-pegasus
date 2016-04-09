@@ -45,12 +45,15 @@
 # include <rapidjson/writer.h>
 # include <rapidjson/stringbuffer.h>
 
+# include "../zookeeper/zookeeper_session_mgr.h"
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "meta.server.state"
 
 # include "dump_file.h"
+# include "meta_service.h"
 
 int32_t server_state::_default_max_replica_count = 3;
 
@@ -195,8 +198,9 @@ std::string join_path(const std::string& input1, const std::string& input2)
 }
 
 /// server state member functions
-server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
+server_state::server_state(meta_service* meta_svc)
+    : ::dsn::serverlet<server_state>("meta.server.state"),
+    _meta_svc(meta_svc), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -1181,6 +1185,23 @@ void server_state::list_nodes(dsn_message_t msg)
                 response.infos.push_back(info);
             }
         }
+        response.err = dsn::ERR_OK;
+    }
+    reply(msg, response);
+}
+
+void server_state::cluster_info(dsn_message_t msg)
+{
+    configuration_cluster_info_request request;
+    configuration_cluster_info_response response;
+    ::unmarshall(msg, request);
+    {
+        response.keys.push_back("primary_meta_server");
+        response.values.push_back(_meta_svc->get_primary().to_string());
+        response.keys.push_back("zookeeper_servers");
+        response.values.push_back(::dsn::dist::zookeeper_session_mgr::instance().zoo_hosts());
+        response.keys.push_back("zookeeper_cluster_root");
+        response.values.push_back(_cluster_root);
         response.err = dsn::ERR_OK;
     }
     reply(msg, response);

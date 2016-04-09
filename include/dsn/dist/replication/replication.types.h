@@ -7,7 +7,6 @@
 // in this case, you need to use these tools to generate
 // type files with --gen=cpp etc. options
 //
-
 # if defined(DSN_USE_THRIFT_SERIALIZATION)
 
 # include "replication_types.h"
@@ -792,6 +791,19 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.status);
     }
 
+    // ---------- configuration_cluster_info_request -------------
+    struct configuration_cluster_info_request
+    {
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_cluster_info_request& val)
+    {
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_cluster_info_request& val)
+    {
+    }
+
     // ---------- configuration_create_app_response -------------
     struct configuration_create_app_response
     {
@@ -936,6 +948,28 @@ namespace dsn { namespace replication {
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.infos);
+    }
+
+    // ---------- configuration_cluster_info_response -------------
+    struct configuration_cluster_info_response
+    {
+        ::dsn::error_code err;
+        std::vector< std::string> keys;
+        std::vector< std::string> values;
+    };
+
+    inline void marshall(::dsn::binary_writer& writer, const configuration_cluster_info_response& val)
+    {
+        marshall(writer, val.err);
+        marshall(writer, val.keys);
+        marshall(writer, val.values);
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_cluster_info_response& val)
+    {
+        unmarshall(reader, val.err);
+        unmarshall(reader, val.keys);
+        unmarshall(reader, val.values);
     }
 
     // ---------- configuration_query_by_node_response -------------

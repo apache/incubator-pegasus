@@ -286,7 +286,7 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
     _lock_svc = nullptr;
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state();
+    _state = new server_state(nullptr);
 }
 
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address, bool is_myself_leader)
@@ -294,6 +294,6 @@ void meta_server_failure_detector::set_leader_for_test(rpc_address leader_addres
     utils::auto_lock<zlock> l(_primary_address_lock);
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state();
+    _state = new server_state(nullptr);
 }
 

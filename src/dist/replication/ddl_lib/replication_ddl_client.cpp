@@ -284,6 +284,55 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     return dsn::ERR_OK;
 }
 
+dsn::error_code replication_ddl_client::cluster_info(const std::string& file_name)
+{
+    std::shared_ptr<configuration_cluster_info_request> req(new configuration_cluster_info_request());
+
+    auto resp_task = request_meta<configuration_cluster_info_request>(
+            RPC_CM_CLUSTER_INFO,
+            req
+    );
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_cluster_info_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_cluster_info_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    size_t width = 0;
+    for(int i = 0; i < resp.keys.size(); i++)
+    {
+        if (resp.keys[i].size() > width)
+            width = resp.keys[i].size();
+    }
+
+    for(int i = 0; i < resp.keys.size(); i++)
+    {
+        out << std::setw(width) << std::left << resp.keys[i]
+            << " : " << resp.values[i] << std::endl;
+    }
+    out << std::endl << std::flush;
+    return dsn::ERR_OK;
+}
+
 dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))

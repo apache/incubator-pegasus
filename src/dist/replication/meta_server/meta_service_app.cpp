@@ -124,7 +124,7 @@ namespace dsn {
             if (argc == 4)
             {
                 //for dump and restore
-                server_state *state = new server_state();
+                server_state *state = new server_state(nullptr);
                 error_code ec = state->initialize();
                 if (ec != ERR_OK)
                 {

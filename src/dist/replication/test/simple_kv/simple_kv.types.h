@@ -7,7 +7,6 @@
 // in this case, you need to use these tools to generate
 // type files with --gen=cpp etc. options
 //
-
 # if defined(DSN_USE_THRIFT_SERIALIZATION)
 
 # include "simple_kv_types.h"
