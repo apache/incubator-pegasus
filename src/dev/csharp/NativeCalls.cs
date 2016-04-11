@@ -51,6 +51,7 @@ namespace dsn.dev.csharp
     using dsn_address_t = UInt64;
     using dsn_group_t = IntPtr;
     using dsn_uri_t = IntPtr;
+    using dsn_gpid = UInt64;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void dsn_task_handler_t(IntPtr param);
@@ -60,21 +61,93 @@ namespace dsn.dev.csharp
     public delegate void dsn_rpc_response_handler_t(dsn_error_t err, dsn_message_t req, dsn_message_t resp, IntPtr param);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void dsn_aio_handler_t(dsn_error_t err, size_t sz, IntPtr param);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate IntPtr dsn_app_create(string type_name); // return app_context
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate dsn_error_t dsn_app_start(IntPtr app_context, int argc, IntPtr argv); // argv: char**
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void dsn_app_destroy(IntPtr app_context, bool cleanup);
+
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate IntPtr dsn_checker_create(string name, IntPtr app_info, int app_info_count); // app_info: dsn_app_info[]
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void dsn_checker_apply(IntPtr checker);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate IntPtr dsn_app_create(string type_name, dsn_gpid gpid); // return app_context
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate dsn_error_t dsn_app_start(IntPtr app_context, int argc, IntPtr argv); // argv: char**
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void dsn_app_destroy(IntPtr app_context, bool cleanup);
+    
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void dsn_layer2_rpc_request_handler(
+            IntPtr app_context,
+            dsn_gpid gpid,
+            bool is_write_op,
+            dsn_message_t req,
+            int delay_milliseconds
+            );
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
+    public struct dsn_app_learn_state
+    {
+        int total_learn_state_size; // memory used in the given buffer by this learn-state 
+        Int64 from_decree_excluded;
+        Int64 to_decree_included;
+        int meta_state_size;
+        int file_state_count;
+        IntPtr meta_state_ptr;
+        IntPtr files;
+        //IntPtr meta_state_ptr;
+        //const char** files;
+    }
+
+    public enum dsn_chkpt_apply_mode
+    {
+        DSN_CHKPT_COPY,
+        DSN_CHKPT_LEARN
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate dsn_error_t dsn_app_checkpoint(IntPtr app_context);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate dsn_error_t dsn_app_checkpoint_async(IntPtr app_context);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate int dsn_app_prepare_get_checkpoint(
+        IntPtr app_context,
+        IntPtr buffer,
+        int buffer_capacity
+        );
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate int dsn_app_get_checkpoint(
+        IntPtr app_context,
+        Int64 start_decree,
+        IntPtr learn_req,
+        int learn_req_size,
+        IntPtr learn_state_buffer, // dsn_app_learn_state learn_state_buffer,
+        int learn_state_buffer_size
+        );
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate int dsn_app_apply_checkpoint(
+        IntPtr app_context,
+        IntPtr learn_state,
+        dsn_chkpt_apply_mode mode
+        );
+
     public delegate dsn_error_t dsn_app_start_managed(IntPtr app_context, string[] args);
     public delegate IntPtr dsn_checker_create_managed(string name, dsn_app_info[] app_info);
 
+    [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
+    public struct dsn_app_cross_layer_shared_info_type_1
+    {
+        // from layer 2 to layer 1
+        public Int64 last_committed_decree;
+        // from layer 1 to layer 2
+        public Int64 last_durable_decree;
+        // physical error (e.g., io error) indicates the app needs to be dropped
+        public Int32 physical_error;
 
+        public Int32 dummy;
+    };
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
     public struct dsn_app_info
@@ -94,6 +167,8 @@ namespace dsn.dev.csharp
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)]
         public string data_dir; // size = DSN_MAX_PATH
+
+        dsn_app_cross_layer_shared_info_type_1 type1_info;
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
@@ -109,9 +184,26 @@ namespace dsn.dev.csharp
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
-    public struct layer2_callbacks
+    public struct layer2_framework_callbacks
     {
-        UInt64 dump;
+        // dsn_layer2_rpc_request_handler on_rpc_request;
+        public IntPtr on_rpc_request;
+    };
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
+    public struct layer2_app_type_1_callbacks
+    {
+        //dsn_app_checkpoint chkpt;
+        //dsn_app_checkpoint_async chkpt_async;
+        //dsn_app_prepare_get_checkpoint checkpoint_get_prepare; ///< optional
+        //dsn_app_get_checkpoint chkpt_get;
+        //dsn_app_apply_checkpoint chkpt_apply;
+
+        public IntPtr chkpt;
+        public IntPtr chkpt_async;
+        public IntPtr checkpoint_get_prepare; ///< optional
+        public IntPtr chkpt_get;
+        public IntPtr chkpt_apply;
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
@@ -131,8 +223,10 @@ namespace dsn.dev.csharp
         /*! layer 1 app definition, mask = DSN_APP_MASK_DEFAULT */
         public layer1_callbacks layer1;
         
-        public layer2_callbacks layer2;
-        
+        public layer2_framework_callbacks layer2_frameworks;
+
+        public layer2_app_type_1_callbacks layer2_apps_type_1;
+
         public layer3_callbacks layer3;
     };
 
@@ -184,11 +278,19 @@ namespace dsn.dev.csharp
         public const uint DSN_MAX_BUFFER_COUNT_IN_MESSAGE= 64 ;
         public const uint DSN_INVALID_HASH               = 0xdeadbeef ;
         public const uint DSN_MAX_APP_TYPE_NAME_LENGTH   = 32 ;
-        #if __MonoCS__
+
+        public const uint DSN_APP_MASK_DEFAULT = 0x00; ///< default mask, only layer1 app model is supported
+        public const uint DSN_L2_REPLICATION_FRAMEWORK_TYPE_1 = 0x01; ///< implement type 1 replication framework
+        public const uint DSN_L2_REPLICATION_APP_TYPE_1 = 0x02; ///< implement type 1 replication app
+        public const uint DSN_L2_REPLICATION_FRAMEWORK_TYPE_2 = 0x04; ///< implement type 1 replication framework
+        public const uint DSN_L2_REPLICATION_APP_TYPE_2 = 0x08; ///< implement type 1 replication app
+
+
+#if __MonoCS__
         public const string DSN_CORE_DLL = "dsn.core.so";
-        #else
+#else
         public const string DSN_CORE_DLL = "dsn.core.dll";
-        #endif
+#endif
 
         public static string[] CopyCStringArrayToManaged(IntPtr ptr, int size)
         {
@@ -218,12 +320,7 @@ namespace dsn.dev.csharp
             }
             return ss.ToArray();
         }
-
-        public static UInt32 DSN_APP_MASK_DEFAULT   = 0x0; ///< default mask, only layer1 app model is supported
-        public static UInt32 DSN_APP_L2_VNODE       = 0x1; ///< whether many virtual app nodes in the same app is supported
-        public static UInt32 DSN_APP_L2_REPLICATION = 0x2; ///< whether replication is supported
-        public static UInt32 DSN_APP_L2_STATEFUL    = 0x4; ///< whether the app is stateful
-
+        
         public static bool dsn_register_app_managed(string type_name, dsn_app_create create, dsn_app_start_managed start, dsn_app_destroy destroy)
         {
             dsn_app_start start2 = (IntPtr app_context, int argc, IntPtr argv) => 
@@ -376,7 +473,7 @@ namespace dsn.dev.csharp
         public extern static dsn_task_t  dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, IntPtr param, int hash, int interval_milliseconds, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         // repeated declarations later in correpondent rpc and file sections
         //[DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        //public extern static dsn_task_t  dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash);
+        //public extern static dsn_task_t  dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_thread_hash);
         //[DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         //public extern static dsn_task_t  dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, IntPtr param, int hash);
 
@@ -518,8 +615,8 @@ namespace dsn.dev.csharp
         // if you want to hold them in upper apps, you need to call msg_add_ref
         // and msg_release_ref explicitly.
         //
-        [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash, UInt64 partition_hash);
+        [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi), SuppressUnmanagedCodeSecurity]
+        public extern static dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, UInt64 hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_message_t dsn_msg_create_response(dsn_message_t request);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -553,7 +650,7 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static IntPtr        dsn_rpc_unregiser_handler(dsn_task_code_t code, IntPtr layer1_app_context);   // return IntPtr param on registration  
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
+        public extern static dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_thread_hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

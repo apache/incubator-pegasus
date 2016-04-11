@@ -27,12 +27,25 @@ namespace dsn.example
     {
         public override ErrorCode Start(string[] args)
         {
-            if (args.Length < 3)
+            if (args.Length < 2)
             {
-                throw new Exception("wrong usage: server-host server-port");                
+                throw new Exception("wrong usage: server-host server-port or service-url");                
             }
 
-            _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
+            if (args.Length >= 3)
+            {
+                _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
+            }
+            else
+            {
+                if (args[1].Contains("dsn://"))
+                    _server = new RpcAddress(args[1]);
+                else
+                {
+                    var addrs = args[1].Split(new char[] { ':'}, StringSplitOptions.RemoveEmptyEntries);
+                    _server.addr = Native.dsn_address_build(addrs[0], ushort.Parse(addrs[1]));
+                }
+            }
 
             _echoClient = new echoClient(_server);
             _timer = Clientlet.CallAsync2(echoHelper.LPC_ECHO_TEST_TIMER, null, this.OnTestTimer, 0, 0, 1000);

@@ -50,24 +50,23 @@ using namespace dsn::utils;
 DSN_API dsn_message_t dsn_msg_create_request(
     dsn_task_code_t rpc_code, 
     int timeout_milliseconds, 
-    int thread_hash, 
-    uint64_t partition_hash
+    uint64_t hash
     )
 {
-    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, thread_hash, partition_hash);
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
 }
 
 DSN_API dsn_message_t dsn_msg_create_received_request(
     dsn_task_code_t rpc_code,
     void* buffer,
     int size,
-    int thread_hash
+    uint64_t hash
     )
 {
     ::dsn::blob bb((const char*)buffer, 0, size);
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
-    msg->header->client.hash = thread_hash;
+    msg->header->client.hash = hash;
 
     msg->add_ref(); // released by callers explicitly using dsn_msg_release
     return msg;
@@ -179,7 +178,7 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_HASH)
     {
-        hdr->client.hash = opts->thread_hash;
+        hdr->client.hash = opts->hash;
     }
     
     if (mask & DSN_MSGM_VNID)
@@ -200,7 +199,7 @@ DSN_API void dsn_msg_get_options(
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
     opts->context = hdr->context;
-    opts->thread_hash = hdr->client.hash;
+    opts->hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
     opts->gpid = hdr->gpid;
 }
@@ -447,7 +446,7 @@ message_ex* message_ex::copy_and_prepare_send()
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int thread_hash, uint64_t partition_hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, uint64_t hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -458,7 +457,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     memset(&hdr, 0, sizeof(hdr));
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
-    hdr.client.hash = thread_hash;
+    hdr.client.hash = hash;
 
     if (0 == timeout_milliseconds)
     {
@@ -477,11 +476,6 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.id = new_id();
 
     hdr.context.u.is_request = true;
-    if (0 != partition_hash)
-    {
-        hdr.context.u.parameter_type = MSG_PARAM_PARTITION_HASH;
-        hdr.context.u.parameter = partition_hash;
-    }
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;

@@ -11,19 +11,17 @@ namespace dsn.example
         public echoClient(RpcAddress server) { _server = server; }
         public echoClient() { }
         ~echoClient() {}
-
-        public virtual UInt64 GetKeyPartitionHash(string req) { return 0; }
-    
+        
         // ---------- call echoHelper.RPC_ECHO_ECHO_PING ------------
         // - synchronous 
         public ErrorCode ping(
             string val, 
             out string resp, 
             int timeout_milliseconds = 0, 
-            int hash = 0,
+            UInt64 hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash, GetKeyPartitionHash(val));
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash);
             s.Write(val);
             s.Flush();
             
@@ -46,11 +44,11 @@ namespace dsn.example
             string val, 
             pingCallback callback,
             int timeout_milliseconds = 0, 
-            int reply_hash = 0,
-            int request_hash = 0,
+            int reply_thread_hash = 0,
+            UInt64 request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash, GetKeyPartitionHash(val));
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
             s.Write(val);
             s.Flush();
             
@@ -64,7 +62,7 @@ namespace dsn.example
                                 rs.Read(out resp);
                                 callback(err, resp);
                             },
-                        reply_hash
+                        reply_thread_hash
                         );
         }        
         
@@ -72,11 +70,11 @@ namespace dsn.example
             string val, 
             pingCallback callback,
             int timeout_milliseconds = 0, 
-            int reply_hash = 0,
-            int request_hash = 0,
+            int reply_thread_hash = 0,
+            UInt64 request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash, GetKeyPartitionHash(val));
+            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
             s.Write(val);
             s.Flush();
             
@@ -90,7 +88,7 @@ namespace dsn.example
                                 rs.Read(out resp);
                                 callback(err, resp);
                             },
-                        reply_hash
+                        reply_thread_hash
                         );
         }       
     

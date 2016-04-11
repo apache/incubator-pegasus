@@ -38,24 +38,12 @@ namespace dsn { namespace replication { namespace test {
         simple_kv_client() { }
         virtual ~simple_kv_client() {}
 
-        // from requests to partition index
-        // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-        virtual uint64_t get_partition_hash(const std::string& key)
-        {
-            return dsn_crc64_compute(key.c_str(), key.size(), 0);
-        }
-
-        virtual uint64_t get_partition_hash(const ::dsn::replication::test::kv_pair& key)
-        {
-            return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
-        }
-
         // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
         // - synchronous 
         std::pair< ::dsn::error_code, std::string> read_sync(
             const std::string& key,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -68,8 +56,7 @@ namespace dsn { namespace replication { namespace test {
                     empty_callback,
                     hash,
                     timeout,
-                    0,
-                    get_partition_hash(key)
+                    0
                     )
                 );
         }
@@ -81,7 +68,7 @@ namespace dsn { namespace replication { namespace test {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_thread_hash = 0,
-            int thread_hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -91,10 +78,9 @@ namespace dsn { namespace replication { namespace test {
                 key,
                 this,
                 std::forward<TCallback>(callback),
-                thread_hash,
+                hash,
                 timeout,
-                reply_thread_hash,
-                get_partition_hash(key)
+                reply_thread_hash
                 );
         }
 
@@ -103,7 +89,7 @@ namespace dsn { namespace replication { namespace test {
         std::pair< ::dsn::error_code, int32_t> write_sync(
             const kv_pair& pr,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -116,8 +102,7 @@ namespace dsn { namespace replication { namespace test {
                     empty_callback,
                     hash,
                     timeout,
-                    0,
-                    get_partition_hash(pr)
+                    0
                     )
                 );
         }
@@ -129,7 +114,7 @@ namespace dsn { namespace replication { namespace test {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_thread_hash = 0,
-            int thread_hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -139,10 +124,9 @@ namespace dsn { namespace replication { namespace test {
                 pr,
                 this,
                 std::forward<TCallback>(callback),
-                thread_hash,
+                hash,
                 timeout,
-                reply_thread_hash,
-                get_partition_hash(pr)
+                reply_thread_hash
                 );
         }
 
@@ -151,7 +135,7 @@ namespace dsn { namespace replication { namespace test {
         std::pair< ::dsn::error_code, int32_t> append_sync(
             const kv_pair& pr,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -164,8 +148,7 @@ namespace dsn { namespace replication { namespace test {
                     empty_callback,
                     hash,
                     timeout,
-                    0,
-                    get_partition_hash(pr)
+                    0
                     )
                 );
         }
@@ -177,7 +160,7 @@ namespace dsn { namespace replication { namespace test {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_thread_hash = 0,
-            int thread_hash = 0,
+            uint64_t hash = 0,
             dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
             )
         {
@@ -187,10 +170,9 @@ namespace dsn { namespace replication { namespace test {
                 pr,
                 this,
                 std::forward<TCallback>(callback),
-                thread_hash,
+                hash,
                 timeout,
-                reply_thread_hash,
-                get_partition_hash(pr)
+                reply_thread_hash
                 );
         }
 

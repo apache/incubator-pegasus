@@ -66,15 +66,19 @@ namespace dsn.dev.csharp
 
         public string Name() { return _name; }
 
+        public UInt64 Gpid() { return _gpid; }
+
         private bool          _started;
         private RpcAddress    _address;
         private string        _name;
         private GCHandle      _gch;
+        private UInt64        _gpid;
 
-        private static IntPtr AppCreate<T>(string tname)
+        private static IntPtr AppCreate<T>(string tname, UInt64 gpid)
             where T : ServiceApp, new()
         {
             ServiceApp app = new T();
+            app._gpid = gpid;
             return (IntPtr)(app._gch);
         }
 
