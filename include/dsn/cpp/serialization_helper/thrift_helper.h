@@ -348,6 +348,7 @@ namespace dsn {
         {
             proto.writeFieldStop(); // for all pieces
             proto.writeStructEnd();
+            proto.writeFieldEnd();
         }
     }
 

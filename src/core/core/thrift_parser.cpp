@@ -1,3 +1,39 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     The thrift rpc message parser
+ *
+ * Revision history:
+ *     2016-04-04 Weijie Sun(sunweijie[at]xiaomi.com) First version
+ *     2016-04-11 Weijie Sun(sunweijie[at]xiaomi.com) add a prefix length in thrift response,
+ *          which is the same with the thrift TFramedTransport, and make the client easier to optimize
+ */
+
 #ifdef DSN_ENABLE_THRIFT_RPC
 
 #include <dsn/internal/thrift_parser.h>
@@ -97,8 +133,8 @@ int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, int offset, /
 
     dassert(!msg->buffers.empty(), "buffers is not possible to be empty");
 
-    // we ignore header for thrift resp
-    offset += sizeof(message_header);
+    // we ignore header for thrift resp, and add a length field in the beginning of body
+    offset += (sizeof(message_header) - sizeof(int32_t));
 
     int count=0;
     //ignore the msg header
@@ -116,6 +152,11 @@ int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, int offset, /
         offset = 0;
         ++count;
     }
+
+    if (count > 0)
+    {
+        *(int*)(buffers[0].buf) = htobe32(msg->header->body_length);
+    }
     return count;
 }
 
@@ -124,8 +165,8 @@ int thrift_header_parser::get_send_buffers_count_and_total_length(message_ex* ms
     if ( !msg->is_response_adjusted_for_custom_rpc )
         adjust_thrift_response(msg);
 
-    // when send thrift message, we ignore the header
-    *total_length = msg->header->body_length;
+    // when send thrift message, we ignore the header, but we add a custom header
+    *total_length = msg->header->body_length + sizeof(int32_t);
     return msg->buffers.size();
 }
 }

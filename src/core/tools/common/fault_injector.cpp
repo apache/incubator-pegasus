@@ -233,6 +233,7 @@ namespace dsn {
             if (callee->delay_milliseconds() == 0 && task_ext_for_fj::get(callee) == 0)
             {
                 callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                ddebug("set timeout(%d) for task(%s)", callee->delay_milliseconds(), dsn_task_code_to_string(callee->code()));
                 task_ext_for_fj::get(callee) = 1; // ensure only fd once
             }
         }
