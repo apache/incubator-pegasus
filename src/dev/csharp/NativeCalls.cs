@@ -136,6 +136,13 @@ namespace dsn.dev.csharp
     public delegate dsn_error_t dsn_app_start_managed(IntPtr app_context, string[] args);
     public delegate IntPtr dsn_checker_create_managed(string name, dsn_app_info[] app_info);
 
+    public enum dsn_batch_state
+    {
+        BS_NOT_BATCH,  // request is not batched
+        BS_BATCH,      // request is batched but not the last in the same batch
+        BS_BATCH_LAST  // request is batched and the last in the same batch
+    };
+
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]
     public struct dsn_app_cross_layer_shared_info_type_1
     {
@@ -146,7 +153,7 @@ namespace dsn.dev.csharp
         // physical error (e.g., io error) indicates the app needs to be dropped
         public Int32 physical_error;
 
-        public Int32 dummy;
+        public dsn_batch_state batch_state;
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]

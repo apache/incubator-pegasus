@@ -129,6 +129,7 @@ namespace dsn {
                     }
                     _store.clear();
                     //reset_states();
+                    memset((void*)&_app_info->info.type1, sizeof(_app_info->info.type1), 0);
                 }
                 ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
                 return ERR_OK;
