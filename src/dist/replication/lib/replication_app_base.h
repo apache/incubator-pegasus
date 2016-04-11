@@ -69,17 +69,6 @@ public:
 class replication_app_base
 {
 public:
-    // requests may be batched by replication and fed to replication
-    // app with the same decree, in this case, apps may need to 
-    // be aware of the batch state for the current request
-    enum batch_state
-    {
-        BS_NOT_BATCH,  // request is not batched
-        BS_BATCH,      // request is batched but not the last in the same batch
-        BS_BATCH_LAST  // request is batched and the last in the same batch
-    };
-
-public:
     replication_app_base(::dsn::replication::replica* replica);
     ~replication_app_base() { }
 
@@ -194,16 +183,6 @@ public:
     ::dsn::replication::decree last_committed_decree() const { return _app_info ? _app_info->info.type1.last_committed_decree : 0; }
     void* app_context() { return _app_context; }
     void reset_counters_after_learning();
-
-protected:
-
-    // init the commit decree, usually used by apps when initializing the 
-    // state from checkpoints (e.g., update durable and commit decrees)
-    void init_last_commit_decree(decree d) { _app_info->info.type1.last_committed_decree = d; }
-
-    // see comments for batch_state, this function is not thread safe
-    batch_state get_current_batch_state() { return _batch_state; }
-
     // reset all states when reopen the app
     void reset_states();
     
@@ -228,8 +207,7 @@ private:
     std::string _dir_learn;
     replica*    _replica;
 
-    replica_init_info    _info;
-    batch_state         _batch_state;
+    replica_init_info _info;
     dsn_app_info *_app_info;
 
     perf_counter_ _app_commit_throughput;

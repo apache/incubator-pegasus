@@ -510,7 +510,7 @@ void timer_task::exec()
 rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
     : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
-        request->header->client.hash, node),
+        static_cast<int>(request->header->client.hash), node),
     _request(request),
     _handler(h),
     _enqueue_ts_ns(0)
@@ -546,7 +546,7 @@ rpc_response_task::rpc_response_task(
     service_node* node
     )
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, context, on_cancel,
-           hash == 0 ? request->header->client.hash : hash, node)
+           hash == 0 ? static_cast<int>(request->header->client.hash) : hash, node)
 {
     _cb = cb;
     _is_null = (_cb == nullptr);

@@ -44,13 +44,19 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 throw new Exception("wrong usage: server-url or server-host server-port");                
             }
 
-            if (args.Length == 2)
+            if (args.Length >= 3)
             {
-                _server = new RpcAddress(args[1]);
+                _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
             }
             else
             {
-                _server = new RpcAddress(args[1], ushort.Parse(args[2]));
+                if (args[1].Contains("dsn://"))
+                    _server = new RpcAddress(args[1]);
+                else
+                {
+                    var addrs = args[1].Split(new char[] { ':'}, StringSplitOptions.RemoveEmptyEntries);
+                    _server.addr = Native.dsn_address_build(addrs[0], ushort.Parse(addrs[1]));
+                }
             }
 
 <?php foreach ($_PROG->services as $svc) { ?>

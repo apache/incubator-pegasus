@@ -76,7 +76,7 @@ public:
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
         int reply_thread_hash = 0,
-        int thread_hash = 0,
+        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -86,7 +86,7 @@ public:
                     c, 
                     this,
                     std::forward<TCallback>(callback),
-                    thread_hash, 
+                    hash, 
                     timeout, 
                     reply_thread_hash
                     );

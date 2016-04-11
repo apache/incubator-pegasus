@@ -791,9 +791,7 @@ namespace dsn {
     {
         dbg_dassert(addr.type() == HOST_TYPE_URI, "only URI is now supported");
         auto& hdr = *request->header;
-        auto partition_hash = hdr.context.u.parameter_type == MSG_PARAM_PARTITION_HASH ?
-            hdr.context.u.parameter :
-            0;
+        auto partition_hash = hdr.client.hash;
 
         auto resolver = request->server_address.uri_address()->get_resolver();
         if (nullptr == resolver)
