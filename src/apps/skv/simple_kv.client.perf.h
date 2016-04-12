@@ -45,17 +45,7 @@ class simple_kv_perf_test_client
 {
 public:
     using simple_kv_client2::simple_kv_client2;
-
-    virtual uint64_t get_partition_hash(const std::string& key) override
-    {
-        return dsn_crc64_compute(key.c_str(), key.size(), 0);
-    }
-
-    virtual uint64_t get_partition_hash(const ::dsn::replication::application::kv_pair& key) override
-    {
-        return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
-    }
-
+    
     void start_test()
     {
         perf_test_suite s;

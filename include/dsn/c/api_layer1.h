@@ -493,20 +493,15 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param thread_hash          if the task code is bound to a partitioned thread pool,
-   a thread hash is needed to specify which thread in the pool should handle the request
-
- \param partition_hash        if the target service is partitioned,
-   a partition hash is needed to specify which partition/shard should handle the request
-
+ \param hash                  used for both partition and thread hash to locate which thread
+   the request should be sent to
  \return RPC message handle
  */
 
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int thread_hash DEFAULT(0),
-                                uint64_t partition_hash DEFAULT(0)
+                                uint64_t hash DEFAULT(0)
                                 );
 
 /*! create a RPC response message correspondent to the given request message */
@@ -526,15 +521,13 @@ extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_task_code_t rpc_code,
                             void* buffer,
                             int size,
-                            int thread_hash DEFAULT(0)
+                            uint64_t hash DEFAULT(0)
                             );
 
 /*! type of the parameter in \ref dsn_msg_context_t */
 typedef enum dsn_msg_parameter_type_t
 {
     MSG_PARAM_NONE = 0,           ///< nothing  
-    MSG_PARAM_PARTITION_HASH = 1  ///< partition hash
-
 } dsn_msg_parameter_type_t;
 
 enum dsn_msg_serialize_format
@@ -587,7 +580,7 @@ inline int dsn_gpid_to_hash(dsn_gpid gpid)
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               thread_hash; ///< thread hash on RPC server
+    int               hash; ///< thread hash on RPC server
     dsn_gpid  gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;

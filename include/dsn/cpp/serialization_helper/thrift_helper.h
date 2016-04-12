@@ -73,7 +73,7 @@ namespace dsn {
             }
             return (uint32_t)l;
         }
-            
+
     private:
         binary_reader& _reader;
     };
@@ -101,7 +101,7 @@ namespace dsn {
         binary_writer& _writer;
     };
 
-    #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
+#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
         inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
         {\
             return proto->write##TMethod(val); \
@@ -112,14 +112,14 @@ namespace dsn {
         }
 
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)        
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
-    template<typename T>
+        template<typename T>
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
     template<typename T>
     uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, T& val);
@@ -184,7 +184,7 @@ namespace dsn {
     {
         uint32_t xfer = oprot->writeFieldBegin("vector", ::apache::thrift::protocol::T_LIST, 1);
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(val.size()));
-        for (auto iter = val.begin(); iter!=val.end(); ++iter)
+        for (auto iter = val.begin(); iter != val.end(); ++iter)
         {
             marshall_base(oprot, *iter);
         }
@@ -210,7 +210,7 @@ namespace dsn {
             ::apache::thrift::protocol::TType element_type;
             xfer += iprot->readListBegin(element_type, size);
             val.resize(size);
-            for (uint32_t i=0; i!=size; ++i)
+            for (uint32_t i = 0; i != size; ++i)
             {
                 xfer += unmarshall_base(iprot, val[i]);
             }
@@ -232,8 +232,8 @@ namespace dsn {
     {
     private:
         template<typename C>
-        static constexpr auto check_method( C* ) ->
-            typename std::is_same< decltype(std::declval<C>().write( std::declval< ::apache::thrift::protocol::TProtocol* >() ) ), uint32_t >::type;
+        static constexpr auto check_method(C*) ->
+            typename std::is_same< decltype(std::declval<C>().write(std::declval< ::apache::thrift::protocol::TProtocol* >())), uint32_t >::type;
 
         template<typename>
         static constexpr std::false_type check_method(...);
@@ -290,18 +290,18 @@ namespace dsn {
     }\
 
     GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
-    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
-    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
-    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
-    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
-    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
-    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
-    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
-    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
-    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
-    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
+        GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
+        GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
+        GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
+        GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
+        GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
+        GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
+        GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
+        GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
+        GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
+        GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
 
-    template<typename T>
+        template<typename T>
     inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
     {
         return ::apache::thrift::protocol::T_LIST;
@@ -348,7 +348,7 @@ namespace dsn {
         const char* ptr;
         int length;
     public:
-        char_ptr(const char* p, int len): ptr(p), length(len) {}
+        char_ptr(const char* p, int len) : ptr(p), length(len) {}
         std::size_t size() const { return length; }
         const char* data() const { return ptr; }
     };
@@ -358,7 +358,7 @@ namespace dsn {
     private:
         blob& _buffer;
     public:
-        blob_string(blob& bb): _buffer(bb) {}
+        blob_string(blob& bb) : _buffer(bb) {}
 
         void clear()
         {
@@ -445,7 +445,6 @@ namespace dsn {
         const char* name = to_string();
         return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
-<<<<<<< HEAD:include/dsn/idl/thrift_helper.h
 
     DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 
@@ -587,6 +586,4 @@ namespace dsn {
             }
         }
     };
-=======
->>>>>>> 3cfd61002c9bb29092ba9157490c70bbbc4f560d:include/dsn/cpp/serialization_helper/thrift_helper.h
 }

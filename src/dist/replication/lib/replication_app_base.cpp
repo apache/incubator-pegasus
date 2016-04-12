@@ -118,7 +118,6 @@ replication_app_base::replication_app_base(replica* replica)
 {
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
-    _batch_state = BS_NOT_BATCH;
     _app_info = nullptr;
     _replica = replica;
 
@@ -127,10 +126,11 @@ replication_app_base::replication_app_base(replica* replica)
 
 void replication_app_base::reset_states()
 {
-    _batch_state = BS_NOT_BATCH;
+    /*_app_info->info.type1.batch_state = BS_NOT_BATCH;
     _app_info->info.type1.last_committed_decree = 0;
     _app_info->info.type1.last_durable_decree = 0;
-    _app_info->info.type1.physical_error = 0;
+    _app_info->info.type1.physical_error = 0;*/
+    memset((void*)&_app_info->info.type1, sizeof(_app_info->info.type1), 0);
 }
 
 const char* replication_app_base::replica_name() const
@@ -337,12 +337,13 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     dassert(mu->data.updates.size() > 0, "");
 
     int count = static_cast<int>(mu->client_requests.size());
-    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    auto& bs = _app_info->info.type1.batch_state;
+    bs = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
     for (int i = 0; i < count; i++)
     {
-        if (_batch_state == BS_BATCH && i + 1 == count)
+        if (bs == BS_BATCH && i + 1 == count)
         {
-            _batch_state = BS_BATCH_LAST;
+            bs = BS_BATCH_LAST;
         }
 
         const mutation_update& update = mu->data.updates[i];

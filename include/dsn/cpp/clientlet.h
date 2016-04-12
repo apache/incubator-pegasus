@@ -300,13 +300,12 @@ namespace dsn
             TRequest&& req,
             clientlet* owner,
             TCallback&& callback,
-            int thread_hash = 0,
+            uint64_t hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int reply_thread_hash = 0,
-            uint64_t partition_hash = 0
+            int reply_thread_hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), hash);
             ::dsn::marshall(msg, std::forward<TRequest>(req));
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_thread_hash);
         }
@@ -332,12 +331,11 @@ namespace dsn
         rpc_message_helper create_message(
             dsn_task_code_t code,
             TRequest&& req,
-            int thread_hash = 0,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            uint64_t partition_hash = 0
+            uint64_t hash = 0,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0)
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), hash);
             ::dsn::marshall(msg, std::forward<TRequest>(req));
             return rpc_message_helper(msg);
         }
@@ -359,11 +357,10 @@ namespace dsn
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
-            int thread_hash = 0,
-            uint64_t partition_hash = 0
+            uint64_t hash = 0
             )
         {
-            dsn_message_t msg = dsn_msg_create_request(code, 0, thread_hash, partition_hash);
+            dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
             ::dsn::marshall(msg, req);
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }

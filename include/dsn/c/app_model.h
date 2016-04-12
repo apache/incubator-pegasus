@@ -329,6 +329,16 @@ typedef int(*dsn_app_apply_checkpoint)(
 # define DSN_L2_REPLICATION_FRAMEWORK_TYPE_2  0x04 ///< implement type 1 replication framework
 # define DSN_L2_REPLICATION_APP_TYPE_2        0x08 ///< implement type 1 replication app
 
+// requests may be batched by replication and fed to replication
+// app with the same decree, in this case, apps may need to 
+// be aware of the batch state for the current request
+enum dsn_batch_state
+{
+    BS_NOT_BATCH,  // request is not batched
+    BS_BATCH,      // request is batched but not the last in the same batch
+    BS_BATCH_LAST  // request is batched and the last in the same batch
+};
+
 # pragma pack(push, 4)
 
 struct dsn_app_cross_layer_shared_info_type_1
@@ -340,7 +350,7 @@ struct dsn_app_cross_layer_shared_info_type_1
     // physical error (e.g., io error) indicates the app needs to be dropped
     int32_t  physical_error;
 
-    int32_t  dummy;
+    dsn_batch_state  batch_state;
 };
 
 /*!
