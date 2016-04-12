@@ -35,6 +35,7 @@
 
 #include "replication_common.h"
 #include <dsn/internal/configuration.h>
+#include <dsn/dist/replication/replication_app_client_base.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -94,26 +95,10 @@ replication_options::~replication_options()
 void replication_options::read_meta_servers()
 {
     // read meta_servers from machine list file
-    meta_servers.clear();
-
-    const char* server_ss[10];
-    int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys("replication.meta_servers", server_ss, &capacity);
-    dassert(need_count <= capacity, "too many meta servers specified");
-
+    replication_app_client_base::load_meta_servers(meta_servers);
     std::ostringstream oss;
-    for (int i = 0; i < capacity; i++)
-    {
-        std::string s(server_ss[i]);
-        // name:port
-        auto pos1 = s.find_first_of(':');
-        if (pos1 != std::string::npos)
-        {
-            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
-            meta_servers.push_back(ep);
-            oss << "[" << ep.to_string() << "] ";
-        }
-    }
+    for (auto& s : meta_servers)
+        oss << "[" << s.to_string() << "] ";
     ddebug("read meta servers from config: %s", oss.str().c_str());
 }
 

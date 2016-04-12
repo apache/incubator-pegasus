@@ -45,21 +45,14 @@ namespace dsn { namespace replication {
 using namespace ::dsn::service;
 
 /*static*/void replication_app_client_base::load_meta_servers(
-    /*out*/ std::vector<dsn::rpc_address>& servers,
-    const char* section /*= "replication.meta_servers"*/)
+    /*out*/ std::vector<dsn::rpc_address>& servers)
 {
-    // read meta_servers from machine list file
     servers.clear();
-
-    const char* server_ss[10];
-    int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys(section, server_ss, &capacity);
-    dassert(need_count <= capacity, "too many meta servers specified in config [%s]", section);
-
-    for (int i = 0; i < capacity; i++)
+    std::string server_list = dsn_config_get_value_string("meta_server", "server_list", "", "meta server list");
+    std::list<std::string> lv;
+    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
+    for (auto& s : lv)
     {
-        std::string s(server_ss[i]);
-
         // name:port
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
@@ -68,7 +61,7 @@ using namespace ::dsn::service;
             servers.push_back(ep);
         }
     }
-    dassert(servers.size() > 0, "no meta server specified in config [%s]", section);
+    dassert(servers.size() > 0, "no meta server specified in config [meta_server].server_list");
 }
 
 replication_app_client_base::replication_app_client_base(
