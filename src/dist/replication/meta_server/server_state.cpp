@@ -1196,6 +1196,17 @@ void server_state::cluster_info(dsn_message_t msg)
     configuration_cluster_info_response response;
     ::unmarshall(msg, request);
     {
+        response.keys.push_back("meta_servers");
+        std::vector<rpc_address> servers;
+        replication_app_client_base::load_meta_servers(servers);
+        std::ostringstream oss;
+        for (size_t i = 0; i < servers.size(); ++i)
+        {
+            if (i != 0)
+                oss << ", ";
+            oss << servers[i].to_string();
+        }
+        response.values.push_back(oss.str());
         response.keys.push_back("primary_meta_server");
         response.values.push_back(_meta_svc->get_primary().to_string());
         response.keys.push_back("zookeeper_servers");
