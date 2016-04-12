@@ -80,7 +80,7 @@ void replica_stub::install_perf_counters()
     _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
 
     std::stringstream ss;
-    ss << primary_address().to_std_string() << ".replica_stub.shared_log_size" << std::endl;
+    ss << primary_address().to_std_string() << ".replica_stub.shared_log_size";
     _counter_shared_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }
 
