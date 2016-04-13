@@ -78,6 +78,10 @@ void replica_stub::install_perf_counters()
     _counter_replicas_learning_failed_latency.init("eon.replication", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
     _counter_replicas_learning_success_latency.init("eon.replication", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
     _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
+
+    std::stringstream ss;
+    ss << primary_address().to_std_string() << ".replica_stub.shared_log_size";
+    _counter_shared_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)
@@ -938,6 +942,7 @@ void replica_stub::on_gc()
             gc_condition[it->first] = ri;
         }
         _log->garbage_collection(gc_condition);
+        _counter_shared_log_size.set(_log->size() / 1000000);
     }
     
     // gc on-disk rps

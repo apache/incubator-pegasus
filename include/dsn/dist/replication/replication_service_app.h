@@ -49,7 +49,7 @@ class replication_service_app : public ::dsn::service_app
 public:
     replication_service_app();
 
-    ~replication_service_app(void);
+    virtual ~replication_service_app(void);
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
 
