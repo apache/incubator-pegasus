@@ -942,7 +942,7 @@ void replica_stub::on_gc()
             gc_condition[it->first] = ri;
         }
         _log->garbage_collection(gc_condition);
-	_counter_shared_log_size.set(_log->size() / 1000000);
+        _counter_shared_log_size.set(_log->size() / 1000000);
     }
     
     // gc on-disk rps
