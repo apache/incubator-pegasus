@@ -131,7 +131,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
 
         if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
         {
-            derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(" PRId64 ")",
+            derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
                    name(), last_committed_decree(), _primary_states.last_prepare_decree_on_new_primary);
             response_client_message(request, ERR_INVALID_STATE);
             return;
