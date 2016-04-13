@@ -103,7 +103,7 @@ namespace dsn { namespace replication {
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
             int reply_hash = 0,
-            read_semantic semantic = read_semantic::ReadOutdated,
+            read_semantic semantic = read_semantic::ReadLastUpdate,
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
@@ -170,7 +170,7 @@ namespace dsn { namespace replication {
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
-            dsn::replication::read_semantic semantic = read_semantic::ReadOutdated,
+            dsn::replication::read_semantic semantic = read_semantic::ReadLastUpdate,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot
             int reply_hash = 0
             );
