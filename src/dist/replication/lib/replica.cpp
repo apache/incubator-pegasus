@@ -113,15 +113,26 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
 {
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {
+        derror("%s: invalid status: read_semantic=%s, partition_status=%s",
+               name(), enum_to_string(meta.semantic), enum_to_string(status()));
         response_client_message(request, ERR_INVALID_STATE);
         return;
     }
 
     if (meta.semantic == read_semantic::ReadLastUpdate)
     {
-        if (status() != PS_PRIMARY ||
-            last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
+        if (status() != PS_PRIMARY)
         {
+            derror("%s: invalid status: read_semantic=%s, partition_status=%s",
+                   name(), enum_to_string(meta.semantic), enum_to_string(status()));
+            response_client_message(request, ERR_INVALID_STATE);
+            return;
+        }
+
+        if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
+        {
+            derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(" PRId64 ")",
+                   name(), last_committed_decree(), _primary_states.last_prepare_decree_on_new_primary);
             response_client_message(request, ERR_INVALID_STATE);
             return;
         }
@@ -141,7 +152,14 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
         return;
     }   
 
-    ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
+    if (error == ERR_OK)
+    {
+        ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
+    }
+    else
+    {
+        derror("%s: reply client read/write, err = %s", name(), error.to_string());
+    }
 
     // well, replication layer error is 1
     // application layer result is 2
