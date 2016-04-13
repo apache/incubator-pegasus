@@ -54,7 +54,7 @@
 #define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8, NAME, ...) NAME
 //workaround due to the way VC handles "..."
 #define JSON_ENTRIES_GET_MACRO_(tuple) JSON_ENTRIES_GET_MACRO tuple
-#define JSON_DICT_ENTRIES(out, prefix, ...) out<<"{";JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, JSON_DICT_ENTRIES8, JSON_DICT_ENTRIES7, JSON_DICT_ENTRIES6, JSON_DICT_ENTRIES5, JSON_DICT_ENTRIES4, JSON_DICT_ENTRIES3, JSON_DICT_ENTRIES2)) (out, prefix, __VA_ARGS__); out<<"}"
+#define JSON_DICT_ENTRIES(out, prefix, ...) out<<"{";JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, JSON_DICT_ENTRIES8, JSON_DICT_ENTRIES7, JSON_DICT_ENTRIES6, JSON_DICT_ENTRIES5, JSON_DICT_ENTRIES4, JSON_DICT_ENTRIES3, JSON_DICT_ENTRIES2, JSON_DICT_ENTRY)) (out, prefix, __VA_ARGS__); out<<"}"
 
 //parameters: fields to be serialized
 #define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}

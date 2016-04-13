@@ -263,6 +263,8 @@ public:
     // thread safe
     void check_valid_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
 
+    int64_t size() const { return _global_end_offset - _global_start_offset; }
+
 private:
     //
     //  internal helpers
