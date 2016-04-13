@@ -335,6 +335,65 @@ dsn::error_code replication_ddl_client::cluster_info(const std::string& file_nam
 
 dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
+    int32_t app_id;
+    int32_t partition_count;
+    std::vector<partition_configuration> partitions;
+    dsn::error_code err = list_app(app_name, app_id, partition_count, partitions);
+    if(err != dsn::ERR_OK)
+    {
+        return err;
+    }
+
+    // print configuration_query_by_index_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    int width = strlen("partition_count");
+    out << std::setw(width) << std::left << "app_name" << " : " << app_name << std::endl;
+    out << std::setw(width) << std::left << "app_id" << " : " << app_id << std::endl;
+    out << std::setw(width) << std::left << "partition_count" << " : " << partition_count << std::endl;
+    if(detailed)
+    {
+        out << std::setw(width) << std::left << "details" << " : " << std::endl;
+        out << std::setw(10) << std::left << "pidx"
+            << std::setw(10) << std::left << "ballot"
+            << std::setw(20) << std::left << "max_replica_count"
+            << std::setw(25) << std::left << "primary"
+            << std::setw(40) << std::left << "secondaries"
+            << std::endl;
+        for(int i = 0; i < partitions.size(); i++)
+        {
+            const dsn::replication::partition_configuration& p = partitions[i];
+            out << std::setw(10) << std::left << p.gpid.pidx
+                << std::setw(10) << std::left << p.ballot
+                << std::setw(20) << std::left << p.max_replica_count
+                << std::setw(25) << std::left << p.primary.to_std_string()
+                << std::left<< p.secondaries.size() << ":[";
+            for(int j = 0; j < p.secondaries.size(); j++)
+            {
+                if(j!= 0)
+                    out << ",";
+                out << p.secondaries[j].to_std_string();
+            }
+            out << "]" << std::endl;
+        }
+    }
+    out << std::endl;
+    return dsn::ERR_OK;
+}
+
+dsn::error_code replication_ddl_client::list_app(const std::string& app_name,
+                                                 int32_t& app_id, int32_t& partition_count,
+                                                 std::vector<partition_configuration>& partitions)
+{
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
 
@@ -359,48 +418,10 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
         return resp.err;
     }
 
-    // print configuration_query_by_index_response
-    std::streambuf * buf;
-    std::ofstream of;
+    app_id = resp.app_id;
+    partition_count = resp.partition_count;
+    partitions = resp.partitions;
 
-    if(!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
-
-    out << "app_name: " << app_name << std::endl
-        << "app_id: " << resp.app_id << std::endl
-        << "partition_count: " << resp.partition_count << std::endl;
-    if(detailed)
-    {
-        out << "details:" << std::endl
-            << std::setw(10) << std::left << "pidx"
-            << std::setw(10) << std::left << "ballot"
-            << std::setw(20) << std::left << "max_replica_count"
-            << std::setw(25) << std::left << "primary"
-            << std::setw(40) << std::left << "secondaries"
-            << std::endl;
-        for(int i = 0; i < resp.partitions.size(); i++)
-        {
-            const dsn::replication::partition_configuration& p = resp.partitions[i];
-            out << std::setw(10) << std::left << p.gpid.pidx
-                << std::setw(10) << std::left << p.ballot
-                << std::setw(20) << std::left << p.max_replica_count
-                << std::setw(25) << std::left << p.primary.to_std_string()
-                << std::left<< p.secondaries.size() << ":[";
-            for(int j = 0; j < p.secondaries.size(); j++)
-            {
-                if(j!= 0)
-                    out << ",";
-                out << p.secondaries[j].to_std_string();
-            }
-            out << "]" << std::endl;
-        }
-    }
-    out << std::endl;
     return dsn::ERR_OK;
 }
 
