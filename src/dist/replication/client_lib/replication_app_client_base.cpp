@@ -392,7 +392,7 @@ void replication_app_client_base::replica_rw_reply(
     }
 
 Retry:
-    dinfo("%s.client: get error %s from replica with index %d",
+    dwarn("%s.client: get error %s from replica with index %d, retry now",
         _app_name.c_str(),
         err.to_string(),
         rc->partition_index
