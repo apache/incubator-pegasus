@@ -32,13 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
+
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
-using System.Diagnostics;
+using System.Linq;
 
 namespace rDSN.Tron.Utility
 {
@@ -82,7 +79,7 @@ namespace rDSN.Tron.Utility
         public bool Write(BinaryWriter writer)
         {
             Stat.Write(writer);
-            writer.Write(Children.Count());
+            writer.Write(Children.Count);
             foreach (var child in Children)
                 child.Write(writer);
 
@@ -92,10 +89,10 @@ namespace rDSN.Tron.Utility
         public bool Read(BinaryReader reader)
         {
             Stat.Read(reader);
-            int count = reader.ReadInt32();
-            for (int i = 0; i < count; i++)
+            var count = reader.ReadInt32();
+            for (var i = 0; i < count; i++)
             {
-                StatisticTree<StatisticType> temp = new StatisticTree<StatisticType>();
+                var temp = new StatisticTree<StatisticType>();
                 temp.Read(reader);
                 AddChild(temp);
             }
@@ -104,22 +101,20 @@ namespace rDSN.Tron.Utility
 
         private string PrintTree(int layer)
         {
-            string s = "";
-            for (int i = 0; i < layer; i++)
+            var s = "";
+            for (var i = 0; i < layer; i++)
                 s += ("    ");
-            if (Children.Count() != 0)
+            if (Children.Count != 0)
                 s += ("+");
             else
                 s += (" ");
             s += Stat.Print() + "\r\n";
-            foreach (var child in Children)
-                s += child.PrintTree(layer + 1);
-            return s;
+            return Children.Aggregate(s, (current, child) => current + child.PrintTree(layer + 1));
         }
 
         public string ToVerbose()
         {
-            return this.PrintTree(0);
+            return PrintTree(0);
         }
     }
 }

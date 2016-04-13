@@ -32,18 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Reflection;
-using System.IO;
-using System.Diagnostics;
-
+using IDL;
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -68,7 +63,7 @@ namespace rDSN.Tron.LanguageProvider
         public virtual void Generate(Assembly asm)
         {
             this.asm = asm;
-            this.c = new CodeBuilder();
+            c = new CodeBuilder();
             GenerateHeader();
             GenerateEnums();
             GenerateStructs();
@@ -110,7 +105,7 @@ namespace rDSN.Tron.LanguageProvider
         protected List<string> FindDependency(Type t)
         {
             var fields = t.GetFields().ToList();
-            List<string> res = new List<string>();
+            var res = new List<string>();
             foreach (var field in fields)
             {
                 res.AddRange(GetUserTypes(field.FieldType));
@@ -121,7 +116,7 @@ namespace rDSN.Tron.LanguageProvider
 
         protected List<string> GetUserTypes(Type t)
         {
-            List<string> res = new List<string>();
+            var res = new List<string>();
             if (t.IsGenericType)
             {
                 foreach (var subField in t.GenericTypeArguments)
@@ -144,32 +139,27 @@ namespace rDSN.Tron.LanguageProvider
         protected void SortTypeByDependency(ref List<Type> structs)
         {
             var names = structs.Select(a => a.Name);
-            Dictionary<string, bool> flag = new Dictionary<string, bool>();
+            var flag = new Dictionary<string, bool>();
             foreach (var name in names)
             {
                 flag[name] = false;
             }
-            for (int i = 0; i < structs.Count(); )
+            for (var i = 0; i < structs.Count; )
             {
                 var dependencyList = FindDependency(structs[i]);
-                if (dependencyList.Count() > 0)
+                if (dependencyList.Any())
                 {
-                    foreach (var name in dependencyList)
+                    foreach (var name in dependencyList.Where(name => flag[name] == false))
                     {
-                        if (flag[name] == false)
-                        {
-                            int pos = structs.FindIndex(s => s.Name == name);
-                            var tmp = structs[i];
-                            structs[i] = structs[pos];
-                            structs[pos] = tmp;
-                            break;
-                        }
+                        var pos = structs.FindIndex(s => s.Name == name);
+                        var tmp = structs[i];
+                        structs[i] = structs[pos];
+                        structs[pos] = tmp;
+                        break;
                     }
-                    if (dependencyList.Count(t => flag[t] == false) == 0)
-                    {
-                        flag[structs[i].Name] = true;
-                        i++;
-                    }
+                    if (dependencyList.Count(t => flag[t] == false) != 0) continue;
+                    flag[structs[i].Name] = true;
+                    i++;
                 }
                 else
                 {
@@ -185,15 +175,14 @@ namespace rDSN.Tron.LanguageProvider
         protected abstract string CastToIdlType(Type t);
 
         public string name = "";
-        public bool supportForwardSearch = false;
-        public bool supportNested = false;
+        public bool supportForwardSearch;
+        public bool supportNested;
 
     }
 
     public class ProtoGenerator : IdlGenerator
     {
         public ProtoGenerator()
-            : base()
         {
             name = "proto";
             supportForwardSearch = true;
@@ -217,8 +206,8 @@ namespace rDSN.Tron.LanguageProvider
                 fields.RemoveAt(0);
                 foreach (var member in fields)
                 {
-                    string defaultValue = "";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
+                    var defaultValue = "";
+                    var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute.defaultValue != null)
                     {
                         defaultValue = " = " + fieldAttribute.defaultValue;
@@ -257,12 +246,12 @@ namespace rDSN.Tron.LanguageProvider
                 }
 
                 c.BeginBlock();
-                int lineNumber = 0;
+                var lineNumber = 0;
                 foreach (var member in fields)
                 {
-                    string modifier = "";
-                    string defaultValue = ";";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
+                    var modifier = "";
+                    var defaultValue = ";";
+                    var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute != null)
                     {
                         lineNumber = fieldAttribute.index;
@@ -338,25 +327,21 @@ namespace rDSN.Tron.LanguageProvider
             {
                 return s.Name;
             }
-            else if (s.IsGenericType == true)
+            if (s.IsGenericType)
             {
                 var genericTypeName = IdlTypeMaps[s.Name.Split('`').First()];
-                var genericParamList = s.GenericTypeArguments.Select(p => CastToIdlType(p));
+                var genericParamList = s.GenericTypeArguments.Select(CastToIdlType);
                 return genericTypeName + "<" + string.Join(", ", genericParamList) + ">";
             }
-            else if (IdlTypeMaps.ContainsKey(s.Name))
+            if (IdlTypeMaps.ContainsKey(s.Name))
             {
                 return IdlTypeMaps[s.Name];
             }
-            else
-            {
-                return s.Name.ToLower();
-            }
-
+            return s.Name.ToLower();
         }
 
         #region private fields
-        private Dictionary<string, string> IdlTypeMaps = new Dictionary<string, string>()
+        private Dictionary<string, string> IdlTypeMaps = new Dictionary<string, string>
         {
             // generic types
             {"List"         , "vector"},
@@ -373,7 +358,7 @@ namespace rDSN.Tron.LanguageProvider
             {"Int32"        , "int32"},
             {"UInt32"       , "uint32"},
             {"Int64"        , "int64"},
-            {"UInt64"       , "uint64"},
+            {"UInt64"       , "uint64"}
             //{"Object"       , "object"}       // do not support object？
              //{"Byte"         , "byte"},        // do not support byte?
             //{"SByte"        , "sbyte"},
@@ -387,7 +372,6 @@ namespace rDSN.Tron.LanguageProvider
     public class ThriftGenerator : IdlGenerator
     {
         public ThriftGenerator()
-            : base()
         {
             name = "thrift";
             supportForwardSearch = true;
@@ -411,8 +395,8 @@ namespace rDSN.Tron.LanguageProvider
                 fields.RemoveAt(0);
                 foreach (var member in fields)
                 {
-                    string defaultValue = "";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
+                    var defaultValue = "";
+                    var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute.defaultValue != null)
                     {
                         defaultValue = " = " + fieldAttribute.defaultValue;
@@ -451,12 +435,12 @@ namespace rDSN.Tron.LanguageProvider
                 }
 
                 c.BeginBlock();
-                int lineNumber = 0;
+                var lineNumber = 0;
                 foreach (var member in fields)
                 {
-                    string modifier = "";
-                    string defaultValue = ";";
-                    var fieldAttribute = member.GetCustomAttribute(typeof(IDL.FieldAttribute)) as IDL.FieldAttribute;
+                    var modifier = "";
+                    var defaultValue = ";";
+                    var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute != null)
                     {
                         lineNumber = fieldAttribute.index;
@@ -532,25 +516,21 @@ namespace rDSN.Tron.LanguageProvider
             {
                 return s.Name;
             }
-            else if (s.IsGenericType == true)
+            if (s.IsGenericType)
             {
                 var genericTypeName = IdlTypeMaps[s.Name.Split('`').First()];
-                var genericParamList = s.GenericTypeArguments.Select(p => CastToIdlType(p));
+                var genericParamList = s.GenericTypeArguments.Select(CastToIdlType);
                 return genericTypeName + "<" + string.Join(", ", genericParamList) + ">";
             }
-            else if (IdlTypeMaps.ContainsKey(s.Name))
+            if (IdlTypeMaps.ContainsKey(s.Name))
             {
                 return IdlTypeMaps[s.Name];
             }
-            else
-            {
-                return s.Name.ToLower();
-            }
-
+            return s.Name.ToLower();
         }
 
         #region private fields
-        private Dictionary<string, string> IdlTypeMaps = new Dictionary<string, string>()
+        private Dictionary<string, string> IdlTypeMaps = new Dictionary<string, string>
         {
             // generic types
             {"List"         , "list"},
@@ -568,7 +548,7 @@ namespace rDSN.Tron.LanguageProvider
             {"Int32"        , "int32"},
             {"UInt32"       , "uint32"},
             {"Int64"        , "int64"},
-            {"UInt64"       , "uint64"},
+            {"UInt64"       , "uint64"}
             //{"Object"       , "object"}       // do not support object？
              //{"Byte"         , "byte"},        // do not support byte?
             //{"SByte"        , "sbyte"},

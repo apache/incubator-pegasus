@@ -32,14 +32,12 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Threading;
 
 namespace rDSN.Tron.Utility
 {
@@ -53,13 +51,13 @@ namespace rDSN.Tron.Utility
 
         public object Invoke(IEnumerable<TSource> source)
         {
-            return (object)_reducer(source);
+            return _reducer(source);
         }
 
         private Func<IEnumerable<TSource>, TResult> _reducer;
     }
 
-    public delegate object ParallelReducer<TSource>(IEnumerable<TSource> source);
+    public delegate object ParallelReducer<in TSource>(IEnumerable<TSource> source);
 
     public static class ParallelReducerHelper
     {
@@ -68,7 +66,7 @@ namespace rDSN.Tron.Utility
             public EnumerableMulticastServer(IEnumerable<T> enums, int clientCount)
             {
                 _clients = new EnumerableMulticastClient<T>[clientCount];
-                for (int i = 0; i < clientCount; i++)
+                for (var i = 0; i < clientCount; i++)
                 {
                     _clients[i] = new EnumerableMulticastClient<T>();
                 }
@@ -98,10 +96,7 @@ namespace rDSN.Tron.Utility
                     return _clients[index];
                 }
 
-                else
-                {
-                    return null;
-                }
+                return null;
             }
 
             private EnumerableMulticastClient<T>[] _clients;
@@ -125,7 +120,7 @@ namespace rDSN.Tron.Utility
             {
                 while (true)
                 {
-                    T o = _q.Take();
+                    var o = _q.Take();
                     if (_end && _q.Count == 0)
                         break;
 
@@ -134,23 +129,23 @@ namespace rDSN.Tron.Utility
             }
 
             private BlockingCollection<T> _q = new BlockingCollection<T>();
-            private bool _end = false;
+            private bool _end;
         }
         
         public static object[] ParallelReduce<TSource>(this IEnumerable<TSource> source, ParallelReducer<TSource>[] reducers)
         {
-            EnumerableMulticastServer<TSource> multicastServer = new EnumerableMulticastServer<TSource>(source, reducers.Length);
+            var multicastServer = new EnumerableMulticastServer<TSource>(source, reducers.Length);
 
-            List<Task<object>> tasks = new List<Task<object>>();
-            for (int index = 0; index < reducers.Length; index++)
+            var tasks = new List<Task<object>>();
+            for (var index = 0; index < reducers.Length; index++)
             {
                 var param = new KeyValuePair<ParallelReducer<TSource>, EnumerableMulticastClient<TSource>> (
                         reducers[index],
                         multicastServer.GetClient(index)
                         );
 
-                Task<object> task = new Task<object>(
-                    (obj) => 
+                var task = new Task<object>(
+                    obj => 
                     {
                         var p = (KeyValuePair<ParallelReducer<TSource>, EnumerableMulticastClient<TSource>>)obj;
                         return p.Key(p.Value.Get());

@@ -32,18 +32,15 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+
 using System.IO;
+using System.Text;
 
 namespace rDSN.Tron.Utility
 {
-    public static partial class Serializer
+    public static class Serializer
     {
-        public partial class GraphSerializer
+        public class GraphSerializer
         {
             public static void Read<instantiatedClassT>(BinaryReader reader, AbstractGraphElement<instantiatedClassT> ae)
             {
@@ -64,7 +61,7 @@ namespace rDSN.Tron.Utility
                 where EdgeT : GenericEdge<VertexT, EdgeT, GraphT>
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
-                Read<EdgeT>(reader, (AbstractGraphElement<EdgeT>)edge);
+                Read(reader, (AbstractGraphElement<EdgeT>)edge);
             }
 
             public static void Write<VertexT, EdgeT, GraphT>(BinaryWriter writer, GenericEdge<VertexT, EdgeT, GraphT> edge)
@@ -72,7 +69,7 @@ namespace rDSN.Tron.Utility
                 where EdgeT : GenericEdge<VertexT, EdgeT, GraphT>
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
-                Write<EdgeT>(writer, (AbstractGraphElement<EdgeT>)edge);
+                Write(writer, (AbstractGraphElement<EdgeT>)edge);
             }
 
             public static void Read<VertexT, EdgeT, GraphT>(BinaryReader reader, GenericVertex<VertexT, EdgeT, GraphT> vertex)
@@ -81,15 +78,13 @@ namespace rDSN.Tron.Utility
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
                 int i;
-                UInt32 flag;
-                bool b;
 
-                Read<VertexT>(reader, (AbstractGraphElement<VertexT>)vertex);
+                Read(reader, (AbstractGraphElement<VertexT>)vertex);
 
-                flag = reader.ReadUInt32();
+                var flag = reader.ReadUInt32();
                 for (i = 0; i < (int)GenericVertex<VertexT, EdgeT, GraphT>.VertexFlags.VertexFlags_MAX; i++)
                 {
-                    b = (flag & (1U << i)) != 0;
+                    var b = (flag & (1U << i)) != 0;
                     vertex.Flags.Set(i, b);
                 }
             }
@@ -100,9 +95,9 @@ namespace rDSN.Tron.Utility
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
                 int i;
-                UInt32 flag = 0;
+                uint flag = 0;
 
-                Write<VertexT>(writer, (AbstractGraphElement<VertexT>)vertex);
+                Write(writer, (AbstractGraphElement<VertexT>)vertex);
 
                 for (i = 0; i < (int)GenericVertex<VertexT, EdgeT, GraphT>.VertexFlags.VertexFlags_MAX; i++)
                 {
@@ -122,15 +117,14 @@ namespace rDSN.Tron.Utility
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
                   int i;
-                int size;
-                UInt64 id, id2;
-                VertexT v, v2;
-              
+                ulong id;
+                VertexT v;
+
                 graph.Clear();
 
-                Read<GraphT>(reader, (AbstractGraphElement<GraphT>)graph);
+                Read(reader, graph);
 
-                size = reader.ReadInt32();
+                var size = reader.ReadInt32();
                 for (i = 0; i < size; i++)
                 {
                     id = reader.ReadUInt64();
@@ -144,8 +138,8 @@ namespace rDSN.Tron.Utility
                     id = reader.ReadUInt64();
                     v = graph.GetVertexById(id);
 
-                    id2 = reader.ReadUInt64();
-                    v2 = graph.GetVertexById(id2);
+                    var id2 = reader.ReadUInt64();
+                    var v2 = graph.GetVertexById(id2);
 
                     EdgeT e = v.ConnectTo<ET>(v2);
 
@@ -158,17 +152,17 @@ namespace rDSN.Tron.Utility
                 where EdgeT : GenericEdge<VertexT, EdgeT, GraphT>
                 where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
             {
-                Write<GraphT>(writer, (AbstractGraphElement<GraphT>)graph);
+                Write(writer, (AbstractGraphElement<GraphT>)graph);
 
                 writer.Write(graph.Vertices.Count);
-                foreach (KeyValuePair<UInt64, VertexT> pair in graph.Vertices)
+                foreach (var pair in graph.Vertices)
                 {
                     writer.Write(pair.Key);
                     Write(writer, pair.Value);
                 }
 
                 writer.Write(graph.Edges.Count);
-                foreach (EdgeT e in graph.Edges)
+                foreach (var e in graph.Edges)
                 {
                     writer.Write(e.StartVertex.Id);
                     writer.Write(e.EndVertex.Id);

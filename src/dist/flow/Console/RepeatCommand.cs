@@ -35,8 +35,6 @@
  
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 
 using rDSN.Tron.Utility;
@@ -50,16 +48,16 @@ namespace rDSN.Tron.ControlPanel
             if (args.Count < 2)
                 return false;
 
-            List<string> cargs = new List<string>();
+            var cargs = new List<string>();
             if (args.Count > 2)
             {
-                for (int i = 2; i < args.Count; i++)
+                for (var i = 2; i < args.Count; i++)
                     cargs.Add(args[i]);
             }
 
             if (args[0][0] == 'c' || args[0][0] == 'C')
             {
-                for (int i = 0; i < int.Parse(args[0].Substring(1)); i++)
+                for (var i = 0; i < int.Parse(args[0].Substring(1)); i++)
                 {
                     Console.WriteLine("execute command '" + args[1] + " " + cargs.VerboseCombine(" ", a => a) + "' for the " + i + " time");
                     CommandManager.Instance().ExecuteCommand(args[1], cargs);
@@ -68,7 +66,7 @@ namespace rDSN.Tron.ControlPanel
             }
             else if (args[0][0] == 'i' || args[0][0] == 'I')
             {
-                int seconds = int.Parse(args[0].Substring(1));
+                var seconds = int.Parse(args[0].Substring(1));
                 while (true)
                 {
                     Console.WriteLine(DateTime.Now.ToLongTimeString() + ": execute command '" + args[1] + " " + cargs.VerboseCombine(" ", a => a) + "'");

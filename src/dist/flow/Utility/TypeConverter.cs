@@ -32,12 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 namespace rDSN.Tron.Utility
 {
@@ -62,21 +60,17 @@ namespace rDSN.Tron.Utility
         {
             Trace.Assert(sourceObject.GetType() == SourceType);
 
-            if (Type == ConversionType.Same || Type == ConversionType.Base)
-                return sourceObject;
+            switch (Type)
+            {
+                case ConversionType.Same:
+                case ConversionType.Base:
+                    return sourceObject;
+                case ConversionType.Copy:
+                    var construc = DestinationType.GetConstructors();
+                    return construc[0].Invoke(SourceType.GetProperties().Select(prop => prop.GetValue(sourceObject, new object[0])).ToArray());
+            }
 
-            else if (Type == ConversionType.Copy)
-            {
-                var construc = DestinationType.GetConstructors();
-                List<object> arg = new List<object>();
-                foreach (var prop in SourceType.GetProperties())
-                    arg.Add(prop.GetValue(sourceObject, new object[0]));
-                return construc[0].Invoke(arg.ToArray());
-            }
-            else
-            {
-                throw new Exception("invalid object conversion");
-            }
+            throw new Exception("invalid object conversion");
         }
 
         private static ConversionType Check(Type SourceT, Type DestinationT)
@@ -86,19 +80,19 @@ namespace rDSN.Tron.Utility
                 return ConversionType.Same;
             }
 
-            else if (DestinationT.IsEnum && SourceT == typeof(byte))
+            if (DestinationT.IsEnum && SourceT == typeof(byte))
             {
                 return ConversionType.Copy;
             }
 
-            else if (SourceT.IsSubclassOf(DestinationT))
+            if (SourceT.IsSubclassOf(DestinationT))
             {
                 return ConversionType.Base;
             }
 
-            else if (SourceT.Name.StartsWith("RewrittenType_") && DestinationT.IsAnonymous())
+            if (SourceT.Name.StartsWith("RewrittenType_") && DestinationT.IsAnonymous())
             {
-                if (SourceT.GetProperties().Count() != DestinationT.GetProperties().Count())
+                if (SourceT.GetProperties().Length != DestinationT.GetProperties().Length)
                 {
                     return ConversionType.Invalid;
                 }
@@ -121,10 +115,7 @@ namespace rDSN.Tron.Utility
                 return ConversionType.Copy;
             }
 
-            else
-            {
-                return ConversionType.Invalid;
-            }
+            return ConversionType.Invalid;
         }
 
         public Type SourceType { get; private set; }

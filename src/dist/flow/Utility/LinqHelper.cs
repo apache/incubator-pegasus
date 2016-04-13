@@ -32,11 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron.Utility
 {
@@ -44,7 +43,7 @@ namespace rDSN.Tron.Utility
     {
         public static string VerboseCombine<T>(this IEnumerable<T> source, string seperator, Func<T, string> selector)
         {
-            string s = "";
+            var s = "";
             source.Select(v => { s += selector(v) + seperator; return 0; }).Count();
             if (s.Length > 0)
             {
@@ -55,22 +54,15 @@ namespace rDSN.Tron.Utility
 
         public static IEnumerable<TSource> DistinctBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
         {
-            HashSet<TKey> keys = new HashSet<TKey>();
-            foreach (TSource e in source)
-            {
-                if (keys.Add(keySelector(e)))
-                {
-                    yield return e;
-                }
-            }
+            var keys = new HashSet<TKey>();
+            return source.Where(e => keys.Add(keySelector(e)));
         }
 
         public static IEnumerable<TSource> Top<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, int count, bool isAscending)
         {
             if (isAscending)
                 return source.OrderBy(keySelector).Take(count);
-            else
-                return source.OrderByDescending(keySelector).Take(count);
+            return source.OrderByDescending(keySelector).Take(count);
         }
     }
 }

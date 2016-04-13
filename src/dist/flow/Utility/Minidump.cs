@@ -32,8 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace rDSN.Tron.Utility
@@ -63,8 +64,8 @@ namespace rDSN.Tron.Utility
             MiniDumpWithFullAuxiliaryState = 0x00008000,
             MiniDumpWithPrivateWriteCopyMemory = 0x00010000,
             MiniDumpIgnoreInaccessibleMemory = 0x00020000,
-            MiniDumpValidTypeFlags = 0x0003ffff,
-        };
+            MiniDumpValidTypeFlags = 0x0003ffff
+        }
 
         //typedef struct _MINIDUMP_EXCEPTION_INFORMATION {
         //    DWORD ThreadId;
@@ -114,20 +115,15 @@ namespace rDSN.Tron.Utility
         [DllImport("kernel32.dll", EntryPoint = "GetCurrentProcessId", ExactSpelling = true)]
         static extern uint GetCurrentProcessId();
 
-        public static bool Write(string fileName)
+        public static bool Write(string fileName, Typ dumpTyp = Typ.MiniDumpWithFullMemory)
         {
-            return Write(fileName, Typ.MiniDumpWithFullMemory);
-        }
-
-        public static bool Write(string fileName, Typ dumpTyp)
-        {
-            using (var fs = new System.IO.FileStream(fileName, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
+            using (var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 MiniDumpExceptionInformation exp;
                 exp.ThreadId = GetCurrentThreadId();
                 exp.ClientPointers = false;
-                exp.ExceptioonPointers = System.Runtime.InteropServices.Marshal.GetExceptionPointers();
-                bool bRet = MiniDumpWriteDump(
+                exp.ExceptioonPointers = Marshal.GetExceptionPointers();
+                var bRet = MiniDumpWriteDump(
                   GetCurrentProcess(),
                   GetCurrentProcessId(),
                   fs.SafeFileHandle.DangerousGetHandle(),

@@ -32,11 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
 using System.IO;
 
 namespace rDSN.Tron.Utility
@@ -48,30 +46,25 @@ namespace rDSN.Tron.Utility
     {
         #region FIELDS
         //private HashSet<VertexT> _vertices = new HashSet<VertexT>();
-        private Dictionary<UInt64, VertexT> _vertices = new Dictionary<UInt64, VertexT>();
-        private HashSet<EdgeT> _edges = new HashSet<EdgeT>();
-        private UInt64 _vertexId = 0;
+        private ulong _vertexId;
         #endregion
 
         #region PROPERTIES
         //public HashSet<VertexT> Vertices { get { return _vertices; } }
-        public Dictionary<UInt64, VertexT> Vertices { get { return _vertices; } }
-        public HashSet<EdgeT> Edges { get { return _edges; } }
-        #endregion
+        public Dictionary<ulong, VertexT> Vertices { get; } = new Dictionary<ulong, VertexT>();
+        public HashSet<EdgeT> Edges { get; } = new HashSet<EdgeT>();
 
-        public GenericGraph()
-        {
-        }
+        #endregion
 
         public void Clear()
         {
-            foreach (VertexT v in _vertices.Values)
+            foreach (var v in Vertices.Values)
             {
                 RemoveVertex(v);
             }
 
-            _vertices.Clear();
-            _edges.Clear();
+            Vertices.Clear();
+            Edges.Clear();
         }
 
         //public VertexT CreateVertex()
@@ -97,36 +90,31 @@ namespace rDSN.Tron.Utility
 
         public VT CreateVertex<VT>() where VT : VertexT
         {
-            return CreateVertex(typeof(VT), UInt64.MaxValue) as VT;
+            return CreateVertex(typeof(VT), ulong.MaxValue) as VT;
         }
 
-        public VertexT CreateVertex(Type vt)
+        public VertexT CreateVertex(Type vt, ulong id = ulong.MaxValue)
         {
-            return CreateVertex(vt, UInt64.MaxValue);
-        }
-
-        public VertexT CreateVertex(Type vt, UInt64 id)
-        {
-            if (id == UInt64.MaxValue) // -1
+            if (id == ulong.MaxValue) // -1
             {
                 id = ++_vertexId;
             }
 
-            Type[] ps = new Type[2] { typeof(GraphT), typeof(UInt64) };
-            Object[] pss = new Object[2] { this, id };
-            VertexT vertex = (VertexT)vt.GetConstructor(ps).Invoke(pss);
+            var ps = new[] { typeof(GraphT), typeof(ulong) };
+            var pss = new object[] { this, id };
+            var vertex = (VertexT)vt.GetConstructor(ps).Invoke(pss);
 
-            _vertices.Add(id, vertex);
+            Vertices.Add(id, vertex);
 
             return vertex;
         }
         
         public void RemoveVertex(VertexT vertex)
         {
-            HashSet<EdgeT> es = new HashSet<EdgeT>();
+            var es = new HashSet<EdgeT>();
             es.UnionWith(vertex.InEdges);
 
-            foreach (EdgeT edge in es)
+            foreach (var edge in es)
             {
                 RemoveEdge(edge);
             }
@@ -134,12 +122,12 @@ namespace rDSN.Tron.Utility
             es.Clear();
             es.UnionWith(vertex.OutEdges);
 
-            foreach (EdgeT edge in es)
+            foreach (var edge in es)
             {
                 RemoveEdge(edge);
             }
 
-            _vertices.Remove(vertex.Id);
+            Vertices.Remove(vertex.Id);
         }
 
 
@@ -147,15 +135,15 @@ namespace rDSN.Tron.Utility
         {
             edge.StartVertex.OutEdges.Remove(edge);
             edge.EndVertex.InEdges.Remove(edge);
-            _edges.Remove(edge);
+            Edges.Remove(edge);
             edge.Clear();
         }
 
         public List<VertexT> GetRootVertices(bool downStream)
         {
-            List<VertexT> _rootVertices = new List<VertexT>();
+            var _rootVertices = new List<VertexT>();
 
-            foreach (VertexT v in _vertices.Values)
+            foreach (var v in Vertices.Values)
             {
                 if (downStream)
                 {
@@ -176,26 +164,26 @@ namespace rDSN.Tron.Utility
             return _rootVertices;
         }
 
-        public VertexT GetVertexById(UInt64 id)
+        public VertexT GetVertexById(ulong id)
         {
             VertexT v;
 
-            _vertices.TryGetValue(id, out v);
+            Vertices.TryGetValue(id, out v);
 
             return v;
         }
 
         public string VisualizeGraph()
         {
-            MemoryStream membuf = new MemoryStream(8192);
+            var membuf = new MemoryStream(8192);
             TextWriter output = new StreamWriter(membuf);
 
             GenerateGraphHeader(output);
-            foreach (VertexT v in Vertices.Values)
+            foreach (var v in Vertices.Values)
             {
                 v.Visualize(output);
             }
-            foreach (EdgeT e in Edges)
+            foreach (var e in Edges)
             {
                 e.Visualize(output);
             }
@@ -209,9 +197,9 @@ namespace rDSN.Tron.Utility
 
         public virtual bool VisualizeGraph(string path, string file)
         {
-            int rfs = (new Random()).Next();
-            string s = VisualizeGraph();
-            StreamWriter r = new StreamWriter(path + "\\" + rfs + ".dot");
+            var rfs = (new Random()).Next();
+            var s = VisualizeGraph();
+            var r = new StreamWriter(path + "\\" + rfs + ".dot");
             r.Write(s);
             r.Close();
 
@@ -241,9 +229,9 @@ namespace rDSN.Tron.Utility
 
         private void GenerateVertices(TextWriter output)
         {
-            foreach (VertexT v in Vertices.Values)
+            foreach (var v in Vertices.Values)
             {
-                String fillColor = "green";
+                var fillColor = "green";
                 output.Write("    \"" + v.Id + "\"");
                 output.Write(" [");
                 if ((v.Name.Length != 0) || (v.Description.Length != 0))
@@ -273,7 +261,7 @@ namespace rDSN.Tron.Utility
 
         private void GenerateEdges(TextWriter output)
         {
-            foreach (EdgeT e in Edges)
+            foreach (var e in Edges)
             {
                 output.Write("    \"" + e.StartVertex.Id + "\"");
                 output.Write("->");

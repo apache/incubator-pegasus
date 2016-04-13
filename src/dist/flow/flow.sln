@@ -36,8 +36,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySearchEngine", "ConsoleAp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "search-in-one", "..\..\apps\search\search-servers-in-one\search-in-one.csproj", "{2C6B8EB7-21F0-C316-C784-341F82A4E50D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -221,26 +219,6 @@ Global
 		{2C6B8EB7-21F0-C316-C784-341F82A4E50D}.Release|x64.Build.0 = Release|x64
 		{2C6B8EB7-21F0-C316-C784-341F82A4E50D}.Release|x86.ActiveCfg = Release|x86
 		{2C6B8EB7-21F0-C316-C784-341F82A4E50D}.Release|x86.Build.0 = Release|x86
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|Win32.Build.0 = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|x64.Build.0 = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Debug|x86.Build.0 = Debug|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Win32.ActiveCfg = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|Win32.Build.0 = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|x64.ActiveCfg = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|x64.Build.0 = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|x86.ActiveCfg = Release|Any CPU
-		{3649FBC1-A57A-4CBE-BBFE-33B9419E1B4C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

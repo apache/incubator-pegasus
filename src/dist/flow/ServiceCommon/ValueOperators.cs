@@ -36,9 +36,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace rDSN.Tron.Runtime
 {
@@ -116,7 +114,7 @@ namespace rDSN.Tron.Runtime
             Func<TSource, TResult> call
             )
         {
-            return source.Select(r => call(r));
+            return source.Select(call);
         }
 
         public static IValue<TResult> Call<TSource, TResult>(
@@ -170,11 +168,7 @@ namespace rDSN.Tron.Runtime
             Func<TSource, IEnumerable<TResult>> extractor
             )
         {
-            foreach (var s in source)
-            {
-                foreach (var r in extractor(s))
-                    yield return r;
-            }
+            return source.SelectMany(extractor);
         }
 
 
@@ -190,9 +184,7 @@ namespace rDSN.Tron.Runtime
             this IEnumerable<IEnumerable<TSource>> source
             )
         {
-            foreach (var s in source)
-                foreach (var s1 in s)
-                    yield return s1;
+            return source.SelectMany(s => s);
         }
 
         //
@@ -256,10 +248,7 @@ namespace rDSN.Tron.Runtime
             Func<IEnumerable<TSource>, TResult> reducer
             )
         {
-            foreach (var g in source.GroupBy(s => keySelector(s)))
-            {
-                yield return reducer(g);
-            }
+            return source.GroupBy(keySelector).Select(reducer);
         }
 
         /// <summary>
@@ -301,10 +290,7 @@ namespace rDSN.Tron.Runtime
             Func<TAccumulate, TSource, TAccumulate> reducer
             )
         {
-            foreach (var g in source.GroupBy(s => keySelector(s)))
-            {
-                yield return g.Aggregate(seed, reducer);
-            }
+            return source.GroupBy(keySelector).Select(g => g.Aggregate(seed, reducer));
         }
 
         #endregion scatter and gather
@@ -343,9 +329,11 @@ namespace rDSN.Tron.Runtime
             Func<TSource, bool> ifPredicate
             )
         {
-            var r = new ValIfPairs<TSource>();
-            r.Then = source.Where(ifPredicate);
-            r.Else = source.Where(x => ifPredicate(x) == false);
+            var r = new ValIfPairs<TSource>
+            {
+                Then = source.Where(ifPredicate),
+                Else = source.Where(x => ifPredicate(x) == false)
+            };
             return r;
         }
 

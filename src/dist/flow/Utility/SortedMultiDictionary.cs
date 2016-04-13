@@ -32,11 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron.Utility
 {
@@ -44,7 +42,7 @@ namespace rDSN.Tron.Utility
     {
         public void Put(TKey key, TValue val)
         {
-            List<TValue> vs = null;
+            List<TValue> vs;
             if (!_dict.TryGetValue(key, out vs))
             {
                 vs = new List<TValue>();
@@ -55,29 +53,25 @@ namespace rDSN.Tron.Utility
 
         public TValue Get(TKey key, bool remove)
         {
-            List<TValue> vs = null;
-            if (_dict.TryGetValue(key, out vs))
+            List<TValue> vs;
+            if (!_dict.TryGetValue(key, out vs)) return default(TValue);
+            TValue v;
+            if (remove)
             {
-                TValue v;
-                if (remove)
-                {
-                    v = vs.First();
-                    vs.RemoveAt(0);
+                v = vs.First();
+                vs.RemoveAt(0);
 
-                    if (vs.Count == 0)
-                    {
-                        _dict.Remove(key);
-                    }
-                }
-                else
+                if (vs.Count == 0)
                 {
-                    v = vs.First();
+                    _dict.Remove(key);
                 }
-
-                return v;
             }
             else
-                return default(TValue);
+            {
+                v = vs.First();
+            }
+
+            return v;
         }
 
         public TValue Min(out TKey key, bool remove)
@@ -91,22 +85,16 @@ namespace rDSN.Tron.Utility
                 {
                     return vs.Value.First();
                 }
-                else
+                var v = vs.Value.First();
+                vs.Value.RemoveAt(0);
+                if (vs.Value.Count == 0)
                 {
-                    var v = vs.Value.First();
-                    vs.Value.RemoveAt(0);
-                    if (vs.Value.Count == 0)
-                    {
-                        _dict.Remove(vs.Key);
-                    }
-                    return v;
+                    _dict.Remove(vs.Key);
                 }
+                return v;
             }
-            else
-            {
-                key = default(TKey);
-                return default(TValue);
-            }
+            key = default(TKey);
+            return default(TValue);
         }
 
         public TValue Max(out TKey key, bool remove)
@@ -120,25 +108,19 @@ namespace rDSN.Tron.Utility
                 {
                     return vs.Value.First();
                 }
-                else
+                var v = vs.Value.First();
+                vs.Value.RemoveAt(0);
+                if (vs.Value.Count == 0)
                 {
-                    var v = vs.Value.First();
-                    vs.Value.RemoveAt(0);
-                    if (vs.Value.Count == 0)
-                    {
-                        _dict.Remove(vs.Key);
-                    }
-                    return v;
+                    _dict.Remove(vs.Key);
                 }
+                return v;
             }
-            else
-            {
-                key = default(TKey);
-                return default(TValue);
-            }
+            key = default(TKey);
+            return default(TValue);
         }
 
-        public int Count { get { return _dict.Count; } }
+        public int Count => _dict.Count;
 
         private SortedDictionary<TKey, List<TValue>> _dict = new SortedDictionary<TKey, List<TValue>>();
     }

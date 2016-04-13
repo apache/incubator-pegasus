@@ -35,19 +35,7 @@
  
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
-using System.Xml.Serialization;
-using System.CodeDom.Compiler;
-using System.Reflection;
-using System.Collections;
-using System.Linq.Expressions;
-using System.Diagnostics;
-
-using Microsoft.CSharp;
-using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 using rDSN.Tron.LanguageProvider;
 
 namespace rDSN.Tron.ControlPanel
@@ -62,14 +50,14 @@ namespace rDSN.Tron.ControlPanel
                 return "";
             }
 
-            string name = Path.GetFileNameWithoutExtension(input);
+            var name = Path.GetFileNameWithoutExtension(input);
             return name + ".cs";
             
         }
 
         public static bool IdlToInterface(string input, string outputDir)
         {
-            string toFile = GetToSourceName(input);
+            var toFile = GetToSourceName(input);
             if (toFile == "")
             {
                 return false;
@@ -94,14 +82,7 @@ namespace rDSN.Tron.ControlPanel
                     break;
                 
             }
-            if (translator.ToCommonInterface(dir, file)) 
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }              
+            return translator.ToCommonInterface(dir, file);              
         }
        
         public override bool Execute(List<string> args)
@@ -109,17 +90,10 @@ namespace rDSN.Tron.ControlPanel
             if (args.Count < 1)
                 return false;
 
-            string input = args[0];
-            string output = Path.GetDirectoryName(input);
-            try
-            {
-                IdlToInterface(input, output);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-            
+            var input = args[0];
+            var output = Path.GetDirectoryName(input);
+            IdlToInterface(input, output);
+
             return true;
         }
 

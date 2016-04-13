@@ -32,12 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Utility
 {
@@ -64,46 +61,36 @@ namespace rDSN.Tron.Utility
 
             while (_pendingVertices.Count != 0)
             {
-                foreach (VertexT v in _pendingVertices)
+                foreach (var v in _pendingVertices)
                 {
-                    bool isAllDirectionalVerticesSatisfied = true;
+                    var isAllDirectionalVerticesSatisfied = true;
 
                     if (_isDownStream)
                     {
-                        foreach (VertexT inVertex in v.InVertices)
+                        if (v.InVertices.Any(inVertex => !inVertex.IsVisited()))
                         {
-                            if (!inVertex.IsVisited())
-                            {
-                                isAllDirectionalVerticesSatisfied = false;
-                                break;
-                            }
+                            isAllDirectionalVerticesSatisfied = false;
                         }
                     }
                     else
                     {
-                        foreach (VertexT outVertex in v.OutVertices)
+                        if (v.OutVertices.Any(outVertex => !outVertex.IsVisited()))
                         {
-                            if (!outVertex.IsVisited())
-                            {
-                                isAllDirectionalVerticesSatisfied = false;
-                                break;
-                            }
+                            isAllDirectionalVerticesSatisfied = false;
                         }
                     }
 
-                    if (isAllDirectionalVerticesSatisfied)
+                    if (!isAllDirectionalVerticesSatisfied) continue;
+                    var r = visitVertex(v);
+                    if (breakIt)
                     {
-                        bool r = visitVertex(v);
-                        if (breakIt)
-                        {
-                            if (r != breakOnFalse)
-                                return r;
-                        }
-                        v.SetVisited(true);
-                        _pendingVertices.Remove(v);
-                        _pendingVertices.UnionWith(_isDownStream ? v.OutVertices : v.InVertices);
-                        break;
+                        if (r != breakOnFalse)
+                            return r;
                     }
+                    v.SetVisited(true);
+                    _pendingVertices.Remove(v);
+                    _pendingVertices.UnionWith(_isDownStream ? v.OutVertices : v.InVertices);
+                    break;
                 }
             }
             return true;

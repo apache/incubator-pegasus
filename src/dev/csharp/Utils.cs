@@ -34,12 +34,7 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using System.IO;
 
 namespace dsn.dev.csharp
 {
@@ -80,7 +75,7 @@ namespace dsn.dev.csharp
 
         public override bool Equals(object obj)
         {
-            return this._error == ((ErrorCode)obj)._error;
+            return _error == ((ErrorCode)obj)._error;
         }
 
         public override int GetHashCode()
@@ -126,7 +121,7 @@ namespace dsn.dev.csharp
 
         public override bool Equals(object obj)
         {
-            return this._code == ((ThreadPoolCode)obj)._code;
+            return _code == ((ThreadPoolCode)obj)._code;
         }
 
         public override int GetHashCode()
@@ -170,7 +165,7 @@ namespace dsn.dev.csharp
 
         public override bool Equals(object obj)
         {
-            return this._code == ((TaskCode)obj)._code;
+            return _code == ((TaskCode)obj)._code;
         }
 
         public override int GetHashCode()
@@ -205,8 +200,7 @@ namespace dsn.dev.csharp
                 GlobalInterOpLookupTable.GetRelease(_callback_index);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
 
         public bool Cancel(bool waitFinished, out bool finished)
@@ -216,8 +210,7 @@ namespace dsn.dev.csharp
                 GlobalInterOpLookupTable.GetRelease(_callback_index);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
 
         public void Wait()
@@ -233,7 +226,7 @@ namespace dsn.dev.csharp
 
     public class RpcAddress
     {
-        public RpcAddress(dsn_address_t ad)
+        public RpcAddress(ulong ad)
         {
             addr = ad;
         }
@@ -249,12 +242,12 @@ namespace dsn.dev.csharp
             addr = Native.dsn_address_build_uri(_uri.DangerousGetHandle());
         }
 
-        public RpcAddress(string host, UInt16 port)
+        public RpcAddress(string host, ushort port)
         {
             addr = Native.dsn_address_build(host, port);
         }
 
-        public static implicit operator dsn_address_t(RpcAddress c)
+        public static implicit operator ulong(RpcAddress c)
         {
             return c.addr;
         }
@@ -264,7 +257,7 @@ namespace dsn.dev.csharp
             return Native.dsn_address_to_string(addr);
         }
 
-        public dsn_address_t addr;
-        private UriAddress _uri = null;
+        public ulong addr;
+        private UriAddress _uri;
     }
 }

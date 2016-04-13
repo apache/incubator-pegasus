@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using dsn.dev.csharp;
 
 namespace dsn.example 
@@ -10,22 +9,20 @@ namespace dsn.example
         
         public echoClient(RpcAddress server) { _server = server; }
         public echoClient() { }
-        ~echoClient() {}
-        
         // ---------- call echoHelper.RPC_ECHO_ECHO_PING ------------
         // - synchronous 
         public ErrorCode ping(
             string val, 
             out string resp, 
             int timeout_milliseconds = 0, 
-            UInt64 hash = 0,
+            ulong hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash);
             s.Write(val);
             s.Flush();
             
-            var respStream = RpcCallSync(server != null ? server : _server, s);
+            var respStream = RpcCallSync(server ?? _server, s);
             if (null == respStream)
             {
                 resp = default(string);
@@ -45,15 +42,15 @@ namespace dsn.example
             pingCallback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            UInt64 request_hash = 0,
+            ulong request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
             s.Write(val);
             s.Flush();
             
             RpcCallAsync(
-                        server != null ? server : _server, 
+                        server ?? _server, 
                         s,
                         this, 
                         (err, rs) => 
@@ -71,15 +68,15 @@ namespace dsn.example
             pingCallback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            UInt64 request_hash = 0,
+            ulong request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
             s.Write(val);
             s.Flush();
             
             return RpcCallAsync2(
-                        server != null ? server : _server, 
+                        server ?? _server, 
                         s,
                         this, 
                         (err, rs) => 

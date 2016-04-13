@@ -32,13 +32,11 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.Compiler
 {
@@ -69,9 +67,9 @@ namespace rDSN.Tron.Compiler
                 case SymbolType.ST_PARAMETER:
                 case SymbolType.ST_LOCAL:
                 case SymbolType.ST_TEMP:
-                    return Name + "(" + SymType.ToString() + ", " + ValType.Name + ")";
+                    return Name + "(" + SymType + ", " + ValType.Name + ")";
                 case SymbolType.ST_CONSTANT:
-                    return ConstantValue.ToString() + "(" + SymType.ToString() + ", " + ValType.Name + ")";
+                    return ConstantValue + "(" + SymType + ", " + ValType.Name + ")";
                 default:
                     throw new Exception();
             }
@@ -79,44 +77,52 @@ namespace rDSN.Tron.Compiler
 
         public static Variable CreateTemp(Type type, Instruction defineInstr)
         {
-            Variable var = new Variable();
-            var.Name = "t" + (_tempVarId++);
-            var.SymType = SymbolType.ST_TEMP;
-            var.ValType = type;
+            var var = new Variable
+            {
+                Name = "t" + (_tempVarId++),
+                SymType = SymbolType.ST_TEMP,
+                ValType = type,
+                DefineInstruction = defineInstr
+            };
 
-            var.DefineInstruction = defineInstr;
             return var;
         }
 
         public static Variable CreateLocal(string name, Type type, Instruction defineInstr)
         {
-            Variable var = new Variable();
-            var.Name = name;
-            var.SymType = SymbolType.ST_LOCAL;
-            var.ValType = type;
+            var var = new Variable
+            {
+                Name = name,
+                SymType = SymbolType.ST_LOCAL,
+                ValType = type,
+                DefineInstruction = defineInstr
+            };
 
-            var.DefineInstruction = defineInstr;
             return var;
         }
 
         public static Variable CreateParam(string name, Type type)
         {
-            Variable var = new Variable();
-            var.Name = name;
-            var.SymType = SymbolType.ST_PARAMETER;
-            var.ValType = type;
+            var var = new Variable
+            {
+                Name = name,
+                SymType = SymbolType.ST_PARAMETER,
+                ValType = type
+            };
 
             return var;
         }
 
         public static Variable CreateConstant(Type type, object value)
         {
-            Variable var = new Variable();
-            var.Name = "c" + (_constVarId++);
-            var.SymType = SymbolType.ST_CONSTANT;
-            var.ValType = type;
+            var var = new Variable
+            {
+                Name = "c" + (_constVarId++),
+                SymType = SymbolType.ST_CONSTANT,
+                ValType = type,
+                ConstantValue = value
+            };
 
-            var.ConstantValue = value;
             return var;
         }
 
@@ -143,12 +149,9 @@ namespace rDSN.Tron.Compiler
         {
             if (Code == OpCode.Call)
             {
-                return Destinations.VerboseCombine(" ", d => d.ToString()) + " = " + Code.ToString() + " " + MethodCall.Name + " " + Sources.VerboseCombine(" ", s => s.ToString());
+                return Destinations.VerboseCombine(" ", d => d.ToString()) + " = " + Code + " " + MethodCall.Name + " " + Sources.VerboseCombine(" ", s => s.ToString());
             }
-            else
-            {
-                return Destinations.VerboseCombine(" ", d => d.ToString()) + " = " + Code.ToString() + " " + Sources.VerboseCombine(" ", s => s.ToString());
-            }
+            return Destinations.VerboseCombine(" ", d => d.ToString()) + " = " + Code + " " + Sources.VerboseCombine(" ", s => s.ToString());
         }
     }
     
@@ -420,6 +423,6 @@ namespace rDSN.Tron.Compiler
         //
         // Summary:
         //     A false condition value.
-        IsFalse = 84,
+        IsFalse = 84
     }
 }

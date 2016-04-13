@@ -35,8 +35,6 @@
  
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
 
 using rDSN.Tron.Utility;
@@ -47,10 +45,10 @@ namespace rDSN.Tron.ControlPanel
     {
         public void Add(string name, Command cmd)
         {
-            if (_commands.ContainsKey(name))
+            if (Commands.ContainsKey(name))
                 throw new Exception("command alias '" + name + "' is already registered.");
 
-            _commands.Add(name, cmd);
+            Commands.Add(name, cmd);
         }
 
         public void Add(string[] names, Command cmd)
@@ -63,7 +61,7 @@ namespace rDSN.Tron.ControlPanel
 
         public bool Remove(string name)
         {
-            return _commands.Remove(name);
+            return Commands.Remove(name);
         }
 
         public void Run()
@@ -71,21 +69,20 @@ namespace rDSN.Tron.ControlPanel
             while (true)
             {
                 Console.Write(">");
-                string cmdline = Console.ReadLine();
+                var cmdline = Console.ReadLine();
                 ExecuteCommand(cmdline);
             }
         }
 
         public bool ExecuteCommand(string cmdLine)
         {
-            string oldCommand = cmdLine;
-            var args = cmdLine.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            var args = cmdLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
             if (args.Length == 0)
                 return false;
 
-            List<string> rargs = new List<string>();
-            for (int i = 1; i < args.Length; i++)
+            var rargs = new List<string>();
+            for (var i = 1; i < args.Length; i++)
             {
                 rargs.Add(args[i]);
             }
@@ -95,7 +92,7 @@ namespace rDSN.Tron.ControlPanel
 
         public bool ExecuteCommand(string name, List<string> args)
         {
-            Command cmd = Get(name);
+            var cmd = Get(name);
             if (cmd == null)
             {
                 Console.WriteLine("invalid command '" + name + "'");
@@ -103,7 +100,7 @@ namespace rDSN.Tron.ControlPanel
             }
 
             var start = SystemHelper.GetCurrentMillieseconds();
-            bool r = false;
+            bool r;
 
             try
             {
@@ -137,7 +134,7 @@ namespace rDSN.Tron.ControlPanel
         {
             try
             {
-                StreamReader reader = new StreamReader(cmdFile);
+                var reader = new StreamReader(cmdFile);
                 string cmd;
                 while ((cmd = reader.ReadLine()) != null)
                 {
@@ -146,17 +143,18 @@ namespace rDSN.Tron.ControlPanel
                 reader.Close();
             }
             catch (Exception)
-            { }
+            {
+                // ignored
+            }
         }
 
-        public Dictionary<string, Command> Commands { get { return _commands; } }
+        public Dictionary<string, Command> Commands { get; } = new Dictionary<string,Command>();
 
         public Command Get(string name)
         {
-            Command cmd = null;
-            _commands.TryGetValue(name, out cmd);
+            Command cmd;
+            Commands.TryGetValue(name, out cmd);
             return cmd;
         }
-        private Dictionary<string, Command> _commands = new Dictionary<string,Command>();
     }
 }

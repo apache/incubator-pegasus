@@ -32,13 +32,12 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 
 namespace rDSN.Tron.Utility
 {
@@ -81,7 +80,7 @@ namespace rDSN.Tron.Utility
 
         private static void EchoLine(int indent, string line)
         {
-            for (int i = 0; i < indent; i++)
+            for (var i = 0; i < indent; i++)
                 Console.Write("  ");
 
             Console.WriteLine(line);
@@ -97,7 +96,7 @@ namespace rDSN.Tron.Utility
             }
             else
             {
-                Type type = o.GetType();            
+                var type = o.GetType();            
 
                 EchoLine(indent, type.FullName + " " + name + " = [");
                 foreach (var m in type.GetFields())
@@ -180,92 +179,67 @@ namespace rDSN.Tron.Utility
         {
             if (member.MemberType == MemberTypes.Field)
             {
-                FieldInfo fld = member.DeclaringType.GetFieldEx(member.Name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                var fld = member.DeclaringType.GetFieldEx(member.Name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
                 Trace.Assert(fld != null);
                 if (o != null)
                 {
                     return fld.GetValue(o);
                 }
-                else
-                {   
-                    if (fld.IsStatic)
-                        return fld.GetValue(null);
-                    else
-                        return null;
-                }
+                return fld.IsStatic ? fld.GetValue(null) : null;
             }
-            else if (member.MemberType == MemberTypes.Property)
-            {
-                PropertyInfo prop = member.DeclaringType.GetPropertyEx(member.Name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                Trace.Assert(prop != null);
-                return prop.GetValue(o, new object[] { });
-            }
-            else
-            {
-                throw new Exception("member type '" + member.MemberType + "' for '" + member.Name + "' is not supported yet");
-            }
+            if (member.MemberType != MemberTypes.Property)
+                throw new Exception("member type '" + member.MemberType + "' for '" + member.Name +
+                                    "' is not supported yet");
+            var prop = member.DeclaringType.GetPropertyEx(member.Name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            Trace.Assert(prop != null);
+            return prop.GetValue(o, new object[] { });
         }
 
         public static Type GetElementType(Type seqType)
         {
             if (seqType.IsEnumerable())
             {
-                Type ienum = FindIEnumerable(seqType);
-                if (ienum == null) return seqType;
-                return ienum.GetGenericArguments()[0];
+                var ienum = FindIEnumerable(seqType);
+                return ienum == null ? seqType : ienum.GetGenericArguments()[0];
             }
-            else if (seqType.IsSymbols())
+            if (seqType.IsSymbols())
             {
                 return seqType.GetGenericArguments()[0];
             }
-            else if (seqType.IsSymbol())
-            {
-                return seqType.GetGenericArguments()[0];
-            }
-            else
-            {
-                return seqType;
-            }
+            return seqType.IsSymbol() ? seqType.GetGenericArguments()[0] : seqType;
         }
 
         private static Type FindIEnumerable(Type seqType)
         {
-            if (seqType == null || seqType == typeof(string))
-                return null;
-
-            if (seqType.IsArray)
-                return typeof(IEnumerable<>).MakeGenericType(seqType.GetElementType());
-
-            if (seqType.IsGenericType)
+            while (true)
             {
-                foreach (Type arg in seqType.GetGenericArguments())
+                if (seqType == null || seqType == typeof (string))
+                    return null;
+
+                if (seqType.IsArray)
+                    return typeof (IEnumerable<>).MakeGenericType(seqType.GetElementType());
+
+                if (seqType.IsGenericType)
                 {
-                    Type ienum = typeof(IEnumerable<>).MakeGenericType(arg);
-                    if (ienum.IsAssignableFrom(seqType))
+                    var type = seqType;
+                    foreach (var ienum in seqType.GetGenericArguments().Select(arg => typeof (IEnumerable<>).MakeGenericType(arg)).Where(ienum => ienum.IsAssignableFrom(type)))
                     {
                         return ienum;
                     }
                 }
-            }
 
-            Type[] ifaces = seqType.GetInterfaces();
-            if (ifaces != null && ifaces.Length > 0)
-            {
-                foreach (Type iface in ifaces)
+                var ifaces = seqType.GetInterfaces();
+                if (ifaces.Length > 0)
                 {
-                    Type ienum = FindIEnumerable(iface);
-                    if (ienum != null) return ienum;
+                    foreach (var ienum in ifaces.Select(FindIEnumerable).Where(ienum => ienum != null))
+                    {
+                        return ienum;
+                    }
                 }
-            }
 
-            if (seqType.BaseType != null && seqType.BaseType != typeof(object))
-            {
-                return FindIEnumerable(seqType.BaseType);
+                if (seqType.BaseType == null || seqType.BaseType == typeof (object)) return null;
+                seqType = seqType.BaseType;
             }
-
-            return null;
         }
-
-
     }
 }

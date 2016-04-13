@@ -32,16 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
 
+using System.Collections.Generic;
+using System.Reflection;
 using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
@@ -55,7 +48,7 @@ namespace rDSN.Tron.Compiler
 
         public static OperatorTransformer Get(MethodBase method)
         {
-            OperatorTransformer transformer = null;
+            OperatorTransformer transformer;
             _transformers.TryGetValue(method, out transformer);
             return transformer;
         }

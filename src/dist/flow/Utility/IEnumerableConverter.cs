@@ -32,12 +32,9 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+
 using System.Collections;
+using System.Collections.Generic;
 
 namespace rDSN.Tron.Utility
 {
@@ -54,23 +51,18 @@ namespace rDSN.Tron.Utility
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return (IEnumerator)GetEnumerator();
+            return GetEnumerator();
         }
 
         public IEnumerator<TResult> GetEnumerator()
         {
-            if (_enums != null)
+            if (_enums == null) yield break;
+            foreach (var o in _enums)
             {
-                foreach (var o in _enums)
-                {
-                    yield return (TResult)_converter.Convert(o);
-                }
-
-                if (_cb != null)
-                {
-                    _cb(_cbArg);
-                }
+                yield return (TResult)_converter.Convert(o);
             }
+
+            _cb?.Invoke(_cbArg);
         }
 
         private IEnumerable<TSource> _enums;

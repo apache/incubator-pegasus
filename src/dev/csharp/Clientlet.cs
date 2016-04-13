@@ -34,14 +34,6 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Collections;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 {
@@ -77,8 +69,7 @@ namespace dsn.dev.csharp
                 Native.dsn_task_tracker_destroy(handle);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
 
         protected IntPtr tracker() { return handle; }
@@ -98,11 +89,11 @@ namespace dsn.dev.csharp
             return new RpcAddress(Native.dsn_primary_address());
         }
 
-        public static UInt32 random32(UInt32 min, UInt32 max) { return Native.dsn_random32(min, max); }
-        public static UInt64 random64(UInt64 min, UInt64 max) { return Native.dsn_random64(min, max); }
-        public static UInt64 now_ns() { return Native.dsn_now_ns(); }
-        public static UInt64 now_us() { return Native.dsn_now_us(); }
-        public static UInt64 now_ms() { return Native.dsn_now_ms(); }
+        public static uint random32(uint min, uint max) { return Native.dsn_random32(min, max); }
+        public static ulong random64(ulong min, ulong max) { return Native.dsn_random64(min, max); }
+        public static ulong now_ns() { return Native.dsn_now_ns(); }
+        public static ulong now_us() { return Native.dsn_now_us(); }
+        public static ulong now_ms() { return Native.dsn_now_ms(); }
 
         protected void CheckHashedAccess()
         {
@@ -124,14 +115,14 @@ namespace dsn.dev.csharp
         // TODO: what if the task is cancelled
         static void c_task_handler(IntPtr h)
         {
-            int idx2 = (int)h;
+            var idx2 = (int)h;
             var hr = GlobalInterOpLookupTable.GetRelease(idx2) as task_handler;
             hr();
         }
 
         static void c_timer_task_handler(IntPtr h)
         {
-            int idx2 = (int)h;
+            var idx2 = (int)h;
             var hr = GlobalInterOpLookupTable.Get(idx2) as task_handler;
             hr();
         }
@@ -147,8 +138,8 @@ namespace dsn.dev.csharp
             int delay_milliseconds = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            IntPtr task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            var task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero);
             Native.dsn_task_call(task, delay_milliseconds);
         }
 
@@ -165,16 +156,11 @@ namespace dsn.dev.csharp
             int timer_interval_milliseconds = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            IntPtr task;
-            SafeTaskHandle ret;
+            var idx = GlobalInterOpLookupTable.Put(callback);
 
-            if (timer_interval_milliseconds == 0)
-                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            else
-                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var task = timer_interval_milliseconds == 0 ? Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero) : Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, callbackOwner?.tracker() ?? IntPtr.Zero);
 
-            ret = new SafeTaskHandle(task, idx);
+            var ret = new SafeTaskHandle(task, idx);
             Native.dsn_task_call(task, delay_milliseconds);
             return ret;
         }
@@ -199,22 +185,15 @@ namespace dsn.dev.csharp
             Logging.dassert(requestStream.IsFlushed(), 
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            IntPtr respMsg = Native.dsn_rpc_call_wait(server.addr, requestStream.DangerousGetHandle());
-            if (IntPtr.Zero == respMsg)
-            {
-                return null;
-            }   
-            else
-            {
-                return new RpcReadStream(respMsg, true);
-            }
+            var respMsg = Native.dsn_rpc_call_wait(server.addr, requestStream.DangerousGetHandle());
+            return IntPtr.Zero == respMsg ? null : new RpcReadStream(respMsg, true);
         }
 
         public delegate void RpcResponseHandler(ErrorCode err, RpcReadStream responseStream);
 
         static void c_rpc_response_handler(int err, IntPtr reqc, IntPtr respc, IntPtr h)
         {
-            int idx2 = (int)h;
+            var idx2 = (int)h;
             var hr = GlobalInterOpLookupTable.GetRelease(idx2) as RpcResponseHandler;
             
             if (err == 0)
@@ -242,12 +221,12 @@ namespace dsn.dev.csharp
                 "RpcWriteStream must be flushed after write in the same thread");
 
             var idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_rpc_create_response_task(
+            var task = Native.dsn_rpc_create_response_task(
                 requestStream.DangerousGetHandle(),
                 _c_rpc_response_handler_holder, 
                 (IntPtr)idx, 
                 replyHash,
-                callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero
+                callbackOwner?.tracker() ?? IntPtr.Zero
                 );
             Native.dsn_rpc_call(server.addr, task);
         }
@@ -268,12 +247,12 @@ namespace dsn.dev.csharp
                 "RpcWriteStream must be flushed after write in the same thread");
 
             var idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_rpc_create_response_task(
+            var task = Native.dsn_rpc_create_response_task(
                 requestStream.DangerousGetHandle(),
                 _c_rpc_response_handler_holder,
                 (IntPtr)idx,
                 replyHash,
-                callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero
+                callbackOwner?.tracker() ?? IntPtr.Zero
                 );
 
             var ret = new SafeTaskHandle(task, idx);
@@ -288,7 +267,7 @@ namespace dsn.dev.csharp
 
         public static ErrorCode FileClose(dsn_handle_t file)
         {
-            int err = Native.dsn_file_close(file);
+            var err = Native.dsn_file_close(file);
             return new ErrorCode(err);
         }
 
@@ -296,7 +275,7 @@ namespace dsn.dev.csharp
 
         static void c_aio_handler(int err, IntPtr size, IntPtr h)
         {
-            int idx2 = (int)h;
+            var idx2 = (int)h;
             var hr = GlobalInterOpLookupTable.GetRelease(idx2) as AioHandler;
             
             hr(new ErrorCode(err), size.ToInt32());
@@ -308,15 +287,15 @@ namespace dsn.dev.csharp
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
-            UInt64 offset,
+            ulong offset,
             TaskCode callbackCode,
             Clientlet callbackOwner,
             AioHandler callback,
             int hash = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            var task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero);
             Native.dsn_file_read(hFile, buffer, count, offset, task);
             return new SafeTaskHandle(task, idx);
         }
@@ -325,21 +304,21 @@ namespace dsn.dev.csharp
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
-            UInt64 offset,
+            ulong offset,
             TaskCode callbackCode,
             Clientlet callbackOwner,
             AioHandler callback,
             int hash = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            var task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero);
             Native.dsn_file_write(hFile, buffer, count, offset, task);
             return new SafeTaskHandle(task, idx);
         }
 
         public static SafeTaskHandle CopyRemoteFiles(
-            dsn_address_t remote,
+            ulong remote,
             string source_dir,
             string[] files,
             string dest_dir,
@@ -350,14 +329,14 @@ namespace dsn.dev.csharp
             int hash = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            var task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero);
             Native.dsn_file_copy_remote_files(remote, source_dir, files, dest_dir, overwrite, task);
             return new SafeTaskHandle(task, idx);
         }
 
         public static SafeTaskHandle CopyRemoteDirectory(
-            dsn_address_t remote,
+            ulong remote,
             string source_dir,
             string dest_dir,
             bool overwrite,
@@ -367,10 +346,10 @@ namespace dsn.dev.csharp
             int hash = 0
             )
         {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            var task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, callbackOwner?.tracker() ?? IntPtr.Zero);
             Native.dsn_file_copy_remote_directory(remote, source_dir, dest_dir, overwrite, task);
             return new SafeTaskHandle(task, idx);
         }            
-    };
+    }
 }

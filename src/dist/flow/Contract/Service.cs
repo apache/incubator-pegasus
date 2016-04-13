@@ -32,16 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using System.Reflection;
-
-using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Contract
 {
@@ -97,7 +91,7 @@ namespace rDSN.Tron.Contract
         {
             PackageName = package;
             URL = url;
-            Name = ((name != null && name != "") ? name : url);
+            Name = !string.IsNullOrEmpty(name) ? name : url;
 
             Properties = new ServiceProperty();
             Spec = new ServiceSpec();
@@ -143,33 +137,23 @@ namespace rDSN.Tron.Contract
 
         public ServiceSpec ExtractSpec()
         {
-            if (Spec.Directory == "")
+            if (Spec.Directory != "") return Spec;
+            Spec.Directory = ".";
+
+            var files = new List<string> {Spec.MainSpecFile};
+            files.AddRange(Spec.ReferencedSpecFiles);
+
+            foreach (var f in files)
             {
-                Spec.Directory = PackageName + ".Spec";
-                if (!Directory.Exists(Spec.Directory))
+                if (File.Exists(Path.Combine(Spec.Directory, f))) continue;
+                var stream = GetType().Assembly.GetManifestResourceStream(f);
+                using (Stream file = File.Create(Path.Combine(Spec.Directory, f)))
                 {
-                    Directory.CreateDirectory(Spec.Directory);
-                }
-
-                List<string> files = new List<string>();
-                files.Add(Spec.MainSpecFile);
-                foreach (var ds in Spec.ReferencedSpecFiles)
-                    files.Add(ds);
-
-                foreach (var f in files)
-                {
-                    if (!File.Exists(Path.Combine(Spec.Directory, f)))
+                    int len;
+                    var buffer = new byte[8 * 1024];                            
+                    while ((len = stream.Read(buffer, 0, buffer.Length)) > 0)
                     {
-                        var stream = GetType().Assembly.GetManifestResourceStream(f);
-                        using (Stream file = File.Create(Path.Combine(Spec.Directory, f)))
-                        {
-                            int len;
-                            byte[] buffer = new byte[8 * 1024];                            
-                            while ((len = stream.Read(buffer, 0, buffer.Length)) > 0)
-                            {
-                                file.Write(buffer, 0, len);
-                            }
-                        }
+                        file.Write(buffer, 0, len);
                     }
                 }
             }
@@ -249,7 +233,7 @@ namespace rDSN.Tron.Contract
         where TSelf : PrimitiveService<TSelf>
     {
         public PrimitiveService(string name, string classFullName)
-            : base(name, classFullName, classFullName.Substring(classFullName.LastIndexOfAny(new char[]{':', '.'}) + 1))
+            : base(name, classFullName, classFullName.Substring(classFullName.LastIndexOfAny(new[]{':', '.'}) + 1))
         {
         }
 
@@ -268,14 +252,14 @@ namespace rDSN.Tron.Contract
             return base.Partition(key, type, partitionCount) as TSelf;
         }
 
-        public new TSelf DataSource(string dataSource) // e.g., cosmos structured stream
+        public TSelf DataSource(string dataSource) // e.g., cosmos structured stream
         {
-            return base.SetDataSource(dataSource) as TSelf;
+            return SetDataSource(dataSource) as TSelf;
         }
 
-        public new TSelf Configuration(string uri)
+        public TSelf Configuration(string uri)
         {
-            return base.SetConfiguration(uri) as TSelf;
+            return SetConfiguration(uri) as TSelf;
         }
     }
 
@@ -288,14 +272,14 @@ namespace rDSN.Tron.Contract
             Latency90Percentile,
             Latency50Percentile,
 
-            WorkflowConsistency,
+            WorkflowConsistency
         }
 
         public enum WorkflowConsistencyLevel
         { 
             Any,
             Atomic,
-            ACID,
+            ACID
         }
 
         public SLA Add<TValue>(Metric prop, TValue value)
@@ -311,36 +295,11 @@ namespace rDSN.Tron.Contract
 
         public string Get(Metric prop)
         {
-            string v = "";
+            string v;
             m_properties.TryGetValue(prop, out v);
             return v;
         }
 
         private Dictionary<Metric, string> m_properties = new Dictionary<Metric, string>();
-    }
-
-    public interface IPartitionableService<TPartitionKey>
-    { 
-    }
-
-    public interface IDynamicPartitionableService<TPartitionKey> : IPartitionableService<TPartitionKey>
-    {
-        UInt64 PartitionKeyHash(TPartitionKey key);
-        void Merge();
-        void Split();
-    }
-
-    public class LearnRequest
-    {}
-
-    public class LearnState
-    {}
-
-    public interface IReplicationableService
-    { 
-        int Checkpoint(bool force);
-        void PrepareLearningRequest(LearnRequest request);
-        void GetLearnState(LearnRequest request, LearnState state);
-        int  ApplyLearnState(LearnState state);
     }
 }

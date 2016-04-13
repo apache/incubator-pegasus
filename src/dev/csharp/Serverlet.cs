@@ -35,10 +35,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
 
 namespace dsn.dev.csharp
 {
@@ -92,14 +88,14 @@ namespace dsn.dev.csharp
 
         protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandlerOneWay handler)
         {
-            dsn_rpc_request_handler_t cb = (dsn_message_t req, IntPtr param) =>
+            dsn_rpc_request_handler_t cb = (req, param) =>
                 {
-                    RpcReadStream rms = new RpcReadStream(req, false);
+                    var rms = new RpcReadStream(req, false);
                     handler(rms);
                 };
 
-            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
-            Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
+            var r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
+            Logging.dassert(r, "rpc handler registration failed for " + code);
 
             lock (_handlers)
             {
@@ -110,21 +106,21 @@ namespace dsn.dev.csharp
 
         protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandler handler)
         {
-            dsn_rpc_request_handler_t cb = (dsn_message_t req, IntPtr param) =>
+            dsn_rpc_request_handler_t cb = (req, param) =>
             {
                 // if handler synchnously processes the incoming request
                 // we don't need to add_ref and set owner to true 
                 // in folloiwng two stmts
                 // however, we don't know so we do as follows
                 Native.dsn_msg_add_ref(req); // released by RpcReadStream 
-                RpcReadStream rms = new RpcReadStream(req, true);
+                var rms = new RpcReadStream(req, true);
 
-                RpcWriteStream wms = new RpcWriteStream(Native.dsn_msg_create_response(req));
+                var wms = new RpcWriteStream(Native.dsn_msg_create_response(req));
                 handler(rms, wms);    
             };
 
-            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
-            Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
+            var r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
+            Logging.dassert(r, "rpc handler registration failed for " + code);
 
             lock (_handlers)
             {

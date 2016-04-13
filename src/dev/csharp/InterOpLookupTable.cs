@@ -33,12 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
 namespace dsn.dev.csharp
 {
@@ -49,23 +45,23 @@ namespace dsn.dev.csharp
     {
         public static int Put(object obj)
         {
-            int table_id = Thread.CurrentThread.ManagedThreadId % _table_count;
-            int idx = _tables[table_id].Put(obj);
+            var table_id = Thread.CurrentThread.ManagedThreadId % _table_count;
+            var idx = _tables[table_id].Put(obj);
             Logging.dassert(idx <= 0x07ffffff, "too many concurrent objects in global lookup table now");
             return (table_id << 27) + idx;
         }
 
         public static object Get(int index)
         {
-            int table_id = index >> 27;
-            int idx = index & 0x07ffffff;
+            var table_id = index >> 27;
+            var idx = index & 0x07ffffff;
             return _tables[table_id].Get(idx);
         }
 
         public static object GetRelease(int index)
         {
-            int table_id = index >> 27;
-            int idx = index & 0x07ffffff;
+            var table_id = index >> 27;
+            var idx = index & 0x07ffffff;
             return _tables[table_id].GetRelease(idx);
         }
 
@@ -76,8 +72,8 @@ namespace dsn.dev.csharp
         {
             _table_count = table_count;
 
-            List<InterOpLookupTable> tables = new List<InterOpLookupTable>();
-            for (int i = 0; i < table_count; i++)
+            var tables = new List<InterOpLookupTable>();
+            for (var i = 0; i < table_count; i++)
             {
                 var table = new InterOpLookupTable(init_slot_count_per_table);
                 tables.Add(table);
@@ -92,7 +88,7 @@ namespace dsn.dev.csharp
         {
             _objects = new List<object>();
             _free_objects = new Queue<int>();
-            for (int i = 0; i < _objects.Count; i++)
+            for (var i = 0; i < _objects.Count; i++)
             {
                 _objects.Add(null);
                 _free_objects.Enqueue(i);

@@ -32,21 +32,12 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Dynamic;
-using System.Globalization;
-
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.Compiler
 {
@@ -60,17 +51,14 @@ namespace rDSN.Tron.Compiler
 
         private Instruction GetInstruction(Expression exp, OpCode code)
         {
-            Instruction inst = null;
+            Instruction inst;
 
             if (_indexedInsts.TryGetValue(exp, out inst))
                 return inst;
-            else
-            {
-                inst = new Instruction(code);
-                _indexedInsts.Add(exp, inst);
-                _insts.Add(inst);
-                return inst;
-            }
+            inst = new Instruction(code);
+            _indexedInsts.Add(exp, inst);
+            _insts.Add(inst);
+            return inst;
         }
 
         private Instruction CreateNonIndexedInstruction(OpCode code)
@@ -86,19 +74,16 @@ namespace rDSN.Tron.Compiler
             Instruction inst;
             if (_indexedInsts.TryGetValue(exp, out inst))
                 return inst.Destinations[0];
-            else
-            {
-                inst = new Instruction(code);
-                _indexedInsts.Add(exp, inst);
-                _insts.Add(inst);
+            inst = new Instruction(code);
+            _indexedInsts.Add(exp, inst);
+            _insts.Add(inst);
 
-                foreach (var s in sources)
-                    inst.Sources.Add(s);
+            foreach (var s in sources)
+                inst.Sources.Add(s);
 
-                Variable d = Variable.CreateTemp(exp.Type, inst);
-                inst.Destinations.Add(d);
-                return d;
-            }
+            var d = Variable.CreateTemp(exp.Type, inst);
+            inst.Destinations.Add(d);
+            return d;
         }
 
         internal BasicBlockBuilder(LGraph graph)
@@ -108,12 +93,9 @@ namespace rDSN.Tron.Compiler
 
         internal void Build()
         {
-            foreach (var v in _graph.Vertices)
+            foreach (var v in _graph.Vertices.Where(v => v.Value.Exp != null))
             {
-                if (v.Value.Exp != null)
-                {
-                    Build(v.Value);
-                }
+                Build(v.Value);
             }
         }
 
@@ -124,11 +106,11 @@ namespace rDSN.Tron.Compiler
                 if (arg.NodeType != ExpressionType.Quote)
                     continue;
 
-                UnaryExpression uexp = arg as UnaryExpression;
+                var uexp = arg as UnaryExpression;
                 if (uexp.Operand.NodeType != ExpressionType.Lambda)
                     continue;
 
-                LambdaExpression lexp = uexp.Operand as LambdaExpression;
+                var lexp = uexp.Operand as LambdaExpression;
                 if (lexp.Parameters.Count > 0 && lexp.Parameters[0].Type.IsSymbol() && lexp.Body.NodeType == ExpressionType.Call)
                 {
                     // nothing to do, other LVertex will handle it
@@ -291,7 +273,7 @@ namespace rDSN.Tron.Compiler
 
             var l = Visit(node.Left);
             var r = Visit(node.Right);
-            return ComputeTempVar(node, code, new Variable[]{l, r});
+            return ComputeTempVar(node, code, new[]{l, r});
         }
 
         private Variable VisitBlock(BlockExpression node)
@@ -326,7 +308,7 @@ namespace rDSN.Tron.Compiler
             var b = Visit(node.IfTrue);
             var c = Visit(node.IfFalse);
 
-            return ComputeTempVar(node, OpCode.Conditional, new Variable[]{a, b, c});
+            return ComputeTempVar(node, OpCode.Conditional, new[]{a, b, c});
         }
 
         private Variable VisitConstant(ConstantExpression node)
@@ -344,12 +326,9 @@ namespace rDSN.Tron.Compiler
             Variable v;
             if (_constants.TryGetValue(node, out v))
                 return v;
-            else
-            {
-                v = Variable.CreateConstant(node.Type, node.Value);
-                _constants[node] = v;
-                return v;
-            }
+            v = Variable.CreateConstant(node.Type, node.Value);
+            _constants[node] = v;
+            return v;
         }
 
         private Variable VisitDebugInfo(DebugInfoExpression node)
@@ -381,12 +360,7 @@ namespace rDSN.Tron.Compiler
 
         private Variable[] VisitExpressions(Expression[] expressions)
         {
-            List<Variable> vars = new List<Variable>();
-            foreach (var exp in expressions)
-            {
-                vars.Add(Visit(exp));
-            }
-            return vars.ToArray();
+            return expressions.Select(Visit).ToArray();
 
             //this.Out(open);
             //if (expressions != null)
@@ -445,30 +419,17 @@ namespace rDSN.Tron.Compiler
 
         private Variable VisitIndex(IndexExpression node)
         {
-            List<Variable> args = new List<Variable>();
+            var args = new List<Variable>
+            {
+                node.Object != null ? Visit(node.Object) : Variable.CreateConstant(typeof (object), null),
+                node.Indexer != null
+                    ? Variable.CreateConstant(typeof (string), node.Indexer.Name)
+                    : Variable.CreateConstant(typeof (string), "")
+            };
 
-            if (node.Object != null)
-            {
-                args.Add(this.Visit(node.Object));
-            }
-            else
-            {
-                args.Add(Variable.CreateConstant(typeof(object), null));
-            }
 
-            if (node.Indexer != null)
-            {
-                args.Add(Variable.CreateConstant(typeof(string), node.Indexer.Name));
-            }
-            else
-            {
-                args.Add(Variable.CreateConstant(typeof(string), ""));
-            }
 
-            foreach (var p in this.VisitExpressions(node.Arguments.ToArray()))
-            {
-                args.Add(p);
-            }
+            args.AddRange(VisitExpressions(node.Arguments.ToArray()));
 
             return ComputeTempVar(node, OpCode.Index, args.ToArray());
 
@@ -515,15 +476,15 @@ namespace rDSN.Tron.Compiler
 
         private Variable VisitLambda(LambdaExpression node)
         {
-            this.VisitExpressions(node.Parameters.ToArray());
-            return this.Visit(node.Body);
+            VisitExpressions(node.Parameters.ToArray());
+            return Visit(node.Body);
         }
 
         private Variable VisitListInit(ListInitExpression node)
         {
-            var r = this.Visit(node.NewExpression);
+            var r = Visit(node.NewExpression);
 
-            foreach (var init in node.Initializers)
+            if (node.Initializers.Any())
             {
                 throw new NotSupportedException();
             }
@@ -543,8 +504,8 @@ namespace rDSN.Tron.Compiler
 
             try
             {
-                var lambda = Expression.Lambda(exp, new ParameterExpression[] { });
-                value = lambda.Compile().DynamicInvoke(new object[] { });
+                var lambda = Expression.Lambda(exp);
+                value = lambda.Compile().DynamicInvoke();
                 return true;
             }
             catch (Exception)
@@ -559,32 +520,20 @@ namespace rDSN.Tron.Compiler
             if (node.Expression != null)
             {
                 var host = Visit(node.Expression);
-                var member = ComputeTempVar(node, OpCode.MemberRead, new Variable[] { 
+                var member = ComputeTempVar(node, OpCode.MemberRead, new[] { 
                     host,
                     Variable.CreateConstant(typeof(string), node.Member.Name)
                 });
                 return member;
             }
-            else
-            {
-                Variable v;
-                if (_constants.TryGetValue(node, out v))
-                    return v;
-                else
-                { 
-                    object value;
-                    if (GetValue(node, out value))
-                    {
-                        v = Variable.CreateConstant(node.Type, value);
-                        _constants[node] = v;
-                        return v;
-                    }
-                    else
-                    {
-                        throw new NotSupportedException();
-                    }
-                }
-            }
+            Variable v;
+            if (_constants.TryGetValue(node, out v))
+                return v;
+            object value;
+            if (!GetValue(node, out value)) throw new NotSupportedException();
+            v = Variable.CreateConstant(node.Type, value);
+            _constants[node] = v;
+            return v;
         }
 
         private Variable VisitMemberAssignment(Variable host, MemberAssignment assignment)
@@ -651,16 +600,13 @@ namespace rDSN.Tron.Compiler
 
         private Variable VisitMethodCall(MethodCallExpression node)
         {
-            List<Variable> allArgs = new List<Variable>();
+            var allArgs = new List<Variable>();
             if (node.Object != null)
             {
                 allArgs.Add(Visit(node.Object));
             }
 
-            foreach (var arg in node.Arguments)
-            {
-                allArgs.Add(Visit(arg));
-            }
+            allArgs.AddRange(node.Arguments.Select(Visit));
 
             var r = ComputeTempVar(node, OpCode.Call, allArgs.ToArray());
             r.DefineInstruction.MethodCall = node.Method;
@@ -675,25 +621,22 @@ namespace rDSN.Tron.Compiler
                 var args = VisitExpressions(node.Arguments.ToArray());
                 return ComputeTempVar(node, OpCode.New, args);
             }
-            else
+            var obj = ComputeTempVar(node, OpCode.New, new Variable[]{});
+
+            for (var i = 0; i < node.Members.Count; i++)
             {
-                var obj = ComputeTempVar(node, OpCode.New, new Variable[]{});
-
-                for (int i = 0; i < node.Members.Count; i++)
-                {
-                    var inst = CreateNonIndexedInstruction(OpCode.MemberWrite);
-                    inst.Destinations.Add(obj);
-                    inst.Destinations.Add(Variable.CreateConstant(typeof(string), node.Members[i].Name));
-                    inst.Sources.Add(Visit(node.Arguments[i]));
-                }
-
-                return obj;
+                var inst = CreateNonIndexedInstruction(OpCode.MemberWrite);
+                inst.Destinations.Add(obj);
+                inst.Destinations.Add(Variable.CreateConstant(typeof(string), node.Members[i].Name));
+                inst.Sources.Add(Visit(node.Arguments[i]));
             }
+
+            return obj;
         }
 
         private Variable VisitNewArray(NewArrayExpression node)
         {
-            var args = this.VisitExpressions(node.Expressions.ToArray());
+            var args = VisitExpressions(node.Expressions.ToArray());
             switch (node.NodeType)
             {
                 case ExpressionType.NewArrayInit:
@@ -712,12 +655,9 @@ namespace rDSN.Tron.Compiler
             Variable v;
             if (_parameters.TryGetValue(node, out v))
                 return v;
-            else
-            {
-                v = Variable.CreateParam(node.Name, node.Type);
-                _parameters[node] = v;
-                return v;
-            }
+            v = Variable.CreateParam(node.Name, node.Type);
+            _parameters[node] = v;
+            return v;
         }
 
         private Variable VisitRuntimeVariables(RuntimeVariablesExpression node)
@@ -775,7 +715,7 @@ namespace rDSN.Tron.Compiler
 
         private Variable VisitUnary(UnaryExpression node)
         {
-            Variable s = Visit(node.Operand);
+            var s = Visit(node.Operand);
 
             OpCode code;
             switch (node.NodeType)
@@ -833,7 +773,7 @@ namespace rDSN.Tron.Compiler
                     throw new NotSupportedException("Expression of type " + node.NodeType + " is not supported");
             }
 
-            return ComputeTempVar(node, code, new Variable[] { s });
+            return ComputeTempVar(node, code, new[] { s });
         }
 
         private Variable VisitMemberBinding(Variable host, MemberBinding node)
@@ -841,15 +781,15 @@ namespace rDSN.Tron.Compiler
             switch (node.BindingType)
             {
                 case MemberBindingType.Assignment:
-                    return this.VisitMemberAssignment(host, (MemberAssignment)node);
+                    return VisitMemberAssignment(host, (MemberAssignment)node);
 
                 case MemberBindingType.MemberBinding:
-                    return this.VisitMemberMemberBinding(host, (MemberMemberBinding)node);
+                    return VisitMemberMemberBinding(host, (MemberMemberBinding)node);
 
                 case MemberBindingType.ListBinding:
-                    return this.VisitMemberListBinding(host, (MemberListBinding)node);
+                    return VisitMemberListBinding(host, (MemberListBinding)node);
                 default:
-                    throw new System.ArgumentException("Error.UnhandledBindingType(node.BindingType);");
+                    throw new ArgumentException("Error.UnhandledBindingType(node.BindingType);");
             }
             //throw Error.UnhandledBindingType(node.BindingType);
             //throw new System.ArgumentException("Error.UnhandledBindingType(node.BindingType);");
@@ -880,7 +820,7 @@ namespace rDSN.Tron.Compiler
                 case ExpressionType.ArrayLength:
                 case ExpressionType.Quote:
                 case ExpressionType.TypeAs:
-                    return this.VisitUnary((UnaryExpression)exp);
+                    return VisitUnary((UnaryExpression)exp);
                 case ExpressionType.Add:
                 case ExpressionType.AddChecked:
                 case ExpressionType.Subtract:
@@ -905,56 +845,56 @@ namespace rDSN.Tron.Compiler
                 case ExpressionType.LeftShift:
                 case ExpressionType.ExclusiveOr:
                     {
-                        return this.VisitBinary((BinaryExpression)exp);
+                        return VisitBinary((BinaryExpression)exp);
                     }
                 case ExpressionType.TypeIs:
                     {
-                        return this.VisitTypeIs((TypeBinaryExpression)exp);
+                        return VisitTypeIs((TypeBinaryExpression)exp);
                     }
                 case ExpressionType.Conditional:
                     {
-                        return this.VisitConditional((ConditionalExpression)exp);
+                        return VisitConditional((ConditionalExpression)exp);
                     }
                 case ExpressionType.Constant:
                     {
-                        return this.VisitConstant((ConstantExpression)exp);
+                        return VisitConstant((ConstantExpression)exp);
                     }
                 case ExpressionType.Parameter:
                     {
-                        return this.VisitParameter((ParameterExpression)exp);
+                        return VisitParameter((ParameterExpression)exp);
                     }
                 case ExpressionType.MemberAccess:
                     {
-                        return this.VisitMember((MemberExpression)exp);
+                        return VisitMember((MemberExpression)exp);
                     }
                 case ExpressionType.Call:
                     {
-                        return this.VisitMethodCall((MethodCallExpression)exp);
+                        return VisitMethodCall((MethodCallExpression)exp);
                     }
                 case ExpressionType.Lambda:
                     {
-                        return this.VisitLambda((LambdaExpression)exp);
+                        return VisitLambda((LambdaExpression)exp);
                     }
                 case ExpressionType.New:
                     {
-                        return this.VisitNew((NewExpression)exp);
+                        return VisitNew((NewExpression)exp);
                     }
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
                     {
-                        return this.VisitNewArray((NewArrayExpression)exp);
+                        return VisitNewArray((NewArrayExpression)exp);
                     }
                 case ExpressionType.Invoke:
                     {
-                        return this.VisitInvocation((InvocationExpression)exp);
+                        return VisitInvocation((InvocationExpression)exp);
                     }
                 case ExpressionType.MemberInit:
                     {
-                        return this.VisitMemberInit((MemberInitExpression)exp);
+                        return VisitMemberInit((MemberInitExpression)exp);
                     }
                 case ExpressionType.ListInit:
                     {
-                        return this.VisitListInit((ListInitExpression)exp);
+                        return VisitListInit((ListInitExpression)exp);
                     }
                 default:
                     {

@@ -32,13 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace rDSN.Tron.Utility
 {
@@ -77,7 +77,7 @@ namespace rDSN.Tron.Utility
             SetupLogFile();
             SetupMiniDump();
 
-            if (Get<bool>("DebugBreak", false))
+            if (Get("DebugBreak", false))
             {
                 Console.WriteLine("Press any key to continue ...");
                 Console.ReadKey();
@@ -91,15 +91,15 @@ namespace rDSN.Tron.Utility
 
         private void SetupLogFile()
         {
-            string logFile = Get<string>("LogFile");
-            LogConsumer consumer = new LogConsumer(logFile);
+            var logFile = Get<string>("LogFile");
+            var consumer = new LogConsumer(logFile);
             Trace.Listeners.Add(consumer);
             //Debug.Listeners.Add(consumer);
         }
 
         private void SetupMiniDump()
         {
-            AppDomain.CurrentDomain.UnhandledException += this.MyUnhandledExceptionEventHandler;
+            AppDomain.CurrentDomain.UnhandledException += MyUnhandledExceptionEventHandler;
         }
 
         private void MyUnhandledExceptionEventHandler(object sender, UnhandledExceptionEventArgs e)
@@ -108,22 +108,12 @@ namespace rDSN.Tron.Utility
         }
 
         /// <summary>
-        /// Load config from the default config file.
-        /// </summary>
-        private void LoadConfig()
-        {
-            LoadConfig(_defaultConfigFile);
-        }
-
-        /// <summary>
         /// Load config from the specified config file.
         /// </summary>
         /// <param name="configFile">The path of the config file.</param>
-        public void LoadConfig(string configFile)
+        public void LoadConfig(string configFile = _defaultConfigFile)
         {
-            string currSec = "";
-            string newSec = "";
-            string line;            
+            var currSec = "";
             StreamReader sr = null;
             Dictionary<string, string> currentDict = null;
 
@@ -136,19 +126,19 @@ namespace rDSN.Tron.Utility
                     {
                         break;
                     }
-                    line = sr.ReadLine();
+                    var line = sr.ReadLine();
 
                     if (line.IndexOf('#') != -1)
                     {
                         line = line.Substring(0, line.IndexOf('#'));
                     }
 
-                    line = line.Trim(new char[] {' ', '\t', '\r', '\n'});
+                    line = line.Trim(' ', '\t', '\r', '\n');
 
                     if ((line == "") || (line[0] == '#')) continue;
                     if (line[0] == '[')
                     {
-                        newSec = line.Substring(1, line.Length - 2).Trim();
+                        var newSec = line.Substring(1, line.Length - 2).Trim();
                         if (_sectionParams.TryGetValue(newSec, out currentDict) == false)
                         {
                             currentDict = new Dictionary<string, string>();
@@ -166,7 +156,7 @@ namespace rDSN.Tron.Utility
 
                         // New value pair
                         string name, value = "";
-                        int ep = line.IndexOf('=');
+                        var ep = line.IndexOf('=');
                         if (ep == -1)
                         {
                             name = line.Trim();
@@ -202,8 +192,7 @@ namespace rDSN.Tron.Utility
                     Console.WriteLine("Error loading config. " + e.Message);
                 }
 
-                if (sr != null)
-                    sr.Close();
+                sr?.Close();
             }
         }
 
@@ -227,7 +216,7 @@ namespace rDSN.Tron.Utility
         
         public Dictionary<string, string> GetSection(string sectionName)
         {
-            Dictionary<string, string> dict = null;
+            Dictionary<string, string> dict;
             _sectionParams.TryGetValue(sectionName, out dict);
             return dict;
         }
@@ -245,12 +234,15 @@ namespace rDSN.Tron.Utility
             if (typeof(T) == typeof(string))
                 return (T)(object)value;
 
-            System.Reflection.MethodInfo method = null;
+            MethodInfo method = null;
             try
             {
-                method = typeof(T).GetMethod("Parse", new Type[] { typeof(string) });
+                method = typeof(T).GetMethod("Parse", new[] { typeof(string) });
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // ignored
+            }
 
             if (method != null)
             {
@@ -267,15 +259,12 @@ namespace rDSN.Tron.Utility
                     return default(T);
                 }
             }
-            else if (typeof(T).IsEnum)
+            if (typeof(T).IsEnum)
             {
                 return (T)Enum.Parse(typeof(T), value);
             }
-            else
-            {
-                Console.WriteLine("config item type wrong: " + name);
-                return default(T);
-            }
+            Console.WriteLine("config item type wrong: " + name);
+            return default(T);
         }
 
         public bool TryGet<T>(string section, string name, out T val)
@@ -298,59 +287,40 @@ namespace rDSN.Tron.Utility
         public T Get<T>(string section, string name, T defaultValue = default(T))
         {
             T v;
-            if (TryGet<T>(section, name, out v))
+            if (TryGet(section, name, out v))
                 return v;
-            else
-                return defaultValue;
+            return defaultValue;
         }
 
         public bool TryGet<T>(string name, out T val)
         {
-            return TryGet<T>("general", name, out val);
+            return TryGet("general", name, out val);
         }
 
         public T Get<T>(string name, T defaultValue = default(T))
         {
-            return Get<T>("general", name, defaultValue);
+            return Get("general", name, defaultValue);
         }
 
         public List<string> GetAllSectionNames()
         {
-            List<string> names = new List<string>();
-            foreach (var kv in _sectionParams)
-            {
-                names.Add(kv.Key);
-            }
-            return names;
-        }
-
-        /// <summary>
-        /// Save config to the default config file.
-        /// </summary>
-        public void SaveConfig()
-        {
-            SaveConfig(_defaultConfigFile);
+            return _sectionParams.Select(kv => kv.Key).ToList();
         }
 
         /// <summary>
         /// Save config the the specified config file.
         /// </summary>
         /// <param name="configFile">The path of the config file.</param>
-        public void SaveConfig(string configFile)
+        public void SaveConfig(string configFile = _defaultConfigFile)
         {
-            StreamWriter sw = new StreamWriter(configFile);
-            if (sw == null)
-            {
-                Console.WriteLine("Failed to write config to " + configFile);
-                return;
-            }
+            var sw = new StreamWriter(configFile);
 
-            foreach (KeyValuePair<string, Dictionary<string, string>> sections in _sectionParams)
+            foreach (var sections in _sectionParams)
             {
                 sw.WriteLine("[" + sections.Key + "]");
-                foreach (KeyValuePair<string, string> pair in sections.Value)
+                foreach (var pair in sections.Value)
                 {
-                    sw.WriteLine(pair.Key + " = " + pair.Value.ToString());
+                    sw.WriteLine(pair.Key + " = " + pair.Value);
                 }
                 sw.WriteLine();
             }

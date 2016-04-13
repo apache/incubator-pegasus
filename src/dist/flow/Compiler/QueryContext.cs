@@ -32,33 +32,28 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Dynamic;
-using System.Globalization;
-
-using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
 {
     public class QueryContext : ExpressionVisitor<object, int>
     {
-        public static HashSet<string> KnownLibs = new HashSet<string>() { 
+        public static HashSet<string> KnownLibs = new HashSet<string>
+        { 
             "System.dll",
             "System.Core.dll",
             "rDSN.Tron.Utility.dll",
             "rDSN.Tron.Compiler.dll",
             "rDSN.Tron.Contract.dll",
-            "rDSN.Tron.Runtime.Common.dll",
+            "rDSN.Tron.Runtime.dll"
         };
 
         public Dictionary<Type, string> RewrittenTypes = new Dictionary<Type,string>(); // see TypeRewriter
@@ -168,7 +163,7 @@ namespace rDSN.Tron.Compiler
             if (attrs.Length == 0 && (m.Type.IsSymbol() || m.Type.IsSymbols()))
             {
                 var paramemters = new List<object>();
-                int i = 0;
+                var i = 0;
 
                 foreach (var p in m.Method.GetParameters())
                 {
@@ -182,7 +177,7 @@ namespace rDSN.Tron.Compiler
                     {
                         Trace.Assert(p.ParameterType.IsSymbol());
                         
-                        var rp = p.ParameterType.GetConstructor(new Type[] { typeof(string) }).Invoke(new object[] { "p_" + i });
+                        var rp = p.ParameterType.GetConstructor(new[] { typeof(string) }).Invoke(new object[] { "p_" + i });
 
                         (rp as ISymbol).Name = "p_" + i;
 
@@ -193,8 +188,6 @@ namespace rDSN.Tron.Compiler
                 var r = m.Method.Invoke(ComposedServiceObject, paramemters.ToArray());
                 Trace.Assert(r.GetType().IsInheritedTypeOf(typeof(ISymbol)));
 
-                var kexpr = (r as ISymbol).Expression;
-
                 ExternalComposedSerivce.Add(m.Method, (r as ISymbol).Expression as MethodCallExpression);
 
                 //Visit(kexpr, 0);
@@ -203,12 +196,11 @@ namespace rDSN.Tron.Compiler
             if (!Methods.Contains(m.Method))
                 Methods.Add(m.Method);
 
-            if (m.Object != null && m.Object.Type.IsInheritedTypeOf(typeof(Service)))
+            if (m.Object == null || !m.Object.Type.IsInheritedTypeOf(typeof (Service)))
+                return base.VisitMethodCall(m, nil);
+            if (!ServiceCalls.ContainsKey(m))
             {
-                if (!ServiceCalls.ContainsKey(m))
-                {
-                    ServiceCalls.Add(m, GetValue(m.Object) as Service);
-                }
+                ServiceCalls.Add(m, GetValue(m.Object) as Service);
             }
 
             return base.VisitMethodCall(m, nil);
@@ -217,7 +209,7 @@ namespace rDSN.Tron.Compiler
         public override object VisitConstant(ConstantExpression node, int nil)
         {
             object v;
-            bool r = GetValue(node, out v);
+            var r = GetValue(node, out v);
             if (!r)
             {
                 if (node.Type.IsGenericType && node.Type.BaseType == typeof(ISymbol))
@@ -237,7 +229,7 @@ namespace rDSN.Tron.Compiler
                 }
                 else
                 {
-                    InputConstants.Add(node, r);
+                    InputConstants.Add(node, true);
                 }
             }
             return null;
@@ -245,30 +237,29 @@ namespace rDSN.Tron.Compiler
 
         public override object VisitMemberAccess(MemberExpression node, int nil)
         {
-            string s;
-            Object value;
+            object value;
             if (ExternalObjects.ContainsKey(node))
             {
                 return null;
             }
-            else if (GetValue(node, out value))
+            if (GetValue(node, out value))
             {
                 ExternalObjects[node] = value;
                 if (node.Type.IsInheritedTypeOf(typeof(Service)))
                 {
                     // TODO: multiple instances of the same type
-                    bool t1 = Services.Keys.Select(k => k.Type.ToString()).Any(p => p == node.Type.ToString());
+                    var t1 = Services.Keys.Select(k => k.Type.ToString()).Any(p => p == node.Type.ToString());
                     if (!t1)
                     {
                         Services.Add(node, value as Service);
                     }
                     return null;
                 }
-                else if (node.Type.IsInheritedTypeOf(typeof(Expression)))
+                if (node.Type.IsInheritedTypeOf(typeof(Expression)))
                 {
                     return null;
                 }
-                else if (node.Type.IsSymbol() || node.Type.IsSymbols())
+                if (node.Type.IsSymbol() || node.Type.IsSymbols())
                 {
                     if (value == null)
                     {
@@ -277,39 +268,35 @@ namespace rDSN.Tron.Compiler
                     else
                     {
                         var kexpr = (value as ISymbol).Expression;
-                        if (kexpr.NodeType != ExpressionType.Constant)
+                        if (kexpr.NodeType == ExpressionType.Constant) return null;
+                        if (!TempSymbols.ContainsKey(kexpr))
                         {
-                            if (!TempSymbols.ContainsKey(kexpr))
-                            {
-                                TempSymbols.Add(kexpr, node.Member.Name);
-                            }
+                            TempSymbols.Add(kexpr, node.Member.Name);
                         }
                     }
 
                     return null;
                 }
 
-                bool r = LocalTypeHelper.ConstantValue2String(ExternalObjects[node], out s);
+                string s;
+                var r = LocalTypeHelper.ConstantValue2String(ExternalObjects[node], out s);
                 if (r)
                 {
                     return null;
                 }
-                else
-                {
-                    throw new Exception("cannot resolve external constant expression '" + node + "'");
-                }
+                throw new Exception("cannot resolve external constant expression '" + node + "'");
             }
 
             if (node.Expression != null)
             {
-                this.Visit(node.Expression, nil);
+                Visit(node.Expression, nil);
             }
             return null;
         }
 
         public override object VisitNew(NewExpression nex, int param)
         {
-            this.VisitExpressionList(nex.Arguments, param);
+            VisitExpressionList(nex.Arguments, param);
 
             Types.Add(nex.Type);
 
@@ -318,7 +305,7 @@ namespace rDSN.Tron.Compiler
 
         public override object VisitNewArray(NewArrayExpression na, int param)
         {
-            this.VisitExpressionList(na.Expressions, param);
+            VisitExpressionList(na.Expressions, param);
 
             Types.Add(na.Type);
 
@@ -327,8 +314,8 @@ namespace rDSN.Tron.Compiler
 
         public override object VisitInvocation(InvocationExpression iv, int param)
         {
-            this.VisitExpressionList(iv.Arguments, param);
-            this.Visit(iv.Expression, param);
+            VisitExpressionList(iv.Arguments, param);
+            Visit(iv.Expression, param);
 
             Types.Add(iv.Type);
 

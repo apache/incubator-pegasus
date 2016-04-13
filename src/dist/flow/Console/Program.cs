@@ -35,13 +35,7 @@
  
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.IO;
-
-using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.ControlPanel
 {
@@ -50,16 +44,16 @@ namespace rDSN.Tron.ControlPanel
         static void Main(string[] args)
         {
             // general commands
-            CommandManager.Instance().Add(new string[] {"quit", "Quit", "q", "Q"}, new ExitCommand());
-            CommandManager.Instance().Add(new string[] { "help", "Help", "h", "H" }, new HelpCommand());            
-            CommandManager.Instance().Add(new string[] { "Repeat", "repeat", "r", "R" }, new RepeatCommand());            
-            CommandManager.Instance().Add(new string[] { "enum", "Enum", "e", "E" }, new EnumCommand());
-            CommandManager.Instance().Add(new string[] { "win", "Win", "w", "W" }, new WinBatchCommand());
+            CommandManager.Instance().Add(new[] {"quit", "Quit", "q", "Q"}, new ExitCommand());
+            CommandManager.Instance().Add(new[] { "help", "Help", "h", "H" }, new HelpCommand());            
+            CommandManager.Instance().Add(new[] { "Repeat", "repeat", "r", "R" }, new RepeatCommand());            
+            CommandManager.Instance().Add(new[] { "enum", "Enum", "e", "E" }, new EnumCommand());
+            CommandManager.Instance().Add(new[] { "win", "Win", "w", "W" }, new WinBatchCommand());
             
             // local tools
-            CommandManager.Instance().Add(new string[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCompositionStubCommand());
-            CommandManager.Instance().Add(new string[] { "Generatec", "generatec", "gc", "GC" }, new GenerateCommonInterfaceCommand());
-            CommandManager.Instance().Add(new string[] { "Generateb", "generateb", "gb", "GB" }, new GenerateIDLFileCommand());
+            CommandManager.Instance().Add(new[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCompositionStubCommand());
+            CommandManager.Instance().Add(new[] { "Generatec", "generatec", "gc", "GC" }, new GenerateCommonInterfaceCommand());
+            CommandManager.Instance().Add(new[] { "Generateb", "generateb", "gb", "GB" }, new GenerateIDLFileCommand());
             
             if (args.Length == 0)
             {
