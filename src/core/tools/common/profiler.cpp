@@ -79,8 +79,8 @@ using namespace dsn::service;
 namespace dsn {
     namespace tools {
 
-        typedef uint64_extension_helper<task> task_ext_for_profiler;
-        typedef uint64_extension_helper<message_ex> message_ext_for_profiler;
+        typedef uint64_extension_helper<task_spec_profiler, task> task_ext_for_profiler;
+        typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;
 
         task_spec_profiler* s_spec_profilers = nullptr;
         std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
