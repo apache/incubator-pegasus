@@ -36,7 +36,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron.ControlPanel
 {
@@ -57,7 +56,7 @@ namespace rDSN.Tron.ControlPanel
 
             foreach (var name in args)
             {            
-		        Command cmd = CommandManager.Instance().Get(name);
+		        var cmd = CommandManager.Instance().Get(name);
                 Console.WriteLine("");
 		        if (cmd != null)
 		        {			

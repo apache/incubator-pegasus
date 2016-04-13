@@ -36,19 +36,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.IO;
-using System.Xml.Serialization;
-using System.CodeDom.Compiler;
 using System.Reflection;
-using System.Collections;
-using System.Linq.Expressions;
 using System.Diagnostics;
-
-using Microsoft.CSharp;
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
-using rDSN.Tron.Compiler;
 using rDSN.Tron.LanguageProvider;
 
 
@@ -64,13 +55,13 @@ namespace rDSN.Tron.ControlPanel
                 return "";
             }
 
-            string name = Path.GetFileNameWithoutExtension(input);
+            var name = Path.GetFileNameWithoutExtension(input);
             return name + "." + outputType;
         }
 
         public static string InterfacesToIdl(string input, string outputDir, string outputType)
         {
-            string toFile = GetToSourceName(input, outputType);
+            var toFile = GetToSourceName(input, outputType);
             if (toFile == "")
             {
                 return "";
@@ -81,13 +72,13 @@ namespace rDSN.Tron.ControlPanel
             //
             // code gen 
             //
-            CodeBuilder c = new CodeBuilder();
+            var c = new CodeBuilder();
             var asm = Assembly.LoadFrom(input);
             var generator = IdlGenerator.GetInstance(outputType);
 
             generator.Generate(asm, c);
 
-            StreamWriter writer = new StreamWriter(toFile);
+            var writer = new StreamWriter(toFile);
             writer.Write(c.ToString());
             writer.Close();
 
@@ -99,10 +90,10 @@ namespace rDSN.Tron.ControlPanel
             if (args.Count < 1)
                 return false;
 
-            string input = args[0];
-            string outputType = args.ElementAtOrDefault(1);
+            var input = args[0];
+            var outputType = args.ElementAtOrDefault(1);
             var outDir = Path.GetDirectoryName(input);
-            string toFile = InterfacesToIdl(input, outDir, outputType);
+            var toFile = InterfacesToIdl(input, outDir, outputType);
             if (toFile != "")
             {
                 Trace.WriteLine("idl code generated completed, saved in " + toFile);

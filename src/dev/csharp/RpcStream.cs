@@ -35,11 +35,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 { 
@@ -56,10 +53,7 @@ namespace dsn.dev.csharp
         {
         }
 
-        public override bool IsInvalid
-        {
-            get { return handle == IntPtr.Zero; }
-        }
+        public override bool IsInvalid => handle == IntPtr.Zero;
     }
 
     public class Message : SafeHandleZeroIsInvalid
@@ -76,8 +70,7 @@ namespace dsn.dev.csharp
                 Native.dsn_msg_release_ref(handle);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
     }
 
@@ -95,8 +88,7 @@ namespace dsn.dev.csharp
                 Native.dsn_uri_destroy(handle);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
     }
 
@@ -113,13 +105,15 @@ namespace dsn.dev.csharp
             return _msg.DangerousGetHandle();
         }
 
-        public override bool CanRead { get { return _isRead; } }
+        public override bool CanRead => _isRead;
 
-        public override bool CanSeek { get { return false; } }
+        public override bool CanSeek => false;
 
         [ComVisible(false)]
-        public override bool CanTimeout { get { return false; } }
-        public override bool CanWrite { get { return !_isRead; } }
+        public override bool CanTimeout => false;
+
+        public override bool CanWrite => !_isRead;
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
@@ -136,7 +130,7 @@ namespace dsn.dev.csharp
 
     public class RpcWriteStream : RpcStream
     {
-        public RpcWriteStream(TaskCode code, int timeoutMilliseconds, UInt64 hash)
+        public RpcWriteStream(TaskCode code, int timeoutMilliseconds, ulong hash)
             : base(Native.dsn_msg_create_request(code, timeoutMilliseconds, hash), false, false)
         {
             _currentWriteOffset = 0;
@@ -152,7 +146,8 @@ namespace dsn.dev.csharp
             _length = 0;
         }
 
-        public override long Length { get { return _length; } }
+        public override long Length => _length;
+
         public override long Position
         {
             get 
@@ -203,7 +198,7 @@ namespace dsn.dev.csharp
                     PrepareWriteBuffer(count);
                 }
 
-                int cp = count > ((int)_currentBufferLength - _currentWriteOffset) ?
+                var cp = count > ((int)_currentBufferLength - _currentWriteOffset) ?
                     ((int)_currentBufferLength - _currentWriteOffset) : count;
 
                 Marshal.Copy(buffer, offset, _currentBuffer + _currentWriteOffset, cp);
@@ -231,7 +226,8 @@ namespace dsn.dev.csharp
             _pos = 0;
         }
 
-        public override long Length { get { return (long)_length; } }
+        public override long Length => (long)_length;
+
         public override long Position
         { 
             get { return _pos; } 
@@ -267,51 +263,51 @@ namespace dsn.dev.csharp
         private IntPtr _length;
     }
 
-    public static partial class RpcStreamIoHelper
+    public static class RpcStreamIoHelper
     {
-        public static void Read(this Stream rs, out UInt64 val)
+        public static void Read(this Stream rs, out ulong val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadUInt64();
             }
         }
 
-        public static void Write(this Stream ws, UInt64 val)
+        public static void Write(this Stream ws, ulong val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
         }
 
-        public static void Read(this Stream rs, out UInt32 val)
+        public static void Read(this Stream rs, out uint val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadUInt32();
             }
         }
 
-        public static void Write(this Stream ws, UInt32 val)
+        public static void Write(this Stream ws, uint val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
         }
 
-        public static void Read(this Stream rs, out UInt16 val)
+        public static void Read(this Stream rs, out ushort val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadUInt16();
             }
         }
 
-        public static void Write(this Stream ws, UInt16 val)
+        public static void Write(this Stream ws, ushort val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -319,7 +315,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out byte val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadByte();
             }
@@ -327,55 +323,55 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, byte val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
         }
 
-        public static void Read(this Stream rs, out Int64 val)
+        public static void Read(this Stream rs, out long val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadInt64();
             }
         }
 
-        public static void Write(this Stream ws, Int64 val)
+        public static void Write(this Stream ws, long val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
         }
 
-        public static void Read(this Stream rs, out Int32 val)
+        public static void Read(this Stream rs, out int val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadInt32();
             }
         }
 
-        public static void Write(this Stream ws, Int32 val)
+        public static void Write(this Stream ws, int val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
         }
 
-        public static void Read(this Stream rs, out Int16 val)
+        public static void Read(this Stream rs, out short val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadInt16();
             }
         }
 
-        public static void Write(this Stream ws, Int16 val)
+        public static void Write(this Stream ws, short val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -383,7 +379,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out sbyte val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadSByte();
             }
@@ -391,7 +387,7 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, sbyte val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -399,7 +395,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out bool val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadBoolean();
             }
@@ -407,7 +403,7 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, bool val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -415,7 +411,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out double val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadDouble();
             }
@@ -423,7 +419,7 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, double val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -431,7 +427,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out float val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadSingle();
             }
@@ -439,7 +435,7 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, float val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -447,7 +443,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out string val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = reader.ReadString();
             }
@@ -455,7 +451,7 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, string val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
                 writer.Write(val);
             }
@@ -463,7 +459,7 @@ namespace dsn.dev.csharp
 
         public static void Read(this Stream rs, out TaskCode val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = new TaskCode(reader.ReadInt32());
             }
@@ -471,15 +467,15 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, TaskCode val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
-                writer.Write((Int32)val);
+                writer.Write(val);
             }
         }
 
         public static void Read(this Stream rs, out RpcAddress val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
                 val = new RpcAddress(reader.ReadUInt64());
             }
@@ -487,19 +483,19 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, RpcAddress val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
-                writer.Write((UInt64)val);
+                writer.Write(val);
             }
         }
 
         public static void Read(this Stream rs, out List<RpcAddress> val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
-                int c = reader.ReadInt32();
+                var c = reader.ReadInt32();
                 val = new List<RpcAddress>();
-                for (int i = 0; i < c; i++)
+                for (var i = 0; i < c; i++)
                 {
                     val.Add(new RpcAddress(reader.ReadUInt64()));
                 }
@@ -508,34 +504,34 @@ namespace dsn.dev.csharp
 
         public static void Write(this Stream ws, List<RpcAddress> val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
-                writer.Write((Int32)val.Count);
+                writer.Write(val.Count);
                 foreach (var addr in val)
                 {
-                    writer.Write((UInt64)addr);
+                    writer.Write(addr);
                 }
             }
         }
 
-        public static void Read(this Stream rs, out List<Int32> val)
+        public static void Read(this Stream rs, out List<int> val)
         {
-            using (BinaryReader reader = new BinaryReader(rs))
+            using (var reader = new BinaryReader(rs))
             {
-                int c = reader.ReadInt32();
+                var c = reader.ReadInt32();
                 val = new List<int>();
-                for (int i = 0; i < c; i++)
+                for (var i = 0; i < c; i++)
                 {
                     val.Add(reader.ReadInt32());
                 }
             }
         }
 
-        public static void Write(this Stream ws, List<Int32> val)
+        public static void Write(this Stream ws, List<int> val)
         {
-            using (BinaryWriter writer = new BinaryWriter(ws))
+            using (var writer = new BinaryWriter(ws))
             {
-                writer.Write((Int32)val.Count);
+                writer.Write(val.Count);
                 foreach (var v in val)
                 {
                     writer.Write(v);

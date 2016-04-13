@@ -32,22 +32,12 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using System.IO;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
-
-
-
-
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -110,14 +100,14 @@ namespace rDSN.Tron.LanguageProvider
             return Compile(input, Path.GetDirectoryName(input));
         }
 
-        protected bool Compile(string input, string outDir)
+        protected static bool Compile(string input, string outDir)
         {
             var dir = Path.GetDirectoryName(input);
             var file = Path.GetFileName(input);
 
             var output = Path.Combine(outDir, Path.GetFileNameWithoutExtension(file) + ".dll");
             var cscPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "csc.exe");
-            var libFiles = "rDSN.Tron.Contract.dll ";
+            const string libFiles = "rDSN.Tron.Contract.dll ";
             var arguments = "/target:library /out:" + output + " " + input + " /r:" + libFiles;
 
             // if input is a folder, the default action is to compile all *.cs files in the folder recursively

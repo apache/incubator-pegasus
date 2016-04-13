@@ -32,11 +32,8 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
+
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
 
 namespace rDSN.Tron.Utility
@@ -46,16 +43,14 @@ namespace rDSN.Tron.Utility
         private List<int> _indents;
         private List<string> _scripts;
 
-        private int _indent;
-
-        public int Indent { get { return _indent; } }
+        public int Indent { get; private set; }
 
         public CodeBuilder()
         {
             _indents = new List<int>();
             _scripts = new List<string>();
 
-            _indent = 0;
+            Indent = 0;
         }
 
         public CodeBuilder(int initIndent)
@@ -63,19 +58,19 @@ namespace rDSN.Tron.Utility
             _indents = new List<int>();
             _scripts = new List<string>();
 
-            _indent = initIndent;
+            Indent = initIndent;
             Trace.Assert(initIndent >= 0);
         }
 
         void increaseIndent() 
         {
-            ++_indent;
+            ++Indent;
         }
 
         void decreaseIndent()
         {
-            --_indent;
-            Trace.Assert(_indent >= 0);
+            --Indent;
+            Trace.Assert(Indent >= 0);
         }
 
         public void Insert(int after, CodeBuilder cb)
@@ -86,24 +81,24 @@ namespace rDSN.Tron.Utility
         public void BeginBlock()
         {
             AppendLine("{");
-            _indent++;
+            Indent++;
         }
 
         public void EndBlock()
         {
-            _indent--;
+            Indent--;
             AppendLine("}");
         }
 
         public void AppendLine(string script)
         {
-            _indents.Add(_indent);
+            _indents.Add(Indent);
             _scripts.Add(script);
         }
 
         public void AppendLine()
         {
-            _indents.Add(_indent);
+            _indents.Add(Indent);
             _scripts.Add("");
         }
                 
@@ -121,11 +116,11 @@ namespace rDSN.Tron.Utility
 
         public override string ToString()
         {
-            string ps = "";
+            var ps = "";
 
-            for (int i = 0; i < _indents.Count; ++i)
+            for (var i = 0; i < _indents.Count; ++i)
             {
-                for (int k = 0; k < _indents[i]; ++k)
+                for (var k = 0; k < _indents[i]; ++k)
                     ps += "\t";
                 ps += _scripts[i];
                 ps += "\r\n";

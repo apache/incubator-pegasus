@@ -32,15 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
-
 using rDSN.Tron.Utility;
-
 
 namespace rDSN.Tron.Contract
 {
@@ -79,8 +77,8 @@ namespace rDSN.Tron.Contract
         public static bool IsPublicType(this Type type)
         {
             if (type.IsPublic) return true;
-            else if (type.IsNestedPublic) return type.DeclaringType.IsPublicType();
-            else return false;
+            if (type.IsNestedPublic) return type.DeclaringType.IsPublicType();
+            return false;
         }
 
         public static Type FromQueryType2RunningType(this Type t)
@@ -89,12 +87,9 @@ namespace rDSN.Tron.Contract
             {
                 return typeof(IEnumerable<>).MakeGenericType(TypeHelper.GetElementType(t));
             }
-            else
-            {
-                return t;
-            }
+            return t;
         }
-        
+
         public static bool IsSerializable(this Type t)
         {
             if (t.IsPrimitive || t.IsEnum || t == typeof(string) || t == typeof(DateTime) || t == typeof(TimeSpan) || t == typeof(Guid))
@@ -102,60 +97,43 @@ namespace rDSN.Tron.Contract
                 return true;
             }
 
-            else if (t.IsTuple())
+            if (t.IsTuple())
             {
                 Trace.Assert(t.IsGenericType);
-                foreach (var item in t.GetGenericArguments())
-                {
-                    if (!IsSerializable(item))
-                    {
-                        return false;
-                    }
-                }
-                return true;
+                return t.GetGenericArguments().All(IsSerializable);
             }
 
-            else if (t.IsAnonymous())
+            if (t.IsAnonymous())
             {
-                foreach (var prop in t.GetProperties())
-                {
-                    if (!IsSerializable(prop.PropertyType))
-                    {
-                        return false;
-                    }
-                }
-                return true;
+                return t.GetProperties().All(prop => IsSerializable(prop.PropertyType));
             }
 
-            else if (t.IsGrouping())
+            if (t.IsGrouping())
             {
                 return IsSerializable(t.GetGenericArguments()[0]) && IsSerializable(t.GetGenericArguments()[1]);
             }
 
-            else if (t.IsDirectEnumerable() || t.IsDirectQueryable() || t.IsArray)
+            if (t.IsDirectEnumerable() || t.IsDirectQueryable() || t.IsArray)
             {
                 return IsSerializable(TypeHelper.GetElementType(t));
             }
 
-            else
+            if (!t.IsPublicType())
             {
-                if (!t.IsPublicType())
-                {
-                    throw new Exception("User defined type '" + t.FullName + "' must be public");
-                }
-
-                if (t.GetInterface("ISerializable") == null)
-                {
-                    throw new Exception("User defined type '" + t.FullName + "' must implement ISerializable interface");
-                }
-
-                if (t.GetConstructor(Type.EmptyTypes) == null)
-                {
-                    throw new Exception("User defined type '" + t.FullName + "' must have a constructor '" + t.Name + "()'");
-                }
-
-                return true;
+                throw new Exception("User defined type '" + t.FullName + "' must be public");
             }
+
+            if (t.GetInterface("ISerializable") == null)
+            {
+                throw new Exception("User defined type '" + t.FullName + "' must implement ISerializable interface");
+            }
+
+            if (t.GetConstructor(Type.EmptyTypes) == null)
+            {
+                throw new Exception("User defined type '" + t.FullName + "' must have a constructor '" + t.Name + "()'");
+            }
+
+            return true;
         }
 
         public static void CollectSubTypes(this Type t, HashSet<Type> types)
@@ -212,64 +190,58 @@ namespace rDSN.Tron.Contract
                 return rewrittenTypes[t];
             }
 
-            else if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime) || t == typeof(TimeSpan) || t == typeof(Guid))
+            if (t.IsPrimitive || t == typeof(string) || t == typeof(DateTime) || t == typeof(TimeSpan) || t == typeof(Guid))
             {
                 return t.Name;
             }
 
-            else if (t.IsEnum)
+            if (t.IsEnum)
             {
                 return "byte";
             }
 
-            else if (t.IsTuple())
+            if (t.IsTuple())
             {
                 Trace.Assert(t.IsGenericType);
-                StringBuilder typeName = new StringBuilder("Tuple<");
-                foreach (var parameterType in t.GetGenericArguments())
-                {
-                    typeName = typeName.Append(GetCompilableTypeName(parameterType, rewrittenTypes) + ", ");
-                }
+                var typeName = new StringBuilder("Tuple<");
+                typeName = t.GetGenericArguments().Aggregate(typeName, (current, parameterType) => current.Append(GetCompilableTypeName(parameterType, rewrittenTypes) + ", "));
                 typeName.Remove(typeName.Length - 2, 2);
                 typeName.Append(">");
                 return typeName.ToString();
             }
 
-            else if (t.IsArray)
+            if (t.IsArray)
             {
                 return GetCompilableTypeName(TypeHelper.GetElementType(t), rewrittenTypes) + "[]";
             }
 
-            else if (t.IsGrouping())
+            if (t.IsGrouping())
             {
                 return "IGrouping<" + GetCompilableTypeName(t.GetGenericArguments()[0], rewrittenTypes)
-                    + ", " + GetCompilableTypeName(t.GetGenericArguments()[1], rewrittenTypes)
-                    + ">";
+                       + ", " + GetCompilableTypeName(t.GetGenericArguments()[1], rewrittenTypes)
+                       + ">";
             }
 
-            else if (t.IsDirectEnumerable() || t.IsDirectQueryable())
+            if (t.IsDirectEnumerable() || t.IsDirectQueryable())
             {
                 return "IEnumerable<" + GetCompilableTypeName(TypeHelper.GetElementType(t), rewrittenTypes) + ">";
             }
 
-            else if (t.IsSymbols())
+            if (t.IsSymbols())
             {
                 return "IEnumerable<" 
-                    + GetCompilableTypeName(t.GetGenericArguments()[0], rewrittenTypes)
-                    + ">";
+                       + GetCompilableTypeName(t.GetGenericArguments()[0], rewrittenTypes)
+                       + ">";
             }
 
-            else if (t.IsSymbol())
+            if (t.IsSymbol())
             {
                 return "IValue<"
-                        + GetCompilableTypeName(t.GetGenericArguments()[0], rewrittenTypes)
-                        + ">";
+                       + GetCompilableTypeName(t.GetGenericArguments()[0], rewrittenTypes)
+                       + ">";
             }
 
-            else
-            {
-                return t.FullName.Replace('+', '.');
-            }
+            return t.FullName.Replace('+', '.');
         }
 
         public static string GetTypeNameAsFunctionName(string typeName)
@@ -314,36 +286,33 @@ namespace rDSN.Tron.Contract
             {
                 return ((bool)o) ? "true" : "false";
             }
-            else if (o is string)
+            if (o is string)
             {
                 return "\"" + o + "\"";
             }
-            else if (o is DateTime)
+            if (o is DateTime)
             {
                 return "new DateTime(" + ((DateTime)o).Ticks + ")";
             }
-            else if (o is TimeSpan)
+            if (o is TimeSpan)
             {
                 return "new TimeSpan(" + ((TimeSpan)o).Ticks + ")";
             }
-            else if (o.GetType().IsPrimitive)
+            if (o.GetType().IsPrimitive)
             {
                 return o.ToString();
             }
-            else if (o.GetType().IsEnum)
+            if (o.GetType().IsEnum)
             {
                 return ((int)o).ToString();
             }
-            else
-            {
-                throw new Exception("non primitive variable '" + o.ToString() + "' reference is not supported yet!");
-            }
+            throw new Exception("non primitive variable '" + o + "' reference is not supported yet!");
         }
 
         public static void BuildReader(this Type t, CodeBuilder builder, Dictionary<Type, string> rewrittenTypes)
         {
-            string typeName = GetCompilableTypeName(t, rewrittenTypes);
-            string cTypeName = GetTypeNameAsFunctionName(typeName);
+            var typeName = GetCompilableTypeName(t, rewrittenTypes);
+            var cTypeName = GetTypeNameAsFunctionName(typeName);
 
             builder.AppendLine("private static " + typeName + " Read_" + cTypeName + "(BinaryReader reader)");
             builder.AppendLine("{");
@@ -367,11 +336,8 @@ namespace rDSN.Tron.Contract
             else if (t.IsTuple())
             {
                 Trace.Assert(t.IsGenericType);
-                StringBuilder temp = new StringBuilder("return Tuple.Create(");
-                foreach (var parameterType in t.GetGenericArguments())
-                {
-                    temp = temp.Append("Read_" + GetTypeNameAsFunctionName(parameterType, rewrittenTypes) + "(reader), ");
-                }
+                var temp = new StringBuilder("return Tuple.Create(");
+                temp = t.GetGenericArguments().Aggregate(temp, (current, parameterType) => current.Append("Read_" + GetTypeNameAsFunctionName(parameterType, rewrittenTypes) + "(reader), "));
                 temp.Remove(temp.Length - 2, 2);
                 temp.Append(");");
                 builder.AppendLine(temp.ToString());
@@ -379,20 +345,20 @@ namespace rDSN.Tron.Contract
 
             else if (t.IsAnonymous())
             {
-                StringBuilder tempObject = new StringBuilder("{ ");
+                var tempObject = new StringBuilder("{ ");
                 foreach (var propertyType in t.GetProperties())
                 {
                     tempObject.Append(propertyType.Name + " = Read_" + GetTypeNameAsFunctionName(propertyType.PropertyType, rewrittenTypes) + "(reader), ");
                 }
                 tempObject.Remove(tempObject.Length - 2, 2);
                 tempObject.Append("}");
-                builder.AppendLine("return new " + typeName + "() " + tempObject.ToString() + ";");
+                builder.AppendLine("return new " + typeName + "() " + tempObject + ";");
             }
 
             else if (t.IsGrouping())
             {
-                Type keyType = t.GetGenericArguments()[0];
-                Type elementType = t.GetGenericArguments()[1];
+                var keyType = t.GetGenericArguments()[0];
+                var elementType = t.GetGenericArguments()[1];
 
                 builder.AppendLine("var temp = new SimpleGrouping<"
                     + GetCompilableTypeName(keyType, rewrittenTypes) + ", "
@@ -410,7 +376,7 @@ namespace rDSN.Tron.Contract
 
             else if (t.IsDirectEnumerable() || t.IsDirectQueryable() || t.IsArray)
             {
-                Type elementType = TypeHelper.GetElementType(t);
+                var elementType = TypeHelper.GetElementType(t);
                 builder.AppendLine("int count = reader.ReadInt32();");
                 builder.AppendLine("var temp = new List<" + GetCompilableTypeName(elementType, rewrittenTypes) + ">();");
                 builder.AppendLine("for(int i = 0; i< count; i++)");
@@ -419,14 +385,7 @@ namespace rDSN.Tron.Contract
                 builder.AppendLine("temp.Add(Read_" + GetTypeNameAsFunctionName(elementType, rewrittenTypes) + "(reader));");
                 builder--;
                 builder.AppendLine("}");
-                if (t.IsArray)
-                {
-                    builder.AppendLine("return temp.ToArray();");
-                }
-                else
-                {
-                    builder.AppendLine("return temp;");
-                }
+                builder.AppendLine(t.IsArray ? "return temp.ToArray();" : "return temp;");
             }
 
             else
@@ -442,8 +401,8 @@ namespace rDSN.Tron.Contract
 
         public static void BuildWriter(this Type t, CodeBuilder builder, Dictionary<Type, string> rewrittenTypes)
         {
-            string typeName = t.GetCompilableTypeName(rewrittenTypes);
-            string cTypeName = GetTypeNameAsFunctionName(typeName);
+            var typeName = t.GetCompilableTypeName(rewrittenTypes);
+            var cTypeName = GetTypeNameAsFunctionName(typeName);
 
             builder.AppendLine("private static void Write_" + cTypeName + "(BinaryWriter writer, " + typeName + " obj)");
             builder.AppendLine("{");
@@ -467,7 +426,7 @@ namespace rDSN.Tron.Contract
             else if (t.IsTuple())
             {
                 Trace.Assert(t.IsGenericType);
-                int itemNum = 0;
+                var itemNum = 0;
                 foreach (var parameterType in t.GetGenericArguments())
                 {
                     itemNum++;
@@ -485,8 +444,8 @@ namespace rDSN.Tron.Contract
 
             else if (t.IsGrouping())
             {
-                Type keyType = t.GetGenericArguments()[0];
-                Type elementType = t.GetGenericArguments()[1];
+                var keyType = t.GetGenericArguments()[0];
+                var elementType = t.GetGenericArguments()[1];
 
                 builder.AppendLine("Write_" + GetTypeNameAsFunctionName(keyType, rewrittenTypes) + "(writer, obj.Key);");
                 builder.AppendLine("int count = obj.Count();");
@@ -501,7 +460,7 @@ namespace rDSN.Tron.Contract
 
             else if (t.IsDirectEnumerable() || t.IsDirectQueryable() || t.IsArray)
             {
-                Type elementType = TypeHelper.GetElementType(t);
+                var elementType = TypeHelper.GetElementType(t);
                 builder.AppendLine("int count = obj.Count();");
                 builder.AppendLine("writer.Write(count);");
                 builder.AppendLine("foreach (var temp in obj)");

@@ -32,17 +32,8 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
 
-using rDSN.Tron.Contract;
+using System.Linq.Expressions;
 
 namespace rDSN.Tron.Compiler
 {

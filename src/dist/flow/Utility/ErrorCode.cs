@@ -32,11 +32,6 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron.Utility
 {
@@ -70,6 +65,6 @@ namespace rDSN.Tron.Utility
         PlatformNotSupported,
 
         HttpServiceAlreadyStarted,
-        HttpServiceNotStarted,
+        HttpServiceNotStarted
     }
 }

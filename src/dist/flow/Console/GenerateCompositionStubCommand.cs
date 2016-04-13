@@ -36,58 +36,33 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.IO;
-using System.Xml.Serialization;
-using System.CodeDom.Compiler;
-using System.Reflection;
-using System.Collections;
-using System.Linq.Expressions;
-using System.Diagnostics;
-using System.IO.Compression;
-using System.Windows.Forms;
-using System.Threading;
-
-using Microsoft.CSharp;
 using rDSN.Tron.Utility;
-using rDSN.Tron.Runtime;
-using rDSN.Tron.Contract;
-using rDSN.Tron.LanguageProvider;
+
 
 namespace rDSN.Tron.ControlPanel
 {
     public class GenerateCompositionStubCommand : Command
     {
-
         public override bool Execute(List<string> args)
         {
-            Console.WriteLine(args);
-            var app_name = Path.GetFileNameWithoutExtension(args[2]);
+            SystemHelper.CreateOrCleanDirectory("tmp");
+            SystemHelper.RunProcess("php.exe",
+                 string.Join(" ", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.templates", "csharp", "composition", "gen_composition_stub.php"), string.Join(" ", args.Where(a => a.EndsWith(".proto") || a.EndsWith(".thrift")).ToArray())));
             
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + args[2] + " csharp tmp binary layer3") != 0)
-            {
-                return false;
-            }
-            if (CSharpCompiler.ToDiskAssembly(new string[] {Path.Combine("tmp", app_name + ".Tron.Composition.cs") },
-                new string[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
-                new string[] { args[2] },
-                Path.Combine("tmp", app_name + ".Tron.Composition.dll"),
-                false, true
-                ))
-            {
-                Console.WriteLine("Generate success for " + Directory.GetCurrentDirectory() + "\\tmp\\" + app_name + ".Tron.Composition.dll");
-            }
-            else
-            {
-                Console.WriteLine("generate composition stub failed");
-            }
-
+            CSharpCompiler.ToDiskAssembly(
+                Directory.GetFiles("tmp", "*.cs", SearchOption.AllDirectories).ToArray(),
+                new[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
+                Directory.GetFiles("tmp", "*.proto", SearchOption.AllDirectories).Concat(
+                    args.Where(a => a.EndsWith(".thrift"))).ToArray(),
+                "compo.dll");
+            Console.ReadLine();
             return true;
         }
 
         public override string Help()
         {
-            return ".\\Tron.exe gcs thrift dsn .\\add.thrift";
+            return ".\\Tron.exe gcs 1.thrift 2.proto 3.thrift";
         }
     }
 }

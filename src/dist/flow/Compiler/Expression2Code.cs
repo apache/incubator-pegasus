@@ -32,21 +32,19 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Dynamic;
 using System.Globalization;
-
-using rDSN.Tron.Utility;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
 using rDSN.Tron.Contract;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
 {
@@ -56,17 +54,17 @@ namespace rDSN.Tron.Compiler
         // Fields
         private Dictionary<object, int> _ids = new Dictionary<object,int>();
         private StringBuilder _out = new StringBuilder();
-        private Expression _exp = null;
-        private QueryContext _context = null;
+        private Expression _exp;
+        private QueryContext _context;
         private Dictionary<Expression, object> _externalObjects = new Dictionary<Expression, object>();
         private HashSet<Expression> _tempVarsUndefined = new HashSet<Expression>();
-        private int _indent = 0;
+        private int _indent;
 
         private void NewLine()
         {
-            this.Out("\r\n");
-            for (int i = 0; i < _indent; i++)
-                this.Out("\t");
+            Out("\r\n");
+            for (var i = 0; i < _indent; i++)
+                Out("\t");
         }
 
         public ExpressionToCode(Expression exp, QueryContext context)
@@ -85,10 +83,10 @@ namespace rDSN.Tron.Compiler
             _indent = indent;
 
             if (_tempVarsUndefined.Count == 0)
-                this.Out("return ");
+                Out("return ");
 
             Visit(_exp);
-            return this.ToString();
+            return ToString();
         }
 
         private bool GetValue(Expression exp, out object value)
@@ -97,8 +95,8 @@ namespace rDSN.Tron.Compiler
 
             try
             {
-                var lambda = Expression.Lambda(exp, new ParameterExpression[] { });
-                value = lambda.Compile().DynamicInvoke(new object[] { });
+                var lambda = Expression.Lambda(exp);
+                value = lambda.Compile().DynamicInvoke();
                 return true;
             }
             catch (Exception)
@@ -110,17 +108,17 @@ namespace rDSN.Tron.Compiler
 
         private void AddLabel(LabelTarget label)
         {
-            if (!this._ids.ContainsKey(label))
+            if (!_ids.ContainsKey(label))
             {
-                this._ids.Add(label, this._ids.Count);
+                _ids.Add(label, _ids.Count);
             }
         }
 
         private void AddParam(ParameterExpression p)
         {
-            if (!this._ids.ContainsKey(p))
+            if (!_ids.ContainsKey(p))
             {
-                this._ids.Add(p, this._ids.Count);
+                _ids.Add(p, _ids.Count);
             }
         }
                 
@@ -128,32 +126,32 @@ namespace rDSN.Tron.Compiler
         {
             if (!string.IsNullOrEmpty(target.Name))
             {
-                this.Out(target.Name);
+                Out(target.Name);
             }
             else
             {
-                this.Out("UnamedLabel_" + this.GetLabelId(target));
+                Out("UnamedLabel_" + GetLabelId(target));
             }
         }
 
         private static string FormatBinder(CallSiteBinder binder)
         {
-            ConvertBinder binder2 = binder as ConvertBinder;
+            var binder2 = binder as ConvertBinder;
             if (binder2 != null)
             {
                 return (" " + binder2.Type);
             }
-            GetMemberBinder binder3 = binder as GetMemberBinder;
+            var binder3 = binder as GetMemberBinder;
             if (binder3 != null)
             {
                 return ("GetMember " + binder3.Name);
             }
-            SetMemberBinder binder4 = binder as SetMemberBinder;
+            var binder4 = binder as SetMemberBinder;
             if (binder4 != null)
             {
                 return ("SetMember " + binder4.Name);
             }
-            DeleteMemberBinder binder5 = binder as DeleteMemberBinder;
+            var binder5 = binder as DeleteMemberBinder;
             if (binder5 != null)
             {
                 return ("DeleteMember " + binder5.Name);
@@ -170,7 +168,7 @@ namespace rDSN.Tron.Compiler
             {
                 return "DeleteIndex";
             }
-            InvokeMemberBinder binder6 = binder as InvokeMemberBinder;
+            var binder6 = binder as InvokeMemberBinder;
             if (binder6 != null)
             {
                 return ("Call " + binder6.Name);
@@ -183,66 +181,58 @@ namespace rDSN.Tron.Compiler
             {
                 return "Create";
             }
-            UnaryOperationBinder binder7 = binder as UnaryOperationBinder;
+            var binder7 = binder as UnaryOperationBinder;
             if (binder7 != null)
             {
                 return binder7.Operation.ToString();
             }
-            BinaryOperationBinder binder8 = binder as BinaryOperationBinder;
-            if (binder8 != null)
-            {
-                return binder8.Operation.ToString();
-            }
-            return "CallSiteBinder";
+            var binder8 = binder as BinaryOperationBinder;
+            return binder8?.Operation.ToString() ?? "CallSiteBinder";
         }
 
         private int GetLabelId(LabelTarget label)
         {
             int count;
-            if (this._ids == null)
+            if (_ids == null)
             {
-                this._ids = new Dictionary<object, int>();
-                this.AddLabel(label);
+                _ids = new Dictionary<object, int>();
+                AddLabel(label);
                 return 0;
             }
-            if (!this._ids.TryGetValue(label, out count))
-            {
-                count = this._ids.Count;
-                this.AddLabel(label);
-            }
+            if (_ids.TryGetValue(label, out count)) return count;
+            count = _ids.Count;
+            AddLabel(label);
             return count;
         }
 
         private int GetParamId(ParameterExpression p)
         {
             int count;
-            if (this._ids == null)
+            if (_ids == null)
             {
-                this._ids = new Dictionary<object, int>();
-                this.AddParam(p);
+                _ids = new Dictionary<object, int>();
+                AddParam(p);
                 return 0;
             }
-            if (!this._ids.TryGetValue(p, out count))
-            {
-                count = this._ids.Count;
-                this.AddParam(p);
-            }
+            if (_ids.TryGetValue(p, out count)) return count;
+            count = _ids.Count;
+            AddParam(p);
             return count;
         }
 
         private void Out(char c)
         {
-            this._out.Append(c);
+            _out.Append(c);
         }
 
         private void Out(string s)
         {
-            this._out.Append(s);
+            _out.Append(s);
         }
 
         public override string ToString()
         {
-            return this._out.ToString();
+            return _out.ToString();
         }
 
         internal void VisitBinary(BinaryExpression node)
@@ -431,61 +421,61 @@ namespace rDSN.Tron.Compiler
                     break;
 
                 case ExpressionType.ArrayIndex:
-                    this.Visit(node.Left);
-                    this.Out("[");
-                    this.Visit(node.Right);
-                    this.Out("]");
+                    Visit(node.Left);
+                    Out("[");
+                    Visit(node.Right);
+                    Out("]");
                     return;
 
                 default:
                     throw new InvalidOperationException();
             }
-            this.Out("(");
-            this.Visit(node.Left);
-            this.Out(' ');
-            this.Out(str);
-            this.Out(' ');
-            this.Visit(node.Right);
-            this.Out(")");
+            Out("(");
+            Visit(node.Left);
+            Out(' ');
+            Out(str);
+            Out(' ');
+            Visit(node.Right);
+            Out(")");
         }
 
         internal void VisitBlock(BlockExpression node)
         {
-            this.Out("{");
-            foreach (ParameterExpression expression in node.Variables)
+            Out("{");
+            foreach (var expression in node.Variables)
             {
-                this.Out("var ");
-                this.Visit(expression);
-                this.Out(";");
+                Out("var ");
+                Visit(expression);
+                Out(";");
             }
-            this.Out(" ... }");
+            Out(" ... }");
         }
 
         internal void VisitCatchBlock(CatchBlock node)
         {
-            this.Out("catch (" + node.Test.Name);
+            Out("catch (" + node.Test.Name);
             if (node.Variable != null)
             {
-                this.Out(node.Variable.Name ?? "");
+                Out(node.Variable.Name);
             }
-            this.Out(") { ... }");
+            Out(") { ... }");
         }
 
         internal void VisitConditional(ConditionalExpression node)
         {
-            this.Out("(");
-            this.Visit(node.Test);
-            this.Out(") ? (");
-            this.Visit(node.IfTrue);
-            this.Out(") : (");
-            this.Visit(node.IfFalse);
-            this.Out(")");
+            Out("(");
+            Visit(node.Test);
+            Out(") ? (");
+            Visit(node.IfTrue);
+            Out(") : (");
+            Visit(node.IfFalse);
+            Out(")");
         }
 
         internal void VisitConstant(ConstantExpression node)
         {
             string v;
-            bool r = LocalTypeHelper.ConstantValue2String(node.Value, out v);
+            var r = LocalTypeHelper.ConstantValue2String(node.Value, out v);
             if (!r)
             {
                 if (node.Type.IsGenericType && node.Type.BaseType == typeof(ISymbol))
@@ -493,42 +483,42 @@ namespace rDSN.Tron.Compiler
                     v = "request";
                 }
             }
-            this.Out(v);
+            Out(v);
         }
 
         internal void VisitDebugInfo(DebugInfoExpression node)
         {
-            string s = string.Format(CultureInfo.CurrentCulture, "<DebugInfo({0}: {1}, {2}, {3}, {4})>", new object[] { node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn });
-            this.Out(s);
+            var s = string.Format(CultureInfo.CurrentCulture, "<DebugInfo({0}: {1}, {2}, {3}, {4})>", node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn);
+            Out(s);
         }
 
         internal void VisitDefault(DefaultExpression node)
         {
-            this.Out("default(");
-            this.Out(node.Type.FullName.Replace('+', '.'));
-            this.Out(")");
+            Out("default(");
+            Out(node.Type.FullName.Replace('+', '.'));
+            Out(")");
         }
 
         internal void VisitDynamic(DynamicExpression node)
         {
-            this.Out(FormatBinder(node.Binder));
-            this.VisitExpressions<Expression>('(', node.Arguments, ')');
+            Out(FormatBinder(node.Binder));
+            VisitExpressions('(', node.Arguments, ')');
         }
 
         ElementInit VisitElementInit(ElementInit initializer)
         {
-            this.Out(initializer.AddMethod.ToString());
-            this.VisitExpressions<Expression>('(', initializer.Arguments, ')');
+            Out(initializer.AddMethod.ToString());
+            VisitExpressions('(', initializer.Arguments, ')');
             return initializer;
         }
 
         private void VisitExpressions<T>(char open, IList<T> expressions, char close) where T : Expression
         {
-            this.Out(open);
+            Out(open);
             if (expressions != null)
             {
-                bool flag = true;
-                foreach (T local in expressions)
+                var flag = true;
+                foreach (var local in expressions)
                 {
                     if (flag)
                     {
@@ -536,155 +526,146 @@ namespace rDSN.Tron.Compiler
                     }
                     else
                     {
-                        this.Out(", ");
+                        Out(", ");
                     }
-                    this.Visit(local);
+                    Visit(local);
                 }
             }
-            this.Out(close);
+            Out(close);
         }
 
         internal void VisitExtension(Expression node)
         {
-            BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
+            const BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
             if (node.GetType().GetMethod("ToString", bindingAttr, null, Type.EmptyTypes, null).DeclaringType != typeof(Expression))
             {
-                this.Out(node.ToString());
+                Out(node.ToString());
                 return;
             }
-            this.Out("[");
-            if (node.NodeType == ExpressionType.Extension)
-            {
-                this.Out(node.GetType().FullName);
-            }
-            else
-            {
-                this.Out(node.NodeType.ToString());
-            }
-            this.Out("]");
+            Out("[");
+            Out(node.NodeType == ExpressionType.Extension ? node.GetType().FullName : node.NodeType.ToString());
+            Out("]");
         }
 
         internal void VisitGoto(GotoExpression node)
         {
-            this.Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
-            this.DumpLabel(node.Target);
-            if (node.Value != null)
-            {
-                this.Out(" (");
-                this.Visit(node.Value);
-                this.Out(") ");
-            }
+            Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
+            DumpLabel(node.Target);
+            if (node.Value == null) return;
+            Out(" (");
+            Visit(node.Value);
+            Out(") ");
         }
 
         internal void VisitIndex(IndexExpression node)
         {
             if (node.Object != null)
             {
-                this.Visit(node.Object);
+                Visit(node.Object);
             }
             else
             {
-                this.Out(node.Indexer.DeclaringType.Name);
+                Out(node.Indexer.DeclaringType.Name);
             }
             if (node.Indexer != null)
             {
-                this.Out(".");
-                this.Out(node.Indexer.Name);
+                Out(".");
+                Out(node.Indexer.Name);
             }
-            this.VisitExpressions<Expression>('[', node.Arguments, ']');
+            VisitExpressions('[', node.Arguments, ']');
         }
 
         internal void VisitInvocation(InvocationExpression node)
         {
-            this.Out("Invoke(");
-            this.Visit(node.Expression);
-            int num = 0;
-            int count = node.Arguments.Count;
+            Out("Invoke(");
+            Visit(node.Expression);
+            var num = 0;
+            var count = node.Arguments.Count;
             while (num < count)
             {
-                this.Out(", ");
-                this.Visit(node.Arguments[num]);
+                Out(", ");
+                Visit(node.Arguments[num]);
                 num++;
             }
-            this.Out(")");
+            Out(")");
         }
 
         internal void VisitLabel(LabelExpression node)
         {
-            this.Out("{ ... } ");
-            this.DumpLabel(node.Target);
-            this.Out(":");
+            Out("{ ... } ");
+            DumpLabel(node.Target);
+            Out(":");
         }
 
         internal void VisitLambda(LambdaExpression node)
         {
             if (node.Parameters.Count == 1)
             {
-                this.Visit(node.Parameters[0]);
+                Visit(node.Parameters[0]);
             }
             else
             {
-                this.VisitExpressions<ParameterExpression>('(', node.Parameters, ')');
+                VisitExpressions('(', node.Parameters, ')');
             }
-            this.Out(" => ");
+            Out(" => ");
 
-            bool needIndent = node.Parameters[0].Type.IsSymbol()
+            var needIndent = node.Parameters[0].Type.IsSymbol()
                 || node.Parameters[0].Type.IsSymbols()
                 || node.Parameters[0].Type.IsEnumerable();
 
             if (needIndent) ++_indent;
 
-            this.Visit(node.Body);
+            Visit(node.Body);
 
             if (needIndent) --_indent;
         }
 
         internal void VisitListInit(ListInitExpression node)
         {
-            this.Visit(node.NewExpression);
-            this.Out(" {");
-            int num = 0;
-            int count = node.Initializers.Count;
+            Visit(node.NewExpression);
+            Out(" {");
+            var num = 0;
+            var count = node.Initializers.Count;
             while (num < count)
             {
                 if (num > 0)
                 {
-                    this.Out(", ");
+                    Out(", ");
                 }
-                this.Out(node.Initializers[num].ToString());
+                Out(node.Initializers[num].ToString());
                 num++;
             }
-            this.Out("}");
+            Out("}");
         }
 
         internal void VisitLoop(LoopExpression node)
         {
-            this.Out("loop { ... }");
+            Out("loop { ... }");
         }
 
         internal void VisitMember(MemberExpression node)
         {
             string s;
-            Object value;
+            object value;
             if (_externalObjects.ContainsKey(node))
             {
-                bool r = LocalTypeHelper.ConstantValue2String(_externalObjects[node], out s);
+                var r = LocalTypeHelper.ConstantValue2String(_externalObjects[node], out s);
                 if (r)
                 {
-                    this.Out(s);
+                    Out(s);
                     return;
                 }
             }
             else if (GetValue(node, out value))
             {
                 _externalObjects[node] = value;
-                bool r = LocalTypeHelper.ConstantValue2String(_externalObjects[node], out s);
+                var r = LocalTypeHelper.ConstantValue2String(_externalObjects[node], out s);
                 if (r)
                 {
-                    this.Out(s);
+                    Out(s);
                     return;
                 }
-                else if (node.Type.IsSymbol() || node.Type.IsSymbols())
+                if (node.Type.IsSymbol() || node.Type.IsSymbols())
                 {
                     if (value != null)
                     {
@@ -692,7 +673,7 @@ namespace rDSN.Tron.Compiler
                     }
                     else
                     {
-                        this.Out(node.Member.Name);
+                        Out(node.Member.Name);
                     }
                     return;
                 }
@@ -700,95 +681,95 @@ namespace rDSN.Tron.Compiler
 
             if (node.Expression != null)
             {
-                this.Visit(node.Expression);
-                this.Out(".");
+                Visit(node.Expression);
+                Out(".");
             }
-            this.Out(node.Member.Name);
+            Out(node.Member.Name);
         }
 
         internal void VisitMemberAssignment(MemberAssignment assignment)
         {
-            this.Out(assignment.Member.Name);
-            this.Out(" = ");
-            this.Visit(assignment.Expression);
+            Out(assignment.Member.Name);
+            Out(" = ");
+            Visit(assignment.Expression);
         }
 
         internal void VisitMemberInit(MemberInitExpression node)
         {
             if ((node.NewExpression.Arguments.Count == 0) && node.NewExpression.Type.Name.Contains("<"))
             {
-                this.Out("new");
+                Out("new");
             }
             else
             {
-                this.Visit(node.NewExpression);
+                Visit(node.NewExpression);
             }
-            this.Out(" {");
-            int num = 0;
-            int count = node.Bindings.Count;
+            Out(" {");
+            var num = 0;
+            var count = node.Bindings.Count;
             while (num < count)
             {
-                MemberBinding binding = node.Bindings[num];
+                var binding = node.Bindings[num];
                 if (num > 0)
                 {
-                    this.Out(", ");
+                    Out(", ");
                 }
-                this.VisitMemberBinding(binding);
+                VisitMemberBinding(binding);
                 num++;
             }
-            this.Out("}");
+            Out("}");
         }
 
         internal void VisitMemberListBinding(MemberListBinding binding)
         {
-            this.Out(binding.Member.Name);
-            this.Out(" = {");
-            int num = 0;
-            int count = binding.Initializers.Count;
+            Out(binding.Member.Name);
+            Out(" = {");
+            var num = 0;
+            var count = binding.Initializers.Count;
             while (num < count)
             {
                 if (num > 0)
                 {
-                    this.Out(", ");
+                    Out(", ");
                 }
-                this.VisitElementInit(binding.Initializers[num]);
+                VisitElementInit(binding.Initializers[num]);
                 num++;
             }
-            this.Out("}");
+            Out("}");
         }
 
         internal void VisitMemberMemberBinding(MemberMemberBinding binding)
         {
-            this.Out(binding.Member.Name);
-            this.Out(" = {");
-            int num = 0;
-            int count = binding.Bindings.Count;
+            Out(binding.Member.Name);
+            Out(" = {");
+            var num = 0;
+            var count = binding.Bindings.Count;
             while (num < count)
             {
                 if (num > 0)
                 {
-                    this.Out(", ");
+                    Out(", ");
                 }
-                this.VisitMemberBinding(binding.Bindings[num]);
+                VisitMemberBinding(binding.Bindings[num]);
                 num++;
             }
-            this.Out("}");
+            Out("}");
         }
 
         internal void VisitMethodCall(MethodCallExpression node)
         {
-            string tempVar = string.Empty;
+            var tempVar = string.Empty;
             if ((node.Type.IsSymbol() || node.Type.IsSymbols()) && _context.TempSymbols.ContainsKey(node))
             {
                 tempVar = _context.TempSymbols[node];
                 _tempVarsUndefined.Remove(node);
 
                 NewLine();
-                this.Out("var " + tempVar + " = ");
+                Out("var " + tempVar + " = ");
             }
 
-            int num = 0;
-            Expression expression = node.Object;
+            var num = 0;
+            var expression = node.Object;
             if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) != null)
             {
                 num = 1;
@@ -799,18 +780,17 @@ namespace rDSN.Tron.Compiler
             if (node.Object != null && node.Object.Type.IsInheritedTypeOf(typeof(Service)))
             {
                 object svc;
-                bool r = GetValue(node.Object, out svc);
+                var r = GetValue(node.Object, out svc);
                 Trace.Assert(r);
 
-                this.Out(" Call_" + (svc as Service).PlainTypeName() + "_" + node.Method.Name);
+                Out(" Call_" + (svc as Service).PlainTypeName() + "_" + node.Method.Name);
             }
 
             // composed serivce call hack
             else if ((node.Type.IsSymbol() || node.Type.IsSymbols()) && Attribute.GetCustomAttribute(node.Method, typeof(Primitive)) == null)
             {
                 num = 0;
-                expression = null;
-                this.Out(" " + node.Method.Name);
+                Out(" " + node.Method.Name);
             }
 
             // else
@@ -818,13 +798,13 @@ namespace rDSN.Tron.Compiler
             {
                 if (expression != null)
                 {
-                    this.Visit(expression);
+                    Visit(expression);
                     if (expression.Type.IsSymbol() || expression.Type.IsSymbols() || expression.Type.IsEnumerable())
                     {
                         NewLine();
                     }
 
-                    this.Out(".");
+                    Out(".");
                 }
 
                 //if (!node.Method.IsPublic)
@@ -834,28 +814,24 @@ namespace rDSN.Tron.Compiler
 
                 if (expression == null)
                 {
-                    this.Out(node.Method.DeclaringType.FullName.Replace('+', '.') + "." + node.Method.Name);
+                    Out(node.Method.DeclaringType.FullName.Replace('+', '.') + "." + node.Method.Name);
 
                     if (node.Method.IsGenericMethod)
                     {
-                        string paramList = "";
-                        foreach (var p in node.Method.GetGenericArguments())
-                        {
-                            paramList += p.GetCompilableTypeName(_context.RewrittenTypes) + ", ";
-                        }
+                        var paramList = node.Method.GetGenericArguments().Aggregate("", (current, p) => current + (p.GetCompilableTypeName(_context.RewrittenTypes) + ", "));
                         paramList = paramList.Substring(0, paramList.Length - ", ".Length);
-                        this.Out("<" + paramList + ">");
+                        Out("<" + paramList + ">");
                     }
                 }
                 else
                 {
-                    this.Out(node.Method.Name);
+                    Out(node.Method.Name);
                 }
             }
 
-            this.Out("(");
+            Out("(");
 
-            bool isNewLine = node.Arguments.Where(a => a.NodeType == ExpressionType.Quote).Count() > 0;
+            var isNewLine = node.Arguments.Any(a => a.NodeType == ExpressionType.Quote);
 
             if (isNewLine)
             {
@@ -863,26 +839,26 @@ namespace rDSN.Tron.Compiler
                 NewLine();
             }
 
-            int num2 = num;
-            int count = node.Arguments.Count;
+            var num2 = num;
+            var count = node.Arguments.Count;
 
             Trace.Assert(node.Method.GetParameters().Length == node.Arguments.Count);
             while (num2 < count)
             {
                 if (num2 > num)
                 {
-                    this.Out(", ");
+                    Out(", ");
                     if (isNewLine)
                         NewLine();
                 }
 
                 var paramInfo = node.Method.GetParameters()[num2];
                 if (paramInfo.IsIn && paramInfo.IsOut)
-                    this.Out("ref ");
+                    Out("ref ");
                 else if (paramInfo.IsOut)
-                    this.Out("out ");
+                    Out("out ");
 
-                this.Visit(node.Arguments[num2]);                
+                Visit(node.Arguments[num2]);                
 
                 num2++;
             }
@@ -893,48 +869,42 @@ namespace rDSN.Tron.Compiler
                 NewLine();
             }
 
-            this.Out(")");
+            Out(")");
 
             if (tempVar != string.Empty)
             {
-                this.Out(";");
+                Out(";");
                 NewLine();
                 NewLine();
                 if (_tempVarsUndefined.Count == 0)
-                    this.Out("return " + tempVar);
+                    Out("return " + tempVar);
             }
         }
 
         internal void VisitNew(NewExpression node)
         {
-            string typeName = node.Type.GetCompilableTypeName(_context.RewrittenTypes);
+            var typeName = node.Type.GetCompilableTypeName(_context.RewrittenTypes);
             
-            this.Out("new " + typeName);
-            if (node.Members != null)
-                this.Out("() {");
-            else
-                this.Out("(");
+            Out("new " + typeName);
+            Out(node.Members != null ? "() {" : "(");
 
-            for (int i = 0; i < node.Arguments.Count; i++)
+            for (var i = 0; i < node.Arguments.Count; i++)
             {
                 if (i > 0)
                 {
-                    this.Out(", ");
+                    Out(", ");
                 }
 
                 if (node.Members != null)
                 {
-                    this.Out(node.Members[i].Name);
-                    this.Out(" = ");
+                    Out(node.Members[i].Name);
+                    Out(" = ");
                 }
 
-                this.Visit(node.Arguments[i]);
+                Visit(node.Arguments[i]);
             }
 
-            if (node.Members != null)
-                this.Out("}");
-            else
-                this.Out(")");
+            Out(node.Members != null ? "}" : ")");
         }
 
         internal void VisitNewArray(NewArrayExpression node)
@@ -942,13 +912,13 @@ namespace rDSN.Tron.Compiler
             switch (node.NodeType)
             {
                 case ExpressionType.NewArrayInit:
-                    this.Out("new [] ");
-                    this.VisitExpressions<Expression>('{', node.Expressions, '}');
+                    Out("new [] ");
+                    VisitExpressions('{', node.Expressions, '}');
                     break;
 
                 case ExpressionType.NewArrayBounds:
-                    this.Out("new " + node.Type.ToString());
-                    this.VisitExpressions<Expression>('(', node.Expressions, ')');
+                    Out("new " + node.Type);
+                    VisitExpressions('(', node.Expressions, ')');
                     break;
             }
         }
@@ -957,60 +927,60 @@ namespace rDSN.Tron.Compiler
         {
             if (node.IsByRef)
             {
-                this.Out("ref ");
+                Out("ref ");
             }
             if (string.IsNullOrEmpty(node.Name))
             {
-                this.Out("param_" + this.GetParamId(node));
+                Out("param_" + GetParamId(node));
             }
             else
             {
-                this.Out(node.Name + "_" + this.GetParamId(node));
+                Out(node.Name + "_" + GetParamId(node));
             }
         }
 
         internal void VisitRuntimeVariables(RuntimeVariablesExpression node)
         {
-            this.VisitExpressions<ParameterExpression>('(', node.Variables, ')');
+            VisitExpressions('(', node.Variables, ')');
         }
 
         internal void VisitSwitch(SwitchExpression node)
         {
-            this.Out("switch ");
-            this.Out("(");
-            this.Visit(node.SwitchValue);
-            this.Out(") { ... }");
+            Out("switch ");
+            Out("(");
+            Visit(node.SwitchValue);
+            Out(") { ... }");
         }
 
         internal void VisitSwitchCase(SwitchCase node)
         {
-            this.Out("case ");
-            this.VisitExpressions<Expression>('(', node.TestValues, ')');
-            this.Out(": ...");
+            Out("case ");
+            VisitExpressions('(', node.TestValues, ')');
+            Out(": ...");
         }
 
         internal void VisitTry(TryExpression node)
         {
-            this.Out("try { ... }");
+            Out("try { ... }");
         }
 
         internal void VisitTypeBinary(TypeBinaryExpression node)
         {
-            this.Out("(");
-            this.Visit(node.Expression);
+            Out("(");
+            Visit(node.Expression);
             switch (node.NodeType)
             {
                 case ExpressionType.TypeIs:
-                    this.Out(" Is ");
+                    Out(" Is ");
                     break;
 
                 case ExpressionType.TypeEqual:
-                    this.Out(" TypeEqual ");
+                    Out(" TypeEqual ");
                     goto Label_0043;
             }
         Label_0043:
-            this.Out(node.TypeOperand.Name);
-            this.Out(")");
+            Out(node.TypeOperand.Name);
+            Out(")");
         }
 
         internal void VisitUnary(UnaryExpression node)
@@ -1018,55 +988,55 @@ namespace rDSN.Tron.Compiler
             switch (node.NodeType)
             {
                 case ExpressionType.TypeAs:
-                    this.Out("(");
+                    Out("(");
                     break;
 
                 case ExpressionType.Decrement:
-                    this.Out("-(");
+                    Out("-(");
                     break;
 
                 case ExpressionType.Negate:
                 case ExpressionType.NegateChecked:
-                    this.Out("-");
+                    Out("-");
                     break;
 
                 case ExpressionType.UnaryPlus:
-                    this.Out("+");
+                    Out("+");
                     break;
 
                 case ExpressionType.Not:
-                    this.Out("!(");
+                    Out("!(");
                     break;
 
                 case ExpressionType.Quote:
                     break;
 
                 case ExpressionType.Increment:
-                    this.Out("+(");
+                    Out("+(");
                     break;
 
                 case ExpressionType.Throw:
-                    this.Out("throw (");
+                    Out("throw (");
                     break;
 
                 case ExpressionType.PreIncrementAssign:
-                    this.Out("++");
+                    Out("++");
                     break;
 
                 case ExpressionType.PreDecrementAssign:
-                    this.Out("--");
+                    Out("--");
                     break;
 
                 case ExpressionType.OnesComplement:
-                    this.Out("~(");
+                    Out("~(");
                     break;
 
                 default:
                     //this.Out(node.NodeType.ToString());
-                    this.Out("(");
+                    Out("(");
                     break;
             }
-            this.Visit(node.Operand);
+            Visit(node.Operand);
             switch (node.NodeType)
             {
                 case ExpressionType.PreIncrementAssign:
@@ -1074,17 +1044,17 @@ namespace rDSN.Tron.Compiler
                     return;
 
                 case ExpressionType.PostIncrementAssign:
-                    this.Out("++");
+                    Out("++");
                     return;
 
                 case ExpressionType.PostDecrementAssign:
-                    this.Out("--");
+                    Out("--");
                     return;
 
                 case ExpressionType.TypeAs:
-                    this.Out(" As ");
-                    this.Out(node.Type.Name);
-                    this.Out(")");
+                    Out(" As ");
+                    Out(node.Type.Name);
+                    Out(")");
                     return;
 
                 case ExpressionType.Negate:
@@ -1095,8 +1065,7 @@ namespace rDSN.Tron.Compiler
                 case ExpressionType.Quote:
                     return;
             }
-            this.Out(")");
-            return;
+            Out(")");
         }
 
         internal void VisitMemberBinding(MemberBinding node)
@@ -1104,15 +1073,15 @@ namespace rDSN.Tron.Compiler
             switch (node.BindingType)
             {
                 case MemberBindingType.Assignment:
-                    this.VisitMemberAssignment((MemberAssignment)node);
+                    VisitMemberAssignment((MemberAssignment)node);
                     return;
 
                 case MemberBindingType.MemberBinding:
-                    this.VisitMemberMemberBinding((MemberMemberBinding)node);
+                    VisitMemberMemberBinding((MemberMemberBinding)node);
                     return;
 
                 case MemberBindingType.ListBinding:
-                    this.VisitMemberListBinding((MemberListBinding)node);
+                    VisitMemberListBinding((MemberListBinding)node);
                     return;
             }
             //throw Error.UnhandledBindingType(node.BindingType);
@@ -1121,20 +1090,20 @@ namespace rDSN.Tron.Compiler
 
         public void VisitTypeIs(TypeBinaryExpression b)
         {
-            this.Visit(b.Expression);
+            Visit(b.Expression);
         }
 
         public void VisitMemberAccess(MemberExpression m)
         {
             //throw new Exception("Overloaded visitors should implement this method");
-            this.Visit(m.Expression);
+            Visit(m.Expression);
         }
 
         public void Visit(Expression exp)
         {
             if (_context.TempSymbols.ContainsKey(exp) && !_tempVarsUndefined.Contains(exp))
             {
-                this.Out(_context.TempSymbols[exp]);
+                Out(_context.TempSymbols[exp]);
                 return;
             }
 
@@ -1149,7 +1118,7 @@ namespace rDSN.Tron.Compiler
                 case ExpressionType.Quote:
                 case ExpressionType.TypeAs:
                     {
-                        this.VisitUnary((UnaryExpression)exp);
+                        VisitUnary((UnaryExpression)exp);
                         break;
                     }
                 case ExpressionType.Add:
@@ -1176,68 +1145,68 @@ namespace rDSN.Tron.Compiler
                 case ExpressionType.LeftShift:
                 case ExpressionType.ExclusiveOr:
                     {
-                        this.VisitBinary((BinaryExpression)exp);
+                        VisitBinary((BinaryExpression)exp);
                         break;
                     }
                 case ExpressionType.TypeIs:
                     {
-                        this.VisitTypeIs((TypeBinaryExpression)exp);
+                        VisitTypeIs((TypeBinaryExpression)exp);
                         break;
                     }
                 case ExpressionType.Conditional:
                     {
-                        this.VisitConditional((ConditionalExpression)exp);
+                        VisitConditional((ConditionalExpression)exp);
                         break;
                     }
                 case ExpressionType.Constant:
                     {
-                        this.VisitConstant((ConstantExpression)exp);
+                        VisitConstant((ConstantExpression)exp);
                         break;
                     }
                 case ExpressionType.Parameter:
                     {
-                        this.VisitParameter((ParameterExpression)exp);
+                        VisitParameter((ParameterExpression)exp);
                         break;
                     }
                 case ExpressionType.MemberAccess:
                     {
-                        this.VisitMember((MemberExpression)exp);
+                        VisitMember((MemberExpression)exp);
                         break;
                     }
                 case ExpressionType.Call:
                     {
-                        this.VisitMethodCall((MethodCallExpression)exp);
+                        VisitMethodCall((MethodCallExpression)exp);
                         break;
                     }
                 case ExpressionType.Lambda:
                     {
-                        this.VisitLambda((LambdaExpression)exp);
+                        VisitLambda((LambdaExpression)exp);
                         break;
                     }
                 case ExpressionType.New:
                     {
-                        this.VisitNew((NewExpression)exp);
+                        VisitNew((NewExpression)exp);
                         break;
                     }
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
                     {
-                        this.VisitNewArray((NewArrayExpression)exp);
+                        VisitNewArray((NewArrayExpression)exp);
                         break;
                     }
                 case ExpressionType.Invoke:
                     {
-                        this.VisitInvocation((InvocationExpression)exp);
+                        VisitInvocation((InvocationExpression)exp);
                         break;
                     }
                 case ExpressionType.MemberInit:
                     {
-                        this.VisitMemberInit((MemberInitExpression)exp);
+                        VisitMemberInit((MemberInitExpression)exp);
                         break;
                     }
                 case ExpressionType.ListInit:
                     {
-                        this.VisitListInit((ListInitExpression)exp);
+                        VisitListInit((ListInitExpression)exp);
                         break;
                     }
                 default:

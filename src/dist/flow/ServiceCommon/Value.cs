@@ -32,13 +32,6 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections;
 
 namespace rDSN.Tron.Runtime
 {
@@ -50,13 +43,11 @@ namespace rDSN.Tron.Runtime
         private TValue _value;
 
         public IValue()
-            : base()
         {
             _value = default(TValue);
         }
 
         public IValue(TValue v)
-            : base()
         {
             _value = v;
         }

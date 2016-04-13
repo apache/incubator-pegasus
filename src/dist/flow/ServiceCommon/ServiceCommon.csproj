@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>rDSN.Tron.Runtime</RootNamespace>
-    <AssemblyName>rDSN.Tron.Runtime.Common</AssemblyName>
+    <AssemblyName>rDSN.Tron.Runtime</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

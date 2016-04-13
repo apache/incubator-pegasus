@@ -32,13 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace rDSN.Tron.Utility
 {
@@ -85,10 +85,7 @@ namespace rDSN.Tron.Utility
         public IQueryProvider Provider { get; private set; }
         public Expression Expression { get; private set; }
 
-        public Type ElementType
-        {
-            get { return typeof(T); }
-        }
+        public Type ElementType => typeof(T);
 
         #endregion
 
@@ -111,12 +108,12 @@ namespace rDSN.Tron.Utility
 
         public IQueryable CreateQuery(Expression expression)
         {
-            Type elementType = TypeHelper.GetElementType(expression.Type);
+            var elementType = TypeHelper.GetElementType(expression.Type);
             try
             {
-                return (IQueryable)Activator.CreateInstance(typeof(QueryableObjects<>).MakeGenericType(elementType), new object[] { this, expression });
+                return (IQueryable)Activator.CreateInstance(typeof(QueryableObjects<>).MakeGenericType(elementType), this, expression);
             }
-            catch (System.Reflection.TargetInvocationException tie)
+            catch (TargetInvocationException tie)
             {
                 throw tie.InnerException;
             }

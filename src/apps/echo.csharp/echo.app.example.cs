@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using dsn.dev.csharp;
 
 namespace dsn.example 
@@ -63,7 +62,7 @@ namespace dsn.example
         {
             // test for service 'echo'
             {
-                string req = "PING";
+                var req = "PING";
                 //sync:
                 string resp;
                 var err = _echoClient.ping(req, out resp);

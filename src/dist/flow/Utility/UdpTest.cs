@@ -32,19 +32,11 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading;
-using System.Collections;
-using System.IO;
-using System.Diagnostics;
-using System.Collections.Concurrent;
-using System.Linq;
 
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 
 namespace rDSN.Tron.Utility
 {
@@ -79,20 +71,20 @@ namespace rDSN.Tron.Utility
         {
             Console.WriteLine("UPD Server on " + port + " ...");
 
-            var sep = new System.Net.IPEndPoint(IPAddress.Any, port);
+            var sep = new IPEndPoint(IPAddress.Any, port);
             _udp_socket = new Socket(sep.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             _udp_socket.Bind(sep);
 
             while (true)
             {
-                byte[] s = new byte[1024];
+                var s = new byte[1024];
                 EndPoint ep = new IPEndPoint(IPAddress.Any, 0);
                 try
                 {
-                    int read = _udp_socket.ReceiveFrom(s, ref ep);
+                    var read = _udp_socket.ReceiveFrom(s, ref ep);
                     if (read > 0)
                     {
-                        Console.WriteLine("UDP recv ok from " +  ep.ToString());
+                        Console.WriteLine("UDP recv ok from " +  ep);
                     }
                 }
                 catch (SocketException e)
@@ -102,20 +94,20 @@ namespace rDSN.Tron.Utility
             }
         }
         
-        private static Socket _udp_socket = null;
+        private static Socket _udp_socket;
     }
 
     public class UdpClient
     {
         public void Start(string server, int port)
         {
-            UInt32 ip = 0;
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(server);
-            for (int i = ipHostInfo.AddressList.Length - 1; i >= 0; i--)
+            uint ip = 0;
+            var ipHostInfo = Dns.GetHostEntry(server);
+            for (var i = ipHostInfo.AddressList.Length - 1; i >= 0; i--)
             {
                 if (ipHostInfo.AddressList[i].AddressFamily == AddressFamily.InterNetwork)
                 {
-                    IPAddress ipAddress = ipHostInfo.AddressList[i];
+                    var ipAddress = ipHostInfo.AddressList[i];
                     ip = BitConverter.ToUInt32(ipAddress.GetAddressBytes(), 0);
                     break;
                 }
@@ -123,7 +115,7 @@ namespace rDSN.Tron.Utility
 
             EndPoint ep = new IPEndPoint(ip, port);
 
-            Console.WriteLine("UPD Client for " + ep.ToString() + "...");
+            Console.WriteLine("UPD Client for " + ep + "...");
 
             while (true)
             {
@@ -132,7 +124,7 @@ namespace rDSN.Tron.Utility
             }
         }
 
-        private static int _i = 0;
+        private static int _i;
         private static Socket _udp_sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         private static void MsgSentCallback(IAsyncResult ar)
         {
@@ -141,8 +133,8 @@ namespace rDSN.Tron.Utility
 
         private static int SendMsg(EndPoint server)
         {
-            byte[] s = new byte[] { 0, 1, 2, 3, 4 };
-            _udp_sock.BeginSendTo(s, 0, (int)s.Length, 0, server, new AsyncCallback(MsgSentCallback), ++_i);
+            var s = new byte[] { 0, 1, 2, 3, 4 };
+            _udp_sock.BeginSendTo(s, 0, s.Length, 0, server, MsgSentCallback, ++_i);
             //_udp_sock.SendTo(s, server);
             Console.WriteLine("UDP send begin for msg " + _i);
             return 0;

@@ -67,6 +67,7 @@
     <Compile Include="SymbolOperators.cs" />
     <Compile Include="Symbols.cs" />
     <Compile Include="AliasHelper.cs" />
+    <Compile Include="TypeConsolidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Contract\Contract.csproj">

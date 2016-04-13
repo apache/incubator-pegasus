@@ -33,12 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace dsn.dev.csharp
 {
     public static class Logging
