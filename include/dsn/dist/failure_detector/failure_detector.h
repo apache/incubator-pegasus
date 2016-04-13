@@ -103,13 +103,16 @@ public:
 
     error_code stop();
 
+    uint32_t get_lease_ms() const { return _lease_milliseconds; }
+    uint32_t get_grace_ms() const { return _grace_milliseconds; }
+
     void register_master(::dsn::rpc_address target);
 
     bool switch_master(::dsn::rpc_address from, ::dsn::rpc_address to, uint32_t delay_milliseconds);
 
     bool unregister_master( ::dsn::rpc_address node);
 
-    bool is_master_connected( ::dsn::rpc_address node) const;
+    virtual bool is_master_connected( ::dsn::rpc_address node) const;
 
     // ATTENTION: be very careful to set is_connected to false as
     // workers are always considered *connected* initially which is ok even when workers think master is disconnected
@@ -120,7 +123,7 @@ public:
 
     void clear_workers();
 
-    bool is_worker_connected( ::dsn::rpc_address node) const;
+    virtual bool is_worker_connected( ::dsn::rpc_address node) const;
 
     void add_allow_list( ::dsn::rpc_address node);
 
