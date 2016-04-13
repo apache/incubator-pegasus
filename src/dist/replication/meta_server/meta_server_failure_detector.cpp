@@ -243,6 +243,10 @@ void meta_server_failure_detector::set_primary(rpc_address primary)
         utils::auto_lock<zlock> l(_primary_address_lock);
         _primary_address = primary;
         _is_primary = (primary == primary_address());
+        if (_is_primary)
+        {
+            _election_moment = dsn_now_ms();
+        }
     }
 
     if (old && !_is_primary)
@@ -263,10 +267,6 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     {
         ack.is_master = false;
         ack.primary_node = get_primary();
-        {
-            zauto_lock l(_lock);
-            _state->add_alive_node_to_cache(beacon.from_addr);
-        }
     }
     else 
     {
