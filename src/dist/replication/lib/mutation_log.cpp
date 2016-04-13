@@ -1161,6 +1161,7 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
         }
     }
 
+    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
     return deleted;
 }
 
@@ -1336,6 +1337,8 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
             _log_files.erase(it->first);
         }
     }
+
+    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
 
     return deleted;
 }

@@ -198,6 +198,8 @@ private:
     perf_counter_    _counter_replicas_learning_failed_latency;
     perf_counter_    _counter_replicas_learning_success_latency;
     perf_counter_    _counter_replicas_learning_count;
+
+    perf_counter_    _counter_shared_log_size;
 private:
     void response_client_error(dsn_message_t request, error_code error);
 };
