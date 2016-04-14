@@ -106,6 +106,7 @@ void replication_app_client_base::clear_all_pending_tasks()
 
 DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     uint64_t key_hash,
@@ -369,9 +370,15 @@ void replication_app_client_base::replica_rw_reply(
         }
     }
 
+    bool clear_config_cache = false;
+    bool retry = true;
+
     if (err != ERR_OK)
     {
-        goto Retry;
+        // network issue
+        clear_config_cache = true;
+        retry = true;
+        goto Handle_Failure;
     }
 
     ::unmarshall(response, err);
@@ -379,33 +386,74 @@ void replication_app_client_base::replica_rw_reply(
     //
     // some error codes do not need retry
     //
-    if (err == ERR_OK || err == ERR_HANDLER_NOT_FOUND)
+
+    // server is busy, retry later
+    // server can't serve, retry later
+    if(err == ERR_CAPACITY_EXCEEDED || err == ERR_NOT_ENOUGH_MEMBER)
+    {
+        clear_config_cache = false;
+        retry = true;
+    }
+    // the sever state is not primary
+    // the replica is not on the server
+    else if(err == ERR_INVALID_STATE || err == ERR_OBJECT_NOT_FOUND)
+    {
+        clear_config_cache = true;
+        retry = true;
+    }
+    // ERR_OK means success
+    // the task code is not valid, version mismatch
+    else if(err == ERR_OK || err == ERR_INVALID_DATA)
+    {
+        clear_config_cache = false;
+        retry = false;
+    }
+    else
+    {
+        dassert(false, "%s.client: get error %s from replica with index %d, retry:%d, clear cache:%d",
+            _app_name.c_str(),
+            err.to_string(),
+            rc->partition_index,
+            retry,
+            clear_config_cache
+            );
+    }
+
+Handle_Failure:
+    if(err != ERR_OK)
+    {
+        dwarn("%s.client: get error %s from replica with index %d, retry:%d, clear cache:%d",
+            _app_name.c_str(),
+            err.to_string(),
+            rc->partition_index,
+            retry,
+            clear_config_cache
+            );
+    }
+
+    if(!retry)
     {
         end_request(rc, err, response);
         return;
     }
-
-    // retry 
     else
     {
-        dsn::rpc_address adr = dsn_msg_from_address(response);
+        if(clear_config_cache)
+        {
+            zauto_write_lock l(_config_lock);
+            _config_cache.erase(rc->partition_index);
+        }
+        tasking::enqueue(
+            LPC_REPLICATION_DELAY_QUERY_CALL,
+            this,
+            [this, rc_capture = std::move(rc), clear_config_cache]()
+            {
+                replication_app_client_base::call(std::move(rc_capture), !clear_config_cache);
+            },
+            0,
+            std::chrono::milliseconds(200) // sleep 200 ms before retry
+            );
     }
-
-Retry:
-    dwarn("%s.client: get error %s from replica with index %d, retry now",
-        _app_name.c_str(),
-        err.to_string(),
-        rc->partition_index
-        );
-
-    // clear partition configuration as it could be wrong
-    {
-        zauto_write_lock l(_config_lock);
-        _config_cache.erase(rc->partition_index);
-    }
-
-    // then retry
-    call(rc.get(), false);
 }
 
 void replication_app_client_base::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context)
