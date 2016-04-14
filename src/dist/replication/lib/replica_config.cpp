@@ -414,8 +414,9 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     }
 
     ddebug(
-        "%s: update configuration reply with err %s, ballot %" PRId64 ", local %" PRId64,
+        "%s: update configuration %s, reply with err %s, ballot %" PRId64 ", local %" PRId64,
         name(),
+        enum_to_string(req->type),
         resp.err.to_string(),
         resp.config.ballot,
         get_ballot()

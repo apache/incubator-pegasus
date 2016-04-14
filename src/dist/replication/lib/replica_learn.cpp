@@ -653,7 +653,7 @@ void replica::on_copy_remote_state_completed(
     decree old_committed = _app->last_committed_decree();
     decree old_durable = _app->last_durable_decree();
 
-    derror(
+    ddebug(
         "%s: on_copy_remote_state_completed[%016llx]: learner = %s, learn duration = %" PRIu64 " ms, err = %s, transfer %d files to %s",
         name(), req.signature, req.learner.to_string(),
         _potential_secondary_states.duration_ms(),
