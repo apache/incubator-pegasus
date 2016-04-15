@@ -32,11 +32,6 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron
 {    
@@ -50,7 +45,7 @@ namespace rDSN.Tron
 
         public override bool Equals(object obj)
         {
-            NodeAddress that = obj as NodeAddress;
+            var that = obj as NodeAddress;
             return Host == that.Host && Port == that.Port;
         }
 

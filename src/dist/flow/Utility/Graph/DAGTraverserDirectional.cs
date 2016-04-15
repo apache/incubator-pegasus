@@ -32,10 +32,8 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
+
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 
 namespace rDSN.Tron.Utility
@@ -66,9 +64,9 @@ namespace rDSN.Tron.Utility
         {
             while (_pendingVertices.Count != 0)
             {
-                VertexT v = _pendingVertices[0];
+                var v = _pendingVertices[0];
                 _pendingVertices.RemoveAt(0);
-                bool r = visitVertex(v);
+                var r = visitVertex(v);
                 if (breakIt)
                 {
                     if (r != breakOnFalse)
@@ -81,7 +79,7 @@ namespace rDSN.Tron.Utility
 
                 if (!_isDownStream)
                 {
-                    foreach (VertexT vv in v.InVertices)
+                    foreach (var vv in v.InVertices)
                     {
                         if (!_visitedVertices.Contains(vv))
                         {
@@ -91,7 +89,7 @@ namespace rDSN.Tron.Utility
                 }
                 else
                 {
-                    foreach (VertexT vv in v.OutVertices)
+                    foreach (var vv in v.OutVertices)
                     {
                         if (!_visitedVertices.Contains(vv))
                         {

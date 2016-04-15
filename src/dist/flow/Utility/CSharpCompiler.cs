@@ -32,18 +32,14 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Xml.Serialization;
 using System.CodeDom.Compiler;
-using System.Reflection;
-using System.Collections;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using Microsoft.CSharp;
 
 namespace rDSN.Tron.Utility
@@ -75,7 +71,7 @@ namespace rDSN.Tron.Utility
             bool inMemory = false
             )
         {
-            CompilerParameters cp = new CompilerParameters();
+            var cp = new CompilerParameters();
 
             // Add reference to libs
             cp.ReferencedAssemblies.Add("System.dll");
@@ -107,35 +103,31 @@ namespace rDSN.Tron.Utility
             // Invoke compilation.
             IDictionary<string, string> providerOptions = new Dictionary<string, string>();
             providerOptions["CompilerVersion"] = version;
-            CSharpCodeProvider provider = new CSharpCodeProvider(providerOptions);
+            var provider = new CSharpCodeProvider(providerOptions);
 
 
-            CompilerResults cr = provider.CompileAssemblyFromFile(cp, sources);
+            var cr = provider.CompileAssemblyFromFile(cp, sources);
             if (cr.Errors.Count > 0)
             {
                 // Display compilation errors.
-                Trace.WriteLine("Compiler error:");
-                Trace.WriteLine("Errors building " + cr.PathToAssembly);
+                Console.WriteLine("Compiler error:");
+                Console.WriteLine("Errors building " + cr.PathToAssembly);
                 foreach (CompilerError ce in cr.Errors)
                 {
-                    Trace.WriteLine("\t" + ce.ToString());
+                    Console.WriteLine("\t" + ce);
                 }
 
                 return null;
             }
-            else
+            var oasm = cr.CompiledAssembly;
+
+            foreach (var stream in resourceFiles.Select(Path.GetFileName).Select(oasm.GetManifestResourceStream))
             {
-                var oasm = cr.CompiledAssembly;
-
-                foreach (var r in resourceFiles)
-                {
-                    var name = Path.GetFileName(r);
-                    var stream = oasm.GetManifestResourceStream(name);
-                    Trace.Assert(stream != null);
-                }
-
-                return cr.CompiledAssembly;
+                Trace.Assert(stream != null);
             }
+
+            Console.WriteLine("Generate " + cr.PathToAssembly + " succeeds!");
+            return cr.CompiledAssembly;
         }
     }
 }

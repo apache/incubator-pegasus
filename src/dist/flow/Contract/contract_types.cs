@@ -34,11 +34,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 
 namespace rDSN.Tron
 {    
@@ -86,7 +82,7 @@ public class ServicePackage
     public string Name{ get; set; } 
 	public string Author{ get; set; } 
 	public double Version{ get; set; } 
-	public Int64  PublishTime{ get; set; } 
+	public long  PublishTime{ get; set; } 
 	public string Description{ get; set; } 
 	public string IconFileName{ get; set; } 
 	public byte[]   PackageZip{ get; set; } 
@@ -115,7 +111,7 @@ public class ServiceDsptr
 
 public class RpcError
 {
-	public  Int32 Code{ get; set; } 
+	public  int Code{ get; set; } 
 }
 
 public class RpcResponse<T> : RpcError
@@ -137,25 +133,25 @@ public class NameList
 public partial class NodeAddress
 {
 	public string Host{ get; set; } 
-	public Int32  Port{ get; set; } 
+	public int Port { get; set; } 
 }
 
 public class ServiceInfo
 {
 	public string Name{ get; set; } 
-	public Int32  InternalServiceSequenceId{ get; set; } 
-	public Int32  PartitionCount{ get; set; } 	
+	public int InternalServiceSequenceId { get; set; } 
+	public int PartitionCount { get; set; } 	
 	public string ServicePackageName{ get; set; } 
 }
 
 public class ServicePartitionInfo
 {
-    public Int32       InternalServiceSequenceId{ get; set; } 
-	public Int32       Index{ get; set; } 
-	public UInt64      GlobalPartitionId{ get; set; }  // InternalServiceSequenceId ## Index
+    public int InternalServiceSequenceId { get; set; } 
+	public int Index { get; set; } 
+	public ulong GlobalPartitionId { get; set; }  // InternalServiceSequenceId ## Index
 	public string      Name{ get; set; } 
-	public Int32       ConfigurationVersion{ get; set; } 
-	public Int32       ServicePort{ get; set; } 
+	public int ConfigurationVersion { get; set; } 
+	public int ServicePort { get; set; } 
 	public NodeAddress ManagerAddress{ get; set; } 	
 }
 

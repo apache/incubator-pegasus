@@ -53,17 +53,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
-using System.Diagnostics;
-
-using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
-using rDSN.Tron.Runtime;
 
 namespace rDSN.Tron.Compiler
 {
@@ -87,8 +79,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -105,8 +97,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -126,8 +118,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -143,8 +135,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource)}),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -165,8 +157,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -182,8 +174,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -199,8 +191,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -216,8 +208,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource) }),
-                        new Expression[] { source.Expression, call }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                        new[] { source.Expression, call }
                         )
                 );
         }
@@ -242,8 +234,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, extractor }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, extractor }
                         )
                 );
         }
@@ -264,8 +256,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, extractor }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, extractor }
                         )
                 );
         }
@@ -277,9 +269,7 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource) }),
-                        new Expression[] { source.Expression }
-                        )
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)), source.Expression)
                 );
         }
 
@@ -290,9 +280,7 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TSource>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource)}),
-                        new Expression[] { source.Expression }
-                        )
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)), source.Expression)
                 );
         }
 
@@ -326,8 +314,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, reducer }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, reducer }
                         )
                 );
         }
@@ -364,8 +352,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, keySelector, reducer }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)),
+                        new[] { source.Expression, keySelector, reducer }
                         )
                 );
         }
@@ -389,8 +377,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TAccumulate>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TAccumulate) }),
-                        new Expression[] { source.Expression, Expression.Constant(seed), func }
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TAccumulate)),
+                        new[] { source.Expression, Expression.Constant(seed), func }
                         )
                 );
         }
@@ -416,9 +404,7 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TAccumulate>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TReduceKey), typeof(TAccumulate) }),
-                        new Expression[] { source.Expression, keySelector, Expression.Constant(seed), reducer }
-                        )
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TReduceKey), typeof(TAccumulate)), source.Expression, keySelector, Expression.Constant(seed), reducer)
                 );
         }
 
@@ -436,9 +422,7 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, ifPredicate, thenBlock, elseBlock }
-                        )
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)), source.Expression, ifPredicate, thenBlock, elseBlock)
                 );
         }
 
@@ -452,9 +436,7 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TResult>(
                 Expression.Call(null,
-                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource), typeof(TResult) }),
-                        new Expression[] { source.Expression, ifPredicate, thenBlock, elseBlock }
-                        )
+                        ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource), typeof(TResult)), source.Expression, ifPredicate, thenBlock, elseBlock)
                 );
         }
 
@@ -476,8 +458,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateQuery<TSource>(
                     Expression.Call(null,
-                            ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource)}),
-                            new Expression[] { source.Expression, body, condition }
+                            ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                            new[] { source.Expression, body, condition }
                             )
                     );
         }
@@ -491,8 +473,8 @@ namespace rDSN.Tron.Compiler
         {
             return source.CreateCollectionQuery<TSource>(
                     Expression.Call(null,
-                            ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(new Type[] { typeof(TSource) }),
-                            new Expression[] { source.Expression, body, condition }
+                            ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TSource)),
+                            new[] { source.Expression, body, condition }
                             )
                     );
         }

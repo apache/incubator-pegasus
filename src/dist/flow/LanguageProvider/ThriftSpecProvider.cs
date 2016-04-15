@@ -35,17 +35,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
 using System.IO;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-
-using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
+using System.Linq;
 using System.Linq.Expressions;
+using rDSN.Tron.Contract;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -63,43 +57,32 @@ namespace rDSN.Tron.LanguageProvider
             var inputDir = spec.Directory;
             var file = spec.MainSpecFile;
             var outDir = dir;
-            var args = new List<string>() 
+            var args = new List<string>
             {
                 "-out " + outDir,
                 "-r" // recursively generate all included files
             };
-            if (translator.ToCommonInterface(inputDir, file, outDir, args))
-            {
-                int threshhold = 30;  // filter the .cs files by their LastWriteTimes
-                var output = SystemHelper.GetFilesByLastWrite(outDir, "*_common.cs", SearchOption.TopDirectoryOnly, threshhold);
-                return output.ToArray();
-            }
-            else
-            {
-                return null;
-            }
+            if (!translator.ToCommonInterface(inputDir, file, outDir, args)) return null;
+            const int threshhold = 30; // filter the .cs files by their LastWriteTimes
+            var output = SystemHelper.GetFilesByLastWrite(outDir, "*_common.cs", SearchOption.TopDirectoryOnly, threshhold);
+            return output.ToArray();
         }
-        public ErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
+
+        private static ErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
         {
             linkinfo = new LinkageInfo();
-            var app_name = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " + Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
-            {
-                var thriftGenPath = Path.Combine(dir, "thrift");
-                CSharpCompiler.ToDiskAssembly(
-                    new string[] { Path.Combine(dir, "ThriftBinaryHelper.cs"), Path.Combine(dir, app_name + ".client.cs"), Path.Combine(dir, app_name + ".code.definition.cs") }.Concat(Directory.GetFiles(thriftGenPath, "*.cs", SearchOption.AllDirectories)).ToArray(),
-                    new string[] { Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"), Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Thrift.dll") },
-                    new string[] { },
-                    Path.Combine(dir, app_name + ".client.dll")
-                    );
-                Directory.Delete(thriftGenPath, true);
-                linkinfo.DynamicLibraries.Add(Path.Combine(dir, app_name + ".client.dll"));
-                return ErrorCode.Success;
-            }
-            else
-            {
+            var appName = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
+            if (
+                SystemHelper.RunProcess("php.exe",
+                    Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " +
+                    Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") != 0)
                 return ErrorCode.ProcessStartFailed;
-            }
+            var thriftGenPath = Path.Combine(dir, "thrift");
+            linkinfo.Sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
+            linkinfo.Sources.Add(Path.Combine(dir, appName + ".client.cs"));
+            linkinfo.Sources.Add(Path.Combine(dir, appName + ".code.definition.cs"));
+            linkinfo.Sources.AddRange(Directory.GetFiles(thriftGenPath, "*.cs", SearchOption.AllDirectories));
+            return ErrorCode.Success;
         }
 
         public ErrorCode GenerateServiceClient(
@@ -124,7 +107,7 @@ namespace rDSN.Tron.LanguageProvider
             }
 
 
-            List<string> arguments = new List<string>();
+            var arguments = new List<string>();
             var languageName = GetLanguageName(lang);
 
             arguments.Add(" ");
@@ -132,61 +115,54 @@ namespace rDSN.Tron.LanguageProvider
             arguments.Add("-r");
             arguments.Add("-out " + dir);
             arguments.Add(Path.Combine(spec.Directory, spec.MainSpecFile));
-            if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) == 0)
+            if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) != 0) return ErrorCode.ExceptionError;
+            // generally, thrift.exe will generate a folder in the name of the mainspec's namespace to the output dir,e.g. gen-csharp
+            // all language libraries are availabe in the source code of thrift project, placed in the thrift\\lib\\{language} dir
+            // in Tron project, we place thrift compiler at "external\\thrift\\bin", and place the libraries in at"external\\thrift\\lib\\{language}"
+            switch (lang)
             {
-                // generally, thrift.exe will generate a folder in the name of the mainspec's namespace to the output dir,e.g. gen-csharp
-                // all language libraries are availabe in the source code of thrift project, placed in the thrift\\lib\\{language} dir
-                // in Tron project, we place thrift compiler at "external\\thrift\\bin", and place the libraries in at"external\\thrift\\lib\\{language}"
-                switch (lang)
+                case ClientLanguage.Client_CSharp:
                 {
-                    case ClientLanguage.Client_CSharp:
-                        {
-                            var sourceDir = Path.Combine(dir, "gen-" + languageName);
-                            linkInfo.IncludeDirectories.Add(sourceDir);
-                            linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\csharp"));
-                            linkInfo.LibraryPaths.Add(dir);
+                    var sourceDir = Path.Combine(dir, "gen-" + languageName);
+                    linkInfo.IncludeDirectories.Add(sourceDir);
+                    linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\csharp"));
+                    linkInfo.LibraryPaths.Add(dir);
 
-                            linkInfo.DynamicLibraries.AddRange(new List<string>()
-                            {
-                                "Thrift.dll"
-                            });
-                            var specName = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
-                            var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
-                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15).Select(f => Path.GetFileName(f)));
-                            break;
-                        }
-
-                    case ClientLanguage.Client_CPlusPlus:
-                        {
-                            var sourceDir = Path.Combine(dir, "gen-" + languageName);
-                            linkInfo.IncludeDirectories.Add(sourceDir);
-                            linkInfo.LibraryPaths.Add(sourceDir);
-                            linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\cpp"));                            
-                            var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
-                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15));
-                            break;
-                        }
-                    case ClientLanguage.Client_Java:
-                        {
-                            var sourceDir = Path.Combine(dir, "gen-" + languageName);
-                            linkInfo.IncludeDirectories.Add(sourceDir);
-                            linkInfo.LibraryPaths.Add(sourceDir);
-                            linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\java"));
-                            var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
-                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15));
-                            break;
-                        }
-                    default:
-                        break;
-
+                    linkInfo.DynamicLibraries.AddRange(new List<string>
+                    {
+                        "Thrift.dll"
+                    });
+                    var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
+                    linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15).Select(Path.GetFileName));
+                    break;
                 }
 
-                return ErrorCode.Success;
+                case ClientLanguage.Client_CPlusPlus:
+                {
+                    var sourceDir = Path.Combine(dir, "gen-" + languageName);
+                    linkInfo.IncludeDirectories.Add(sourceDir);
+                    linkInfo.LibraryPaths.Add(sourceDir);
+                    linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\cpp"));                            
+                    var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
+                    linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15));
+                    break;
+                }
+                case ClientLanguage.Client_Java:
+                {
+                    var sourceDir = Path.Combine(dir, "gen-" + languageName);
+                    linkInfo.IncludeDirectories.Add(sourceDir);
+                    linkInfo.LibraryPaths.Add(sourceDir);
+                    linkInfo.LibraryPaths.Add(Path.Combine(Directory.GetParent(compiler).FullName, "lib\\java"));
+                    var searchPattern = "*." + LanguageHelper.GetSourceExtension(lang);
+                    linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(sourceDir, searchPattern, SearchOption.AllDirectories, 15));
+                    break;
+                }
+                default:
+                    break;
+
             }
-            else
-            {
-                return ErrorCode.ExceptionError;
-            }
+
+            return ErrorCode.Success;
         }
 
         public ErrorCode GenerateServiceSketch(
@@ -204,28 +180,25 @@ namespace rDSN.Tron.LanguageProvider
 
         private string GetLanguageName(ClientLanguage lang)
         {
-            Dictionary<ClientLanguage, string> map = new Dictionary<ClientLanguage, string>()
+            var map = new Dictionary<ClientLanguage, string>
             {
                 {ClientLanguage.Client_CPlusPlus, "cpp"},
                 {ClientLanguage.Client_CSharp, "csharp"},
                 {ClientLanguage.Client_Java, "java"},
                 {ClientLanguage.Client_Javascript, "js"},
-                {ClientLanguage.Client_Python, "py"},
+                {ClientLanguage.Client_Python, "py"}
             };
             if (map.ContainsKey(lang))
             {
                 return map[lang];
             }
-            else
-            {
-                return "";
-            }
+            return "";
         }
 
         public void GenerateClientCall(CodeBuilder builder, MethodCallExpression call, Service svc, Dictionary<Type, string> reWrittenTypes)
         {
             var thriftArgName = call.Method.GetParameters()[0].Name;
-            var upperedThriftArgName = Char.ToUpper(thriftArgName[0]).ToString() + thriftArgName.Substring(1);
+            var upperedThriftArgName = char.ToUpper(thriftArgName[0]) + thriftArgName.Substring(1);
             builder.AppendLine(svc.TypeName() + "." + call.Method.Name + "_result resp;");
             builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.TypeName() + "." + call.Method.Name + "_args(){" + upperedThriftArgName + "= req}, out resp);");
             builder.AppendLine("return resp.Success;");

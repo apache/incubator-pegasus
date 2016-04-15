@@ -32,38 +32,35 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Xml.Serialization;
-using System.CodeDom.Compiler;
-using System.Reflection;
-using System.Collections;
-using System.Linq.Expressions;
 using System.Diagnostics;
-
-using Microsoft.CSharp;
-using rDSN.Tron.Utility;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using rDSN.Tron.Contract;
 using rDSN.Tron.LanguageProvider;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
 {
-    public class Compiler
+    public static class Compiler
     {
         public static ServicePlan Compile(Type serviceType)
         {
             var calls = new Dictionary<MethodInfo, MethodCallExpression>();
             var ctor = serviceType.GetConstructor(new Type[] { });
+            Debug.Assert(ctor != null, "ctor != null");
             var this_ = ctor.Invoke(new object[] { });
 
             foreach (var m in ServiceContract.GetServiceCalls(serviceType))
             {
-                var req = m.GetParameters()[0].ParameterType.GetConstructor(new Type[] { typeof(string) }).Invoke(new object[] { "request" });
-                var result = (ISymbol)m.Invoke(this_, new object[] { req });
+                var constructorInfo = m.GetParameters()[0].ParameterType.GetConstructor(new[] { typeof(string) });
+                if (constructorInfo == null) continue;
+                var req = constructorInfo.Invoke(new object[] { "request" });
+                var result = (ISymbol)m.Invoke(this_, new[] { req });
 
                 calls[m] = result.Expression as MethodCallExpression;
             }
@@ -81,53 +78,46 @@ namespace rDSN.Tron.Compiler
                 workerQueue.Enqueue(new KeyValuePair<MethodInfo, MethodCallExpression>(exp.Key, exp.Value));
             }
 
-            Dictionary<MethodInfo, QueryContext> contexts = new Dictionary<MethodInfo, QueryContext>();
-
+            var contexts = new Dictionary<MethodInfo, QueryContext>();
             while (workerQueue.Count > 0)
             {
                 var exp = workerQueue.Dequeue();
-                QueryContext context = new QueryContext(serviceObject, exp.Value, exp.Key.Name);
+                var context = new QueryContext(serviceObject, exp.Value, exp.Key.Name);
                 context.Collect();
-
                 contexts.Add(exp.Key, context);
-
-                foreach (var s in context.ExternalComposedSerivce)
+                foreach (var s in context.ExternalComposedSerivce.Where(s => !contexts.ContainsKey(s.Key)))
                 {
-                    if (!contexts.ContainsKey(s.Key))
-                        workerQueue.Enqueue(new KeyValuePair<MethodInfo, MethodCallExpression>(s.Key, s.Value));
+                    workerQueue.Enqueue(new KeyValuePair<MethodInfo, MethodCallExpression>(s.Key, s.Value));
                 }
             }
 
             // step: prepare service plan
-            CodeGenerator codeGenerator = new CodeGenerator();
-            string name = serviceObject.GetType().Name + "." + codeGenerator.AppId.ToString();
-            ServicePlan plan = new ServicePlan();
-            plan.DependentServices = contexts
-                .SelectMany(c => c.Value.Services.Select(r => r.Value))
-                .DistinctBy(s => s.URL)
-                .ToArray()
-                ;
-            plan.Package = new ServicePackage();
+            var codeGenerator = new CodeGenerator();
+            var name = serviceObject.GetType().Name + "." + codeGenerator.AppId;
+            var plan = new ServicePlan
+            {
+                DependentServices = contexts
+                    .SelectMany(c => c.Value.Services.Select(r => r.Value))
+                    .DistinctBy(s => s.URL)
+                    .ToArray(),
+                Package = new ServicePackage()
+            };
             SystemHelper.CreateOrCleanDirectory(name);
 
             // step: generate composed service code
-            HashSet<string> sources = new HashSet<string>();
-            HashSet<string> libs = new HashSet<string>();
-            string dir = name + ".Source";
+            var sources = new HashSet<string>();
+            var libs = new HashSet<string>();
+            var dir = name + ".Source";
             SystemHelper.CreateOrCleanDirectory(dir);
 
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.dev.csharp.dll"));
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Thrift.dll"));
-            
-            string code = codeGenerator.BuildRdsn(serviceObject.GetType(), contexts.Select(c => c.Value).ToArray());
+
+            var code = codeGenerator.BuildRdsn(serviceObject.GetType(), contexts.Select(c => c.Value).ToArray());
             SystemHelper.StringToFile(code, Path.Combine(dir, name + ".cs"));
             sources.Add(Path.Combine(dir, name + ".cs"));
             
-            foreach (var lib in QueryContext.KnownLibs)
-            {
-                if (!libs.Contains(lib))
-                    libs.Add(lib);
-            }
+            libs.UnionWith(QueryContext.KnownLibs);
 
             // step: generate client code for all dependent services
             foreach (var s in contexts
@@ -136,52 +126,47 @@ namespace rDSN.Tron.Compiler
                 .Select(s => s.ExtractSpec()))
             {
                 var provider = SpecProviderManager.Instance().GetProvider(s.SType);
-                Trace.Assert(null != provider, "Language provider missing for type " + s.SType.ToString());
+                Trace.Assert(null != provider, "Language provider missing for type " + s.SType);
 
-                LinkageInfo linkInfo = new LinkageInfo();
+                LinkageInfo linkInfo;
                 var err = provider.GenerateServiceClient(s, dir, ClientLanguage.Client_CSharp, ClientPlatform.Windows, out linkInfo);
                 Trace.Assert(ErrorCode.Success == err);
 
-                foreach (var source in linkInfo.Sources)
-                {
-                    sources.Add(Path.Combine(dir, source));
-                }
-
-                foreach (var lib in linkInfo.DynamicLibraries)
-                {
-                    if (!libs.Contains(lib))
-                        libs.Add(lib);
-                }
+                sources.UnionWith(linkInfo.Sources);
+                libs.UnionWith(linkInfo.DynamicLibraries);
             }
 
             // step: fill service plan
-            plan.Package.Spec = new ServiceSpec();
-            plan.Package.Spec.SType = ServiceSpecType.thrift;
-            plan.Package.Spec.MainSpecFile = serviceObject.GetType().Name + ".thrift";
-            plan.Package.Spec.ReferencedSpecFiles = plan.DependentServices
-                .DistinctBy(s => s.PackageName)
-                .SelectMany(s =>
-                {
-                    var spec = s.ExtractSpec();
-                    List<string> specFiles = new List<string>();
-
-                    specFiles.Add(spec.MainSpecFile);
-                    SystemHelper.SafeCopy(Path.Combine(spec.Directory, spec.MainSpecFile), Path.Combine(name, spec.MainSpecFile), false);
-
-                    foreach (var ds in spec.ReferencedSpecFiles)
+            plan.Package.Spec = new ServiceSpec
+            {
+                SType = ServiceSpecType.thrift,
+                MainSpecFile = serviceObject.GetType().Name + ".thrift",
+                ReferencedSpecFiles = plan.DependentServices
+                    .DistinctBy(s => s.PackageName)
+                    .Where(s => s.Spec.SType == ServiceSpecType.thrift)
+                    .SelectMany(s =>
                     {
-                        specFiles.Add(ds);
-                        SystemHelper.SafeCopy(Path.Combine(spec.Directory, ds), Path.Combine(name, ds), false);
+                        var spec = s.ExtractSpec();
+                        var specFiles = new List<string> { spec.MainSpecFile };
+
+                        SystemHelper.SafeCopy(Path.Combine(spec.Directory, spec.MainSpecFile),
+                            Path.Combine(name, spec.MainSpecFile), false);
+
+                        foreach (var ds in spec.ReferencedSpecFiles)
+                        {
+                            specFiles.Add(ds);
+                            SystemHelper.SafeCopy(Path.Combine(spec.Directory, ds), Path.Combine(name, ds), false);
+                        }
+                        return specFiles;
                     }
-                    return specFiles;
-                }
-                )
-                .Distinct()
-                .ToList();
-            plan.Package.Spec.Directory = name;
+                    )
+                    .Distinct()
+                    .ToList(),
+                Directory = name
+            };
             plan.Package.MainSpec = ServiceContract.GenerateThriftSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);
             SystemHelper.StringToFile(plan.Package.MainSpec, Path.Combine(name, plan.Package.Spec.MainSpecFile));
-        
+
             if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
@@ -194,11 +179,10 @@ namespace rDSN.Tron.Compiler
             {
                 Console.Write("php codegen failed");
             }
+
             //grab thrift-generated files
-            foreach (var file in Directory.GetFiles(Path.Combine(dir, "thrift"), "*.cs", SearchOption.AllDirectories))
-            {
-                sources.Add(file);
-            }
+            sources.UnionWith(Directory.GetFiles(Path.Combine(dir, "thrift"), "*.cs", SearchOption.AllDirectories));
+
             // step: generate composed service package                        
             CSharpCompiler.ToDiskAssembly(sources.ToArray(), libs.ToArray(), new string[] { },
                 Path.Combine(name, name + ".exe"),
@@ -208,16 +192,12 @@ namespace rDSN.Tron.Compiler
 
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "dsn.core.dll"));
             libs.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "zookeeper_mt.dll"));
-            foreach (var lib in libs)
+            foreach (var lib in libs.Where(lib => !lib.StartsWith("System.")))
             {
-                // TODO: fix me as this is a hack
-                if (!lib.StartsWith("System."))
-                {
-                    SystemHelper.SafeCopy(lib, Path.Combine(name, Path.GetFileName(lib)), false);
-                }
+                SystemHelper.SafeCopy(lib, Path.Combine(name, Path.GetFileName(lib)), false);
             }
 
-            Console.ReadKey();
+            //Console.ReadKey();
             return plan;
         }
     }

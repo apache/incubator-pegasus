@@ -32,11 +32,7 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+
 using System.IO;
 
 namespace rDSN.Tron.Utility
@@ -47,22 +43,21 @@ namespace rDSN.Tron.Utility
         where GraphT : GenericGraph<VertexT, EdgeT, GraphT>
     {
         #region FIELDS
-        private VertexT _startVertex;
-        private VertexT _endVertex;
-        private GraphT _graph;
+
         #endregion
 
         #region PROPERTIES
-        public VertexT StartVertex { get { return _startVertex; } }
-        public VertexT EndVertex { get { return _endVertex; } }
-        public GraphT Graph { get { return _graph; } }
+        public VertexT StartVertex { get; private set; }
+        public VertexT EndVertex { get; private set; }
+        public GraphT Graph { get; private set; }
+
         #endregion
 
         public GenericEdge(GraphT graph, VertexT startVertex, VertexT endVertex)
         {
-            _graph = graph;
-            _startVertex = startVertex;
-            _endVertex = endVertex;
+            Graph = graph;
+            StartVertex = startVertex;
+            EndVertex = endVertex;
         }
 
         protected virtual string GetVisualizationProperties()
@@ -84,9 +79,9 @@ namespace rDSN.Tron.Utility
 
         public void Clear()
         {
-            _startVertex = null;
-            _endVertex = null;
-            _graph = null;
+            StartVertex = null;
+            EndVertex = null;
+            Graph = null;
         }
     }
 }

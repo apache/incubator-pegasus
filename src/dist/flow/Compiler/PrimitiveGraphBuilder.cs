@@ -32,21 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Dynamic;
-using System.Globalization;
-
+using System.Linq;
+using System.Linq.Expressions;
 using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.Compiler
 {
@@ -56,7 +48,7 @@ namespace rDSN.Tron.Compiler
         private LGraph _graph;
         private Dictionary<MethodCallExpression, LVertex> _vertices = new Dictionary<MethodCallExpression, LVertex>();
         private Stack<LVertex> _currentParentVertices = new Stack<LVertex>();
-        private object _composedService = null;
+        private object _composedService;
 
         internal PrimitiveGraphBuilder(object serviceObject, MethodCallExpression m, LGraph graph)
         {
@@ -104,24 +96,16 @@ namespace rDSN.Tron.Compiler
             if (_vertices.ContainsKey(m))
                 return _vertices[m];
 
-            LVertex v = _graph.CreateVertex<LVertex>();
+            var v = _graph.CreateVertex<LVertex>();
             v.Exp = m;
             v.Name = m.Method.Name + "(" + scopeLevel + ")";
             _vertices.Add(m, v);
-            
-            Expression source = null;
-            if (m.Object != null)
-            {
-                source = m.Object;
-            }
-            else
-            {
-                source = m.Arguments[0];
-            }
+
+            var source = m.Object ?? m.Arguments[0];
 
             if (source.NodeType == ExpressionType.Constant)
             {
-                ConstantExpression cexp = source as ConstantExpression;
+                var cexp = source as ConstantExpression;
                 if (cexp.Value.GetType().IsInheritedTypeOf(typeof(ISymbol)))
                 {
                     var input = _graph.CreateVertex<LVertex>();
@@ -132,7 +116,7 @@ namespace rDSN.Tron.Compiler
                 }
                 else
                 {
-                    throw new Exception("input variable not allowed for ' " + cexp.Value.GetType() + "' in exp '" + m.ToString() + "'");
+                    throw new Exception("input variable not allowed for ' " + cexp.Value.GetType() + "' in exp '" + m + "'");
                 }
             }
             else if (source.NodeType == ExpressionType.Parameter)
@@ -145,13 +129,13 @@ namespace rDSN.Tron.Compiler
             }
             else if (source is MethodCallExpression)
             {
-                var sv = this.Visit(source, scopeLevel) as LVertex;
+                var sv = Visit(source, scopeLevel) as LVertex;
                 var ie = sv.ConnectTo<LEdge>(v);
                 ie.Type = LEdge.FlowType.Data;
             }
             else
             {
-                throw new Exception("Invalid source expression: " + source.ToString());
+                throw new Exception("Invalid source expression: " + source);
             }
 
             foreach (var arg in m.Arguments)
@@ -159,34 +143,29 @@ namespace rDSN.Tron.Compiler
                 if (arg == source)
                     continue;
 
-                if (arg.NodeType == ExpressionType.Quote)
+                if (arg.NodeType != ExpressionType.Quote) continue;
+                var uexp = arg as UnaryExpression;
+                if (uexp.Operand.NodeType != ExpressionType.Lambda) continue;
+                var lexp = uexp.Operand as LambdaExpression;
+                if (lexp.Parameters.Count <= 0 || !lexp.Parameters[0].Type.IsSymbol() ||
+                    lexp.Body.NodeType != ExpressionType.Call) continue;
+                var cexp = lexp.Body as MethodCallExpression;
+                if (IsTronPrimitiveCall(cexp))
                 {
-                    UnaryExpression uexp = arg as UnaryExpression;
-                    if (uexp.Operand.NodeType == ExpressionType.Lambda)
-                    {
-                        LambdaExpression lexp = uexp.Operand as LambdaExpression;
-                        if (lexp.Parameters.Count > 0 && lexp.Parameters[0].Type.IsSymbol() && lexp.Body.NodeType == ExpressionType.Call)
-                        {
-                            var cexp = lexp.Body as MethodCallExpression;
-                            if (IsTronPrimitiveCall(cexp))
-                            {
-                                var sv = Visit(lexp.Body, scopeLevel + 1) as LVertex;
-                                var ie = sv.ConnectTo<LEdge>(v);
-                                ie.Type = LEdge.FlowType.Lambda;
-                            }
+                    var sv = Visit(lexp.Body, scopeLevel + 1) as LVertex;
+                    var ie = sv.ConnectTo<LEdge>(v);
+                    ie.Type = LEdge.FlowType.Lambda;
+                }
 
-                            else
-                            {
-                                Trace.Assert(IsTronComposedCall(cexp));
-                                var req = cexp.Method.GetParameters()[0].ParameterType.GetConstructor(new Type[] { typeof(string) }).Invoke(new object[] { "request" });
-                                var result = (ISymbol)cexp.Method.Invoke(_composedService, new object[] { req });
+                else
+                {
+                    Trace.Assert(IsTronComposedCall(cexp));
+                    var req = cexp.Method.GetParameters()[0].ParameterType.GetConstructor(new[] { typeof(string) }).Invoke(new object[] { "request" });
+                    var result = (ISymbol)cexp.Method.Invoke(_composedService, new[] { req });
 
-                                LVertex sv = Visit(result.Expression, scopeLevel + 1) as LVertex;
-                                var ie = sv.ConnectTo<LEdge>(v);
-                                ie.Type = LEdge.FlowType.Lambda;
-                            }
-                        }
-                    }
+                    var sv = Visit(result.Expression, scopeLevel + 1) as LVertex;
+                    var ie = sv.ConnectTo<LEdge>(v);
+                    ie.Type = LEdge.FlowType.Lambda;
                 }
             }
 

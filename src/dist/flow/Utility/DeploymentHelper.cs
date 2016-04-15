@@ -32,11 +32,8 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
 
 namespace rDSN.Tron.Utility
@@ -51,7 +48,7 @@ namespace rDSN.Tron.Utility
     public class DeployHelper
     {
         public static bool IsFaked = false;
-        public static RemotingTool Remoting = Utility.RemotingTool.PsExec;
+        public static RemotingTool Remoting = RemotingTool.PsExec;
 
         public static void EnableFirewallRule(string name, string programFullpath, string machineName, bool verbose = false)
         {
@@ -71,7 +68,7 @@ namespace rDSN.Tron.Utility
             localFullPath = localFullPath.PathClean();
             remoteFullPath = remoteFullPath.PathClean();
 
-            string rpath = "\\\\" + remoteMachine + "\\" + remoteFullPath.Replace(':', '$');
+            var rpath = "\\\\" + remoteMachine + "\\" + remoteFullPath.Replace(':', '$');
             RunCommand("robocopy " + (cleanup ? "/MIR" : "") + " " + localFullPath + " " + rpath + (cleanup ? "" : " /S"), verbose);
         }
 
@@ -80,7 +77,7 @@ namespace rDSN.Tron.Utility
             localFullPath = localFullPath.PathClean();
             remoteFullPath = remoteFullPath.PathClean();
 
-            string rpath = "\\\\" + remoteMachine + "\\" + remoteFullPath.Replace(':', '$');
+            var rpath = "\\\\" + remoteMachine + "\\" + remoteFullPath.Replace(':', '$');
             RunCommand("copy /Y " + localFullPath + " " + rpath, verbose);
         }
 
@@ -100,7 +97,7 @@ namespace rDSN.Tron.Utility
         {
             if (machineName.ToLower() == Environment.MachineName.ToLower() || machineName.ToLower() == "localhost")
                 RunCommand(cmd, verbose);
-            else if (Remoting ==  Utility.RemotingTool.PsExec)
+            else if (Remoting ==  RemotingTool.PsExec)
             {
                 if (workdir == "")
                 {
@@ -113,7 +110,7 @@ namespace rDSN.Tron.Utility
             }
             else
             {
-                Trace.Assert(Remoting == Utility.RemotingTool.ApServ);
+                Trace.Assert(Remoting == RemotingTool.ApServ);
                 RunCommand("start apserv.exe " + machineName + " \"" + cmd + "\"", verbose);
             }
         }

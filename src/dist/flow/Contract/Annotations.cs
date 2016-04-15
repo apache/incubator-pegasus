@@ -32,18 +32,13 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Linq.Expressions;
-using System.Reflection;
 
 namespace rDSN.Tron.Contract
 {
-    [System.AttributeUsage(AttributeTargets.Interface|AttributeTargets.Class, AllowMultiple = false)]
-    public class TronService : System.Attribute
+    [AttributeUsage(AttributeTargets.Interface|AttributeTargets.Class)]
+    public class TronService : Attribute
     {
         public TronService()
         {
@@ -56,24 +51,24 @@ namespace rDSN.Tron.Contract
     /// <summary>
     /// whether this method has some side effect
     /// </summary>
-    [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class SideEffect : System.Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public class SideEffect : Attribute
     { 
     }
 
     /// <summary>
     /// whether this method is implemented via service composition
     /// </summary>
-    [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class Composed : System.Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public class Composed : Attribute
     {
     }
 
     /// <summary>
     /// whether this method is an upcall (event), default is downcall
     /// </summary>
-    [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class UpCall : System.Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public class UpCall : Attribute
     {
     }
   
@@ -82,8 +77,8 @@ namespace rDSN.Tron.Contract
 
 namespace IDL
 {
-    [System.AttributeUsage(AttributeTargets.Enum | AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false)]
-    public class SchemaAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Class | AttributeTargets.Interface)]
+    public class SchemaAttribute : Attribute
     {
 
         public SchemaAttribute()
@@ -110,8 +105,8 @@ namespace IDL
         public string version;
     }
 
-    [System.AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-    public class FieldAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.Field)]
+    public class FieldAttribute : Attribute
     {
        
         public FieldAttribute(int i)
@@ -162,8 +157,8 @@ namespace IDL
 
     }
 
-    [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class MethodAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public class MethodAttribute : Attribute
     {
 
         public MethodAttribute()
@@ -180,8 +175,8 @@ namespace IDL
 
     }
 
-    [System.AttributeUsage(AttributeTargets.All, AllowMultiple = false)]
-    public class DocAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.All)]
+    public class DocAttribute : Attribute
     {
         public DocAttribute(string d)
         {

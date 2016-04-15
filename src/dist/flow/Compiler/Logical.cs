@@ -32,16 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Linq.Expressions;
 
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
@@ -73,10 +67,10 @@ namespace rDSN.Tron.Compiler
 
             foreach (var lb in Instructions)
             {
-                Console.WriteLine("\t" + lb.Key.ToString());
+                Console.WriteLine("\t" + lb.Key);
                 foreach (var inst in lb.Value)
                 {
-                    Console.WriteLine("\t\t" + inst.ToString());
+                    Console.WriteLine("\t\t" + inst);
                 }
             }
         }
@@ -110,9 +104,5 @@ namespace rDSN.Tron.Compiler
 
     public class LGraph : GenericGraph<LVertex, LEdge, LGraph>
     {
-        public LGraph()
-            : base()
-        {        
-        }
     }
 }

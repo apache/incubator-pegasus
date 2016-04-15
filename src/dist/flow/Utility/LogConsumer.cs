@@ -32,11 +32,8 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -53,7 +50,7 @@ namespace rDSN.Tron.Utility
         }
 
         private ConsumerType _mode;
-        private StreamWriter _localWriter = null;
+        private StreamWriter _localWriter;
 
         public LogConsumer(string name)
         {
@@ -65,16 +62,13 @@ namespace rDSN.Tron.Utility
             {
                 _mode = ConsumerType.LocalFile;
                 var fs = new FileStream(name + ".PID." + Process.GetCurrentProcess().Id + ".log", FileMode.Create);
-                if (fs != null)
-                {
-                    _localWriter = new StreamWriter(fs);
-                }
+                _localWriter = new StreamWriter(fs);
             }
         }
 
         public override void Write(string message)
         {
-            string rMsg = DateTime.Now.ToString("HH:mm:ss.fff") + ",TID=" 
+            var rMsg = DateTime.Now.ToString("HH:mm:ss.fff") + ",TID=" 
                 + Thread.CurrentThread.ManagedThreadId
                 + ": " + message;
             switch (_mode)

@@ -32,16 +32,10 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-
-using rDSN.Tron.Utility;
-using rDSN.Tron.Contract;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -49,22 +43,19 @@ namespace rDSN.Tron.LanguageProvider
    {
        public static string GetSourceExtension(ClientLanguage lang)
        {
-           Dictionary<ClientLanguage, string> map = new Dictionary<ClientLanguage, string>()
-            {
+           var map = new Dictionary<ClientLanguage, string>
+           {
                 {ClientLanguage.Client_CPlusPlus, "cpp"},
                 {ClientLanguage.Client_CSharp, "cs"},
                 {ClientLanguage.Client_Java, "java"},
                 {ClientLanguage.Client_Python, "py"},
-                {ClientLanguage.Client_Javascript, "js"},
+                {ClientLanguage.Client_Javascript, "js"}
             };
            if (map.ContainsKey(lang))
            {
                return map[lang];
            }
-           else
-           {
-               return "";
-           }
+           return "";
        }
 
        // TODO: return the correct path of compiler in Linux platform
@@ -87,11 +78,8 @@ namespace rDSN.Tron.LanguageProvider
            {
                return path;
            }
-           else
-           {
-               Console.WriteLine("Cannot find thrift compiler at path: {0}!", path);
-               return "";
-           }
+           Console.WriteLine("Cannot find thrift compiler at path: {0}!", path);
+           return "";
        }
    }
   

@@ -32,18 +32,14 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace rDSN.Tron.Compiler
 {
-    [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class Primitive : System.Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public class Primitive : Attribute
     {
         public Primitive()
         {
@@ -54,10 +50,7 @@ namespace rDSN.Tron.Compiler
         {
             get
             {
-                if (Analyzer == null)
-                    return null;
-                else
-                    return Analyzer.GetType();
+                return Analyzer?.GetType();
             }
             set
             {

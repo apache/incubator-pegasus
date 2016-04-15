@@ -36,7 +36,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,13 +56,12 @@ namespace rDSN.Tron.ControlPanel
             if (args.Count < 2)
                 return false;
 
-            string elementList = args[0];
-            string cmd = args[1];
+            var elementList = args[0];
 
-            List<string> cargs = new List<string>();
+            var cargs = new List<string>();
             if (args.Count > 2)
             {
-                for (int i = 2; i < args.Count; i++)
+                for (var i = 2; i < args.Count; i++)
                     cargs.Add(args[i]);
             }
 
@@ -71,16 +69,16 @@ namespace rDSN.Tron.ControlPanel
             // pre[min:max]post
             if (elementList.Contains('[') && elementList.Contains(']'))
             {
-                int lpos = elementList.IndexOf('[');
-                int rpos = elementList.IndexOf(']');
-                string prefix = elementList.Substring(0, lpos);
-                string postfix = elementList.Substring(rpos + 1);
-                string range = elementList.Substring(lpos + 1, rpos - lpos - 1);
-                int colonPos = range.IndexOf(':');
-                int min = int.Parse(range.Substring(0, colonPos));
-                int max = int.Parse(range.Substring(colonPos + 1));
+                var lpos = elementList.IndexOf('[');
+                var rpos = elementList.IndexOf(']');
+                var prefix = elementList.Substring(0, lpos);
+                var postfix = elementList.Substring(rpos + 1);
+                var range = elementList.Substring(lpos + 1, rpos - lpos - 1);
+                var colonPos = range.IndexOf(':');
+                var min = int.Parse(range.Substring(0, colonPos));
+                var max = int.Parse(range.Substring(colonPos + 1));
 
-                string fmt = "0";
+                string fmt;
                 if (max < 10)
                     fmt = "0";
                 else if (max < 100)
@@ -92,11 +90,11 @@ namespace rDSN.Tron.ControlPanel
                 else
                     throw new Exception("too big");
 
-                List<string> es = new List<string>();
+                var es = new List<string>();
 
-                for (int i = min; i <= max; i++)
+                for (var i = min; i <= max; i++)
                 {
-                    string e = prefix + i.ToString(fmt) + postfix;
+                    var e = prefix + i.ToString(fmt) + postfix;
                     es.Add(e);
                 }
 
@@ -104,13 +102,11 @@ namespace rDSN.Tron.ControlPanel
             }
             else
             {
-                elements = elementList.Split(new char[] { ',' });
+                elements = elementList.Split(',');
             }
 
             var tasks = new List<KeyValuePair<Task, string>>();
             var completedTasks = new List<KeyValuePair<Task, string>>();
-
-            DateTime beginTs = DateTime.Now;
 
             foreach (var e in elements)
             {
@@ -123,7 +119,7 @@ namespace rDSN.Tron.ControlPanel
                     else return a;
                 }).ToList();
 
-                Task<int> task = new Task<int>(
+                var task = new Task<int>(
                         () =>
                         {
                             //Console.WriteLine("execute command '" + cmd + " " + myargs.VerboseCombine(" ", a => a));
@@ -137,21 +133,15 @@ namespace rDSN.Tron.ControlPanel
                 task.Start();
             }
 
-            int totalTaskCount = tasks.Count;
-            int completeCount = 0;
+            var totalTaskCount = tasks.Count;
+            var completeCount = 0;
 
             while (completeCount < totalTaskCount)
             {
                 Thread.Sleep(1000);
-                foreach (var task in tasks)
-                {
-                    if (task.Key.Wait(1))
-                    {
-                        completedTasks.Add(task);
-                    }
-                }
+                completedTasks.AddRange(tasks.Where(task => task.Key.Wait(1)));
 
-                completeCount += completedTasks.Count();
+                completeCount += completedTasks.Count;
                 foreach (var task in completedTasks)
                 {
                     tasks.Remove(task);

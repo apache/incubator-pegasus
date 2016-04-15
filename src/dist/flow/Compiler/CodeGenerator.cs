@@ -32,19 +32,16 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Diagnostics;
-using System.IO;
-
-using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
 using rDSN.Tron.LanguageProvider;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Compiler
 {
@@ -57,12 +54,11 @@ namespace rDSN.Tron.Compiler
     public class CodeGenerator
     {
         private CodeBuilder _builder = new CodeBuilder();
-        private QueryContext[] _contexts = null;
-        private UInt64 _appId = RandomGenerator.Random64();
+        private QueryContext[] _contexts;
         private string _appClassName;
         private Dictionary<Type, string> _rewrittenTypes = new Dictionary<Type, string>();
 
-        public UInt64 AppId { get { return _appId; } }
+        public ulong AppId { get; } = RandomGenerator.Random64();
 
         public string BuildRdsn(Type service, QueryContext[] contexts)
         {
@@ -177,14 +173,14 @@ namespace rDSN.Tron.Compiler
 
         private void BuildServiceCallsRdsn(string serviceName)
         {
-            HashSet<string> calls = new HashSet<string>();
+            var calls = new HashSet<string>();
             foreach (var s in _contexts.SelectMany(c => c.ServiceCalls))
             {
                 Trace.Assert(s.Key.Object != null && s.Key.Object.NodeType == ExpressionType.MemberAccess);
-                string callName = s.Key.Method.Name;
-                string respTypeName = s.Key.Type.GetCompilableTypeName(_rewrittenTypes);
-                string reqTypeName = s.Key.Arguments[0].Type.GetCompilableTypeName(_rewrittenTypes);
-                string call = "Call_" + s.Value.PlainTypeName() + "_" + callName;
+                var callName = s.Key.Method.Name;
+                var respTypeName = s.Key.Type.GetCompilableTypeName(_rewrittenTypes);
+                var reqTypeName = s.Key.Arguments[0].Type.GetCompilableTypeName(_rewrittenTypes);
+                var call = "Call_" + s.Value.PlainTypeName() + "_" + callName;
 
                 if (!calls.Add(call + ":" + reqTypeName))
                     continue;
@@ -222,8 +218,8 @@ namespace rDSN.Tron.Compiler
                 _builder.AppendLine();
 
             // final query
-            ExpressionToCode codeBuilder = new ExpressionToCode(c.RootExpression, c);
-            string code = codeBuilder.GenCode(_builder.Indent);
+            var codeBuilder = new ExpressionToCode(c.RootExpression, c);
+            var code = codeBuilder.GenCode(_builder.Indent);
 
             _builder.AppendLine(code + ";");
 
@@ -237,10 +233,10 @@ namespace rDSN.Tron.Compiler
         {
             foreach (var m in methods)
             {
-                var resp_type = serviceName + "." + m.Name + "_result";
-                _builder.AppendLine("protected override void On" + m.Name + "(" + serviceName + "." + m.Name + "_args request, RpcReplier<" + resp_type + "> replier)");
+                var respType = serviceName + "." + m.Name + "_result";
+                _builder.AppendLine("protected override void On" + m.Name + "(" + serviceName + "." + m.Name + "_args request, RpcReplier<" + respType + "> replier)");
                 _builder.BeginBlock();
-                _builder.AppendLine("var resp = new " + resp_type + "();");
+                _builder.AppendLine("var resp = new " + respType + "();");
                 _builder.AppendLine("resp.Success = " + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request.Req));");
                 _builder.AppendLine("replier.Reply(resp);");
                 _builder.EndBlock();
@@ -269,8 +265,8 @@ namespace rDSN.Tron.Compiler
                 _builder.AppendLine();
 
             // final query
-            ExpressionToCode codeBuilder = new ExpressionToCode(c.RootExpression, c);
-            string code = codeBuilder.GenCode(_builder.Indent);
+            var codeBuilder = new ExpressionToCode(c.RootExpression, c);
+            var code = codeBuilder.GenCode(_builder.Indent);
 
             _builder.AppendLine(code + ";");
 
@@ -281,11 +277,7 @@ namespace rDSN.Tron.Compiler
         
         private string VerboseStringArray(string[] parameters)
         {
-            string ps = "";
-            foreach (var s in parameters)
-            {
-                ps += "@\"" + s + "\",";
-            }
+            var ps = parameters.Aggregate("", (current, s) => current + ("@\"" + s + "\","));
             if (ps.Length > 0)
             {
                 ps = ps.Substring(0, ps.Length - 1);
@@ -295,15 +287,9 @@ namespace rDSN.Tron.Compiler
         
         private void BuildRewrittenTypes()
         {
-            foreach (var c in _contexts)
+            foreach (var t in _contexts.SelectMany(c => c.RewrittenTypes.Where(t => !_rewrittenTypes.ContainsKey(t.Key))))
             {
-                foreach (var t in c.RewrittenTypes)
-                {
-                    if (!_rewrittenTypes.ContainsKey(t.Key))
-                    {
-                        _rewrittenTypes.Add(t.Key, t.Value);
-                    }
-                }
+                _rewrittenTypes.Add(t.Key, t.Value);
             }
 
             foreach (var c in _contexts)
@@ -330,30 +316,32 @@ namespace rDSN.Tron.Compiler
             }
         }
 
-        private void BuildHeaderRdsn(string service_namespce)
+        private void BuildHeaderRdsn(string serviceNamespce)
         {
 
-            _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime().ToString() + " */");
+            _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime() + " */");
 
 
-            HashSet<string> namespaces = new HashSet<string>();
-            namespaces.Add("System");
-            namespaces.Add("System.IO");
-            namespaces.Add("dsn.dev.csharp");
-            namespaces.Add(service_namespce);
-            namespaces.Add("System.Linq");
-            namespaces.Add("System.Text");
-            namespaces.Add("System.Linq.Expressions");
-            namespaces.Add("System.Reflection");
-            namespaces.Add("System.Diagnostics");
-            namespaces.Add("System.Net");
-            namespaces.Add("System.Threading");
+            var namespaces = new HashSet<string>
+            {
+                "System",
+                "System.IO",
+                "dsn.dev.csharp",
+                serviceNamespce,
+                "System.Linq",
+                "System.Text",
+                "System.Linq.Expressions",
+                "System.Reflection",
+                "System.Diagnostics",
+                "System.Net",
+                "System.Threading",
+                "rDSN.Tron.Contract",
+                "rDSN.Tron.Runtime",
+                "rDSN.Tron.App"
+            };
 
             //namespaces.Add("rDSN.Tron.Utility");
             //namespaces.Add("rDSN.Tron.Compiler");
-            namespaces.Add("rDSN.Tron.Contract");
-            namespaces.Add("rDSN.Tron.Runtime");
-            namespaces.Add("rDSN.Tron.App");
 
             foreach (var nm in _contexts.SelectMany(c => c.Methods).Select(mi => mi.DeclaringType.Namespace).Distinct().Except(namespaces))
             {
@@ -373,26 +361,28 @@ namespace rDSN.Tron.Compiler
         }
         private void BuildHeader()
         {
-            _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime().ToString() + " */");
+            _builder.AppendLine("/* AUTO GENERATED BY Tron AT " + DateTime.Now.ToLocalTime() + " */");
 
 
-            HashSet<string> namespaces = new HashSet<string>();
-            namespaces.Add("System");
-            namespaces.Add("System.IO");
-            namespaces.Add("System.Collections.Generic");
-            namespaces.Add("System.Linq");
-            namespaces.Add("System.Text");
-            namespaces.Add("System.Linq.Expressions");
-            namespaces.Add("System.Reflection");
-            namespaces.Add("System.Diagnostics");
-            namespaces.Add("System.Net");
-            namespaces.Add("System.Threading");
+            var namespaces = new HashSet<string>
+            {
+                "System",
+                "System.IO",
+                "System.Collections.Generic",
+                "System.Linq",
+                "System.Text",
+                "System.Linq.Expressions",
+                "System.Reflection",
+                "System.Diagnostics",
+                "System.Net",
+                "System.Threading",
+                "rDSN.Tron.Utility",
+                "rDSN.Tron.Contract",
+                "rDSN.Tron.Runtime"
+            };
 
-            namespaces.Add("rDSN.Tron.Utility");
             //namespaces.Add("rDSN.Tron.Compiler");
-            namespaces.Add("rDSN.Tron.Contract");
-            namespaces.Add("rDSN.Tron.Runtime");
-            
+
             foreach (var nm in _contexts.SelectMany(c => c.Methods).Select(mi => mi.DeclaringType.Namespace).Distinct().Except(namespaces))
             {
                 namespaces.Add(nm);

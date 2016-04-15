@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Linq;
 using dsn.dev.csharp;
 
@@ -15,7 +13,7 @@ namespace dsn.example
             ServiceApp.RegisterApp<echoClientApp>("client");        
             //ServiceApp.RegisterApp<echoPerfTestClientApp>("client.echo.perf.test");
 
-            string[] args2 = (new string[] { "echo" }).Union(args).ToArray();
+            var args2 = (new string[] { "echo" }).Union(args).ToArray();
             Native.dsn_run(args2.Length, args2, true);
         }
     }

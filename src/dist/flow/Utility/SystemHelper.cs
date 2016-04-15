@@ -32,19 +32,20 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Management;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
-using System.Management;
-using System.Reflection;
-using System.Linq;
+using ThreadState = System.Threading.ThreadState;
 
 // msn.common
 namespace rDSN.Tron.Utility
@@ -57,21 +58,21 @@ namespace rDSN.Tron.Utility
     {
         public string srcDir;
         public string destDir;
-        public ICollection<string> files = new string[] { "*.*" };
+        public ICollection<string> files = new[] { "*.*" };
         public string logFile;
-        public bool recurseSubdirs = false;
-        public bool excludePdbs = false;
+        public bool recurseSubdirs;
+        public bool excludePdbs;
         public ManualResetEvent signal;
         public Exception exception;
-    };
+    }
 
     public static class RandomGenerator
     {
-        public static UInt64 Random64()
+        public static ulong Random64()
         {
-            return (UInt64)((new Random()).Next());
+            return (ulong)((new Random()).Next());
         }
-    };
+    }
 
     public static class PathUtil
     {
@@ -92,19 +93,20 @@ namespace rDSN.Tron.Utility
             {
                 File.Copy(from, to, force);
             }
-            catch(Exception)
+            catch (Exception)
             {
+                // ignored
             }
         }
             
 
         public static string[] LeveledDirs(string path)
         {
-            List<string> dirs = new List<string>();
+            var dirs = new List<string>();
 
-            var spliters = new char[] { '\\', '/' };
-            int idx = 0;
-            int lastIndex = 0;
+            var spliters = new[] { '\\', '/' };
+            int idx;
+            var lastIndex = 0;
 
             path = path.PathClean();
             while (-1 != (idx = path.IndexOfAny(spliters, lastIndex + 1)))
@@ -126,13 +128,12 @@ namespace rDSN.Tron.Utility
 
         public static byte[] FileToByteArray(string fileName)
         {
-            byte[] buff = null;
-            FileStream fs = new FileStream(fileName,
+            var fs = new FileStream(fileName,
                                            FileMode.Open,
                                            FileAccess.Read);
-            BinaryReader br = new BinaryReader(fs);
-            long numBytes = new FileInfo(fileName).Length;
-            buff = br.ReadBytes((int)numBytes);
+            var br = new BinaryReader(fs);
+            var numBytes = new FileInfo(fileName).Length;
+            var buff = br.ReadBytes((int)numBytes);
             br.Close();
             fs.Close();
             return buff;
@@ -143,7 +144,7 @@ namespace rDSN.Tron.Utility
             if (File.Exists(path))
                 File.Delete(path);
 
-            FileStream f = new FileStream(path, FileMode.Create);
+            var f = new FileStream(path, FileMode.Create);
             f.Write(content, offset, count);
             f.Close();
         }
@@ -151,19 +152,19 @@ namespace rDSN.Tron.Utility
         public static string FileToString(string fileName)
         {
             TextReader br = new StreamReader(fileName);
-            string s = br.ReadToEnd();
+            var s = br.ReadToEnd();
             br.Close();
             return s;
         }
 
         public static void StringToFile(string code, string fileName)
         {
-            StreamWriter writer = new StreamWriter(fileName);
-            writer.Write(code.ToString());
+            var writer = new StreamWriter(fileName);
+            writer.Write(code);
             writer.Close();
         }
 
-        public static HashSet<string> KnownSystemAssemblies = new HashSet<string>() 
+        public static HashSet<string> KnownSystemAssemblies = new HashSet<string>
         {
             "System.dll",
             "mscorlib.dll"
@@ -171,15 +172,14 @@ namespace rDSN.Tron.Utility
 
         public static string[] GetDependentNonSystemAssemblies(Assembly asm)
         {
-            HashSet<string> asmnames = new HashSet<string>();
-            asmnames.Add(asm.Location);
+            var asmnames = new HashSet<string> {asm.Location};
 
             if (asm.FullName.Contains("MySQL"))        // hack for referencing libmysqld
             {
                 asmnames.Add(Path.GetDirectoryName(asm.Location) + "\\libmysqld.dll");
             }
 
-            Queue<Assembly> asms = new Queue<Assembly>();
+            var asms = new Queue<Assembly>();
             asms.Enqueue(asm);
 
             while (asms.Count > 0)
@@ -219,14 +219,14 @@ namespace rDSN.Tron.Utility
         /// <returns></returns>
         public static FileInfo GetLatestModifiedFileInfo(string directoryPath, string filePattern)
         {
-            FileInfo[] files = new DirectoryInfo(directoryPath).GetFiles(filePattern);
+            var files = new DirectoryInfo(directoryPath).GetFiles(filePattern);
             if (files.Length == 0)
             {
                 return null;
             }
 
-            int last = 0;
-            for (int current = 1; current < files.Length; current++)
+            var last = 0;
+            for (var current = 1; current < files.Length; current++)
             {
                 if (files[current].LastWriteTime > files[last].LastWriteTime)
                 {
@@ -288,7 +288,7 @@ namespace rDSN.Tron.Utility
         /// <exception cref="CommandFailureException">If the command fails</exception>
         public static void CopyDir(string srcdir, string destdir, string logfile)
         {
-            RunRobocopyCommand(string.Format("robocopy /s \"{0}\" \"{1}\"", srcdir.TrimEnd('\\'), destdir.TrimEnd('\\')), logfile);
+            RunRobocopyCommand($"robocopy /s \"{srcdir.TrimEnd('\\')}\" \"{destdir.TrimEnd('\\')}\"", logfile);
         }
 
         /// <summary>
@@ -301,7 +301,7 @@ namespace rDSN.Tron.Utility
         /// <exception cref="CommandFailureException">If the command fails</exception>
         public static void CopyDir(string srcdir, string destdir, string wildcard, string logfile)
         {
-            RunRobocopyCommand(string.Format("robocopy /s \"{0}\" \"{1}\" {2}", srcdir.TrimEnd('\\'), destdir.TrimEnd('\\'), wildcard), logfile);
+            RunRobocopyCommand($"robocopy /s \"{srcdir.TrimEnd('\\')}\" \"{destdir.TrimEnd('\\')}\" {wildcard}", logfile);
         }
 
         /// <summary>
@@ -310,7 +310,7 @@ namespace rDSN.Tron.Utility
         /// </summary>
         /// <param name="sourceFileName">Source filename</param>
         /// <param name="destFileName">Destination filename</param>
-        public static void CopyFileThroughTmp(String sourceFileName, String destFileName)
+        public static void CopyFileThroughTmp(string sourceFileName, string destFileName)
         {
             File.Copy(sourceFileName, destFileName + ".tmp", true);
             File.Move(destFileName + ".tmp", destFileName);
@@ -333,7 +333,7 @@ namespace rDSN.Tron.Utility
             delayInSeconds = Math.Max(0, delayInSeconds);
 
             // Try multiple times to delete the file
-            for (int i = 0; i < numberOfTry; i++)
+            for (var i = 0; i < numberOfTry; i++)
             {
                 try
                 {
@@ -342,18 +342,15 @@ namespace rDSN.Tron.Utility
                     // Break from the loop when successfully delete the file
                     break;
                 }
-                catch (IOException ex)
+                catch (IOException)
                 {
                     if (i == numberOfTry - 1)
                     {
                         // Failed the last time, re-throw the exception
-                        throw ex;
+                        throw;
                     }
-                    else
-                    {
-                        // Sleep for a while before next try
-                        System.Threading.Thread.Sleep(delayInSeconds * 1000);
-                    }
+                    // Sleep for a while before next try
+                    Thread.Sleep(delayInSeconds * 1000);
                 }
             }
         }
@@ -376,19 +373,15 @@ namespace rDSN.Tron.Utility
         /// <param name="excludedFiles">The list of files to exclude</param>
         public static void RemoveAllFilesExcept(string dir, string searchPattern, string[] excludedFiles)
         {
-            DirectoryInfo dirInfo = new DirectoryInfo(dir);
-            foreach (FileInfo fi in dirInfo.GetFiles(searchPattern))
+            var dirInfo = new DirectoryInfo(dir);
+            foreach (var fi in dirInfo.GetFiles(searchPattern))
             {
-                bool isExcludedFile = false;
+                var isExcludedFile = false;
                 if (excludedFiles != null)
                 {
-                    foreach (string file in excludedFiles)
+                    if (excludedFiles.Any(file => fi.Name.ToLower().Equals(file.ToLower())))
                     {
-                        if (fi.Name.ToLower().Equals(file.ToLower()))
-                        {
-                            isExcludedFile = true;
-                            break;
-                        }
+                        isExcludedFile = true;
                     }
                 }
                 if (!isExcludedFile)
@@ -401,20 +394,10 @@ namespace rDSN.Tron.Utility
         /// </summary>
         /// <param name="">The directory from which to remove directories</param>
         /// <param name="excludedSubdirs">The list of directories to exclude</param>
-        public static void RemoveAllDirsExcept(string dir, string[] excludedDirs)
-        {
-            RemoveAllDirsExcept(dir, excludedDirs, false);
-        }
-
-        /// <summary>
-        /// Remove all subdirectories within a given directory except the specified directories
-        /// </summary>
-        /// <param name="">The directory from which to remove directories</param>
-        /// <param name="excludedSubdirs">The list of directories to exclude</param>
         /// <param name="areExcludedDirsLowered">A bool indicating if the list of excludedDirs are all lower case.
         /// If false, each entry in excludedSubdirs will be lowered to facilitate string matching.
         /// If true, this process will be skipped.</param>
-        public static void RemoveAllDirsExcept(string dir, string[] excludedDirs, bool areExcludedDirsLowered)
+        public static void RemoveAllDirsExcept(string dir, string[] excludedDirs, bool areExcludedDirsLowered = false)
         {
             // lower the root dir to facilitate comparison
             //
@@ -440,24 +423,23 @@ namespace rDSN.Tron.Utility
 
                 // iterate through the array and lower each entry
                 //
-                for (int i = 0; i < excludedDirs.Length; i++)
+                for (var i = 0; i < excludedDirs.Length; i++)
                 {
                     loweredExcludedDirs[i] = excludedDirs[i].ToLower();
                 }
             }
 
-            DirectoryInfo dirInfo = new DirectoryInfo(dir);
-            DirectoryInfo fullSubDir = null;
-            foreach (DirectoryInfo subdirInfo in dirInfo.GetDirectories())
+            var dirInfo = new DirectoryInfo(dir);
+            foreach (var subdirInfo in dirInfo.GetDirectories())
             {
-                bool isExcludedDir = false;
+                var isExcludedDir = false;
                 if (loweredExcludedDirs != null)
                 {
-                    foreach (string subdir in loweredExcludedDirs)
+                    foreach (var subdir in loweredExcludedDirs)
                     {
                         // create a full path to this subdir
                         //
-                        fullSubDir = new DirectoryInfo(Path.Combine(dir, subdir));
+                        var fullSubDir = new DirectoryInfo(Path.Combine(dir, subdir));
 
                         // if this exact directory is excluded no need to process any further
                         //
@@ -469,29 +451,15 @@ namespace rDSN.Tron.Utility
                         // if a subdir of this directory is excluded, need to exclude this dir
                         // and perform a recursive call to nuke subdirs
                         //
-                        else if (fullSubDir.FullName.StartsWith(subdirInfo.FullName.ToLower()))
+                        if (fullSubDir.FullName.StartsWith(subdirInfo.FullName.ToLower()))
                         {
                             // filter the excluded dirs to only those that are 
                             // contained under this subdir
                             //
-                            List<string> filteredExcludedDirs = new List<string>();
-                            foreach (string filterCandidate in loweredExcludedDirs)
-                            {
-                                // if this is a subdir of the current subdir
-                                // it should be included in the list of filtered subdirs
-                                //
-                                if (filterCandidate.StartsWith(subdirInfo.Name.ToLower() + Path.DirectorySeparatorChar))
-                                {
-                                    // trim off the current subdir as it will become part of the root dir
-                                    // for the recursive call
-                                    //
-                                    filteredExcludedDirs.Add(filterCandidate.Remove(0, subdirInfo.Name.Length + 1));
-                                }
-                            }
 
                             // make a recursive call that won't re-lower the filtered excluded dirs
                             //
-                            RemoveAllDirsExcept(subdirInfo.FullName, filteredExcludedDirs.ToArray(), true);
+                            RemoveAllDirsExcept(subdirInfo.FullName, (from filterCandidate in loweredExcludedDirs where filterCandidate.StartsWith(subdirInfo.Name.ToLower() + Path.DirectorySeparatorChar) select filterCandidate.Remove(0, subdirInfo.Name.Length + 1)).ToArray(), true);
 
                             // mark this dir as excluded as we handled it in the recursive call
                             //
@@ -536,14 +504,14 @@ namespace rDSN.Tron.Utility
             if (Directory.Exists(dir))
             {
                 // Delete any subdirectories
-                DirectoryInfo rootDirInfo = new DirectoryInfo(dir);
-                foreach (DirectoryInfo dirInfo in rootDirInfo.GetDirectories())
+                var rootDirInfo = new DirectoryInfo(dir);
+                foreach (var dirInfo in rootDirInfo.GetDirectories())
                 {
                     NukeDirectory(dirInfo.FullName);
                 }
 
                 // Delete any files, even read-only ones
-                foreach (FileInfo fileInfo in rootDirInfo.GetFiles())
+                foreach (var fileInfo in rootDirInfo.GetFiles())
                 {
                     if ((fileInfo.Attributes & FileAttributes.ReadOnly) != 0)
                         fileInfo.Attributes -= FileAttributes.ReadOnly;
@@ -581,14 +549,14 @@ namespace rDSN.Tron.Utility
             if (Directory.Exists(dir))
             {
                 // Delete any subdirectories
-                DirectoryInfo rootDirInfo = new DirectoryInfo(dir);
-                foreach (DirectoryInfo dirInfo in rootDirInfo.GetDirectories())
+                var rootDirInfo = new DirectoryInfo(dir);
+                foreach (var dirInfo in rootDirInfo.GetDirectories())
                 {
                     NukeDirectoryWithRetry(dirInfo.FullName, numberOfTry, delayInSeconds, deleteItself);
                 }
 
                 // Delete any files, even read-only ones
-                foreach (FileInfo fileInfo in rootDirInfo.GetFiles())
+                foreach (var fileInfo in rootDirInfo.GetFiles())
                 {
                     if ((fileInfo.Attributes & FileAttributes.ReadOnly) != 0)
                     {
@@ -646,9 +614,11 @@ namespace rDSN.Tron.Utility
                 // that will each spawn a robocopy process and signal a wait handle when done
                 // return the wait handle so that the caller can monitor the robocopy progress
                 //
-                RobocopyData data = new RobocopyData();
-                data.srcDir = srcdir;
-                data.destDir = destdir;
+                var data = new RobocopyData
+                {
+                    srcDir = srcdir,
+                    destDir = destdir
+                };
                 if (files != null)
                 {
                     data.files = files;
@@ -658,58 +628,44 @@ namespace rDSN.Tron.Utility
                 data.excludePdbs = excludePdbs;
                 data.signal = new ManualResetEvent(false);
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadedMirrorDir), data);
+                ThreadPool.QueueUserWorkItem(ThreadedMirrorDir, data);
                 return data;
             }
-            else
+            // make sure we didn't get any null arguments
+            // 
+            if (srcdir == null)
             {
-                // make sure we didn't get any null arguments
-                // 
-                if (srcdir == null)
-                {
-                    srcdir = string.Empty;
-                }
-                if (destdir == null)
-                {
-                    destdir = string.Empty;
-                }
-
-                // call robocopy directly and allow it to block the current thread
-                // first build up the robocopy command to be run
-                //
-                string robocopyCmd = null;
-
-                if (recurseSubdirs)
-                {
-                    robocopyCmd = string.Format("robocopy /mir /np /nfl /r:5 /w:5 \"{0}\" \"{1}\"", srcdir.TrimEnd('\\'), destdir.TrimEnd('\\'));
-                }
-                else
-                {
-                    robocopyCmd = string.Format("robocopy /copy:dat /purge /np /r:5 /w:5 \"{0}\" \"{1}\"", srcdir.TrimEnd('\\'), destdir.TrimEnd('\\'));
-                }
-
-                // iterate through the files to be copied and add each to the command line
-                //
-                if (files != null)
-                {
-                    foreach (string f in files)
-                    {
-                        robocopyCmd += String.Format(" \"{0}\" ", f);
-                    }
-                }
-
-                // if excludepdbs is true then add this as a command line param to robocopy
-                //
-                if (excludePdbs)
-                {
-                    robocopyCmd += " /XF *.pdb";
-                }
-
-                // run robocopy
-                //
-                RunRobocopyCommand(robocopyCmd, logfile);
-                return null;
+                srcdir = string.Empty;
             }
+            if (destdir == null)
+            {
+                destdir = string.Empty;
+            }
+
+            // call robocopy directly and allow it to block the current thread
+            // first build up the robocopy command to be run
+            //
+
+            var robocopyCmd = string.Format(recurseSubdirs ? "robocopy /mir /np /nfl /r:5 /w:5 \"{0}\" \"{1}\"" : "robocopy /copy:dat /purge /np /r:5 /w:5 \"{0}\" \"{1}\"", srcdir.TrimEnd('\\'), destdir.TrimEnd('\\'));
+
+            // iterate through the files to be copied and add each to the command line
+            //
+            if (files != null)
+            {
+                robocopyCmd = files.Aggregate(robocopyCmd, (current, f) => current + $" \"{f}\" ");
+            }
+
+            // if excludepdbs is true then add this as a command line param to robocopy
+            //
+            if (excludePdbs)
+            {
+                robocopyCmd += " /XF *.pdb";
+            }
+
+            // run robocopy
+            //
+            RunRobocopyCommand(robocopyCmd, logfile);
+            return null;
         }
 
         /// <summary>
@@ -749,7 +705,7 @@ namespace rDSN.Tron.Utility
         {
             // unpackage the robocopy data object
             // 
-            RobocopyData data = callInfo as RobocopyData;
+            var data = callInfo as RobocopyData;
 
             // make sure valid data was passed in
             // 
@@ -786,10 +742,6 @@ namespace rDSN.Tron.Utility
                     data.signal.Set();
                 }
             }
-            else
-            {
-                //Log.Error("Call info was not the type expected or was null");
-            }
         }
 
         /// <summary>
@@ -811,24 +763,10 @@ namespace rDSN.Tron.Utility
         {
             // create a list of robocopy instances on which to wait
             // 
-            List<RobocopyData> robocopyInstances = new List<RobocopyData>();
+            var robocopyInstances = subdirs.Select(subdir => MirrorDir(Path.Combine(srcrootdir, subdir), Path.Combine(destdir, subdir), null, null, recurseSubdirs, excludePdbs, useMultipleRobocopyInstances)).Where(curInstance => useMultipleRobocopyInstances && (curInstance != null)).ToList();
 
             // iterate through each subdir 
             //
-            foreach (string subdir in subdirs)
-            {
-                // call the thread-aware overload to MirrorDir
-                // 
-                RobocopyData curInstance = MirrorDir(Path.Combine(srcrootdir, subdir), Path.Combine(destdir, subdir),
-                    null, null, recurseSubdirs, excludePdbs, useMultipleRobocopyInstances);
-
-                // if a valid waithandle was returned add it to the return list
-                //
-                if (useMultipleRobocopyInstances && (curInstance != null))
-                {
-                    robocopyInstances.Add(curInstance);
-                }
-            }
 
             // if multiple instances of robocopy are being created, return the list of wait handles
             //
@@ -880,16 +818,14 @@ namespace rDSN.Tron.Utility
         /// <exception cref="CommandFailureException">If the command fails</exception>
         public static string RunCommand(string command)
         {
-            string result;
             try
             {
-                result = RunCommand(command, null, false);  // default usage, without UAC permission
+                var result = RunCommand(command, null, false);
                 return result;
             }
             catch (Exception)
             {
-                
-                
+                // ignored
             }
             return "";
         }
@@ -916,8 +852,8 @@ namespace rDSN.Tron.Utility
             /// 
             public CommandOutputStreamHolder(StreamReader commandOutputStream)
             {
-                this.outputStream = commandOutputStream;
-                this.outputString = String.Empty;
+                outputStream = commandOutputStream;
+                outputString = string.Empty;
             }
 
             /// <summary>
@@ -927,9 +863,9 @@ namespace rDSN.Tron.Utility
             ///
             public void ReadProcessOutputStream()
             {
-                if (this.outputStream != null)
+                if (outputStream != null)
                 {
-                    this.outputString = this.outputStream.ReadToEnd();
+                    outputString = outputStream.ReadToEnd();
                 }
             }
 
@@ -940,7 +876,7 @@ namespace rDSN.Tron.Utility
             /// <returns>the consumed output of the redirected output stream</returns>
             public string GetOutputString()
             {
-                return this.outputString;
+                return outputString;
             }
 
             // private member to hold the redirected output stream to consume
@@ -961,7 +897,7 @@ namespace rDSN.Tron.Utility
         public static string RunCommand(string command, string standardInput, bool needRoot = false)
         {
             // Start the process
-            Process process = StartProcess("cmd.exe", "/c " + command, true, standardInput);
+            var process = StartProcess("cmd.exe", "/c " + command, true, standardInput);
 
             // trying to read both redirected standard output and standard error
             // synchronously can result in deadlock as the parent process can't
@@ -974,14 +910,12 @@ namespace rDSN.Tron.Utility
 
             //string stdout = process.StandardOutput.ReadToEnd();
 
-            CommandOutputStreamHolder streamHolder = new CommandOutputStreamHolder(process.StandardOutput);
-            Thread stdoutReaderThread = new Thread(new ThreadStart(streamHolder.ReadProcessOutputStream));
+            var streamHolder = new CommandOutputStreamHolder(process.StandardOutput);
+            var stdoutReaderThread = new Thread(streamHolder.ReadProcessOutputStream);
             stdoutReaderThread.Start();
 
-            string stdout = String.Empty;
-
             // read redirected stderr synchronously
-            string stderr = process.StandardError.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
 
             // Wait for process to finish
             while (!process.HasExited)
@@ -989,15 +923,15 @@ namespace rDSN.Tron.Utility
                 Thread.Sleep(1000);
             }
 
-            while (stdoutReaderThread.ThreadState != System.Threading.ThreadState.Stopped &&
-                   stdoutReaderThread.ThreadState != System.Threading.ThreadState.Aborted)
+            while (stdoutReaderThread.ThreadState != ThreadState.Stopped &&
+                   stdoutReaderThread.ThreadState != ThreadState.Aborted)
             {
                 Thread.Sleep(1000);
             }
-            stdout = streamHolder.GetOutputString();
+            var stdout = streamHolder.GetOutputString();
 
             // Check for error
-            int exitCode = process.ExitCode;
+            var exitCode = process.ExitCode;
             if (exitCode != 0)
             {
                 //throw new CommandFailureException(command, process.ExitCode, stdout + stderr);
@@ -1029,27 +963,27 @@ namespace rDSN.Tron.Utility
         public static void RunLoggedCommand(string command, string logfile, bool runHidden)
         {
             // Get portion of string that pipes this to a file
-            string logpipe = "";
+            var logpipe = "";
             if (logfile != null)
             {
                 logpipe = " >> " + logfile + " 2>&1";
             }
 
             // Create the ProcessStartInfo object
-            string cmd = "cmd.exe";
-            string cmdArguments = "/c " + command + logpipe;
-            ProcessStartInfo startInfo = new ProcessStartInfo(cmd, cmdArguments);
+            var cmd = "cmd.exe";
+            var cmdArguments = "/c " + command + logpipe;
+            var startInfo = new ProcessStartInfo(cmd, cmdArguments);
             if (runHidden)
             {
                 startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             }
 
             // Run the command
-            Process process = Process.Start(startInfo);
+            var process = Process.Start(startInfo);
             process.WaitForExit();
 
             // Check for error
-            int exitCode = process.ExitCode;
+            var exitCode = process.ExitCode;
             if (exitCode != 0)
             {
                 throw new CommandFailureException(command, process.ExitCode);
@@ -1071,12 +1005,12 @@ namespace rDSN.Tron.Utility
         {
             try
             {
-                string[] newCommands = new string[3 + commands.Length];
+                var newCommands = new string[3 + commands.Length];
                 newCommands[0] = "set inetroot=" + corextdir;
                 newCommands[1] = "call " + corextdir + @"\tools\path1st\myenv.cmd";
                 newCommands[2] = "cd /d " + corextdir;
-                System.Array.Copy(commands, 0, newCommands, 3, commands.Length);
-                SystemHelper.RunCommandsInSameShellLogged(
+                Array.Copy(commands, 0, newCommands, 3, commands.Length);
+                RunCommandsInSameShellLogged(
                     logfile,
                     newCommands
                 );
@@ -1110,12 +1044,12 @@ namespace rDSN.Tron.Utility
         public static void RunCommandsInSameShellLogged(string logfile, params string[] commands)
         {
             // Write out the build batch file we will run
-            string batchFile = System.IO.Path.GetTempFileName() + ".cmd";
-            StreamWriter writer = new StreamWriter(batchFile);
-            for (int i = 0; i < commands.Length; i++)
+            var batchFile = Path.GetTempFileName() + ".cmd";
+            var writer = new StreamWriter(batchFile);
+            for (var i = 0; i < commands.Length; i++)
             {
                 // Write the command itself
-                string command = commands[i];
+                var command = commands[i];
                 writer.WriteLine(command);
                 // When a command fails, use the command # as the error so we know which failed
                 writer.WriteLine("if errorlevel 1 exit /b " + (i + 1));
@@ -1162,7 +1096,7 @@ namespace rDSN.Tron.Utility
         {
             //Create a start info for the process based on filename
             //and arguments
-            ProcessStartInfo startInfo =
+            var startInfo =
                 new ProcessStartInfo(fileName, arguments);
 
             // add the requested environment variables
@@ -1173,7 +1107,7 @@ namespace rDSN.Tron.Utility
             }
 
             //Set the working directory for the process
-            FileInfo file = new FileInfo(fileName);
+            var file = new FileInfo(fileName);
             startInfo.WorkingDirectory = file.DirectoryName;
             startInfo.UseShellExecute = false;
             if (redirectOutput)
@@ -1187,8 +1121,7 @@ namespace rDSN.Tron.Utility
             }
 
             //Create a new process based on the startinfo
-            Process process = new Process();
-            process.StartInfo = startInfo;
+            var process = new Process {StartInfo = startInfo};
 
             //Start the process and return the process object
             process.Start();
@@ -1240,15 +1173,15 @@ namespace rDSN.Tron.Utility
         /// <returns>Array of Process objects matching processList</returns>
         public static Process[] FindAllProcessesByNames(params string[] processList)
         {
-            Process[] processes = Process.GetProcesses();
-            ArrayList found = new ArrayList();
-            foreach (Process process in processes)
+            var processes = Process.GetProcesses();
+            var found = new ArrayList();
+            foreach (var process in processes)
             {
                 string name;
 
                 try
                 {
-                    FileInfo file = new FileInfo(process.MainModule.FileName);
+                    var file = new FileInfo(process.MainModule.FileName);
                     name = file.Name;
                 }
                 catch
@@ -1258,18 +1191,13 @@ namespace rDSN.Tron.Utility
                     name = null;
                 }
 
-                if (name != null)
+                if (name == null) continue;
+                foreach (var match in processList.Where(match => name.ToLower().Equals(match.ToLower())))
                 {
-                    foreach (string match in processList)
-                    {
-                        if (name.ToLower().Equals(match.ToLower()))
-                        {
-                            found.Add(process);
-                        }
-                    }
+                    found.Add(process);
                 }
             }
-            return (Process[])found.ToArray(typeof(System.Diagnostics.Process));
+            return (Process[])found.ToArray(typeof(Process));
         }
 
         /// <summary>
@@ -1280,10 +1208,10 @@ namespace rDSN.Tron.Utility
         /// kill</param>
         public static void KillAllProcessesByNames(params string[] processList)
         {
-            Process[] processes = FindAllProcessesByNames(processList);
+            var processes = FindAllProcessesByNames(processList);
             if ((processes == null) || (processes.Length == 0)) return;
 
-            foreach (Process process in processes)
+            foreach (var process in processes)
             {
                 KillProcessTree(process.Id);
             }
@@ -1311,27 +1239,25 @@ namespace rDSN.Tron.Utility
         {
             //Query WMI class Win32_Process to get all processes with 
             //the specified parent processID
-            string query =
+            var query =
                 "select * from Win32_Process where ParentProcessID = " +
-                parentProcessID.ToString();
-            ObjectQuery objectQuery = new ObjectQuery(query);
+                parentProcessID;
+            var objectQuery = new ObjectQuery(query);
 
             //Send the query and gets all the child processes
-            ManagementObjectSearcher searcher =
+            var searcher =
                 new ManagementObjectSearcher(objectQuery);
             ICollection childProcesses = searcher.Get();
 
             //Loop through every child process and kill everything
             //spawned by the process
-            foreach (ManagementObject childProcess in childProcesses)
+            foreach (var childProcessId in from ManagementObject childProcess in childProcesses select Convert.ToInt32(childProcess["ProcessID"]))
             {
-                int childProcessID = Convert.ToInt32(childProcess["ProcessID"]);
-
                 //Kill the processes recursively
-                KillProcessTree(childProcessID, timeoutMS);
+                KillProcessTree(childProcessId, timeoutMS);
 
                 //Now kill the child process
-                KillProcessWithTimeout(childProcessID, timeoutMS);
+                KillProcessWithTimeout(childProcessId, timeoutMS);
             }
 
             // Now, kill the parent process...
@@ -1364,16 +1290,12 @@ namespace rDSN.Tron.Utility
             }
 
             process.Kill();
-            if ((!process.HasExited) && (timeoutMS != 0))
+            if ((process.HasExited) || (timeoutMS == 0)) return;
+            if (!process.WaitForExit(timeoutMS))
             {
-                if (!process.WaitForExit(timeoutMS))
-                {
-                    throw new ApplicationException(
-                        String.Format("Couldn't terminate process ID {0} within specified timeout ({1} ms)",
-                            processID,
-                            timeoutMS)
+                throw new ApplicationException(
+                    $"Couldn't terminate process ID {processID} within specified timeout ({timeoutMS} ms)"
                     );
-                }
             }
         }
 
@@ -1406,13 +1328,12 @@ namespace rDSN.Tron.Utility
                     return false;
                 }
             }
-            else
-                return true;
+            return true;
         }
 
         public static StreamReader OpenFileTimeout(string file, TimeSpan timeout)
         {
-            DateTime start = DateTime.Now;
+            var start = DateTime.Now;
             // We loop until we pass the timeout
             while (true)
             {
@@ -1445,7 +1366,7 @@ namespace rDSN.Tron.Utility
 
         public static FileStream OpenFileTimeout(string file, FileMode mode, FileAccess access, FileShare share, TimeSpan timeout)
         {
-            DateTime start = DateTime.Now;
+            var start = DateTime.Now;
             // We loop until we pass the timeout
             while (true)
             {
@@ -1478,13 +1399,13 @@ namespace rDSN.Tron.Utility
 
         public static StreamWriter CreateFileTimeout(string file, TimeSpan timeout)
         {
-            DateTime start = DateTime.Now;
+            var start = DateTime.Now;
             // We loop until we pass the timeout
             while (true)
             {
                 try
                 {
-                    StreamWriter writer = File.CreateText(file);
+                    var writer = File.CreateText(file);
                     return writer;
                 }
                 catch (Exception)
@@ -1502,13 +1423,13 @@ namespace rDSN.Tron.Utility
 
         public static void WriteLogLine(string file, string message, TimeSpan timeout)
         {
-            DateTime start = DateTime.Now;
+            var start = DateTime.Now;
             // We loop until we pass the timeout
             while (true)
             {
                 try
                 {
-                    StreamWriter writer = File.AppendText(file);
+                    var writer = File.AppendText(file);
                     writer.WriteLine(message);
                     writer.Flush();
                     writer.Close();
@@ -1545,35 +1466,19 @@ namespace rDSN.Tron.Utility
             }
 
             // If any are not equal, we return false.  Otherwise it is true.
-            for (int i = 0; i < array1.Length; i++)
-            {
-                if (!array1[i].Equals(array2[i]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return !array1.Where((t, i) => !t.Equals(array2[i])).Any();
         }
 
         public static NameValueCollection GetOptions(params string[] args)
         {
-            NameValueCollection retval = new NameValueCollection();
-            ArrayList remainingArgs = new ArrayList();
-            foreach (string arg in args)
+            var retval = new NameValueCollection();
+            foreach (var arg in args)
             {
                 if (arg[0] == '/')
                 {
                     // Read enlistment info
-                    string[] nameValuePair = arg.Substring(1).Split(new char[] { ':' }, 2);
-                    if (nameValuePair.Length == 2)
-                    {
-                        retval.Add(nameValuePair[0], nameValuePair[1]);
-                    }
-                    else
-                    {
-                        retval.Add(nameValuePair[0], "");
-                    }
+                    var nameValuePair = arg.Substring(1).Split(new[] { ':' }, 2);
+                    retval.Add(nameValuePair[0], nameValuePair.Length == 2 ? nameValuePair[1] : "");
                 }
                 else
                 {
@@ -1592,7 +1497,7 @@ namespace rDSN.Tron.Utility
             }
 
             // Create a new FileSystemWatcher and set its properties.
-            FileSystemWatcher watcher = new FileSystemWatcher(dir, filter);
+            var watcher = new FileSystemWatcher(dir, filter);
 
             // Add event handlers.
             watcher.Changed += handler;
@@ -1600,7 +1505,7 @@ namespace rDSN.Tron.Utility
             watcher.Deleted += handler;
 
             // Read the initial files and send Created notifications
-            foreach (string file in Directory.GetFiles(dir, filter))
+            foreach (var file in Directory.GetFiles(dir, filter))
             {
                 handler(null, new FileSystemEventArgs(WatcherChangeTypes.Created, dir, file.Substring(dir.Length + 1)));
             }
@@ -1612,14 +1517,14 @@ namespace rDSN.Tron.Utility
 
         public static string Dump(object o)
         {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
             Dump(builder, o, new ArrayList(), 0, false);
             return builder.ToString();
         }
 
         private static void Indent(StringBuilder builder, int indent)
         {
-            for (int i = 0; i < indent; i++)
+            for (var i = 0; i < indent; i++)
             {
                 builder.Append("  ");
             }
@@ -1633,18 +1538,15 @@ namespace rDSN.Tron.Utility
             }
 
             // Check if we have already printed this exact object
-            foreach (object alreadyFound in foundSoFar)
+            foreach (var alreadyFound in foundSoFar.Cast<object>().Where(alreadyFound => o == alreadyFound))
             {
-                if (o == alreadyFound)
-                {
-                    builder.Append("<already printed this object>");
-                }
+                builder.Append("<already printed this object>");
             }
             foundSoFar.Add(o);
 
             if (o is IDictionary)
             {
-                builder.Append(o.ToString());
+                builder.Append(o);
                 builder.Append(":\n");
                 foreach (DictionaryEntry entry in (IDictionary)o)
                 {
@@ -1659,23 +1561,23 @@ namespace rDSN.Tron.Utility
             }
             else if (o is ICollection)
             {
-                builder.Append(o.ToString());
+                builder.Append(o);
                 builder.Append(":\n");
-                foreach (object obj in (ICollection)o)
+                foreach (var obj in (ICollection)o)
                 {
                     Dump(builder, obj, foundSoFar, indent + 1, true);
                 }
             }
             else
             {
-                builder.Append(o.ToString());
+                builder.Append(o);
                 builder.Append("\n");
             }
         }
 
         public static void SendEmail(string from, string[] to, string[] cc, string subject, string body)
         {
-            string args = "";
+            var args = "";
             args += " from:" + from;
             if (to != null)
             {
@@ -1689,8 +1591,8 @@ namespace rDSN.Tron.Utility
             args += " server:smtphost.redmond.corp.microsoft.com";
 
             // Write out the body of the mail to a file
-            string bodyFile = Path.GetTempFileName();
-            StreamWriter writer = new StreamWriter(bodyFile);
+            var bodyFile = Path.GetTempFileName();
+            var writer = new StreamWriter(bodyFile);
             try
             {
                 try
@@ -1719,11 +1621,10 @@ namespace rDSN.Tron.Utility
         /// <returns>process exitcode</returns>
         public static int RunProcess(string fileName, string arguments)
         {
-            Process process = new Process();
+            var process = new Process();
             try
             {
-                ProcessStartInfo startInfo = new ProcessStartInfo(fileName, arguments);
-                startInfo.UseShellExecute = false;
+                var startInfo = new ProcessStartInfo(fileName, arguments) {UseShellExecute = false};
                 process.StartInfo = startInfo;
                 process.Start();
                 process.WaitForExit();

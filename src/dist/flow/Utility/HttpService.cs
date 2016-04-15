@@ -32,15 +32,14 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
 using System.Web.Script.Serialization;
 
 namespace rDSN.Tron.Utility
@@ -59,27 +58,27 @@ namespace rDSN.Tron.Utility
                 localRoot += '\\';
             }
 
-            RegisterHandler(virtualPath, (c, p, q) => this.StaticFileHandler(virtualPath, Path.GetFullPath(localRoot), c, p, q));
+            RegisterHandler(virtualPath, (c, p, q) => StaticFileHandler(virtualPath, Path.GetFullPath(localRoot), c, p, q));
         }
 
         public delegate string WebApiRequestHandler(string subApi, string query, string requestObjectInJson);
 
-        public delegate TResponse TypedWebApiHandler<TRequest, TResponse>(TRequest request);
+        public delegate TResponse TypedWebApiHandler<in TRequest, out TResponse>(TRequest request);
 
-        public delegate TResponse TypedVoidWebApiHandler<TResponse>();
+        public delegate TResponse TypedVoidWebApiHandler<out TResponse>();
 
         public void RegisterWebApi(string apiPath, WebApiRequestHandler handler)
         {
-            RegisterHandler(apiPath, (c, p, q) => this.WebApiCallback(handler, c, p, q));
+            RegisterHandler(apiPath, (c, p, q) => WebApiCallback(handler, c, p, q));
         }
 
         public void RegisterTypedWebApi<TRequest, TResponse>(string apiPath, TypedWebApiHandler<TRequest, TResponse> handler)
         {
-            RegisterHandler(apiPath, (c, p, q) => this.WebApiCallback(
+            RegisterHandler(apiPath, (c, p, q) => WebApiCallback(
                 (api, query, requestObjectInJson) => 
                     {
-                        TRequest req = new JavaScriptSerializer().Deserialize<TRequest>(requestObjectInJson);
-                        TResponse resp = handler(req);
+                        var req = new JavaScriptSerializer().Deserialize<TRequest>(requestObjectInJson);
+                        var resp = handler(req);
                         return new JavaScriptSerializer().Serialize(resp);
                     }, 
                 c, p, q)
@@ -88,10 +87,10 @@ namespace rDSN.Tron.Utility
 
         public void RegisterTypedWebApi<TResponse>(string apiPath, TypedVoidWebApiHandler<TResponse> handler)
         {
-            RegisterHandler(apiPath, (c, p, q) => this.WebApiCallback(
+            RegisterHandler(apiPath, (c, p, q) => WebApiCallback(
                 (api, query, requestObjectInJson) =>
                 {
-                    TResponse resp = handler();
+                    var resp = handler();
                     return new JavaScriptSerializer().Serialize(resp);
                 },
                 c, p, q)
@@ -113,10 +112,10 @@ namespace rDSN.Tron.Utility
             _sortedHandlerArrary = _handlers.ToArray();
 
             _listener = new HttpListener();
-            _listener.Prefixes.Add(String.Format(@"http://+:{0}/", port));
+            _listener.Prefixes.Add($@"http://+:{port}/");
             _listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
             _listener.Start();
-            _listener.BeginGetContext(this.ContextCallback, null);
+            _listener.BeginGetContext(ContextCallback, null);
 
             _port = port;
 
@@ -140,7 +139,7 @@ namespace rDSN.Tron.Utility
         protected virtual void Http404NotFoundHandler(HttpListenerContext context, string path, string query)
         {
             context.Response.StatusCode = 404;
-            string responseString = "<HTML><BODY>404 Not Found.</BODY></HTML>";
+            var responseString = "<HTML><BODY>404 Not Found.</BODY></HTML>";
             WriteAndCloseResponse(responseString, context);
         }
 
@@ -183,7 +182,7 @@ namespace rDSN.Tron.Utility
                 Trace.TraceWarning("static file download does not support queries: {0}?{1}", subpath, query);
             }
 
-            string localPath = (localRoot + subpath).Replace('/', '\\').Replace("\\\\", "\\");
+            var localPath = (localRoot + subpath).Replace('/', '\\').Replace("\\\\", "\\");
 
             // TODO: cache service
             if (File.Exists(localPath))
@@ -201,7 +200,7 @@ namespace rDSN.Tron.Utility
             else if (Directory.Exists(localPath))
             {
                 context.Response.ContentType = "text/html";
-                string responseString = ListAllInDirectory(virtualPath, subpath, localPath);
+                var responseString = ListAllInDirectory(virtualPath, subpath, localPath);
                 WriteAndCloseResponse(responseString, context);
             }
 
@@ -209,16 +208,16 @@ namespace rDSN.Tron.Utility
             else
             {
                 context.Response.ContentType = "text/html";
-                this.Http404NotFoundHandler(context, subpath, query);
+                Http404NotFoundHandler(context, subpath, query);
             }
         }
 
         protected string ListAllInDirectory(string virtualPath, string subPath, string localDir)
         {
-            string logicalDir = (virtualPath + "/" + subPath).Replace('\\', '/').Replace("//", "/");
+            var logicalDir = (virtualPath + "/" + subPath).Replace('\\', '/').Replace("//", "/");
             if (logicalDir.Last() != '/') logicalDir += "/";
 
-            CodeBuilder builder = new CodeBuilder();
+            var builder = new CodeBuilder();
             builder.AppendLine("<html>");
             builder.AppendLine("<title>" + logicalDir + "</title>");
             builder.AppendLine("<body>");
@@ -231,13 +230,13 @@ namespace rDSN.Tron.Utility
 
             foreach (var subdir in Directory.GetDirectories(localDir))
             {
-                string dirname = Path.GetFileName(subdir);
+                var dirname = Path.GetFileName(subdir);
                 builder.AppendLine("<a href=\"" + logicalDir + dirname + "/\">" + dirname + "</a><br>");
             }
 
             foreach (var file in Directory.GetFiles(localDir))
             {
-                string fileName = Path.GetFileName(file);
+                var fileName = Path.GetFileName(file);
                 builder.AppendLine("<a href=\"" + logicalDir + fileName + "\">" + fileName + "</a><br>");
             }
 
@@ -250,13 +249,13 @@ namespace rDSN.Tron.Utility
         {
             context.Response.ContentType = "text/plain";
 
-            string requestStr = "";
+            var requestStr = "";
             var request = context.Request;
             if (request.HasEntityBody)
             {
-                using (System.IO.Stream body = request.InputStream) // here we have data
+                using (var body = request.InputStream) // here we have data
                 {
-                    using (System.IO.StreamReader reader = new System.IO.StreamReader(body, request.ContentEncoding))
+                    using (var reader = new StreamReader(body, request.ContentEncoding))
                     {
                         requestStr = reader.ReadToEnd();
                     }
@@ -270,7 +269,7 @@ namespace rDSN.Tron.Utility
         {
             context.Response.ContentEncoding = Encoding.UTF8;
 
-            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(response);
+            var buffer = Encoding.UTF8.GetBytes(response);
             context.Response.ContentLength64 = buffer.Length;
             context.Response.OutputStream.Write(buffer, 0, buffer.Length);
             context.Response.OutputStream.Close();
@@ -278,10 +277,10 @@ namespace rDSN.Tron.Utility
 
         private void ContextCallback(IAsyncResult result)
         {
-            HttpListenerContext context = _listener.EndGetContext(result);           
+            var context = _listener.EndGetContext(result);           
             
             // continue next request
-            _listener.BeginGetContext(this.ContextCallback, null);
+            _listener.BeginGetContext(ContextCallback, null);
 
             try
             {
@@ -292,9 +291,9 @@ namespace rDSN.Tron.Utility
                 context.Response.KeepAlive = true;
 
                 // deal with current request
-                string path = context.Request.RawUrl;
-                string query = "";
-                int queryStart = path.IndexOf('?');
+                var path = context.Request.RawUrl;
+                var query = "";
+                var queryStart = path.IndexOf('?');
                 if (queryStart > 0)
                 {
                     path = path.Substring(0, queryStart);
@@ -313,7 +312,7 @@ namespace rDSN.Tron.Utility
             }
             catch (Exception e)
             {
-                Trace.TraceError("HttpContextCallback throws exception = " + e.ToString() + ", StackTrace = " + e.StackTrace);
+                Trace.TraceError("HttpContextCallback throws exception = " + e + ", StackTrace = " + e.StackTrace);
             }
         }
 
@@ -324,18 +323,18 @@ namespace rDSN.Tron.Utility
 
         private HttpRequestHandler GetHandler(string path, out string oprefix)
         {
-            int matchCount = -1;
-            int matchIndex = -1;
-            int max = _sortedHandlerArrary.Length;
+            var matchCount = -1;
+            var matchIndex = -1;
+            var max = _sortedHandlerArrary.Length;
             oprefix = "";
             path = path.ToLower();
 
-            for (int i = 0; i < max; i++)
+            for (var i = 0; i < max; i++)
             {
-                string prefix = _sortedHandlerArrary[i].Key;
-                int localMatchCount = 0;
+                var prefix = _sortedHandlerArrary[i].Key;
+                var localMatchCount = 0;
 
-                for (int j = 0; j < prefix.Length && j < path.Length; j++)
+                for (var j = 0; j < prefix.Length && j < path.Length; j++)
                 {
                     if (prefix[j] == path[j])
                     {
@@ -368,18 +367,15 @@ namespace rDSN.Tron.Utility
             {
                 return _sortedHandlerArrary[matchIndex].Value;
             }
-            else
-            {
-                oprefix = "NotFound";
-                return this.Http404NotFoundHandler;
-            }
+            oprefix = "NotFound";
+            return Http404NotFoundHandler;
         }
 
         protected delegate void HttpRequestHandler(HttpListenerContext context, string subpath, string query);
         
-        private int _port = 0;
-        private HttpListener _listener = null;
+        private int _port;
+        private HttpListener _listener;
         private SortedDictionary<string, HttpRequestHandler> _handlers = new SortedDictionary<string, HttpRequestHandler>();
-        private KeyValuePair<string, HttpRequestHandler>[] _sortedHandlerArrary = null;
+        private KeyValuePair<string, HttpRequestHandler>[] _sortedHandlerArrary;
     }
 }

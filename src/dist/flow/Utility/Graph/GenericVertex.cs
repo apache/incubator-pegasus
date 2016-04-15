@@ -32,14 +32,11 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Diagnostics;
+
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace rDSN.Tron.Utility
 {
@@ -51,34 +48,25 @@ namespace rDSN.Tron.Utility
         public enum VertexFlags
         {
             VertexFlags_Visited = 0,
-            VertexFlags_MAX = 1,
+            VertexFlags_MAX = 1
         }
 
         #region FIELDS
-        private HashSet<EdgeT> _in = new HashSet<EdgeT>();
-        private HashSet<EdgeT> _out = new HashSet<EdgeT>();
-        private GraphT _graph;
-        private BitArray _flags = new BitArray((int)VertexFlags.VertexFlags_MAX);
-        private UInt64 _id;
+
         #endregion
 
         #region PROPERTIES
-        public HashSet<EdgeT> InEdges { get { return _in; } }
-        public HashSet<EdgeT> OutEdges { get { return _out; } }
-        public GraphT Graph { get { return _graph; } }
-        public BitArray Flags { get { return _flags; } }
-        public UInt64 Id { get { return _id; } }
+        public HashSet<EdgeT> InEdges { get; } = new HashSet<EdgeT>();
+        public HashSet<EdgeT> OutEdges { get; } = new HashSet<EdgeT>();
+        public GraphT Graph { get; }
+        public BitArray Flags { get; } = new BitArray((int)VertexFlags.VertexFlags_MAX);
+        public ulong Id { get; }
 
         public List<VertexT> InVertices
         {
             get
             {
-                List<VertexT> inVertices = new List<VertexT>();
-                foreach (EdgeT e in InEdges)
-                {
-                    inVertices.Add(e.StartVertex);
-                }
-                return inVertices;
+                return InEdges.Select(e => e.StartVertex).ToList();
             }
         }
 
@@ -86,33 +74,27 @@ namespace rDSN.Tron.Utility
         {
             get
             {
-                List<VertexT> outVertices = new List<VertexT>();
-                foreach (EdgeT e in OutEdges)
-                {
-                    outVertices.Add(e.EndVertex);
-                }
-                return outVertices;
+                return OutEdges.Select(e => e.EndVertex).ToList();
             }
         }
         #endregion
 
-        public GenericVertex(GraphT graph, UInt64 id)
+        public GenericVertex(GraphT graph, ulong id)
         {
-            _graph = graph;
-            _id = id;
+            Graph = graph;
+            Id = id;
         }
 
         public HashSet<VertexT> GetVerticesClosure(bool upStream)
         {
-            HashSet<VertexT> vs = new HashSet<VertexT>();
-            vs.Add((VertexT)this);
+            var vs = new HashSet<VertexT> {(VertexT) this};
 
-            Queue<VertexT> pendingVertices = new Queue<VertexT>();
+            var pendingVertices = new Queue<VertexT>();
             pendingVertices.Enqueue((VertexT)this);
 
             while (pendingVertices.Count > 0)
             {
-                VertexT v = pendingVertices.Dequeue();
+                var v = pendingVertices.Dequeue();
                 if (upStream)
                 {
                     v.InVertices.Select(iv => { if (!vs.Contains(iv)) { vs.Add(iv); pendingVertices.Enqueue(iv); } return 0; }).Count();
@@ -127,19 +109,19 @@ namespace rDSN.Tron.Utility
         
         public ET ConnectTo<ET>(VertexT targetVertex) where ET : EdgeT
         {
-            Type[] ps = new Type[3] { typeof(GraphT), typeof(VertexT), typeof(VertexT) };
-            Object[] pss = new Object[3] {_graph, this, targetVertex};
-            ET e = (ET)typeof(ET).GetConstructor(ps).Invoke(pss);
-            _graph.Edges.Add(e);
+            var ps = new[] { typeof(GraphT), typeof(VertexT), typeof(VertexT) };
+            var pss = new object[] {Graph, this, targetVertex};
+            var e = (ET)typeof(ET).GetConstructor(ps).Invoke(pss);
+            Graph.Edges.Add(e);
 
-            _out.Add(e);
-            targetVertex._in.Add(e);
+            OutEdges.Add(e);
+            targetVertex.InEdges.Add(e);
             return e;
         }
 
         protected virtual string GetVisualizationProperties()
         {
-            string s = "";
+            var s = "";
             if (Name != null)
             {
                 s += "label=\"" + Name + "\", ";

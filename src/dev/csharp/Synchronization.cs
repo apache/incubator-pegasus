@@ -34,10 +34,6 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace dsn.dev.csharp
 {
@@ -101,17 +97,14 @@ namespace dsn.dev.csharp
             Native.dsn_semaphore_signal(handle, count); 
         }
 
-        public bool wait(int timeout_milliseconds = int.MaxValue) 
+        public bool wait(int timeout_milliseconds = int.MaxValue)
         {
             if (timeout_milliseconds == int.MaxValue)
             {
                 Native.dsn_semaphore_wait(handle);
                 return true;
             }
-            else
-            {
-                return Native.dsn_semaphore_wait_timeout(handle, timeout_milliseconds);
-            }
+            return Native.dsn_semaphore_wait_timeout(handle, timeout_milliseconds);
         }
     }
 

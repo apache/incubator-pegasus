@@ -32,18 +32,15 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace rDSN.Tron.Utility
 {
     public class Singleton<T>:MarshalByRefObject
            where T : new()
     {
-        private static T _instance = default(T);
+        private static T _instance;
         private static object _lock = new object();
         public static T Instance()
         {
@@ -53,7 +50,7 @@ namespace rDSN.Tron.Utility
                 {
                     if (_instance == null)
                     {
-                        T tmp = new T();
+                        var tmp = new T();
                         _instance = tmp;
                     }
                 }

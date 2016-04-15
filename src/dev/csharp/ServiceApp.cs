@@ -34,10 +34,6 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
@@ -84,8 +80,8 @@ namespace dsn.dev.csharp
 
         private static int AppStart(IntPtr app_handle, string[] argv)
         {
-            GCHandle h = (GCHandle)app_handle;
-            ServiceApp sapp = h.Target as ServiceApp;
+            var h = (GCHandle)app_handle;
+            var sapp = h.Target as ServiceApp;
             var r = sapp.Start(argv);
             if (r == 0)
             {
@@ -98,8 +94,8 @@ namespace dsn.dev.csharp
 
         private static void AppDestroy(IntPtr app_handle, bool cleanup)
         {
-            GCHandle h = (GCHandle)app_handle;
-            ServiceApp sapp = h.Target as ServiceApp;
+            var h = (GCHandle)app_handle;
+            var sapp = h.Target as ServiceApp;
             sapp.Stop(cleanup);
             sapp._started = false;
             sapp.ReleaseUnmanagedResources();
@@ -110,7 +106,7 @@ namespace dsn.dev.csharp
         {
             Native.dsn_register_app_managed(type_name, AppCreate<T>, AppStart, AppDestroy);
         }
-    };
+    }
 
     
 }

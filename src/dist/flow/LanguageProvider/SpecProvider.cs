@@ -32,15 +32,12 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), done in Tron project and copied here
  *     xxxx-xx-xx, author, fix bug about xxx
  */
- 
+
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-
-using rDSN.Tron.Utility;
 using rDSN.Tron.Contract;
+using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.LanguageProvider
 {
@@ -51,7 +48,7 @@ namespace rDSN.Tron.LanguageProvider
         Client_CPlusPlus,
         Client_Python,
         Client_Javascript,
-        Client_Java,
+        Client_Java
     }
 
     public enum ClientPlatform
@@ -191,7 +188,7 @@ namespace rDSN.Tron.LanguageProvider
 
         public ISpecProvider GetProvider(ServiceSpecType type)
         {
-            ISpecProvider spec = null;
+            ISpecProvider spec;
             _providers.TryGetValue(type, out spec);
             return spec;
         }
