@@ -3,7 +3,7 @@ include(ExternalProject)
 if(DSN_GIT_SOURCE STREQUAL "xiaomi")
     set(target_url "http://git.n.xiaomi.com/pegasus/packages/raw/master/thrift-0.9.3.tar.gz")
 else()
-    set(target_url "https://github.com/ykwd/thrift.git"
+    set(target_url "https://github.com/ykwd/thrift.git")
 endif()
 
 set(THRIFT_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/thrift")

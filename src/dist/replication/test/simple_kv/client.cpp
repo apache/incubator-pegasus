@@ -95,7 +95,7 @@ void simple_kv_client_app::run()
     int timeout_ms;
 
     rpc_address receiver;
-    dsn::replication::config_type type;
+    dsn::replication::config_type::type type;
     rpc_address node;
 
     while (!g_done)
@@ -146,13 +146,13 @@ void simple_kv_client_app::begin_write(int id, const std::string& key, const std
 }
 
 
-void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node)
+void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node)
 {
     dsn_message_t request = dsn_msg_create_request(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND, 30000);
 
     ::dsn::marshall(request, g_default_gpid);
     ::dsn::marshall(request, receiver);
-    ::dsn::marshall(request, type);
+    ::dsn::marshall(request, static_cast<int>(type));
     ::dsn::marshall(request, node);
 
     dsn_rpc_call_one_way(_meta_server_group.c_addr(), request);

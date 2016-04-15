@@ -12,8 +12,9 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS dsn.failure_detector.multimaster 
+set(MY_PROJ_LIBS dsn.failure_detector.multimaster
                  dsn.failure_detector
+                 dsn.replication.clientlib
                  )
 
 set(MY_PROJ_LIB_PATH "")

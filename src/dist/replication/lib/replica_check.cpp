@@ -50,7 +50,7 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || _options->group_check_disabled)
+    if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -99,7 +99,7 @@ void replica::broadcast_group_check()
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
 
-        if (request->config.status == PS_POTENTIAL_SECONDARY)
+        if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY)
         {
             auto it = _primary_states.learners.find(addr);
             dassert(it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
@@ -159,18 +159,18 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     
     switch (status())
     {
-    case PS_INACTIVE:
+    case partition_status::PS_INACTIVE:
         break;
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree())
         {
             _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         init_learn(request.config.learner_signature);
         break;
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         break;
     default:
         dassert (false, "");
@@ -179,7 +179,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     response.gpid = get_gpid();
     response.node = _stub->_primary_address;
     response.err = ERR_OK;
-    if (status() == PS_ERROR)
+    if (status() == partition_status::PS_ERROR)
     {
         response.err = ERR_INVALID_STATE;
     }
@@ -194,7 +194,7 @@ void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_c
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
+    if (partition_status::PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {
         return;
     }
@@ -210,7 +210,7 @@ void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_c
     {
         if (resp->err == ERR_OK)
         {
-            if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
+            if (resp->learner_status_ == learner_status::LearningSucceeded && req->config.status == partition_status::PS_POTENTIAL_SECONDARY)
             {
                 handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }

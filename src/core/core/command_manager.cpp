@@ -38,13 +38,12 @@
 # include <thread>
 # include <sstream>
 # include <dsn/cpp/utils.h>
-# include <dsn/cpp/serialization_manager.h>
 # include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
 # include "rpc_engine.h"
-# include <dsn/tool/cli.types.h>
+# include <dsn/tool/cli.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -231,8 +230,6 @@ namespace dsn {
         return run_command(args[0], args2, output);
     }
 
-    DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
-
     bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output)
     {
         command* h = nullptr;
@@ -259,14 +256,15 @@ namespace dsn {
             {
                 ::dsn::rpc_read_stream response;
                 
-                dsn_message_t msg = dsn_msg_create_request(RPC_DSN_CLI_CALL, 0, 0);
-                ::dsn::marshall(msg, cmd);
-                ::dsn::marshall(msg, args);
+                dsn_message_t msg = dsn_msg_create_request(RPC_CLI_CLI_CALL, 0, 0);
+                ::dsn::command rcmd;
+                rcmd.cmd = cmd;
+                rcmd.arguments = args;
+                ::dsn::marshall(msg, rcmd);
                 auto resp = dsn_rpc_call_wait(h->address.c_addr(), msg);
                 if (resp != nullptr)
                 {
-                    response.set_read_msg(resp);
-                    unmarshall(response, output);
+                    ::dsn::unmarshall(resp, output);
                     return true;
                 }
                 else
@@ -305,17 +303,16 @@ namespace dsn {
 
     void command_manager::start_remote_cli()
     {
-        ::dsn::service_engine::fast_instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
+        ::dsn::service_engine::fast_instance().register_system_rpc_handler(RPC_CLI_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
     }
 
     void command_manager::on_remote_cli(dsn_message_t req)
     {
-        rpc_read_stream reader(req);
-        dsn::command cli_command;
+        ::dsn::command cmd;
         std::string result;
 
-        unmarshall(reader, cli_command);
-        run_command(cli_command.cmd, cli_command.arguments, result);
+        ::dsn::unmarshall(req, cmd);
+        run_command(cmd.cmd, cmd.arguments, result);
 
         auto resp = dsn_msg_create_response(req);
         ::dsn::marshall(resp, result);

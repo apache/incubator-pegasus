@@ -41,6 +41,7 @@
 
 # include <thrift/Thrift.h>
 # include <thrift/protocol/TBinaryProtocol.h>
+# include <thrift/protocol/TJSONProtocol.h>
 # include <thrift/protocol/TVirtualProtocol.h>
 # include <thrift/transport/TVirtualTransport.h>
 # include <thrift/TApplicationException.h>
@@ -101,7 +102,7 @@ namespace dsn {
         binary_writer& _writer;
     };
 
-#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
+    #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
         inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
         {\
             return proto->write##TMethod(val); \
@@ -112,14 +113,14 @@ namespace dsn {
         }
 
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
-        template<typename T>
+    template<typename T>
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
     template<typename T>
     uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, T& val);
@@ -290,18 +291,18 @@ namespace dsn {
     }\
 
     GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
-        GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
-        GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
-        GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
-        GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
-        GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
-        GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
-        GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
-        GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
-        GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
-        GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
+    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
+    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
+    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
+    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
 
-        template<typename T>
+    template<typename T>
     inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
     {
         return ::apache::thrift::protocol::T_LIST;
@@ -586,4 +587,66 @@ namespace dsn {
             }
         }
     };
+
+    template<typename T>
+    void marshall_thrift_binary(binary_writer& writer, const T& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        val.write(&proto);
+    }
+
+    template<typename T>
+    void unmarshall_thrift_binary(binary_reader& reader, /*out*/ T& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        val.read(&proto);
+    }
+
+    template<typename T>
+    void marshall_thrift_json(binary_writer& writer, const T& val)
+    {
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        ::apache::thrift::protocol::TJSONProtocol proto(transport);
+        val.write(&proto);
+    }
+
+    template<typename T>
+    void unmarshall_thrift_json(binary_reader& reader, /*out*/ T& val)
+    {
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        ::apache::thrift::protocol::TJSONProtocol proto(transport);
+        val.read(&proto);
+    }
+
+    #define THRIFT_BASIC_TYPE_SERIALIZATION(PROTOCOL, TMethod, CXXType) \
+        inline void marshall_thrift_basic_##PROTOCOL##(binary_writer& writer, const CXXType##& val) \
+        { \
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer)); \
+            ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
+            proto.write##TMethod##(val); \
+        } \
+        inline void unmarshall_thrift_basic_##PROTOCOL##(binary_reader& reader, CXXType##& val) \
+        { \
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader)); \
+            ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
+            proto.read##TMethod##(val); \
+        }
+
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Bool, bool)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Byte, int8_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I16, int16_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I32, int32_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I64, int64_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Double, double)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, String, std::string)
+
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Bool, bool)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Byte, int8_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I16, int16_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I32, int32_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I64, int64_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Double, double)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, String, std::string)
 }

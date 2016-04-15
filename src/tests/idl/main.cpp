@@ -194,6 +194,7 @@ bool prepare()
     return ret;
 }
 
+/*
 TEST(TEST_PROTOBUF_HELPER, CPP_BINARY)
 {
     EXPECT_TRUE(test_code_generation(lang_cpp, idl_protobuf, format_binary));
@@ -241,7 +242,7 @@ TEST(TEST_THRIFT_HELPER, CSHARP_JSON)
 }
 
 #endif
-
+*/
 GTEST_API_ int main(int argc, char **argv)
 {
     if (argc != 3)

@@ -109,7 +109,7 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY || r.second->status() == PS_SECONDARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY || r.second->status() == partition_status::PS_SECONDARY)
                         {
                             r.second->check_state_completeness();
                         }
@@ -159,7 +159,7 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY)
                         {
                             auto pr = primaries_from_replica_servers.insert(
                                 std::unordered_map<global_partition_id, ::dsn::rpc_address>::value_type(r.first, rs->primary_address())
@@ -190,7 +190,7 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY)
                         {
                             last_committed_decrees_on_primary[r.first] = r.second;
                         }
@@ -207,7 +207,7 @@ namespace dsn {
                         auto it = last_committed_decrees_on_primary.find(r.first);
                         if (it != last_committed_decrees_on_primary.end())
                         {
-                            if (r.second->status() == PS_SECONDARY &&
+                            if (r.second->status() == partition_status::PS_SECONDARY &&
                                 r.second->_config.ballot == it->second->_config.ballot)
                             {
                                 dassert(it->second->last_committed_decree() <= r.second->last_prepared_decree(),

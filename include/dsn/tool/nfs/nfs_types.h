@@ -17,7 +17,6 @@
 
 #include <thrift/cxxfunctional.h>
 
-
 namespace dsn { namespace service {
 
 class copy_request;

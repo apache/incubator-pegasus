@@ -110,9 +110,9 @@ namespace dsn
             void start_app(std::shared_ptr<layer1_app_info> &&  app);
             void kill_app(std::shared_ptr<layer1_app_info> &&  app);
 
-            void update_configuration_on_meta_server(::dsn::replication::config_type type, std::shared_ptr<layer1_app_info>&& app);
+            void update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info>&& app);
             void on_update_configuration_on_meta_server_reply(
-                ::dsn::replication::config_type type, std::shared_ptr<layer1_app_info> &&  app,
+                ::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info> &&  app,
                 error_code err, dsn_message_t request, dsn_message_t response
                 );
 

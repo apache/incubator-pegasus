@@ -35,6 +35,8 @@
 # include "partition_resolver_simple.h"
 # include <dsn/internal/factory_store.h>
 
+# include <dsn/dist/replication/replication.types.h>
+
 namespace dsn
 {
     namespace dist

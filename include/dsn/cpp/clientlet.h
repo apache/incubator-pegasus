@@ -37,7 +37,6 @@
 
 # include <dsn/cpp/task_helper.h>
 # include <dsn/cpp/function_traits.h>
-# include <dsn/cpp/serialization_manager.h>
 
 namespace dsn
 { 

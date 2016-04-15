@@ -21,7 +21,7 @@ public:
     virtual ::dsn::error_code start(int argc, char** argv) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_svc.open_service();
+        _<?=$svc->name?>_svc.open_service(gpid());
 <?php } ?>
         return ::dsn::ERR_OK;
     }
@@ -29,7 +29,7 @@ public:
     virtual ::dsn::error_code stop(bool cleanup = false) override
     {
 <?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_svc.close_service();
+        _<?=$svc->name?>_svc.close_service(gpid());
 <?php } ?>
         return ::dsn::ERR_OK;
     }

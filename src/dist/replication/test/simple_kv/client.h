@@ -52,7 +52,7 @@ public:
 
     void begin_read(int id, const std::string& key, int timeout_ms);
     void begin_write(int id,const std::string& key,const std::string& value, int timeout_ms);
-    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node);
+    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node);
 private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;

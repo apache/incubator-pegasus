@@ -24,6 +24,8 @@ class beacon_msg;
 
 class beacon_ack;
 
+class config_master_message;
+
 typedef struct _beacon_msg__isset {
   _beacon_msg__isset() : time(false), from_addr(false), to_addr(false) {}
   bool time :1;
@@ -35,9 +37,7 @@ class beacon_msg {
  public:
 
   beacon_msg(const beacon_msg&);
-  beacon_msg(beacon_msg&&);
   beacon_msg& operator=(const beacon_msg&);
-  beacon_msg& operator=(beacon_msg&&);
   beacon_msg() : time(0) {
   }
 
@@ -97,9 +97,7 @@ class beacon_ack {
  public:
 
   beacon_ack(const beacon_ack&);
-  beacon_ack(beacon_ack&&);
   beacon_ack& operator=(const beacon_ack&);
-  beacon_ack& operator=(beacon_ack&&);
   beacon_ack() : time(0), is_master(0), allowed(0) {
   }
 
@@ -151,6 +149,58 @@ class beacon_ack {
 void swap(beacon_ack &a, beacon_ack &b);
 
 inline std::ostream& operator<<(std::ostream& out, const beacon_ack& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _config_master_message__isset {
+  _config_master_message__isset() : master(false), is_register(false) {}
+  bool master :1;
+  bool is_register :1;
+} _config_master_message__isset;
+
+class config_master_message {
+ public:
+
+  config_master_message(const config_master_message&);
+  config_master_message& operator=(const config_master_message&);
+  config_master_message() : is_register(0) {
+  }
+
+  virtual ~config_master_message() throw();
+   ::dsn::rpc_address master;
+  bool is_register;
+
+  _config_master_message__isset __isset;
+
+  void __set_master(const  ::dsn::rpc_address& val);
+
+  void __set_is_register(const bool val);
+
+  bool operator == (const config_master_message & rhs) const
+  {
+    if (!(master == rhs.master))
+      return false;
+    if (!(is_register == rhs.is_register))
+      return false;
+    return true;
+  }
+  bool operator != (const config_master_message &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const config_master_message & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(config_master_message &a, config_master_message &b);
+
+inline std::ostream& operator<<(std::ostream& out, const config_master_message& obj)
 {
   obj.printTo(out);
   return out;

@@ -600,7 +600,7 @@ void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, 
     configuration_list_apps_request req;
     configuration_list_apps_response resp;
 
-    req.status = AS_INVALID;
+    req.status = app_status::AS_INVALID;
     _state->list_apps(req, resp);
 
     std::string* resp_json = new std::string();
@@ -619,7 +619,7 @@ void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv,
     configuration_list_nodes_request req;
     configuration_list_nodes_response resp;
 
-    req.status = NS_INVALID;
+    req.status = node_status::NS_INVALID;
     _state->list_nodes(req, resp);
 
     std::string* resp_json = new std::string();
@@ -757,15 +757,16 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
 
     global_partition_id gpid;
     rpc_address receiver;
-    config_type type;
+    int type;
     rpc_address node;
+
 
     ::dsn::unmarshall(req, gpid);
     ::dsn::unmarshall(req, receiver);
     ::dsn::unmarshall(req, type);
     ::dsn::unmarshall(req, node);
 
-    _balancer->explictly_send_proposal(gpid, receiver, type, node);
+    _balancer->explictly_send_proposal(gpid, receiver, static_cast<config_type::type>(type), node);
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)

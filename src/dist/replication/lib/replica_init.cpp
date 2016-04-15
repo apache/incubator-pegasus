@@ -370,7 +370,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         );
 
     // prepare
-    error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
+    error_code err = _prepare_list->prepare(mu, partition_status::PS_INACTIVE);
     dassert (err == ERR_OK, "");
 
     return true;
@@ -378,7 +378,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 
 void replica::set_inactive_state_transient(bool t)
 {
-    if (status() == PS_INACTIVE)
+    if (status() == partition_status::PS_INACTIVE)
     {
         _inactive_is_transient = t;
     }

@@ -532,7 +532,6 @@ typedef enum dsn_msg_parameter_type_t
 
 enum dsn_msg_serialize_format
 {
-    DSF_DSN_BINARY,
     DSF_THRIFT_BINARY,
     DSF_THRIFT_COMPACT,
     DSF_THRIFT_JSON,

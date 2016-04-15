@@ -184,7 +184,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -242,7 +242,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_st
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
     req->status = status;

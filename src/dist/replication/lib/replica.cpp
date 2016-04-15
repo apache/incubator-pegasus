@@ -91,7 +91,7 @@ void replica::init_state()
     _config.ballot = 0;
     _config.gpid.pidx = 0;
     _config.gpid.app_id = 0;
-    _config.status = PS_INACTIVE;
+    _config.status = partition_status::PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
     _private_log = nullptr;
@@ -112,13 +112,13 @@ replica::~replica(void)
 
 void replica::on_client_read(task_code code, dsn_message_t request)
 {    
-    if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
+    if (status() == partition_status::PS_INACTIVE || status() == partition_status::PS_POTENTIAL_SECONDARY)
     {
         response_client_message(request, ERR_INVALID_STATE);
         return;
     }
 
-    if (status() != PS_PRIMARY ||
+    if (status() != partition_status::PS_PRIMARY ||
 
         // a small window where the state is not the latest yet
         last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
@@ -215,7 +215,7 @@ void replica::execute_mutation(mutation_ptr& mu)
 
     switch (status())
     {
-    case PS_INACTIVE:
+    case partition_status::PS_INACTIVE:
         if (_app->last_committed_decree() + 1 == d)
         {
             err = _app->write_internal(mu);
@@ -230,7 +230,7 @@ void replica::execute_mutation(mutation_ptr& mu)
                 );
         }
         break;
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         {
             check_state_completeness();
             dassert(_app->last_committed_decree() + 1 == d, "");
@@ -238,7 +238,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         break;
 
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         if (!_secondary_states.checkpoint_is_running)
         {
             check_state_completeness();
@@ -256,19 +256,19 @@ void replica::execute_mutation(mutation_ptr& mu)
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
-            dassert(_private_log != nullptr, "");            
+            dassert(_private_log != nullptr, "");          
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
-        if (_potential_secondary_states.learning_status == LearningSucceeded ||
-            _potential_secondary_states.learning_status == LearningWithPrepareTransient)
+    case partition_status::PS_POTENTIAL_SECONDARY:
+        if (_potential_secondary_states.learning_status == learner_status::LearningSucceeded ||
+            _potential_secondary_states.learning_status == learner_status::LearningWithPrepareTransient)
         {
             dassert(_app->last_committed_decree() + 1 == d, "");
             err = _app->write_internal(mu);
         }
         else
         {
-            // prepare also happens with LearningWithPrepare, in this case
+            // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
             // catch-up will be done later after the checkpoint task is finished
 
@@ -280,7 +280,7 @@ void replica::execute_mutation(mutation_ptr& mu)
                 );
         }
         break;
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         break;
     }
     
@@ -293,7 +293,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         handle_local_failure(err);
     }
 
-    if (status() == PS_PRIMARY)
+    if (status() == partition_status::PS_PRIMARY)
     {
         mutation_ptr next = _primary_states.write_queue.check_possible_work(
             static_cast<int>(_prepare_list->max_decree() - d)
@@ -318,7 +318,7 @@ mutation_ptr replica::new_mutation(decree decree)
 
 bool replica::group_configuration(/*out*/ partition_configuration& config) const
 {
-    if (PS_PRIMARY != status())
+    if (partition_status::PS_PRIMARY != status())
         return false;
 
     config = _primary_states.membership;
@@ -349,7 +349,7 @@ decree replica::last_prepared_decree() const
 void replica::close()
 {
     dassert(
-        status() == PS_ERROR || status() == PS_INACTIVE,
+        status() == partition_status::PS_ERROR || status() == partition_status::PS_INACTIVE,
         "%s: invalid state %s when calling replica::close",
         name(),
         enum_to_string(status())
@@ -364,13 +364,13 @@ void replica::close()
     cleanup_preparing_mutations(true);
     dassert(_primary_states.is_cleaned(), "primary context is not cleared");
 
-    if (PS_INACTIVE == status())
+    if (partition_status::PS_INACTIVE == status())
     {
         dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
         dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
     }
 
-    // for PS_ERROR, context cleanup is done here as they may block
+    // for partition_status::PS_ERROR, context cleanup is done here as they may block
     else
     {
         bool r = _secondary_states.cleanup(true);

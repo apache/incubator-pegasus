@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool/nfs_node_simple.h>
+# include <dsn/tool/nfs.h>
 # include "nfs_client_impl.h"
 # include "nfs_server_impl.h"
 

@@ -43,7 +43,9 @@ using namespace ::dsn::replication;
 TEST(replication, mutation_log_learn)
 {
     std::chrono::steady_clock clock;
-    global_partition_id gpid = { 1, 1 };
+    global_partition_id gpid;
+    gpid.app_id = 1;
+    gpid.pidx = 1;
     std::string str = "hello, world!";
     std::string logp = "./test-log";
 

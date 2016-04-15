@@ -62,7 +62,7 @@ typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
 struct app_state
 {
-    app_status                           status;
+    app_status::type                     status;
     std::string                          app_type;
     std::string                          app_name;
     bool                                 is_stateful;
@@ -76,7 +76,7 @@ struct app_state
     std::atomic_int                      available_partitions;
     DEFINE_JSON_SERIALIZATION(status, app_type, app_name, is_stateful, package_id, app_id, partition_count, partitions)
 
-    app_state() : status(AS_DROPPED), app_type(), app_name(), is_stateful(true), package_id(), app_id(0), partitions(), partition_count(0)
+    app_state() : status(app_status::AS_DROPPED), app_type(), app_name(), is_stateful(true), package_id(), app_id(0), partitions(), partition_count(0)
     {
         available_partitions.store(0);
     }

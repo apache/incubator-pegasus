@@ -82,7 +82,7 @@ namespace dsn
             virtual void on_control_migration(/*in*/const control_balancer_migration_request& request,
                                               /*out*/control_balancer_migration_response& response) {}
 
-            void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
+            void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type::type type, rpc_address node);
 
         protected:
             void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);

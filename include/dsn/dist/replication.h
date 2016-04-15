@@ -44,18 +44,18 @@ namespace dsn
 {
     namespace replication 
     {
-
-        inline bool operator < (const global_partition_id& l, const global_partition_id& r)
+        // seems thrift does not define this, why!!!!
+        inline bool global_partition_id::operator < (const global_partition_id & r) const
         {
-            return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
+            return app_id < r.app_id || (app_id == r.app_id && pidx < r.pidx);
         }
-
+        /*
 #ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
         inline bool operator == (const global_partition_id& l, const global_partition_id& r)
         {
             return l.app_id == r.app_id && l.pidx == r.pidx;
         }
-#endif
+#endif*/
 
         inline int gpid_to_hash(global_partition_id gpid)
         {

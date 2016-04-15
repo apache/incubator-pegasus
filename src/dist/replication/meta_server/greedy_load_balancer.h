@@ -75,7 +75,7 @@ private:
     dsn::rpc_address recommend_primary(partition_configuration& pc);
     dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 
-    void insert_balancer_proposal_request(const global_partition_id& gpid, balancer_type type, dsn::rpc_address from, dsn::rpc_address to)
+    void insert_balancer_proposal_request(const global_partition_id& gpid, balancer_type::type type, dsn::rpc_address from, dsn::rpc_address to)
     {
         balancer_proposal_request& request = _balancer_proposals_map[gpid];
         request.gpid = gpid;

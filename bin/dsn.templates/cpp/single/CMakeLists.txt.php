@@ -4,28 +4,13 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_format = $argv[4];
 
-global $inc_path;
-global $inc_lib;
-$inc_lib = "";
-$inc_path = '${DSN_ROOT}/include/ext';
-if ($idl_format == "proto")
+$my_serialization = "";
+if ($idl_format == "thrift")
 {
-    if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
-    {
-        $inc_lib = "libprotobuf.lib dsn.core.dll";
-    } else
-    {
-        $inc_lib = "libprotobuf.a libdsn.core.so";
-    }
-} else if ($idl_format == "thrift")
+    $my_serialization = "thrift";
+} else if ($idl_format == "proto")
 {
-    if (strncasecmp(PHP_OS, 'WIN', 3) == 0)
-    {
-         $inc_lib = "thriftmt.lib dsn.core.dll";
-    } else
-    {
-        $inc_lib = "libthrift.so libdsn.core.so";
-    }
+    $my_serialization = "protobuf";
 }
 ?>
 cmake_minimum_required(VERSION 2.8.8)
@@ -57,13 +42,15 @@ file(GLOB
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "<?=$inc_path?>")
+set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS <?=$inc_lib?>)
+set(MY_PROJ_LIBS "")
 
 set(MY_PROJ_LIB_PATH "")
 
 set(INI_FILES "")
+
+set(MY_SERIALIZATION_TYPE "<?=$my_serialization?>")
 
 file(GLOB
     RES_FILES

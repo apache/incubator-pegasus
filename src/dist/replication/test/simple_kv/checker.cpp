@@ -256,11 +256,11 @@ bool test_checker::check_replica_state(int primary_count, int secondary_count, i
         for (auto& replica : rs->_stub->_replicas)
         {
             auto status = replica.second->status();
-            if (status == PS_PRIMARY)
+            if (status == partition_status::PS_PRIMARY)
                 p++;
-            else if (status == PS_SECONDARY)
+            else if (status == partition_status::PS_SECONDARY)
                 s++;
-            else if (status == PS_INACTIVE)
+            else if (status == partition_status::PS_INACTIVE)
                 i++;
         }
     }

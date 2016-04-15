@@ -71,7 +71,7 @@ namespace dsn {
         void replica::init_checkpoint()
         {
             // only applicable to primary and secondary replicas
-            if (status() != PS_PRIMARY && status() != PS_SECONDARY)
+            if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY)
                 return;
 
             //// no need to checkpoint
@@ -102,7 +102,7 @@ namespace dsn {
 
             // primary cannot checkpoint (TODO: test if async checkpoint is supported)
             // therefore we have to copy checkpoints from secondaries
-            if (PS_PRIMARY == status())
+            if (partition_status::PS_PRIMARY == status())
             {
                 // only one running instance
                 if (nullptr == _primary_states.checkpoint_task)
@@ -111,7 +111,7 @@ namespace dsn {
                         return;
 
                     std::shared_ptr<replica_configuration> rc(new replica_configuration);
-                    _primary_states.get_replica_config(PS_SECONDARY, *rc);
+                    _primary_states.get_replica_config(partition_status::PS_SECONDARY, *rc);
 
                     rpc_address sd = _primary_states.membership.secondaries
                         [dsn_random32(0, (int)_primary_states.membership.secondaries.size() - 1)];
@@ -134,7 +134,7 @@ namespace dsn {
             // secondary can start checkpint in the long running thread pool
             else
             {
-                dassert(PS_SECONDARY == status(), "");
+                dassert(partition_status::PS_SECONDARY == status(), "");
 
                 // only one running instance
                 if (!_secondary_states.checkpoint_is_running)
@@ -164,7 +164,7 @@ namespace dsn {
                 }
             }
 
-            if (status() != PS_SECONDARY)
+            if (status() != partition_status::PS_SECONDARY)
             {
                 response.err = ERR_INVALID_STATE;
                 return;
@@ -204,7 +204,7 @@ namespace dsn {
         {
             check_hashed_access();
 
-            if (PS_PRIMARY != status())
+            if (partition_status::PS_PRIMARY != status())
             {
                 _primary_states.checkpoint_task = nullptr;
                 return;
@@ -268,7 +268,7 @@ namespace dsn {
                 _primary_states.checkpoint_task = nullptr;
                 return;
             }
-            if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
+            if (partition_status::PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
                 // we must give the app the full path of the check point
                 for (std::string& filename: resp->state.files)
@@ -295,7 +295,7 @@ namespace dsn {
                 );
         }
 
-        void replica::catch_up_with_private_logs(partition_status s)
+        void replica::catch_up_with_private_logs(partition_status::type s)
         {
             learn_state state;
             _private_log->get_learn_state(
@@ -306,7 +306,7 @@ namespace dsn {
 
             auto err = apply_learned_state_from_private_log(state);
 
-            if (s == PS_POTENTIAL_SECONDARY)
+            if (s == partition_status::PS_POTENTIAL_SECONDARY)
             {
                 _potential_secondary_states.learn_remote_files_completed_task = tasking::create_task(
                     LPC_CHECKPOINT_REPLICA_COMPLETED,
@@ -339,7 +339,7 @@ namespace dsn {
             check_hashed_access();
 
             // closing or wrong timing or no need operate
-            if (PS_SECONDARY != status() || err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE)
+            if (partition_status::PS_SECONDARY != status() || err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE)
             {
                 _secondary_states.checkpoint_is_running = false;
                 return;
@@ -385,7 +385,7 @@ namespace dsn {
                     _secondary_states.catchup_with_private_log_task = tasking::create_task(
                         LPC_CATCHUP_WITH_PRIVATE_LOGS,
                         this,
-                        [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },
+                        [this]() { this->catch_up_with_private_logs(partition_status::PS_SECONDARY); },
                         gpid_to_hash(get_gpid())
                         );
                     _secondary_states.catchup_with_private_log_task->enqueue();

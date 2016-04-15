@@ -51,7 +51,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status())
+    if (partition_status::PS_PRIMARY != status())
     {
         response_client_message(request, ERR_INVALID_STATE);
         return;
@@ -72,7 +72,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
 
 void replica::init_prepare(mutation_ptr& mu)
 {
-    dassert (PS_PRIMARY == status(), "");
+    dassert (partition_status::PS_PRIMARY == status(), "");
 
     error_code err = ERR_OK;
     uint8_t count = 0;
@@ -99,7 +99,7 @@ void replica::init_prepare(mutation_ptr& mu)
     dassert (mu->data.header.decree > last_committed_decree(), "");
 
     // local prepare
-    err = _prepare_list->prepare(mu, PS_PRIMARY);
+    err = _prepare_list->prepare(mu, partition_status::PS_PRIMARY);
     if (err != ERR_OK)
     {
         goto ErrOut;
@@ -110,7 +110,7 @@ void replica::init_prepare(mutation_ptr& mu)
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); ++it)
     {
-        send_prepare_message(*it, PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
+        send_prepare_message(*it, partition_status::PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
     }
 
     count = 0;
@@ -118,7 +118,7 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
-            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries, it->second.signature);
+            send_prepare_message(it->first, partition_status::PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries, it->second.signature);
             count++;
         }
     }    
@@ -156,7 +156,7 @@ ErrOut:
 
 void replica::send_prepare_message(
     ::dsn::rpc_address addr, 
-    partition_status status, 
+    partition_status::type status,
     mutation_ptr& mu, 
     int timeout_milliseconds,
     int64_t learn_signature)
@@ -192,7 +192,7 @@ void replica::send_prepare_message(
 void replica::do_possible_commit_on_primary(mutation_ptr& mu)
 {
     dassert (_config.ballot == mu->data.header.ballot, "");
-    dassert (PS_PRIMARY == status(), "");
+    dassert (partition_status::PS_PRIMARY == status(), "");
 
     if (mu->is_ready_for_commit())
     {
@@ -241,7 +241,7 @@ void replica::on_prepare(dsn_message_t request)
         }
     }
 
-    if (PS_INACTIVE == status() || PS_ERROR == status())
+    if (partition_status::PS_INACTIVE == status() || partition_status::PS_ERROR == status())
     {
         derror(
             "%s: mutation %s on_prepare failed as invalid replica state, state = %s",
@@ -249,12 +249,12 @@ void replica::on_prepare(dsn_message_t request)
             enum_to_string(status())
             );
         ack_prepare_message(
-            (PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE,
+            (partition_status::PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE,
             mu
             );
         return;
     }
-    else if (PS_POTENTIAL_SECONDARY == status())
+    else if (partition_status::PS_POTENTIAL_SECONDARY == status())
     {
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_signature)
@@ -264,8 +264,8 @@ void replica::on_prepare(dsn_message_t request)
             return;
         }
 
-        if (!(_potential_secondary_states.learning_status == LearningWithPrepare
-            || _potential_secondary_states.learning_status == LearningSucceeded))
+        if (!(_potential_secondary_states.learning_status == learner_status::LearningWithPrepare
+            || _potential_secondary_states.learning_status == learner_status::LearningSucceeded))
         {
             derror(
                 "%s: mutation %s on_prepare skipped as invalid learning status, state = %s, learning_status = %s",
@@ -307,13 +307,13 @@ void replica::on_prepare(dsn_message_t request)
     error_code err = _prepare_list->prepare(mu, status());
     dassert (err == ERR_OK, "");
 
-    if (PS_POTENTIAL_SECONDARY == status())
+    if (partition_status::PS_POTENTIAL_SECONDARY == status())
     {
         dassert (mu->data.header.decree <= last_committed_decree() + _options->max_mutation_count_in_prepare_list, "");
     }
     else
     {
-        dassert (PS_SECONDARY == status(), "");
+        dassert (partition_status::PS_SECONDARY == status(), "");
         dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit, "");
     }
 
@@ -346,11 +346,11 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
 
     // skip old mutations
-    if (mu->data.header.ballot >= get_ballot() && status() != PS_INACTIVE)
+    if (mu->data.header.ballot >= get_ballot() && status() != partition_status::PS_INACTIVE)
     {
         switch (status())
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             if (err == ERR_OK)
             {
                 do_possible_commit_on_primary(mu);
@@ -360,8 +360,8 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
                 handle_local_failure(err);
             }
             break;
-        case PS_SECONDARY:
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             if (err != ERR_OK)
             {
                 handle_local_failure(err);
@@ -369,7 +369,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             // always ack
             ack_prepare_message(err, mu);
             break;
-        case PS_ERROR:
+        case partition_status::PS_ERROR:
             break;
         default:
             dassert(false, "");
@@ -384,7 +384,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
    
     // write local private log if necessary
-    if (err == ERR_OK && _private_log && status() != PS_ERROR)
+    if (err == ERR_OK && _private_log && status() != partition_status::PS_ERROR)
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
@@ -418,21 +418,21 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
 }
 
-void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr, error_code err, dsn_message_t request, dsn_message_t reply)
 {
     check_hashed_access();
 
     mutation_ptr mu = pr.first;
-    partition_status targetStatus = pr.second;
+    partition_status::type targetStatus = pr.second;
 
     // skip callback for old mutations
-    if (mu->data.header.ballot < get_ballot() || PS_PRIMARY != status())
+    if (mu->data.header.ballot < get_ballot() || partition_status::PS_PRIMARY != status())
         return;
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
     ::dsn::rpc_address node = dsn_msg_to_address(request);
-    partition_status st = _primary_states.get_node_status(node);
+    partition_status::type st = _primary_states.get_node_status(node);
 
     // handle reply
     prepare_ack resp;
@@ -461,15 +461,15 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
 
         switch (targetStatus)
         {
-        case PS_SECONDARY:
-            dassert (_primary_states.check_exist(node, PS_SECONDARY), "");
+        case partition_status::PS_SECONDARY:
+            dassert (_primary_states.check_exist(node, partition_status::PS_SECONDARY), "");
             dassert (mu->left_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_secondary_ack_count())
             {
                 do_possible_commit_on_primary(mu);
             }
             break;
-        case PS_POTENTIAL_SECONDARY:            
+        case partition_status::PS_POTENTIAL_SECONDARY:
             dassert (mu->left_potential_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_potential_secondary_ack_count())
             {
@@ -489,12 +489,12 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     {
         // retry for INACTIVE state when there are still time
         if (resp.err == ERR_INACTIVE_STATE
-            && !mu->is_prepare_close_to_timeout(2, targetStatus == PS_SECONDARY ? 
+            && !mu->is_prepare_close_to_timeout(2, targetStatus == partition_status::PS_SECONDARY ?
             _options->prepare_timeout_ms_for_secondaries :
             _options->prepare_timeout_ms_for_potential_secondaries)
             )
         {
-            send_prepare_message(node, targetStatus, mu, targetStatus == PS_SECONDARY ?
+            send_prepare_message(node, targetStatus, mu, targetStatus == partition_status::PS_SECONDARY ?
                 _options->prepare_timeout_ms_for_secondaries :
                 _options->prepare_timeout_ms_for_potential_secondaries);
             return;
@@ -506,7 +506,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
         handle_remote_failure(st, node, resp.err);
 
         // note targetStatus and (curent) status may diff
-        if (targetStatus == PS_POTENTIAL_SECONDARY)
+        if (targetStatus == partition_status::PS_POTENTIAL_SECONDARY)
         {
             dassert (mu->left_potential_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_potential_secondary_ack_count())
@@ -525,7 +525,7 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     resp.ballot = get_ballot();
     resp.decree = mu->data.header.decree;
 
-    // for PS_POTENTIAL_SECONDARY ONLY
+    // for partition_status::PS_POTENTIAL_SECONDARY ONLY
     resp.last_committed_decree_in_app = _app->last_committed_decree(); 
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
