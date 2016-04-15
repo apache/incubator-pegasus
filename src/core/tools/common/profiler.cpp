@@ -341,7 +341,7 @@ namespace dsn {
                 s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES,"latency due to waiting in the queue", true);
                 s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency due to executing tasks", true);
                 s_spec_profilers[i].ptr[TASK_THROUGHPUT] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, "task numbers per second", true);
-                s_spec_profilers[i].ptr[TASK_CANCELLED] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, "cancelled times of a specific task type", true);
+                s_spec_profilers[i].ptr[TASK_CANCELLED] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".cancelled_count")).c_str(), COUNTER_TYPE_NUMBER, "cancelled times of a specific task type", true);
 
                 if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST)
                 {
