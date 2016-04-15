@@ -35,8 +35,6 @@
 
 # pragma once
 
-# include <dsn/service_api_c.h>
-# include <dsn/service_api_cpp.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/address.h>
 # include <dsn/cpp/rpc_stream.h>

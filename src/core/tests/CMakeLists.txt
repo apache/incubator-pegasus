@@ -18,8 +18,8 @@ set(MY_PROJ_INC_PATH
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
-                 dsn.replication.clientlib
                  dsn.dist.providers.common
+                 dsn.replication.clientlib
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
