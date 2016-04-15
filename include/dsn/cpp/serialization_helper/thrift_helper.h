@@ -621,17 +621,17 @@ namespace dsn {
     }
 
     #define THRIFT_BASIC_TYPE_SERIALIZATION(PROTOCOL, TMethod, CXXType) \
-        inline void marshall_thrift_basic_##PROTOCOL##(binary_writer& writer, const CXXType##& val) \
+        inline void marshall_thrift_basic_##PROTOCOL (binary_writer& writer, const CXXType &val) \
         { \
             boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer)); \
             ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
-            proto.write##TMethod##(val); \
+            proto.write##TMethod (val); \
         } \
-        inline void unmarshall_thrift_basic_##PROTOCOL##(binary_reader& reader, CXXType##& val) \
+        inline void unmarshall_thrift_basic_##PROTOCOL (binary_reader& reader, CXXType &val) \
         { \
             boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader)); \
             ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
-            proto.read##TMethod##(val); \
+            proto.read##TMethod (val); \
         }
 
     THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Bool, bool)

@@ -142,7 +142,7 @@ namespace dsn
 #endif
 
 #define BASIC_TYPE_SERIALIZATION(CXXType) \
-    inline void marshall(binary_writer& writer, const CXXType##& value, dsn_msg_serialize_format fmt) \
+    inline void marshall(binary_writer& writer, const CXXType &value, dsn_msg_serialize_format fmt) \
     { \
         switch (fmt) \
         { \
@@ -150,7 +150,7 @@ namespace dsn
             default: dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str()); \
         } \
     } \
-    inline void unmarshall(binary_reader& reader, CXXType##& value, dsn_msg_serialize_format fmt) \
+    inline void unmarshall(binary_reader& reader, CXXType &value, dsn_msg_serialize_format fmt) \
     { \
         switch (fmt) \
         { \
@@ -160,15 +160,15 @@ namespace dsn
     }
 
     BASIC_TYPE_SERIALIZATION(bool)
-        BASIC_TYPE_SERIALIZATION(int8_t)
-        BASIC_TYPE_SERIALIZATION(int16_t)
-        BASIC_TYPE_SERIALIZATION(int32_t)
-        BASIC_TYPE_SERIALIZATION(int64_t)
-        BASIC_TYPE_SERIALIZATION(double)
-        BASIC_TYPE_SERIALIZATION(std::string)
+    BASIC_TYPE_SERIALIZATION(int8_t)
+    BASIC_TYPE_SERIALIZATION(int16_t)
+    BASIC_TYPE_SERIALIZATION(int32_t)
+    BASIC_TYPE_SERIALIZATION(int64_t)
+    BASIC_TYPE_SERIALIZATION(double)
+    BASIC_TYPE_SERIALIZATION(std::string)
 
 #define GENERATED_TYPE_SERIALIZATION(GType) \
-    inline void marshall(binary_writer& writer, const GType##& value, dsn_msg_serialize_format fmt) \
+    inline void marshall(binary_writer& writer, const GType &value, dsn_msg_serialize_format fmt) \
     { \
         switch (fmt) \
         { \
@@ -177,7 +177,7 @@ namespace dsn
             default: dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str()); \
         } \
     } \
-    inline void unmarshall(binary_reader& reader, GType##& value, dsn_msg_serialize_format fmt) \
+    inline void unmarshall(binary_reader& reader, GType &value, dsn_msg_serialize_format fmt) \
     { \
         switch (fmt) \
         { \
@@ -187,7 +187,7 @@ namespace dsn
         } \
     }
 
-        template<typename T>
+    template<typename T>
     inline void marshall(dsn_message_t msg, const T& val)
     {
         ::dsn::rpc_write_stream writer(msg);
