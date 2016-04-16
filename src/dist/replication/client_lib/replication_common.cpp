@@ -390,17 +390,17 @@ void replication_options::sanity_check()
 
     if (node == partition_config.primary)
     {
-        replica_config.status = PS_PRIMARY;
+        replica_config.status = partition_status::PS_PRIMARY;
         return true;
     }
     else if (std::find(partition_config.secondaries.begin(), partition_config.secondaries.end(), node) != partition_config.secondaries.end())
     {
-        replica_config.status = PS_SECONDARY;
+        replica_config.status = partition_status::PS_SECONDARY;
         return true;
     }
     else
     {
-        replica_config.status = PS_INACTIVE;
+        replica_config.status = partition_status::PS_INACTIVE;
         return false;
     }
 }

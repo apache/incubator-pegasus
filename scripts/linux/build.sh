@@ -5,6 +5,8 @@
 #    CLEAR          YES|NO
 #    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
+#    SERIALIZE_TYPE dsn|thrift|protobuf
+#    GIT_SOURCE     github|xiaomi
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
 #    WARNING_ALL    YES|NO
@@ -16,6 +18,8 @@
 #    -DCMAKE_C_COMPILER=gcc
 #    -DCMAKE_CXX_COMPILER=g++
 #    [-DCMAKE_BUILD_TYPE=Debug]
+#    [-DDSN_SERIALIZATION_TYPE=dsn|thrift|protobuf]
+#    [-DDSN_GIT_SOURCE=github|xiaomi]
 #    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
 #    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
@@ -43,6 +47,18 @@ then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
 else
     echo "BUILD_TYPE=release"
+fi
+
+echo "SERIALIZE_TYPE=$SERIALIZE_TYPE"
+if [ -n "$SERIALIZE_TYPE" ]
+then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_SERIALIZATION_TYPE=$SERIALIZE_TYPE"
+fi
+
+echo "GIT_SOURCE=$GIT_SOURCE"
+if [ -n "$GIT_SOURCE" ]
+then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_GIT_SOURCE=$GIT_SOURCE"
 fi
 
 if [ "$ONLY_BUILD" == "YES" ]

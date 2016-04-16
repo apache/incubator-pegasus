@@ -325,6 +325,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             [=]() {this->on_meta_server_disconnected(); },
             [=]() {this->on_meta_server_connected(); }
             );
+
         err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
@@ -440,7 +441,7 @@ void replica_stub::on_client_read(global_partition_id gpid, dsn_message_t reques
 void replica_stub::on_client_write2(dsn_message_t request)
 {
     write_request_header hdr;
-    ::unmarshall(request, hdr);
+    ::dsn::unmarshall(request, hdr);
 
     if (hdr.code == TASK_CODE_INVALID)
     {
@@ -462,7 +463,7 @@ void replica_stub::on_client_write2(dsn_message_t request)
 void replica_stub::on_client_read2(dsn_message_t request)
 {
     read_request_header hdr;
-    ::unmarshall(request, hdr);
+    ::dsn::unmarshall(request, hdr);
 
     if (hdr.code == TASK_CODE_INVALID)
     {
@@ -491,14 +492,14 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 
     // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
     // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
-    replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
+    replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == config_type::CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr)
     {
-        if (proposal.type == CT_ASSIGN_PRIMARY)
+        if (proposal.type == config_type::CT_ASSIGN_PRIMARY)
         {
             begin_open_replica(proposal.config.app_type, proposal.config.gpid);
         }   
-        else if (proposal.type == CT_UPGRADE_TO_PRIMARY)
+        else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
             remove_replica_on_meta_server(proposal.config);
         }
@@ -516,7 +517,7 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, /*ou
     if (rep != nullptr)
     {
         resp.err = ERR_OK;
-        if (PS_POTENTIAL_SECONDARY == rep->status())
+        if (partition_status::PS_POTENTIAL_SECONDARY == rep->status())
         {
             resp.last_decree = 0;
         }
@@ -559,7 +560,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
 void replica_stub::on_prepare(dsn_message_t request)
 {
     global_partition_id gpid;
-    ::unmarshall(request, gpid);    
+    ::dsn::unmarshall(request, gpid);
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -582,14 +583,14 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
         return;
     }
 
-    replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.gpid, request.config.status == partition_status::PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     if (rep != nullptr)
     {
         rep->on_group_check(request, response);
     }
     else 
     {
-        if (request.config.status == PS_POTENTIAL_SECONDARY)
+        if (request.config.status == partition_status::PS_POTENTIAL_SECONDARY)
         {
             std::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
@@ -608,7 +609,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 void replica_stub::on_learn(dsn_message_t msg)
 {
     learn_request request;
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
 
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
@@ -721,7 +722,7 @@ void replica_stub::query_configuration_by_node()
 
     configuration_query_by_node_request req;
     req.node = _primary_address;
-    ::marshall(msg, req);
+    ::dsn::marshall(msg, req);
 
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
@@ -779,7 +780,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         configuration_query_by_node_response resp;
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
 
         if (resp.err != ERR_OK)
             return;
@@ -858,14 +859,14 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
 void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid)
 {
     replica_ptr replica = get_replica(gpid);
-    if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
+    if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY)
     {
         ddebug(
             "%u.%u @ %s: replica not exists on meta server, removed",
             gpid.app_id, gpid.pidx,
             primary_address().to_string()
             );
-        replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
+        replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }
 
@@ -877,7 +878,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     request->config = config;
     request->config.ballot++;        
     request->node = _primary_address;
-    request->type = CT_DOWNGRADE_TO_INACTIVE;
+    request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
     if (_primary_address == config.primary)
     {
@@ -891,7 +892,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         return;
     }
 
-    ::marshall(msg, *request);
+    ::dsn::marshall(msg, *request);
 
     rpc_address target(_failure_detector->get_servers());
     rpc::call(
@@ -1076,7 +1077,7 @@ void replica_stub::on_gc()
         auto it2 = _closing_replicas.find(gpid);
         if (it2 != _closing_replicas.end())
         {
-            if (it2->second.second->status() == PS_INACTIVE 
+            if (it2->second.second->status() == partition_status::PS_INACTIVE
                 && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
@@ -1154,7 +1155,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     dassert(
-        r->status() == PS_ERROR || r->status() == PS_INACTIVE,
+        r->status() == partition_status::PS_ERROR || r->status() == partition_status::PS_INACTIVE,
         "%s: invalid state %s when calling begin_close_replica",
         r->name(),
         enum_to_string(r->status())
@@ -1175,7 +1176,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
                 close_replica(r);
             }, 
             0, 
-            std::chrono::milliseconds(r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
+            std::chrono::milliseconds(r->status() == partition_status::PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();

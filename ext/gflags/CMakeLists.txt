@@ -2,9 +2,17 @@
 #project(gtest_builder C CXX)
 include(ExternalProject)
 
+if(DSN_GIT_SOURCE STREQUAL "github")
+    set(target_url "https://github.com/gflags/gflags.git")
+elseif(DSN_GIT_SOURCE STREQUAL "xiaomi")
+    set(target_url "http://git.n.xiaomi.com/pegasus/gflags.git")
+else()
+    message(FATAL_ERROR "not support other git source")
+endif()
+
 if (WIN32)
 	ExternalProject_Add(gflags
-		GIT_REPOSITORY https://github.com/gflags/gflags.git
+		GIT_REPOSITORY ${target_url}
 		GIT_TAG master
 	   #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
@@ -15,7 +23,7 @@ if (WIN32)
 		)
 else()
 	ExternalProject_Add(gflags
-		GIT_REPOSITORY https://github.com/gflags/gflags.git
+		GIT_REPOSITORY ${target_url}
 		GIT_TAG master
 	   #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs

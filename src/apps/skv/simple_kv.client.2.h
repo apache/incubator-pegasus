@@ -1,15 +1,20 @@
 # pragma once
 # include "simple_kv.code.definition.h"
+# include "simple_kv.types.h"
 # include <iostream>
-
 
 namespace dsn { namespace replication { namespace application { 
 class simple_kv_client2 
     : public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client2(::dsn::rpc_address server) { _server = server; }
+    simple_kv_client2(::dsn::rpc_address server)
+    {
+        _server = server;
+    }
+
     simple_kv_client2() { }
+
     virtual ~simple_kv_client2() {}
  
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------

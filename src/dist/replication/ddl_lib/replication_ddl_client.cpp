@@ -94,7 +94,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
     }
 
     dsn::replication::configuration_create_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         std::cout << "create app " << app_name << " failed: [create] received server error: " << resp.err.to_string() << std::endl;
@@ -129,7 +129,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
         }
 
         dsn::replication::configuration_query_by_index_response query_resp;
-        ::unmarshall(query_task->response(), query_resp);
+        ::dsn::unmarshall(query_task->response(), query_resp);
         if(query_resp.err != dsn::ERR_OK)
         {
             std::cout << "create app " << app_name << " failed: [query] received server error: " << query_resp.err.to_string() << std::endl;
@@ -176,7 +176,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     }
 
     dsn::replication::configuration_drop_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -184,7 +184,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -200,7 +200,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_st
     }
 
     dsn::replication::configuration_list_apps_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -242,7 +242,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_st
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
     req->status = status;
@@ -258,7 +258,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
 
     dsn::replication::configuration_list_nodes_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -310,7 +310,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
     }
 
     dsn::replication::configuration_query_by_index_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -373,7 +373,7 @@ dsn::error_code replication_ddl_client::control_meta_balancer_migration(bool sta
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::control_balancer_migration_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 
@@ -388,7 +388,7 @@ dsn::error_code replication_ddl_client::send_balancer_proposal(const balancer_pr
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::balancer_proposal_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 

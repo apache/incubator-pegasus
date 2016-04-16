@@ -16,6 +16,9 @@ thrift_description = [
                 "add": ["<dsn/service_api_cpp.h>", "<dsn/dist/cluster_scheduler.h>"],
                 "remove": ["\"dsn_types.h\""]
             },
+            ".types.h": {
+                "add": ["<dsn/dist/cluster_scheduler.h>"],
+            }
         }
     },
     {
@@ -153,26 +156,6 @@ def replace_struct_usage(cpp_file, enum_class):
     sed_exp = "sed -i " + " ".join(["-e \'s/%s::type/%s/\'"%(i,i) for i in enum_class]) + " " + cpp_file
     os.system(sed_exp)
 
-def handle_enums(thrift_name):
-    enum_class = []
-    for line in open(thrift_name + ".thrift"):
-        if "enum " == line[0:5]:
-            enum_class.append(line.strip().split()[1])
-
-    if len(enum_class) != 0:
-        header_file = thrift_name + "_types.h"
-        impl_file = thrift_name + "_types.cpp"
-
-        os.chdir("output")
-
-        modify_struct_define(header_file, enum_class)
-        remove_struct_impl(impl_file, enum_class)
-        
-        replace_struct_usage(header_file, enum_class)
-        replace_struct_usage(impl_file, enum_class)
-
-        os.chdir("..")
-
 def fix_include_file(filename, fix_commands):
     tmp_result = filename + ".swapfile"
     from_fd, to_fd = open(filename, "r"), open(tmp_result, "w")
@@ -219,7 +202,7 @@ def toggle_serialization_in_cpp(thrift_name):
     new_file = cpp_file + ".swapfile"
 
     os.system("pwd")
-    os.system("echo \"#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION\" > %s"%(new_file) )
+    os.system("echo \"#ifdef DSN_USE_THRIFT_SERIALIZATION\" > %s"%(new_file) )
     os.system("cat %s >> %s"%(cpp_file, new_file))
     os.system("echo \"#endif\" >> %s"%(new_file) )
 
@@ -245,14 +228,13 @@ def compile_thrift_file(thrift_info):
     os.system("cp build/%s.types.h output"%(thrift_name))
 
     #### then generate _types.h _types.cpp
-    thrift_gen = "%s -r --gen cpp -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
+    thrift_gen = "%s -r --gen cpp:pure_enums,moveable_types -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
     print "exec " + thrift_gen
     os.system(thrift_gen)
     os.system("cp build/%s_types.h output"%(thrift_name))
     os.system("cp build/%s_types.cpp output"%(thrift_name))
     os.system("rm -rf build")
 
-    handle_enums(thrift_name)
     toggle_serialization_in_cpp(thrift_name)
 
     if "include_fix" in thrift_info:
@@ -278,10 +260,10 @@ def compile_thrift_file(thrift_info):
 
     os.chdir( env_tools["root_dir"] )
 
-def find_desc_from_name(name):
+def find_desc_from_path(path):
     ans = []
     for i in thrift_description:
-        if i["name"] == name:
+        if i["path"] == path:
             ans.append(i)
     return ans
 
@@ -320,12 +302,12 @@ def remove_all_enums_define_hook(args):
     in_enums = False
     for line in src_fd:
         if in_enums:
-            if line.startswith("};"):
+            if line.strip().startswith("};"):
                 in_enums = False
             line = ""
         else:
             tokens = line.strip().split()
-            if len(tokens)>1 and tokens[0]=="enum" and tokens[2]=="{":
+            if len(tokens)>1 and tokens[0]=="enum":
                 in_enums = True
                 line = ""
         dst_fd.write(line)
@@ -349,12 +331,14 @@ if __name__ == "__main__":
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
 
     add_hook("deploy_svc", "src/dist/deployment_service", remove_all_enums_define_hook, ["deploy_svc_types.h"])
+    add_hook("deploy_svc", "src/dist/deployment_service", remove_all_enums_define_hook, ["deploy_svc.types.h"])
+
     add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "global_partition_id", ctor_gpid])
     add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
 
     if len(sys.argv)>1:
         for i in sys.argv[1:]:
-            for desc in find_desc_from_name(i):
+            for desc in find_desc_from_path(i):
                 compile_thrift_file(desc)
     else:
         for i in thrift_description:

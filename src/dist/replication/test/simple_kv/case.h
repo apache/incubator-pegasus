@@ -377,12 +377,12 @@ public:
     bool parse_type_name(const std::string& name);
     void get_write_params(int& id, std::string& key, std::string& value, int& timeout_ms) const;
     void get_read_params(int& id, std::string& key, int& timeout_ms) const;
-    void get_replica_config_params(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node) const;
+    void get_replica_config_params(rpc_address& receiver, dsn::replication::config_type::type& type, rpc_address& node) const;
     bool check_write_result(int id, ::dsn::error_code err, int32_t resp);
     bool check_read_result(int id, ::dsn::error_code err, const std::string& resp);
 
-    dsn::replication::config_type parse_config_command(const std::string& command_str) const;
-    std::string config_command_to_string(dsn::replication::config_type cfg_command) const;
+    dsn::replication::config_type::type parse_config_command(const std::string& command_str) const;
+    std::string config_command_to_string(dsn::replication::config_type::type cfg_command) const;
 private:
     client_type _type;
     int _id;
@@ -394,7 +394,7 @@ private:
     std::string _read_resp;
 
     rpc_address _config_receiver;
-    dsn::replication::config_type _config_type;
+    dsn::replication::config_type::type _config_type;
     rpc_address _config_node;
 };
 
@@ -422,7 +422,7 @@ public:
     void wait_check_client();
     void notify_check_client();
     bool check_client_write(int& id, std::string& key, std::string& value, int& timeout_ms);
-    bool check_replica_config(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node);
+    bool check_replica_config(rpc_address& receiver, dsn::replication::config_type::type& type, rpc_address& node);
     bool check_client_read(int& id, std::string& key, int& timeout_ms);
     void on_end_write(int id, ::dsn::error_code err, int32_t resp);
     void on_end_read(int id, ::dsn::error_code err, const std::string& resp);

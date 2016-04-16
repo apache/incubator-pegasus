@@ -56,9 +56,9 @@ namespace dsn
             rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
         }
 
-        void server_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
+        void server_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type::type type, rpc_address node)
         {
-            if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_INVALID)
+            if (gpid.app_id <= 0 || gpid.pidx < 0 || type == config_type::CT_INVALID)
             {
                 derror("invalid params");
                 return;

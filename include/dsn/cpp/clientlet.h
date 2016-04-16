@@ -271,7 +271,7 @@ namespace dsn
                     typename is_typed_rpc_callback<TCallback>::response_t response;
                     if (err == ERR_OK)
                     {
-                        ::unmarshall(resp, response);
+                        ::dsn::unmarshall(resp, response);
                     }
                     cb_fwd(err, std::move(response));
                 },
@@ -305,7 +305,7 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), hash);
-            ::marshall(msg, std::forward<TRequest>(req));
+            ::dsn::marshall(msg, std::forward<TRequest>(req));
             return call(server, msg, owner, std::forward<TCallback>(callback), reply_thread_hash);
         }
 
@@ -335,7 +335,7 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, static_cast<int>(timeout.count()), hash);
-            ::marshall(msg, std::forward<TRequest>(req));
+            ::dsn::marshall(msg, std::forward<TRequest>(req));
             return rpc_message_helper(msg);
         }
 
@@ -360,19 +360,19 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
-            ::marshall(msg, req);
+            ::dsn::marshall(msg, req);
             dsn_rpc_call_one_way(server.c_addr(), msg);
         }
         
         template<typename TResponse>
-        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(task_ptr task)
+        std::pair< ::dsn::error_code, TResponse> wait_and_unwrap(safe_task_handle* task)
         {
             task->wait();
             std::pair< ::dsn::error_code, TResponse> result;
             result.first = task->error();
             if (task->error() == ::dsn::ERR_OK)
             {
-                ::unmarshall(task->response(), result.second);
+                ::dsn::unmarshall(task->response(), result.second);
             }
             return result;
         }
@@ -381,12 +381,12 @@ namespace dsn
         std::pair< ::dsn::error_code, TResponse> call_wait(
             ::dsn::rpc_address server,
             dsn_task_code_t code,
-            const TRequest& req,
+            TRequest&& req,
             int hash = 0,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0)
             )
         {
-            return wait_and_unwrap<TResponse>(call(server, code, req, nullptr, empty_callback, hash, timeout));
+            return wait_and_unwrap<TResponse>(call(server, code, std::forward<TRequest>(req), nullptr, empty_callback, hash, timeout));
         }
     }
     /*@}*/

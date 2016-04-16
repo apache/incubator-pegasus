@@ -119,11 +119,11 @@ bool greedy_load_balancer::balancer_proposal_check(const balancer_proposal_reque
 
     switch (balancer_proposal.type)
     {
-    case BT_MOVE_PRIMARY:
+    case balancer_type::BT_MOVE_PRIMARY:
         return is_primary(balancer_proposal.from_addr, gpid) && is_secondary(balancer_proposal.to_addr, gpid);
-    case BT_COPY_PRIMARY:
+    case balancer_type::BT_COPY_PRIMARY:
         return is_primary(balancer_proposal.from_addr, gpid) && !is_secondary(balancer_proposal.to_addr, gpid);
-    case BT_COPY_SECONDARY:
+    case balancer_type::BT_COPY_SECONDARY:
         return is_secondary(balancer_proposal.from_addr, gpid) &&
                !is_primary(balancer_proposal.to_addr, gpid) &&
                !is_secondary(balancer_proposal.to_addr, gpid);
@@ -150,25 +150,25 @@ void greedy_load_balancer::execute_balancer_proposal()
 
         switch (p.type)
         {
-        case BT_MOVE_PRIMARY:
+        case balancer_type::BT_MOVE_PRIMARY:
             dassert(pc.primary==p.from_addr, "invalid balancer proposal");
 
             proposal.config = pc;
-            proposal.type = CT_DOWNGRADE_TO_SECONDARY;
+            proposal.type = config_type::CT_DOWNGRADE_TO_SECONDARY;
             proposal.node = pc.primary;
             break;
 
-        case BT_COPY_PRIMARY:
+        case balancer_type::BT_COPY_PRIMARY:
             dassert(pc.primary==p.from_addr, "invalid balancer proposal");
 
             proposal.config = pc;
-            proposal.type = CT_ADD_SECONDARY_FOR_LB;
+            proposal.type = config_type::CT_ADD_SECONDARY_FOR_LB;
             proposal.node = p.to_addr;
             break;
 
-        case BT_COPY_SECONDARY:
+        case balancer_type::BT_COPY_SECONDARY:
             proposal.config = pc;
-            proposal.type = CT_ADD_SECONDARY_FOR_LB;
+            proposal.type = config_type::CT_ADD_SECONDARY_FOR_LB;
             proposal.node = p.to_addr;
             break;
 
@@ -202,7 +202,7 @@ void greedy_load_balancer::greedy_move_primary(const std::vector<rpc_address> &n
             {
                 if (addr == to)
                 {
-                    insert_balancer_proposal_request(pc.gpid, BT_MOVE_PRIMARY, from, to);
+                    insert_balancer_proposal_request(pc.gpid, balancer_type::BT_MOVE_PRIMARY, from, to);
                     --primaries_need_to_remove;
                     break;
                 }
@@ -266,7 +266,7 @@ void greedy_load_balancer::greedy_copy_primary(int total_replicas)
         //we are able to do the move_primary in greedy_move_primary
         dassert( std::find(pc.secondaries.begin(), pc.secondaries.end(), min_load)==pc.secondaries.end(), "");
 
-        insert_balancer_proposal_request(gpid, BT_COPY_PRIMARY, max_load, min_load);
+        insert_balancer_proposal_request(gpid, balancer_type::BT_COPY_PRIMARY, max_load, min_load);
         dinfo("copy gpid(%d:%d) primary from %s to %s", gpid.app_id, gpid.pidx, max_load.to_string(), min_load.to_string());
         //adjust the priority queue
         ++changing_primaries[min_load];
@@ -333,7 +333,7 @@ void greedy_load_balancer::greedy_copy_secondary()
                 ++changing_secondaries[ns->address];
                 --maximum_secondaries;
 
-                insert_balancer_proposal_request(pc.gpid, BT_COPY_SECONDARY, output_server, ns->address);
+                insert_balancer_proposal_request(pc.gpid, balancer_type::BT_COPY_SECONDARY, output_server, ns->address);
                 break;
             }
         }
@@ -506,7 +506,7 @@ void greedy_load_balancer::run()
         if (_state->freezed() && app.is_stateful)
             continue;
 
-        if (app.status != AS_AVAILABLE)
+        if (app.status != app_status::AS_AVAILABLE)
         {
             dinfo("ignore app(%s)", app.app_name.c_str());
             continue;
@@ -534,7 +534,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
     global_partition_id& gpid = request->config.gpid;
     switch (request->type)
     {
-    case CT_DOWNGRADE_TO_SECONDARY:
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
         it = _balancer_proposals_map.find(gpid);
         //it is possible that we can't find gpid, coz the meta server may switch
         if (it != _balancer_proposals_map.end())
@@ -544,7 +544,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         }
         break;
 
-    case CT_UPGRADE_TO_SECONDARY:
+    case config_type::CT_UPGRADE_TO_SECONDARY:
         it = _balancer_proposals_map.find(gpid);
         if (it != _balancer_proposals_map.end())
         {
@@ -552,9 +552,9 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
             //this secondary is what we add
             if (p.to_addr == request->node)
             {
-                if (p.type == BT_COPY_PRIMARY)
-                    p.type = BT_MOVE_PRIMARY;
-                else if (p.type == BT_COPY_SECONDARY)
+                if (p.type == balancer_type::BT_COPY_PRIMARY)
+                    p.type = balancer_type::BT_MOVE_PRIMARY;
+                else if (p.type == balancer_type::BT_COPY_SECONDARY)
                     _balancer_proposals_map.erase(it);
                 else
                 {
@@ -564,7 +564,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         }
         break;
 
-    case CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
         //which means that the primary has been died
         if ( request->config.primary.is_invalid() )
         {
@@ -574,8 +574,8 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         else if (_balancer_proposals_map.find(gpid) != _balancer_proposals_map.end())
         {
             balancer_proposal_request& p = _balancer_proposals_map[gpid];
-            if (p.type == BT_COPY_SECONDARY && request->node==p.from_addr||
-                p.type == BT_MOVE_PRIMARY && request->node==p.to_addr)
+            if (p.type == balancer_type::BT_COPY_SECONDARY && request->node==p.from_addr||
+                p.type == balancer_type::BT_MOVE_PRIMARY && request->node==p.to_addr)
                 _balancer_proposals_map.erase(gpid);
         }
         break;
@@ -685,7 +685,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
             if (pc.secondaries.size() > 0)
             {
                 proposal.node = recommend_primary(pc);
-                proposal.type = CT_UPGRADE_TO_PRIMARY;
+                proposal.type = config_type::CT_UPGRADE_TO_PRIMARY;
 
                 if (proposal.node.is_invalid())
                 {
@@ -695,13 +695,13 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
             else if (pc.last_drops.size() == 0)
             {
                 proposal.node = recommend_primary(pc);
-                proposal.type = CT_ASSIGN_PRIMARY;
+                proposal.type = config_type::CT_ASSIGN_PRIMARY;
             }
             // DDD
             else
             {
                 proposal.node = *pc.last_drops.rbegin();
-                proposal.type = CT_ASSIGN_PRIMARY;
+                proposal.type = config_type::CT_ASSIGN_PRIMARY;
 
                 derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
                     pc.app_type.c_str(),
@@ -720,7 +720,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
         }
         else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
         {
-            proposal.type = CT_ADD_SECONDARY;
+            proposal.type = config_type::CT_ADD_SECONDARY;
             proposal.node = find_minimal_load_machine(false);
             if (proposal.node.is_invalid() == false &&
                 proposal.node != pc.primary &&
@@ -734,7 +734,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
         else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
         {
             auto iter = _balancer_proposals_map.find(pc.gpid);
-            if (iter != _balancer_proposals_map.end() && iter->second.type == BT_MOVE_PRIMARY)
+            if (iter != _balancer_proposals_map.end() && iter->second.type == balancer_type::BT_MOVE_PRIMARY)
                 return true;
             int target = 0;
             int load = _state->_nodes[pc.secondaries.front()].partitions.size();
@@ -748,7 +748,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
                 }
             }
 
-            proposal.type = CT_REMOVE;
+            proposal.type = config_type::CT_REMOVE;
             proposal.node = pc.secondaries[target];
             send_proposal(pc.primary, proposal);
             return false;
@@ -764,7 +764,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
 
         if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
         {
-            proposal.type = CT_ADD_SECONDARY;
+            proposal.type = config_type::CT_ADD_SECONDARY;
             proposal.node = find_minimal_load_machine(false);
             if (proposal.node.is_invalid() == false)
             {

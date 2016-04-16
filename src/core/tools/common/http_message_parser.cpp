@@ -152,7 +152,6 @@ message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/
 
 int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, send_buf* buffers)
 {
-
     int buffer_iter = 0;
     if (msg->header->context.u.is_request)
     {

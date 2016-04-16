@@ -79,7 +79,7 @@ void prepare_list::truncate(decree init_decree)
     _last_committed_decree = init_decree;
 }
 
-error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
+error_code prepare_list::prepare(mutation_ptr& mu, partition_status::type status)
 {
     decree d = mu->data.header.decree;
     dassert (d > last_committed_decree(), "");
@@ -87,7 +87,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     error_code err;
     switch (status)
     {
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         // pop committed mutations if buffer is full
         while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
         {
@@ -95,8 +95,8 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         }
         return mutation_cache::put(mu);
 
-    case PS_SECONDARY: 
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         // pop committed mutations if buffer is full
@@ -109,7 +109,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         return err;
 
     //// delayed commit - only when capacity is an issue
-    //case PS_POTENTIAL_SECONDARY:
+    //case partition_status::PS_POTENTIAL_SECONDARY:
     //    while (true)
     //    {
     //        err = mutation_cache::put(mu);
@@ -125,7 +125,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     //    dassert (err == ERR_OK, "");
     //    return err;
      
-    case PS_INACTIVE: // only possible during init  
+    case partition_status::PS_INACTIVE: // only possible during init
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);

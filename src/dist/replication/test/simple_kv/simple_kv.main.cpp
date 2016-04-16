@@ -46,6 +46,8 @@
 
 void dsn_app_registration()
 {
+    // register simple-kv type here
+
     // register services
     dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
     dsn::register_app<dsn::service::meta_service_app>("meta");
@@ -65,6 +67,9 @@ int main(int argc, char** argv)
         std::cerr << " e.g.: " << argv[0] << " case-000.ini case-000.act" << std::endl;
         return -1;
     }
+
+    dsn::replication::test::g_default_gpid.app_id = 1;
+    dsn::replication::test::g_default_gpid.pidx = 0;
     
     dsn::replication::test::g_case_input = argv[2];
 

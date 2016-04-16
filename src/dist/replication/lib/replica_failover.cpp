@@ -54,15 +54,15 @@ void replica::handle_local_failure(error_code error)
         enum_to_string(status())
         );
     
-    if (status() == PS_PRIMARY)
+    if (status() == partition_status::PS_PRIMARY)
     {
         _stub->remove_replica_on_meta_server(_primary_states.membership);
     }
 
-    update_local_configuration_with_no_ballot_change(PS_ERROR);
+    update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node, error_code error)
+void replica::handle_remote_failure(partition_status::type st, ::dsn::rpc_address node, error_code error)
 {    
     derror(
         "%s: handle remote failure error %s, status = %s, node = %s",
@@ -73,29 +73,29 @@ void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node
         );
     error.end_tracking();
 
-    dassert (status() == PS_PRIMARY, "");
+    dassert (status() == partition_status::PS_PRIMARY, "");
     dassert (node != _stub->_primary_address, "");
 
     switch (st)
     {
-    case PS_SECONDARY:
-        dassert (_primary_states.check_exist(node, PS_SECONDARY), "");
+    case partition_status::PS_SECONDARY:
+        dassert (_primary_states.check_exist(node, partition_status::PS_SECONDARY), "");
         {
             configuration_update_request request;
             request.node = node;
-            request.type = CT_DOWNGRADE_TO_INACTIVE;
+            request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
             request.config = _primary_states.membership;
             downgrade_to_inactive_on_primary(request);
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
         _primary_states.learners.erase(node);
         _primary_states.statuses.erase(node);
         break;
-    case PS_INACTIVE:
-    case PS_ERROR:
+    case partition_status::PS_INACTIVE:
+    case partition_status::PS_ERROR:
         break;
     default:
         dassert (false, "");
@@ -108,10 +108,10 @@ void replica::on_meta_server_disconnected()
     ddebug( "%s: meta server disconnected", name());
 
     auto old_status = status();
-    update_local_configuration_with_no_ballot_change(PS_INACTIVE);
+    update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
 
     // make sure they can be back directly
-    if (old_status == PS_PRIMARY || old_status == PS_SECONDARY)
+    if (old_status == partition_status::PS_PRIMARY || old_status == partition_status::PS_SECONDARY)
     {
         set_inactive_state_transient(true);
     }

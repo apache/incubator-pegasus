@@ -73,7 +73,7 @@ namespace dsn
         {
             if (_response != nullptr)
             {
-                ::marshall(_response, resp);
+                ::dsn::marshall(_response, resp);
                 dsn_rpc_reply(_response);
             }
         }
@@ -150,7 +150,7 @@ namespace dsn
             auto hc2 = (hc_type1*)param;
 
             TRequest req;
-            ::unmarshall(request, req);
+            ::dsn::unmarshall(request, req);
             ((hc2->this_)->*(hc2->cb))(req);
         };
 
@@ -170,7 +170,7 @@ namespace dsn
             auto hc2 = (hc_type2*)param;
 
             TRequest req;
-            ::unmarshall(request, req);
+            ::dsn::unmarshall(request, req);
 
             TResponse resp;
             ((hc2->this_)->*(hc2->cb))(req, resp);
@@ -195,7 +195,7 @@ namespace dsn
             auto hc2 = (hc_type3*)param;
 
             TRequest req;
-            ::unmarshall(request, req);
+            ::dsn::unmarshall(request, req);
 
             rpc_replier<TResponse> replier(dsn_msg_create_response(request));
             ((hc2->this_)->*(hc2->cb))(req, replier);
@@ -233,7 +233,7 @@ namespace dsn
     inline void serverlet<T>::reply(dsn_message_t request, const TResponse& resp)
     {
         auto msg = dsn_msg_create_response(request);
-        ::marshall(msg, resp);
+        ::dsn::marshall(msg, resp);
         dsn_rpc_reply(msg);
     }
 

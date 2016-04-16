@@ -251,7 +251,7 @@ namespace dsn
             {
                 req.partition_indices.push_back(partition_index);
             }
-            ::marshall(msg, req);
+            ::dsn::marshall(msg, req);
 
             rpc_address target(_meta_server);
             return rpc::call(
@@ -272,7 +272,7 @@ namespace dsn
             if (err == ERR_OK)
             {
                 configuration_query_by_index_response resp;
-                ::unmarshall(response, resp);
+                ::dsn::unmarshall(response, resp);
                 if (resp.err == ERR_OK)
                 {
                     zauto_write_lock l(_config_lock);

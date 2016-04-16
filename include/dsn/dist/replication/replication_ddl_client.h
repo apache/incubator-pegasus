@@ -48,9 +48,9 @@ public:
 
     dsn::error_code drop_app(const std::string& app_name);
 
-    dsn::error_code list_apps(const dsn::replication::app_status status, const std::string& file_name);
+    dsn::error_code list_apps(const dsn::replication::app_status::type status, const std::string& file_name);
 
-    dsn::error_code list_nodes(const dsn::replication::node_status status, const std::string& file_name);
+    dsn::error_code list_nodes(const dsn::replication::node_status::type status, const std::string& file_name);
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
 
@@ -72,7 +72,7 @@ private:
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
         task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code, dsn_message_t, dsn_message_t) {}, reply_thread_hash);
-        ::marshall(msg, *req);
+        ::dsn::marshall(msg, *req);
         rpc::call(
             _meta_servers,
             msg,

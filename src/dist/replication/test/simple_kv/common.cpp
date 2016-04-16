@@ -49,25 +49,25 @@
 namespace dsn { namespace replication { namespace test {
 
 std::string g_case_input("case-000.act");
-global_partition_id g_default_gpid = {1,0};
+global_partition_id g_default_gpid;
 bool g_done = false;
 bool g_fail = false;
 
-const char* partition_status_to_short_string(partition_status s)
+const char* partition_status_to_short_string(partition_status::type s)
 {
     switch(s)
     {
-    case PS_INACTIVE:
+    case partition_status::PS_INACTIVE:
         return "ina";
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         return "err";
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         return "pri";
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         return "sec";
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         return "pot";
-    case PS_INVALID:
+    case partition_status::PS_INVALID:
         return "inv";
     default:
         dassert(false, "");
@@ -75,16 +75,16 @@ const char* partition_status_to_short_string(partition_status s)
     }
 }
 
-partition_status partition_status_from_short_string(const std::string& str)
+partition_status::type partition_status_from_short_string(const std::string& str)
 {
-    if (str == "ina") return PS_INACTIVE;
-    if (str == "err") return PS_ERROR;
-    if (str == "pri") return PS_PRIMARY;
-    if (str == "sec") return PS_SECONDARY;
-    if (str == "pot") return PS_POTENTIAL_SECONDARY;
-    if (str == "inv") return PS_INVALID;
+    if (str == "ina") return partition_status::PS_INACTIVE;
+    if (str == "err") return partition_status::PS_ERROR;
+    if (str == "pri") return partition_status::PS_PRIMARY;
+    if (str == "sec") return partition_status::PS_SECONDARY;
+    if (str == "pot") return partition_status::PS_POTENTIAL_SECONDARY;
+    if (str == "inv") return partition_status::PS_INVALID;
     dassert(false, "");
-    return PS_INVALID;
+    return partition_status::PS_INVALID;
 }
 
 std::string address_to_node(rpc_address addr)

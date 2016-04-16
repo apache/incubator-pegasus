@@ -73,7 +73,7 @@ public:
     bool replay_mutation(mutation_ptr& mu, bool is_private);
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
-    bool update_local_configuration_with_no_ballot_change(partition_status status);
+    bool update_local_configuration_with_no_ballot_change(partition_status::type status);
     void set_inactive_state_transient(bool t);
     void check_state_completeness();
     //error_code check_and_fix_private_log_completeness();
@@ -117,7 +117,7 @@ public:
     //  local information query
     //
     ballot get_ballot() const {return _config.ballot; }    
-    partition_status status() const { return _config.status; }
+    partition_status::type status() const { return _config.status; }
     global_partition_id get_gpid() const { return _config.gpid; }    
     replication_app_base* get_app() { return _app.get(); }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
@@ -149,9 +149,9 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds, int64_t learn_signature = invalid_signature);
+    void send_prepare_message(::dsn::rpc_address addr, partition_status::type status, mutation_ptr& mu, int timeout_milliseconds, int64_t learn_signature = invalid_signature);
     void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
-    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
+    void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
     void cleanup_preparing_mutations(bool wait);
@@ -170,7 +170,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, ::dsn::rpc_address node, error_code error);
+    void handle_remote_failure(partition_status::type status, ::dsn::rpc_address node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
@@ -180,10 +180,10 @@ private:
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig);
+    void update_configuration_on_meta_server(config_type::type type, ::dsn::rpc_address node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
-    bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
+    bool is_same_ballot_status_change_allowed(partition_status::type olds, partition_status::type news);
 
     // return false when update fails or replica is going to be closed
     bool update_configuration(const partition_configuration& config);
@@ -201,7 +201,7 @@ private:
     void garbage_collection();
     void init_checkpoint();
     void background_checkpoint();
-    void catch_up_with_private_logs(partition_status s);
+    void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp);
     void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp, const std::string &chk_dir);

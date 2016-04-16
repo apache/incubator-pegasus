@@ -19,6 +19,7 @@ set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
                  dsn.dist.providers.common
+                 dsn.replication.clientlib
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc

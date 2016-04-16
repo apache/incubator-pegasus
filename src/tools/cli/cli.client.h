@@ -32,68 +32,70 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+
 # pragma once
-# include <dsn/tool/cli.types.h>
+# include <dsn/tool/cli.h>
 # include <iostream>
 
 
-namespace dsn { 
-DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
-class cli_client 
-    : public virtual ::dsn::clientlet
-{
-public:
-    cli_client(::dsn::rpc_address server) { _server = server; }
-    cli_client() { }
-    virtual ~cli_client() {}
-
-
-    // ---------- call RPC_CLI_CLI_CALL ------------
-    // - synchronous 
-    std::pair< ::dsn::error_code, std::string> call_sync(
-        const command& c, 
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
-        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
+namespace dsn {
+    class cli_client
+        : public virtual ::dsn::clientlet
     {
-        return ::dsn::rpc::wait_and_unwrap<std::string>(
-            ::dsn::rpc::call(
+    public:
+        cli_client(::dsn::rpc_address server) { _server = server; }
+        cli_client() { }
+        virtual ~cli_client() {}
+
+
+        // ---------- call RPC_CLI_CLI_CALL ------------
+        // - synchronous
+        std::pair< ::dsn::error_code, std::string> call_sync(
+            const command& args,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+            uint64_t hash = 0,
+            dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
+            )
+        {
+            return ::dsn::rpc::wait_and_unwrap<std::string>(
+                ::dsn::rpc::call(
+                    server_addr.unwrap_or(_server),
+                    RPC_CLI_CLI_CALL,
+                    args,
+                    nullptr,
+                    empty_callback,
+                    hash,
+                    timeout,
+                    0
+                    )
+                );
+        }
+
+        // - asynchronous with on-stack command and std::string
+        template<typename TCallback>
+        ::dsn::task_ptr call(
+            const command& args,
+            TCallback&& callback,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+            int reply_hash = 0,
+            uint64_t hash = 0,
+            dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
+            )
+        {
+            return ::dsn::rpc::call(
                 server_addr.unwrap_or(_server),
-                RPC_DSN_CLI_CALL,
-                c,
-                nullptr,
-                empty_callback,
+                RPC_CLI_CLI_CALL,
+                args,
+                this,
+                std::forward<TCallback>(callback),
                 hash,
-                timeout
-                )
-            );
-    }
-    
-    // - asynchronous with on-stack command and std::string 
-    template<typename TCallback>
-    ::dsn::task_ptr call(
-        const command& c, 
-        TCallback&& callback,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_thread_hash = 0,
-        uint64_t hash = 0,
-        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
-        )
-    {
-        return ::dsn::rpc::call(
-                    server_addr.unwrap_or(_server), 
-                    RPC_DSN_CLI_CALL, 
-                    c, 
-                    this,
-                    std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
-                    reply_thread_hash
-                    );
-    }
+                timeout,
+                reply_hash
+                );
+        }
 
-private:
-    ::dsn::rpc_address _server;
-};
+    private:
+        ::dsn::rpc_address _server;
+    };
 
-} 
+}

@@ -45,8 +45,8 @@ extern global_partition_id g_default_gpid;
 extern bool g_done;
 extern bool g_fail;
 
-const char* partition_status_to_short_string(partition_status s);
-partition_status partition_status_from_short_string(const std::string& str);
+const char* partition_status_to_short_string(partition_status::type s);
+partition_status::type partition_status_from_short_string(const std::string& str);
 
 // transfer primary_address to node_name
 // return "-" if addr.is_invalid()
@@ -91,11 +91,11 @@ struct replica_id
 struct replica_state
 {
     replica_id id;
-    partition_status status;
+    partition_status::type status;
     int64_t ballot;
     decree last_committed_decree;
     decree last_durable_decree; // -1 means not set
-    replica_state() : status(PS_INACTIVE), ballot(0), last_committed_decree(0),last_durable_decree(-1) {}
+    replica_state() : status(partition_status::PS_INACTIVE), ballot(0), last_committed_decree(0),last_durable_decree(-1) {}
     replica_state& operator= (const replica_state& o)
     {
         if (this == &o) return *this;

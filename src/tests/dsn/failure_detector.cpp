@@ -18,23 +18,6 @@ using namespace dsn;
 
 DEFINE_TASK_CODE_RPC(RPC_MASTER_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
 
-struct config_master_message
-{
-    rpc_address master;
-    bool is_register;
-};
-
-void marshall(rpc_write_stream& msg, const config_master_message &val)
-{
-    marshall(msg, val.master);
-    marshall(msg, val.is_register);
-}
-
-void unmarshall(rpc_read_stream& msg, config_master_message &val)
-{
-    unmarshall(msg, val.master);
-    unmarshall(msg, val.is_register);
-}
 
 volatile int started_apps = 0;
 class worker_fd_test: public ::dsn::dist::slave_failure_detector_with_multimaster
@@ -285,7 +268,9 @@ void worker_set_leader(test_worker* worker, int leader_contact)
 {
     worker->fd()->set_leader_for_test( rpc_address("localhost", MPORT_START+leader_contact) );
 
-    config_master_message msg = { rpc_address("localhost", MPORT_START+leader_contact), true };
+    config_master_message msg;
+    msg.master = rpc_address("localhost", MPORT_START + leader_contact);
+    msg.is_register = true;
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
@@ -299,7 +284,9 @@ void clear(test_worker* worker, std::vector<test_master*> masters)
 {
     rpc_address leader = dsn_group_get_leader(worker->fd()->get_servers().group_handle());
 
-    config_master_message msg = { leader, false };
+    config_master_message msg;
+    msg.master = leader;
+    msg.is_register = false;
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(

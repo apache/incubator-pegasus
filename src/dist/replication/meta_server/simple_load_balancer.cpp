@@ -60,7 +60,7 @@ void simple_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
-        if (app.status != AS_AVAILABLE)
+        if (app.status != app_status::AS_AVAILABLE)
             continue;
 
         if (_state->freezed() && app.is_stateful)
@@ -150,20 +150,20 @@ void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
                 {
                     proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
                 }
-                proposal.type = CT_UPGRADE_TO_PRIMARY;
+                proposal.type = config_type::CT_UPGRADE_TO_PRIMARY;
             }
 
             else if (pc.last_drops.size() == 0)
             {
                 proposal.node = find_minimal_load_machine(true);
-                proposal.type = CT_ASSIGN_PRIMARY;
+                proposal.type = config_type::CT_ASSIGN_PRIMARY;
             }
 
             // DDD
             else
             {
                 proposal.node = *pc.last_drops.rbegin();
-                proposal.type = CT_ASSIGN_PRIMARY;
+                proposal.type = config_type::CT_ASSIGN_PRIMARY;
 
                 derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
                     pc.app_type.c_str(),
@@ -181,7 +181,7 @@ void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
 
         else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
         {
-            proposal.type = CT_ADD_SECONDARY;
+            proposal.type = config_type::CT_ADD_SECONDARY;
             proposal.node = find_minimal_load_machine(false);
             if (proposal.node.is_invalid() == false &&
                 proposal.node != pc.primary &&
@@ -203,7 +203,7 @@ void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
 
         if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
         {
-            proposal.type = CT_ADD_SECONDARY;
+            proposal.type = config_type::CT_ADD_SECONDARY;
             proposal.node = find_minimal_load_machine(false);
             if (proposal.node.is_invalid() == false)
             {

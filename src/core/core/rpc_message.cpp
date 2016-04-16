@@ -192,6 +192,18 @@ DSN_API void dsn_msg_set_options(
     }
 }
 
+DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg)
+{
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    return static_cast<dsn_msg_serialize_format>(hdr->context.u.serialize_format);
+}
+
+DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt)
+{
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    hdr->context.u.serialize_format = fmt;
+}
+
 DSN_API void dsn_msg_get_options(
     dsn_message_t msg,
     /*out*/ dsn_msg_options_t* opts
@@ -476,6 +488,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.id = new_id();
 
     hdr.context.u.is_request = true;
+    hdr.context.u.serialize_format = sp->rpc_msg_payload_serialize_default_format;
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;

@@ -95,12 +95,12 @@ namespace dsn
 
             switch (proposal.type)
             {
-            case CT_ADD_SECONDARY:
-            case CT_ADD_SECONDARY_FOR_LB:
+            case config_type::CT_ADD_SECONDARY:
+            case config_type::CT_ADD_SECONDARY_FOR_LB:
                 on_add_app(proposal);
                 break;
 
-            case CT_REMOVE:          
+            case config_type::CT_REMOVE:
                 on_remove_app(proposal);
                 break;
 
@@ -207,7 +207,7 @@ namespace dsn
 
             configuration_query_by_node_request req;
             req.node = primary_address();
-            ::marshall(msg, req);
+            ::dsn::marshall(msg, req);
 
             rpc_address target(_fd->get_servers());
             rpc::call(
@@ -240,7 +240,7 @@ namespace dsn
                     return;
 
                 configuration_query_by_node_response resp;
-                ::unmarshall(response, resp);
+                ::dsn::unmarshall(response, resp);
 
                 if (resp.err != ERR_OK)
                     return;
@@ -278,7 +278,7 @@ namespace dsn
                         req.config = appc;
                         req.is_stateful = false;
                         req.host_node = host;
-                        req.type = CT_REMOVE;
+                        req.type = config_type::CT_REMOVE;
 
                         // worker nodes stored in last-drops
                         req.node = appc.last_drops[i];
@@ -287,7 +287,7 @@ namespace dsn
                         app->exited = true;
                         app->working_port = req.node.port();
 
-                        update_configuration_on_meta_server(CT_REMOVE, std::move(app));
+                        update_configuration_on_meta_server(config_type::CT_REMOVE, std::move(app));
                     }
                     else
                     {
@@ -526,7 +526,7 @@ namespace dsn
                 auto cap_app = app;
                 kill_app(std::move(cap_app));
 
-                update_configuration_on_meta_server(CT_REMOVE, std::move(app));
+                update_configuration_on_meta_server(config_type::CT_REMOVE, std::move(app));
             }
         }
 
@@ -611,7 +611,7 @@ namespace dsn
             // register to meta server if successful
             if (!app->exited)
             {
-                update_configuration_on_meta_server(CT_ADD_SECONDARY, std::move(app));
+                update_configuration_on_meta_server(config_type::CT_ADD_SECONDARY, std::move(app));
             }
 
             // remove for failure too many times
@@ -689,13 +689,13 @@ namespace dsn
                 {
                     auto cap_app = app.second;
                     kill_app(std::move(cap_app));
-                    update_configuration_on_meta_server(CT_REMOVE, std::move(app.second));
+                    update_configuration_on_meta_server(config_type::CT_REMOVE, std::move(app.second));
                 }
             }
             apps.clear();
         }
         
-        void daemon_s_service::update_configuration_on_meta_server(::dsn::replication::config_type type, std::shared_ptr<layer1_app_info>&& app)
+        void daemon_s_service::update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info>&& app)
         {
             rpc_address node = primary_address();
             node.assign_ipv4(node.ip(), app->working_port);
@@ -709,7 +709,7 @@ namespace dsn
             request->node = node;
             request->host_node = primary_address();
 
-            if (type == CT_REMOVE)
+            if (type == config_type::CT_REMOVE)
             {
                 auto it = std::remove(
                     app->configuration.secondaries.begin(),
@@ -731,7 +731,7 @@ namespace dsn
                 app->configuration.last_drops.emplace_back(node);
             }
 
-            ::marshall(msg, *request);
+            ::dsn::marshall(msg, *request);
 
             rpc::call(
                 _fd->get_servers(),
@@ -745,7 +745,7 @@ namespace dsn
         }
 
         void daemon_s_service::on_update_configuration_on_meta_server_reply(
-            ::dsn::replication::config_type type, std::shared_ptr<layer1_app_info> &&  app,
+            ::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info> &&  app,
             error_code err, dsn_message_t request, dsn_message_t response
             )
         {
@@ -758,7 +758,7 @@ namespace dsn
             configuration_update_response resp;
             if (err == ERR_OK)
             {
-                ::unmarshall(response, resp);
+                ::dsn::unmarshall(response, resp);
                 err = resp.err;
             }
             else if (err == ERR_TIMEOUT)
@@ -775,7 +775,7 @@ namespace dsn
             }
             else
             {
-                if (type == CT_ADD_SECONDARY)
+                if (type == config_type::CT_ADD_SECONDARY)
                     kill_app(std::move(app));
             }
         }

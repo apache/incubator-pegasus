@@ -132,12 +132,12 @@ int main(int argc, char** argv)
             std::cout << "drop app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_apps") {
-        dsn::replication::app_status s = dsn::replication::AS_INVALID;
+        dsn::replication::app_status::type s = dsn::replication::app_status::AS_INVALID;
         if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "AS_" + status;
-            s = enum_from_string(status.c_str(), dsn::replication::AS_INVALID);
-            if(s == dsn::replication::AS_INVALID)
+            s = enum_from_string(status.c_str(), dsn::replication::app_status::AS_INVALID);
+            if(s == dsn::replication::app_status::AS_INVALID)
                 usage(argv[0]);
         }
         dsn::error_code err = client.list_apps(s, out_file);
@@ -145,12 +145,12 @@ int main(int argc, char** argv)
             std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_nodes") {
-        dsn::replication::node_status s = dsn::replication::NS_INVALID;
+        dsn::replication::node_status::type s = dsn::replication::node_status::NS_INVALID;
         if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "NS_" + status;
-            s = enum_from_string(status.c_str(), dsn::replication::NS_INVALID);
-            if(s == dsn::replication::NS_INVALID)
+            s = enum_from_string(status.c_str(), dsn::replication::node_status::NS_INVALID);
+            if(s == dsn::replication::node_status::NS_INVALID)
                 usage(argv[0]);
         }
         dsn::error_code err = client.list_nodes(s, out_file);
@@ -181,10 +181,10 @@ int main(int argc, char** argv)
                 sscanf(argv[i+1], "%d.%d", &request.gpid.app_id, &request.gpid.pidx);
             }
             else if (strcmp(argv[i], "-type") == 0){
-                std::map<std::string, dsn::replication::balancer_type> mapper = {
-                    {"move_pri", BT_MOVE_PRIMARY},
-                    {"copy_pri", BT_COPY_PRIMARY},
-                    {"copy_sec", BT_COPY_SECONDARY}
+                std::map<std::string, dsn::replication::balancer_type::type> mapper = {
+                    {"move_pri", balancer_type::BT_MOVE_PRIMARY},
+                    {"copy_pri", balancer_type::BT_COPY_PRIMARY},
+                    {"copy_sec", balancer_type::BT_COPY_SECONDARY}
                 };
                 if (mapper.find(argv[i+1]) == mapper.end()) {
                     usage(argv[0]);

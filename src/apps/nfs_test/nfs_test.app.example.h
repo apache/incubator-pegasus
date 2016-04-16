@@ -34,8 +34,7 @@
  */
 # pragma once
 # include <dsn/dist/replication.h>
-# include <dsn/tool/nfs_node_simple.h>
-# include "nfs_code_definition.h"
+# include <dsn/tool/nfs.h>
 
 namespace dsn {
     namespace replication {

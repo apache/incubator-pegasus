@@ -35,6 +35,7 @@
 
 # pragma once
 # include "simple_kv.code.definition.h"
+# include "simple_kv.types.h"
 # include <iostream>
 
 namespace dsn { namespace replication { namespace application { 

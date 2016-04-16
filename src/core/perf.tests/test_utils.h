@@ -79,7 +79,7 @@ public:
 
     void on_rpc_string_test(dsn_message_t message) {
         std::string command;
-        ::unmarshall(message, command);
+        ::dsn::unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
