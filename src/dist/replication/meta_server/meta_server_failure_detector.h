@@ -102,6 +102,17 @@ public:
     virtual void on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes);
     virtual void on_worker_connected(::dsn::rpc_address node);
 
+    virtual bool is_worker_connected(rpc_address node) const
+    {
+        //we treat all nodes not in the worker list alive in the first grace period
+        //for those in the worker list, they are surely alive
+        if (_election_moment+get_grace_ms() < dsn_now_ms())
+        {
+            return true;
+        }
+        return failure_detector::is_worker_connected(node);
+    }
+
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 
 private:
@@ -124,5 +135,6 @@ private:
     task_ptr    _lock_expire_task;
     std::string _primary_lock_id;
     std::string _lock_owner_id;
+    volatile uint64_t    _election_moment;
 };
 

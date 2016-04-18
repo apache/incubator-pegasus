@@ -243,6 +243,10 @@ void meta_server_failure_detector::set_primary(rpc_address primary)
         utils::auto_lock<zlock> l(_primary_address_lock);
         _primary_address = primary;
         _is_primary = (primary == primary_address());
+        if (_is_primary)
+        {
+            _election_moment = dsn_now_ms();
+        }
     }
 
     if (old && !_is_primary)
@@ -271,8 +275,8 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
         failure_detector::on_ping_internal(beacon, ack);
     }
 
-    dinfo("on_ping, is_master(%s), this_node(%s), primary_node(%s)", ack.is_master?"true":"false",
-          ack.this_node.to_string(), ack.primary_node.to_string());
+    dinfo("on_ping, is_master(%s), from_node(%s), this_node(%s), primary_node(%s)", ack.is_master?"true":"false",
+          beacon.from_addr.to_string(), ack.this_node.to_string(), ack.primary_node.to_string());
     reply(ack);
 }
 
@@ -282,6 +286,7 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
     _lock_svc = nullptr;
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
+    _state = new server_state();
 }
 
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address, bool is_myself_leader)
@@ -289,5 +294,6 @@ void meta_server_failure_detector::set_leader_for_test(rpc_address leader_addres
     utils::auto_lock<zlock> l(_primary_address_lock);
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
+    _state = new server_state();
 }
 

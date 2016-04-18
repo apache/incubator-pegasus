@@ -149,7 +149,7 @@ steps to use an ExtensionHelper
 - once F object is here, you can access your extra information freely.
  */
 
-template <typename TExtensibleObject>
+template <typename TPlaceholder, typename TExtensibleObject>
 class uint64_extension_helper
 {
 public:
@@ -225,7 +225,7 @@ private:
 template <typename T, const int MAX_EXTENSION_COUNT> extension_deletor extensible_object<T, MAX_EXTENSION_COUNT>::s_extensionDeletors[MAX_EXTENSION_COUNT];
 template <typename T, const int MAX_EXTENSION_COUNT> std::atomic<uint32_t> extensible_object<T, MAX_EXTENSION_COUNT>::s_nextExtensionIndex(0);
 
-template <typename TExtensibleObject> uint32_t uint64_extension_helper<TExtensibleObject>::s_slotIdx = 0;
+template <typename TPlaceholder, typename TExtensibleObject> uint32_t uint64_extension_helper<TPlaceholder, TExtensibleObject>::s_slotIdx = 0;
 
 template <typename TExtension, typename TExtensibleObject> uint32_t object_extension_helper<TExtension, TExtensibleObject>::s_slotIdx = 0;
 template <typename TExtension, typename TExtensibleObject> extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_deletor = nullptr;

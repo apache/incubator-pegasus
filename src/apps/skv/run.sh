@@ -17,8 +17,8 @@ if [ -f core ] || ! grep ERR_OK out; then
     echo "run dsn.replication.simple_kv failed"
     echo "---- ls ----"
     ls -l
-    echo "---- tail -n 100 out ----"
-    tail -n 100 out
+    echo "---- head -n 100 out ----"
+    head -n 100 out
     if find . -name log.1.txt; then
         echo "---- tail -n 100 log.1.txt ----"
         tail -n 100 `find . -name log.1.txt`
