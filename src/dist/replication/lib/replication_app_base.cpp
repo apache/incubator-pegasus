@@ -170,7 +170,14 @@ error_code replica_app_info::store(const char* file)
     os.write((const char*)data.data(), (std::streamsize)data.length());
     os.close();
 
-    return ERR_OK;
+    if (!utils::filesystem::rename_path(tmp_file, ffile))
+    {
+        return ERR_FILE_OPERATION_FAILED;
+    }
+    else
+    {
+        return ERR_OK;
+    }
 }
 
 replication_app_base::replication_app_base(replica* replica)
