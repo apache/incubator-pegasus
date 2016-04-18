@@ -68,7 +68,7 @@ public:
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
-        return ::dsn::rpc::wait_and_unwrap<::dsn::error_code>(
+        return ::dsn::rpc::wait_and_unwrap< ::dsn::error_code>(
             ::dsn::rpc::call(
                 server_addr.unwrap_or(_server),
                 RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY,

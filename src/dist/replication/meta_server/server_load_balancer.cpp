@@ -52,7 +52,7 @@ namespace dsn
                 proposal.node.to_string(),
                 proposal.config.ballot
                 );
-
+            dassert(proposal.info.app_type != "", "make sure app-info is filled properly before sending the proposal");
             rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.pid));
         }
 
@@ -78,6 +78,8 @@ namespace dsn
                     derror("invalid params");
                     return;
                 }
+
+                req.info = app.info;
                 req.config = app.partitions[gpid.get_partition_index()];
             }
 

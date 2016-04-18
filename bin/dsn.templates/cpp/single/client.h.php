@@ -42,7 +42,7 @@ public:
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
-        return ::dsn::rpc::wait_and_unwrap<<?=$f->get_cpp_return_type()?>>(
+        return ::dsn::rpc::wait_and_unwrap< <?=$f->get_cpp_return_type()?>>(
             ::dsn::rpc::call(
                 server_addr.unwrap_or(_server),
                 <?=$f->get_rpc_code()?>,

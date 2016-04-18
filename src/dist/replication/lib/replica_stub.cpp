@@ -453,7 +453,7 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
     {
         if (proposal.type == config_type::CT_ASSIGN_PRIMARY)
         {
-            begin_open_replica(proposal.info.app_type, proposal.config.pid);
+            begin_open_replica(proposal.info, proposal.config.pid, nullptr);
         }   
         else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
@@ -551,7 +551,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
             std::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
 
-            begin_open_replica(request.app.app_type, request.config.pid, req);
+            begin_open_replica(request.app, request.config.pid, req);
             response.err = ERR_OK;
             response.learner_signature = invalid_signature;
         }
@@ -617,7 +617,7 @@ void replica_stub::on_add_learner(const group_check_request& request)
     {
         std::shared_ptr<group_check_request> req(new group_check_request);
         *req = request;
-        begin_open_replica(request.app.app_type, request.config.pid, req);
+        begin_open_replica(request.app, request.config.pid, req);
     }
 }
 
@@ -1013,7 +1013,7 @@ void replica_stub::on_gc()
 #endif
 }
 
-::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, gpid gpid, std::shared_ptr<group_check_request> req)
+::dsn::task_ptr replica_stub::begin_open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
 {
     _replicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -1045,7 +1045,7 @@ void replica_stub::on_gc()
                 // unlock here to avoid dead lock
                 _replicas_lock.unlock();
 
-                ddebug( "open replica which is to be closed '%s.%u.%u'", app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());
+                ddebug( "open replica which is to be closed '%s.%u.%u'", app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());
 
                 if (req != nullptr)
                 {
@@ -1057,13 +1057,13 @@ void replica_stub::on_gc()
             {
                 _replicas_lock.unlock();
                 dwarn( "open replica '%s.%u.%u' failed coz replica is under closing", 
-                    app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());                
+                    app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());                
                 return nullptr;
             }
         }
         else 
         {
-            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app, gpid, req));
 
             _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
@@ -1073,16 +1073,16 @@ void replica_stub::on_gc()
     }
 }
 
-void replica_stub::open_replica(const std::string app_type, gpid gpid, std::shared_ptr<group_check_request> req)
+void replica_stub::open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
 {
-    std::string dir = get_replica_dir(app_type.c_str(), gpid);
+    std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
     dwarn("open replica '%s'", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());
 
     if (rep == nullptr)
     {
-        rep = replica::newr(this, gpid, req->app);
+        rep = replica::newr(this, gpid, app);
     }
 
     if (rep == nullptr)

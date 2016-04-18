@@ -52,6 +52,7 @@ replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char*
     _app_info(app),
     _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
+    dassert(_app_info.app_type != "", "");
     dassert(stub != nullptr, "");
     _stub = stub;
     _dir = dir;
