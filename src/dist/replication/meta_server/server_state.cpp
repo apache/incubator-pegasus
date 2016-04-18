@@ -885,6 +885,7 @@ int32_t server_state::get_app_index(const char *app_name) const
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
+DEFINE_TASK_CODE(LPC_CM_UPDATE_CONFIGURATION, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
 
 void server_state::init_app_partition_node(int app_id, int pidx)
 {
@@ -1069,6 +1070,19 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
             {
                 zauto_write_lock l(_lock);
                 app.status = AS_DROPPED;
+                for (partition_configuration& pc: app.partitions) {
+                    if (!pc.primary.is_invalid() && _nodes.find(pc.primary)!=_nodes.end()) {
+                        _nodes[pc.primary].primaries.erase(pc.gpid);
+                        pc.primary.set_invalid();
+                    }
+                    for (dsn::rpc_address& addr: pc.secondaries) {
+                        if (_nodes.find(addr) != _nodes.end()) {
+                            _nodes[addr].partitions.erase(pc.gpid);
+                        }
+                    }
+                    pc.secondaries.clear();
+                    ++pc.ballot;
+                }
             }
             response.err = ERR_OK;
             reply(msg, response);
@@ -1192,17 +1206,33 @@ void server_state::update_configuration(
     std::function<void()> callback)
 {
     bool write;
+    bool retry;
+    int delay_ms = 0;
+
     configuration_update_response response;
     {
         zauto_write_lock l(_lock);
         app_state& app = _apps[req->config.gpid.app_id - 1];
         partition_configuration& old = app.partitions[req->config.gpid.pidx];
-        if (is_partition_config_equal(old, req->config))
+
+        //For a dropped table on meta server, all the update configuration request is invalid
+        if (app.status == AS_DROPPED)
+        {
+            dwarn("app_id(%d) is dropped, update request(from:%s, cfg_type:%s, ballot:%s) is ignored",
+                  app.app_id, req->node.to_string(), enum_to_string(req->type), req->config.ballot);
+            write = false;
+            retry = false;
+
+            response.err = ERR_INVALID_VERSION;
+            response.config = old;
+        }
+        else if (is_partition_config_equal(old, req->config))
         {
             // duplicate request
             dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
                   req->node.to_string(), old.gpid.app_id, old.gpid.pidx, old.ballot);
             write = false;
+            retry = false;
             response.err = ERR_OK;
             response.config = old;
         }
@@ -1210,7 +1240,13 @@ void server_state::update_configuration(
         {
             dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
                   req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot, old.ballot);
-            write = false;   
+            write = false;
+            if (nullptr == request_msg)
+            {
+                //for meta server's remove primary request, we must always try to execute it
+                req->config.ballot = old.ballot + 1;
+                retry = true;
+            }
             response.err = ERR_INVALID_VERSION;
             response.config = old;
         }
@@ -1218,7 +1254,18 @@ void server_state::update_configuration(
         {
             dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
                   req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot);
-            return;
+            if (nullptr == request_msg)
+            {
+                //for meta server's remove primary request, we must always try to execute it
+                retry = true;
+                delay_ms = 1000;
+            }
+            else
+            {
+                //for request from replica server, we just adandon it.
+                //because we asssume the replica server will resend this
+                return;
+            }
         }
         else
         {
@@ -1249,6 +1296,17 @@ void server_state::update_configuration(
         if (request_msg)
         {
             reply(request_msg, response);
+        }
+        else if (retry)
+        {
+            tasking::enqueue(
+                LPC_CM_UPDATE_CONFIGURATION,
+                nullptr,
+                [svc = this->_meta_svc, req_ptr = std::move(req)]() mutable {
+                    svc->update_configuration_on_machine_failure(req_ptr);
+                },
+                0,
+                std::chrono::milliseconds(delay_ms));
         }
         else
         {
@@ -1336,9 +1394,16 @@ void server_state::update_configuration_internal(const configuration_update_requ
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
-    if (old.ballot + 1 != request.config.ballot)
+    if (app.status == AS_DROPPED)
     {
-        dassert(false, "invalid request");
+        response.err = ERR_INVALID_VERSION;
+        response.config = old;
+        dwarn("table is dropped when trying to update config(node: %s, config_type: %s, ballot: %" PRId64 ")",
+              request.node.to_string(), enum_to_string(request.type), request.config.ballot);
+    }
+    else if (old.ballot + 1 != request.config.ballot)
+    {
+        dassert(false, "");
     }
     else
     {
