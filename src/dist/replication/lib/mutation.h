@@ -113,7 +113,7 @@ private:
     ::dsn::task_ptr _log_task;
     node_tasks      _prepare_or_commit_tasks;
     dsn_message_t   _prepare_request;
-    char            _name[60]; // app_id.pidx.ballot.decree
+    char            _name[60]; // app_id.partition_index.ballot.decree
     int             _appro_data_bytes;
     uint64_t        _create_ts_ns; // for profiling
     uint64_t        _tid; // trace id, unique in process
@@ -123,7 +123,7 @@ private:
 class mutation_queue
 {
 public:
-    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2, bool batch_write_disabled = false);
+    mutation_queue(gpid gpid, int max_concurrent_op = 2, bool batch_write_disabled = false);
 
     ~mutation_queue()
     {
@@ -179,8 +179,8 @@ inline void mutation::set_id(ballot b, decree c)
 
     snprintf_p(_name, sizeof(_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        data.header.gpid.app_id,
-        data.header.gpid.pidx,
+        data.header.pid.get_app_id(),
+        data.header.pid.get_partition_index(),
         data.header.ballot,
         data.header.decree);
 }

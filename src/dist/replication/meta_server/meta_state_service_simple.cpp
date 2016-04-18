@@ -278,7 +278,8 @@ namespace dsn
                         blob blob_wrapper(buffer, (int)header.size);
                         binary_reader reader(blob_wrapper);
                         int op_type;
-                        unmarshall(reader, op_type);
+                        reader.read(op_type);
+
                         switch (static_cast<operation_type>(op_type))
                         {
                         case operation_type::create_node:

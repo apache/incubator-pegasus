@@ -44,11 +44,11 @@ class replication_ddl_client : public clientlet
 public:
     replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
 
-    dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::string& package_id, bool is_stateless);
+    dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless);
 
     dsn::error_code drop_app(const std::string& app_name);
 
-    dsn::error_code list_apps(const dsn::replication::app_status::type status, const std::string& file_name);
+    dsn::error_code list_apps(const dsn::app_status::type status, const std::string& file_name);
 
     dsn::error_code list_nodes(const dsn::replication::node_status::type status, const std::string& file_name);
 

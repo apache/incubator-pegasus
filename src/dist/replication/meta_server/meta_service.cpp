@@ -51,190 +51,6 @@
 # endif
 # define __TITLE__ "meta.service"
 
-#define TEST_PARAM(x) if(!(x)){return ERR_INVALID_PARAMETERS;}
-#define PREPARE_UNMARSHALL(json_str) std::string jstr(json_str);std::replace(jstr.begin(), jstr.end(), '\'', '\"'); \
-    rapidjson::Document doc; TEST_PARAM(!doc.Parse<0>(jstr.c_str()).HasParseError()) TEST_PARAM(doc.IsObject()) TEST_PARAM(doc.HasMember("req"))
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, bool &val)
-{
-    TEST_PARAM(doc.IsBool())
-    val = doc.GetBool();
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, int32_t &val)
-{
-    TEST_PARAM(doc.IsInt())
-    val = doc.GetInt();
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, std::string& val)
-{
-    TEST_PARAM(doc.IsString())
-    val = doc.GetString();
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, std::vector< int32_t>& val)
-{
-    TEST_PARAM(doc.IsArray())
-    val.clear();
-    for (rapidjson::SizeType i = 0; i < doc.Size(); i++)
-    {
-        TEST_PARAM(doc[i].IsInt())
-        val.push_back(doc[i].GetInt());
-    }
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, rpc_address& val)
-{
-    if (doc.IsUint64())
-    {
-        dsn_address_t addr;
-        addr.u.value = doc.GetUint64();
-        val = rpc_address(addr);
-    }
-    else if (doc.IsString())
-    {
-        std::vector<std::string> segments;
-        utils::split_args(doc.GetString(), segments, ':');
-        if (segments.size() != 2)
-        {
-            return ERR_INVALID_PARAMETERS;
-        }
-        else
-        {
-            val = rpc_address(segments[0].c_str(), (uint16_t)atoi(segments[1].c_str()));
-        }
-    }
-    else
-    {
-        return ERR_INVALID_PARAMETERS;
-    }
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, create_app_options& val)
-{
-    TEST_PARAM(doc.HasMember("app_type"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["app_type"], val.app_type))
-    TEST_PARAM(doc.HasMember("is_stateful"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["is_stateful"], val.is_stateful))
-    TEST_PARAM(doc.HasMember("package_id"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["package_id"], val.package_id))
-    TEST_PARAM(doc.HasMember("partition_count"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["partition_count"], val.partition_count))
-    TEST_PARAM(doc.HasMember("replica_count"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["replica_count"], val.replica_count))
-    TEST_PARAM(doc.HasMember("success_if_exist"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["success_if_exist"], val.success_if_exist))
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const rapidjson::Value &doc, drop_app_options& val)
-{
-    TEST_PARAM(doc.HasMember("success_if_not_exist"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc["success_if_not_exist"], val.success_if_not_exist))
-    return ERR_OK;
-}
-
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_create_app_request& val)
-{
-    PREPARE_UNMARSHALL(json_str)
-
-    TEST_PARAM(doc[key].IsObject())
-    TEST_PARAM(doc[key].HasMember("app_name"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
-    TEST_PARAM(doc[key].HasMember("options"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["options"], val.options))
-
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_create_app_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string(), appid);
-
-    return std::move(ss.str());
-}
-
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_drop_app_request& val)
-{
-    PREPARE_UNMARSHALL(json_str)
-
-    TEST_PARAM(doc[key].IsObject())
-    TEST_PARAM(doc[key].HasMember("app_name"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
-    TEST_PARAM(doc[key].HasMember("options"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["options"], val.options))
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_drop_app_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string());
-
-    return std::move(ss.str());
-}
-
-inline std::string marshall_json(const configuration_list_apps_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string(), infos);
-
-    return std::move(ss.str());
-}
-
-inline std::string marshall_json(const configuration_list_nodes_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string(), infos);
-
-    return std::move(ss.str());
-}
-
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_index_request& val)
-{
-    PREPARE_UNMARSHALL(json_str)
-
-    TEST_PARAM(doc[key].IsObject())
-    TEST_PARAM(doc[key].HasMember("app_name"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["app_name"], val.app_name))
-    TEST_PARAM(doc[key].HasMember("partition_indices"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["partition_indices"], val.partition_indices))
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_query_by_index_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string(), app_id, partition_count, is_stateful, partitions);
-
-    return std::move(ss.str());
-}
-
-inline error_code unmarshall_json(const char* json_str, const char* key, /*out*/ configuration_query_by_node_request& val)
-{
-    PREPARE_UNMARSHALL(json_str)
-
-    TEST_PARAM(doc[key].IsObject())
-    TEST_PARAM(doc[key].HasMember("node"))
-    TEST_PARAM(ERR_OK == unmarshall_json(doc[key]["node"], val.node))
-    return ::dsn::ERR_OK;
-}
-
-inline std::string marshall_json(const configuration_query_by_node_response& val)
-{
-    std::stringstream ss;
-    JSON_DICT_ENTRIES(ss, val, err.to_string(), partitions);
-
-    return std::move(ss.str());
-}
-
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _balancer(nullptr), _started(false)
 {
@@ -310,12 +126,6 @@ error_code meta_service::start()
     return ERR_OK;
 }
 
-static void __svc_cli_freeer__(dsn_cli_reply reply)
-{
-    std::string* s = (std::string*)reply.context;
-    delete s;
-}
-
 void meta_service::register_rpc_handlers()
 {
     register_rpc_handler(
@@ -376,84 +186,6 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_BALANCER_PROPOSAL",
         &meta_service::on_balancer_proposal);
 
-
-    _cli_create_app = dsn_cli_app_register(
-        "create_app",
-        "create app on meta server (in json format)",
-        "create app on meta server and auto-deployed in cluster",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_create_app_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
-
-    _cli_drop_app = dsn_cli_app_register(
-        "drop_app",
-        "drop app on meta server (in json format)",
-        "drop app on meta server and auto-undeployed in cluster",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_drop_app_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
-
-    _cli_list_apps = dsn_cli_app_register(
-        "list_apps",
-        "list apps on meta server (in json format)",
-        "list apps and their status on meta server",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_list_apps_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
-
-    _cli_list_nodes = dsn_cli_app_register(
-        "list_nodes",
-        "list nodes on meta server (in json format)",
-        "list nodes and their status on meta server",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_list_nodes_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
-
-    _cli_query_config_by_app = dsn_cli_app_register(
-        "query_config_by_app",
-        "query app configurations on meta server (in json format)",
-        "query app configurations on meta server with app id",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_query_config_by_app_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
-
-    _cli_query_config_by_node = dsn_cli_app_register(
-        "query_config_by_node",
-        "query apps on one node (in json format)",
-        "query apps on one node with node address",
-        (void*)this,
-        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
-        {
-            auto this_ = (meta_service*)context;
-            this_->on_query_config_by_node_cli(context, argc, argv, reply);
-        },
-        __svc_cli_freeer__
-        );
 }
 
 void meta_service::stop()
@@ -468,13 +200,6 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_DROP_APP);
     unregister_rpc_handler(RPC_CM_CONTROL_BALANCER_MIGRATION);
     unregister_rpc_handler(RPC_CM_BALANCER_PROPOSAL);
-        
-    dsn_cli_deregister(_cli_create_app);
-    dsn_cli_deregister(_cli_drop_app);
-    dsn_cli_deregister(_cli_list_apps);
-    dsn_cli_deregister(_cli_list_nodes);
-    dsn_cli_deregister(_cli_query_config_by_app);
-    dsn_cli_deregister(_cli_query_config_by_node);
 
     if (_balancer_timer != nullptr)
     {
@@ -539,150 +264,6 @@ bool meta_service::check_primary(dsn_message_t req)
         reply(dsn_msg, response_struct);\
         return;\
     }\
-
-// create app cli
-void meta_service::on_create_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    error_code err = ERR_INVALID_PARAMETERS;
-    configuration_create_app_request req;
-    configuration_create_app_response resp;
-    
-    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
-    {
-        resp.err = err;
-    }
-    else
-    {
-        _state->create_app(req, resp);
-    }
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
-// drop app cli
-void meta_service::on_drop_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    error_code err = ERR_INVALID_PARAMETERS;
-    configuration_drop_app_request req;
-    configuration_drop_app_response resp;
-
-    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
-    {
-        resp.err = err;
-    }
-    else
-    {
-        _state->drop_app(req, resp);
-    }
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
-// list_apps
-void meta_service::on_list_apps_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    configuration_list_apps_request req;
-    configuration_list_apps_response resp;
-
-    req.status = app_status::AS_INVALID;
-    _state->list_apps(req, resp);
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
-// list nodes
-void meta_service::on_list_nodes_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    configuration_list_nodes_request req;
-    configuration_list_nodes_response resp;
-
-    req.status = node_status::NS_INVALID;
-    _state->list_nodes(req, resp);
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
-
-// query app config
-void meta_service::on_query_config_by_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    error_code err = ERR_INVALID_PARAMETERS;
-    configuration_query_by_index_request req;
-    configuration_query_by_index_response resp;
-
-    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
-    {
-        resp.err = err;
-    }
-    else
-    {
-        _state->query_configuration_by_index(req, resp);
-    }
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
-// query node config
-void meta_service::on_query_config_by_node_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
-{
-    dassert(context == this, "must called with local context");
-
-    error_code err = ERR_INVALID_PARAMETERS;
-    configuration_query_by_node_request req;
-    configuration_query_by_node_response resp;
-
-    if (argc == 0 || ERR_OK != (err = unmarshall_json(argv[0], "req", req)))
-    {
-        resp.err = err;
-    }
-    else
-    {
-        _state->query_configuration_by_node(req, resp);
-    }
-
-    std::string* resp_json = new std::string();
-    *resp_json = std::move(marshall_json(resp));
-    reply->context = resp_json;
-    reply->message = (const char*)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
-}
-
 
 // table operations
 void meta_service::on_create_app(dsn_message_t req)
@@ -755,7 +336,7 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
     if (!check_primary(req))
         return;
 
-    global_partition_id gpid;
+    gpid gpid;
     rpc_address receiver;
     int type;
     rpc_address node;
@@ -777,15 +358,15 @@ void meta_service::on_update_configuration(dsn_message_t req)
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     ::dsn::unmarshall(req, *request);
 
-    if (_state->freezed() && request->is_stateful)
+    if (_state->freezed() && request->info.is_stateful)
     {
         response.err = ERR_STATE_FREEZED;
-        _state->query_configuration_by_gpid(request->config.gpid, response.config);
+        _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
         return;
     }
   
-    global_partition_id gpid = request->config.gpid;
+    gpid gpid = request->config.pid;
     _state->update_configuration(request, req, [this, gpid, request]() mutable
     {
         if (_started)
@@ -798,7 +379,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
-    global_partition_id gpid = update->config.gpid;
+    gpid gpid = update->config.pid;
     _state->update_configuration(update, nullptr, [this, gpid, update]() mutable
     {
         if (_started)
@@ -828,7 +409,7 @@ void meta_service::on_balancer_proposal(dsn_message_t req)
 
     ::dsn::unmarshall(req, request);
     dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
-          request.gpid.app_id, request.gpid.pidx,
+          request.pid.get_app_id(), request.pid.get_partition_index(),
           enum_to_string(request.type),
           request.from_addr.to_string(),
           request.to_addr.to_string());
@@ -848,7 +429,7 @@ void meta_service::on_load_balance_timer()
     }
 }
 
-void meta_service::on_config_changed(global_partition_id gpid)
+void meta_service::on_config_changed(gpid gpid)
 {
     if (_failure_detector->is_primary())
     {

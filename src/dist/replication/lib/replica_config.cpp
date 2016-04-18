@@ -151,8 +151,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     }
 
     dassert (proposal.config.ballot == get_ballot(), "");
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY), "");
@@ -193,7 +192,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     }
 
     group_check_request request;
-    request.app_type = _primary_states.membership.app_type;
+    request.app = _app_info;
     request.node = proposal.node;
     _primary_states.get_replica_config(partition_status::PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
@@ -228,8 +227,7 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (proposal.node == proposal.config.primary, "");
@@ -246,8 +244,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -269,8 +266,7 @@ void replica::remove(configuration_update_request& proposal)
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -430,8 +426,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     // post-update work items?
     if (resp.err == ERR_OK)
     {        
-        dassert (req->config.gpid == resp.config.gpid, "");
-        dassert (req->config.app_type == resp.config.app_type, "");
+        dassert (req->config.pid == resp.config.pid, "");
         dassert (req->config.primary == resp.config.primary, "");
         dassert (req->config.secondaries == resp.config.secondaries, "");
 
@@ -512,7 +507,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 {
     dassert(config.ballot > get_ballot()
         || (same_ballot && config.ballot == get_ballot()), "");
-    dassert (config.gpid == get_gpid(), "");
+    dassert (config.pid == get_gpid(), "");
 
     partition_status::type old_status = status();
     ballot old_ballot = get_ballot();

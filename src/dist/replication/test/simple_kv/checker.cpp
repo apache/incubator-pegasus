@@ -180,7 +180,7 @@ void test_checker::on_replica_state_change(::dsn::rpc_address from, const replic
 
 void test_checker::on_config_change(const std::vector<app_state>& new_config)
 {
-    partition_configuration c = new_config[g_default_gpid.app_id - 1].partitions[g_default_gpid.pidx];
+    partition_configuration c = new_config[g_default_gpid.get_app_id() - 1].partitions[g_default_gpid.get_partition_index()];
     parti_config cur_config;
     cur_config.convert_from(c);
     if (cur_config != _last_config)

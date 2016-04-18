@@ -90,17 +90,13 @@ error_code replication_service_app::stop(bool cleanup)
 
 void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg, int delay_ms)
 {
-    global_partition_id gpid;
-    gpid.app_id = dpid.u.app_id;
-    gpid.pidx = dpid.u.partition_index;
-
     if (is_write)
     {
         tasking::enqueue(
             LPC_REPLICATION_CLIENT_WRITE,
             nullptr,
-            [=]() {_stub->on_client_write(gpid, msg); },
-            gpid_to_hash(gpid)
+            [=]() {_stub->on_client_write(dpid, msg); },
+            gpid_to_hash(dpid)
             );
     }
     else
@@ -108,8 +104,8 @@ void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_messa
         tasking::enqueue(
             LPC_REPLICATION_CLIENT_READ,
             nullptr,
-            [=]() {_stub->on_client_read(gpid, msg); },
-            gpid_to_hash(gpid)
+            [=]() {_stub->on_client_read(dpid, msg); },
+            gpid_to_hash(dpid)
             );
     }
 }

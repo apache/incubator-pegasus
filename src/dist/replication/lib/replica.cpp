@@ -47,28 +47,28 @@
 
 namespace dsn { namespace replication {
 
-replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir)
+replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char* dir)
     : serverlet<replica>("replica"), 
+    _app_info(app),
     _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert(stub != nullptr, "");
     _stub = stub;
-    _app_type = app_type;
     _dir = dir;
-    sprintf(_name, "%u.%u@%s", gpid.app_id, gpid.pidx, stub->_primary_address.to_string());
+    sprintf(_name, "%u.%u@%s", gpid.get_app_id(), gpid.get_partition_index(), stub->_primary_address.to_string());
     _options = &stub->options();
     init_state();
-    _config.gpid = gpid;
+    _config.pid = gpid;
 
     std::stringstream ss;
     ss << _name << ".2pc.latency(ns)";
     _counter_commit_latency.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
 }
 
-void replica::json_state(std::stringstream& out) const
-{
-    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
-}
+//void replica::json_state(std::stringstream& out) const
+//{
+//    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
+//}
 
 void replica::update_commit_statistics(int count)
 {
@@ -89,8 +89,8 @@ void replica::init_state()
     );
 
     _config.ballot = 0;
-    _config.gpid.pidx = 0;
-    _config.gpid.app_id = 0;
+    _config.pid.set_app_id(0);
+    _config.pid.set_partition_index(0);
     _config.status = partition_status::PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
@@ -309,7 +309,7 @@ void replica::execute_mutation(mutation_ptr& mu)
 mutation_ptr replica::new_mutation(decree decree)
 {
     mutation_ptr mu(new mutation());
-    mu->data.header.gpid = get_gpid();
+    mu->data.header.pid = get_gpid();
     mu->data.header.ballot = get_ballot();
     mu->data.header.decree = decree;
     mu->data.header.log_offset = invalid_offset;

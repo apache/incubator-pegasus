@@ -49,7 +49,7 @@
 namespace dsn { namespace replication { namespace test {
 
 std::string g_case_input("case-000.act");
-global_partition_id g_default_gpid;
+gpid g_default_gpid(1, 0);
 bool g_done = false;
 bool g_fail = false;
 
@@ -101,20 +101,20 @@ rpc_address node_to_address(const std::string& name)
     return test_checker::fast_instance().node_name_to_address(name);
 }
 
-std::string gpid_to_string(global_partition_id gpid)
+std::string gpid_to_string(gpid gpid)
 {
     std::stringstream oss;
-    oss << gpid.app_id << "." << gpid.pidx;
+    oss << gpid.get_app_id() << "." << gpid.get_partition_index();
     return oss.str();
 }
 
-bool gpid_from_string(const std::string& str, global_partition_id& gpid)
+bool gpid_from_string(const std::string& str, gpid& gpid)
 {
     size_t pos = str.find('.');
     if (pos == std::string::npos)
         return false;
-    gpid.app_id = boost::lexical_cast<int32_t>(str.substr(0, pos));
-    gpid.pidx = boost::lexical_cast<int32_t>(str.substr(pos + 1));
+    gpid.set_app_id(boost::lexical_cast<int32_t>(str.substr(0, pos)));
+    gpid.set_partition_index(boost::lexical_cast<int32_t>(str.substr(pos + 1)));
     return true;
 }
 
@@ -342,7 +342,7 @@ bool parti_config::from_string(const std::string& str)
 
 void parti_config::convert_from(const partition_configuration& c)
 {
-    gpid = c.gpid;
+    pid = c.pid;
     ballot = c.ballot;
     primary = address_to_node(c.primary);
     for (auto& s : c.secondaries)

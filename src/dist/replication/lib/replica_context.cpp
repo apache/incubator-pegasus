@@ -137,7 +137,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
 
 void primary_context::get_replica_config(partition_status::type st, /*out*/ replica_configuration& config, uint64_t learner_signature /*= invalid_signature*/)
 {
-    config.gpid = membership.gpid;
+    config.pid = membership.pid;
     config.primary = membership.primary;  
     config.ballot = membership.ballot;
     config.status = st;

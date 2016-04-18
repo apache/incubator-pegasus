@@ -54,7 +54,7 @@ namespace dsn.dev.csharp
 
         public abstract ErrorCode Start(string[] args);
 
-        public abstract void Stop(bool cleanup = false);
+        public abstract ErrorCode Stop(bool cleanup = false);
 
         public bool IsStarted() { return _started; }
 
@@ -92,13 +92,14 @@ namespace dsn.dev.csharp
             return r;
         }
 
-        private static void AppDestroy(IntPtr app_handle, bool cleanup)
+        private static int AppDestroy(IntPtr app_handle, bool cleanup)
         {
             var h = (GCHandle)app_handle;
             var sapp = h.Target as ServiceApp;
-            sapp.Stop(cleanup);
+            var err = sapp.Stop(cleanup);
             sapp._started = false;
             sapp.ReleaseUnmanagedResources();
+            return err;
         }
 
         public static void RegisterApp<T>(string type_name)

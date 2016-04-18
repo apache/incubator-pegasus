@@ -15,8 +15,8 @@
 #include <thrift/transport/TTransport.h>
 
 #include <thrift/cxxfunctional.h>
-
-#include <dsn/cpp/serialization_helper/thrift_helper.h>
+#include "dsn_types.h"
+#include "dsn.layer2_types.h"
 
 
 namespace dsn { namespace replication {
@@ -85,20 +85,6 @@ struct config_type {
 
 extern const std::map<int, const char*> _config_type_VALUES_TO_NAMES;
 
-struct app_status {
-  enum type {
-    AS_INVALID = 0,
-    AS_AVAILABLE = 1,
-    AS_CREATING = 2,
-    AS_CREATE_FAILED = 3,
-    AS_DROPPING = 4,
-    AS_DROP_FAILED = 5,
-    AS_DROPPED = 6
-  };
-};
-
-extern const std::map<int, const char*> _app_status_VALUES_TO_NAMES;
-
 struct node_status {
   enum type {
     NS_INVALID = 0,
@@ -120,15 +106,11 @@ struct balancer_type {
 
 extern const std::map<int, const char*> _balancer_type_VALUES_TO_NAMES;
 
-class global_partition_id;
-
 class mutation_header;
 
 class mutation_update;
 
 class mutation_data;
-
-class partition_configuration;
 
 class replica_configuration;
 
@@ -152,8 +134,6 @@ class group_check_request;
 
 class group_check_response;
 
-class app_info;
-
 class node_info;
 
 class meta_response_header;
@@ -163,6 +143,8 @@ class configuration_update_request;
 class configuration_update_response;
 
 class configuration_query_by_node_request;
+
+class configuration_query_by_node_response;
 
 class create_app_options;
 
@@ -192,12 +174,6 @@ class configuration_list_apps_response;
 
 class configuration_list_nodes_response;
 
-class configuration_query_by_node_response;
-
-class configuration_query_by_index_request;
-
-class configuration_query_by_index_response;
-
 class query_replica_decree_request;
 
 class query_replica_decree_response;
@@ -208,61 +184,13 @@ class query_replica_info_request;
 
 class query_replica_info_response;
 
-typedef struct _global_partition_id__isset {
-  _global_partition_id__isset() : app_id(true), pidx(true) {}
-  bool app_id :1;
-  bool pidx :1;
-} _global_partition_id__isset;
+class app_state;
 
-class global_partition_id {
- public:
-
-  global_partition_id(const global_partition_id&);
-  global_partition_id& operator=(const global_partition_id&);
-  global_partition_id() : app_id(-1), pidx(-1) {
-  }
-
-  virtual ~global_partition_id() throw();
-  int32_t app_id;
-  int32_t pidx;
-
-  _global_partition_id__isset __isset;
-
-  void __set_app_id(const int32_t val);
-
-  void __set_pidx(const int32_t val);
-
-  bool operator == (const global_partition_id & rhs) const
-  {
-    if (!(app_id == rhs.app_id))
-      return false;
-    if (!(pidx == rhs.pidx))
-      return false;
-    return true;
-  }
-  bool operator != (const global_partition_id &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const global_partition_id & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(global_partition_id &a, global_partition_id &b);
-
-inline std::ostream& operator<<(std::ostream& out, const global_partition_id& obj)
-{
-  obj.printTo(out);
-  return out;
-}
+class node_state;
 
 typedef struct _mutation_header__isset {
-  _mutation_header__isset() : gpid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false) {}
-  bool gpid :1;
+  _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false) {}
+  bool pid :1;
   bool ballot :1;
   bool decree :1;
   bool log_offset :1;
@@ -278,7 +206,7 @@ class mutation_header {
   }
 
   virtual ~mutation_header() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
   int64_t ballot;
   int64_t decree;
   int64_t log_offset;
@@ -286,7 +214,7 @@ class mutation_header {
 
   _mutation_header__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_ballot(const int64_t val);
 
@@ -298,7 +226,7 @@ class mutation_header {
 
   bool operator == (const mutation_header & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(ballot == rhs.ballot))
       return false;
@@ -434,103 +362,9 @@ inline std::ostream& operator<<(std::ostream& out, const mutation_data& obj)
   return out;
 }
 
-typedef struct _partition_configuration__isset {
-  _partition_configuration__isset() : app_type(false), package_id(false), gpid(false), ballot(false), max_replica_count(false), primary(false), secondaries(false), last_drops(false), last_committed_decree(false) {}
-  bool app_type :1;
-  bool package_id :1;
-  bool gpid :1;
-  bool ballot :1;
-  bool max_replica_count :1;
-  bool primary :1;
-  bool secondaries :1;
-  bool last_drops :1;
-  bool last_committed_decree :1;
-} _partition_configuration__isset;
-
-class partition_configuration {
- public:
-
-  partition_configuration(const partition_configuration&);
-  partition_configuration& operator=(const partition_configuration&);
-  partition_configuration() : app_type(), package_id(), ballot(0), max_replica_count(0), last_committed_decree(0) {
-  }
-
-  virtual ~partition_configuration() throw();
-  std::string app_type;
-  std::string package_id;
-  global_partition_id gpid;
-  int64_t ballot;
-  int32_t max_replica_count;
-   ::dsn::rpc_address primary;
-  std::vector< ::dsn::rpc_address>  secondaries;
-  std::vector< ::dsn::rpc_address>  last_drops;
-  int64_t last_committed_decree;
-
-  _partition_configuration__isset __isset;
-
-  void __set_app_type(const std::string& val);
-
-  void __set_package_id(const std::string& val);
-
-  void __set_gpid(const global_partition_id& val);
-
-  void __set_ballot(const int64_t val);
-
-  void __set_max_replica_count(const int32_t val);
-
-  void __set_primary(const  ::dsn::rpc_address& val);
-
-  void __set_secondaries(const std::vector< ::dsn::rpc_address> & val);
-
-  void __set_last_drops(const std::vector< ::dsn::rpc_address> & val);
-
-  void __set_last_committed_decree(const int64_t val);
-
-  bool operator == (const partition_configuration & rhs) const
-  {
-    if (!(app_type == rhs.app_type))
-      return false;
-    if (!(package_id == rhs.package_id))
-      return false;
-    if (!(gpid == rhs.gpid))
-      return false;
-    if (!(ballot == rhs.ballot))
-      return false;
-    if (!(max_replica_count == rhs.max_replica_count))
-      return false;
-    if (!(primary == rhs.primary))
-      return false;
-    if (!(secondaries == rhs.secondaries))
-      return false;
-    if (!(last_drops == rhs.last_drops))
-      return false;
-    if (!(last_committed_decree == rhs.last_committed_decree))
-      return false;
-    return true;
-  }
-  bool operator != (const partition_configuration &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const partition_configuration & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(partition_configuration &a, partition_configuration &b);
-
-inline std::ostream& operator<<(std::ostream& out, const partition_configuration& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
 typedef struct _replica_configuration__isset {
-  _replica_configuration__isset() : gpid(false), ballot(false), primary(false), status(true), learner_signature(false) {}
-  bool gpid :1;
+  _replica_configuration__isset() : pid(false), ballot(false), primary(false), status(true), learner_signature(false) {}
+  bool pid :1;
   bool ballot :1;
   bool primary :1;
   bool status :1;
@@ -548,7 +382,7 @@ class replica_configuration {
   }
 
   virtual ~replica_configuration() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
   int64_t ballot;
    ::dsn::rpc_address primary;
   partition_status::type status;
@@ -556,7 +390,7 @@ class replica_configuration {
 
   _replica_configuration__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_ballot(const int64_t val);
 
@@ -568,7 +402,7 @@ class replica_configuration {
 
   bool operator == (const replica_configuration & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(ballot == rhs.ballot))
       return false;
@@ -653,8 +487,8 @@ inline std::ostream& operator<<(std::ostream& out, const prepare_msg& obj)
 }
 
 typedef struct _read_request_header__isset {
-  _read_request_header__isset() : gpid(false), code(false), semantic(true), version_decree(true) {}
-  bool gpid :1;
+  _read_request_header__isset() : pid(false), code(false), semantic(true), version_decree(true) {}
+  bool pid :1;
   bool code :1;
   bool semantic :1;
   bool version_decree :1;
@@ -671,14 +505,14 @@ class read_request_header {
   }
 
   virtual ~read_request_header() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::task_code code;
   read_semantic::type semantic;
   int64_t version_decree;
 
   _read_request_header__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_code(const  ::dsn::task_code& val);
 
@@ -688,7 +522,7 @@ class read_request_header {
 
   bool operator == (const read_request_header & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(code == rhs.code))
       return false;
@@ -719,8 +553,8 @@ inline std::ostream& operator<<(std::ostream& out, const read_request_header& ob
 }
 
 typedef struct _write_request_header__isset {
-  _write_request_header__isset() : gpid(false), code(false) {}
-  bool gpid :1;
+  _write_request_header__isset() : pid(false), code(false) {}
+  bool pid :1;
   bool code :1;
 } _write_request_header__isset;
 
@@ -733,18 +567,18 @@ class write_request_header {
   }
 
   virtual ~write_request_header() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::task_code code;
 
   _write_request_header__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_code(const  ::dsn::task_code& val);
 
   bool operator == (const write_request_header & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(code == rhs.code))
       return false;
@@ -817,8 +651,8 @@ inline std::ostream& operator<<(std::ostream& out, const rw_response_header& obj
 }
 
 typedef struct _prepare_ack__isset {
-  _prepare_ack__isset() : gpid(false), err(false), ballot(false), decree(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false) {}
-  bool gpid :1;
+  _prepare_ack__isset() : pid(false), err(false), ballot(false), decree(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false) {}
+  bool pid :1;
   bool err :1;
   bool ballot :1;
   bool decree :1;
@@ -835,7 +669,7 @@ class prepare_ack {
   }
 
   virtual ~prepare_ack() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::error_code err;
   int64_t ballot;
   int64_t decree;
@@ -844,7 +678,7 @@ class prepare_ack {
 
   _prepare_ack__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_err(const  ::dsn::error_code& val);
 
@@ -858,7 +692,7 @@ class prepare_ack {
 
   bool operator == (const prepare_ack & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(err == rhs.err))
       return false;
@@ -957,8 +791,8 @@ inline std::ostream& operator<<(std::ostream& out, const learn_state& obj)
 }
 
 typedef struct _learn_request__isset {
-  _learn_request__isset() : gpid(false), learner(false), signature(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), app_specific_learn_request(false) {}
-  bool gpid :1;
+  _learn_request__isset() : pid(false), learner(false), signature(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), app_specific_learn_request(false) {}
+  bool pid :1;
   bool learner :1;
   bool signature :1;
   bool last_committed_decree_in_app :1;
@@ -975,7 +809,7 @@ class learn_request {
   }
 
   virtual ~learn_request() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::rpc_address learner;
   int64_t signature;
   int64_t last_committed_decree_in_app;
@@ -984,7 +818,7 @@ class learn_request {
 
   _learn_request__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_learner(const  ::dsn::rpc_address& val);
 
@@ -998,7 +832,7 @@ class learn_request {
 
   bool operator == (const learn_request & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(learner == rhs.learner))
       return false;
@@ -1123,8 +957,8 @@ inline std::ostream& operator<<(std::ostream& out, const learn_response& obj)
 }
 
 typedef struct _group_check_request__isset {
-  _group_check_request__isset() : app_type(false), node(false), config(false), last_committed_decree(false) {}
-  bool app_type :1;
+  _group_check_request__isset() : app(false), node(false), config(false), last_committed_decree(false) {}
+  bool app :1;
   bool node :1;
   bool config :1;
   bool last_committed_decree :1;
@@ -1135,18 +969,18 @@ class group_check_request {
 
   group_check_request(const group_check_request&);
   group_check_request& operator=(const group_check_request&);
-  group_check_request() : app_type(), last_committed_decree(0) {
+  group_check_request() : last_committed_decree(0) {
   }
 
   virtual ~group_check_request() throw();
-  std::string app_type;
+   ::dsn::app_info app;
    ::dsn::rpc_address node;
   replica_configuration config;
   int64_t last_committed_decree;
 
   _group_check_request__isset __isset;
 
-  void __set_app_type(const std::string& val);
+  void __set_app(const  ::dsn::app_info& val);
 
   void __set_node(const  ::dsn::rpc_address& val);
 
@@ -1156,7 +990,7 @@ class group_check_request {
 
   bool operator == (const group_check_request & rhs) const
   {
-    if (!(app_type == rhs.app_type))
+    if (!(app == rhs.app))
       return false;
     if (!(node == rhs.node))
       return false;
@@ -1187,8 +1021,8 @@ inline std::ostream& operator<<(std::ostream& out, const group_check_request& ob
 }
 
 typedef struct _group_check_response__isset {
-  _group_check_response__isset() : gpid(false), err(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), learner_status_(true), learner_signature(false), node(false) {}
-  bool gpid :1;
+  _group_check_response__isset() : pid(false), err(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), learner_status_(true), learner_signature(false), node(false) {}
+  bool pid :1;
   bool err :1;
   bool last_committed_decree_in_app :1;
   bool last_committed_decree_in_prepare_list :1;
@@ -1208,7 +1042,7 @@ class group_check_response {
   }
 
   virtual ~group_check_response() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::error_code err;
   int64_t last_committed_decree_in_app;
   int64_t last_committed_decree_in_prepare_list;
@@ -1218,7 +1052,7 @@ class group_check_response {
 
   _group_check_response__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_err(const  ::dsn::error_code& val);
 
@@ -1234,7 +1068,7 @@ class group_check_response {
 
   bool operator == (const group_check_response & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(err == rhs.err))
       return false;
@@ -1265,90 +1099,6 @@ class group_check_response {
 void swap(group_check_response &a, group_check_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const group_check_response& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _app_info__isset {
-  _app_info__isset() : status(true), app_type(false), app_name(false), app_id(false), partition_count(false), package_id(false), is_stateful(false) {}
-  bool status :1;
-  bool app_type :1;
-  bool app_name :1;
-  bool app_id :1;
-  bool partition_count :1;
-  bool package_id :1;
-  bool is_stateful :1;
-} _app_info__isset;
-
-class app_info {
- public:
-
-  app_info(const app_info&);
-  app_info& operator=(const app_info&);
-  app_info() : status((app_status::type)0), app_type(), app_name(), app_id(0), partition_count(0), package_id(), is_stateful(0) {
-    status = (app_status::type)0;
-
-  }
-
-  virtual ~app_info() throw();
-  app_status::type status;
-  std::string app_type;
-  std::string app_name;
-  int32_t app_id;
-  int32_t partition_count;
-  std::string package_id;
-  bool is_stateful;
-
-  _app_info__isset __isset;
-
-  void __set_status(const app_status::type val);
-
-  void __set_app_type(const std::string& val);
-
-  void __set_app_name(const std::string& val);
-
-  void __set_app_id(const int32_t val);
-
-  void __set_partition_count(const int32_t val);
-
-  void __set_package_id(const std::string& val);
-
-  void __set_is_stateful(const bool val);
-
-  bool operator == (const app_info & rhs) const
-  {
-    if (!(status == rhs.status))
-      return false;
-    if (!(app_type == rhs.app_type))
-      return false;
-    if (!(app_name == rhs.app_name))
-      return false;
-    if (!(app_id == rhs.app_id))
-      return false;
-    if (!(partition_count == rhs.partition_count))
-      return false;
-    if (!(package_id == rhs.package_id))
-      return false;
-    if (!(is_stateful == rhs.is_stateful))
-      return false;
-    return true;
-  }
-  bool operator != (const app_info &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const app_info & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(app_info &a, app_info &b);
-
-inline std::ostream& operator<<(std::ostream& out, const app_info& obj)
 {
   obj.printTo(out);
   return out;
@@ -1461,12 +1211,12 @@ inline std::ostream& operator<<(std::ostream& out, const meta_response_header& o
 }
 
 typedef struct _configuration_update_request__isset {
-  _configuration_update_request__isset() : config(false), type(true), node(false), host_node(false), is_stateful(false) {}
+  _configuration_update_request__isset() : info(false), config(false), type(true), node(false), host_node(false) {}
+  bool info :1;
   bool config :1;
   bool type :1;
   bool node :1;
   bool host_node :1;
-  bool is_stateful :1;
 } _configuration_update_request__isset;
 
 class configuration_update_request {
@@ -1474,21 +1224,23 @@ class configuration_update_request {
 
   configuration_update_request(const configuration_update_request&);
   configuration_update_request& operator=(const configuration_update_request&);
-  configuration_update_request() : type((config_type::type)0), is_stateful(0) {
+  configuration_update_request() : type((config_type::type)0) {
     type = (config_type::type)0;
 
   }
 
   virtual ~configuration_update_request() throw();
-  partition_configuration config;
+   ::dsn::app_info info;
+   ::dsn::partition_configuration config;
   config_type::type type;
    ::dsn::rpc_address node;
    ::dsn::rpc_address host_node;
-  bool is_stateful;
 
   _configuration_update_request__isset __isset;
 
-  void __set_config(const partition_configuration& val);
+  void __set_info(const  ::dsn::app_info& val);
+
+  void __set_config(const  ::dsn::partition_configuration& val);
 
   void __set_type(const config_type::type val);
 
@@ -1496,10 +1248,10 @@ class configuration_update_request {
 
   void __set_host_node(const  ::dsn::rpc_address& val);
 
-  void __set_is_stateful(const bool val);
-
   bool operator == (const configuration_update_request & rhs) const
   {
+    if (!(info == rhs.info))
+      return false;
     if (!(config == rhs.config))
       return false;
     if (!(type == rhs.type))
@@ -1507,8 +1259,6 @@ class configuration_update_request {
     if (!(node == rhs.node))
       return false;
     if (!(host_node == rhs.host_node))
-      return false;
-    if (!(is_stateful == rhs.is_stateful))
       return false;
     return true;
   }
@@ -1548,13 +1298,13 @@ class configuration_update_response {
 
   virtual ~configuration_update_response() throw();
    ::dsn::error_code err;
-  partition_configuration config;
+   ::dsn::partition_configuration config;
 
   _configuration_update_response__isset __isset;
 
   void __set_err(const  ::dsn::error_code& val);
 
-  void __set_config(const partition_configuration& val);
+  void __set_config(const  ::dsn::partition_configuration& val);
 
   bool operator == (const configuration_update_response & rhs) const
   {
@@ -1630,14 +1380,66 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_
   return out;
 }
 
+typedef struct _configuration_query_by_node_response__isset {
+  _configuration_query_by_node_response__isset() : err(false), partitions(false) {}
+  bool err :1;
+  bool partitions :1;
+} _configuration_query_by_node_response__isset;
+
+class configuration_query_by_node_response {
+ public:
+
+  configuration_query_by_node_response(const configuration_query_by_node_response&);
+  configuration_query_by_node_response& operator=(const configuration_query_by_node_response&);
+  configuration_query_by_node_response() {
+  }
+
+  virtual ~configuration_query_by_node_response() throw();
+   ::dsn::error_code err;
+  std::vector<configuration_update_request>  partitions;
+
+  _configuration_query_by_node_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_partitions(const std::vector<configuration_update_request> & val);
+
+  bool operator == (const configuration_query_by_node_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(partitions == rhs.partitions))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_by_node_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_by_node_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_node_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
 typedef struct _create_app_options__isset {
-  _create_app_options__isset() : partition_count(false), replica_count(false), success_if_exist(false), app_type(false), is_stateful(false), package_id(false) {}
+  _create_app_options__isset() : partition_count(false), replica_count(false), success_if_exist(false), app_type(false), is_stateful(false), envs(false) {}
   bool partition_count :1;
   bool replica_count :1;
   bool success_if_exist :1;
   bool app_type :1;
   bool is_stateful :1;
-  bool package_id :1;
+  bool envs :1;
 } _create_app_options__isset;
 
 class create_app_options {
@@ -1645,7 +1447,7 @@ class create_app_options {
 
   create_app_options(const create_app_options&);
   create_app_options& operator=(const create_app_options&);
-  create_app_options() : partition_count(0), replica_count(0), success_if_exist(0), app_type(), is_stateful(0), package_id() {
+  create_app_options() : partition_count(0), replica_count(0), success_if_exist(0), app_type(), is_stateful(0) {
   }
 
   virtual ~create_app_options() throw();
@@ -1654,7 +1456,7 @@ class create_app_options {
   bool success_if_exist;
   std::string app_type;
   bool is_stateful;
-  std::string package_id;
+  std::map<std::string, std::string>  envs;
 
   _create_app_options__isset __isset;
 
@@ -1668,7 +1470,7 @@ class create_app_options {
 
   void __set_is_stateful(const bool val);
 
-  void __set_package_id(const std::string& val);
+  void __set_envs(const std::map<std::string, std::string> & val);
 
   bool operator == (const create_app_options & rhs) const
   {
@@ -1682,7 +1484,7 @@ class create_app_options {
       return false;
     if (!(is_stateful == rhs.is_stateful))
       return false;
-    if (!(package_id == rhs.package_id))
+    if (!(envs == rhs.envs))
       return false;
     return true;
   }
@@ -1866,17 +1668,17 @@ class configuration_list_apps_request {
 
   configuration_list_apps_request(const configuration_list_apps_request&);
   configuration_list_apps_request& operator=(const configuration_list_apps_request&);
-  configuration_list_apps_request() : status((app_status::type)0) {
-    status = (app_status::type)0;
+  configuration_list_apps_request() : status(( ::dsn::app_status::type)0) {
+    status = ( ::dsn::app_status::type)0;
 
   }
 
   virtual ~configuration_list_apps_request() throw();
-  app_status::type status;
+   ::dsn::app_status::type status;
 
   _configuration_list_apps_request__isset __isset;
 
-  void __set_status(const app_status::type val);
+  void __set_status(const  ::dsn::app_status::type val);
 
   bool operator == (const configuration_list_apps_request & rhs) const
   {
@@ -2097,8 +1899,8 @@ inline std::ostream& operator<<(std::ostream& out, const control_balancer_migrat
 }
 
 typedef struct _balancer_proposal_request__isset {
-  _balancer_proposal_request__isset() : gpid(false), type(false), from_addr(false), to_addr(false) {}
-  bool gpid :1;
+  _balancer_proposal_request__isset() : pid(false), type(false), from_addr(false), to_addr(false) {}
+  bool pid :1;
   bool type :1;
   bool from_addr :1;
   bool to_addr :1;
@@ -2113,14 +1915,14 @@ class balancer_proposal_request {
   }
 
   virtual ~balancer_proposal_request() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
   balancer_type::type type;
    ::dsn::rpc_address from_addr;
    ::dsn::rpc_address to_addr;
 
   _balancer_proposal_request__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_type(const balancer_type::type val);
 
@@ -2130,7 +1932,7 @@ class balancer_proposal_request {
 
   bool operator == (const balancer_proposal_request & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(type == rhs.type))
       return false;
@@ -2268,13 +2070,13 @@ class configuration_list_apps_response {
 
   virtual ~configuration_list_apps_response() throw();
    ::dsn::error_code err;
-  std::vector<app_info>  infos;
+  std::vector< ::dsn::app_info>  infos;
 
   _configuration_list_apps_response__isset __isset;
 
   void __set_err(const  ::dsn::error_code& val);
 
-  void __set_infos(const std::vector<app_info> & val);
+  void __set_infos(const std::vector< ::dsn::app_info> & val);
 
   bool operator == (const configuration_list_apps_response & rhs) const
   {
@@ -2356,183 +2158,9 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_list_node
   return out;
 }
 
-typedef struct _configuration_query_by_node_response__isset {
-  _configuration_query_by_node_response__isset() : err(false), partitions(false) {}
-  bool err :1;
-  bool partitions :1;
-} _configuration_query_by_node_response__isset;
-
-class configuration_query_by_node_response {
- public:
-
-  configuration_query_by_node_response(const configuration_query_by_node_response&);
-  configuration_query_by_node_response& operator=(const configuration_query_by_node_response&);
-  configuration_query_by_node_response() {
-  }
-
-  virtual ~configuration_query_by_node_response() throw();
-   ::dsn::error_code err;
-  std::vector<partition_configuration>  partitions;
-
-  _configuration_query_by_node_response__isset __isset;
-
-  void __set_err(const  ::dsn::error_code& val);
-
-  void __set_partitions(const std::vector<partition_configuration> & val);
-
-  bool operator == (const configuration_query_by_node_response & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(partitions == rhs.partitions))
-      return false;
-    return true;
-  }
-  bool operator != (const configuration_query_by_node_response &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const configuration_query_by_node_response & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b);
-
-inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_node_response& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _configuration_query_by_index_request__isset {
-  _configuration_query_by_index_request__isset() : app_name(false), partition_indices(false) {}
-  bool app_name :1;
-  bool partition_indices :1;
-} _configuration_query_by_index_request__isset;
-
-class configuration_query_by_index_request {
- public:
-
-  configuration_query_by_index_request(const configuration_query_by_index_request&);
-  configuration_query_by_index_request& operator=(const configuration_query_by_index_request&);
-  configuration_query_by_index_request() : app_name() {
-  }
-
-  virtual ~configuration_query_by_index_request() throw();
-  std::string app_name;
-  std::vector<int32_t>  partition_indices;
-
-  _configuration_query_by_index_request__isset __isset;
-
-  void __set_app_name(const std::string& val);
-
-  void __set_partition_indices(const std::vector<int32_t> & val);
-
-  bool operator == (const configuration_query_by_index_request & rhs) const
-  {
-    if (!(app_name == rhs.app_name))
-      return false;
-    if (!(partition_indices == rhs.partition_indices))
-      return false;
-    return true;
-  }
-  bool operator != (const configuration_query_by_index_request &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const configuration_query_by_index_request & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(configuration_query_by_index_request &a, configuration_query_by_index_request &b);
-
-inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_index_request& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _configuration_query_by_index_response__isset {
-  _configuration_query_by_index_response__isset() : err(false), app_id(false), partition_count(false), is_stateful(false), partitions(false) {}
-  bool err :1;
-  bool app_id :1;
-  bool partition_count :1;
-  bool is_stateful :1;
-  bool partitions :1;
-} _configuration_query_by_index_response__isset;
-
-class configuration_query_by_index_response {
- public:
-
-  configuration_query_by_index_response(const configuration_query_by_index_response&);
-  configuration_query_by_index_response& operator=(const configuration_query_by_index_response&);
-  configuration_query_by_index_response() : app_id(0), partition_count(0), is_stateful(0) {
-  }
-
-  virtual ~configuration_query_by_index_response() throw();
-   ::dsn::error_code err;
-  int32_t app_id;
-  int32_t partition_count;
-  bool is_stateful;
-  std::vector<partition_configuration>  partitions;
-
-  _configuration_query_by_index_response__isset __isset;
-
-  void __set_err(const  ::dsn::error_code& val);
-
-  void __set_app_id(const int32_t val);
-
-  void __set_partition_count(const int32_t val);
-
-  void __set_is_stateful(const bool val);
-
-  void __set_partitions(const std::vector<partition_configuration> & val);
-
-  bool operator == (const configuration_query_by_index_response & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(app_id == rhs.app_id))
-      return false;
-    if (!(partition_count == rhs.partition_count))
-      return false;
-    if (!(is_stateful == rhs.is_stateful))
-      return false;
-    if (!(partitions == rhs.partitions))
-      return false;
-    return true;
-  }
-  bool operator != (const configuration_query_by_index_response &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const configuration_query_by_index_response & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(configuration_query_by_index_response &a, configuration_query_by_index_response &b);
-
-inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_index_response& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
 typedef struct _query_replica_decree_request__isset {
-  _query_replica_decree_request__isset() : gpid(false), node(false) {}
-  bool gpid :1;
+  _query_replica_decree_request__isset() : pid(false), node(false) {}
+  bool pid :1;
   bool node :1;
 } _query_replica_decree_request__isset;
 
@@ -2545,18 +2173,18 @@ class query_replica_decree_request {
   }
 
   virtual ~query_replica_decree_request() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
    ::dsn::rpc_address node;
 
   _query_replica_decree_request__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_node(const  ::dsn::rpc_address& val);
 
   bool operator == (const query_replica_decree_request & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(node == rhs.node))
       return false;
@@ -2635,8 +2263,8 @@ inline std::ostream& operator<<(std::ostream& out, const query_replica_decree_re
 }
 
 typedef struct _replica_info__isset {
-  _replica_info__isset() : gpid(false), ballot(false), status(false), last_committed_decree(false), last_prepared_decree(false), last_durable_decree(false) {}
-  bool gpid :1;
+  _replica_info__isset() : pid(false), ballot(false), status(false), last_committed_decree(false), last_prepared_decree(false), last_durable_decree(false) {}
+  bool pid :1;
   bool ballot :1;
   bool status :1;
   bool last_committed_decree :1;
@@ -2653,7 +2281,7 @@ class replica_info {
   }
 
   virtual ~replica_info() throw();
-  global_partition_id gpid;
+   ::dsn::gpid pid;
   int64_t ballot;
   partition_status::type status;
   int64_t last_committed_decree;
@@ -2662,7 +2290,7 @@ class replica_info {
 
   _replica_info__isset __isset;
 
-  void __set_gpid(const global_partition_id& val);
+  void __set_pid(const  ::dsn::gpid& val);
 
   void __set_ballot(const int64_t val);
 
@@ -2676,7 +2304,7 @@ class replica_info {
 
   bool operator == (const replica_info & rhs) const
   {
-    if (!(gpid == rhs.gpid))
+    if (!(pid == rhs.pid))
       return false;
     if (!(ballot == rhs.ballot))
       return false;
@@ -2803,6 +2431,128 @@ class query_replica_info_response {
 void swap(query_replica_info_response &a, query_replica_info_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const query_replica_info_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _app_state__isset {
+  _app_state__isset() : info(false), available_partitions(false), partitions(false) {}
+  bool info :1;
+  bool available_partitions :1;
+  bool partitions :1;
+} _app_state__isset;
+
+class app_state {
+ public:
+
+  app_state(const app_state&);
+  app_state& operator=(const app_state&);
+  app_state() {
+  }
+
+  virtual ~app_state() throw();
+   ::dsn::app_info info;
+   ::dsn::atom_int available_partitions;
+  std::vector< ::dsn::partition_configuration>  partitions;
+
+  _app_state__isset __isset;
+
+  void __set_info(const  ::dsn::app_info& val);
+
+  void __set_available_partitions(const  ::dsn::atom_int& val);
+
+  void __set_partitions(const std::vector< ::dsn::partition_configuration> & val);
+
+  bool operator == (const app_state & rhs) const
+  {
+    if (!(info == rhs.info))
+      return false;
+    if (!(available_partitions == rhs.available_partitions))
+      return false;
+    if (!(partitions == rhs.partitions))
+      return false;
+    return true;
+  }
+  bool operator != (const app_state &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const app_state & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(app_state &a, app_state &b);
+
+inline std::ostream& operator<<(std::ostream& out, const app_state& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _node_state__isset {
+  _node_state__isset() : is_alive(false), address(false), primaries(false), partitions(false) {}
+  bool is_alive :1;
+  bool address :1;
+  bool primaries :1;
+  bool partitions :1;
+} _node_state__isset;
+
+class node_state {
+ public:
+
+  node_state(const node_state&);
+  node_state& operator=(const node_state&);
+  node_state() : is_alive(0) {
+  }
+
+  virtual ~node_state() throw();
+  bool is_alive;
+   ::dsn::rpc_address address;
+  std::set< ::dsn::gpid>  primaries;
+  std::set< ::dsn::gpid>  partitions;
+
+  _node_state__isset __isset;
+
+  void __set_is_alive(const bool val);
+
+  void __set_address(const  ::dsn::rpc_address& val);
+
+  void __set_primaries(const std::set< ::dsn::gpid> & val);
+
+  void __set_partitions(const std::set< ::dsn::gpid> & val);
+
+  bool operator == (const node_state & rhs) const
+  {
+    if (!(is_alive == rhs.is_alive))
+      return false;
+    if (!(address == rhs.address))
+      return false;
+    if (!(primaries == rhs.primaries))
+      return false;
+    if (!(partitions == rhs.partitions))
+      return false;
+    return true;
+  }
+  bool operator != (const node_state &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const node_state & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(node_state &a, node_state &b);
+
+inline std::ostream& operator<<(std::ostream& out, const node_state& obj)
 {
   obj.printTo(out);
   return out;

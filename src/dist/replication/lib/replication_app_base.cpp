@@ -114,6 +114,65 @@ error_code replica_init_info::store(const char* file)
     return ERR_OK;
 }
 
+
+error_code replica_app_info::load(const char* file)
+{
+    std::ifstream is(file, std::ios::binary);
+    if (!is.is_open())
+    {
+        derror("open file %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    int64_t sz = 0;
+    if (!::dsn::utils::filesystem::file_size(std::string(file), sz))
+    {
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    std::shared_ptr<char> buffer(new char[sz]);
+    is.read((char*)buffer.get(), sz);
+    is.close();
+    
+    binary_reader reader(blob(buffer, sz));
+    int magic;
+    unmarshall(reader, magic, DSF_THRIFT_BINARY);
+
+    if (magic != 0xdeadbeef)
+    {
+        derror("data in file %s is invalid (magic)", file);
+        return ERR_INVALID_DATA;
+    }
+
+    unmarshall(reader, *_app, DSF_THRIFT_JSON);
+    return ERR_OK;
+}
+
+error_code replica_app_info::store(const char* file)
+{
+    binary_writer writer;
+    int magic = 0xdeadbeef;
+
+    marshall(writer, magic, DSF_THRIFT_BINARY);
+    marshall(writer, *_app, DSF_THRIFT_JSON);
+
+    std::string ffile = std::string(file);
+    std::string tmp_file = ffile + ".tmp";
+
+    std::ofstream os(tmp_file.c_str(), (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
+    if (!os.is_open())
+    {
+        derror("open file %s failed", tmp_file.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    auto data = writer.get_buffer();
+    os.write((const char*)data.data(), (std::streamsize)data.length());
+    os.close();
+
+    return ERR_OK;
+}
+
 replication_app_base::replication_app_base(replica* replica)
 {
     _dir_data = replica->dir() + "/data";
@@ -203,11 +262,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 
 ::dsn::error_code replication_app_base::open()
 {
-    auto gpid = _replica->get_gpid();
-    dsn_gpid gd;
-    gd.u.app_id = gpid.app_id;
-    gd.u.partition_index = gpid.pidx;
-
+    auto gd = _replica->get_gpid();
     ::dsn::error_code err = dsn_layer1_app_create(gd, &_app_context);
     if (err == ERR_OK)
     {

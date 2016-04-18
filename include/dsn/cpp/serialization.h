@@ -103,6 +103,24 @@ namespace dsn
         unmarshall_thrift_binary(reader, value);
     }
 
+    inline void marshall(binary_writer& writer, const gpid& value, dsn_msg_serialize_format fmt)
+    {
+        marshall_thrift_binary(writer, value);
+    }
+    inline void unmarshall(binary_reader& reader, gpid& value, dsn_msg_serialize_format fmt)
+    {
+        unmarshall_thrift_binary(reader, value);
+    }
+
+    inline void marshall(binary_writer& writer, const atom_int& value, dsn_msg_serialize_format fmt)
+    {
+        marshall_thrift_binary(writer, value);
+    }
+    inline void unmarshall(binary_reader& reader, atom_int& value, dsn_msg_serialize_format fmt)
+    {
+        unmarshall_thrift_binary(reader, value);
+    }
+
 #define THRIFT_BASIC_TYPE_MARSHALLER \
         case DSF_THRIFT_BINARY: marshall_thrift_basic_Binary(writer, value); break;\
         case DSF_THRIFT_JSON: marshall_thrift_basic_JSON(writer, value); break;

@@ -51,7 +51,7 @@
 namespace dsn {
     namespace replication {
 
-        typedef int32_t app_id;
+        typedef int32_t get_app_id();
         typedef int64_t ballot;
         typedef int64_t decree;
 
@@ -133,7 +133,7 @@ namespace dsn {
 /*
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {
-            JSON_DICT_ENTRIES(out, config, app_type, package_id, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+            JSON_DICT_ENTRIES(out, config, app_type, envs, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
         }
         inline void json_encode(std::stringstream& out, const partition_status::type& status)
         {
@@ -144,14 +144,14 @@ namespace dsn {
             JSON_DICT_ENTRIES(out, config, gpid, ballot, primary, status, learner_signature);
         }
         
-        inline void json_encode(std::stringstream& out, const global_partition_id& gpid)
+        inline void json_encode(std::stringstream& out, const gpid& gpid)
         {
-            JSON_DICT_ENTRIES(out, gpid, app_id, pidx);
+            JSON_DICT_ENTRIES(out, gpid, app_id, partition_index);
         }
 
         inline void json_encode(std::stringstream& out, const app_info& config)
         {
-            JSON_DICT_ENTRIES(out, config, status, app_type, app_name, app_id, partition_count, package_id, is_stateful);
+            JSON_DICT_ENTRIES(out, config, status, app_type, app_name, app_id, partition_count, envs, is_stateful);
         }
 
         inline void json_encode(std::stringstream& out, const node_info& config)
@@ -168,9 +168,7 @@ namespace dsn {
         {
             // last_drops is not considered into equality check
             return pc1.ballot == pc2.ballot &&
-                   pc1.gpid.app_id == pc2.gpid.app_id &&
-                   pc1.gpid.pidx == pc2.gpid.pidx &&
-                   pc1.app_type == pc2.app_type &&
+                   pc1.pid == pc2.pid &&
                    pc1.max_replica_count == pc2.max_replica_count &&
                    pc1.primary == pc2.primary &&
                    pc1.secondaries == pc2.secondaries &&

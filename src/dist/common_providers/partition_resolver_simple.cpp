@@ -42,7 +42,6 @@ namespace dsn
     {
         //------------------------------------------------------------------------------------
         using namespace ::dsn::service;
-        using namespace ::dsn::replication;
 
         partition_resolver_simple::partition_resolver_simple(
             rpc_address meta_server,
@@ -240,6 +239,8 @@ namespace dsn
         }
 
         /*send rpc*/
+        DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
         dsn::task_ptr partition_resolver_simple::query_partition_config(int partition_index)
         {
             //dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_path.c_str(), _app_id, request->partition_index);
@@ -295,10 +296,10 @@ namespace dsn
                     {
                         partition_configuration& new_config = *it;
 
-                        auto it2 = _config_cache.find(new_config.gpid.pidx);
+                        auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                         if (it2 == _config_cache.end())
                         {
-                            _config_cache[new_config.gpid.pidx] = new_config;
+                            _config_cache[new_config.pid.get_partition_index()] = new_config;
                         }
                         else if (it2->second.ballot < new_config.ballot)
                         {
@@ -470,12 +471,12 @@ namespace dsn
         //ERR_OBJECT_NOT_FOUND  not in cache.
         //ERR_IO_PENDING        in cache but invalid, remove from cache.
         //ERR_OK                in cache and valid
-        error_code partition_resolver_simple::get_address(int pidx, /*out*/ dsn::rpc_address& addr)
+        error_code partition_resolver_simple::get_address(int partition_index, /*out*/ dsn::rpc_address& addr)
         {
             partition_configuration config;
             {
                 zauto_read_lock l(_config_lock);
-                auto it = _config_cache.find(pidx);
+                auto it = _config_cache.find(partition_index);
                 if (it != _config_cache.end())
                 {
                     config = it->second;

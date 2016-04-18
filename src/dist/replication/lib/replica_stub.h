@@ -53,7 +53,7 @@ namespace test {
     class test_checker;
 }
 
-typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
+typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void (::dsn::rpc_address /*from*/,
                             const replica_configuration& /*new_config*/,
                             bool /*is_closing*/)> replica_state_subscriber;
@@ -79,11 +79,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(global_partition_id gpid, dsn_message_t request);
-    void on_client_read(global_partition_id gpid, dsn_message_t request);
-
-    void on_client_write2(dsn_message_t request);
-    void on_client_read2(dsn_message_t request);
+    void on_client_write(gpid gpid, dsn_message_t request);
+    void on_client_read(gpid gpid, dsn_message_t request);
 
     //
     //    messages from meta server
@@ -124,17 +121,17 @@ public:
     //
     // common routines for inquiry
     //
-    replica_ptr get_replica(global_partition_id gpid, bool new_when_possible = false, const char* app_type = nullptr);
+    replica_ptr get_replica(gpid gpid, bool new_when_possible = false, const app_info* app = nullptr);
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
 
-    void json_state(std::stringstream& out) const;
+    //void json_state(std::stringstream& out) const;
 
-    static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+    //static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
     static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
 
-    std::string get_replica_dir(const char* app_type, global_partition_id gpid) const;
+    std::string get_replica_dir(const char* app_type, gpid gpid) const;
 
 private:    
     enum replica_node_state
@@ -145,13 +142,13 @@ private:
     };
 
     void query_configuration_by_node();
-    void on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid);
+    void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid gpid);
     void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response);
-    void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
-    void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
+    void on_node_query_reply_scatter(replica_stub_ptr this_, const configuration_update_request& config);
+    void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpid);
     void remove_replica_on_meta_server(const partition_configuration& config);
-    ::dsn::task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req = nullptr);
-    void    open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req);
+    ::dsn::task_ptr begin_open_replica(const std::string& app_type, gpid gpid, std::shared_ptr<group_check_request> req = nullptr);
+    void    open_replica(const std::string app_type, gpid gpid, std::shared_ptr<group_check_request> req);
     ::dsn::task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void add_replica(replica_ptr r);
@@ -166,8 +163,8 @@ private:
     friend class ::dsn::replication::replication_checker;    
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::replica;
-    typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
+    typedef std::unordered_map<gpid, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     mutable zlock               _replicas_lock;
     replicas                    _replicas;
@@ -191,7 +188,7 @@ private:
     ::dsn::task_ptr _gc_timer_task;
 
     //cli handle, for deregister cli command
-    dsn_handle_t    _cli_replica_stub_json_state_handle;
+    //dsn_handle_t    _cli_replica_stub_json_state_handle;
     dsn_handle_t    _cli_kill_partition;
 
     // performance counters

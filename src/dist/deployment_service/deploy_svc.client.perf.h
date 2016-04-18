@@ -61,7 +61,7 @@ public:
     {
         deploy_request req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -79,7 +79,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -97,7 +97,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -115,7 +115,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -133,7 +133,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();

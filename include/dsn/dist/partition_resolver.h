@@ -56,7 +56,7 @@ namespace dsn
                                      ///< ERR_IO_PENDING if resolve in is progress, callers 
                                      ///< should call resolve_async in this case
                 rpc_address address; ///< IPv4 of the target to send request to
-                dsn_gpid gpid;    ///< global partition indentity
+                dsn_gpid    pid;    ///< global partition indentity
             };
 
         public:

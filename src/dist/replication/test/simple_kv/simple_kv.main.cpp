@@ -68,9 +68,6 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    dsn::replication::test::g_default_gpid.app_id = 1;
-    dsn::replication::test::g_default_gpid.pidx = 0;
-    
     dsn::replication::test::g_case_input = argv[2];
 
     dsn_app_registration();

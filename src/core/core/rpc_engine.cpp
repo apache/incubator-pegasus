@@ -862,10 +862,10 @@ namespace dsn {
                     {
                         // update gpid when necessary
                         auto& hdr2 = request->header;
-                        if (*(uint64_t*)&hdr2->gpid != *(uint64_t*)&result.gpid)
+                        if (*(uint64_t*)&hdr2->gpid != *(uint64_t*)&result.pid)
                         {
-                            hdr2->gpid = result.gpid;
-                            hdr2->client.hash = dsn_gpid_to_hash(result.gpid);
+                            hdr2->gpid = result.pid;
+                            hdr2->client.hash = dsn_gpid_to_hash(result.pid);
                             request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
                         }
 

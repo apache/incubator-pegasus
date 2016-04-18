@@ -64,7 +64,7 @@ struct replica_log_info
     }
 };
 
-typedef std::unordered_map<global_partition_id, replica_log_info> replica_log_info_map;
+typedef std::unordered_map<gpid, replica_log_info> replica_log_info_map;
 
 // each block in log file has a log_block_header
 struct log_block_header
@@ -138,7 +138,7 @@ public:
         int32_t max_log_file_mb,
         bool force_flush = false,
         bool is_private = false,
-        global_partition_id private_gpid = global_partition_id()
+        gpid private_gpid = gpid()
         );
     virtual ~mutation_log();
 
@@ -187,21 +187,21 @@ public:
 
     // when open a exist replica, need to set valid_start_offset on open
     // thread safe
-    void set_valid_start_offset_on_open(global_partition_id gpid, int64_t valid_start_offset);
+    void set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset);
 
     // when create a new replica, need to reset current max decree
     // returns current global end offset, needs to be remebered by caller for gc usage
     // thread safe
-    int64_t on_partition_reset(global_partition_id gpid, decree max_decree);
+    int64_t on_partition_reset(gpid gpid, decree max_decree);
 
     // remove entry from _previous_log_max_decrees when a partition is removed.
     // only used for private log.
     // thread safe
-    void on_partition_removed(global_partition_id gpid);
+    void on_partition_removed(gpid gpid);
 
     // update current max decree
     // thread safe
-    void update_max_decree(global_partition_id gpid, decree d);
+    void update_max_decree(gpid gpid, decree d);
 
     // update current max commit of private log
     // thread safe
@@ -217,7 +217,7 @@ public:
     //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
     //  - the current log file is excluded
     // thread safe
-    int garbage_collection(global_partition_id gpid, decree durable_decree, int64_t valid_start_offset);
+    int garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset);
 
     // garbage collection for shared log
     // remove log files if satisfy:
@@ -233,7 +233,7 @@ public:
     //  when this is a private log, log files are learned by remote replicas
     //
     void get_learn_state(
-        global_partition_id gpid,
+        gpid gpid,
         ::dsn::replication::decree start,
         /*out*/ ::dsn::replication::learn_state& state
         ) const;
@@ -249,7 +249,7 @@ public:
     // get current max decree for gpid
     // returns 0 if not found
     // thread safe
-    decree max_decree(global_partition_id gpid) const;
+    decree max_decree(gpid gpid) const;
 
     // get current max commit on disk of private log.
     // thread safe
@@ -257,11 +257,11 @@ public:
 
     // maximum decree that is garbage collected
     // thread safe
-    decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
+    decree max_gced_decree(gpid gpid, int64_t valid_start_offset) const;
 
     // check the consistence of valid_start_offset
     // thread safe
-    void check_valid_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
+    void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
 
 private:
     //
@@ -283,7 +283,7 @@ private:
     void init_states();
 
     // update max decree without lock
-    void update_max_decree_no_lock(global_partition_id gpid, decree d);
+    void update_max_decree_no_lock(gpid gpid, decree d);
 
     // update max commit on disk without lock
     void update_max_commit_on_disk_no_lock(decree d);
@@ -317,7 +317,7 @@ private:
 private:
     std::string               _dir;
     bool                      _is_private;
-    global_partition_id       _private_gpid; // only used for private log
+    gpid       _private_gpid; // only used for private log
 
     // options
     int64_t                   _max_log_file_size_in_bytes;    

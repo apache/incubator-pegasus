@@ -60,27 +60,27 @@ void simple_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
-        if (app.status != app_status::AS_AVAILABLE)
+        if (app.info.status != app_status::AS_AVAILABLE)
             continue;
 
-        if (_state->freezed() && app.is_stateful)
+        if (_state->freezed() && app.info.is_stateful)
             continue;
 
-        for (int j = 0; j < app.partition_count; j++)
+        for (int j = 0; j < app.info.partition_count; j++)
         {
             partition_configuration& pc = app.partitions[j];
-            run_lb(pc, app.is_stateful);
+            run_lb(app.info, pc, app.info.is_stateful);
         }
     }
 }
 
-void simple_load_balancer::run(global_partition_id gpid)
+void simple_load_balancer::run(gpid gpid)
 {
     if (s_disable_lb) return;
 
     zauto_read_lock l(_state->_lock);
-    partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
-    run_lb(pc, _state->_apps[gpid.app_id - 1].is_stateful);
+    partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
+    run_lb(_state->_apps[gpid.get_app_id() - 1].info, pc, _state->_apps[gpid.get_app_id() - 1].info.is_stateful);
 }
 
 ::dsn::rpc_address simple_load_balancer::find_minimal_load_machine(bool primaryOnly)
@@ -125,14 +125,14 @@ void simple_load_balancer::run(global_partition_id gpid)
     return stats[dsn_random32(0, candidate_count - 1)].first;
 }
 
-void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
+void simple_load_balancer::run_lb(app_info& info, partition_configuration& pc, bool is_stateful)
 {
     if (_state->freezed() && is_stateful)
         return;
 
     configuration_update_request proposal;
     proposal.config = pc;
-    proposal.is_stateful = is_stateful;
+    proposal.info = info;
 
     if (is_stateful)
     {
@@ -166,9 +166,9 @@ void simple_load_balancer::run_lb(partition_configuration& pc, bool is_stateful)
                 proposal.type = config_type::CT_ASSIGN_PRIMARY;
 
                 derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                    pc.app_type.c_str(),
-                    pc.gpid.app_id,
-                    pc.gpid.pidx,
+                    info.app_type.c_str(),
+                    pc.pid.get_app_id(),
+                    pc.pid.get_partition_index(),
                     proposal.node.to_string()
                     );
             }
@@ -245,7 +245,7 @@ void simple_load_balancer::query_decree(std::shared_ptr<query_replica_decree_req
             on_query_decree_ack(err, query, response);
         }
         ,
-        gpid_to_hash(query->gpid), std::chrono::seconds(3));
+        gpid_to_hash(query->pid), std::chrono::seconds(3));
 }
 
 void simple_load_balancer::on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp)
@@ -257,8 +257,8 @@ void simple_load_balancer::on_query_decree_ack(error_code err, const std::shared
     else
     {
         zauto_write_lock l(_state->_lock);
-        app_state& app = _state->_apps[query->gpid.app_id - 1];
-        partition_configuration& ps = app.partitions[query->gpid.pidx];
+        app_state& app = _state->_apps[query->pid.get_app_id() - 1];
+        partition_configuration& ps = app.partitions[query->pid.get_partition_index()];
         if (resp->last_decree > ps.last_committed_decree)
         {
             ps.last_committed_decree = resp->last_decree;

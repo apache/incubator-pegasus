@@ -20,3 +20,12 @@ struct task_code
 {
 }
 
+// placeholder
+struct gpid
+{
+}
+
+// placeholder
+struct atom_int
+{
+}

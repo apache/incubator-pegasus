@@ -57,10 +57,10 @@ bool greedy_load_balancer::walk_through_primary(const rpc_address &addr, const s
     auto iter = _state->_nodes.find(addr);
     if (iter == _state->_nodes.end() )
         return false;
-    server_state::node_state& ns = iter->second;
-    for (const global_partition_id& gpid: ns.primaries)
+    node_state& ns = iter->second;
+    for (const gpid& gpid: ns.primaries)
     {
-        partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
         if ( !func(pc) )
             return false;
     }
@@ -73,10 +73,10 @@ bool greedy_load_balancer::walk_through_partitions(const rpc_address &addr, cons
     auto iter = _state->_nodes.find(addr);
     if (iter == _state->_nodes.end() )
         return false;
-    server_state::node_state& ns = iter->second;
-    for (const global_partition_id& gpid: ns.partitions)
+    node_state& ns = iter->second;
+    for (const gpid& gpid: ns.partitions)
     {
-        partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
         if ( !func(pc) )
             return false;
     }
@@ -92,23 +92,23 @@ bool greedy_load_balancer::balancer_proposal_check(const balancer_proposal_reque
         return iter->second.is_alive;
     };
 
-    auto is_primary = [&, this](const dsn::rpc_address& addr, const global_partition_id& gpid)
+    auto is_primary = [&, this](const dsn::rpc_address& addr, const gpid& gpid)
     {
-        partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
         return pc.primary == addr;
     };
 
-    auto is_secondary = [&, this](const dsn::rpc_address& addr, const global_partition_id& gpid)
+    auto is_secondary = [&, this](const dsn::rpc_address& addr, const gpid& gpid)
     {
-        partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
         return std::find(pc.secondaries.begin(), pc.secondaries.end(), addr)!=pc.secondaries.end();
     };
 
-    const global_partition_id& gpid = balancer_proposal.gpid;
-    if (gpid.app_id < 0 ||
-        gpid.pidx < 0 ||
-        gpid.app_id > _state->_apps.size() ||
-        gpid.pidx >= _state->_apps[gpid.app_id - 1].partitions.size() )
+    const gpid& gpid = balancer_proposal.pid;
+    if (gpid.get_app_id() < 0 ||
+        gpid.get_partition_index() < 0 ||
+        gpid.get_app_id() > _state->_apps.size() ||
+        gpid.get_partition_index() >= _state->_apps[gpid.get_app_id() - 1].partitions.size() )
         return false;
 
     if ( !is_node_alive(balancer_proposal.from_addr) || !is_node_alive(balancer_proposal.to_addr) )
@@ -134,12 +134,12 @@ bool greedy_load_balancer::balancer_proposal_check(const balancer_proposal_reque
 void greedy_load_balancer::execute_balancer_proposal()
 {
     dinfo("execute balancer proposal, proposals count(%u)", _balancer_proposals_map.size());
-    std::vector<global_partition_id> staled_balancer_proposal;
+    std::vector<gpid> staled_balancer_proposal;
     for (auto iter=_balancer_proposals_map.begin(); iter!=_balancer_proposals_map.end(); ++iter)
     {
         balancer_proposal_request& p = iter->second;
-        const global_partition_id& gpid = iter->first;
-        partition_configuration& pc = _state->_apps[gpid.app_id-1].partitions[gpid.pidx];
+        const gpid& gpid = iter->first;
+        partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
         configuration_update_request proposal;
 
         if ( !balancer_proposal_check(p) )
@@ -180,7 +180,7 @@ void greedy_load_balancer::execute_balancer_proposal()
     }
 
     dinfo("%u proposals are staled as they don't match the partition config", staled_balancer_proposal.size());
-    for (const global_partition_id& gpid: staled_balancer_proposal)
+    for (const gpid& gpid: staled_balancer_proposal)
         _balancer_proposals_map.erase(gpid);
 }
 
@@ -202,7 +202,7 @@ void greedy_load_balancer::greedy_move_primary(const std::vector<rpc_address> &n
             {
                 if (addr == to)
                 {
-                    insert_balancer_proposal_request(pc.gpid, balancer_type::BT_MOVE_PRIMARY, from, to);
+                    insert_balancer_proposal_request(pc.pid, balancer_type::BT_MOVE_PRIMARY, from, to);
                     --primaries_need_to_remove;
                     break;
                 }
@@ -259,15 +259,15 @@ void greedy_load_balancer::greedy_copy_primary(int total_replicas)
 
         //currently we simply random copy one primary from one machine to another
         //TODO: a better policy is necessary if considering the copying cost
-        const global_partition_id& gpid = *(_state->_nodes[max_load].primaries.begin());
-        partition_configuration& pc = _state->_apps[gpid.app_id-1].partitions[gpid.pidx];
+        const gpid& gpid = *(_state->_nodes[max_load].primaries.begin());
+        partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
 
         //we run greedy_copy_primary after we run the greedy_move_primary. If a secondary exist on min_load,
         //we are able to do the move_primary in greedy_move_primary
         dassert( std::find(pc.secondaries.begin(), pc.secondaries.end(), min_load)==pc.secondaries.end(), "");
 
         insert_balancer_proposal_request(gpid, balancer_type::BT_COPY_PRIMARY, max_load, min_load);
-        dinfo("copy gpid(%d:%d) primary from %s to %s", gpid.app_id, gpid.pidx, max_load.to_string(), min_load.to_string());
+        dinfo("copy gpid(%d:%d) primary from %s to %s", gpid.get_app_id(), gpid.get_partition_index(), max_load.to_string(), min_load.to_string());
         //adjust the priority queue
         ++changing_primaries[min_load];
         --changing_primaries[max_load];
@@ -286,7 +286,7 @@ void greedy_load_balancer::greedy_copy_secondary()
     int total_replicas = 0;
     for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
     {
-        server_state::node_state& state = iter->second;
+        node_state& state = iter->second;
         if ( state.is_alive )
             total_replicas += state.partitions.size();
     }
@@ -297,7 +297,7 @@ void greedy_load_balancer::greedy_copy_secondary()
     std::unordered_map<dsn::rpc_address, int> changing_secondaries;
     int maximum_secondaries = 0;
     dsn::rpc_address output_server;
-    std::vector<server_state::node_state*> input_server;
+    std::vector<node_state*> input_server;
 
     for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
     {
@@ -326,14 +326,14 @@ void greedy_load_balancer::greedy_copy_secondary()
         if (maximum_secondaries <= replicas_high)
             return false;
 
-        for (server_state::node_state* ns: input_server)
+        for (node_state* ns: input_server)
         {
-            if ( changing_secondaries[ns->address] < replicas_low && ns->partitions.find(pc.gpid)==ns->partitions.end() )
+            if ( changing_secondaries[ns->address] < replicas_low && ns->partitions.find(pc.pid)==ns->partitions.end() )
             {
                 ++changing_secondaries[ns->address];
                 --maximum_secondaries;
 
-                insert_balancer_proposal_request(pc.gpid, balancer_type::BT_COPY_SECONDARY, output_server, ns->address);
+                insert_balancer_proposal_request(pc.pid, balancer_type::BT_COPY_SECONDARY, output_server, ns->address);
                 break;
             }
         }
@@ -487,7 +487,7 @@ void greedy_load_balancer::on_balancer_proposal(/*in*/const balancer_proposal_re
     if ( !balancer_proposal_check(request) )
         response.err = ERR_INVALID_PARAMETERS;
     else {
-        _balancer_proposals_map[request.gpid] = request;
+        _balancer_proposals_map[request.pid] = request;
         response.err = ERR_OK;
     }
 }
@@ -503,20 +503,20 @@ void greedy_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
-        if (_state->freezed() && app.is_stateful)
+        if (_state->freezed() && app.info.is_stateful)
             continue;
 
-        if (app.status != app_status::AS_AVAILABLE)
+        if (app.info.status != app_status::AS_AVAILABLE)
         {
-            dinfo("ignore app(%s)", app.app_name.c_str());
+            dinfo("ignore app(%s)", app.info.app_name.c_str());
             continue;
         }
-        for (int j = 0; j < app.partition_count; j++)
+        for (int j = 0; j < app.info.partition_count; j++)
         {
             partition_configuration& pc = app.partitions[j];
-            is_system_healthy = (run_lb(pc, app.is_stateful) && is_system_healthy);
+            is_system_healthy = (run_lb(app.info, pc, app.info.is_stateful) && is_system_healthy);
         }
-        total_replicas += app.partition_count;
+        total_replicas += app.info.partition_count;
     }
 
     if (is_system_healthy)
@@ -528,10 +528,10 @@ void greedy_load_balancer::run()
 
 void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_update_request>& request)
 {
-    dassert(request->is_stateful, "only stateful services are supported right now");
+    dassert(request->info.is_stateful, "only stateful services are supported right now");
 
-    std::unordered_map<global_partition_id, balancer_proposal_request>::iterator it;
-    global_partition_id& gpid = request->config.gpid;
+    std::unordered_map<gpid, balancer_proposal_request>::iterator it;
+    gpid& gpid = request->config.pid;
     switch (request->type)
     {
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
@@ -584,11 +584,11 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
     }
 }
 
-void greedy_load_balancer::run(global_partition_id gpid)
+void greedy_load_balancer::run(gpid gpid)
 {
     zauto_read_lock l(_state->_lock);
-    partition_configuration& pc = _state->_apps[gpid.app_id-1].partitions[gpid.pidx];
-    run_lb(pc, _state->_apps[gpid.app_id -1].is_stateful);
+    partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
+    run_lb(_state->_apps[gpid.get_app_id()-1].info, pc, _state->_apps[gpid.get_app_id() -1].info.is_stateful);
 }
 
 dsn::rpc_address greedy_load_balancer::find_minimal_load_machine(bool primaryOnly)
@@ -652,7 +652,7 @@ dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration
         return addr_list[target];
     };
 
-    auto iter = _primary_recommender.find(pc.gpid);
+    auto iter = _primary_recommender.find(pc.pid);
     if (iter != _primary_recommender.end())
     {
         if ( _state->_nodes[iter->second].is_alive )
@@ -662,18 +662,18 @@ dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration
 
     dsn::rpc_address result = find_machine_from_secondaries(pc.secondaries);
     if ( !result.is_invalid() )
-        _primary_recommender.emplace(pc.gpid, result);
+        _primary_recommender.emplace(pc.pid, result);
     return result;
 }
 
-bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
+bool greedy_load_balancer::run_lb(app_info& info, partition_configuration &pc, bool is_stateful)
 {
     if (_state->freezed() && is_stateful)
     {
         dinfo("state is freezed, node_alive count: %d, total: %d", _state->_node_live_count, _state->_nodes.size());
         return false;
     }
-    dinfo("lb for gpid(%d.%d)", pc.gpid.app_id, pc.gpid.pidx);
+    dinfo("lb for gpid(%d.%d)", pc.pid.get_app_id(), pc.pid.get_partition_index());
 
     configuration_update_request proposal;
     proposal.config = pc;
@@ -703,10 +703,9 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
                 proposal.node = *pc.last_drops.rbegin();
                 proposal.type = config_type::CT_ASSIGN_PRIMARY;
 
-                derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                    pc.app_type.c_str(),
-                    pc.gpid.app_id,
-                    pc.gpid.pidx,
+                derror("partition %d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                    pc.pid.get_app_id(),
+                    pc.pid.get_partition_index(),
                     proposal.node.to_string()
                     );
             }
@@ -733,7 +732,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc, bool is_stateful)
         //we have too many secondaries, let's do remove
         else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
         {
-            auto iter = _balancer_proposals_map.find(pc.gpid);
+            auto iter = _balancer_proposals_map.find(pc.pid);
             if (iter != _balancer_proposals_map.end() && iter->second.type == balancer_type::BT_MOVE_PRIMARY)
                 return true;
             int target = 0;

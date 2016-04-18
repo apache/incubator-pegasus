@@ -53,12 +53,12 @@ namespace dsn
                 proposal.config.ballot
                 );
 
-            rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
+            rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.pid));
         }
 
-        void server_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type::type type, rpc_address node)
+        void server_load_balancer::explictly_send_proposal(gpid gpid, rpc_address receiver, config_type::type type, rpc_address node)
         {
-            if (gpid.app_id <= 0 || gpid.pidx < 0 || type == config_type::CT_INVALID)
+            if (gpid.get_app_id() <= 0 || gpid.get_partition_index() < 0 || type == config_type::CT_INVALID)
             {
                 derror("invalid params");
                 return;
@@ -67,18 +67,18 @@ namespace dsn
             configuration_update_request req;
             {
                 zauto_read_lock l(_state->_lock);
-                if (gpid.app_id > _state->_apps.size())
+                if (gpid.get_app_id() > _state->_apps.size())
                 {
                     derror("invalid params");
                     return;
                 }
-                app_state& app = _state->_apps[gpid.app_id-1];
-                if (gpid.pidx>=app.partition_count)
+                app_state& app = _state->_apps[gpid.get_app_id()-1];
+                if (gpid.get_partition_index()>=app.info.partition_count)
                 {
                     derror("invalid params");
                     return;
                 }
-                req.config = app.partitions[gpid.pidx];
+                req.config = app.partitions[gpid.get_partition_index()];
             }
 
             req.type = type;
