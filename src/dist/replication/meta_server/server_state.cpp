@@ -1334,8 +1334,9 @@ void server_state::update_configuration(
             tasking::enqueue(
                 LPC_CM_UPDATE_CONFIGURATION,
                 nullptr,
-                [svc = this->_meta_svc, req_ptr = std::move(req)]() mutable {
-                    svc->update_configuration_on_machine_failure(req_ptr);
+                [this, cb = std::move(callback), req_ptr = std::move(req)]() mutable
+                {
+                    this->update_configuration(req_ptr, nullptr, cb);
                 },
                 0,
                 std::chrono::milliseconds(delay_ms));
