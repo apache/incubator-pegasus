@@ -106,6 +106,7 @@ void replication_app_client_base::clear_all_pending_tasks()
 
 DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     uint64_t key_hash,
@@ -178,10 +179,10 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 void replication_app_client_base::on_replica_request_timeout(request_context_ptr& rc)
 {
     dsn_message_t nil(nullptr);
-    end_request(rc, ERR_TIMEOUT, nil);
+    end_request(rc, ERR_TIMEOUT, nil, true);
 }
 
-void replication_app_client_base::end_request(request_context_ptr& request, error_code err, dsn_message_t resp)
+void replication_app_client_base::end_request(request_context_ptr& request, error_code err, dsn_message_t resp, bool called_by_timer)
 {
     zauto_lock l(request->lock);
     if (request->completed)
@@ -190,7 +191,7 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
         return;
     }
 
-    if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
+    if (request->timeout_timer != nullptr && !called_by_timer)
         request->timeout_timer->cancel(false);
 
     request->callback_task->enqueue_rpc_response(err, resp);
@@ -199,8 +200,9 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
 
 void replication_app_client_base::call(request_context_ptr request, bool from_meta_ack)
 {
-    if (from_meta_ack)
+    if (request->timeout_timer != nullptr)
     {
+        // maybe already completed by timeout
         zauto_lock l(request->lock);
         if (request->completed)
             return;
@@ -226,11 +228,42 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
     // fill partition index
     if (_app_partition_count == -1)
     {
-        zauto_lock l(_requests_lock);
-        query_partition_config(request);
+        // init timeout timer only when necessary
+        // DO NOT START THE TIMER FOR EACH REQUEST
+        {
+            zauto_lock l(request->lock);
+            if (request->timeout_timer == nullptr)
+            {
+                request->timeout_timer = tasking::enqueue(
+                    LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
+                    this,
+                    std::bind(&replication_app_client_base::on_replica_request_timeout, this, request),
+                    0,
+                    std::chrono::milliseconds(timeout_ms)
+                    );
+            }
+        }
+
+        if (from_meta_ack)
+        {
+            // delay 1 second for further config query, call again
+            tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
+                std::bind(&replication_app_client_base::call, this, request, false),
+                0,
+                std::chrono::seconds(1)
+                );
+        }
+        else
+        {
+            zauto_lock l(_requests_lock);
+            query_partition_config(request);
+        }
+
         return;
     }
-    else
+
+    // calculate partition index
+    if (request->partition_index == -1)
     {
         request->partition_index = get_partition_index(_app_partition_count, request->key_hash);
     }
@@ -263,7 +296,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
             // init timeout timer only when necessary
             // DO NOT START THE TIMER FOR EACH REQUEST
             {
-                zauto_lock l(request->lock);                
+                zauto_lock l(request->lock);
                 if (request->timeout_timer == nullptr)
                 {
                     request->timeout_timer = tasking::enqueue(
@@ -369,9 +402,15 @@ void replication_app_client_base::replica_rw_reply(
         }
     }
 
+    bool clear_config_cache = false;
+    bool retry = false;
+
     if (err != ERR_OK)
     {
-        goto Retry;
+        // network issue
+        clear_config_cache = true;
+        retry = true;
+        goto Handle_Failure;
     }
 
     ::unmarshall(response, err);
@@ -379,33 +418,86 @@ void replication_app_client_base::replica_rw_reply(
     //
     // some error codes do not need retry
     //
-    if (err == ERR_OK || err == ERR_HANDLER_NOT_FOUND)
-    {
-        end_request(rc, err, response);
-        return;
-    }
 
-    // retry 
+    // server is busy, retry later
+    // server can't serve, retry later
+    if(err == ERR_CAPACITY_EXCEEDED || err == ERR_NOT_ENOUGH_MEMBER)
+    {
+        clear_config_cache = false;
+        retry = true;
+    }
+    // the sever state is not primary
+    // the replica is not on the server
+    else if(err == ERR_INVALID_STATE || err == ERR_OBJECT_NOT_FOUND)
+    {
+        clear_config_cache = true;
+        retry = true;
+    }
+    // ERR_OK means success
+    // the task code is not valid, version mismatch
+    else if(err == ERR_OK || err == ERR_INVALID_DATA)
+    {
+        clear_config_cache = false;
+        retry = false;
+    }
     else
     {
-        dsn::rpc_address adr = dsn_msg_from_address(response);
+        dassert(false, "%s.client: get error %s from replica with index %d, retry:%d, clear cache:%d",
+            _app_name.c_str(),
+            err.to_string(),
+            rc->partition_index,
+            retry,
+            clear_config_cache
+            );
     }
 
-Retry:
-    dwarn("%s.client: get error %s from replica with index %d, retry now",
-        _app_name.c_str(),
-        err.to_string(),
-        rc->partition_index
-        );
+Handle_Failure:
+    if(err != ERR_OK)
+    {
+        derror("%s.client: get error %s from replica with gpid=%d.%d, clear_config_cache=%s, retry=%s",
+            _app_name.c_str(),
+            err.to_string(),
+            _app_id,
+            rc->partition_index,
+            clear_config_cache ? "true" : "false",
+            retry ? "true" : "false"
+            );
+    }
 
-    // clear partition configuration as it could be wrong
+    if(clear_config_cache)
     {
         zauto_write_lock l(_config_lock);
         _config_cache.erase(rc->partition_index);
     }
 
-    // then retry
-    call(rc.get(), false);
+    if(!retry)
+    {
+        end_request(rc, err, (err == ERR_OK ? response : dsn_message_t(nullptr)));
+        return;
+    }
+    else
+    {
+        auto nts = ::dsn_now_us();
+
+        // no more than 1 second left, unnecessary to retry
+        if (nts + 1000000 >= rc->timeout_ts_us)
+        {
+            dsn_message_t nil(nullptr);
+            end_request(rc, ERR_TIMEOUT, nil);
+            return;
+        }
+
+        tasking::enqueue(
+            LPC_REPLICATION_DELAY_QUERY_CALL,
+            this,
+            [this, rc_capture = std::move(rc)]()
+            {
+                replication_app_client_base::call(std::move(rc_capture));
+            },
+            0,
+            std::chrono::seconds(1) // sleep 1 second before retry
+            );
+    }
 }
 
 void replication_app_client_base::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context)
@@ -459,7 +551,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             derror("%s.client: query config reply err = %s, partition index = %d",
                 _app_name.c_str(),
                 resp.err.to_string(),
-                context->partition_index
+                pidx
                 );
 
             conti = false;
@@ -470,7 +562,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             derror("%s.client: query config reply err = %s, partition index = %d",
                 _app_name.c_str(),
                 resp.err.to_string(),
-                context->partition_index
+                pidx
                 );
             conti = false;
             client_err = resp.err;
@@ -481,7 +573,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
         derror("%s.client: query config reply err = %s, partition index = %d",
             _app_name.c_str(),
             err.to_string(),
-            context->partition_index
+            pidx
             );
     }
 
