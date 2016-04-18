@@ -194,7 +194,7 @@ namespace dsn { namespace replication {
         void call(request_context_ptr request, bool from_meta_ack = false);
         void call_with_address(dsn::rpc_address address, request_context_ptr request);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr rc);
-        void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
+        void end_request(request_context_ptr& request, error_code err, dsn_message_t resp, bool called_by_timer = false);
         void on_replica_request_timeout(request_context_ptr& rc);
 
         // with meta server
