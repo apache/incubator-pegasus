@@ -505,7 +505,9 @@ void greedy_load_balancer::run()
         app_state& app = _state->_apps[i];
         if (app.status != AS_AVAILABLE)
         {
-            dinfo("ignore app(%s)", app.app_name.c_str());
+            if (app.status != AS_DROPPED)
+                is_system_healthy = false;
+            dinfo("ignore app(%s), status(%s)", app.app_name.c_str(), enum_to_string(app.status));
             continue;
         }
         for (int j = 0; j < app.partition_count; j++)
@@ -582,6 +584,9 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
 void greedy_load_balancer::run(global_partition_id gpid)
 {
     zauto_read_lock l(_state->_lock);
+    if (_state->_apps[gpid.app_id - 1].status != AS_AVAILABLE)
+        return;
+
     partition_configuration& pc = _state->_apps[gpid.app_id-1].partitions[gpid.pidx];
     run_lb(pc);
 }
