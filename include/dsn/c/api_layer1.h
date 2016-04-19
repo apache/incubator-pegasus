@@ -116,6 +116,14 @@ extern DSN_API int         dsn_task_get_ref(dsn_task_t task);
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
 
 /*!
+ set delay for a task
+
+ \param task                the task handle
+ \param delay_ms            the delay milliseconds for a task
+ */
+extern DSN_API void        dsn_task_set_delay(dsn_task_t task, int delay_ms);
+
+/*!
  cancel a task
 
  \param task                the task handle

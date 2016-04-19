@@ -857,6 +857,7 @@ int32_t server_state::get_app_index(const char *app_name) const
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
+DEFINE_TASK_CODE(LPC_CM_UPDATE_CONFIGURATION, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
 
 void server_state::init_app_partition_node(int app_id, int partition_index)
 {
@@ -1050,6 +1051,19 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
             {
                 zauto_write_lock l(_lock);
                 app.info.status = app_status::AS_DROPPED;
+                for (partition_configuration& pc: app.partitions) {
+                    if (!pc.primary.is_invalid() && _nodes.find(pc.primary)!=_nodes.end()) {
+                        _nodes[pc.primary].primaries.erase(pc.pid);
+                        pc.primary.set_invalid();
+                    }
+                    for (dsn::rpc_address& addr: pc.secondaries) {
+                        if (_nodes.find(addr) != _nodes.end()) {
+                            _nodes[addr].partitions.erase(pc.pid);
+                        }
+                    }
+                    pc.secondaries.clear();
+                    ++pc.ballot;
+                }
             }
             response.err = ERR_OK;
             if (msg) reply(msg, response);
@@ -1159,41 +1173,40 @@ void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/
     }
 }
 
-void server_state::update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi)
+void server_state::update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req,
+                                                  dsn_message_t request_msg)
 {
-    std::string partition_path = get_partition_path(wi->req->config.pid);
+    std::string partition_path = get_partition_path(req->config.pid);
     binary_writer writer;
-    marshall(writer, wi->req->config, DSF_THRIFT_JSON);
+    marshall(writer, req->config, DSF_THRIFT_JSON);
 
     _storage->set_data(
         partition_path,
         writer.get_buffer(),
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-        [this, wi](error_code ec)
+        [this, req, request_msg](error_code ec)
         {
-            gpid gpid = wi->req->config.pid;
+            gpid gpid = req->config.pid;
             if (ec == ERR_OK)
             {
-                {
-                    zauto_lock l(_pending_requests_lock);
-                    _pending_requests[gpid][wi->ballot] = *wi;
-                }
-                exec_pending_requests(gpid);
+                exec_pending_request(req, request_msg);
             }
             else if (ec == ERR_TIMEOUT)
             {
                 // well, if we have message need to resposne,
                 // we just ignore it. After all, the sender will
                 // resend it
-                if (wi->msg)
+                if (request_msg)
                 {
-                    dsn_msg_release_ref(wi->msg);
+                    zauto_write_lock l(_lock);
+                    _pending_requests.erase(req->config.pid);
+                    dsn_msg_release_ref(request_msg);
                 }
                 else
                 {
                     tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
                         this,
-                        std::bind(&server_state::update_configuration_on_remote, this, wi),
+                        std::bind(&server_state::update_configuration_on_remote, this, req, nullptr),
                         0,
                         std::chrono::milliseconds(1000));
                 }
@@ -1211,23 +1224,34 @@ void server_state::update_configuration(
     dsn_message_t request_msg, 
     std::function<void()> callback)
 {
-    bool write;
-    configuration_update_response response; 
+    bool write = false;
+    bool retry = false;
+    int delay_ms = 0;
 
+    configuration_update_response response;
     {
-        zauto_read_lock l(_lock);
+        zauto_write_lock l(_lock);
         app_state& app = _apps[req->config.pid.get_app_id() - 1];
         partition_configuration& old = app.partitions[req->config.pid.get_partition_index()];
-
+        
         // update for stateful service (via replication framework)
         if (app.info.is_stateful)
         {
-            if (is_partition_config_equal(old, req->config))
+            //For a dropped table on meta server, all the update configuration request is invalid
+            if (app.info.status == app_status::AS_DROPPED)
+            {
+                dwarn("app_id(%d) is dropped, update request(from:%s, cfg_type:%s, ballot:%s) is ignored",
+                    app.info.app_id, req->node.to_string(), enum_to_string(req->type), req->config.ballot);
+
+                response.err = ERR_INVALID_VERSION;
+                response.config = old;
+            }
+            else if (is_partition_config_equal(old, req->config))
             {
                 // duplicate request
                 dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
                     req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), old.ballot);
-                write = false;
+
                 response.err = ERR_OK;
                 response.config = old;
             }
@@ -1235,14 +1259,36 @@ void server_state::update_configuration(
             {
                 dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
                     req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot, old.ballot);
-                write = false;
+
+                if (nullptr == request_msg)
+                {
+                    //for meta server's remove primary request, we must always try to execute it
+                    req->config.ballot = old.ballot + 1;
+                    retry = true;
+                }
                 response.err = ERR_INVALID_VERSION;
                 response.config = old;
+            }
+            else if (_pending_requests.find(req->config.pid) != _pending_requests.end())
+            {
+                dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot);
+                if (nullptr == request_msg)
+                {
+                    //for meta server's remove primary request, we must always try to execute it
+                    retry = true;
+                    delay_ms = 1000;
+                }
+                else
+                {
+                    //for request from replica server, we just adandon it.
+                    //because we asssume the replica server will resend this
+                    return;
+                }
             }
             else
             {
                 write = true;
-                req->config.last_drops = old.last_drops;
             }
         }
 
@@ -1253,9 +1299,16 @@ void server_state::update_configuration(
             {
                 dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
                     req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot, old.ballot);
-                write = false;
+
                 response.err = ERR_INVALID_VERSION;
                 response.config = old;
+            }
+            else if (_pending_requests.find(req->config.pid) != _pending_requests.end())
+            {
+                dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot);
+                retry = true;
+                delay_ms = 1000;
             }
             else
             {
@@ -1268,7 +1321,6 @@ void server_state::update_configuration(
                     if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
                         std::find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
                     {
-                        write = false;
                         response.err = ERR_OK;
                         response.config = old;
                     }
@@ -1284,7 +1336,6 @@ void server_state::update_configuration(
                     // added already
                     if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
                     {
-                        write = false;
                         response.err = ERR_OK;
                         response.config = old;
                     }
@@ -1304,6 +1355,18 @@ void server_state::update_configuration(
         if (request_msg)
         {
             reply(request_msg, response);
+        }
+        else if (retry)
+        {
+            tasking::enqueue(
+                LPC_CM_UPDATE_CONFIGURATION,
+                nullptr,
+                [this, cb = std::move(callback), req_ptr = std::move(req)]() mutable
+                {
+                    this->update_configuration(req_ptr, nullptr, cb);
+                },
+                0,
+                std::chrono::milliseconds(delay_ms));
         }
         else
         {
@@ -1335,65 +1398,36 @@ void server_state::update_configuration(
                 break;
             }
         }
+        _pending_requests.emplace(req->config.pid, callback);
 
-        std::shared_ptr<storage_work_item> wi(new storage_work_item());
-        wi->ballot = req->config.ballot;
-        wi->req = req;
-        wi->msg = request_msg;
-        wi->callback = callback;
-        update_configuration_on_remote(wi);
+        update_configuration_on_remote(req, request_msg);
     }
 }
 
-void server_state::exec_pending_requests(gpid gpid)
+
+void server_state::exec_pending_request(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
 {
-    do
+    configuration_update_response resp;
+    std::function<void()> callback;
     {
-        storage_work_item wi;
-        {
-            zauto_lock l(_pending_requests_lock);
-            auto& part = _pending_requests[gpid];
-            if (part.size() == 0)
-                return;
-
-            storage_work_item& fwi = part.begin()->second;
-            {
-                zauto_read_lock l2(_lock);
-                app_state& app = _apps[gpid.get_app_id() - 1];
-                partition_configuration& old = app.partitions[gpid.get_partition_index()];
-
-                // ballot for stateful services is updated on membership update
-                if ((app.info.is_stateful && old.ballot + 1 != fwi.ballot)
-
-                // ballot for stateless service is updated on binary update
-                    || (!app.info.is_stateful && old.ballot != fwi.ballot)
-                    )
-                {
-                    return;
-                }
-            }
-
-            wi = fwi;
-            part.erase(part.begin());
-        }
-        
-        configuration_update_response resp;
-        {
-            zauto_write_lock l(_lock);
-            update_configuration_internal(*wi.req, resp);
-        }
-
-        if (wi.msg)
-        {
-            reply(wi.msg, resp);
-            dsn_msg_release_ref(wi.msg);
-        }
-
-        if (wi.callback)
-        {
-            wi.callback();
-        }
-    } while (true);
+        zauto_write_lock l(_lock);
+        auto iter = _pending_requests.find(req->config.pid);
+        callback = std::move(iter->second);
+        dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", 
+            req->config.pid.get_app_id(), req->config.pid.get_partition_index()
+            );
+        update_configuration_internal(*req, resp);
+        _pending_requests.erase(iter);
+    }
+    if (request_msg)
+    {
+        reply(request_msg, resp);
+        dsn_msg_release_ref(request_msg);
+    }
+    if (callback)
+    {
+        callback();
+    }
 }
 
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
@@ -1401,7 +1435,15 @@ void server_state::update_configuration_internal(const configuration_update_requ
     app_state& app = _apps[request.config.pid.get_app_id() - 1];
     partition_configuration& old = app.partitions[request.config.pid.get_partition_index()];
 
-    if (app.info.is_stateful)
+    if (app.info.status == app_status::AS_DROPPED)
+    {
+        response.err = ERR_INVALID_VERSION;
+        response.config = old;
+        dwarn("table is dropped when trying to update config(node: %s, config_type: %s, ballot: %" PRId64 ")",
+              request.node.to_string(), enum_to_string(request.type), request.config.ballot);
+    }
+
+    else if (app.info.is_stateful)
     {
         if (old.ballot + 1 != request.config.ballot)
         {
