@@ -91,16 +91,8 @@ private:
     // load balance actions
     void start_load_balance();
     void on_load_balance_timer();
-    void on_config_changed(global_partition_id gpid);
-
-    // cli commands
-    void on_create_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    void on_drop_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    void on_list_apps_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    void on_list_nodes_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    void on_query_config_by_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    void on_query_config_by_node_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-
+    void on_config_changed(gpid gpid);
+    
     // common routines
     bool check_primary(dsn_message_t req);
 
@@ -115,12 +107,5 @@ private:
     dsn::task_ptr                   _balancer_timer;
     replication_options             _opts;
     bool                            _started;
-
-    dsn_handle_t _cli_create_app;
-    dsn_handle_t _cli_drop_app;
-    dsn_handle_t _cli_list_apps;
-    dsn_handle_t _cli_list_nodes;
-    dsn_handle_t _cli_query_config_by_app;
-    dsn_handle_t _cli_query_config_by_node;
 }; 
 

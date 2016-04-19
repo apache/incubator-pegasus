@@ -44,22 +44,17 @@ namespace dsn
 {
     namespace replication 
     {
-        // seems thrift does not define this, why!!!!
-        inline bool global_partition_id::operator < (const global_partition_id & r) const
-        {
-            return app_id < r.app_id || (app_id == r.app_id && pidx < r.pidx);
-        }
         /*
 #ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
-        inline bool operator == (const global_partition_id& l, const global_partition_id& r)
+        inline bool operator == (const gpid& l, const gpid& r)
         {
-            return l.app_id == r.app_id && l.pidx == r.pidx;
+            return l.app_id == r.app_id && l.partition_index == r.partition_index;
         }
 #endif*/
 
-        inline int gpid_to_hash(global_partition_id gpid)
+        inline uint64_t gpid_to_hash(gpid gpid)
         {
-            return static_cast<int>(gpid.app_id ^ gpid.pidx);
+            return gpid.value();
         }
     }
 }
@@ -67,9 +62,9 @@ namespace dsn
 namespace std
 {
     template<>
-    struct hash< ::dsn::replication::global_partition_id> {
-        size_t operator()(const ::dsn::replication::global_partition_id &gpid) const {
-            return std::hash<int>()(gpid.app_id) ^ std::hash<int>()(gpid.pidx);
+    struct hash< ::dsn::gpid> {
+        size_t operator()(const ::dsn::gpid &gpid) const {
+            return std::hash<int>()(gpid.get_app_id()) ^ std::hash<int>()(gpid.get_partition_index());
         }
     };
 }

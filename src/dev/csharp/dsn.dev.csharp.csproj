@@ -78,6 +78,7 @@
     <Compile Include="Clientlet.cs" />
     <Compile Include="InterOpLookupTable.cs" />
     <Compile Include="Logging.cs" />
+    <Compile Include="ReplicatedServiceAppType1.cs" />
     <Compile Include="RpcStream.cs" />
     <Compile Include="Serverlet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -51,13 +51,13 @@ public:
     ~greedy_load_balancer();
 
     virtual void run() override;
-    virtual void run(global_partition_id gpid) override;
+    virtual void run(gpid gpid) override;
     virtual void on_config_changed(std::shared_ptr<configuration_update_request>& request) override;
     virtual void on_balancer_proposal(/*in*/const balancer_proposal_request& request, /*out*/balancer_proposal_response& response) override;
     virtual void on_control_migration(/*in*/const control_balancer_migration_request& request,
                                       /*out*/control_balancer_migration_response& response) override;
 private:
-    bool run_lb(partition_configuration& pc, bool is_stateful);
+    bool run_lb(app_info& info, partition_configuration& pc, bool is_stateful);
 
     bool balancer_proposal_check(const balancer_proposal_request& balancer_proposal);
 
@@ -75,10 +75,10 @@ private:
     dsn::rpc_address recommend_primary(partition_configuration& pc);
     dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 
-    void insert_balancer_proposal_request(const global_partition_id& gpid, balancer_type::type type, dsn::rpc_address from, dsn::rpc_address to)
+    void insert_balancer_proposal_request(const gpid& gpid, balancer_type::type type, dsn::rpc_address from, dsn::rpc_address to)
     {
         balancer_proposal_request& request = _balancer_proposals_map[gpid];
-        request.gpid = gpid;
+        request.pid = gpid;
         request.type = type;
         request.from_addr= from;
         request.to_addr = to;
@@ -86,6 +86,6 @@ private:
 private:
     volatile bool _is_greedy_rebalancer_enabled;
 
-    std::unordered_map<global_partition_id, dsn::rpc_address> _primary_recommender;
-    std::unordered_map<global_partition_id, balancer_proposal_request> _balancer_proposals_map;
+    std::unordered_map<gpid, dsn::rpc_address> _primary_recommender;
+    std::unordered_map<gpid, balancer_proposal_request> _balancer_proposals_map;
 };

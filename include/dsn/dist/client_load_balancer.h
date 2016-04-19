@@ -59,7 +59,7 @@ namespace dsn
 
 
         public:
-            virtual rpc_address find_target(const ::dsn::replication::partition_configuration& config) = 0;
+            virtual rpc_address find_target(const ::dsn::partition_configuration& config) = 0;
 
         };
     }

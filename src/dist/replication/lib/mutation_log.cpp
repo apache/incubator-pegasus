@@ -54,7 +54,7 @@ mutation_log::mutation_log(
     int32_t max_log_file_mb,
     bool force_flush,
     bool is_private,
-    global_partition_id private_gpid
+    gpid private_gpid
     )
 {
     _dir = dir;
@@ -168,7 +168,7 @@ error_code mutation_log::open(replay_callback callback)
 
             if (ret)
             {
-                this->update_max_decree_no_lock(mu->data.header.gpid, mu->data.header.decree);
+                this->update_max_decree_no_lock(mu->data.header.pid, mu->data.header.decree);
                 if (this->_is_private)
                 {
                     this->update_max_commit_on_disk_no_lock(mu->data.header.last_committed_decree);
@@ -683,7 +683,7 @@ void mutation_log::internal_write_callback(
     return err;
 }
 
-decree mutation_log::max_decree(global_partition_id gpid) const
+decree mutation_log::max_decree(gpid gpid) const
 {
     zauto_lock l(_lock);
     if (_is_private)
@@ -708,7 +708,7 @@ decree mutation_log::max_commit_on_disk() const
     return _private_max_commit_on_disk;
 }
 
-decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
+decree mutation_log::max_gced_decree(gpid gpid, int64_t valid_start_offset) const
 {
     check_valid_start_offset(gpid, valid_start_offset);
 
@@ -747,7 +747,7 @@ decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_sta
     }
 }
 
-void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t valid_start_offset) const
+void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const
 {
     zauto_lock l(_lock);
     if (_is_private)
@@ -799,7 +799,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     }
 
     // update meta data
-    update_max_decree_no_lock(mu->data.header.gpid, d);
+    update_max_decree_no_lock(mu->data.header.pid, d);
 
     //
     // write to buffer
@@ -843,7 +843,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     return tsk;
 }
 
-void mutation_log::set_valid_start_offset_on_open(global_partition_id gpid, int64_t valid_start_offset)
+void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset)
 {
     zauto_lock l(_lock);
     if (_is_private)
@@ -857,7 +857,7 @@ void mutation_log::set_valid_start_offset_on_open(global_partition_id gpid, int6
     }
 }
 
-int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_decree)
+int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
 {
     zauto_lock l(_lock);
     if (_is_private)
@@ -867,7 +867,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_de
         _private_log_info.max_decree = max_decree;
         _private_log_info.valid_start_offset = _global_end_offset;
         dwarn("replica %d.%d has changed private log max_decree from %" PRId64 " to %" PRId64 ", valid_start_offset from %" PRId64 " to %" PRId64,
-            gpid.app_id, gpid.pidx,
+            gpid.get_app_id(), gpid.get_partition_index(),
             old_info.max_decree, _private_log_info.max_decree,
             old_info.valid_start_offset, _private_log_info.valid_start_offset
             );
@@ -879,7 +879,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_de
         if (!it.second)
         {
             dwarn("replica %d.%d has changed shared log max_decree from %" PRId64 " to %" PRId64 ", valid_start_offset from %" PRId64 " to %" PRId64,
-                gpid.app_id, gpid.pidx,
+                gpid.get_app_id(), gpid.get_partition_index(),
                 it.first->second.max_decree, info.max_decree,
                 it.first->second.valid_start_offset, info.valid_start_offset
                 );
@@ -889,20 +889,20 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_de
     return _global_end_offset;
 }
 
-void mutation_log::on_partition_removed(global_partition_id gpid)
+void mutation_log::on_partition_removed(gpid gpid)
 {
     dassert(!_is_private, "this method is only valid for shared logs");
     zauto_lock l(_lock);
     _shared_log_info_map.erase(gpid);
 }
 
-void mutation_log::update_max_decree(global_partition_id gpid, decree d)
+void mutation_log::update_max_decree(gpid gpid, decree d)
 {
     zauto_lock l(_lock);
     update_max_decree_no_lock(gpid, d);
 }
 
-void mutation_log::update_max_decree_no_lock(global_partition_id gpid, decree d)
+void mutation_log::update_max_decree_no_lock(gpid gpid, decree d)
 {
     if (!_is_private)
     {
@@ -945,7 +945,7 @@ void mutation_log::update_max_commit_on_disk_no_lock(decree d)
 }
 
 void mutation_log::get_learn_state(
-    global_partition_id gpid,
+    gpid gpid,
     ::dsn::replication::decree start,
     /*out*/ ::dsn::replication::learn_state& state
     ) const
@@ -1047,7 +1047,7 @@ void mutation_log::get_learn_state(
     }
 }
 
-int mutation_log::garbage_collection(global_partition_id gpid, decree durable_decree, int64_t valid_start_offset)
+int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset)
 {
     dassert(_is_private, "this method is only valid for private log");
 
@@ -1094,8 +1094,8 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
         {
             dinfo("gc @ %d.%d: max_offset for %s is %" PRId64 " vs %" PRId64 " as app.valid_start_offset.private,"
                 " safe to delete this and all older logs",
-                _private_gpid.app_id,
-                _private_gpid.pidx,
+                _private_gpid.get_app_id(),
+                _private_gpid.get_partition_index(),
                 mark_it->second->path().c_str(),
                 mark_it->second->end_offset(),
                 valid_start_offset
@@ -1108,8 +1108,8 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
         {
             dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as app.durable decree,"
                 " safe to delete this and all older logs",
-                _private_gpid.app_id,
-                _private_gpid.pidx,
+                _private_gpid.get_app_id(),
+                _private_gpid.get_partition_index(),
                 mark_it->second->path().c_str(),
                 max_decree,
                 durable_decree
@@ -1194,7 +1194,7 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
     std::map<int, log_file_ptr>::reverse_iterator mark_it;
-    std::set<global_partition_id> kickout_replicas;
+    std::set<gpid> kickout_replicas;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it)
     {
         log_file_ptr log = mark_it->second;
@@ -1218,7 +1218,7 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                     continue;
                 }
 
-                global_partition_id gpid = kv.first;
+                gpid gpid = kv.first;
                 decree gc_max_decree = kv.second.max_decree;
                 int64_t valid_start_offset = kv.second.valid_start_offset;
 
@@ -1234,8 +1234,8 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 
                     dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as gc max decree,"
                         " safe to delete this and all older logs for this replica",
-                        gpid.app_id,
-                        gpid.pidx,
+                        gpid.get_app_id(),
+                        gpid.get_partition_index(),
                         log->path().c_str(),
                         gc_max_decree
                         );
@@ -1249,8 +1249,8 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                     dinfo("gc @ %d.%d: log is invalid for %s, as"
                         " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ", "
                         " it is therefore safe to delete this and all older logs for this replica",
-                        gpid.app_id,
-                        gpid.pidx,
+                        gpid.get_app_id(),
+                        gpid.get_partition_index(),
                         log->path().c_str(),
                         valid_start_offset,
                         log->end_offset()
@@ -1264,8 +1264,8 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                 {
                     dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as gc max decree,"
                         " it is therefore safe to delete this and all older logs for this replica",
-                        gpid.app_id,
-                        gpid.pidx,
+                        gpid.get_app_id(),
+                        gpid.get_partition_index(),
                         log->path().c_str(),
                         it3->second.max_decree,
                         gc_max_decree
@@ -1824,7 +1824,7 @@ int log_file::read_file_header(binary_reader& reader)
     reader.read(count);
     for (int i = 0; i < count; i++)
     {
-        global_partition_id gpid;
+        gpid gpid;
         replica_log_info info;
 
         reader.read_pod(gpid);
@@ -1841,7 +1841,7 @@ int log_file::get_file_header_size() const
     int count = static_cast<int>(_previous_log_max_decrees.size());
     return static_cast<int>(
         sizeof(log_file_header) + sizeof(count)
-        + (sizeof(global_partition_id) + sizeof(replica_log_info))*count
+        + (sizeof(gpid) + sizeof(replica_log_info))*count
         );
 }
 

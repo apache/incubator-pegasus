@@ -79,9 +79,8 @@ static void overwrite_file(const char* file, int offset, const void* buf, int si
 TEST(replication, log_file)
 {
     replica_log_info_map mdecrees;
-    global_partition_id gpid;
-    gpid.app_id = 1;
-    gpid.pidx = 0;
+    gpid gpid(1, 0);
+
     mdecrees[gpid] = replica_log_info(3, 0);
     std::string fpath = "./log.1.100";
     int index = 1;
@@ -286,9 +285,7 @@ TEST(replication, log_file)
 
 TEST(replication, mutation_log)
 {
-    global_partition_id gpid;
-    gpid.app_id = 1;
-    gpid.pidx = 0;
+    gpid gpid(1, 0);
     std::string str = "hello, world!";
     std::string logp = "./test-log";
     std::vector<mutation_ptr> mutations;
@@ -315,7 +312,7 @@ TEST(replication, mutation_log)
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = 2 + i;
-        mu->data.header.gpid = gpid;
+        mu->data.header.pid = gpid;
         mu->data.header.last_committed_decree = i;
         mu->data.header.log_offset = 0;
 

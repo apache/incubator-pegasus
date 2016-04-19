@@ -60,7 +60,7 @@ namespace dsn
             
             struct layer1_app_info
             {
-                ::dsn::replication::partition_configuration configuration;
+                ::dsn::partition_configuration configuration;
                 std::unique_ptr<std::thread> wait_thread;
                 dsn_handle_t process_handle;
                 std::atomic<bool> exited;
@@ -69,6 +69,7 @@ namespace dsn
                 std::string package_dir;
                 std::string runner_script;
                 uint16_t working_port;
+                std::string app_type;
 
                 layer1_app_info(const ::dsn::replication::configuration_update_request & proposal)
                 {
@@ -77,11 +78,12 @@ namespace dsn
                     exited = false;
                     working_port = 0;
                     resource_ready = false;
+                    app_type = proposal.info.app_type;
                 }
             };
 
             ::dsn::service::zrwlock_nr _lock;
-            typedef std::unordered_map< ::dsn::replication::global_partition_id, std::shared_ptr<layer1_app_info>> apps;
+            typedef std::unordered_map< ::dsn::gpid, std::shared_ptr<layer1_app_info>> apps;
             apps _apps;
             std::atomic<bool> _online;
 

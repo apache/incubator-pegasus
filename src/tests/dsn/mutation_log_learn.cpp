@@ -43,9 +43,7 @@ using namespace ::dsn::replication;
 TEST(replication, mutation_log_learn)
 {
     std::chrono::steady_clock clock;
-    global_partition_id gpid;
-    gpid.app_id = 1;
-    gpid.pidx = 1;
+    gpid gpid(1, 1);
     std::string str = "hello, world!";
     std::string logp = "./test-log";
 
@@ -57,7 +55,7 @@ TEST(replication, mutation_log_learn)
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = i + 2;
-        mu->data.header.gpid = gpid;
+        mu->data.header.pid = gpid;
         mu->data.header.last_committed_decree = i;
         mu->data.header.log_offset = 0;
 

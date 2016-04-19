@@ -6,7 +6,7 @@ namespace dsn.example
     public class echoServer : Serverlet<echoServer>
     {
         public echoServer() : base("echo") {}
-        ~echoServer() { CloseService(); }
+        ~echoServer() { }
     
         // all service handlers to be implemented further
         // RPC_ECHO_ECHO_PING 
@@ -39,14 +39,14 @@ namespace dsn.example
         }
         
         
-        public void OpenService()
+        public void OpenService(UInt64 gpid)
         {
-            RegisterRpcHandler(echoHelper.RPC_ECHO_ECHO_PING, "ping", this.OnpingInternal);
+            RegisterRpcHandler(echoHelper.RPC_ECHO_ECHO_PING, "ping", this.OnpingInternal, gpid);
         }
 
-        public void CloseService()
+        public void CloseService(UInt64 gpid)
         {
-            UnregisterRpcHandler(echoHelper.RPC_ECHO_ECHO_PING);
+            UnregisterRpcHandler(echoHelper.RPC_ECHO_ECHO_PING, gpid);
         }
     }
 

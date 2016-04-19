@@ -94,7 +94,7 @@ void replica::broadcast_group_check()
         ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
-        request->app_type = _primary_states.membership.app_type;
+        request->app = _app_info;
         request->node = addr;
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
@@ -176,7 +176,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
         dassert (false, "");
     }
     
-    response.gpid = get_gpid();
+    response.pid = get_gpid();
     response.node = _stub->_primary_address;
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR)

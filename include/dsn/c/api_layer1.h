@@ -565,9 +565,10 @@ typedef union dsn_global_partition_id
     uint64_t value;
 } dsn_gpid;
 
-inline int dsn_gpid_to_hash(dsn_gpid gpid)
+
+inline uint64_t dsn_gpid_to_hash(dsn_gpid gpid)
 {
-    return static_cast<int>(gpid.u.app_id ^ gpid.u.partition_index);
+    return gpid.value;
 }
 
 # define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get

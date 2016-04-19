@@ -137,13 +137,13 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 
 void mutation::write_to(binary_writer& writer) const
 {
-    marshall(writer, data);
+    marshall(writer, data, DSF_THRIFT_BINARY);
 }
 
 /*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data);
+    unmarshall(reader, mu->data, DSF_THRIFT_BINARY);
 
     for (const mutation_update& update : mu->data.updates)
     {
@@ -160,8 +160,8 @@ void mutation::write_to(binary_writer& writer) const
     
     snprintf_p(mu->_name, sizeof(mu->_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        mu->data.header.gpid.app_id,
-        mu->data.header.gpid.pidx,
+        mu->data.header.pid.get_app_id(),
+        mu->data.header.pid.get_partition_index(),
         mu->data.header.ballot,
         mu->data.header.decree);
 
@@ -172,12 +172,12 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 {
     {
         binary_writer temp_writer;
-        marshall(temp_writer, data.header);
-        marshall(temp_writer, static_cast<int>(data.updates.size()));
+        marshall(temp_writer, data.header, DSF_THRIFT_BINARY);
+        marshall(temp_writer, static_cast<int>(data.updates.size()), DSF_THRIFT_BINARY);
         for (const mutation_update& update : data.updates)
         {
-            marshall(temp_writer, update.code);
-            marshall(temp_writer, static_cast<int>(update.data.length()));
+            marshall(temp_writer, update.code, DSF_THRIFT_BINARY);
+            marshall(temp_writer, static_cast<int>(update.data.length()), DSF_THRIFT_BINARY);
         }
         inserter(temp_writer.get_buffer());
     }
@@ -191,15 +191,15 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 /*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data.header);
+    unmarshall(reader, mu->data.header, DSF_THRIFT_BINARY);
     int size;
-    unmarshall(reader, size);
+    unmarshall(reader, size, DSF_THRIFT_BINARY);
     mu->data.updates.resize(size);
     std::vector<int> lengths(size, 0);
     for (int i = 0; i < size; ++i)
     {
-        unmarshall(reader, mu->data.updates[i].code);
-        unmarshall(reader, lengths[i]);
+        unmarshall(reader, mu->data.updates[i].code, DSF_THRIFT_BINARY);
+        unmarshall(reader, lengths[i], DSF_THRIFT_BINARY);
     }
     for (int i = 0; i < size; ++i)
     {
@@ -219,8 +219,8 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 
     snprintf_p(mu->_name, sizeof(mu->_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        mu->data.header.gpid.app_id,
-        mu->data.header.gpid.pidx,
+        mu->data.header.pid.get_app_id(),
+        mu->data.header.pid.get_partition_index(),
         mu->data.header.ballot,
         mu->data.header.decree);
 
@@ -250,18 +250,18 @@ void mutation::wait_log_task() const
     }
 }
 
-mutation_queue::mutation_queue(global_partition_id gpid, int max_concurrent_op /*= 2*/, bool batch_write_disabled /*= false*/)
+mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool batch_write_disabled /*= false*/)
     : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
     std::stringstream ss;
-    ss << gpid.app_id << "." << gpid.pidx << "." << "2pc#";
+    ss << gpid.get_app_id() << "." << gpid.get_partition_index() << "." << "2pc#";
 
     _current_op_counter.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
     _current_op_counter.set(0);
     
     _current_op_count = 0;
     _pending_mutation = nullptr;
-    dassert(gpid.app_id != 0, "invalid gpid");
+    dassert(gpid.get_app_id() != 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(
         RPC_PREPARE,
         gpid_to_hash(gpid)

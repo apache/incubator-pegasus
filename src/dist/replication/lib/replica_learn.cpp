@@ -173,7 +173,7 @@ void replica::init_learn(uint64_t signature)
     _potential_secondary_states.learning_round_is_running = true;
 
     learn_request request;
-    request.gpid = get_gpid();
+    request.pid = get_gpid();
     request.last_committed_decree_in_app = _app->last_committed_decree();
     request.last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request.learner = _stub->_primary_address;
@@ -857,7 +857,7 @@ void replica::handle_learning_succeeded_on_primary(
 void replica::notify_learn_completion()
 {
     group_check_response report;
-    report.gpid = get_gpid();
+    report.pid = get_gpid();
     report.err = ERR_OK;
     report.last_committed_decree_in_app = _app->last_committed_decree();
     report.last_committed_decree_in_prepare_list = last_committed_decree();

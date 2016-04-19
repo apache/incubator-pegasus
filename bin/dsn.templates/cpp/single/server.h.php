@@ -12,10 +12,10 @@ $_IDL_FORMAT = $argv[4];
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_service 
-    : public ::dsn::serverlet<<?=$svc->name?>_service>
+    : public ::dsn::serverlet< <?=$svc->name?>_service>
 {
 public:
-    <?=$svc->name?>_service() : ::dsn::serverlet<<?=$svc->name?>_service>("<?=$svc->name?>") {}
+    <?=$svc->name?>_service() : ::dsn::serverlet< <?=$svc->name?>_service>("<?=$svc->name?>") {}
     virtual ~<?=$svc->name?>_service() {}
 
 protected:
@@ -28,7 +28,7 @@ protected:
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
     }
 <?php     } else {?>
-    virtual void on_<?=$f->name?>(const <?=$f->get_cpp_request_type_name()?>& args, ::dsn::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
+    virtual void on_<?=$f->name?>(const <?=$f->get_cpp_request_type_name()?>& args, ::dsn::rpc_replier< <?=$f->get_cpp_return_type()?>>& reply)
     {
         std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
         <?=$f->get_cpp_return_type()?> resp;

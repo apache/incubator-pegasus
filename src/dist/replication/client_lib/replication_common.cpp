@@ -383,7 +383,7 @@ void replication_options::sanity_check()
 
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config)
 {
-    replica_config.gpid = partition_config.gpid;
+    replica_config.pid = partition_config.pid;
     replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
     replica_config.learner_signature = invalid_signature;

@@ -8,14 +8,16 @@ namespace dsn.example
     {
         public override ErrorCode Start(string[] args)
         {
-            _echoServer.OpenService();
+            _echoServer.OpenService(Gpid());
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
-            _echoServer.CloseService();
+            _echoServer.CloseService(Gpid());
             _echoServer.Dispose();
+
+            return ErrorCode.ERR_OK;
         }
 
         private echoServer _echoServer = new echoServer();
@@ -51,11 +53,13 @@ namespace dsn.example
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
             _timer.Cancel(true);
             _echoClient.Dispose();
             _echoClient = null;
+
+            return ErrorCode.ERR_OK;
         }
 
         private void OnTestTimer()

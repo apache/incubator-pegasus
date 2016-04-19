@@ -199,7 +199,7 @@ namespace dsn
                 {
                     binary_writer writer;
                     writer.write_pod(log_header());
-                    marshall(writer, static_cast<int>(op));
+                    writer.write(static_cast<int>(op));
                     write(writer, head, tail...);
                     auto shared_blob = writer.get_buffer();
                     reinterpret_cast<log_header*>((char*)shared_blob.data())->size = shared_blob.length() - sizeof(log_header);
@@ -207,12 +207,12 @@ namespace dsn
                 }
                 static void write(binary_writer& writer, const Head& head, const Tail&... tail)
                 {
-                    marshall(writer, head);
+                    marshall(writer, head, DSF_THRIFT_BINARY);
                     log_struct<op, Tail...>::write(writer, tail...);
                 }
                 static void parse(binary_reader& reader, Head&head, Tail&... tail)
                 {
-                    unmarshall(reader, head);
+                    unmarshall(reader, head, DSF_THRIFT_BINARY);
                     log_struct<op, Tail...>::parse(reader, tail...);
                 }
             };
@@ -220,11 +220,11 @@ namespace dsn
             struct log_struct<op, Head> {
                 static void write(binary_writer& writer, const Head& head)
                 {
-                    marshall(writer, head);
+                    marshall(writer, head, DSF_THRIFT_BINARY);
                 }
                 static void parse(binary_reader& reader, Head&head)
                 {
-                    unmarshall(reader, head);
+                    unmarshall(reader, head, DSF_THRIFT_BINARY);
                 }
             };
 

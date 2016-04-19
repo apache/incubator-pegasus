@@ -64,13 +64,23 @@ error_code replica::initialize_on_new()
         return ERR_FILE_OPERATION_FAILED;
     }
 
+    replica_app_info info((app_info*)&_app_info);
+    std::string path = utils::filesystem::path_combine(_dir, ".app-info");
+    auto err = info.store(path.c_str());
+    if (err != ERR_OK)
+    {
+        derror("save app-info to %s failed, err = %s", path.c_str(), err.to_string());
+        dsn::utils::filesystem::remove_path(_dir);
+        return err;
+    }
+
     return init_app_and_prepare_list(true);
 }
 
-/*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
+/*static*/ replica* replica::newr(replica_stub* stub, gpid gpid, const app_info& app)
 {
-    std::string dir = stub->get_replica_dir(app_type, gpid);
-    replica* rep = new replica(stub, gpid, app_type, dir.c_str());
+    std::string dir = stub->get_replica_dir(app.app_type.c_str(), gpid);
+    replica* rep = new replica(stub, gpid, app, dir.c_str());
     error_code err = rep->initialize_on_new();
     if (err == ERR_OK)
     {
@@ -113,15 +123,26 @@ error_code replica::initialize_on_load()
     }
 
     char app_type[128];
-    global_partition_id gpid;
-    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
+    gpid gpid;
+    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.raw().u.app_id, &gpid.raw().u.partition_index, app_type))
     {
         derror("invalid replica dir %s", dir);
         return nullptr;
     }
 
-    replica* rep = new replica(stub, gpid, app_type, dir);
-    error_code err = rep->initialize_on_load();
+    dsn::app_info info;
+    replica_app_info info2(&info);
+    std::string path = utils::filesystem::path_combine(dir, ".app-info");
+    auto err = info2.load(path.c_str());
+    if (ERR_OK != err)
+    {
+        derror("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
+        return nullptr;
+    }
+
+    replica* rep = new replica(stub, gpid, info, dir);
+    
+    err = rep->initialize_on_load();
     if (err == ERR_OK)
     {
         ddebug("%s: load replica @ %s succeed", dir, rep->name());

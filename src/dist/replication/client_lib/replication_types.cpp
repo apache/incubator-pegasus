@@ -22,12 +22,12 @@ int _kpartition_statusValues[] = {
   partition_status::PS_POTENTIAL_SECONDARY
 };
 const char* _kpartition_statusNames[] = {
-  "partition_status::PS_INVALID",
-  "partition_status::PS_INACTIVE",
-  "partition_status::PS_ERROR",
-  "partition_status::PS_PRIMARY",
-  "partition_status::PS_SECONDARY",
-  "partition_status::PS_POTENTIAL_SECONDARY"
+  "PS_INVALID",
+  "PS_INACTIVE",
+  "PS_ERROR",
+  "PS_PRIMARY",
+  "PS_SECONDARY",
+  "PS_POTENTIAL_SECONDARY"
 };
 const std::map<int, const char*> _partition_status_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(6, _kpartition_statusValues, _kpartition_statusNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
@@ -101,26 +101,6 @@ const char* _kconfig_typeNames[] = {
 };
 const std::map<int, const char*> _config_type_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(9, _kconfig_typeValues, _kconfig_typeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
-int _kapp_statusValues[] = {
-  app_status::AS_INVALID,
-  app_status::AS_AVAILABLE,
-  app_status::AS_CREATING,
-  app_status::AS_CREATE_FAILED,
-  app_status::AS_DROPPING,
-  app_status::AS_DROP_FAILED,
-  app_status::AS_DROPPED
-};
-const char* _kapp_statusNames[] = {
-  "AS_INVALID",
-  "AS_AVAILABLE",
-  "AS_CREATING",
-  "AS_CREATE_FAILED",
-  "AS_DROPPING",
-  "AS_DROP_FAILED",
-  "AS_DROPPED"
-};
-const std::map<int, const char*> _app_status_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(7, _kapp_statusValues, _kapp_statusNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
-
 int _knode_statusValues[] = {
   node_status::NS_INVALID,
   node_status::NS_ALIVE,
@@ -148,118 +128,12 @@ const char* _kbalancer_typeNames[] = {
 const std::map<int, const char*> _balancer_type_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(4, _kbalancer_typeValues, _kbalancer_typeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 
-global_partition_id::~global_partition_id() throw() {
-}
-
-
-void global_partition_id::__set_app_id(const int32_t val) {
-  this->app_id = val;
-}
-
-void global_partition_id::__set_pidx(const int32_t val) {
-  this->pidx = val;
-}
-
-uint32_t global_partition_id::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->app_id);
-          this->__isset.app_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->pidx);
-          this->__isset.pidx = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t global_partition_id::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("global_partition_id");
-
-  xfer += oprot->writeFieldBegin("app_id", ::apache::thrift::protocol::T_I32, 1);
-  xfer += oprot->writeI32(this->app_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("pidx", ::apache::thrift::protocol::T_I32, 2);
-  xfer += oprot->writeI32(this->pidx);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(global_partition_id &a, global_partition_id &b) {
-  using ::std::swap;
-  swap(a.app_id, b.app_id);
-  swap(a.pidx, b.pidx);
-  swap(a.__isset, b.__isset);
-}
-
-global_partition_id::global_partition_id(const global_partition_id& other0) {
-  app_id = other0.app_id;
-  pidx = other0.pidx;
-  __isset = other0.__isset;
-}
-global_partition_id& global_partition_id::operator=(const global_partition_id& other1) {
-  app_id = other1.app_id;
-  pidx = other1.pidx;
-  __isset = other1.__isset;
-  return *this;
-}
-void global_partition_id::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "global_partition_id(";
-  out << "app_id=" << to_string(app_id);
-  out << ", " << "pidx=" << to_string(pidx);
-  out << ")";
-}
-
-
 mutation_header::~mutation_header() throw() {
 }
 
 
-void mutation_header::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void mutation_header::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void mutation_header::__set_ballot(const int64_t val) {
@@ -301,8 +175,8 @@ uint32_t mutation_header::read(::apache::thrift::protocol::TProtocol* iprot) {
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -356,8 +230,8 @@ uint32_t mutation_header::write(::apache::thrift::protocol::TProtocol* oprot) co
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("mutation_header");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("ballot", ::apache::thrift::protocol::T_I64, 2);
@@ -383,7 +257,7 @@ uint32_t mutation_header::write(::apache::thrift::protocol::TProtocol* oprot) co
 
 void swap(mutation_header &a, mutation_header &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.ballot, b.ballot);
   swap(a.decree, b.decree);
   swap(a.log_offset, b.log_offset);
@@ -391,27 +265,27 @@ void swap(mutation_header &a, mutation_header &b) {
   swap(a.__isset, b.__isset);
 }
 
-mutation_header::mutation_header(const mutation_header& other2) {
-  gpid = other2.gpid;
-  ballot = other2.ballot;
-  decree = other2.decree;
-  log_offset = other2.log_offset;
-  last_committed_decree = other2.last_committed_decree;
-  __isset = other2.__isset;
+mutation_header::mutation_header(const mutation_header& other0) {
+  pid = other0.pid;
+  ballot = other0.ballot;
+  decree = other0.decree;
+  log_offset = other0.log_offset;
+  last_committed_decree = other0.last_committed_decree;
+  __isset = other0.__isset;
 }
-mutation_header& mutation_header::operator=(const mutation_header& other3) {
-  gpid = other3.gpid;
-  ballot = other3.ballot;
-  decree = other3.decree;
-  log_offset = other3.log_offset;
-  last_committed_decree = other3.last_committed_decree;
-  __isset = other3.__isset;
+mutation_header& mutation_header::operator=(const mutation_header& other1) {
+  pid = other1.pid;
+  ballot = other1.ballot;
+  decree = other1.decree;
+  log_offset = other1.log_offset;
+  last_committed_decree = other1.last_committed_decree;
+  __isset = other1.__isset;
   return *this;
 }
 void mutation_header::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "mutation_header(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "ballot=" << to_string(ballot);
   out << ", " << "decree=" << to_string(decree);
   out << ", " << "log_offset=" << to_string(log_offset);
@@ -506,15 +380,15 @@ void swap(mutation_update &a, mutation_update &b) {
   swap(a.__isset, b.__isset);
 }
 
-mutation_update::mutation_update(const mutation_update& other4) {
-  code = other4.code;
-  data = other4.data;
-  __isset = other4.__isset;
+mutation_update::mutation_update(const mutation_update& other2) {
+  code = other2.code;
+  data = other2.data;
+  __isset = other2.__isset;
 }
-mutation_update& mutation_update::operator=(const mutation_update& other5) {
-  code = other5.code;
-  data = other5.data;
-  __isset = other5.__isset;
+mutation_update& mutation_update::operator=(const mutation_update& other3) {
+  code = other3.code;
+  data = other3.data;
+  __isset = other3.__isset;
   return *this;
 }
 void mutation_update::printTo(std::ostream& out) const {
@@ -571,14 +445,14 @@ uint32_t mutation_data::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->updates.clear();
-            uint32_t _size6;
-            ::apache::thrift::protocol::TType _etype9;
-            xfer += iprot->readListBegin(_etype9, _size6);
-            this->updates.resize(_size6);
-            uint32_t _i10;
-            for (_i10 = 0; _i10 < _size6; ++_i10)
+            uint32_t _size4;
+            ::apache::thrift::protocol::TType _etype7;
+            xfer += iprot->readListBegin(_etype7, _size4);
+            this->updates.resize(_size4);
+            uint32_t _i8;
+            for (_i8 = 0; _i8 < _size4; ++_i8)
             {
-              xfer += this->updates[_i10].read(iprot);
+              xfer += this->updates[_i8].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -611,10 +485,10 @@ uint32_t mutation_data::write(::apache::thrift::protocol::TProtocol* oprot) cons
   xfer += oprot->writeFieldBegin("updates", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->updates.size()));
-    std::vector<mutation_update> ::const_iterator _iter11;
-    for (_iter11 = this->updates.begin(); _iter11 != this->updates.end(); ++_iter11)
+    std::vector<mutation_update> ::const_iterator _iter9;
+    for (_iter9 = this->updates.begin(); _iter9 != this->updates.end(); ++_iter9)
     {
-      xfer += (*_iter11).write(oprot);
+      xfer += (*_iter9).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -632,15 +506,15 @@ void swap(mutation_data &a, mutation_data &b) {
   swap(a.__isset, b.__isset);
 }
 
-mutation_data::mutation_data(const mutation_data& other12) {
-  header = other12.header;
-  updates = other12.updates;
-  __isset = other12.__isset;
+mutation_data::mutation_data(const mutation_data& other10) {
+  header = other10.header;
+  updates = other10.updates;
+  __isset = other10.__isset;
 }
-mutation_data& mutation_data::operator=(const mutation_data& other13) {
-  header = other13.header;
-  updates = other13.updates;
-  __isset = other13.__isset;
+mutation_data& mutation_data::operator=(const mutation_data& other11) {
+  header = other11.header;
+  updates = other11.updates;
+  __isset = other11.__isset;
   return *this;
 }
 void mutation_data::printTo(std::ostream& out) const {
@@ -652,298 +526,12 @@ void mutation_data::printTo(std::ostream& out) const {
 }
 
 
-partition_configuration::~partition_configuration() throw() {
-}
-
-
-void partition_configuration::__set_app_type(const std::string& val) {
-  this->app_type = val;
-}
-
-void partition_configuration::__set_package_id(const std::string& val) {
-  this->package_id = val;
-}
-
-void partition_configuration::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
-}
-
-void partition_configuration::__set_ballot(const int64_t val) {
-  this->ballot = val;
-}
-
-void partition_configuration::__set_max_replica_count(const int32_t val) {
-  this->max_replica_count = val;
-}
-
-void partition_configuration::__set_primary(const  ::dsn::rpc_address& val) {
-  this->primary = val;
-}
-
-void partition_configuration::__set_secondaries(const std::vector< ::dsn::rpc_address> & val) {
-  this->secondaries = val;
-}
-
-void partition_configuration::__set_last_drops(const std::vector< ::dsn::rpc_address> & val) {
-  this->last_drops = val;
-}
-
-void partition_configuration::__set_last_committed_decree(const int64_t val) {
-  this->last_committed_decree = val;
-}
-
-uint32_t partition_configuration::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->app_type);
-          this->__isset.app_type = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->package_id);
-          this->__isset.package_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 4:
-        if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->ballot);
-          this->__isset.ballot = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 5:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->max_replica_count);
-          this->__isset.max_replica_count = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 6:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->primary.read(iprot);
-          this->__isset.primary = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 7:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->secondaries.clear();
-            uint32_t _size14;
-            ::apache::thrift::protocol::TType _etype17;
-            xfer += iprot->readListBegin(_etype17, _size14);
-            this->secondaries.resize(_size14);
-            uint32_t _i18;
-            for (_i18 = 0; _i18 < _size14; ++_i18)
-            {
-              xfer += this->secondaries[_i18].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
-          this->__isset.secondaries = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 8:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->last_drops.clear();
-            uint32_t _size19;
-            ::apache::thrift::protocol::TType _etype22;
-            xfer += iprot->readListBegin(_etype22, _size19);
-            this->last_drops.resize(_size19);
-            uint32_t _i23;
-            for (_i23 = 0; _i23 < _size19; ++_i23)
-            {
-              xfer += this->last_drops[_i23].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
-          this->__isset.last_drops = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 9:
-        if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->last_committed_decree);
-          this->__isset.last_committed_decree = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t partition_configuration::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("partition_configuration");
-
-  xfer += oprot->writeFieldBegin("app_type", ::apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->app_type);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("package_id", ::apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->package_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 3);
-  xfer += this->gpid.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("ballot", ::apache::thrift::protocol::T_I64, 4);
-  xfer += oprot->writeI64(this->ballot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("max_replica_count", ::apache::thrift::protocol::T_I32, 5);
-  xfer += oprot->writeI32(this->max_replica_count);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("primary", ::apache::thrift::protocol::T_STRUCT, 6);
-  xfer += this->primary.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("secondaries", ::apache::thrift::protocol::T_LIST, 7);
-  {
-    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->secondaries.size()));
-    std::vector< ::dsn::rpc_address> ::const_iterator _iter24;
-    for (_iter24 = this->secondaries.begin(); _iter24 != this->secondaries.end(); ++_iter24)
-    {
-      xfer += (*_iter24).write(oprot);
-    }
-    xfer += oprot->writeListEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("last_drops", ::apache::thrift::protocol::T_LIST, 8);
-  {
-    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->last_drops.size()));
-    std::vector< ::dsn::rpc_address> ::const_iterator _iter25;
-    for (_iter25 = this->last_drops.begin(); _iter25 != this->last_drops.end(); ++_iter25)
-    {
-      xfer += (*_iter25).write(oprot);
-    }
-    xfer += oprot->writeListEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("last_committed_decree", ::apache::thrift::protocol::T_I64, 9);
-  xfer += oprot->writeI64(this->last_committed_decree);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(partition_configuration &a, partition_configuration &b) {
-  using ::std::swap;
-  swap(a.app_type, b.app_type);
-  swap(a.package_id, b.package_id);
-  swap(a.gpid, b.gpid);
-  swap(a.ballot, b.ballot);
-  swap(a.max_replica_count, b.max_replica_count);
-  swap(a.primary, b.primary);
-  swap(a.secondaries, b.secondaries);
-  swap(a.last_drops, b.last_drops);
-  swap(a.last_committed_decree, b.last_committed_decree);
-  swap(a.__isset, b.__isset);
-}
-
-partition_configuration::partition_configuration(const partition_configuration& other26) {
-  app_type = other26.app_type;
-  package_id = other26.package_id;
-  gpid = other26.gpid;
-  ballot = other26.ballot;
-  max_replica_count = other26.max_replica_count;
-  primary = other26.primary;
-  secondaries = other26.secondaries;
-  last_drops = other26.last_drops;
-  last_committed_decree = other26.last_committed_decree;
-  __isset = other26.__isset;
-}
-partition_configuration& partition_configuration::operator=(const partition_configuration& other27) {
-  app_type = other27.app_type;
-  package_id = other27.package_id;
-  gpid = other27.gpid;
-  ballot = other27.ballot;
-  max_replica_count = other27.max_replica_count;
-  primary = other27.primary;
-  secondaries = other27.secondaries;
-  last_drops = other27.last_drops;
-  last_committed_decree = other27.last_committed_decree;
-  __isset = other27.__isset;
-  return *this;
-}
-void partition_configuration::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "partition_configuration(";
-  out << "app_type=" << to_string(app_type);
-  out << ", " << "package_id=" << to_string(package_id);
-  out << ", " << "gpid=" << to_string(gpid);
-  out << ", " << "ballot=" << to_string(ballot);
-  out << ", " << "max_replica_count=" << to_string(max_replica_count);
-  out << ", " << "primary=" << to_string(primary);
-  out << ", " << "secondaries=" << to_string(secondaries);
-  out << ", " << "last_drops=" << to_string(last_drops);
-  out << ", " << "last_committed_decree=" << to_string(last_committed_decree);
-  out << ")";
-}
-
-
 replica_configuration::~replica_configuration() throw() {
 }
 
 
-void replica_configuration::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void replica_configuration::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void replica_configuration::__set_ballot(const int64_t val) {
@@ -985,8 +573,8 @@ uint32_t replica_configuration::read(::apache::thrift::protocol::TProtocol* ipro
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1009,9 +597,9 @@ uint32_t replica_configuration::read(::apache::thrift::protocol::TProtocol* ipro
         break;
       case 4:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast28;
-          xfer += iprot->readI32(ecast28);
-          this->status = (partition_status::type)ecast28;
+          int32_t ecast12;
+          xfer += iprot->readI32(ecast12);
+          this->status = (partition_status::type)ecast12;
           this->__isset.status = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1042,8 +630,8 @@ uint32_t replica_configuration::write(::apache::thrift::protocol::TProtocol* opr
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("replica_configuration");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("ballot", ::apache::thrift::protocol::T_I64, 2);
@@ -1069,7 +657,7 @@ uint32_t replica_configuration::write(::apache::thrift::protocol::TProtocol* opr
 
 void swap(replica_configuration &a, replica_configuration &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.ballot, b.ballot);
   swap(a.primary, b.primary);
   swap(a.status, b.status);
@@ -1077,27 +665,27 @@ void swap(replica_configuration &a, replica_configuration &b) {
   swap(a.__isset, b.__isset);
 }
 
-replica_configuration::replica_configuration(const replica_configuration& other29) {
-  gpid = other29.gpid;
-  ballot = other29.ballot;
-  primary = other29.primary;
-  status = other29.status;
-  learner_signature = other29.learner_signature;
-  __isset = other29.__isset;
+replica_configuration::replica_configuration(const replica_configuration& other13) {
+  pid = other13.pid;
+  ballot = other13.ballot;
+  primary = other13.primary;
+  status = other13.status;
+  learner_signature = other13.learner_signature;
+  __isset = other13.__isset;
 }
-replica_configuration& replica_configuration::operator=(const replica_configuration& other30) {
-  gpid = other30.gpid;
-  ballot = other30.ballot;
-  primary = other30.primary;
-  status = other30.status;
-  learner_signature = other30.learner_signature;
-  __isset = other30.__isset;
+replica_configuration& replica_configuration::operator=(const replica_configuration& other14) {
+  pid = other14.pid;
+  ballot = other14.ballot;
+  primary = other14.primary;
+  status = other14.status;
+  learner_signature = other14.learner_signature;
+  __isset = other14.__isset;
   return *this;
 }
 void replica_configuration::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "replica_configuration(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "ballot=" << to_string(ballot);
   out << ", " << "primary=" << to_string(primary);
   out << ", " << "status=" << to_string(status);
@@ -1192,15 +780,15 @@ void swap(prepare_msg &a, prepare_msg &b) {
   swap(a.__isset, b.__isset);
 }
 
-prepare_msg::prepare_msg(const prepare_msg& other31) {
-  config = other31.config;
-  mu = other31.mu;
-  __isset = other31.__isset;
+prepare_msg::prepare_msg(const prepare_msg& other15) {
+  config = other15.config;
+  mu = other15.mu;
+  __isset = other15.__isset;
 }
-prepare_msg& prepare_msg::operator=(const prepare_msg& other32) {
-  config = other32.config;
-  mu = other32.mu;
-  __isset = other32.__isset;
+prepare_msg& prepare_msg::operator=(const prepare_msg& other16) {
+  config = other16.config;
+  mu = other16.mu;
+  __isset = other16.__isset;
   return *this;
 }
 void prepare_msg::printTo(std::ostream& out) const {
@@ -1216,8 +804,8 @@ read_request_header::~read_request_header() throw() {
 }
 
 
-void read_request_header::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void read_request_header::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void read_request_header::__set_code(const  ::dsn::task_code& val) {
@@ -1255,8 +843,8 @@ uint32_t read_request_header::read(::apache::thrift::protocol::TProtocol* iprot)
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1271,9 +859,9 @@ uint32_t read_request_header::read(::apache::thrift::protocol::TProtocol* iprot)
         break;
       case 3:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast33;
-          xfer += iprot->readI32(ecast33);
-          this->semantic = (read_semantic::type)ecast33;
+          int32_t ecast17;
+          xfer += iprot->readI32(ecast17);
+          this->semantic = (read_semantic::type)ecast17;
           this->__isset.semantic = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1304,8 +892,8 @@ uint32_t read_request_header::write(::apache::thrift::protocol::TProtocol* oprot
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("read_request_header");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -1327,32 +915,32 @@ uint32_t read_request_header::write(::apache::thrift::protocol::TProtocol* oprot
 
 void swap(read_request_header &a, read_request_header &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.code, b.code);
   swap(a.semantic, b.semantic);
   swap(a.version_decree, b.version_decree);
   swap(a.__isset, b.__isset);
 }
 
-read_request_header::read_request_header(const read_request_header& other34) {
-  gpid = other34.gpid;
-  code = other34.code;
-  semantic = other34.semantic;
-  version_decree = other34.version_decree;
-  __isset = other34.__isset;
+read_request_header::read_request_header(const read_request_header& other18) {
+  pid = other18.pid;
+  code = other18.code;
+  semantic = other18.semantic;
+  version_decree = other18.version_decree;
+  __isset = other18.__isset;
 }
-read_request_header& read_request_header::operator=(const read_request_header& other35) {
-  gpid = other35.gpid;
-  code = other35.code;
-  semantic = other35.semantic;
-  version_decree = other35.version_decree;
-  __isset = other35.__isset;
+read_request_header& read_request_header::operator=(const read_request_header& other19) {
+  pid = other19.pid;
+  code = other19.code;
+  semantic = other19.semantic;
+  version_decree = other19.version_decree;
+  __isset = other19.__isset;
   return *this;
 }
 void read_request_header::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "read_request_header(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "code=" << to_string(code);
   out << ", " << "semantic=" << to_string(semantic);
   out << ", " << "version_decree=" << to_string(version_decree);
@@ -1364,8 +952,8 @@ write_request_header::~write_request_header() throw() {
 }
 
 
-void write_request_header::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void write_request_header::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void write_request_header::__set_code(const  ::dsn::task_code& val) {
@@ -1395,8 +983,8 @@ uint32_t write_request_header::read(::apache::thrift::protocol::TProtocol* iprot
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1426,8 +1014,8 @@ uint32_t write_request_header::write(::apache::thrift::protocol::TProtocol* opro
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("write_request_header");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -1441,26 +1029,26 @@ uint32_t write_request_header::write(::apache::thrift::protocol::TProtocol* opro
 
 void swap(write_request_header &a, write_request_header &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.code, b.code);
   swap(a.__isset, b.__isset);
 }
 
-write_request_header::write_request_header(const write_request_header& other36) {
-  gpid = other36.gpid;
-  code = other36.code;
-  __isset = other36.__isset;
+write_request_header::write_request_header(const write_request_header& other20) {
+  pid = other20.pid;
+  code = other20.code;
+  __isset = other20.__isset;
 }
-write_request_header& write_request_header::operator=(const write_request_header& other37) {
-  gpid = other37.gpid;
-  code = other37.code;
-  __isset = other37.__isset;
+write_request_header& write_request_header::operator=(const write_request_header& other21) {
+  pid = other21.pid;
+  code = other21.code;
+  __isset = other21.__isset;
   return *this;
 }
 void write_request_header::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "write_request_header(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "code=" << to_string(code);
   out << ")";
 }
@@ -1535,13 +1123,13 @@ void swap(rw_response_header &a, rw_response_header &b) {
   swap(a.__isset, b.__isset);
 }
 
-rw_response_header::rw_response_header(const rw_response_header& other38) {
-  err = other38.err;
-  __isset = other38.__isset;
+rw_response_header::rw_response_header(const rw_response_header& other22) {
+  err = other22.err;
+  __isset = other22.__isset;
 }
-rw_response_header& rw_response_header::operator=(const rw_response_header& other39) {
-  err = other39.err;
-  __isset = other39.__isset;
+rw_response_header& rw_response_header::operator=(const rw_response_header& other23) {
+  err = other23.err;
+  __isset = other23.__isset;
   return *this;
 }
 void rw_response_header::printTo(std::ostream& out) const {
@@ -1556,8 +1144,8 @@ prepare_ack::~prepare_ack() throw() {
 }
 
 
-void prepare_ack::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void prepare_ack::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void prepare_ack::__set_err(const  ::dsn::error_code& val) {
@@ -1603,8 +1191,8 @@ uint32_t prepare_ack::read(::apache::thrift::protocol::TProtocol* iprot) {
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1666,8 +1254,8 @@ uint32_t prepare_ack::write(::apache::thrift::protocol::TProtocol* oprot) const 
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("prepare_ack");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -1697,7 +1285,7 @@ uint32_t prepare_ack::write(::apache::thrift::protocol::TProtocol* oprot) const 
 
 void swap(prepare_ack &a, prepare_ack &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.err, b.err);
   swap(a.ballot, b.ballot);
   swap(a.decree, b.decree);
@@ -1706,29 +1294,29 @@ void swap(prepare_ack &a, prepare_ack &b) {
   swap(a.__isset, b.__isset);
 }
 
-prepare_ack::prepare_ack(const prepare_ack& other40) {
-  gpid = other40.gpid;
-  err = other40.err;
-  ballot = other40.ballot;
-  decree = other40.decree;
-  last_committed_decree_in_app = other40.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other40.last_committed_decree_in_prepare_list;
-  __isset = other40.__isset;
+prepare_ack::prepare_ack(const prepare_ack& other24) {
+  pid = other24.pid;
+  err = other24.err;
+  ballot = other24.ballot;
+  decree = other24.decree;
+  last_committed_decree_in_app = other24.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other24.last_committed_decree_in_prepare_list;
+  __isset = other24.__isset;
 }
-prepare_ack& prepare_ack::operator=(const prepare_ack& other41) {
-  gpid = other41.gpid;
-  err = other41.err;
-  ballot = other41.ballot;
-  decree = other41.decree;
-  last_committed_decree_in_app = other41.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other41.last_committed_decree_in_prepare_list;
-  __isset = other41.__isset;
+prepare_ack& prepare_ack::operator=(const prepare_ack& other25) {
+  pid = other25.pid;
+  err = other25.err;
+  ballot = other25.ballot;
+  decree = other25.decree;
+  last_committed_decree_in_app = other25.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other25.last_committed_decree_in_prepare_list;
+  __isset = other25.__isset;
   return *this;
 }
 void prepare_ack::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "prepare_ack(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "err=" << to_string(err);
   out << ", " << "ballot=" << to_string(ballot);
   out << ", " << "decree=" << to_string(decree);
@@ -1807,14 +1395,14 @@ uint32_t learn_state::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->files.clear();
-            uint32_t _size42;
-            ::apache::thrift::protocol::TType _etype45;
-            xfer += iprot->readListBegin(_etype45, _size42);
-            this->files.resize(_size42);
-            uint32_t _i46;
-            for (_i46 = 0; _i46 < _size42; ++_i46)
+            uint32_t _size26;
+            ::apache::thrift::protocol::TType _etype29;
+            xfer += iprot->readListBegin(_etype29, _size26);
+            this->files.resize(_size26);
+            uint32_t _i30;
+            for (_i30 = 0; _i30 < _size26; ++_i30)
             {
-              xfer += iprot->readString(this->files[_i46]);
+              xfer += iprot->readString(this->files[_i30]);
             }
             xfer += iprot->readListEnd();
           }
@@ -1855,10 +1443,10 @@ uint32_t learn_state::write(::apache::thrift::protocol::TProtocol* oprot) const 
   xfer += oprot->writeFieldBegin("files", ::apache::thrift::protocol::T_LIST, 4);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->files.size()));
-    std::vector<std::string> ::const_iterator _iter47;
-    for (_iter47 = this->files.begin(); _iter47 != this->files.end(); ++_iter47)
+    std::vector<std::string> ::const_iterator _iter31;
+    for (_iter31 = this->files.begin(); _iter31 != this->files.end(); ++_iter31)
     {
-      xfer += oprot->writeString((*_iter47));
+      xfer += oprot->writeString((*_iter31));
     }
     xfer += oprot->writeListEnd();
   }
@@ -1878,19 +1466,19 @@ void swap(learn_state &a, learn_state &b) {
   swap(a.__isset, b.__isset);
 }
 
-learn_state::learn_state(const learn_state& other48) {
-  from_decree_excluded = other48.from_decree_excluded;
-  to_decree_included = other48.to_decree_included;
-  meta = other48.meta;
-  files = other48.files;
-  __isset = other48.__isset;
+learn_state::learn_state(const learn_state& other32) {
+  from_decree_excluded = other32.from_decree_excluded;
+  to_decree_included = other32.to_decree_included;
+  meta = other32.meta;
+  files = other32.files;
+  __isset = other32.__isset;
 }
-learn_state& learn_state::operator=(const learn_state& other49) {
-  from_decree_excluded = other49.from_decree_excluded;
-  to_decree_included = other49.to_decree_included;
-  meta = other49.meta;
-  files = other49.files;
-  __isset = other49.__isset;
+learn_state& learn_state::operator=(const learn_state& other33) {
+  from_decree_excluded = other33.from_decree_excluded;
+  to_decree_included = other33.to_decree_included;
+  meta = other33.meta;
+  files = other33.files;
+  __isset = other33.__isset;
   return *this;
 }
 void learn_state::printTo(std::ostream& out) const {
@@ -1908,8 +1496,8 @@ learn_request::~learn_request() throw() {
 }
 
 
-void learn_request::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void learn_request::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void learn_request::__set_learner(const  ::dsn::rpc_address& val) {
@@ -1955,8 +1543,8 @@ uint32_t learn_request::read(::apache::thrift::protocol::TProtocol* iprot) {
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -2018,8 +1606,8 @@ uint32_t learn_request::write(::apache::thrift::protocol::TProtocol* oprot) cons
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("learn_request");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("learner", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -2049,7 +1637,7 @@ uint32_t learn_request::write(::apache::thrift::protocol::TProtocol* oprot) cons
 
 void swap(learn_request &a, learn_request &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.learner, b.learner);
   swap(a.signature, b.signature);
   swap(a.last_committed_decree_in_app, b.last_committed_decree_in_app);
@@ -2058,29 +1646,29 @@ void swap(learn_request &a, learn_request &b) {
   swap(a.__isset, b.__isset);
 }
 
-learn_request::learn_request(const learn_request& other50) {
-  gpid = other50.gpid;
-  learner = other50.learner;
-  signature = other50.signature;
-  last_committed_decree_in_app = other50.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other50.last_committed_decree_in_prepare_list;
-  app_specific_learn_request = other50.app_specific_learn_request;
-  __isset = other50.__isset;
+learn_request::learn_request(const learn_request& other34) {
+  pid = other34.pid;
+  learner = other34.learner;
+  signature = other34.signature;
+  last_committed_decree_in_app = other34.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other34.last_committed_decree_in_prepare_list;
+  app_specific_learn_request = other34.app_specific_learn_request;
+  __isset = other34.__isset;
 }
-learn_request& learn_request::operator=(const learn_request& other51) {
-  gpid = other51.gpid;
-  learner = other51.learner;
-  signature = other51.signature;
-  last_committed_decree_in_app = other51.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other51.last_committed_decree_in_prepare_list;
-  app_specific_learn_request = other51.app_specific_learn_request;
-  __isset = other51.__isset;
+learn_request& learn_request::operator=(const learn_request& other35) {
+  pid = other35.pid;
+  learner = other35.learner;
+  signature = other35.signature;
+  last_committed_decree_in_app = other35.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other35.last_committed_decree_in_prepare_list;
+  app_specific_learn_request = other35.app_specific_learn_request;
+  __isset = other35.__isset;
   return *this;
 }
 void learn_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "learn_request(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "learner=" << to_string(learner);
   out << ", " << "signature=" << to_string(signature);
   out << ", " << "last_committed_decree_in_app=" << to_string(last_committed_decree_in_app);
@@ -2181,9 +1769,9 @@ uint32_t learn_response::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 5:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast52;
-          xfer += iprot->readI32(ecast52);
-          this->type = (learn_type::type)ecast52;
+          int32_t ecast36;
+          xfer += iprot->readI32(ecast36);
+          this->type = (learn_type::type)ecast36;
           this->__isset.type = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -2280,27 +1868,27 @@ void swap(learn_response &a, learn_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-learn_response::learn_response(const learn_response& other53) {
-  err = other53.err;
-  config = other53.config;
-  last_committed_decree = other53.last_committed_decree;
-  prepare_start_decree = other53.prepare_start_decree;
-  type = other53.type;
-  state = other53.state;
-  address = other53.address;
-  base_local_dir = other53.base_local_dir;
-  __isset = other53.__isset;
+learn_response::learn_response(const learn_response& other37) {
+  err = other37.err;
+  config = other37.config;
+  last_committed_decree = other37.last_committed_decree;
+  prepare_start_decree = other37.prepare_start_decree;
+  type = other37.type;
+  state = other37.state;
+  address = other37.address;
+  base_local_dir = other37.base_local_dir;
+  __isset = other37.__isset;
 }
-learn_response& learn_response::operator=(const learn_response& other54) {
-  err = other54.err;
-  config = other54.config;
-  last_committed_decree = other54.last_committed_decree;
-  prepare_start_decree = other54.prepare_start_decree;
-  type = other54.type;
-  state = other54.state;
-  address = other54.address;
-  base_local_dir = other54.base_local_dir;
-  __isset = other54.__isset;
+learn_response& learn_response::operator=(const learn_response& other38) {
+  err = other38.err;
+  config = other38.config;
+  last_committed_decree = other38.last_committed_decree;
+  prepare_start_decree = other38.prepare_start_decree;
+  type = other38.type;
+  state = other38.state;
+  address = other38.address;
+  base_local_dir = other38.base_local_dir;
+  __isset = other38.__isset;
   return *this;
 }
 void learn_response::printTo(std::ostream& out) const {
@@ -2322,8 +1910,8 @@ group_check_request::~group_check_request() throw() {
 }
 
 
-void group_check_request::__set_app_type(const std::string& val) {
-  this->app_type = val;
+void group_check_request::__set_app(const  ::dsn::app_info& val) {
+  this->app = val;
 }
 
 void group_check_request::__set_node(const  ::dsn::rpc_address& val) {
@@ -2360,9 +1948,9 @@ uint32_t group_check_request::read(::apache::thrift::protocol::TProtocol* iprot)
     switch (fid)
     {
       case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->app_type);
-          this->__isset.app_type = true;
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->app.read(iprot);
+          this->__isset.app = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -2408,8 +1996,8 @@ uint32_t group_check_request::write(::apache::thrift::protocol::TProtocol* oprot
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("group_check_request");
 
-  xfer += oprot->writeFieldBegin("app_type", ::apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->app_type);
+  xfer += oprot->writeFieldBegin("app", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->app.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -2431,32 +2019,32 @@ uint32_t group_check_request::write(::apache::thrift::protocol::TProtocol* oprot
 
 void swap(group_check_request &a, group_check_request &b) {
   using ::std::swap;
-  swap(a.app_type, b.app_type);
+  swap(a.app, b.app);
   swap(a.node, b.node);
   swap(a.config, b.config);
   swap(a.last_committed_decree, b.last_committed_decree);
   swap(a.__isset, b.__isset);
 }
 
-group_check_request::group_check_request(const group_check_request& other55) {
-  app_type = other55.app_type;
-  node = other55.node;
-  config = other55.config;
-  last_committed_decree = other55.last_committed_decree;
-  __isset = other55.__isset;
+group_check_request::group_check_request(const group_check_request& other39) {
+  app = other39.app;
+  node = other39.node;
+  config = other39.config;
+  last_committed_decree = other39.last_committed_decree;
+  __isset = other39.__isset;
 }
-group_check_request& group_check_request::operator=(const group_check_request& other56) {
-  app_type = other56.app_type;
-  node = other56.node;
-  config = other56.config;
-  last_committed_decree = other56.last_committed_decree;
-  __isset = other56.__isset;
+group_check_request& group_check_request::operator=(const group_check_request& other40) {
+  app = other40.app;
+  node = other40.node;
+  config = other40.config;
+  last_committed_decree = other40.last_committed_decree;
+  __isset = other40.__isset;
   return *this;
 }
 void group_check_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "group_check_request(";
-  out << "app_type=" << to_string(app_type);
+  out << "app=" << to_string(app);
   out << ", " << "node=" << to_string(node);
   out << ", " << "config=" << to_string(config);
   out << ", " << "last_committed_decree=" << to_string(last_committed_decree);
@@ -2468,8 +2056,8 @@ group_check_response::~group_check_response() throw() {
 }
 
 
-void group_check_response::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void group_check_response::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void group_check_response::__set_err(const  ::dsn::error_code& val) {
@@ -2519,8 +2107,8 @@ uint32_t group_check_response::read(::apache::thrift::protocol::TProtocol* iprot
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -2551,9 +2139,9 @@ uint32_t group_check_response::read(::apache::thrift::protocol::TProtocol* iprot
         break;
       case 5:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast57;
-          xfer += iprot->readI32(ecast57);
-          this->learner_status_ = (learner_status::type)ecast57;
+          int32_t ecast41;
+          xfer += iprot->readI32(ecast41);
+          this->learner_status_ = (learner_status::type)ecast41;
           this->__isset.learner_status_ = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -2592,8 +2180,8 @@ uint32_t group_check_response::write(::apache::thrift::protocol::TProtocol* opro
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("group_check_response");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -2627,7 +2215,7 @@ uint32_t group_check_response::write(::apache::thrift::protocol::TProtocol* opro
 
 void swap(group_check_response &a, group_check_response &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.err, b.err);
   swap(a.last_committed_decree_in_app, b.last_committed_decree_in_app);
   swap(a.last_committed_decree_in_prepare_list, b.last_committed_decree_in_prepare_list);
@@ -2637,245 +2225,37 @@ void swap(group_check_response &a, group_check_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-group_check_response::group_check_response(const group_check_response& other58) {
-  gpid = other58.gpid;
-  err = other58.err;
-  last_committed_decree_in_app = other58.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other58.last_committed_decree_in_prepare_list;
-  learner_status_ = other58.learner_status_;
-  learner_signature = other58.learner_signature;
-  node = other58.node;
-  __isset = other58.__isset;
+group_check_response::group_check_response(const group_check_response& other42) {
+  pid = other42.pid;
+  err = other42.err;
+  last_committed_decree_in_app = other42.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other42.last_committed_decree_in_prepare_list;
+  learner_status_ = other42.learner_status_;
+  learner_signature = other42.learner_signature;
+  node = other42.node;
+  __isset = other42.__isset;
 }
-group_check_response& group_check_response::operator=(const group_check_response& other59) {
-  gpid = other59.gpid;
-  err = other59.err;
-  last_committed_decree_in_app = other59.last_committed_decree_in_app;
-  last_committed_decree_in_prepare_list = other59.last_committed_decree_in_prepare_list;
-  learner_status_ = other59.learner_status_;
-  learner_signature = other59.learner_signature;
-  node = other59.node;
-  __isset = other59.__isset;
+group_check_response& group_check_response::operator=(const group_check_response& other43) {
+  pid = other43.pid;
+  err = other43.err;
+  last_committed_decree_in_app = other43.last_committed_decree_in_app;
+  last_committed_decree_in_prepare_list = other43.last_committed_decree_in_prepare_list;
+  learner_status_ = other43.learner_status_;
+  learner_signature = other43.learner_signature;
+  node = other43.node;
+  __isset = other43.__isset;
   return *this;
 }
 void group_check_response::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "group_check_response(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "err=" << to_string(err);
   out << ", " << "last_committed_decree_in_app=" << to_string(last_committed_decree_in_app);
   out << ", " << "last_committed_decree_in_prepare_list=" << to_string(last_committed_decree_in_prepare_list);
   out << ", " << "learner_status_=" << to_string(learner_status_);
   out << ", " << "learner_signature=" << to_string(learner_signature);
   out << ", " << "node=" << to_string(node);
-  out << ")";
-}
-
-
-app_info::~app_info() throw() {
-}
-
-
-void app_info::__set_status(const app_status::type val) {
-  this->status = val;
-}
-
-void app_info::__set_app_type(const std::string& val) {
-  this->app_type = val;
-}
-
-void app_info::__set_app_name(const std::string& val) {
-  this->app_name = val;
-}
-
-void app_info::__set_app_id(const int32_t val) {
-  this->app_id = val;
-}
-
-void app_info::__set_partition_count(const int32_t val) {
-  this->partition_count = val;
-}
-
-void app_info::__set_package_id(const std::string& val) {
-  this->package_id = val;
-}
-
-void app_info::__set_is_stateful(const bool val) {
-  this->is_stateful = val;
-}
-
-uint32_t app_info::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast60;
-          xfer += iprot->readI32(ecast60);
-          this->status = (app_status::type)ecast60;
-          this->__isset.status = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->app_type);
-          this->__isset.app_type = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->app_name);
-          this->__isset.app_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 4:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->app_id);
-          this->__isset.app_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 5:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->partition_count);
-          this->__isset.partition_count = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 6:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->package_id);
-          this->__isset.package_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 7:
-        if (ftype == ::apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->is_stateful);
-          this->__isset.is_stateful = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t app_info::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("app_info");
-
-  xfer += oprot->writeFieldBegin("status", ::apache::thrift::protocol::T_I32, 1);
-  xfer += oprot->writeI32((int32_t)this->status);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("app_type", ::apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->app_type);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 3);
-  xfer += oprot->writeString(this->app_name);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("app_id", ::apache::thrift::protocol::T_I32, 4);
-  xfer += oprot->writeI32(this->app_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partition_count", ::apache::thrift::protocol::T_I32, 5);
-  xfer += oprot->writeI32(this->partition_count);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("package_id", ::apache::thrift::protocol::T_STRING, 6);
-  xfer += oprot->writeString(this->package_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("is_stateful", ::apache::thrift::protocol::T_BOOL, 7);
-  xfer += oprot->writeBool(this->is_stateful);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(app_info &a, app_info &b) {
-  using ::std::swap;
-  swap(a.status, b.status);
-  swap(a.app_type, b.app_type);
-  swap(a.app_name, b.app_name);
-  swap(a.app_id, b.app_id);
-  swap(a.partition_count, b.partition_count);
-  swap(a.package_id, b.package_id);
-  swap(a.is_stateful, b.is_stateful);
-  swap(a.__isset, b.__isset);
-}
-
-app_info::app_info(const app_info& other61) {
-  status = other61.status;
-  app_type = other61.app_type;
-  app_name = other61.app_name;
-  app_id = other61.app_id;
-  partition_count = other61.partition_count;
-  package_id = other61.package_id;
-  is_stateful = other61.is_stateful;
-  __isset = other61.__isset;
-}
-app_info& app_info::operator=(const app_info& other62) {
-  status = other62.status;
-  app_type = other62.app_type;
-  app_name = other62.app_name;
-  app_id = other62.app_id;
-  partition_count = other62.partition_count;
-  package_id = other62.package_id;
-  is_stateful = other62.is_stateful;
-  __isset = other62.__isset;
-  return *this;
-}
-void app_info::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "app_info(";
-  out << "status=" << to_string(status);
-  out << ", " << "app_type=" << to_string(app_type);
-  out << ", " << "app_name=" << to_string(app_name);
-  out << ", " << "app_id=" << to_string(app_id);
-  out << ", " << "partition_count=" << to_string(partition_count);
-  out << ", " << "package_id=" << to_string(package_id);
-  out << ", " << "is_stateful=" << to_string(is_stateful);
   out << ")";
 }
 
@@ -2915,9 +2295,9 @@ uint32_t node_info::read(::apache::thrift::protocol::TProtocol* iprot) {
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast63;
-          xfer += iprot->readI32(ecast63);
-          this->status = (node_status::type)ecast63;
+          int32_t ecast44;
+          xfer += iprot->readI32(ecast44);
+          this->status = (node_status::type)ecast44;
           this->__isset.status = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -2968,15 +2348,15 @@ void swap(node_info &a, node_info &b) {
   swap(a.__isset, b.__isset);
 }
 
-node_info::node_info(const node_info& other64) {
-  status = other64.status;
-  address = other64.address;
-  __isset = other64.__isset;
+node_info::node_info(const node_info& other45) {
+  status = other45.status;
+  address = other45.address;
+  __isset = other45.__isset;
 }
-node_info& node_info::operator=(const node_info& other65) {
-  status = other65.status;
-  address = other65.address;
-  __isset = other65.__isset;
+node_info& node_info::operator=(const node_info& other46) {
+  status = other46.status;
+  address = other46.address;
+  __isset = other46.__isset;
   return *this;
 }
 void node_info::printTo(std::ostream& out) const {
@@ -3074,15 +2454,15 @@ void swap(meta_response_header &a, meta_response_header &b) {
   swap(a.__isset, b.__isset);
 }
 
-meta_response_header::meta_response_header(const meta_response_header& other66) {
-  err = other66.err;
-  primary_address = other66.primary_address;
-  __isset = other66.__isset;
+meta_response_header::meta_response_header(const meta_response_header& other47) {
+  err = other47.err;
+  primary_address = other47.primary_address;
+  __isset = other47.__isset;
 }
-meta_response_header& meta_response_header::operator=(const meta_response_header& other67) {
-  err = other67.err;
-  primary_address = other67.primary_address;
-  __isset = other67.__isset;
+meta_response_header& meta_response_header::operator=(const meta_response_header& other48) {
+  err = other48.err;
+  primary_address = other48.primary_address;
+  __isset = other48.__isset;
   return *this;
 }
 void meta_response_header::printTo(std::ostream& out) const {
@@ -3098,7 +2478,11 @@ configuration_update_request::~configuration_update_request() throw() {
 }
 
 
-void configuration_update_request::__set_config(const partition_configuration& val) {
+void configuration_update_request::__set_info(const  ::dsn::app_info& val) {
+  this->info = val;
+}
+
+void configuration_update_request::__set_config(const  ::dsn::partition_configuration& val) {
   this->config = val;
 }
 
@@ -3112,10 +2496,6 @@ void configuration_update_request::__set_node(const  ::dsn::rpc_address& val) {
 
 void configuration_update_request::__set_host_node(const  ::dsn::rpc_address& val) {
   this->host_node = val;
-}
-
-void configuration_update_request::__set_is_stateful(const bool val) {
-  this->is_stateful = val;
 }
 
 uint32_t configuration_update_request::read(::apache::thrift::protocol::TProtocol* iprot) {
@@ -3141,23 +2521,31 @@ uint32_t configuration_update_request::read(::apache::thrift::protocol::TProtoco
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->info.read(iprot);
+          this->__isset.info = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->config.read(iprot);
           this->__isset.config = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 2:
+      case 3:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast68;
-          xfer += iprot->readI32(ecast68);
-          this->type = (config_type::type)ecast68;
+          int32_t ecast49;
+          xfer += iprot->readI32(ecast49);
+          this->type = (config_type::type)ecast49;
           this->__isset.type = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 3:
+      case 4:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->node.read(iprot);
           this->__isset.node = true;
@@ -3165,18 +2553,10 @@ uint32_t configuration_update_request::read(::apache::thrift::protocol::TProtoco
           xfer += iprot->skip(ftype);
         }
         break;
-      case 4:
+      case 5:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->host_node.read(iprot);
           this->__isset.host_node = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 5:
-        if (ftype == ::apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->is_stateful);
-          this->__isset.is_stateful = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -3198,24 +2578,24 @@ uint32_t configuration_update_request::write(::apache::thrift::protocol::TProtoc
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("configuration_update_request");
 
-  xfer += oprot->writeFieldBegin("config", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += oprot->writeFieldBegin("info", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->info.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("config", ::apache::thrift::protocol::T_STRUCT, 2);
   xfer += this->config.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("type", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeFieldBegin("type", ::apache::thrift::protocol::T_I32, 3);
   xfer += oprot->writeI32((int32_t)this->type);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 4);
   xfer += this->node.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("host_node", ::apache::thrift::protocol::T_STRUCT, 4);
+  xfer += oprot->writeFieldBegin("host_node", ::apache::thrift::protocol::T_STRUCT, 5);
   xfer += this->host_node.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("is_stateful", ::apache::thrift::protocol::T_BOOL, 5);
-  xfer += oprot->writeBool(this->is_stateful);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -3225,39 +2605,39 @@ uint32_t configuration_update_request::write(::apache::thrift::protocol::TProtoc
 
 void swap(configuration_update_request &a, configuration_update_request &b) {
   using ::std::swap;
+  swap(a.info, b.info);
   swap(a.config, b.config);
   swap(a.type, b.type);
   swap(a.node, b.node);
   swap(a.host_node, b.host_node);
-  swap(a.is_stateful, b.is_stateful);
   swap(a.__isset, b.__isset);
 }
 
-configuration_update_request::configuration_update_request(const configuration_update_request& other69) {
-  config = other69.config;
-  type = other69.type;
-  node = other69.node;
-  host_node = other69.host_node;
-  is_stateful = other69.is_stateful;
-  __isset = other69.__isset;
+configuration_update_request::configuration_update_request(const configuration_update_request& other50) {
+  info = other50.info;
+  config = other50.config;
+  type = other50.type;
+  node = other50.node;
+  host_node = other50.host_node;
+  __isset = other50.__isset;
 }
-configuration_update_request& configuration_update_request::operator=(const configuration_update_request& other70) {
-  config = other70.config;
-  type = other70.type;
-  node = other70.node;
-  host_node = other70.host_node;
-  is_stateful = other70.is_stateful;
-  __isset = other70.__isset;
+configuration_update_request& configuration_update_request::operator=(const configuration_update_request& other51) {
+  info = other51.info;
+  config = other51.config;
+  type = other51.type;
+  node = other51.node;
+  host_node = other51.host_node;
+  __isset = other51.__isset;
   return *this;
 }
 void configuration_update_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "configuration_update_request(";
-  out << "config=" << to_string(config);
+  out << "info=" << to_string(info);
+  out << ", " << "config=" << to_string(config);
   out << ", " << "type=" << to_string(type);
   out << ", " << "node=" << to_string(node);
   out << ", " << "host_node=" << to_string(host_node);
-  out << ", " << "is_stateful=" << to_string(is_stateful);
   out << ")";
 }
 
@@ -3270,7 +2650,7 @@ void configuration_update_response::__set_err(const  ::dsn::error_code& val) {
   this->err = val;
 }
 
-void configuration_update_response::__set_config(const partition_configuration& val) {
+void configuration_update_response::__set_config(const  ::dsn::partition_configuration& val) {
   this->config = val;
 }
 
@@ -3348,15 +2728,15 @@ void swap(configuration_update_response &a, configuration_update_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-configuration_update_response::configuration_update_response(const configuration_update_response& other71) {
-  err = other71.err;
-  config = other71.config;
-  __isset = other71.__isset;
+configuration_update_response::configuration_update_response(const configuration_update_response& other52) {
+  err = other52.err;
+  config = other52.config;
+  __isset = other52.__isset;
 }
-configuration_update_response& configuration_update_response::operator=(const configuration_update_response& other72) {
-  err = other72.err;
-  config = other72.config;
-  __isset = other72.__isset;
+configuration_update_response& configuration_update_response::operator=(const configuration_update_response& other53) {
+  err = other53.err;
+  config = other53.config;
+  __isset = other53.__isset;
   return *this;
 }
 void configuration_update_response::printTo(std::ostream& out) const {
@@ -3437,19 +2817,145 @@ void swap(configuration_query_by_node_request &a, configuration_query_by_node_re
   swap(a.__isset, b.__isset);
 }
 
-configuration_query_by_node_request::configuration_query_by_node_request(const configuration_query_by_node_request& other73) {
-  node = other73.node;
-  __isset = other73.__isset;
+configuration_query_by_node_request::configuration_query_by_node_request(const configuration_query_by_node_request& other54) {
+  node = other54.node;
+  __isset = other54.__isset;
 }
-configuration_query_by_node_request& configuration_query_by_node_request::operator=(const configuration_query_by_node_request& other74) {
-  node = other74.node;
-  __isset = other74.__isset;
+configuration_query_by_node_request& configuration_query_by_node_request::operator=(const configuration_query_by_node_request& other55) {
+  node = other55.node;
+  __isset = other55.__isset;
   return *this;
 }
 void configuration_query_by_node_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "configuration_query_by_node_request(";
   out << "node=" << to_string(node);
+  out << ")";
+}
+
+
+configuration_query_by_node_response::~configuration_query_by_node_response() throw() {
+}
+
+
+void configuration_query_by_node_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void configuration_query_by_node_response::__set_partitions(const std::vector<configuration_update_request> & val) {
+  this->partitions = val;
+}
+
+uint32_t configuration_query_by_node_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->partitions.clear();
+            uint32_t _size56;
+            ::apache::thrift::protocol::TType _etype59;
+            xfer += iprot->readListBegin(_etype59, _size56);
+            this->partitions.resize(_size56);
+            uint32_t _i60;
+            for (_i60 = 0; _i60 < _size56; ++_i60)
+            {
+              xfer += this->partitions[_i60].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.partitions = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t configuration_query_by_node_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("configuration_query_by_node_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
+    std::vector<configuration_update_request> ::const_iterator _iter61;
+    for (_iter61 = this->partitions.begin(); _iter61 != this->partitions.end(); ++_iter61)
+    {
+      xfer += (*_iter61).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.partitions, b.partitions);
+  swap(a.__isset, b.__isset);
+}
+
+configuration_query_by_node_response::configuration_query_by_node_response(const configuration_query_by_node_response& other62) {
+  err = other62.err;
+  partitions = other62.partitions;
+  __isset = other62.__isset;
+}
+configuration_query_by_node_response& configuration_query_by_node_response::operator=(const configuration_query_by_node_response& other63) {
+  err = other63.err;
+  partitions = other63.partitions;
+  __isset = other63.__isset;
+  return *this;
+}
+void configuration_query_by_node_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "configuration_query_by_node_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "partitions=" << to_string(partitions);
   out << ")";
 }
 
@@ -3478,8 +2984,8 @@ void create_app_options::__set_is_stateful(const bool val) {
   this->is_stateful = val;
 }
 
-void create_app_options::__set_package_id(const std::string& val) {
-  this->package_id = val;
+void create_app_options::__set_envs(const std::map<std::string, std::string> & val) {
+  this->envs = val;
 }
 
 uint32_t create_app_options::read(::apache::thrift::protocol::TProtocol* iprot) {
@@ -3544,9 +3050,24 @@ uint32_t create_app_options::read(::apache::thrift::protocol::TProtocol* iprot) 
         }
         break;
       case 6:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->package_id);
-          this->__isset.package_id = true;
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->envs.clear();
+            uint32_t _size64;
+            ::apache::thrift::protocol::TType _ktype65;
+            ::apache::thrift::protocol::TType _vtype66;
+            xfer += iprot->readMapBegin(_ktype65, _vtype66, _size64);
+            uint32_t _i68;
+            for (_i68 = 0; _i68 < _size64; ++_i68)
+            {
+              std::string _key69;
+              xfer += iprot->readString(_key69);
+              std::string& _val70 = this->envs[_key69];
+              xfer += iprot->readString(_val70);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.envs = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -3588,8 +3109,17 @@ uint32_t create_app_options::write(::apache::thrift::protocol::TProtocol* oprot)
   xfer += oprot->writeBool(this->is_stateful);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("package_id", ::apache::thrift::protocol::T_STRING, 6);
-  xfer += oprot->writeString(this->package_id);
+  xfer += oprot->writeFieldBegin("envs", ::apache::thrift::protocol::T_MAP, 6);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->envs.size()));
+    std::map<std::string, std::string> ::const_iterator _iter71;
+    for (_iter71 = this->envs.begin(); _iter71 != this->envs.end(); ++_iter71)
+    {
+      xfer += oprot->writeString(_iter71->first);
+      xfer += oprot->writeString(_iter71->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -3604,27 +3134,27 @@ void swap(create_app_options &a, create_app_options &b) {
   swap(a.success_if_exist, b.success_if_exist);
   swap(a.app_type, b.app_type);
   swap(a.is_stateful, b.is_stateful);
-  swap(a.package_id, b.package_id);
+  swap(a.envs, b.envs);
   swap(a.__isset, b.__isset);
 }
 
-create_app_options::create_app_options(const create_app_options& other75) {
-  partition_count = other75.partition_count;
-  replica_count = other75.replica_count;
-  success_if_exist = other75.success_if_exist;
-  app_type = other75.app_type;
-  is_stateful = other75.is_stateful;
-  package_id = other75.package_id;
-  __isset = other75.__isset;
+create_app_options::create_app_options(const create_app_options& other72) {
+  partition_count = other72.partition_count;
+  replica_count = other72.replica_count;
+  success_if_exist = other72.success_if_exist;
+  app_type = other72.app_type;
+  is_stateful = other72.is_stateful;
+  envs = other72.envs;
+  __isset = other72.__isset;
 }
-create_app_options& create_app_options::operator=(const create_app_options& other76) {
-  partition_count = other76.partition_count;
-  replica_count = other76.replica_count;
-  success_if_exist = other76.success_if_exist;
-  app_type = other76.app_type;
-  is_stateful = other76.is_stateful;
-  package_id = other76.package_id;
-  __isset = other76.__isset;
+create_app_options& create_app_options::operator=(const create_app_options& other73) {
+  partition_count = other73.partition_count;
+  replica_count = other73.replica_count;
+  success_if_exist = other73.success_if_exist;
+  app_type = other73.app_type;
+  is_stateful = other73.is_stateful;
+  envs = other73.envs;
+  __isset = other73.__isset;
   return *this;
 }
 void create_app_options::printTo(std::ostream& out) const {
@@ -3635,7 +3165,7 @@ void create_app_options::printTo(std::ostream& out) const {
   out << ", " << "success_if_exist=" << to_string(success_if_exist);
   out << ", " << "app_type=" << to_string(app_type);
   out << ", " << "is_stateful=" << to_string(is_stateful);
-  out << ", " << "package_id=" << to_string(package_id);
+  out << ", " << "envs=" << to_string(envs);
   out << ")";
 }
 
@@ -3726,15 +3256,15 @@ void swap(configuration_create_app_request &a, configuration_create_app_request 
   swap(a.__isset, b.__isset);
 }
 
-configuration_create_app_request::configuration_create_app_request(const configuration_create_app_request& other77) {
-  app_name = other77.app_name;
-  options = other77.options;
-  __isset = other77.__isset;
+configuration_create_app_request::configuration_create_app_request(const configuration_create_app_request& other74) {
+  app_name = other74.app_name;
+  options = other74.options;
+  __isset = other74.__isset;
 }
-configuration_create_app_request& configuration_create_app_request::operator=(const configuration_create_app_request& other78) {
-  app_name = other78.app_name;
-  options = other78.options;
-  __isset = other78.__isset;
+configuration_create_app_request& configuration_create_app_request::operator=(const configuration_create_app_request& other75) {
+  app_name = other75.app_name;
+  options = other75.options;
+  __isset = other75.__isset;
   return *this;
 }
 void configuration_create_app_request::printTo(std::ostream& out) const {
@@ -3815,13 +3345,13 @@ void swap(drop_app_options &a, drop_app_options &b) {
   swap(a.__isset, b.__isset);
 }
 
-drop_app_options::drop_app_options(const drop_app_options& other79) {
-  success_if_not_exist = other79.success_if_not_exist;
-  __isset = other79.__isset;
+drop_app_options::drop_app_options(const drop_app_options& other76) {
+  success_if_not_exist = other76.success_if_not_exist;
+  __isset = other76.__isset;
 }
-drop_app_options& drop_app_options::operator=(const drop_app_options& other80) {
-  success_if_not_exist = other80.success_if_not_exist;
-  __isset = other80.__isset;
+drop_app_options& drop_app_options::operator=(const drop_app_options& other77) {
+  success_if_not_exist = other77.success_if_not_exist;
+  __isset = other77.__isset;
   return *this;
 }
 void drop_app_options::printTo(std::ostream& out) const {
@@ -3918,15 +3448,15 @@ void swap(configuration_drop_app_request &a, configuration_drop_app_request &b) 
   swap(a.__isset, b.__isset);
 }
 
-configuration_drop_app_request::configuration_drop_app_request(const configuration_drop_app_request& other81) {
-  app_name = other81.app_name;
-  options = other81.options;
-  __isset = other81.__isset;
+configuration_drop_app_request::configuration_drop_app_request(const configuration_drop_app_request& other78) {
+  app_name = other78.app_name;
+  options = other78.options;
+  __isset = other78.__isset;
 }
-configuration_drop_app_request& configuration_drop_app_request::operator=(const configuration_drop_app_request& other82) {
-  app_name = other82.app_name;
-  options = other82.options;
-  __isset = other82.__isset;
+configuration_drop_app_request& configuration_drop_app_request::operator=(const configuration_drop_app_request& other79) {
+  app_name = other79.app_name;
+  options = other79.options;
+  __isset = other79.__isset;
   return *this;
 }
 void configuration_drop_app_request::printTo(std::ostream& out) const {
@@ -3942,7 +3472,7 @@ configuration_list_apps_request::~configuration_list_apps_request() throw() {
 }
 
 
-void configuration_list_apps_request::__set_status(const app_status::type val) {
+void configuration_list_apps_request::__set_status(const  ::dsn::app_status::type val) {
   this->status = val;
 }
 
@@ -3969,9 +3499,9 @@ uint32_t configuration_list_apps_request::read(::apache::thrift::protocol::TProt
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast83;
-          xfer += iprot->readI32(ecast83);
-          this->status = (app_status::type)ecast83;
+          int32_t ecast80;
+          xfer += iprot->readI32(ecast80);
+          this->status = ( ::dsn::app_status::type)ecast80;
           this->__isset.status = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -4009,13 +3539,13 @@ void swap(configuration_list_apps_request &a, configuration_list_apps_request &b
   swap(a.__isset, b.__isset);
 }
 
-configuration_list_apps_request::configuration_list_apps_request(const configuration_list_apps_request& other84) {
-  status = other84.status;
-  __isset = other84.__isset;
+configuration_list_apps_request::configuration_list_apps_request(const configuration_list_apps_request& other81) {
+  status = other81.status;
+  __isset = other81.__isset;
 }
-configuration_list_apps_request& configuration_list_apps_request::operator=(const configuration_list_apps_request& other85) {
-  status = other85.status;
-  __isset = other85.__isset;
+configuration_list_apps_request& configuration_list_apps_request::operator=(const configuration_list_apps_request& other82) {
+  status = other82.status;
+  __isset = other82.__isset;
   return *this;
 }
 void configuration_list_apps_request::printTo(std::ostream& out) const {
@@ -4057,9 +3587,9 @@ uint32_t configuration_list_nodes_request::read(::apache::thrift::protocol::TPro
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast86;
-          xfer += iprot->readI32(ecast86);
-          this->status = (node_status::type)ecast86;
+          int32_t ecast83;
+          xfer += iprot->readI32(ecast83);
+          this->status = (node_status::type)ecast83;
           this->__isset.status = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -4097,13 +3627,13 @@ void swap(configuration_list_nodes_request &a, configuration_list_nodes_request 
   swap(a.__isset, b.__isset);
 }
 
-configuration_list_nodes_request::configuration_list_nodes_request(const configuration_list_nodes_request& other87) {
-  status = other87.status;
-  __isset = other87.__isset;
+configuration_list_nodes_request::configuration_list_nodes_request(const configuration_list_nodes_request& other84) {
+  status = other84.status;
+  __isset = other84.__isset;
 }
-configuration_list_nodes_request& configuration_list_nodes_request::operator=(const configuration_list_nodes_request& other88) {
-  status = other88.status;
-  __isset = other88.__isset;
+configuration_list_nodes_request& configuration_list_nodes_request::operator=(const configuration_list_nodes_request& other85) {
+  status = other85.status;
+  __isset = other85.__isset;
   return *this;
 }
 void configuration_list_nodes_request::printTo(std::ostream& out) const {
@@ -4200,15 +3730,15 @@ void swap(configuration_create_app_response &a, configuration_create_app_respons
   swap(a.__isset, b.__isset);
 }
 
-configuration_create_app_response::configuration_create_app_response(const configuration_create_app_response& other89) {
-  err = other89.err;
-  appid = other89.appid;
-  __isset = other89.__isset;
+configuration_create_app_response::configuration_create_app_response(const configuration_create_app_response& other86) {
+  err = other86.err;
+  appid = other86.appid;
+  __isset = other86.__isset;
 }
-configuration_create_app_response& configuration_create_app_response::operator=(const configuration_create_app_response& other90) {
-  err = other90.err;
-  appid = other90.appid;
-  __isset = other90.__isset;
+configuration_create_app_response& configuration_create_app_response::operator=(const configuration_create_app_response& other87) {
+  err = other87.err;
+  appid = other87.appid;
+  __isset = other87.__isset;
   return *this;
 }
 void configuration_create_app_response::printTo(std::ostream& out) const {
@@ -4289,13 +3819,13 @@ void swap(control_balancer_migration_request &a, control_balancer_migration_requ
   swap(a.__isset, b.__isset);
 }
 
-control_balancer_migration_request::control_balancer_migration_request(const control_balancer_migration_request& other91) {
-  enable_migration = other91.enable_migration;
-  __isset = other91.__isset;
+control_balancer_migration_request::control_balancer_migration_request(const control_balancer_migration_request& other88) {
+  enable_migration = other88.enable_migration;
+  __isset = other88.__isset;
 }
-control_balancer_migration_request& control_balancer_migration_request::operator=(const control_balancer_migration_request& other92) {
-  enable_migration = other92.enable_migration;
-  __isset = other92.__isset;
+control_balancer_migration_request& control_balancer_migration_request::operator=(const control_balancer_migration_request& other89) {
+  enable_migration = other89.enable_migration;
+  __isset = other89.__isset;
   return *this;
 }
 void control_balancer_migration_request::printTo(std::ostream& out) const {
@@ -4375,13 +3905,13 @@ void swap(control_balancer_migration_response &a, control_balancer_migration_res
   swap(a.__isset, b.__isset);
 }
 
-control_balancer_migration_response::control_balancer_migration_response(const control_balancer_migration_response& other93) {
-  err = other93.err;
-  __isset = other93.__isset;
+control_balancer_migration_response::control_balancer_migration_response(const control_balancer_migration_response& other90) {
+  err = other90.err;
+  __isset = other90.__isset;
 }
-control_balancer_migration_response& control_balancer_migration_response::operator=(const control_balancer_migration_response& other94) {
-  err = other94.err;
-  __isset = other94.__isset;
+control_balancer_migration_response& control_balancer_migration_response::operator=(const control_balancer_migration_response& other91) {
+  err = other91.err;
+  __isset = other91.__isset;
   return *this;
 }
 void control_balancer_migration_response::printTo(std::ostream& out) const {
@@ -4396,8 +3926,8 @@ balancer_proposal_request::~balancer_proposal_request() throw() {
 }
 
 
-void balancer_proposal_request::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void balancer_proposal_request::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void balancer_proposal_request::__set_type(const balancer_type::type val) {
@@ -4435,17 +3965,17 @@ uint32_t balancer_proposal_request::read(::apache::thrift::protocol::TProtocol* 
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast95;
-          xfer += iprot->readI32(ecast95);
-          this->type = (balancer_type::type)ecast95;
+          int32_t ecast92;
+          xfer += iprot->readI32(ecast92);
+          this->type = (balancer_type::type)ecast92;
           this->__isset.type = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -4484,8 +4014,8 @@ uint32_t balancer_proposal_request::write(::apache::thrift::protocol::TProtocol*
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("balancer_proposal_request");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("type", ::apache::thrift::protocol::T_I32, 2);
@@ -4507,32 +4037,32 @@ uint32_t balancer_proposal_request::write(::apache::thrift::protocol::TProtocol*
 
 void swap(balancer_proposal_request &a, balancer_proposal_request &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.type, b.type);
   swap(a.from_addr, b.from_addr);
   swap(a.to_addr, b.to_addr);
   swap(a.__isset, b.__isset);
 }
 
-balancer_proposal_request::balancer_proposal_request(const balancer_proposal_request& other96) {
-  gpid = other96.gpid;
-  type = other96.type;
-  from_addr = other96.from_addr;
-  to_addr = other96.to_addr;
-  __isset = other96.__isset;
+balancer_proposal_request::balancer_proposal_request(const balancer_proposal_request& other93) {
+  pid = other93.pid;
+  type = other93.type;
+  from_addr = other93.from_addr;
+  to_addr = other93.to_addr;
+  __isset = other93.__isset;
 }
-balancer_proposal_request& balancer_proposal_request::operator=(const balancer_proposal_request& other97) {
-  gpid = other97.gpid;
-  type = other97.type;
-  from_addr = other97.from_addr;
-  to_addr = other97.to_addr;
-  __isset = other97.__isset;
+balancer_proposal_request& balancer_proposal_request::operator=(const balancer_proposal_request& other94) {
+  pid = other94.pid;
+  type = other94.type;
+  from_addr = other94.from_addr;
+  to_addr = other94.to_addr;
+  __isset = other94.__isset;
   return *this;
 }
 void balancer_proposal_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "balancer_proposal_request(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "type=" << to_string(type);
   out << ", " << "from_addr=" << to_string(from_addr);
   out << ", " << "to_addr=" << to_string(to_addr);
@@ -4609,13 +4139,13 @@ void swap(balancer_proposal_response &a, balancer_proposal_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-balancer_proposal_response::balancer_proposal_response(const balancer_proposal_response& other98) {
-  err = other98.err;
-  __isset = other98.__isset;
+balancer_proposal_response::balancer_proposal_response(const balancer_proposal_response& other95) {
+  err = other95.err;
+  __isset = other95.__isset;
 }
-balancer_proposal_response& balancer_proposal_response::operator=(const balancer_proposal_response& other99) {
-  err = other99.err;
-  __isset = other99.__isset;
+balancer_proposal_response& balancer_proposal_response::operator=(const balancer_proposal_response& other96) {
+  err = other96.err;
+  __isset = other96.__isset;
   return *this;
 }
 void balancer_proposal_response::printTo(std::ostream& out) const {
@@ -4695,13 +4225,13 @@ void swap(configuration_drop_app_response &a, configuration_drop_app_response &b
   swap(a.__isset, b.__isset);
 }
 
-configuration_drop_app_response::configuration_drop_app_response(const configuration_drop_app_response& other100) {
-  err = other100.err;
-  __isset = other100.__isset;
+configuration_drop_app_response::configuration_drop_app_response(const configuration_drop_app_response& other97) {
+  err = other97.err;
+  __isset = other97.__isset;
 }
-configuration_drop_app_response& configuration_drop_app_response::operator=(const configuration_drop_app_response& other101) {
-  err = other101.err;
-  __isset = other101.__isset;
+configuration_drop_app_response& configuration_drop_app_response::operator=(const configuration_drop_app_response& other98) {
+  err = other98.err;
+  __isset = other98.__isset;
   return *this;
 }
 void configuration_drop_app_response::printTo(std::ostream& out) const {
@@ -4720,7 +4250,7 @@ void configuration_list_apps_response::__set_err(const  ::dsn::error_code& val) 
   this->err = val;
 }
 
-void configuration_list_apps_response::__set_infos(const std::vector<app_info> & val) {
+void configuration_list_apps_response::__set_infos(const std::vector< ::dsn::app_info> & val) {
   this->infos = val;
 }
 
@@ -4757,14 +4287,14 @@ uint32_t configuration_list_apps_response::read(::apache::thrift::protocol::TPro
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->infos.clear();
-            uint32_t _size102;
-            ::apache::thrift::protocol::TType _etype105;
-            xfer += iprot->readListBegin(_etype105, _size102);
-            this->infos.resize(_size102);
-            uint32_t _i106;
-            for (_i106 = 0; _i106 < _size102; ++_i106)
+            uint32_t _size99;
+            ::apache::thrift::protocol::TType _etype102;
+            xfer += iprot->readListBegin(_etype102, _size99);
+            this->infos.resize(_size99);
+            uint32_t _i103;
+            for (_i103 = 0; _i103 < _size99; ++_i103)
             {
-              xfer += this->infos[_i106].read(iprot);
+              xfer += this->infos[_i103].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -4797,10 +4327,10 @@ uint32_t configuration_list_apps_response::write(::apache::thrift::protocol::TPr
   xfer += oprot->writeFieldBegin("infos", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->infos.size()));
-    std::vector<app_info> ::const_iterator _iter107;
-    for (_iter107 = this->infos.begin(); _iter107 != this->infos.end(); ++_iter107)
+    std::vector< ::dsn::app_info> ::const_iterator _iter104;
+    for (_iter104 = this->infos.begin(); _iter104 != this->infos.end(); ++_iter104)
     {
-      xfer += (*_iter107).write(oprot);
+      xfer += (*_iter104).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -4818,15 +4348,15 @@ void swap(configuration_list_apps_response &a, configuration_list_apps_response 
   swap(a.__isset, b.__isset);
 }
 
-configuration_list_apps_response::configuration_list_apps_response(const configuration_list_apps_response& other108) {
-  err = other108.err;
-  infos = other108.infos;
-  __isset = other108.__isset;
+configuration_list_apps_response::configuration_list_apps_response(const configuration_list_apps_response& other105) {
+  err = other105.err;
+  infos = other105.infos;
+  __isset = other105.__isset;
 }
-configuration_list_apps_response& configuration_list_apps_response::operator=(const configuration_list_apps_response& other109) {
-  err = other109.err;
-  infos = other109.infos;
-  __isset = other109.__isset;
+configuration_list_apps_response& configuration_list_apps_response::operator=(const configuration_list_apps_response& other106) {
+  err = other106.err;
+  infos = other106.infos;
+  __isset = other106.__isset;
   return *this;
 }
 void configuration_list_apps_response::printTo(std::ostream& out) const {
@@ -4883,14 +4413,14 @@ uint32_t configuration_list_nodes_response::read(::apache::thrift::protocol::TPr
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->infos.clear();
-            uint32_t _size110;
-            ::apache::thrift::protocol::TType _etype113;
-            xfer += iprot->readListBegin(_etype113, _size110);
-            this->infos.resize(_size110);
-            uint32_t _i114;
-            for (_i114 = 0; _i114 < _size110; ++_i114)
+            uint32_t _size107;
+            ::apache::thrift::protocol::TType _etype110;
+            xfer += iprot->readListBegin(_etype110, _size107);
+            this->infos.resize(_size107);
+            uint32_t _i111;
+            for (_i111 = 0; _i111 < _size107; ++_i111)
             {
-              xfer += this->infos[_i114].read(iprot);
+              xfer += this->infos[_i111].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -4923,10 +4453,10 @@ uint32_t configuration_list_nodes_response::write(::apache::thrift::protocol::TP
   xfer += oprot->writeFieldBegin("infos", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->infos.size()));
-    std::vector<node_info> ::const_iterator _iter115;
-    for (_iter115 = this->infos.begin(); _iter115 != this->infos.end(); ++_iter115)
+    std::vector<node_info> ::const_iterator _iter112;
+    for (_iter112 = this->infos.begin(); _iter112 != this->infos.end(); ++_iter112)
     {
-      xfer += (*_iter115).write(oprot);
+      xfer += (*_iter112).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -4944,15 +4474,15 @@ void swap(configuration_list_nodes_response &a, configuration_list_nodes_respons
   swap(a.__isset, b.__isset);
 }
 
-configuration_list_nodes_response::configuration_list_nodes_response(const configuration_list_nodes_response& other116) {
-  err = other116.err;
-  infos = other116.infos;
-  __isset = other116.__isset;
+configuration_list_nodes_response::configuration_list_nodes_response(const configuration_list_nodes_response& other113) {
+  err = other113.err;
+  infos = other113.infos;
+  __isset = other113.__isset;
 }
-configuration_list_nodes_response& configuration_list_nodes_response::operator=(const configuration_list_nodes_response& other117) {
-  err = other117.err;
-  infos = other117.infos;
-  __isset = other117.__isset;
+configuration_list_nodes_response& configuration_list_nodes_response::operator=(const configuration_list_nodes_response& other114) {
+  err = other114.err;
+  infos = other114.infos;
+  __isset = other114.__isset;
   return *this;
 }
 void configuration_list_nodes_response::printTo(std::ostream& out) const {
@@ -4964,450 +4494,12 @@ void configuration_list_nodes_response::printTo(std::ostream& out) const {
 }
 
 
-configuration_query_by_node_response::~configuration_query_by_node_response() throw() {
-}
-
-
-void configuration_query_by_node_response::__set_err(const  ::dsn::error_code& val) {
-  this->err = val;
-}
-
-void configuration_query_by_node_response::__set_partitions(const std::vector<partition_configuration> & val) {
-  this->partitions = val;
-}
-
-uint32_t configuration_query_by_node_response::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->err.read(iprot);
-          this->__isset.err = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->partitions.clear();
-            uint32_t _size118;
-            ::apache::thrift::protocol::TType _etype121;
-            xfer += iprot->readListBegin(_etype121, _size118);
-            this->partitions.resize(_size118);
-            uint32_t _i122;
-            for (_i122 = 0; _i122 < _size118; ++_i122)
-            {
-              xfer += this->partitions[_i122].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
-          this->__isset.partitions = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t configuration_query_by_node_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("configuration_query_by_node_response");
-
-  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->err.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_LIST, 2);
-  {
-    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
-    std::vector<partition_configuration> ::const_iterator _iter123;
-    for (_iter123 = this->partitions.begin(); _iter123 != this->partitions.end(); ++_iter123)
-    {
-      xfer += (*_iter123).write(oprot);
-    }
-    xfer += oprot->writeListEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b) {
-  using ::std::swap;
-  swap(a.err, b.err);
-  swap(a.partitions, b.partitions);
-  swap(a.__isset, b.__isset);
-}
-
-configuration_query_by_node_response::configuration_query_by_node_response(const configuration_query_by_node_response& other124) {
-  err = other124.err;
-  partitions = other124.partitions;
-  __isset = other124.__isset;
-}
-configuration_query_by_node_response& configuration_query_by_node_response::operator=(const configuration_query_by_node_response& other125) {
-  err = other125.err;
-  partitions = other125.partitions;
-  __isset = other125.__isset;
-  return *this;
-}
-void configuration_query_by_node_response::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "configuration_query_by_node_response(";
-  out << "err=" << to_string(err);
-  out << ", " << "partitions=" << to_string(partitions);
-  out << ")";
-}
-
-
-configuration_query_by_index_request::~configuration_query_by_index_request() throw() {
-}
-
-
-void configuration_query_by_index_request::__set_app_name(const std::string& val) {
-  this->app_name = val;
-}
-
-void configuration_query_by_index_request::__set_partition_indices(const std::vector<int32_t> & val) {
-  this->partition_indices = val;
-}
-
-uint32_t configuration_query_by_index_request::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->app_name);
-          this->__isset.app_name = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->partition_indices.clear();
-            uint32_t _size126;
-            ::apache::thrift::protocol::TType _etype129;
-            xfer += iprot->readListBegin(_etype129, _size126);
-            this->partition_indices.resize(_size126);
-            uint32_t _i130;
-            for (_i130 = 0; _i130 < _size126; ++_i130)
-            {
-              xfer += iprot->readI32(this->partition_indices[_i130]);
-            }
-            xfer += iprot->readListEnd();
-          }
-          this->__isset.partition_indices = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t configuration_query_by_index_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("configuration_query_by_index_request");
-
-  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->app_name);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partition_indices", ::apache::thrift::protocol::T_LIST, 2);
-  {
-    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I32, static_cast<uint32_t>(this->partition_indices.size()));
-    std::vector<int32_t> ::const_iterator _iter131;
-    for (_iter131 = this->partition_indices.begin(); _iter131 != this->partition_indices.end(); ++_iter131)
-    {
-      xfer += oprot->writeI32((*_iter131));
-    }
-    xfer += oprot->writeListEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(configuration_query_by_index_request &a, configuration_query_by_index_request &b) {
-  using ::std::swap;
-  swap(a.app_name, b.app_name);
-  swap(a.partition_indices, b.partition_indices);
-  swap(a.__isset, b.__isset);
-}
-
-configuration_query_by_index_request::configuration_query_by_index_request(const configuration_query_by_index_request& other132) {
-  app_name = other132.app_name;
-  partition_indices = other132.partition_indices;
-  __isset = other132.__isset;
-}
-configuration_query_by_index_request& configuration_query_by_index_request::operator=(const configuration_query_by_index_request& other133) {
-  app_name = other133.app_name;
-  partition_indices = other133.partition_indices;
-  __isset = other133.__isset;
-  return *this;
-}
-void configuration_query_by_index_request::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "configuration_query_by_index_request(";
-  out << "app_name=" << to_string(app_name);
-  out << ", " << "partition_indices=" << to_string(partition_indices);
-  out << ")";
-}
-
-
-configuration_query_by_index_response::~configuration_query_by_index_response() throw() {
-}
-
-
-void configuration_query_by_index_response::__set_err(const  ::dsn::error_code& val) {
-  this->err = val;
-}
-
-void configuration_query_by_index_response::__set_app_id(const int32_t val) {
-  this->app_id = val;
-}
-
-void configuration_query_by_index_response::__set_partition_count(const int32_t val) {
-  this->partition_count = val;
-}
-
-void configuration_query_by_index_response::__set_is_stateful(const bool val) {
-  this->is_stateful = val;
-}
-
-void configuration_query_by_index_response::__set_partitions(const std::vector<partition_configuration> & val) {
-  this->partitions = val;
-}
-
-uint32_t configuration_query_by_index_response::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->err.read(iprot);
-          this->__isset.err = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->app_id);
-          this->__isset.app_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->partition_count);
-          this->__isset.partition_count = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 4:
-        if (ftype == ::apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->is_stateful);
-          this->__isset.is_stateful = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 5:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->partitions.clear();
-            uint32_t _size134;
-            ::apache::thrift::protocol::TType _etype137;
-            xfer += iprot->readListBegin(_etype137, _size134);
-            this->partitions.resize(_size134);
-            uint32_t _i138;
-            for (_i138 = 0; _i138 < _size134; ++_i138)
-            {
-              xfer += this->partitions[_i138].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
-          this->__isset.partitions = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t configuration_query_by_index_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("configuration_query_by_index_response");
-
-  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->err.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("app_id", ::apache::thrift::protocol::T_I32, 2);
-  xfer += oprot->writeI32(this->app_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partition_count", ::apache::thrift::protocol::T_I32, 3);
-  xfer += oprot->writeI32(this->partition_count);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("is_stateful", ::apache::thrift::protocol::T_BOOL, 4);
-  xfer += oprot->writeBool(this->is_stateful);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_LIST, 5);
-  {
-    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
-    std::vector<partition_configuration> ::const_iterator _iter139;
-    for (_iter139 = this->partitions.begin(); _iter139 != this->partitions.end(); ++_iter139)
-    {
-      xfer += (*_iter139).write(oprot);
-    }
-    xfer += oprot->writeListEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(configuration_query_by_index_response &a, configuration_query_by_index_response &b) {
-  using ::std::swap;
-  swap(a.err, b.err);
-  swap(a.app_id, b.app_id);
-  swap(a.partition_count, b.partition_count);
-  swap(a.is_stateful, b.is_stateful);
-  swap(a.partitions, b.partitions);
-  swap(a.__isset, b.__isset);
-}
-
-configuration_query_by_index_response::configuration_query_by_index_response(const configuration_query_by_index_response& other140) {
-  err = other140.err;
-  app_id = other140.app_id;
-  partition_count = other140.partition_count;
-  is_stateful = other140.is_stateful;
-  partitions = other140.partitions;
-  __isset = other140.__isset;
-}
-configuration_query_by_index_response& configuration_query_by_index_response::operator=(const configuration_query_by_index_response& other141) {
-  err = other141.err;
-  app_id = other141.app_id;
-  partition_count = other141.partition_count;
-  is_stateful = other141.is_stateful;
-  partitions = other141.partitions;
-  __isset = other141.__isset;
-  return *this;
-}
-void configuration_query_by_index_response::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "configuration_query_by_index_response(";
-  out << "err=" << to_string(err);
-  out << ", " << "app_id=" << to_string(app_id);
-  out << ", " << "partition_count=" << to_string(partition_count);
-  out << ", " << "is_stateful=" << to_string(is_stateful);
-  out << ", " << "partitions=" << to_string(partitions);
-  out << ")";
-}
-
-
 query_replica_decree_request::~query_replica_decree_request() throw() {
 }
 
 
-void query_replica_decree_request::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void query_replica_decree_request::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void query_replica_decree_request::__set_node(const  ::dsn::rpc_address& val) {
@@ -5437,8 +4529,8 @@ uint32_t query_replica_decree_request::read(::apache::thrift::protocol::TProtoco
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -5468,8 +4560,8 @@ uint32_t query_replica_decree_request::write(::apache::thrift::protocol::TProtoc
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("query_replica_decree_request");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 2);
@@ -5483,26 +4575,26 @@ uint32_t query_replica_decree_request::write(::apache::thrift::protocol::TProtoc
 
 void swap(query_replica_decree_request &a, query_replica_decree_request &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.node, b.node);
   swap(a.__isset, b.__isset);
 }
 
-query_replica_decree_request::query_replica_decree_request(const query_replica_decree_request& other142) {
-  gpid = other142.gpid;
-  node = other142.node;
-  __isset = other142.__isset;
+query_replica_decree_request::query_replica_decree_request(const query_replica_decree_request& other115) {
+  pid = other115.pid;
+  node = other115.node;
+  __isset = other115.__isset;
 }
-query_replica_decree_request& query_replica_decree_request::operator=(const query_replica_decree_request& other143) {
-  gpid = other143.gpid;
-  node = other143.node;
-  __isset = other143.__isset;
+query_replica_decree_request& query_replica_decree_request::operator=(const query_replica_decree_request& other116) {
+  pid = other116.pid;
+  node = other116.node;
+  __isset = other116.__isset;
   return *this;
 }
 void query_replica_decree_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "query_replica_decree_request(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "node=" << to_string(node);
   out << ")";
 }
@@ -5594,15 +4686,15 @@ void swap(query_replica_decree_response &a, query_replica_decree_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-query_replica_decree_response::query_replica_decree_response(const query_replica_decree_response& other144) {
-  err = other144.err;
-  last_decree = other144.last_decree;
-  __isset = other144.__isset;
+query_replica_decree_response::query_replica_decree_response(const query_replica_decree_response& other117) {
+  err = other117.err;
+  last_decree = other117.last_decree;
+  __isset = other117.__isset;
 }
-query_replica_decree_response& query_replica_decree_response::operator=(const query_replica_decree_response& other145) {
-  err = other145.err;
-  last_decree = other145.last_decree;
-  __isset = other145.__isset;
+query_replica_decree_response& query_replica_decree_response::operator=(const query_replica_decree_response& other118) {
+  err = other118.err;
+  last_decree = other118.last_decree;
+  __isset = other118.__isset;
   return *this;
 }
 void query_replica_decree_response::printTo(std::ostream& out) const {
@@ -5618,8 +4710,8 @@ replica_info::~replica_info() throw() {
 }
 
 
-void replica_info::__set_gpid(const global_partition_id& val) {
-  this->gpid = val;
+void replica_info::__set_pid(const  ::dsn::gpid& val) {
+  this->pid = val;
 }
 
 void replica_info::__set_ballot(const int64_t val) {
@@ -5665,8 +4757,8 @@ uint32_t replica_info::read(::apache::thrift::protocol::TProtocol* iprot) {
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->gpid.read(iprot);
-          this->__isset.gpid = true;
+          xfer += this->pid.read(iprot);
+          this->__isset.pid = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -5681,9 +4773,9 @@ uint32_t replica_info::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 3:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast146;
-          xfer += iprot->readI32(ecast146);
-          this->status = (partition_status::type)ecast146;
+          int32_t ecast119;
+          xfer += iprot->readI32(ecast119);
+          this->status = (partition_status::type)ecast119;
           this->__isset.status = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -5730,8 +4822,8 @@ uint32_t replica_info::write(::apache::thrift::protocol::TProtocol* oprot) const
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("replica_info");
 
-  xfer += oprot->writeFieldBegin("gpid", ::apache::thrift::protocol::T_STRUCT, 1);
-  xfer += this->gpid.write(oprot);
+  xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->pid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("ballot", ::apache::thrift::protocol::T_I64, 2);
@@ -5761,7 +4853,7 @@ uint32_t replica_info::write(::apache::thrift::protocol::TProtocol* oprot) const
 
 void swap(replica_info &a, replica_info &b) {
   using ::std::swap;
-  swap(a.gpid, b.gpid);
+  swap(a.pid, b.pid);
   swap(a.ballot, b.ballot);
   swap(a.status, b.status);
   swap(a.last_committed_decree, b.last_committed_decree);
@@ -5770,29 +4862,29 @@ void swap(replica_info &a, replica_info &b) {
   swap(a.__isset, b.__isset);
 }
 
-replica_info::replica_info(const replica_info& other147) {
-  gpid = other147.gpid;
-  ballot = other147.ballot;
-  status = other147.status;
-  last_committed_decree = other147.last_committed_decree;
-  last_prepared_decree = other147.last_prepared_decree;
-  last_durable_decree = other147.last_durable_decree;
-  __isset = other147.__isset;
+replica_info::replica_info(const replica_info& other120) {
+  pid = other120.pid;
+  ballot = other120.ballot;
+  status = other120.status;
+  last_committed_decree = other120.last_committed_decree;
+  last_prepared_decree = other120.last_prepared_decree;
+  last_durable_decree = other120.last_durable_decree;
+  __isset = other120.__isset;
 }
-replica_info& replica_info::operator=(const replica_info& other148) {
-  gpid = other148.gpid;
-  ballot = other148.ballot;
-  status = other148.status;
-  last_committed_decree = other148.last_committed_decree;
-  last_prepared_decree = other148.last_prepared_decree;
-  last_durable_decree = other148.last_durable_decree;
-  __isset = other148.__isset;
+replica_info& replica_info::operator=(const replica_info& other121) {
+  pid = other121.pid;
+  ballot = other121.ballot;
+  status = other121.status;
+  last_committed_decree = other121.last_committed_decree;
+  last_prepared_decree = other121.last_prepared_decree;
+  last_durable_decree = other121.last_durable_decree;
+  __isset = other121.__isset;
   return *this;
 }
 void replica_info::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "replica_info(";
-  out << "gpid=" << to_string(gpid);
+  out << "pid=" << to_string(pid);
   out << ", " << "ballot=" << to_string(ballot);
   out << ", " << "status=" << to_string(status);
   out << ", " << "last_committed_decree=" << to_string(last_committed_decree);
@@ -5871,13 +4963,13 @@ void swap(query_replica_info_request &a, query_replica_info_request &b) {
   swap(a.__isset, b.__isset);
 }
 
-query_replica_info_request::query_replica_info_request(const query_replica_info_request& other149) {
-  node = other149.node;
-  __isset = other149.__isset;
+query_replica_info_request::query_replica_info_request(const query_replica_info_request& other122) {
+  node = other122.node;
+  __isset = other122.__isset;
 }
-query_replica_info_request& query_replica_info_request::operator=(const query_replica_info_request& other150) {
-  node = other150.node;
-  __isset = other150.__isset;
+query_replica_info_request& query_replica_info_request::operator=(const query_replica_info_request& other123) {
+  node = other123.node;
+  __isset = other123.__isset;
   return *this;
 }
 void query_replica_info_request::printTo(std::ostream& out) const {
@@ -5933,14 +5025,14 @@ uint32_t query_replica_info_response::read(::apache::thrift::protocol::TProtocol
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->replicas.clear();
-            uint32_t _size151;
-            ::apache::thrift::protocol::TType _etype154;
-            xfer += iprot->readListBegin(_etype154, _size151);
-            this->replicas.resize(_size151);
-            uint32_t _i155;
-            for (_i155 = 0; _i155 < _size151; ++_i155)
+            uint32_t _size124;
+            ::apache::thrift::protocol::TType _etype127;
+            xfer += iprot->readListBegin(_etype127, _size124);
+            this->replicas.resize(_size124);
+            uint32_t _i128;
+            for (_i128 = 0; _i128 < _size124; ++_i128)
             {
-              xfer += this->replicas[_i155].read(iprot);
+              xfer += this->replicas[_i128].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -5973,10 +5065,10 @@ uint32_t query_replica_info_response::write(::apache::thrift::protocol::TProtoco
   xfer += oprot->writeFieldBegin("replicas", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->replicas.size()));
-    std::vector<replica_info> ::const_iterator _iter156;
-    for (_iter156 = this->replicas.begin(); _iter156 != this->replicas.end(); ++_iter156)
+    std::vector<replica_info> ::const_iterator _iter129;
+    for (_iter129 = this->replicas.begin(); _iter129 != this->replicas.end(); ++_iter129)
     {
-      xfer += (*_iter156).write(oprot);
+      xfer += (*_iter129).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -5994,15 +5086,15 @@ void swap(query_replica_info_response &a, query_replica_info_response &b) {
   swap(a.__isset, b.__isset);
 }
 
-query_replica_info_response::query_replica_info_response(const query_replica_info_response& other157) {
-  err = other157.err;
-  replicas = other157.replicas;
-  __isset = other157.__isset;
+query_replica_info_response::query_replica_info_response(const query_replica_info_response& other130) {
+  err = other130.err;
+  replicas = other130.replicas;
+  __isset = other130.__isset;
 }
-query_replica_info_response& query_replica_info_response::operator=(const query_replica_info_response& other158) {
-  err = other158.err;
-  replicas = other158.replicas;
-  __isset = other158.__isset;
+query_replica_info_response& query_replica_info_response::operator=(const query_replica_info_response& other131) {
+  err = other131.err;
+  replicas = other131.replicas;
+  __isset = other131.__isset;
   return *this;
 }
 void query_replica_info_response::printTo(std::ostream& out) const {
@@ -6010,6 +5102,340 @@ void query_replica_info_response::printTo(std::ostream& out) const {
   out << "query_replica_info_response(";
   out << "err=" << to_string(err);
   out << ", " << "replicas=" << to_string(replicas);
+  out << ")";
+}
+
+
+app_state::~app_state() throw() {
+}
+
+
+void app_state::__set_info(const  ::dsn::app_info& val) {
+  this->info = val;
+}
+
+void app_state::__set_available_partitions(const  ::dsn::atom_int& val) {
+  this->available_partitions = val;
+}
+
+void app_state::__set_partitions(const std::vector< ::dsn::partition_configuration> & val) {
+  this->partitions = val;
+}
+
+uint32_t app_state::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->info.read(iprot);
+          this->__isset.info = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->available_partitions.read(iprot);
+          this->__isset.available_partitions = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->partitions.clear();
+            uint32_t _size132;
+            ::apache::thrift::protocol::TType _etype135;
+            xfer += iprot->readListBegin(_etype135, _size132);
+            this->partitions.resize(_size132);
+            uint32_t _i136;
+            for (_i136 = 0; _i136 < _size132; ++_i136)
+            {
+              xfer += this->partitions[_i136].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.partitions = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t app_state::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("app_state");
+
+  xfer += oprot->writeFieldBegin("info", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->info.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("available_partitions", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->available_partitions.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_LIST, 3);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
+    std::vector< ::dsn::partition_configuration> ::const_iterator _iter137;
+    for (_iter137 = this->partitions.begin(); _iter137 != this->partitions.end(); ++_iter137)
+    {
+      xfer += (*_iter137).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(app_state &a, app_state &b) {
+  using ::std::swap;
+  swap(a.info, b.info);
+  swap(a.available_partitions, b.available_partitions);
+  swap(a.partitions, b.partitions);
+  swap(a.__isset, b.__isset);
+}
+
+app_state::app_state(const app_state& other138) {
+  info = other138.info;
+  available_partitions = other138.available_partitions;
+  partitions = other138.partitions;
+  __isset = other138.__isset;
+}
+app_state& app_state::operator=(const app_state& other139) {
+  info = other139.info;
+  available_partitions = other139.available_partitions;
+  partitions = other139.partitions;
+  __isset = other139.__isset;
+  return *this;
+}
+void app_state::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "app_state(";
+  out << "info=" << to_string(info);
+  out << ", " << "available_partitions=" << to_string(available_partitions);
+  out << ", " << "partitions=" << to_string(partitions);
+  out << ")";
+}
+
+
+node_state::~node_state() throw() {
+}
+
+
+void node_state::__set_is_alive(const bool val) {
+  this->is_alive = val;
+}
+
+void node_state::__set_address(const  ::dsn::rpc_address& val) {
+  this->address = val;
+}
+
+void node_state::__set_primaries(const std::set< ::dsn::gpid> & val) {
+  this->primaries = val;
+}
+
+void node_state::__set_partitions(const std::set< ::dsn::gpid> & val) {
+  this->partitions = val;
+}
+
+uint32_t node_state::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->is_alive);
+          this->__isset.is_alive = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->address.read(iprot);
+          this->__isset.address = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_SET) {
+          {
+            this->primaries.clear();
+            uint32_t _size140;
+            ::apache::thrift::protocol::TType _etype143;
+            xfer += iprot->readSetBegin(_etype143, _size140);
+            uint32_t _i144;
+            for (_i144 = 0; _i144 < _size140; ++_i144)
+            {
+               ::dsn::gpid _elem145;
+              xfer += _elem145.read(iprot);
+              this->primaries.insert(_elem145);
+            }
+            xfer += iprot->readSetEnd();
+          }
+          this->__isset.primaries = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_SET) {
+          {
+            this->partitions.clear();
+            uint32_t _size146;
+            ::apache::thrift::protocol::TType _etype149;
+            xfer += iprot->readSetBegin(_etype149, _size146);
+            uint32_t _i150;
+            for (_i150 = 0; _i150 < _size146; ++_i150)
+            {
+               ::dsn::gpid _elem151;
+              xfer += _elem151.read(iprot);
+              this->partitions.insert(_elem151);
+            }
+            xfer += iprot->readSetEnd();
+          }
+          this->__isset.partitions = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t node_state::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("node_state");
+
+  xfer += oprot->writeFieldBegin("is_alive", ::apache::thrift::protocol::T_BOOL, 1);
+  xfer += oprot->writeBool(this->is_alive);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("address", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->address.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("primaries", ::apache::thrift::protocol::T_SET, 3);
+  {
+    xfer += oprot->writeSetBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->primaries.size()));
+    std::set< ::dsn::gpid> ::const_iterator _iter152;
+    for (_iter152 = this->primaries.begin(); _iter152 != this->primaries.end(); ++_iter152)
+    {
+      xfer += (*_iter152).write(oprot);
+    }
+    xfer += oprot->writeSetEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_SET, 4);
+  {
+    xfer += oprot->writeSetBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
+    std::set< ::dsn::gpid> ::const_iterator _iter153;
+    for (_iter153 = this->partitions.begin(); _iter153 != this->partitions.end(); ++_iter153)
+    {
+      xfer += (*_iter153).write(oprot);
+    }
+    xfer += oprot->writeSetEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(node_state &a, node_state &b) {
+  using ::std::swap;
+  swap(a.is_alive, b.is_alive);
+  swap(a.address, b.address);
+  swap(a.primaries, b.primaries);
+  swap(a.partitions, b.partitions);
+  swap(a.__isset, b.__isset);
+}
+
+node_state::node_state(const node_state& other154) {
+  is_alive = other154.is_alive;
+  address = other154.address;
+  primaries = other154.primaries;
+  partitions = other154.partitions;
+  __isset = other154.__isset;
+}
+node_state& node_state::operator=(const node_state& other155) {
+  is_alive = other155.is_alive;
+  address = other155.address;
+  primaries = other155.primaries;
+  partitions = other155.partitions;
+  __isset = other155.__isset;
+  return *this;
+}
+void node_state::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "node_state(";
+  out << "is_alive=" << to_string(is_alive);
+  out << ", " << "address=" << to_string(address);
+  out << ", " << "primaries=" << to_string(primaries);
+  out << ", " << "partitions=" << to_string(partitions);
   out << ")";
 }
 

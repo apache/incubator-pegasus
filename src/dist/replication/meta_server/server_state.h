@@ -60,90 +60,16 @@ namespace dsn {
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
-struct app_state
-{
-    app_status::type                     status;
-    std::string                          app_type;
-    std::string                          app_name;
-    bool                                 is_stateful;
-    std::string                          package_id;
-    int32_t                              app_id;
-    int32_t                              partition_count;
-    std::vector<partition_configuration> partitions;
-
-    // used only for creating app, to count the number of partitions whose node
-    // has been ready on the remote storage
-    std::atomic_int                      available_partitions;
-    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, is_stateful, package_id, app_id, partition_count, partitions)
-
-    app_state() : status(app_status::AS_DROPPED), app_type(), app_name(), is_stateful(true), package_id(), app_id(0), partitions(), partition_count(0)
-    {
-        available_partitions.store(0);
-    }
-
-    app_state(const app_state& other):
-        status(other.status),
-        app_type(other.app_type),
-        app_name(other.app_name),
-        is_stateful(other.is_stateful),
-        package_id(other.package_id),
-        app_id(other.app_id),
-        partition_count(other.partition_count),
-        partitions(other.partitions)
-    {
-        available_partitions.store(other.available_partitions.load());
-    }
-
-    app_state(app_state&& other):
-        status(other.status),
-        app_type(std::move(other.app_type)),
-        app_name(std::move(other.app_name)),
-        is_stateful(other.is_stateful),
-        package_id(std::move(other.package_id)),
-        app_id(other.app_id),
-        partition_count(other.partition_count),
-        partitions(std::move(other.partitions))
-    {
-        available_partitions.store(other.available_partitions.load());
-    }
-    app_state& operator = (const app_state &other)
-    {
-        status = other.status;
-        app_type=other.app_type;
-        app_name=other.app_name;
-        is_stateful = other.is_stateful;
-        package_id = other.package_id;
-        app_id=other.app_id;
-        partition_count=other.partition_count;
-        partitions=other.partitions;
-        available_partitions.store(other.available_partitions.load());
-        return *this;
-    }
-    app_state& operator = (app_state &&other)
-    {
-        status = other.status;
-        app_type = std::move(other.app_type);
-        app_name = std::move(other.app_name);
-        is_stateful = other.is_stateful;
-        package_id = other.package_id;
-        app_id = other.app_id;
-        partition_count = other.partition_count;
-        partitions = std::move(other.partitions);
-        available_partitions.store(other.available_partitions.load());
-        return *this;
-    }
-};
-
-typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
+typedef std::unordered_map<gpid, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
 
 struct partition_configuration_stateless
 {
-    ::dsn::replication::partition_configuration& config;
+    ::dsn::partition_configuration& config;
 
-    partition_configuration_stateless(::dsn::replication::partition_configuration& pc)
+    partition_configuration_stateless(::dsn::partition_configuration& pc)
         : config(pc) {}
 
     std::vector<dsn::rpc_address>& worker_replicas() { return config.last_drops; }
@@ -192,7 +118,7 @@ public:
     void query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
 
     // query specified partition configuration by gpid
-    void query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config);
+    void query_configuration_by_gpid(gpid id, /*out*/ partition_configuration& config);
 
     // update partition configuration.
     // first persistent to log file, then apply to memory state
@@ -235,17 +161,17 @@ private:
     error_code sync_apps_from_remote_storage();
 
     // check consistency of memory state, between _nodes, _apps, _node_live_count
-    void check_consistency(global_partition_id gpid);
+    void check_consistency(gpid gpid);
 
     // do real work of update configuration
     void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
     // execute all pending requests according to ballot order
-    void exec_pending_requests(global_partition_id gpid);
+    void exec_pending_requests(gpid gpid);
 
     void initialize_app(app_state& app, dsn_message_t msg);
     void do_app_drop(app_state& app, dsn_message_t msg);
-    void init_app_partition_node(int app_id, int pidx);
+    void init_app_partition_node(int app_id, int partition_index);
 
     struct storage_work_item;
     void update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi);
@@ -255,7 +181,7 @@ private:
 
     //path util function in meta_state_service
     std::string get_app_path(const app_state& app) const;
-    std::string get_partition_path(const global_partition_id& gpid) const;
+    std::string get_partition_path(const gpid& gpid) const;
     std::string get_partition_path(const app_state& app, int partition_id) const;
 
     bool set_freeze() const
@@ -268,15 +194,6 @@ private:
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
-
-    struct node_state
-    {
-        bool                          is_alive;
-        ::dsn::rpc_address            address;
-        std::set<global_partition_id> primaries;
-        std::set<global_partition_id> partitions;
-        DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions)
-    };
 
     friend class dsn::dist::server_load_balancer;
     friend class simple_load_balancer;
@@ -314,7 +231,7 @@ private:
     mutable zlock                     _pending_requests_lock;
     // because ballots of different gpid may conflict, we separate items by gpid
     // gpid => <ballot, item>
-    std::map<global_partition_id, std::map<int64_t, storage_work_item> > _pending_requests;
+    std::map<gpid, std::map<int64_t, storage_work_item> > _pending_requests;
 
     // for test
     config_change_subscriber          _config_change_subscriber;

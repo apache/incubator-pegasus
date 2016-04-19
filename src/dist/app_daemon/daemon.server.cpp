@@ -90,7 +90,7 @@ namespace dsn
 
         void daemon_s_service::on_config_proposal(const ::dsn::replication::configuration_update_request& proposal)
         {
-            dassert(proposal.is_stateful == false, 
+            dassert(proposal.info.is_stateful == false, 
                 "stateful replication not supported by daemon, please using a different layer2 handler");
 
             switch (proposal.type)
@@ -256,32 +256,32 @@ namespace dsn
                 for (auto appc : resp.partitions)
                 {
                     int i;
-                    for (i = 0; i < (int)appc.secondaries.size(); i++)
+                    for (i = 0; i < (int)appc.config.secondaries.size(); i++)
                     {
                         // host nodes stored in secondaries
-                        if (appc.secondaries[i] == host)
+                        if (appc.config.secondaries[i] == host)
                         {
                             // worker nodes stored in last-drops
                             break;
                         }
                     }
 
-                    dassert(i < (int)appc.secondaries.size(), 
+                    dassert(i < (int)appc.config.secondaries.size(),
                         "host address %s must exist in secondary list of partition %d.%d",
-                        host.to_string(), appc.gpid.app_id, appc.gpid.pidx
+                        host.to_string(), appc.config.pid.get_app_id(), appc.config.pid.get_partition_index()
                         );
 
-                    auto it = sapps.find(appc.gpid);
+                    auto it = sapps.find(appc.config.pid);
                     if (it == sapps.end())
                     {
                         configuration_update_request req;
-                        req.config = appc;
-                        req.is_stateful = false;
+                        req.info = appc.info;
+                        req.config = appc.config;                        
                         req.host_node = host;
                         req.type = config_type::CT_REMOVE;
 
                         // worker nodes stored in last-drops
-                        req.node = appc.last_drops[i];
+                        req.node = appc.config.last_drops[i];
 
                         std::shared_ptr<layer1_app_info> app(new layer1_app_info(req));
                         app->exited = true;
@@ -309,9 +309,9 @@ namespace dsn
             error_code err = ERR_INVALID_PARAMETERS;
             if (argc >= 2)
             {
-                global_partition_id gpid;
-                gpid.app_id = atoi(argv[0]);
-                gpid.pidx = atoi(argv[1]);
+                gpid gpid;
+                gpid.set_app_id(atoi(argv[0]));
+                gpid.set_partition_index(atoi(argv[1]));
                 std::shared_ptr<layer1_app_info> app = nullptr;
                 {
                     ::dsn::service::zauto_write_lock l(_lock);
@@ -382,7 +382,7 @@ namespace dsn
 
             {
                 ::dsn::service::zauto_write_lock l(_lock);
-                auto it = _apps.find(proposal.config.gpid);
+                auto it = _apps.find(proposal.config.pid);
 
                 // app is running with the same package
                 if (it != _apps.end())
@@ -401,7 +401,7 @@ namespace dsn
                 app.reset(new layer1_app_info(proposal));
 
                 // package dir as work-dir/package-id
-                app->package_dir = utils::filesystem::path_combine(_working_dir, proposal.config.package_id);
+                app->package_dir = utils::filesystem::path_combine(_working_dir, proposal.info.app_type);
 
 
 # ifdef _WIN32
@@ -415,7 +415,7 @@ namespace dsn
                 // as work-dir/package-id/run.cmd
                 app->runner_script = utils::filesystem::path_combine(app->package_dir, runner);
 
-                _apps.emplace(app->configuration.gpid, app);
+                _apps.emplace(app->configuration.pid, app);
             }
             
             // TODO: add confliction with the same package
@@ -434,10 +434,10 @@ namespace dsn
             else
             {
                 // TODO: better way to download package from app store 
-                std::vector<std::string> files{ app->configuration.package_id + ".7z" };
+                std::vector<std::string> files{ proposal.info.app_type + ".7z" };
 
                 dinfo("start downloading package %s from %s to %s",
-                    app->configuration.package_id.c_str(),
+                    proposal.info.app_type.c_str(),
                     _package_server.to_string(),
                     _working_dir.c_str()
                     );
@@ -457,7 +457,7 @@ namespace dsn
 
                             // TODO: using zip lib instead
                             // 
-                            std::string command = "7z x " + _working_dir + '/' + cap_app->configuration.package_id + ".7z -y -o" + _working_dir;
+                            std::string command = "7z x " + _working_dir + '/' + cap_app->app_type + ".7z -y -o" + _working_dir;
                             // decompress when completed
                             system(command.c_str());
 
@@ -481,12 +481,11 @@ namespace dsn
 
                         {
                             ::dsn::service::zauto_write_lock l(_lock);
-                            _apps.erase(cap_app->configuration.gpid);
+                            _apps.erase(cap_app->configuration.pid);
                         }
 
-                        derror("add app %s (%s) failed, err = %s ...",
-                            cap_app->configuration.app_type.c_str(),
-                            cap_app->configuration.package_id.c_str(),
+                        derror("add app %s failed, err = %s ...",
+                            cap_app->app_type.c_str(),
                             err.to_string()
                             );
 
@@ -504,7 +503,7 @@ namespace dsn
 
             {
                 ::dsn::service::zauto_read_lock l(_lock);
-                auto it = _apps.find(proposal.config.gpid);
+                auto it = _apps.find(proposal.config.pid);
 
                 // app is running with the same package
                 if (it != _apps.end())
@@ -540,7 +539,7 @@ namespace dsn
                 // set up working dir as _working_dir/package-id/gpid.port
                 {
                     std::stringstream ss;
-                    ss << app->configuration.gpid.app_id << "." << app->configuration.gpid.pidx << "." << port;
+                    ss << app->configuration.pid.get_app_id() << "." << app->configuration.pid.get_partition_index() << "." << port;
                     app->working_dir = utils::filesystem::path_combine(app->package_dir, ss.str());
 
                     if (utils::filesystem::directory_exists(app->working_dir))
@@ -561,9 +560,8 @@ namespace dsn
 
                 app->working_port = port;
 
-                dinfo("try start app %s (%s) with command %s at working dir %s ...",
-                    app->configuration.app_type.c_str(),
-                    app->configuration.package_id.c_str(),
+                dinfo("try start app %s with command %s at working dir %s ...",
+                    app->app_type.c_str(),
                     command.c_str(),
                     app->working_dir.c_str()
                     );
@@ -623,16 +621,15 @@ namespace dsn
         
         void daemon_s_service::kill_app(std::shared_ptr<layer1_app_info> && app)
         {
-            dinfo("kill app %s (%s) at working dir %s, port %d",
-                app->configuration.app_type.c_str(),
-                app->configuration.package_id.c_str(),
+            dinfo("kill app %s at working dir %s, port %d",
+                app->app_type.c_str(),
                 app->working_dir.c_str(),
                 (int)app->working_port
                 );
 
             {
                 ::dsn::service::zauto_write_lock l(_lock);
-                _apps.erase(app->configuration.gpid);
+                _apps.erase(app->configuration.pid);
             }
 
             if (!app->exited && app->process_handle)
@@ -673,9 +670,8 @@ namespace dsn
                         ::CloseHandle(app.second->process_handle);
                         app.second->process_handle = nullptr;
 
-                        dinfo("app %s (%s) exits (code = %x), with working dir = %s, port = %d",
-                            app.second->configuration.app_type.c_str(),
-                            app.second->configuration.package_id.c_str(),
+                        dinfo("app %s exits (code = %x), with working dir = %s, port = %d",
+                            app.second->app_type.c_str(),
                             exit_code,
                             app.second->working_dir.c_str(),
                             (int)app.second->working_port
@@ -703,7 +699,7 @@ namespace dsn
             dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
             std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-            request->is_stateful = false;
+            request->info.is_stateful = false;
             request->config = app->configuration;
             request->type = type;
             request->node = node;

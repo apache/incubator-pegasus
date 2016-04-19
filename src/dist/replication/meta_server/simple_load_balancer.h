@@ -50,14 +50,14 @@ public:
     virtual ~simple_load_balancer() override;
 
     virtual void run() override;
-    virtual void run(global_partition_id gpid) override;
+    virtual void run(gpid gpid) override;
 
 private:
     // meta server => partition server    
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
     void on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp);
     
-    void run_lb(partition_configuration& pc, bool is_stateful);
+    void run_lb(app_info& info, partition_configuration& pc, bool is_stateful);
     ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 };
 

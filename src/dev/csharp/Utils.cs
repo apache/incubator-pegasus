@@ -46,7 +46,8 @@ namespace dsn.dev.csharp
         public static ErrorCode ERR_OK = new ErrorCode("ERR_OK");
         public static ErrorCode ERR_TIMEOUT = new ErrorCode("ERR_TIMEOUT");
         public static ErrorCode ERR_INVALID_PARAMETERS = new ErrorCode("ERR_INVALID_PARAMETERS");
-        
+        public static ErrorCode ERR_NOT_IMPLEMENTED = new ErrorCode("ERR_NOT_IMPLEMENTED");        
+
         public ErrorCode(int err)
         {
             _error = err;

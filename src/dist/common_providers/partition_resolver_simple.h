@@ -37,7 +37,6 @@
 
 # include <dsn/dist/partition_resolver.h>
 # include <dsn/cpp/zlocks.h>
-# include <dsn/dist/replication.h>
 
 namespace dsn
 {
@@ -69,7 +68,7 @@ namespace dsn
 
         private:
             mutable dsn::service::zrwlock_nr     _config_lock;
-            std::unordered_map<int, ::dsn::replication::partition_configuration> _config_cache;
+            std::unordered_map<int, ::dsn::partition_configuration> _config_cache;
             int                                  _app_id;
             int                                  _app_partition_count;
             bool                                 _app_is_stateful;
@@ -106,8 +105,8 @@ namespace dsn
 
         private:
             // local routines
-            dsn::rpc_address get_address(const ::dsn::replication::partition_configuration& config);
-            error_code get_address(int pidx, /*out*/ dsn::rpc_address& addr);
+            dsn::rpc_address get_address(const ::dsn::partition_configuration& config);
+            error_code get_address(int partition_index, /*out*/ dsn::rpc_address& addr);
             void handle_pending_requests(std::list<request_context_ptr>& reqs, error_code err);
             void clear_all_pending_requests();
 

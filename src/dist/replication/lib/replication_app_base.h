@@ -66,6 +66,17 @@ public:
     error_code store(const char* file);
 };
 
+class replica_app_info
+{
+private:
+    dsn::app_info *_app;
+
+public:
+    replica_app_info(dsn::app_info* app) { _app = app; }
+    error_code load(const char* file);
+    error_code store(const char* file);
+};
+
 class replication_app_base
 {
 public:

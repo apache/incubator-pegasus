@@ -167,8 +167,8 @@ void replica::send_prepare_message(
 
     {
         rpc_write_stream writer(msg);
-        marshall(writer, get_gpid());
-        marshall(writer, rconfig);
+        marshall(writer, get_gpid(), DSF_THRIFT_BINARY);
+        marshall(writer, rconfig, DSF_THRIFT_BINARY);
         mu->write_to(writer);
     }
     
@@ -209,7 +209,7 @@ void replica::on_prepare(dsn_message_t request)
 
     {
         rpc_read_stream reader(request);
-        unmarshall(reader, rconfig);
+        unmarshall(reader, rconfig, DSF_THRIFT_BINARY);
         mu = mutation::read_from(reader, request);
     }
 
@@ -520,7 +520,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
 {
     prepare_ack resp;
-    resp.gpid = get_gpid();
+    resp.pid = get_gpid();
     resp.err = err;
     resp.ballot = get_ballot();
     resp.decree = mu->data.header.decree;

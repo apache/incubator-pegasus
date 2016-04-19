@@ -76,17 +76,13 @@ namespace dsn.dev.csharp
 
         ~Serverlet()
         {
-            foreach (var c in _handlers)
-            {
-                UnregisterRpcHandler(c.Key);
-            }   
         }
 
         protected delegate void RpcRequestHandlerOneWay(RpcReadStream req);
 
         protected delegate void RpcRequestHandler(RpcReadStream req, RpcWriteStream resp);
 
-        protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandlerOneWay handler)
+        protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandlerOneWay handler, UInt64 gpid)
         {
             dsn_rpc_request_handler_t cb = (req, param) =>
                 {
@@ -94,8 +90,8 @@ namespace dsn.dev.csharp
                     handler(rms);
                 };
 
-            var r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
-            Logging.dassert(r, "rpc handler registration failed for " + code);
+            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, gpid);
+            Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
             lock (_handlers)
             {
@@ -104,7 +100,7 @@ namespace dsn.dev.csharp
             return r;
         }
 
-        protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandler handler)
+        protected bool RegisterRpcHandler(TaskCode code, string name, RpcRequestHandler handler, UInt64 gpid)
         {
             dsn_rpc_request_handler_t cb = (req, param) =>
             {
@@ -119,8 +115,8 @@ namespace dsn.dev.csharp
                 handler(rms, wms);    
             };
 
-            var r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, IntPtr.Zero);
-            Logging.dassert(r, "rpc handler registration failed for " + code);
+            bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero, gpid);
+            Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
             lock (_handlers)
             {
@@ -129,9 +125,9 @@ namespace dsn.dev.csharp
             return true;
         }
 
-        protected bool UnregisterRpcHandler(TaskCode code)
+        protected bool UnregisterRpcHandler(TaskCode code, UInt64 gpid)
         {
-            Native.dsn_rpc_unregiser_handler(code, IntPtr.Zero);
+            Native.dsn_rpc_unregiser_handler(code, gpid);
             bool r;
 
             lock (_handlers)

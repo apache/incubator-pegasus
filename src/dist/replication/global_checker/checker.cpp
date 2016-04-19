@@ -140,15 +140,15 @@ namespace dsn {
                 meta_service_app* meta_app = meta_leader();
                 if (!meta_app) return;
 
-                std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_meta_server;
-                std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_replica_servers;
+                std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_meta_server;
+                std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_replica_servers;
 
                 for (auto& app : meta_app->_service->_state->_apps)
                 {
-                    for (int i = 0; i < app.partition_count; i++)
+                    for (int i = 0; i < app.info.partition_count; i++)
                     {
                         auto& par = app.partitions[i];
-                        primaries_from_meta_server[par.gpid] = par.primary;
+                        primaries_from_meta_server[par.pid] = par.primary;
                     }
                 }
 
@@ -162,7 +162,7 @@ namespace dsn {
                         if (r.second->status() == partition_status::PS_PRIMARY)
                         {
                             auto pr = primaries_from_replica_servers.insert(
-                                std::unordered_map<global_partition_id, ::dsn::rpc_address>::value_type(r.first, rs->primary_address())
+                                std::unordered_map<gpid, ::dsn::rpc_address>::value_type(r.first, rs->primary_address())
                                 );
                             dassert(pr.second, "only one primary can exist for one partition");
 
@@ -181,7 +181,7 @@ namespace dsn {
                 auto meta = meta_leader();
                 if (!meta) return;
 
-                std::unordered_map<global_partition_id, replica_ptr> last_committed_decrees_on_primary;
+                std::unordered_map<gpid, replica_ptr> last_committed_decrees_on_primary;
 
                 for (auto& rs : _replica_servers)
                 {

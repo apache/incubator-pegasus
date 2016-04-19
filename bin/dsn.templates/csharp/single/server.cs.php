@@ -74,17 +74,17 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     } ?>
 <?php } ?>
         
-        public void OpenService()
+        public void OpenService(UInt64 gpid)
         {
 <?php foreach ($svc->functions as $f) { ?>
-            RegisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, "<?=$f->name?>", this.On<?=$f->name?>Internal);
+            RegisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, "<?=$f->name?>", this.On<?=$f->name?>Internal, gpid);
 <?php } ?>
         }
 
-        public void CloseService()
+        public void CloseService(UInt64 gpid)
         {
 <?php foreach ($svc->functions as $f) { ?>
-            UnregisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>);
+            UnregisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, gpid);
 <?php } ?>
         }
     }
