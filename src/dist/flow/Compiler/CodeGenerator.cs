@@ -67,8 +67,8 @@ namespace rDSN.Tron.Compiler
             _appClassName = service.Name;
 
             //BuildInputOutputValueTypes();
-            BuildRewrittenTypes();
             BuildHeaderRdsn(service.Namespace);
+            BuildRewrittenTypes();
             _builder.AppendLine("public class " + _appClassName + "Server_impl :" + _appClassName + "Server");
             _builder.BeginBlock();
             BuildServiceClientsRdsn();

@@ -53,7 +53,7 @@ namespace rDSN.Tron.ControlPanel
             
             CSharpCompiler.ToDiskAssembly(
                 Directory.GetFiles("tmp", "*.cs", SearchOption.AllDirectories).ToArray(),
-                new[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
+                new [] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
                 Directory.GetFiles("tmp", "*.proto", SearchOption.AllDirectories).Concat(
                     args.Where(a => a.EndsWith(".thrift"))).ToArray(),
                 "compo.dll");

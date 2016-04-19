@@ -1,5 +1,6 @@
 set cdir=%~dp0
 cd /d %cdir%
+set gcsargument=
 for /f %%f in ('dir *.thrift /b') do (
     cd /d %cdir%
     echo %%f    
@@ -8,10 +9,11 @@ for /f %%f in ('dir *.thrift /b') do (
     cd /d %cdir%\%%~nf
     @mkdir build
     cd build
-    cmake ..
+
     
     
     cd /d %cdir%
-    Tron.exe gcs thrift dsn %cdir%\%%f
+    set gcsargument=%gcsargument% %cdir%\%%f
 )
+Tron.exe gcs %gcsargument%
 
