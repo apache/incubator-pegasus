@@ -12,14 +12,6 @@ struct ErrorResult
     1: i32 ErrorCode;
 }
 
-struct AugmentedQuery
-{
-    1: i32 QueryId;
-    2: StringQuery RawQuery;
-    3: StringQuery AlteredQuery;
-    4: i32 TopX;
-}
-
 struct DocId
 {
     1: string URL;
@@ -34,13 +26,12 @@ struct Caption
 
 struct QueryResult
 {
-    1: StringQuery RawQuery;
-    2: AugmentedQuery Query;
-    3: list<Caption> Results;
+    1: StringQuery Query;
+    2: list<Caption> Results;
 }
 
 service WebCache
 {
-    QueryResult Get(1:AugmentedQuery query);
+    QueryResult Get(1:StringQuery query);
     ErrorResult Put(1:QueryResult result);
 }

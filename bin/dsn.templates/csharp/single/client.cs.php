@@ -43,7 +43,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             UInt64 hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash, GetPartitionHash(args));
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
             s.Write(args);
             s.Flush();
             
