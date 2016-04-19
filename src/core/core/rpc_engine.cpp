@@ -736,7 +736,8 @@ namespace dsn {
                 // injector
                 if (tsk->spec().on_rpc_request_enqueue.execute(tsk, true))
                 {
-                    tsk->set_delay(delay_ms);
+                    if (0 != delay_ms)
+                        tsk->set_delay(delay_ms);
                     tsk->enqueue();
                 }
 

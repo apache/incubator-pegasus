@@ -421,6 +421,11 @@ DSN_API bool dsn_task_cancel(dsn_task_t task, bool wait_until_finished)
     return ((::dsn::task*)(task))->cancel(wait_until_finished);
 }
 
+DSN_API void dsn_task_set_delay(dsn_task_t task, int delay_ms)
+{
+    ((::dsn::task*)(task))->set_delay(delay_ms);
+}
+
 DSN_API bool dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, bool* finished)
 {
     return ((::dsn::task*)(task))->cancel(wait_until_finished, finished);

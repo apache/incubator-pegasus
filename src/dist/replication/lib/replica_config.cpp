@@ -395,8 +395,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         if (err != ERR_INVALID_VERSION)
         {
             rpc_address target(_stub->_failure_detector->get_servers());
-            _primary_states.reconfiguration_task = rpc::call(
-                target,
+            _primary_states.reconfiguration_task = rpc::create_rpc_response_task(
                 request,
                 this,
                 [this, req](error_code err, dsn_message_t request, dsn_message_t response)
@@ -404,9 +403,12 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
                     on_update_configuration_on_meta_server_reply(err, request, response, std::move(req));
                 },
                 gpid_to_hash(get_gpid())
-                );
+            );
+            //when the rpc call timeout, we would delay to do the recall
+            _primary_states.reconfiguration_task->set_delay(1000);
+            dsn_rpc_call(target.c_addr(), _primary_states.reconfiguration_task->native_handle());
             return;
-        }        
+        }
     }
 
     ddebug(
