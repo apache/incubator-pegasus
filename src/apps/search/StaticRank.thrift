@@ -34,11 +34,11 @@ struct PerDocStaticRank
 
 struct StaticRankResult
 {
-    1: AugmentedQuery Query;
+    1: StringQuery Query;
     2: list<PerDocStaticRank> Results;
 }
 
 service StaticRank
 {
-    StaticRankResult OnL1Selection(1:AugmentedQuery query);
+    StaticRankResult OnL1Selection(1:StringQuery query);
 }

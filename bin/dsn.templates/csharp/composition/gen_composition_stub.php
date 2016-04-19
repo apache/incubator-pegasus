@@ -55,7 +55,7 @@ foreach(array_slice($argv, 1) as $idl) {
         {
         case "thrift":
             {
-                $command = __DIR__."/".$os_name."/thrift --gen rdsn -out ".$out_dir." ".$idl;
+                $command = __DIR__."/../../../".$os_name."/thrift --gen rdsn -out ".$out_dir." ".$idl;
                 echo "exec: ".$command.PHP_EOL;
                 system($command);
                 if (!file_exists($idl_php))
@@ -68,7 +68,7 @@ foreach(array_slice($argv, 1) as $idl) {
         case "proto":
             {
                 $idl_dir = dirname($idl);
-                $command = __DIR__."/".$os_name."/protoc --rdsn_out=".$out_dir." ".$idl." -I=".$idl_dir;
+                $command = __DIR__."/../../../".$os_name."/protoc --rdsn_out=".$out_dir." ".$idl." -I=".$idl_dir;
                 echo "exec: ".$command.PHP_EOL;
                 system($command);
                 if (!file_exists($idl_php))

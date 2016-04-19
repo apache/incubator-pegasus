@@ -549,11 +549,13 @@ class t_field
 {
     var $name;
     var $type_name;
+    var $id;
     
-    function __construct($name, $type_name)
+    function __construct($name, $type_name, $id)
     {
         $this->name = $name;
         $this->type_name = $type_name;
+        $this->id = $id;
     }
     
     function get_cpp_type()
@@ -591,9 +593,9 @@ class t_struct extends t_type
         $program->structs[] = $this;
     }
     
-    function add_field($name, $type_name)
+    function add_field($name, $type_name, $id)
     {
-        $this->fields[] = new t_field($name, $type_name);
+        $this->fields[] = new t_field($name, $type_name, $id);
     }
     
     function is_base_type() { return false; }
@@ -621,9 +623,9 @@ class t_function
         $this->params = array();
     }
     
-    function add_param($name, $type_name)
+    function add_param($name, $type_name, $id)
     {
-        $this->params[] = new t_field($name, $type_name);
+        $this->params[] = new t_field($name, $type_name, $id);
     }
     
     function get_cpp_return_type()

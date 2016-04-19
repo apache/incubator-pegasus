@@ -5,7 +5,7 @@ function write_wrapper($file) {
         file_put_contents($file, $str."\n", FILE_APPEND);
     };
 }
-require_once("../../type.php"); // type.php
+require_once(__DIR__."/../../type.php"); // type.php
 $structs = array();
 $last_proto_name = "";
 $last_thrift_name = "";
@@ -54,7 +54,7 @@ function gen_proto($prog, $last) {
         $out("message ".$s->name."{");
         $id = 1;
         foreach ($s->fields as $fld) {
-            $out($fld->type_name." ".$fld->name." = ".$id.";");
+            $out($fld->type_name." ".$fld->name." = ".$fld->id.";");
             $id += 1;
         }
         $out("}");
@@ -76,10 +76,8 @@ function gen_thrift($prog, $last) {
     }
     foreach ($prog->structs as $s) {
         $out("struct ".$s->name."{");
-        $id = 1;
         foreach ($s->fields as $fld) {
-            $out($id.": ".$fld->type_name." ".$fld->name.";");
-            $id += 1;
+            $out($fld->id.": ".$fld->type_name." ".$fld->name.";");
         }
         $out("}");
     }
@@ -97,6 +95,7 @@ function gen_compo($prog, $out, $idl_type) {
     foreach ($prog->structs as $s) {
         $out("public class ".$s->get_csharp_name()."{ ");
         foreach ($s->fields as $fld) {
+            $out("[IDL.FieldAttribute(".$fld->id.")]");
             $out("public ".$fld->get_csharp_type()." ".$fld->name.";");
         }
         $out("}");

@@ -19,30 +19,16 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         public <?=$svc->name?>Client() { }
         ~<?=$svc->name?>Client() {}
 
-        // from requests to partition index
-    // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-<?php
-$keys = array();
-foreach ($svc->functions as $f)
-    $keys[$f->get_csharp_request_type_name()] = 1;
-    
-    
-foreach ($keys as $k => $v)
-{
-    echo "    public virtual UInt64 GetPartitionHash(".$k." key) { return 0; }".PHP_EOL;
-}
-?>
-
     <?php foreach ($svc->functions as $f) { ?>
 
         // ---------- call <?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
         public void <?=$f->name?>(
             <?=$f->get_csharp_request_type_name()?> args,
-            int hash = 0,
+            UInt64 hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash, GetPartitionHash(args));
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash);
             s.Write(args);
             s.Flush();
             
@@ -54,10 +40,10 @@ foreach ($keys as $k => $v)
             <?=$f->get_csharp_request_type_name()?> args,
             out <?=$f->get_csharp_return_type()?> resp, 
             int timeout_milliseconds = 0, 
-            int hash = 0,
+            UInt64 hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash, GetPartitionHash(args));
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
             s.Write(args);
             s.Flush();
             
@@ -80,11 +66,11 @@ foreach ($keys as $k => $v)
             <?=$f->get_csharp_request_type_name()?> args,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
-            int reply_hash = 0,
-            int request_hash = 0,
+            int reply_thread_hash = 0,
+            UInt64 request_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(args));
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
             s.Write(args);
             s.Flush();
             
@@ -98,7 +84,7 @@ foreach ($keys as $k => $v)
                                 rs.Read(out resp);
                                 callback(err, resp);
                             },
-                        reply_hash
+                        reply_thread_hash
                         );
         }        
         
@@ -106,11 +92,11 @@ foreach ($keys as $k => $v)
             <?=$f->get_csharp_request_type_name()?> args,
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
-            int reply_hash = 0,
-            int request_hash = 0,
+            int reply_thread_hash = 0,
+            UInt64 hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash, GetPartitionHash(args));
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, hash);
             s.Write(args);
             s.Flush();
             
@@ -124,7 +110,7 @@ foreach ($keys as $k => $v)
                                 rs.Read(out resp);
                                 callback(err, resp);
                             },
-                        reply_hash
+                        reply_thread_hash
                         );
         }       
 <?php    }?>

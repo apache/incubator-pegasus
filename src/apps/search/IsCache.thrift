@@ -34,9 +34,8 @@ struct Caption
 
 struct QueryResult
 {
-    1: StringQuery RawQuery;
-    2: AugmentedQuery Query;
-    3: list<Caption> Results;
+    1: StringQuery Query;
+    2: list<Caption> Results;
 }
 
 service IsCache
