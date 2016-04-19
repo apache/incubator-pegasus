@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BondSpecProvider.cs" />
     <Compile Include="LanguageHelper.cs" />
     <Compile Include="ThriftTranslator.cs" />
     <Compile Include="ThriftSpecProvider.cs" />

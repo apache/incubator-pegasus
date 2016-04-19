@@ -111,7 +111,7 @@ namespace rDSN.Tron.LanguageProvider
         /// <param name="spec"> given spec </param>
         /// <param name="dir"> dir to place result files </param>
         /// <returns> result spec as a set of .cs files </returns>
-        string[] ToCommonSpec(ServiceSpec spec, string dir);
+        //string[] ToCommonSpec(ServiceSpec spec, string dir);
         
         /// <summary>
         /// generate service invocation client code, save them into %dir%
@@ -179,6 +179,7 @@ namespace rDSN.Tron.LanguageProvider
         {
             Register(new ThriftSpecProvider());
             Register(new ProtoSpecProvider());
+            Register(new BondSpecProvider());
         }
 
         public void Register(ISpecProvider provider)

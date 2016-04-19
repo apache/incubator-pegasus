@@ -52,6 +52,7 @@ namespace rDSN.Tron.ControlPanel
             
             // local tools
             CommandManager.Instance().Add(new[] { "GenCompositionStub", "GCS", "gcs" }, new GenerateCompositionStubCommand());
+            CommandManager.Instance().Add(new[] { "GenCompositionStubBond", "GCSB", "gcsb" }, new GenerateCompositionStubCommandBond());
             CommandManager.Instance().Add(new[] { "Generatec", "generatec", "gc", "GC" }, new GenerateCommonInterfaceCommand());
             CommandManager.Instance().Add(new[] { "Generateb", "generateb", "gb", "GB" }, new GenerateIDLFileCommand());
             

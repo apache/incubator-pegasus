@@ -5,7 +5,7 @@ function write_wrapper($file) {
         file_put_contents($file, $str."\n", FILE_APPEND);
     };
 }
-require_once("../../type.php"); // type.php
+require_once(__DIR__."/../../type.php"); // type.php
 $structs = array();
 $last_proto_name = "";
 $last_thrift_name = "";

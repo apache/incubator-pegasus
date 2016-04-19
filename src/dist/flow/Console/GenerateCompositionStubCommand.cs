@@ -37,8 +37,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
 using rDSN.Tron.Utility;
-
+using rDSN.Tron.LanguageProvider;
 
 namespace rDSN.Tron.ControlPanel
 {
@@ -62,7 +63,38 @@ namespace rDSN.Tron.ControlPanel
 
         public override string Help()
         {
-            return ".\\Tron.exe gcs 1.thrift 2.proto 3.thrift";
+            return "GenCompositionStub|GCS|gcs e.g., .\\Tron.exe gcs 1.thrift 2.proto 3.thrift";
+        }
+    }
+
+    public class GenerateCompositionStubCommandBond : Command
+    {
+        public override bool Execute(List<string> args)
+        {
+            SystemHelper.CreateOrCleanDirectory("tmp");
+            var compiler = LanguageHelper.GetCompilerPath(ServiceSpecType.bond_3_0);
+            var bondc_dir = Path.GetDirectoryName(compiler);
+            string[] templates = { "bond_composition_stub.tt" };
+            var arguments = args[0] + " /c#" +
+                templates.VerboseCombine(" ", t => " /T:" + Path.Combine(bondc_dir, t))
+                + " /O:tmp";
+
+            var err = SystemHelper.RunProcess(compiler, arguments);
+            Trace.Assert(err == 0, "bondc code generation failed");
+
+            CSharpCompiler.ToDiskAssembly(
+                Directory.GetFiles("tmp", "*_composition_stub.cs", SearchOption.AllDirectories).ToArray(),
+                new[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
+                args.ToArray(),
+                "compo.dll"
+                );
+            Console.ReadLine();
+            return true;
+        }
+
+        public override string Help()
+        {
+            return "GenCompositionStubBond|GCSB|gcsb e.g., .\\Tron.exe gcs 1.bond";
         }
     }
 }
