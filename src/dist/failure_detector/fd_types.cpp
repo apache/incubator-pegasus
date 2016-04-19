@@ -124,24 +124,11 @@ beacon_msg::beacon_msg(const beacon_msg& other0) {
   to_addr = other0.to_addr;
   __isset = other0.__isset;
 }
-beacon_msg::beacon_msg( beacon_msg&& other1) {
-  time = std::move(other1.time);
-  from_addr = std::move(other1.from_addr);
-  to_addr = std::move(other1.to_addr);
-  __isset = std::move(other1.__isset);
-}
-beacon_msg& beacon_msg::operator=(const beacon_msg& other2) {
-  time = other2.time;
-  from_addr = other2.from_addr;
-  to_addr = other2.to_addr;
-  __isset = other2.__isset;
-  return *this;
-}
-beacon_msg& beacon_msg::operator=(beacon_msg&& other3) {
-  time = std::move(other3.time);
-  from_addr = std::move(other3.from_addr);
-  to_addr = std::move(other3.to_addr);
-  __isset = std::move(other3.__isset);
+beacon_msg& beacon_msg::operator=(const beacon_msg& other1) {
+  time = other1.time;
+  from_addr = other1.from_addr;
+  to_addr = other1.to_addr;
+  __isset = other1.__isset;
   return *this;
 }
 void beacon_msg::printTo(std::ostream& out) const {
@@ -291,38 +278,21 @@ void swap(beacon_ack &a, beacon_ack &b) {
   swap(a.__isset, b.__isset);
 }
 
-beacon_ack::beacon_ack(const beacon_ack& other4) {
-  time = other4.time;
-  this_node = other4.this_node;
-  primary_node = other4.primary_node;
-  is_master = other4.is_master;
-  allowed = other4.allowed;
-  __isset = other4.__isset;
+beacon_ack::beacon_ack(const beacon_ack& other2) {
+  time = other2.time;
+  this_node = other2.this_node;
+  primary_node = other2.primary_node;
+  is_master = other2.is_master;
+  allowed = other2.allowed;
+  __isset = other2.__isset;
 }
-beacon_ack::beacon_ack( beacon_ack&& other5) {
-  time = std::move(other5.time);
-  this_node = std::move(other5.this_node);
-  primary_node = std::move(other5.primary_node);
-  is_master = std::move(other5.is_master);
-  allowed = std::move(other5.allowed);
-  __isset = std::move(other5.__isset);
-}
-beacon_ack& beacon_ack::operator=(const beacon_ack& other6) {
-  time = other6.time;
-  this_node = other6.this_node;
-  primary_node = other6.primary_node;
-  is_master = other6.is_master;
-  allowed = other6.allowed;
-  __isset = other6.__isset;
-  return *this;
-}
-beacon_ack& beacon_ack::operator=(beacon_ack&& other7) {
-  time = std::move(other7.time);
-  this_node = std::move(other7.this_node);
-  primary_node = std::move(other7.primary_node);
-  is_master = std::move(other7.is_master);
-  allowed = std::move(other7.allowed);
-  __isset = std::move(other7.__isset);
+beacon_ack& beacon_ack::operator=(const beacon_ack& other3) {
+  time = other3.time;
+  this_node = other3.this_node;
+  primary_node = other3.primary_node;
+  is_master = other3.is_master;
+  allowed = other3.allowed;
+  __isset = other3.__isset;
   return *this;
 }
 void beacon_ack::printTo(std::ostream& out) const {
@@ -333,6 +303,112 @@ void beacon_ack::printTo(std::ostream& out) const {
   out << ", " << "primary_node=" << to_string(primary_node);
   out << ", " << "is_master=" << to_string(is_master);
   out << ", " << "allowed=" << to_string(allowed);
+  out << ")";
+}
+
+
+config_master_message::~config_master_message() throw() {
+}
+
+
+void config_master_message::__set_master(const  ::dsn::rpc_address& val) {
+  this->master = val;
+}
+
+void config_master_message::__set_is_register(const bool val) {
+  this->is_register = val;
+}
+
+uint32_t config_master_message::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->master.read(iprot);
+          this->__isset.master = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->is_register);
+          this->__isset.is_register = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t config_master_message::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("config_master_message");
+
+  xfer += oprot->writeFieldBegin("master", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->master.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("is_register", ::apache::thrift::protocol::T_BOOL, 2);
+  xfer += oprot->writeBool(this->is_register);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(config_master_message &a, config_master_message &b) {
+  using ::std::swap;
+  swap(a.master, b.master);
+  swap(a.is_register, b.is_register);
+  swap(a.__isset, b.__isset);
+}
+
+config_master_message::config_master_message(const config_master_message& other4) {
+  master = other4.master;
+  is_register = other4.is_register;
+  __isset = other4.__isset;
+}
+config_master_message& config_master_message::operator=(const config_master_message& other5) {
+  master = other5.master;
+  is_register = other5.is_register;
+  __isset = other5.__isset;
+  return *this;
+}
+void config_master_message::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "config_master_message(";
+  out << "master=" << to_string(master);
+  out << ", " << "is_register=" << to_string(is_register);
   out << ")";
 }
 

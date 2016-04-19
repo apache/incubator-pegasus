@@ -1,12 +1,9 @@
 set(project_name googletest)
 
-if(DSN_GIT_SOURCE STREQUAL "github")
-    set(target_url "https://github.com/imzhenyu/googletest.git")
-elseif(DSN_GIT_SOURCE STREQUAL "xiaomi")
+if(DSN_GIT_SOURCE STREQUAL "xiaomi")
     set(target_url "http://git.n.xiaomi.com/pegasus/googletest.git")
 else()
-    message(STATUS "the git source" ${DSN_GIT_SOURCE})
-    message(FATAL_ERROR "not support other git source")
+    set(target_url "https://github.com/imzhenyu/googletest.git")
 endif()
 
 set(my_cmake_args "-Dgtest_force_shared_crt=OFF;")

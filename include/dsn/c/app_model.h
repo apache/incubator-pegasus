@@ -38,6 +38,7 @@
 # include <dsn/c/api_common.h>
 
 # ifdef __cplusplus
+namespace dsn { class service_app; }
 extern "C" {
 # endif
 
@@ -248,7 +249,8 @@ extern "C" {
  
 /*! callback to create the app context */
 typedef void*       (*dsn_app_create)(
-    const char*     ///< type name registered on dsn_register_app
+    const char*,    ///< type name registered on dsn_register_app
+    dsn_gpid        ///< assigned global partition id
     );
 
 /*! callback to run the app with the app context, similar to main(argc, argv) */
@@ -259,17 +261,98 @@ typedef dsn_error_t(*dsn_app_start)(
     );
 
 /*! callback to stop and destroy the app */
-typedef void(*dsn_app_destroy)(
+typedef dsn_error_t(*dsn_app_destroy)(
     void*,          ///< context return by app_create
     bool            ///< cleanup app state or not
     );
 
-# define DSN_APP_MASK_DEFAULT    0x0 ///< default mask, only layer1 app model is supported
-# define DSN_APP_L2_VNODE        0x1 ///< whether many virtual app nodes in the same app is supported
-# define DSN_APP_L2_REPLICATION  0x2 ///< whether replication is supported
-# define DSN_APP_L2_STATEFUL     0x4 ///< whether the app is stateful
+
+/*! callback for layer2 app & framework to handle incoming rpc request */
+typedef void(*dsn_layer2_rpc_request_handler)(
+    void*,          ///< context from dsn_app_create
+    dsn_gpid,       ///< global partition id
+    bool,           ///< is_write_operation or not
+    dsn_message_t,  ///< incoming rpc request
+    int             ///< delay (imposed by tools)
+    );
+
+
+struct dsn_app_learn_state
+{
+    int     total_learn_state_size; // memory used in the given buffer by this learn-state 
+    int64_t from_decree_excluded;
+    int64_t to_decree_included;
+    int     meta_state_size;
+    int     file_state_count;
+    void*   meta_state_ptr;
+    const char** files;
+};
+
+enum dsn_chkpt_apply_mode
+{
+    DSN_CHKPT_COPY,
+    DSN_CHKPT_LEARN
+};
+
+typedef dsn_error_t (*dsn_app_checkpoint)(
+    void* ///< context from dsn_app_create
+    );
+
+typedef dsn_error_t(*dsn_app_checkpoint_async)(
+    void* ///< context from dsn_app_create
+    );
+
+typedef int(*dsn_app_prepare_get_checkpoint)(
+    void*,    ///< context from dsn_app_create
+    void*,    ///< buffer for filling in learn request
+    int       ///< buffer capacity
+    );
+
+typedef int(*dsn_app_get_checkpoint)(
+    void*,    ///< context from dsn_app_create
+    int64_t,  ///< start decree
+    void*,    ///< learn request from prepare_get_checkpoint
+    int,      ///< learn request size
+    dsn_app_learn_state*, ///< learn state buffer to be filled in
+    int       ///< learn state buffer capacity
+    );
+
+typedef int(*dsn_app_apply_checkpoint)(
+    void*,                      ///< context from dsn_app_create
+    const dsn_app_learn_state*, ///< learn state
+    dsn_chkpt_apply_mode        ///< checkpoint apply mode
+    );
+
+# define DSN_APP_MASK_DEFAULT                 0x00 ///< default mask, only layer1 app model is supported
+# define DSN_L2_REPLICATION_FRAMEWORK_TYPE_1  0x01 ///< implement type 1 replication framework
+# define DSN_L2_REPLICATION_APP_TYPE_1        0x02 ///< implement type 1 replication app
+# define DSN_L2_REPLICATION_FRAMEWORK_TYPE_2  0x04 ///< implement type 1 replication framework
+# define DSN_L2_REPLICATION_APP_TYPE_2        0x08 ///< implement type 1 replication app
+
+// requests may be batched by replication and fed to replication
+// app with the same decree, in this case, apps may need to 
+// be aware of the batch state for the current request
+enum dsn_batch_state
+{
+    BS_NOT_BATCH,  // request is not batched
+    BS_BATCH,      // request is batched but not the last in the same batch
+    BS_BATCH_LAST  // request is batched and the last in the same batch
+};
 
 # pragma pack(push, 4)
+
+struct dsn_app_cross_layer_shared_info_type_1
+{
+    // from layer 2 to layer 1
+    int64_t last_committed_decree;
+    // from layer 1 to layer 2
+    int64_t last_durable_decree;
+    // physical error (e.g., io error) indicates the app needs to be dropped
+    int32_t  physical_error;
+
+    dsn_batch_state  batch_state;
+};
+
 /*!
   developers define the following dsn_app data structure, and passes it
   to rDSN through \ref dsn_register_app so that the latter can manage 
@@ -289,10 +372,19 @@ typedef struct dsn_app
     } layer1;    
 
     /*! TODO: layer 2 app definition */
-    struct layer2_callbacks
+    struct layer2_framework_callbacks
     {
-        uint64_t dump; // C requires that a struct has at least one member
-    } layer2;
+        dsn_layer2_rpc_request_handler on_rpc_request;
+    } layer2_frameworks;
+
+    struct layer2_app_type_1_callbacks
+    {
+        dsn_app_checkpoint              chkpt;
+        dsn_app_checkpoint_async        chkpt_async;
+        dsn_app_prepare_get_checkpoint  checkpoint_get_prepare; ///< optional
+        dsn_app_get_checkpoint          chkpt_get;
+        dsn_app_apply_checkpoint        chkpt_apply;
+    } layer2_apps_type_1;
 
     /*! TODO: layer 3 app definition */
     struct layer3_callbacks
@@ -306,13 +398,30 @@ typedef struct dsn_app
 /*! application information retrived at runtime */
 typedef struct dsn_app_info
 {
-    void* app_context_ptr;                    ///< returned by dsn_app_create
+    //
+    // layer 1 information
+    //
+    union {
+        void* app_context_ptr;                    ///< returned by dsn_app_create
+# ifdef __cplusplus
+        ::dsn::service_app *app_ptr_cpp;
+# endif
+    } app;
+    
     int   app_id;                             ///< app id, see \ref service_app_spec for more details.
     int   index;                              ///< app role index
     char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app role name
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app type name
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app full name
     char  data_dir[DSN_MAX_PATH];             ///< app data directory
+
+    //
+    // cross layer shared information
+    //
+    union
+    {
+        dsn_app_cross_layer_shared_info_type_1 type1;
+    } info;
 } dsn_app_info;
 # pragma pack(pop)
 
@@ -430,12 +539,14 @@ extern DSN_API int  dsn_get_all_apps(/*out*/ dsn_app_info* info_buffer, int coun
  */
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
 
+extern DSN_API dsn_app_info* dsn_get_app_info_ptr(dsn_gpid gpid DEFAULT(dsn_gpid{ 0 }));
+
 /*!
  get current application data dir.
 
  \return null if it fails, else a pointer to the data path string.
  */
-extern DSN_API const char* dsn_get_current_app_data_dir();
+extern DSN_API const char* dsn_get_current_app_data_dir(dsn_gpid gpid DEFAULT(dsn_gpid{ 0 }));
 
 /*!
  signal the application loader that application types are registered.

@@ -136,17 +136,18 @@ namespace dsn {
             auto parser_place = alloca(pr.second);
             auto parser = pr.first(parser_place, _message_buffer_block_size, true);
 
-            int tlen;
-            auto count = parser->get_send_buffers_count_and_total_length(request, &tlen);
-            dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
+            auto count = parser->get_send_buffers_count(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[count]);
             parser->prepare_buffers_on_send(request, 0, bufs.get());
-
             // end using parser
             parser->~message_parser();
-
+            size_t tlen = 0, offset = 0;
+            for (int i = 0; i < count; i ++)
+            {
+                tlen += bufs[i].sz;
+            }
+            dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
             std::unique_ptr<char[]> packet_buffer(new char[tlen]);
-            size_t offset = 0;
             for (int i = 0; i < count; i ++)
             {
                 memcpy(&packet_buffer[offset], bufs[i].buf, bufs[i].sz);

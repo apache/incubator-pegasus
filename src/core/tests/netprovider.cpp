@@ -62,7 +62,7 @@ void response_handler(int ec, dsn_message_t req, dsn_message_t resp, void* reque
     if (ERR_OK.get() == ec) {
         std::string response_string;
         char* request_str = (char*)(request_buf);
-        ::unmarshall(resp, response_string);
+        ::dsn::unmarshall(resp, response_string);
         ASSERT_TRUE(strcmp(response_string.c_str(), request_str)==0);
     }
     else {
@@ -74,9 +74,9 @@ void response_handler(int ec, dsn_message_t req, dsn_message_t resp, void* reque
 void rpc_server_response(dsn_message_t request, void*)
 {
     std::string str_command;
-    ::unmarshall(request, str_command);
+    ::dsn::unmarshall(request, str_command);
     dsn_message_t response = dsn_msg_create_response(request);
-    ::marshall(response, str_command);
+    ::dsn::marshall(response, str_command);
     dsn_rpc_reply(response);
 }
 
@@ -92,7 +92,7 @@ void rpc_client_session_send(rpc_session_ptr client_session)
     char *buffer = new char[128];
     memset(buffer, 0, 128);
     strcpy(buffer, "hello world");
-    ::marshall(msg, std::string(buffer));
+    ::dsn::marshall(msg, std::string(buffer));
 
     wait_flag = 0;
     rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
@@ -173,7 +173,7 @@ TEST(tools_common, asio_udp_provider)
     char *buffer = new char[128];
     memset(buffer, 0, 128);
     strcpy(buffer, "hello world");
-    ::marshall(msg, std::string(buffer));
+    ::dsn::marshall(msg, std::string(buffer));
 
     wait_flag = 0;
     rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);

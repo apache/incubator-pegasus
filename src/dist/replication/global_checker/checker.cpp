@@ -36,12 +36,14 @@
 
 # include <dsn/dist/replication/replication.global_check.h>
 # include <dsn/tool/global_checker.h>
+# include <dsn/dist/replication/meta_service_app.h>
+# include <dsn/dist/replication/replication_service_app.h>
+
 # include "replica.h"
 # include "replica_stub.h"
 # include "meta_service.h"
 # include "meta_server_failure_detector.h"
 # include "server_state.h"
-# include "replication_failure_detector.h"
 # include "mutation_log.h"
 
 # ifdef __TITLE__
@@ -62,11 +64,11 @@ namespace dsn {
                 {
                     if (0 == strcmp(app.type, "meta"))
                     {
-                        _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
+                        _meta_servers.push_back((meta_service_app*)app.app.app_context_ptr);
                     }
                     else if (0 == strcmp(app.type, "replica"))
                     {
-                        _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
+                        _replica_servers.push_back((replication_service_app*)app.app.app_context_ptr);
                     }
                 }
             }
@@ -107,7 +109,7 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY || r.second->status() == PS_SECONDARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY || r.second->status() == partition_status::PS_SECONDARY)
                         {
                             r.second->check_state_completeness();
                         }
@@ -138,15 +140,15 @@ namespace dsn {
                 meta_service_app* meta_app = meta_leader();
                 if (!meta_app) return;
 
-                std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_meta_server;
-                std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_replica_servers;
+                std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_meta_server;
+                std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_replica_servers;
 
                 for (auto& app : meta_app->_service->_state->_apps)
                 {
-                    for (int i = 0; i < app.partition_count; i++)
+                    for (int i = 0; i < app.info.partition_count; i++)
                     {
                         auto& par = app.partitions[i];
-                        primaries_from_meta_server[par.gpid] = par.primary;
+                        primaries_from_meta_server[par.pid] = par.primary;
                     }
                 }
 
@@ -157,10 +159,10 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY)
                         {
                             auto pr = primaries_from_replica_servers.insert(
-                                std::unordered_map<global_partition_id, ::dsn::rpc_address>::value_type(r.first, rs->primary_address())
+                                std::unordered_map<gpid, ::dsn::rpc_address>::value_type(r.first, rs->primary_address())
                                 );
                             dassert(pr.second, "only one primary can exist for one partition");
 
@@ -179,7 +181,7 @@ namespace dsn {
                 auto meta = meta_leader();
                 if (!meta) return;
 
-                std::unordered_map<global_partition_id, replica_ptr> last_committed_decrees_on_primary;
+                std::unordered_map<gpid, replica_ptr> last_committed_decrees_on_primary;
 
                 for (auto& rs : _replica_servers)
                 {
@@ -188,7 +190,7 @@ namespace dsn {
 
                     for (auto& r : rs->_stub->_replicas)
                     {
-                        if (r.second->status() == PS_PRIMARY)
+                        if (r.second->status() == partition_status::PS_PRIMARY)
                         {
                             last_committed_decrees_on_primary[r.first] = r.second;
                         }
@@ -205,7 +207,7 @@ namespace dsn {
                         auto it = last_committed_decrees_on_primary.find(r.first);
                         if (it != last_committed_decrees_on_primary.end())
                         {
-                            if (r.second->status() == PS_SECONDARY &&
+                            if (r.second->status() == partition_status::PS_SECONDARY &&
                                 r.second->_config.ballot == it->second->_config.ballot)
                             {
                                 dassert(it->second->last_committed_decree() <= r.second->last_prepared_decree(),

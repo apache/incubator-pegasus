@@ -32,9 +32,9 @@ pushd %build_dir%
 echo CALL %TOP_DIR%\ext\cmake-3.2.2\bin\cmake.exe .. -DCMAKE_BUILD_TYPE="%build_type%" -DBOOST_INCLUDEDIR="%TOP_DIR%\ext\%boost_dir_name%" -DBOOST_LIBRARYDIR="%TOP_DIR%\ext\%boost_dir_name%\%boost_lib%" -G "%cmake_target%"
 CALL %TOP_DIR%\ext\cmake-3.2.2\bin\cmake.exe .. -DCMAKE_BUILD_TYPE="%build_type%" -DBOOST_INCLUDEDIR="%TOP_DIR%\ext\%boost_dir_name%" -DBOOST_LIBRARYDIR="%TOP_DIR%\ext\%boost_dir_name%\%boost_lib%" -G "%cmake_target%"
 
-msbuild dsn.sln /p:Configuration=%build_type%
+msbuild dsn.sln /p:Configuration=%build_type% /m
 IF "%install%" NEQ "" (
-    msbuild INSTALL.vcxproj /p:Configuration=%build_type%
+    msbuild INSTALL.vcxproj /p:Configuration=%build_type% /m
 )
 
 popd

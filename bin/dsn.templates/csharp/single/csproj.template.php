@@ -2,8 +2,8 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
-$dsn_root = dirname(dirname(dirname(dirname(__DIR__))));
-$dsn_root = str_replace('\\', '/', $dsn_root);
+$idl_format = $argv[4];
+$dsn_root = getenv('DSN_ROOT');
 
 function getGUID()
 {
@@ -29,6 +29,7 @@ function getGUID()
 
 $appguid = getGUID();
 echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
+
 ?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -108,8 +109,17 @@ echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="dsn.dev.csharp">
-        <HintPath><?=$dsn_root?>/lib/dsn.dev.csharp.dll</HintPath>
+        <HintPath><?=$dsn_root?>\lib\dsn.dev.csharp.dll</HintPath>
     </Reference>
+<?php if ($idl_format == "proto") { ?>
+    <Reference Include="Google.Protobuf">
+        <HintPath><?=$dsn_root?>\lib\Google.Protobuf.dll</HintPath>
+    </Reference>
+<?php } else if ($idl_format == "thrift") { ?>
+    <Reference Include="Thrift">
+        <HintPath><?=$dsn_root?>\lib\Thrift.dll</HintPath>
+    </Reference>
+<?php } ?>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="${MY_PROJ_SRC}" />
@@ -119,6 +129,12 @@ echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
   </ItemGroup>
   <ItemGroup>
     <None Include="${MY_CURRENT_SOURCE_DIR}\config.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="${MY_CURRENT_SOURCE_DIR}\config.appstore.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="${MY_CURRENT_SOURCE_DIR}\run.cmd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

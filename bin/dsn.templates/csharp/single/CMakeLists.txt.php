@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_format = $argv[4];
 ?>
 cmake_minimum_required(VERSION 2.8.8)
 
@@ -21,7 +22,7 @@ set(MY_PROJ_SRC "")
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search
-set(MY_SRC_SEARCH_MODE "GLOB")
+set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
 set(MY_PROJ_INC_PATH "")
 
@@ -29,8 +30,17 @@ set(MY_PROJ_LIBS "")
 
 set(MY_PROJ_LIB_PATH "")
 
+set(INI_FILES "")
+file(GLOB
+    RES_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cmd"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile"
+    )
+
 # Extra files that will be installed
-set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
+set(MY_BINPLACES ${RES_FILES})
 
 set(MY_BOOST_PACKAGES "")
 

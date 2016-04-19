@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH "")
 if (UNIX)
     set(MY_PROJ_LIBS pthread dsn.cli)
 else()
-    set(MY_PROJ_LIBS "")
+    set(MY_PROJ_LIBS dsn.cli)
 endif()
 
 set(MY_PROJ_LIB_PATH "")

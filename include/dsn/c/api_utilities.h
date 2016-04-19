@@ -208,6 +208,11 @@ extern DSN_API double                dsn_config_get_value_double(
                                         double default_value, 
                                         const char* dsptr
                                         );
+// return all section count (may greater than buffer_count)
+extern DSN_API int                   dsn_config_get_all_sections(
+                                        const char** buffers, 
+                                        /*inout*/ int* buffer_count
+                                        );
 // return all key count (may greater than buffer_count)
 extern DSN_API int                   dsn_config_get_all_keys(
                                         const char* section, 

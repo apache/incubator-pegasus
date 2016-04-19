@@ -38,8 +38,8 @@
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
-#include "replication_failure_detector.h"
 #include <dsn/cpp/json_helper.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -53,7 +53,7 @@ using namespace dsn::service;
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr)
+    : serverlet("replica_stub"), _replicas_lock(true), /*_cli_replica_stub_json_state_handle(nullptr), */_cli_kill_partition(nullptr)
 {    
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -172,7 +172,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 dassert(false, "conflict replica dir: %s <--> %s", r->dir().c_str(), rps[r->get_gpid()]->dir().c_str());
             }
             ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
-                r->get_gpid().app_id, r->get_gpid().pidx,
+                r->get_gpid().get_app_id(), r->get_gpid().get_partition_index(),
                 primary_address().to_string(),
                 dir.c_str(),
                 r->last_durable_decree(),
@@ -188,7 +188,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     error_code err = _log->open(
         [&rps](mutation_ptr& mu)
         {
-            auto it = rps.find(mu->data.header.gpid);
+            auto it = rps.find(mu->data.header.pid);
             if (it != rps.end())
             {
                 return it->second->replay_mutation(mu, false);
@@ -264,7 +264,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dwarn(
             "%u.%u @ %s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
             "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
-            it->first.app_id, it->first.pidx,
+            it->first.get_app_id(), it->first.get_partition_index(),
             primary_address().to_string(),
             err.to_string(),
             it->second->last_durable_decree(),
@@ -318,9 +318,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     // init livenessmonitor
     dassert (NS_Disconnected == _state, "");
-    _failure_detector = new replication_failure_detector(this, _options.meta_servers);
     if (_options.fd_disabled == false)
     {
+        _failure_detector = new ::dsn::dist::slave_failure_detector_with_multimaster(
+            _options.meta_servers,
+            [=]() {this->on_meta_server_disconnected(); },
+            [=]() {this->on_meta_server_connected(); }
+            );
+
         err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
@@ -337,7 +342,36 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 }
 
-replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_possible, const char* app_type)
+void replica_stub::on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+{
+    error_code err = ERR_INVALID_PARAMETERS;
+    if (argc >= 2)
+    {
+        gpid gpid;
+        gpid.set_app_id(atoi(argv[0]));
+        gpid.set_partition_index(atoi(argv[1]));
+
+        replica_ptr r = get_replica(gpid);
+        if (r == nullptr)
+        {
+            err = ERR_OBJECT_NOT_FOUND;
+        }
+        else
+        {
+            r->inject_error(ERR_INJECTED);
+            err = ERR_OK;
+        }
+    }
+
+    std::string* resp_json = new std::string();
+    *resp_json = err.to_string();
+    reply->context = resp_json;
+    reply->message = (const char*)resp_json->c_str();
+    reply->size = resp_json->size();
+    return;
+}
+
+replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const app_info* app)
 {
     zauto_lock l(_replicas_lock);
     auto it = _replicas.find(gpid);
@@ -359,8 +393,8 @@ replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_po
         }
         else
         {
-            dassert (app_type, "");
-            replica* rep = replica::newr(this, app_type, gpid);
+            dassert (app, "");
+            replica* rep = replica::newr(this, gpid, *app);
             if (rep != nullptr) 
             {
                 add_replica(rep);
@@ -372,27 +406,18 @@ replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_po
 
 replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
 {
-    global_partition_id gpid;
-    gpid.app_id = app_id;
-    gpid.pidx = partition_index;
+    gpid gpid;
+    gpid.set_app_id(app_id);
+    gpid.set_partition_index(partition_index);
     return get_replica(gpid);
 }
 
-void replica_stub::on_client_write(dsn_message_t request)
+void replica_stub::on_client_write(gpid gpid, dsn_message_t request)
 {
-    write_request_header hdr;
-    ::unmarshall(request, hdr);
-
-    if (hdr.code == TASK_CODE_INVALID)
-    {
-        response_client_error(request, ERR_INVALID_DATA);
-        return;
-    }
-
-    replica_ptr rep = get_replica(hdr.gpid);
+    replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_write(hdr.code, request);
+        rep->on_client_write(task_code(dsn_msg_task_code(request)), request);
     }
     else
     {
@@ -400,21 +425,12 @@ void replica_stub::on_client_write(dsn_message_t request)
     }
 }
 
-void replica_stub::on_client_read(dsn_message_t request)
+void replica_stub::on_client_read(gpid gpid, dsn_message_t request)
 {
-    read_request_header hdr;
-    ::unmarshall(request, hdr);
-
-    if (hdr.code == TASK_CODE_INVALID)
-    {
-        response_client_error(request, ERR_INVALID_DATA);
-        return;
-    }
-
-    replica_ptr rep = get_replica(hdr.gpid);
+    replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->on_client_read(hdr, request);
+        rep->on_client_read(task_code(dsn_msg_task_code(request)), request);
     }
     else
     {
@@ -432,14 +448,14 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 
     // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
     // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
-    replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
+    replica_ptr rep = get_replica(proposal.config.pid, proposal.type == config_type::CT_ASSIGN_PRIMARY, &proposal.info);
     if (rep == nullptr)
     {
-        if (proposal.type == CT_ASSIGN_PRIMARY)
+        if (proposal.type == config_type::CT_ASSIGN_PRIMARY)
         {
-            begin_open_replica(proposal.config.app_type, proposal.config.gpid);
+            begin_open_replica(proposal.info, proposal.config.pid, nullptr);
         }   
-        else if (proposal.type == CT_UPGRADE_TO_PRIMARY)
+        else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
             remove_replica_on_meta_server(proposal.config);
         }
@@ -453,11 +469,11 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 
 void replica_stub::on_query_decree(const query_replica_decree_request& req, /*out*/ query_replica_decree_response& resp)
 {
-    replica_ptr rep = get_replica(req.gpid);
+    replica_ptr rep = get_replica(req.pid);
     if (rep != nullptr)
     {
         resp.err = ERR_OK;
-        if (PS_POTENTIAL_SECONDARY == rep->status())
+        if (partition_status::PS_POTENTIAL_SECONDARY == rep->status())
         {
             resp.last_decree = 0;
         }
@@ -486,7 +502,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
     {
         replica_ptr r = it->second;
         replica_info info;
-        info.gpid = r->get_gpid();
+        info.pid = r->get_gpid();
         info.ballot = r->get_ballot();
         info.status = r->status();
         info.last_committed_decree = r->last_committed_decree();
@@ -499,8 +515,8 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
 
 void replica_stub::on_prepare(dsn_message_t request)
 {
-    global_partition_id gpid;
-    ::unmarshall(request, gpid);    
+    gpid gpid;
+    dsn::unmarshall(request, gpid);
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -509,7 +525,7 @@ void replica_stub::on_prepare(dsn_message_t request)
     else
     {
         prepare_ack resp;
-        resp.gpid = gpid;
+        resp.pid = gpid;
         resp.err = ERR_OBJECT_NOT_FOUND;
         reply(request, resp);
     }
@@ -523,19 +539,19 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
         return;
     }
 
-    replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.pid, request.config.status == partition_status::PS_POTENTIAL_SECONDARY, &request.app);
     if (rep != nullptr)
     {
         rep->on_group_check(request, response);
     }
     else 
     {
-        if (request.config.status == PS_POTENTIAL_SECONDARY)
+        if (request.config.status == partition_status::PS_POTENTIAL_SECONDARY)
         {
             std::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
 
-            begin_open_replica(request.app_type, request.config.gpid, req);
+            begin_open_replica(request.app, request.config.pid, req);
             response.err = ERR_OK;
             response.learner_signature = invalid_signature;
         }
@@ -549,9 +565,9 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 void replica_stub::on_learn(dsn_message_t msg)
 {
     learn_request request;
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
 
-    replica_ptr rep = get_replica(request.gpid);
+    replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr)
     {
         rep->on_learn(msg, request);
@@ -566,7 +582,7 @@ void replica_stub::on_learn(dsn_message_t msg)
 
 void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response)
 {
-    replica_ptr rep = get_replica(request.gpid);
+    replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr)
     {
         rep->on_copy_checkpoint(request, response);
@@ -579,7 +595,7 @@ void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*ou
 
 void replica_stub::on_learn_completion_notification(const group_check_response& report)
 {
-    replica_ptr rep = get_replica(report.gpid);
+    replica_ptr rep = get_replica(report.pid);
     if (rep != nullptr)
     {
         rep->on_learn_completion_notification(report);
@@ -592,7 +608,7 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
 
 void replica_stub::on_add_learner(const group_check_request& request)
 {
-    replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.pid, false, &request.app);
     if (rep != nullptr)
     {
         rep->on_add_learner(request);
@@ -601,42 +617,42 @@ void replica_stub::on_add_learner(const group_check_request& request)
     {
         std::shared_ptr<group_check_request> req(new group_check_request);
         *req = request;
-        begin_open_replica(request.app_type, request.config.gpid, req);
+        begin_open_replica(request.app, request.config.pid, req);
     }
 }
 
 void replica_stub::on_remove(const replica_configuration& request)
 {
-    replica_ptr rep = get_replica(request.gpid);
+    replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr)
     {
         rep->on_remove(request);
     }
 }
-
-void replica_stub::json_state(std::stringstream& out) const
-{
-    std::vector<replica_ptr> replicas_copy;
-    {
-        zauto_lock _(_replicas_lock);
-        for (auto& rep : _replicas)
-        {
-            replicas_copy.push_back(rep.second);
-        }
-    }
-    json_encode(out, replicas_copy);
-}
-
-void replica_stub::static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
-{
-    auto stub = reinterpret_cast<replica_stub*>(context);
-    std::stringstream ss;
-    stub->json_state(ss);
-    auto danglingstr = new std::string(std::move(ss.str()));
-    reply->message = danglingstr->c_str();
-    reply->size = danglingstr->size();
-    reply->context = danglingstr;
-}
+//
+//void replica_stub::json_state(std::stringstream& out) const
+//{
+//    std::vector<replica_ptr> replicas_copy;
+//    {
+//        zauto_lock _(_replicas_lock);
+//        for (auto& rep : _replicas)
+//        {
+//            replicas_copy.push_back(rep.second);
+//        }
+//    }
+//    json_encode(out, replicas_copy);
+//}
+//
+//void replica_stub::static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
+//{
+//    auto stub = reinterpret_cast<replica_stub*>(context);
+//    std::stringstream ss;
+//    stub->json_state(ss);
+//    auto danglingstr = new std::string(std::move(ss.str()));
+//    reply->message = danglingstr->c_str();
+//    reply->size = danglingstr->size();
+//    reply->context = danglingstr;
+//}
 
 void replica_stub::static_replica_stub_json_state_freer(dsn_cli_reply reply)
 {
@@ -662,7 +678,7 @@ void replica_stub::query_configuration_by_node()
 
     configuration_query_by_node_request req;
     req.node = _primary_address;
-    ::marshall(msg, req);
+    ::dsn::marshall(msg, req);
 
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
@@ -720,7 +736,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         configuration_query_by_node_response resp;
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
 
         if (resp.err != ERR_OK)
             return;
@@ -728,12 +744,12 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         replicas rs = _replicas;
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
         {
-            rs.erase(it->gpid);
+            rs.erase(it->config.pid);
             tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
                 this,
                 std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-                gpid_to_hash(it->gpid)
+                gpid_to_hash(it->config.pid)
                 );
         }
 
@@ -762,7 +778,7 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
             this,
             std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-            gpid_to_hash(it->gpid)
+            gpid_to_hash(it->config.pid)
             );
     }
 }
@@ -774,39 +790,39 @@ void replica_stub::set_replica_state_subscriber_for_test(replica_state_subscribe
 }
 
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
-void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config)
+void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const configuration_update_request& req)
 {
-    replica_ptr replica = get_replica(config.gpid);
+    replica_ptr replica = get_replica(req.config.pid);
     if (replica != nullptr)
     {
-        replica->on_config_sync(config);
+        replica->on_config_sync(req.config);
     }
     else
     {
         ddebug(
             "%u.%u @ %s: replica not exists on replica server, remove it from meta server",
-            config.gpid.app_id, config.gpid.pidx,
+            req.config.pid.get_app_id(), req.config.pid.get_partition_index(),
             primary_address().to_string()
             );
 
-        if (config.primary == _primary_address)
+        if (req.config.primary == _primary_address)
         {
-            remove_replica_on_meta_server(config);
+            remove_replica_on_meta_server(req.config);
         }
     }
 }
 
-void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid)
+void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpid)
 {
     replica_ptr replica = get_replica(gpid);
-    if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
+    if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY)
     {
         ddebug(
             "%u.%u @ %s: replica not exists on meta server, removed",
-            gpid.app_id, gpid.pidx,
+            gpid.get_app_id(), gpid.get_partition_index(),
             primary_address().to_string()
             );
-        replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
+        replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }
 
@@ -818,7 +834,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     request->config = config;
     request->config.ballot++;        
     request->node = _primary_address;
-    request->type = CT_DOWNGRADE_TO_INACTIVE;
+    request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
     if (_primary_address == config.primary)
     {
@@ -832,7 +848,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         return;
     }
 
-    ::marshall(msg, *request);
+    ::dsn::marshall(msg, *request);
 
     rpc_address target(_failure_detector->get_servers());
     rpc::call(
@@ -867,7 +883,7 @@ void replica_stub::on_meta_server_disconnected()
 }
 
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
-void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid)
+void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid gpid)
 {
     {
         zauto_lock l(_replicas_lock);
@@ -891,7 +907,7 @@ void replica_stub::response_client_error(dsn_message_t request, error_code error
     }
 
     ddebug("reply client read/write, err = %s", error.to_string());
-    reply(request, error);
+    dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
 void replica_stub::init_gc_for_test()
@@ -997,7 +1013,7 @@ void replica_stub::on_gc()
 #endif
 }
 
-::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
+::dsn::task_ptr replica_stub::begin_open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
 {
     _replicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -1017,7 +1033,7 @@ void replica_stub::on_gc()
         auto it2 = _closing_replicas.find(gpid);
         if (it2 != _closing_replicas.end())
         {
-            if (it2->second.second->status() == PS_INACTIVE 
+            if (it2->second.second->status() == partition_status::PS_INACTIVE
                 && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
@@ -1029,7 +1045,7 @@ void replica_stub::on_gc()
                 // unlock here to avoid dead lock
                 _replicas_lock.unlock();
 
-                ddebug( "open replica which is to be closed '%s.%u.%u'", app_type.c_str(), gpid.app_id, gpid.pidx);
+                ddebug( "open replica which is to be closed '%s.%u.%u'", app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());
 
                 if (req != nullptr)
                 {
@@ -1041,13 +1057,13 @@ void replica_stub::on_gc()
             {
                 _replicas_lock.unlock();
                 dwarn( "open replica '%s.%u.%u' failed coz replica is under closing", 
-                    app_type.c_str(), gpid.app_id, gpid.pidx);                
+                    app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());                
                 return nullptr;
             }
         }
         else 
         {
-            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app, gpid, req));
 
             _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
@@ -1057,16 +1073,16 @@ void replica_stub::on_gc()
     }
 }
 
-void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
+void replica_stub::open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
 {
-    std::string dir = get_replica_dir(app_type.c_str(), gpid);
+    std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
     dwarn("open replica '%s'", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());
 
     if (rep == nullptr)
     {
-        rep = replica::newr(this, app_type.c_str(), gpid);
+        rep = replica::newr(this, gpid, app);
     }
 
     if (rep == nullptr)
@@ -1088,14 +1104,14 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (nullptr != req)
     {
-        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
+        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.pid));
     }
 }
 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     dassert(
-        r->status() == PS_ERROR || r->status() == PS_INACTIVE,
+        r->status() == partition_status::PS_ERROR || r->status() == partition_status::PS_INACTIVE,
         "%s: invalid state %s when calling begin_close_replica",
         r->name(),
         enum_to_string(r->status())
@@ -1116,7 +1132,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
                 close_replica(r);
             }, 
             0, 
-            std::chrono::milliseconds(r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
+            std::chrono::milliseconds(r->status() == partition_status::PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();
@@ -1189,9 +1205,6 @@ void replica_stub::handle_log_failure(error_code err)
 
 void replica_stub::open_service()
 {
-    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
-    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
-
     register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
 
     register_rpc_handler(RPC_PREPARE, "prepare", &replica_stub::on_prepare);
@@ -1204,9 +1217,26 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 
-    _cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
+    /*_cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
         this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
-    dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");
+    dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");*/
+
+    _cli_kill_partition = dsn_cli_app_register(
+        "kill_partition",
+        "kill_partition app_id partition_index",
+        "kill partition with its global partition id",
+        (void*)this,
+        [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
+        {
+            auto this_ = (replica_stub*)context;
+            this_->on_kill_app_cli(context, argc, argv, reply);
+        },
+        [](dsn_cli_reply reply)
+        {
+            std::string* s = (std::string*)reply.context;
+            delete s;
+        }
+    );
 }
 
 void replica_stub::close()
@@ -1214,13 +1244,15 @@ void replica_stub::close()
     // this replica may not be opened
     // or is already closed by calling tool_app::stop_all_apps()
     // in this case, just return
-    if(_cli_replica_stub_json_state_handle == nullptr)
+   /* if(_cli_replica_stub_json_state_handle == nullptr)
     {
         return;
-    }
+    }*/
 
-    dsn_cli_deregister(_cli_replica_stub_json_state_handle);
-    _cli_replica_stub_json_state_handle = nullptr;
+    //dsn_cli_deregister(_cli_replica_stub_json_state_handle);
+    dsn_cli_deregister(_cli_kill_partition);
+    //_cli_replica_stub_json_state_handle = nullptr;
+    _cli_kill_partition = nullptr;
 
     if (_config_sync_timer_task != nullptr)
     {
@@ -1246,7 +1278,7 @@ void replica_stub::close()
         while (_closing_replicas.empty() == false)
         {
             task_ptr task = _closing_replicas.begin()->second.first;
-            global_partition_id tmp_gpid = _closing_replicas.begin()->first;
+            gpid tmp_gpid = _closing_replicas.begin()->first;
             _replicas_lock.unlock();
 
             task->wait();
@@ -1255,7 +1287,7 @@ void replica_stub::close()
             // task will automatically remove this replica from _closing_replicas
             if(false == _closing_replicas.empty())
             {
-                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%u.%u' should be removed from _closing_replicas, gpid", tmp_gpid.app_id, tmp_gpid.pidx);
+                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%u.%u' should be removed from _closing_replicas, gpid", tmp_gpid.get_app_id(), tmp_gpid.get_partition_index());
             }
         }
 
@@ -1294,10 +1326,10 @@ void replica_stub::close()
     }
 }
 
-std::string replica_stub::get_replica_dir(const char* app_type, global_partition_id gpid) const
+std::string replica_stub::get_replica_dir(const char* app_type, gpid gpid) const
 {
     char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
+    sprintf(buffer, "%u.%u.%s", gpid.get_app_id(), gpid.get_partition_index(), app_type);
     std::string ret_dir;
     for (auto& dir : _options.data_dirs)
     {

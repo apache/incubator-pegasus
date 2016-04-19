@@ -1,11 +1,9 @@
 set(project_name zookeeper)
 
-if(DSN_GIT_SOURCE STREQUAL "github")
-    set(target_url "https://github.com/shengofsun/zookeeper_client_c.git")
-elseif(DSN_GIT_SOURCE STREQUAL "xiaomi")
+if(DSN_GIT_SOURCE STREQUAL "xiaomi")
     set(target_url "http://git.n.xiaomi.com/pegasus/zookeeper_client_c.git")
 else()
-    message(FATAL_ERROR "not support other git source")
+    set(target_url "https://github.com/shengofsun/zookeeper_client_c.git")
 endif()
 
 set(my_cmake_args "")

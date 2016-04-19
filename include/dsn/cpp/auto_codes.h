@@ -39,6 +39,7 @@
 # include <dsn/internal/ports.h>
 # include <dsn/cpp/autoref_ptr.h>
 # include <memory>
+# include <atomic>
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
 # include <thrift/protocol/TProtocol.h>
@@ -99,6 +100,121 @@ namespace dsn
     private:
         void* _handle;
         bool  _is_owner;
+    };
+
+    class gpid
+    {
+    private:
+        dsn_gpid _value;
+
+    public:
+        gpid(int app_id, int pidx)
+        {
+            _value.u.app_id = app_id;
+            _value.u.partition_index = pidx;
+        }
+
+        gpid(dsn_gpid gd)
+        {
+            _value = gd;
+        }
+
+        gpid(const gpid& gd)
+        {
+            _value.value = gd._value.value;
+        }
+
+        gpid()
+        {
+            _value.value = 0;
+        }
+
+        uint64_t value() const
+        {
+            return _value.value;
+        }
+
+        operator dsn_gpid() const
+        {
+            return _value;
+        }
+         
+        bool operator < (const gpid & r) const
+        {
+            return _value.u.app_id < r._value.u.app_id ||
+                (_value.u.app_id == r._value.u.app_id && _value.u.partition_index < r._value.u.partition_index);
+        }
+
+        bool operator == (const gpid & r) const
+        {
+            return value() == r.value();
+        }
+
+        bool operator != (const gpid & r) const
+        {
+            return value() != r.value();
+        }
+
+        int32_t get_app_id() const { return _value.u.app_id; }
+        int32_t get_partition_index() const { return _value.u.partition_index; }
+        void set_app_id(int32_t v) { _value.u.app_id = v; }
+        void set_partition_index(int32_t v) { _value.u.partition_index = v; }
+        dsn_gpid& raw() { return _value; }
+        
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+        uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+        uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+#endif
+    };
+
+    class atom_int
+    {
+    private:
+        std::atomic<int> _value;
+
+    public:
+        atom_int(int gd)
+        {
+            _value = gd;
+        }
+
+        atom_int(const atom_int& gd)
+        {
+            _value.store(gd._value.load());
+        }
+
+        atom_int()
+        {
+            _value.store(0);
+        }
+
+        std::atomic<int>& atom() { return _value; }
+
+        atom_int& operator = (const atom_int& r)
+        {
+            _value.store(((atom_int&)r).atom().load());
+            return *this;
+        }
+
+        bool operator < (const atom_int & r) const
+        {
+            return _value.load() < r._value.load();
+        }
+
+        bool operator == (const atom_int & r) const
+        {
+            return _value.load() == r._value.load();
+        }
+
+        bool operator != (const atom_int & r) const
+        {
+            return _value.load() != r._value.load();
+        }
+
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+        uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+        uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+#endif
     };
 
     /*! 
@@ -406,6 +522,14 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_CLUSTER_NOT_FOUND)
 
     DEFINE_ERR_CODE(ERR_CLUSTER_ALREADY_EXIST)
+    DEFINE_ERR_CODE(ERR_SERVICE_ALREADY_EXIST)
+    DEFINE_ERR_CODE(ERR_INJECTED)
+    DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
+    DEFINE_ERR_CODE(ERR_APP_EXIST)
+    DEFINE_ERR_CODE(ERR_APP_NOT_EXIST)
+    DEFINE_ERR_CODE(ERR_BUSY_CREATING)
+    DEFINE_ERR_CODE(ERR_BUSY_DROPPING)
+
 /*@}*/
 } // end namespace
 

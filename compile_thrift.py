@@ -112,7 +112,7 @@ class CompileError(Exception):
 
 def init_env(): 
     env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.sh"
-    env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift-0.9.3"
+    env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift"
     env_tools["root_dir"] = os.getcwd()
 
 def find_struct_define(line, enum_class_list):

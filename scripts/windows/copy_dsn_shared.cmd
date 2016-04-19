@@ -15,6 +15,7 @@ IF NOT EXIST "%target_dir%" (
 )
 
 copy /Y %build_dir%\bin\%build_type%\dsn.core.* %target_dir%\
+copy /Y %build_dir%\bin\%build_type%\dsn.meta_server.* %target_dir%\
 CALL :copy_dll zookeeper_mt %target_dir%%
 CALL :copy_dll dsn.dev.python_helper %target_dir%%
 GOTO exit

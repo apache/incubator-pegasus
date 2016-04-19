@@ -37,17 +37,12 @@
 # include "gtest/gtest.h"
 # include "test_utils.h"
 
-extern void dsn_core_init();
-
 int g_test_count = 0;
 
 GTEST_API_ int main(int argc, char **argv) 
 {
     testing::InitGoogleTest(&argc, argv);
-
-    // register all tools
-    dsn_core_init();
-
+    
     // register all possible services
     dsn::register_app<test_client>("test");
     

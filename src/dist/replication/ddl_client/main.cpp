@@ -1,4 +1,5 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
+
 #include <iostream>
 
 using namespace dsn::replication;
@@ -6,14 +7,14 @@ using namespace dsn::replication;
 void usage(char* exe)
 {
     std::cout << "Usage:" << std::endl;
-    std::cout << "\t" << exe << " <config.ini> create_app -name <app_name> -type <app_type> [-pc partition_count] [-rc replication_count]" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> create_app -name <app_name> -type <app_type> [-pc partition_count] [-rc replication_count] [-env k1=v1;k2=v2;...] [-stateless]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> drop_app -name <app_name>" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_apps [-status <all|available|creating|creating_failed|dropping|dropping_failed|dropped>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_nodes [-status <all|alive|unalive>] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> list_app -name <app_name> [-detailed] [-o <out_file>]" << std::endl;
     std::cout << "\t" << exe << " <config.ini> stop_migration" << std::endl;
     std::cout << "\t" << exe << " <config.ini> start_migration" << std::endl;
-    std::cout << "\t" << exe << " <config.ini> balancer -gpid <appid.pidx> -type <move_pri|copy_pri|copy_sec> -from <from_address> -to <to_address>" << std::endl;
+    std::cout << "\t" << exe << " <config.ini> balancer -gpid <appid.partition_index> -type <move_pri|copy_pri|copy_sec> -from <from_address> -to <to_address>" << std::endl;
     std::cout << "\t\tpartition count must be a power of 2" << std::endl;
     std::cout << "\t\tapp_name and app_type shoud be composed of a-z, 0-9 and underscore" << std::endl;
     std::cout << "\t\twithout -o option, program will print status on screen" << std::endl;
@@ -21,12 +22,8 @@ void usage(char* exe)
     exit(-1);
 }
 
-extern void dsn_core_init();
-
 int init_environment(char* exe, char* config_file)
 {
-    dsn_core_init();
-
     //use config file to run
     char* argv[] = {exe, config_file};
 
@@ -49,6 +46,8 @@ int main(int argc, char** argv)
     std::string status;
     bool detailed = false;
     std::string out_file;
+    bool is_stateless = false;
+    std::map<std::string, std::string> envs;
 
     for(int index = 3; index < argc; index++)
     {
@@ -87,6 +86,23 @@ int main(int argc, char** argv)
             out_file = argv[++index];
             std::cout << "out to file:" << out_file <<std::endl;
         }
+        else if (strcmp(argv[index], "-env") == 0 && argc > index)
+        {
+            std::vector<std::string> kvs;
+            ::dsn::utils::split_args(argv[++index], kvs, ';');
+            for (auto& kv : kvs)
+            {
+                std::vector<std::string> kv2;
+                ::dsn::utils::split_args(kv.c_str(), kv2, '=');
+                envs[kv2[0]] = kv2.size() >= 2 ? kv2[1] : "";
+            }
+            std::cout << "envs:" << argv[index] << std::endl;
+        }
+        else if (strcmp(argv[index], "-stateless") == 0)
+        {
+            is_stateless = true;
+            std::cout << "is_stateless:" << is_stateless << std::endl;
+        }
     }
 
     if(init_environment(argv[0], argv[1]) < 0)
@@ -96,16 +112,18 @@ int main(int argc, char** argv)
     std::cout << "Init succeed" << std::endl;
 
     std::vector<dsn::rpc_address> meta_servers;
-    dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+    dsn::replication::replica_helper::load_meta_servers(meta_servers);
     replication_ddl_client client(meta_servers);
     std::string command = argv[2];
 
     if (command == "create_app") {
         if(app_name.empty() || app_type.empty())
             usage(argv[0]);
-        dsn::error_code err = client.create_app(app_name, app_type, partition_count, replica_count);
+        dsn::error_code err = client.create_app(app_name, app_type, partition_count, replica_count, envs, is_stateless);
         if(err == dsn::ERR_OK)
             std::cout << "create app:" << app_name << " succeed" << std::endl;
+        else if (err == dsn::ERR_IO_PENDING)
+            std::cout << "create app:" << app_name << " ongoing ..." << std::endl;
         else
             std::cout << "create app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
@@ -115,16 +133,18 @@ int main(int argc, char** argv)
         dsn::error_code err = client.drop_app(app_name);
         if(err == dsn::ERR_OK)
             std::cout << "drop app:" << app_name << " succeed" << std::endl;
+        else if (err == dsn::ERR_IO_PENDING)
+            std::cout << "drop app:" << app_name << " ongoing ..." << std::endl;
         else
             std::cout << "drop app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_apps") {
-        dsn::replication::app_status s = dsn::replication::AS_INVALID;
+        dsn::app_status::type s = dsn::app_status::AS_INVALID;
         if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "AS_" + status;
-            s = enum_from_string(status.c_str(), dsn::replication::AS_INVALID);
-            if(s == dsn::replication::AS_INVALID)
+            s = enum_from_string(status.c_str(), dsn::app_status::AS_INVALID);
+            if(s == dsn::app_status::AS_INVALID)
                 usage(argv[0]);
         }
         dsn::error_code err = client.list_apps(s, out_file);
@@ -132,12 +152,12 @@ int main(int argc, char** argv)
             std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
     }
     else if(command == "list_nodes") {
-        dsn::replication::node_status s = dsn::replication::NS_INVALID;
+        dsn::replication::node_status::type s = dsn::replication::node_status::NS_INVALID;
         if (!status.empty() && status != "all") {
             std::transform(status.begin(), status.end(), status.begin(), ::toupper);
             status = "NS_" + status;
-            s = enum_from_string(status.c_str(), dsn::replication::NS_INVALID);
-            if(s == dsn::replication::NS_INVALID)
+            s = enum_from_string(status.c_str(), dsn::replication::node_status::NS_INVALID);
+            if(s == dsn::replication::node_status::NS_INVALID)
                 usage(argv[0]);
         }
         dsn::error_code err = client.list_nodes(s, out_file);
@@ -165,13 +185,13 @@ int main(int argc, char** argv)
         dsn::replication::balancer_proposal_request request;
         for (int i=3; i<argc-1; i+=2) {
             if (strcmp(argv[i], "-gpid") == 0){
-                sscanf(argv[i+1], "%d.%d", &request.gpid.app_id, &request.gpid.pidx);
+                sscanf(argv[i + 1], "%d.%d", &request.pid.raw().u.app_id, &request.pid.raw().u.partition_index);
             }
             else if (strcmp(argv[i], "-type") == 0){
-                std::map<std::string, dsn::replication::balancer_type> mapper = {
-                    {"move_pri", BT_MOVE_PRIMARY},
-                    {"copy_pri", BT_COPY_PRIMARY},
-                    {"copy_sec", BT_COPY_SECONDARY}
+                std::map<std::string, dsn::replication::balancer_type::type> mapper = {
+                    {"move_pri", balancer_type::BT_MOVE_PRIMARY},
+                    {"copy_pri", balancer_type::BT_COPY_PRIMARY},
+                    {"copy_sec", balancer_type::BT_COPY_SECONDARY}
                 };
                 if (mapper.find(argv[i+1]) == mapper.end()) {
                     usage(argv[0]);

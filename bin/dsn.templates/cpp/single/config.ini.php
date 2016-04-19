@@ -2,6 +2,19 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_type = $argv[4];
+$idl_format = $argv[5];
+
+$default_serialize_format = "DSF";
+if ($idl_type == "thrift")
+{
+    $default_serialize_format = $default_serialize_format."_THRIFT";
+} else
+{
+    $default_serialize_format = $default_serialize_format."_PROTOC";
+}
+$default_serialize_format = $default_serialize_format."_".strtoupper($idl_format);
+
 ?>
 [apps..default]
 run = true
@@ -21,7 +34,7 @@ pools = THREAD_POOL_DEFAULT
 [apps.client]
 name = client
 type = client
-arguments = localhost 27001
+arguments = localhost:27001
 count = 1
 run = true
 pools = THREAD_POOL_DEFAULT
@@ -30,7 +43,7 @@ pools = THREAD_POOL_DEFAULT
 [apps.client.perf.<?=$svc->name?>] 
 name = client.perf.<?=$svc->name?> 
 type = client.perf.<?=$svc->name?> 
-arguments = localhost 27001 
+arguments = localhost:27001 
 count = 1
 run = false
 <?php } ?>
@@ -71,6 +84,7 @@ fast_execution_in_network_thread = false
 rpc_call_header_format_name = dsn
 rpc_timeout_milliseconds = 5000
 perf_test_rounds = 10000
+rpc_msg_payload_serialize_default_format = <?=$default_serialize_format?> 
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]
 is_trace = false

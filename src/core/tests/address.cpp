@@ -134,11 +134,13 @@ TEST(core, dsn_address_build)
 
     {
         const char* uri = "http://localhost:8080/";
+        dsn_uri_t u = dsn_uri_build(uri);
+
         dsn_address_t addr;
         addr.u.uri.type = HOST_TYPE_URI;
-        addr.u.uri.uri = (uintptr_t)uri;
+        addr.u.uri.uri = (uintptr_t)u;
 
-        dsn_uri_t u = dsn_uri_build(uri);
+        
         ASSERT_EQ(addr, dsn_address_build_uri(u));
         dsn_uri_destroy(u);
     }

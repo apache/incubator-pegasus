@@ -57,6 +57,8 @@ namespace dsn
     */
     class rpc_group_address;
     typedef ref_ptr<rpc_group_address> address_group_ptr;
+
+    class rpc_uri_address;
     
     class rpc_address
     {
@@ -87,6 +89,8 @@ namespace dsn
         uint16_t port() const { return (uint16_t)_addr.u.v4.port; }
         rpc_group_address* group_address() const { return (rpc_group_address*)(uintptr_t)_addr.u.group.group; }
         dsn_group_t group_handle() const { return (dsn_group_t)(uintptr_t)_addr.u.group.group; }
+        rpc_uri_address* uri_address() const { return (rpc_uri_address*)(uintptr_t)_addr.u.uri.uri; }
+        dsn_uri_t uri_handle() const { return (dsn_group_t)(uintptr_t)_addr.u.uri.uri; }
         const char* uri() const { return to_string(); }        
         bool is_invalid() const { return _addr.u.v4.type == HOST_TYPE_INVALID; }
         void set_invalid() { clear(); }
@@ -105,6 +109,17 @@ namespace dsn
     private:
         dsn_address_t       _addr;
     };
+
+    class url_host_address : public rpc_address
+    {
+    public:
+        // dsn://mycluster/myapp, or host-name:port
+        url_host_address(const char* url_or_host_port);
+        url_host_address() {}
+
+    private:
+        std::string _url_host; //< make sure the buffer is valid
+    };
     
     // ------------- inline implementation -------------------
     inline rpc_address::rpc_address(uint32_t ip, uint16_t port)
@@ -120,6 +135,26 @@ namespace dsn
     {
         _addr.u.v4.type = HOST_TYPE_INVALID;
         assign_ipv4(host, port);
+    }
+
+    inline url_host_address::url_host_address(const char* url_or_host_port)
+    {
+        std::string s(url_or_host_port);
+        auto sp = s.find(':');
+        if (sp != std::string::npos)
+        {
+            uint16_t port = (uint16_t)atoi(s.substr(sp + 1).c_str());
+            if (port == 0)
+            {
+                _url_host = std::string(url_or_host_port);
+                assign_uri(dsn_uri_build(_url_host.c_str()));
+            }
+            else
+            {
+                s = s.substr(0, sp);
+                assign_ipv4(s.c_str(), port);
+            }
+        }
     }
 
     inline void rpc_address::assign_ipv4(uint32_t ip, uint16_t port)

@@ -69,6 +69,8 @@ public:
 
     void get_all_sections(std::vector<std::string>& sections);
 
+    void get_all_section_ptrs(std::vector<const char*>& sections);
+
     void get_all_keys(const char* section, std::vector<const char*>& keys);
 
     const char* get_string_value(const char* section, const char* key, const char* default_value, const char* dsptr);

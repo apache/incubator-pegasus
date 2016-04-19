@@ -41,6 +41,7 @@
 
 # include <thrift/Thrift.h>
 # include <thrift/protocol/TBinaryProtocol.h>
+# include <thrift/protocol/TJSONProtocol.h>
 # include <thrift/protocol/TVirtualProtocol.h>
 # include <thrift/transport/TVirtualTransport.h>
 # include <thrift/TApplicationException.h>
@@ -73,7 +74,7 @@ namespace dsn {
             }
             return (uint32_t)l;
         }
-            
+
     private:
         binary_reader& _reader;
     };
@@ -116,7 +117,7 @@ namespace dsn {
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)        
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
     template<typename T>
@@ -184,7 +185,7 @@ namespace dsn {
     {
         uint32_t xfer = oprot->writeFieldBegin("vector", ::apache::thrift::protocol::T_LIST, 1);
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(val.size()));
-        for (auto iter = val.begin(); iter!=val.end(); ++iter)
+        for (auto iter = val.begin(); iter != val.end(); ++iter)
         {
             marshall_base(oprot, *iter);
         }
@@ -210,7 +211,7 @@ namespace dsn {
             ::apache::thrift::protocol::TType element_type;
             xfer += iprot->readListBegin(element_type, size);
             val.resize(size);
-            for (uint32_t i=0; i!=size; ++i)
+            for (uint32_t i = 0; i != size; ++i)
             {
                 xfer += unmarshall_base(iprot, val[i]);
             }
@@ -226,14 +227,16 @@ namespace dsn {
     inline const char* to_string(const blob& blob) { return ""; }
     inline const char* to_string(const task_code& code) { return code.to_string(); }
     inline const char* to_string(const error_code& ec) { return ec.to_string(); }
+    inline const char* to_string(const gpid& id) { return "x"; } // not implemented
+    inline const char* to_string(const atom_int& id) { return "x"; } // not implemented
 
     template<typename T>
     class serialization_forwarder
     {
     private:
         template<typename C>
-        static constexpr auto check_method( C* ) ->
-            typename std::is_same< decltype(std::declval<C>().write( std::declval< ::apache::thrift::protocol::TProtocol* >() ) ), uint32_t >::type;
+        static constexpr auto check_method(C*) ->
+            typename std::is_same< decltype(std::declval<C>().write(std::declval< ::apache::thrift::protocol::TProtocol* >())), uint32_t >::type;
 
         template<typename>
         static constexpr std::false_type check_method(...);
@@ -313,34 +316,34 @@ namespace dsn {
         return ::apache::thrift::protocol::T_STRUCT;
     }
 
-    template<typename T>
-    inline void marshall(binary_writer& writer, const T& val)
-    {
-        ::dsn::binary_writer_transport trans(writer);
-        boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
-        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
-        proto.writeFieldBegin("args", get_thrift_type(val), 0);
-        marshall_base<T>(&proto, val);
-        proto.writeFieldEnd();
-    }
+    //template<typename T>
+    //inline void marshall(binary_writer& writer, const T& val)
+    //{
+    //    ::dsn::binary_writer_transport trans(writer);
+    //    boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+    //    ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+    //    proto.writeFieldBegin("args", get_thrift_type(val), 0);
+    //    marshall_base<T>(&proto, val);
+    //    proto.writeFieldEnd();
+    //}
 
-    template<typename T>
-    inline void unmarshall(binary_reader& reader, /*out*/ T& val)
-    {
-        ::dsn::binary_reader_transport trans(reader);
-        boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
-        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
+    //template<typename T>
+    //inline void unmarshall(binary_reader& reader, /*out*/ T& val)
+    //{
+    //    ::dsn::binary_reader_transport trans(reader);
+    //    boost::shared_ptr< ::dsn::binary_reader_transport> trans_ptr(&trans, [](::dsn::binary_reader_transport*) {});
+    //    ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
-        std::string fname;
-        ::apache::thrift::protocol::TType ftype;
-        int16_t fid;
+    //    std::string fname;
+    //    ::apache::thrift::protocol::TType ftype;
+    //    int16_t fid;
 
-        proto.readFieldBegin(fname, ftype, fid);
-        if (ftype == get_thrift_type(val))
-            unmarshall_base<T>(&proto, val);
-        else
-            proto.skip(ftype);
-    }
+    //    proto.readFieldBegin(fname, ftype, fid);
+    //    if (ftype == get_thrift_type(val))
+    //        unmarshall_base<T>(&proto, val);
+    //    else
+    //        proto.skip(ftype);
+    //}
 
     class char_ptr
     {
@@ -348,7 +351,7 @@ namespace dsn {
         const char* ptr;
         int length;
     public:
-        char_ptr(const char* p, int len): ptr(p), length(len) {}
+        char_ptr(const char* p, int len) : ptr(p), length(len) {}
         std::size_t size() const { return length; }
         const char* data() const { return ptr; }
     };
@@ -358,7 +361,7 @@ namespace dsn {
     private:
         blob& _buffer;
     public:
-        blob_string(blob& bb): _buffer(bb) {}
+        blob_string(blob& bb) : _buffer(bb) {}
 
         void clear()
         {
@@ -399,7 +402,30 @@ namespace dsn {
     {
         return oprot->writeI64((int64_t)_addr.u.value);
     }
+    
+    inline uint32_t atom_int::read(apache::thrift::protocol::TProtocol *iprot)
+    {
+        int v;
+        auto r = iprot->readI32(v);
+        _value.store(v);
+        return r;
+    }
 
+    inline uint32_t atom_int::write(apache::thrift::protocol::TProtocol *oprot) const
+    {
+        return oprot->writeI32(_value.load());
+    }
+
+    inline uint32_t gpid::read(apache::thrift::protocol::TProtocol *iprot)
+    {
+        return iprot->readI64(reinterpret_cast<int64_t&>(_value.value));
+    }
+
+    inline uint32_t gpid::write(apache::thrift::protocol::TProtocol *oprot) const
+    {
+        return oprot->writeI64((int64_t)_value.value);
+    }
+    
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string task_code_string;
@@ -445,4 +471,215 @@ namespace dsn {
         const char* name = to_string();
         return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
     }
+
+    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
+
+    class thrift_binary_message_parser : public message_parser
+    {
+    public:
+        static void register_parser()
+        {
+            ::dsn::tools::register_message_header_parser<thrift_binary_message_parser>(NET_HDR_THRIFT);
+        }
+
+    private:
+        // only one concurrent write message for each parser, so
+        char _write_buffer_for_header[512];
+
+    public:
+        thrift_binary_message_parser(int buffer_block_size, bool is_write_only)
+            : message_parser(buffer_block_size, is_write_only)
+        {
+        }
+
+        //fixme
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override
+        {
+            return 0;
+        }
+
+        int prepare_buffers_on_send(message_ex* msg, /*out*/ std::vector<blob>& buffers)
+        {
+            // prepare head
+            blob bb(_write_buffer_for_header, 0, 512);
+            binary_writer writer(bb);
+            ::dsn::binary_writer_transport trans(writer);
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(&trans, [](::dsn::binary_writer_transport*) {});
+            ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+
+            // FIXME:
+            auto sp = task_spec::get(msg->header->rpc_id);
+
+            proto.writeMessageBegin(msg->header->rpc_name,
+                sp->type == TASK_TYPE_RPC_REQUEST ?
+                ::apache::thrift::protocol::T_CALL :
+                ::apache::thrift::protocol::T_REPLY,
+                (int32_t)msg->header->id
+                );
+
+            // patched end (writeMessageEnd)
+            // no need for now as no data is written
+
+            // finalize
+            std::vector<blob> lbuffers;
+            //FIXME:
+            //msg->writer().get_buffers(lbuffers);
+            if (lbuffers[0].length() == sizeof(message_header))
+            {
+                lbuffers[0] = writer.get_buffer();
+                buffers = lbuffers;
+            }
+            else
+            {
+                dassert(lbuffers[0].length() > sizeof(message_header), "");
+                buffers.resize(lbuffers.size() + 1);
+                buffers[0] = writer.get_buffer();
+
+                for (int i = 0; i < static_cast<int>(lbuffers.size()); i++)
+                {
+                    if (i == 0)
+                    {
+                        buffers[1] = lbuffers[0].range(sizeof(message_header));
+                    }
+                    else
+                    {
+                        buffers[i + 1] = lbuffers[i];
+                    }
+                }
+            }
+
+            //FIXME:
+            return 0;
+        }
+
+        virtual int get_send_buffers_count(message_ex *msg)
+        {
+            return 0;
+        }
+
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override
+        {
+            mark_read(read_length);
+
+            if (_read_buffer_occupied < 10)
+            {
+                read_next = 128;
+                return nullptr;
+            }
+
+            try
+            {
+                blob bb = _read_buffer.range(0, _read_buffer_occupied);
+                binary_reader reader(bb);
+                ::dsn::binary_reader_transport trans(reader);
+                boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {});
+                ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+
+                int32_t rseqid = 0;
+                std::string fname;
+                ::apache::thrift::protocol::TMessageType mtype;
+
+                proto.readMessageBegin(fname, mtype, rseqid);
+                int hdr_sz = _read_buffer_occupied - reader.get_remaining_size();
+
+                if (mtype == ::apache::thrift::protocol::T_EXCEPTION)
+                {
+                    proto.skip(::apache::thrift::protocol::T_STRUCT);
+                }
+                else
+                {
+                    proto.skip(::apache::thrift::protocol::T_STRUCT);
+                }
+
+                proto.readMessageEnd();
+                proto.getTransport()->readEnd();
+
+                // msg done
+                int msg_sz = _read_buffer_occupied - reader.get_remaining_size() - hdr_sz;
+                auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
+                message_ex* msg = message_ex::create_receive_message(msg_bb);
+                msg->header->id = msg->header->rpc_id = rseqid;
+                strncpy(msg->header->rpc_name, fname.c_str(), sizeof(msg->header->rpc_name));
+                msg->header->body_length = msg_sz;
+
+                _read_buffer = _read_buffer.range(msg_sz + hdr_sz);
+                _read_buffer_occupied -= (msg_sz + hdr_sz);
+                read_next = 128;
+                return msg;
+            }
+            catch (TTransportException& ex)
+            {
+                ex;
+                return nullptr;
+            }
+        }
+    };
+
+    template<typename T>
+    void marshall_thrift_binary(binary_writer& writer, const T& val)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        val.write(&proto);
+    }
+
+    template<typename T>
+    void unmarshall_thrift_binary(binary_reader& reader, /*out*/ T& val)
+    {
+        ::dsn::binary_reader_transport trans(reader);
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+        val.read(&proto);
+    }
+
+    template<typename T>
+    void marshall_thrift_json(binary_writer& writer, const T& val)
+    {
+        ::dsn::binary_writer_transport trans(writer);
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TJSONProtocol proto(transport);
+        val.write(&proto);
+    }
+
+    template<typename T>
+    void unmarshall_thrift_json(binary_reader& reader, /*out*/ T& val)
+    {
+        ::dsn::binary_reader_transport trans(reader);
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TJSONProtocol proto(transport);
+        val.read(&proto);
+    }
+
+    #define THRIFT_BASIC_TYPE_SERIALIZATION(PROTOCOL, TMethod, CXXType) \
+        inline void marshall_thrift_basic_##PROTOCOL (binary_writer& writer, const CXXType &val) \
+        { \
+            ::dsn::binary_writer_transport trans(writer); \
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(&trans, [](::dsn::binary_writer_transport*) {}); \
+            ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
+            proto.write##TMethod (val); \
+        } \
+        inline void unmarshall_thrift_basic_##PROTOCOL (binary_reader& reader, CXXType &val) \
+        { \
+            ::dsn::binary_reader_transport trans(reader); \
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {}); \
+            ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
+            proto.read##TMethod (val); \
+        }
+
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Bool, bool)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Byte, int8_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I16, int16_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I32, int32_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, I64, int64_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, Double, double)
+    THRIFT_BASIC_TYPE_SERIALIZATION(Binary, String, std::string)
+
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Bool, bool)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Byte, int8_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I16, int16_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I32, int32_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, I64, int64_t)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, Double, double)
+    THRIFT_BASIC_TYPE_SERIALIZATION(JSON, String, std::string)
 }

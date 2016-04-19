@@ -46,11 +46,13 @@
 # include "rpc_engine.h"
 # include "service_engine.h"
 # include "group_address.h"
+# include "uri_address.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/task_queue.h>
 # include <dsn/cpp/serialization.h>
 # include <set>
+# include <dsn/dist/layer2_handler.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -147,7 +149,7 @@ namespace dsn {
         if (err == ERR_FORWARD_TO_OTHERS)
         {
             rpc_address addr;
-            ::unmarshall((dsn_message_t)reply, addr);
+            ::dsn::unmarshall((dsn_message_t)reply, addr);
 
             // TODO(qinzuoyan): handle the case of forwarding to itself where addr == req->to_address.
 
@@ -208,26 +210,14 @@ namespace dsn {
                 }
             }
 
-            // injector
+            // failure injection not applied
             if (sp->on_rpc_response_enqueue.execute(call, true))
             {
-                if (call->delay_milliseconds() == 0)
-                    call->set_delay(delay_ms);
-
-                if (ERR_OK == err)
-                    call->enqueue(err, reply);
-                else
-                {
-                    call->enqueue(err, nullptr);
-
-                    // because (1) initially, the ref count is zero
-                    //         (2) upper apps may call add_ref already
-                    call->add_ref();
-                    call->release_ref();
-                }
+                call->set_delay(delay_ms);
+                call->enqueue(err, reply);
             }
 
-            // release the task when necessary
+            // failure injection applied
             else
             {
                 ddebug("rpc reply %s is dropped (fault inject), rpc_id = %016llx",
@@ -241,11 +231,6 @@ namespace dsn {
                 dassert(reply->get_count() == 0,
                     "reply should not be referenced by anybody so far");
                 delete reply;
-
-                // because (1) initially, the ref count is zero
-                //         (2) upper apps may call add_ref already
-                call->add_ref();
-                call->release_ref();
             }
         }
 
@@ -405,6 +390,17 @@ namespace dsn {
         }
     }
 
+    rpc_server_dispatcher::~rpc_server_dispatcher()
+    {
+        for (auto& h : _vhandlers)
+        {
+            delete h;
+        }
+        _vhandlers.clear();
+
+        dassert(_handlers.size() == 0, "please make sure all rpc handlers are unregistered at this point");
+    }
+
     bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info* handler)
     {
         auto name = std::string(dsn_task_code_to_string(handler->code));
@@ -457,18 +453,14 @@ namespace dsn {
     rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
     {
         rpc_handler_info* handler = nullptr;
-        auto binary_hash = msg->header->rpc_name_fast.local_hash;
-        if (binary_hash == message_ex::s_local_hash && binary_hash != 0)
+        
+        if (TASK_CODE_INVALID != msg->local_rpc_code)
         {
-            msg->local_rpc_code = msg->header->rpc_name_fast.local_rpc_id;
-
+            utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+            handler = _vhandlers[msg->local_rpc_code]->first;
+            if (nullptr != handler)
             {
-                utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
-                handler = _vhandlers[msg->local_rpc_code]->first;
-                if (nullptr != handler)
-                {
-                    handler->add_ref();
-                }
+                handler->add_ref();
             }
         }
         else
@@ -484,6 +476,41 @@ namespace dsn {
         }
 
         return handler ? new rpc_request_task(msg, handler, node) : nullptr;
+    }
+
+    void rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
+    {
+        rpc_handler_info* handler = nullptr;
+
+        if (TASK_CODE_INVALID != msg->local_rpc_code)
+        {
+            utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
+            handler = _vhandlers[msg->local_rpc_code]->first;
+            if (nullptr != handler)
+            {
+                handler->add_ref();
+            }
+        }
+        else
+        {
+            utils::auto_read_lock l(_handlers_lock);
+            auto it = _handlers.find(msg->header->rpc_name);
+            if (it != _handlers.end())
+            {
+                msg->local_rpc_code = it->second->code;
+                handler = it->second;
+                handler->add_ref();
+            }
+        }
+
+        if (handler)
+        {
+            handler->c_handler(msg, handler->parameter);
+        }
+        else
+        {
+            dassert(false, "msg not handled at all");
+        }
     }
 
     //----------------------------------------------------------------------------------------------
@@ -653,6 +680,9 @@ namespace dsn {
             }
         }
 
+        _uri_resolver_mgr.reset(new uri_resolver_manager(
+            service_engine::fast_instance().spec().config.get()));
+
         _local_primary_address = _client_nets[0][0]->address();
         _local_primary_address.c_addr_ptr()->u.v4.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
@@ -663,123 +693,90 @@ namespace dsn {
         return ERR_OK;
     }
 
-    bool rpc_engine::register_rpc_handler(rpc_handler_info* handler, uint64_t vnid)
+    bool rpc_engine::register_rpc_handler(rpc_handler_info* handler)
     {
-        if (0 == vnid)
-        {
-            return _rpc_dispatcher.register_rpc_handler(handler);
-        }
-        else
-        {
-            utils::auto_write_lock l(_vnodes_lock);
-            auto it = _vnodes.find(vnid);
-            if (it == _vnodes.end())
-            {
-                auto dispatcher = new rpc_server_dispatcher();
-                return _vnodes.insert(
-                    std::unordered_map<uint64_t, rpc_server_dispatcher* >::value_type(vnid, dispatcher))
-                    .first->second->register_rpc_handler(handler);
-            }
-            else
-            {
-                return it->second->register_rpc_handler(handler);
-            }
-        }
+        return _rpc_dispatcher.register_rpc_handler(handler);
     }
 
-    rpc_handler_info* rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+    rpc_handler_info* rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code)
     {
-        if (0 == vnid)
-        {
-            return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
-        }
-        else
-        {
-            utils::auto_write_lock l(_vnodes_lock);
-            auto it = _vnodes.find(vnid);
-            if (it == _vnodes.end())
-            {
-                return nullptr;
-            }
-            else
-            {
-                auto r = it->second->unregister_rpc_handler(rpc_code);
-                if (0 == it->second->handler_count())
-                {
-                    delete it->second;
-                    _vnodes.erase(it);
-                }
-                return r;
-            }
-        }
+        return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
     }
-    
+
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
-        rpc_request_task* tsk;
-        if (msg->header->vnid == 0)
+        uint32_t code = 0;
+        auto binary_hash = msg->header->rpc_name_fast.local_hash;
+        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
         {
-            tsk = _rpc_dispatcher.on_request(msg, _node);
+            code = msg->header->rpc_name_fast.local_rpc_id;
         }
         else
         {
-            utils::auto_read_lock l(_vnodes_lock);
-            auto it = _vnodes.find(msg->header->vnid);
-            if (it != _vnodes.end())
+            code = dsn_task_code_from_string(msg->header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        }
+
+        if (code != ::dsn::TASK_CODE_INVALID)
+        {
+            msg->local_rpc_code = code;
+
+            // handle replication
+            auto sp = task_spec::get(code);
+            //if (sp->rpc_request_layer2_handler_required)
+            if (msg->header->gpid.value != 0)
             {
-                tsk = it->second->on_request(msg, _node);
+                _node->handle_l2_rpc_request(msg->header->gpid, sp->rpc_request_is_write_operation, (dsn_message_t)(msg), delay_ms);
+                return;
             }
-            else
+
+            rpc_request_task* tsk = _rpc_dispatcher.on_request(msg, _node);
+
+            if (tsk != nullptr)
             {
-                tsk = nullptr;
+                // injector
+                if (tsk->spec().on_rpc_request_enqueue.execute(tsk, true))
+                {
+                    if (0 != delay_ms)
+                        tsk->set_delay(delay_ms);
+                    tsk->enqueue();
+                }
+
+                // release the task when necessary
+                else
+                {
+                    ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
+                        msg->header->rpc_name,
+                        msg->header->rpc_id
+                        );
+
+                    // call network failure model when network is present
+                    net->inject_drop_message(msg, false);
+
+                    // because (1) initially, the ref count is zero
+                    //         (2) upper apps may call add_ref already
+                    tsk->add_ref();
+                    tsk->release_ref();
+                }
+                return;
             }
         }
 
-        if (tsk == nullptr)
-        {
-            dwarn(
-                "recv unknown message with type %s from %s, rpc_id = %016llx",
-                msg->header->rpc_name,
-                msg->header->from_address.to_string(),
-                msg->header->rpc_id
-                );
+        dwarn(
+            "recv unknown message with type %s from %s, rpc_id = %016llx",
+            msg->header->rpc_name,
+            msg->header->from_address.to_string(),
+            msg->header->rpc_id
+            );
 
-            dassert(msg->get_count() == 0,
-                "request should not be referenced by anybody so far");
-            delete msg;
-            return;
-        }
-
-        // injector
-        if (tsk->spec().on_rpc_request_enqueue.execute(tsk, true))
-        {
-            if (tsk->delay_milliseconds() == 0)
-                tsk->set_delay(delay_ms);
-            tsk->enqueue();
-        }
-
-        // release the task when necessary
-        else
-        {
-            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
-                msg->header->rpc_name,
-                msg->header->rpc_id
-                );
-
-            // call network failure model
-            net->inject_drop_message(msg, false);
-
-            // because (1) initially, the ref count is zero
-            //         (2) upper apps may call add_ref already
-            tsk->add_ref();
-            tsk->release_ref();
-        }
+        dassert(msg->get_count() == 0,
+            "request should not be referenced by anybody so far");
+        delete msg;
     }
 
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
-        auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header;
+        task_spec* sp = task_spec::get(request->local_rpc_code);
 
         hdr.from_address = primary_address();
         hdr.rpc_id = dsn_random64(
@@ -788,37 +785,132 @@ namespace dsn {
             );
         request->seal(sp->rpc_message_crc_required);
 
-        switch (request->server_address.type())
+        call_address(request->server_address, request, call);
+    }
+    
+    void rpc_engine::call_uri(rpc_address addr, message_ex* request, rpc_response_task* call)
+    {
+        dbg_dassert(addr.type() == HOST_TYPE_URI, "only URI is now supported");
+        auto& hdr = *request->header;
+        auto partition_hash = hdr.client.hash;
+
+        auto resolver = request->server_address.uri_address()->get_resolver();
+        if (nullptr == resolver)
         {
-        case HOST_TYPE_IPV4:
-            call_ip(request->server_address, request, call);
-            break;
-        case HOST_TYPE_URI:
-            dassert(false, "uri as host support is to be implemented");
-            break;
-        case HOST_TYPE_GROUP:
-            switch (sp->grpc_mode)
+            if (call != nullptr)
             {
-            case GRPC_TO_LEADER:
-                // TODO: auto-changed leader
-                call_ip(request->server_address.group_address()->possible_leader(), request, call);
-                break;
-            case GRPC_TO_ANY:
-                // TODO: performance optimization
-                call_ip(request->server_address.group_address()->random_member(), request, call);
-                break;
-            case GRPC_TO_ALL:
-                dassert(false, "to be implemented");
-                break;
-            default:
-                dassert(false, "invalid group rpc mode %d", (int)(sp->grpc_mode));
+                call->enqueue(ERR_SERVICE_NOT_FOUND, nullptr);
             }
+            else
+            {
+                // as ref_count for request may be zero
+                request->add_ref();
+                request->release_ref();
+            }
+        }
+        else
+        {
+            if (call)
+            {
+                call->replace_callback(
+                    [](dsn_rpc_response_handler_t callback,
+                        dsn_error_t err,
+                        dsn_message_t req,
+                        dsn_message_t resp,
+                        void* context,
+                        uint64_t timeout_ts_ms)
+                    {
+                        auto req2 = (message_ex*)(req);
+                        if (req2->header->gpid.value != 0 && err != ERR_OK && err != ERR_HANDLER_NOT_FOUND)
+                        {
+                            auto resolver = req2->server_address.uri_address()->get_resolver();
+                            if (nullptr != resolver)
+                            {
+                                resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
+
+                                // still got time, retry
+                                int64_t nms = dsn_now_ms();
+                                if (nms + 1 < timeout_ts_ms)
+                                {
+                                    req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
+                                    auto call2 = dsn_rpc_create_response_task(req, callback, context, task::get_current_task()->hash(), task::get_current_task()->tracker());
+                                    ((rpc_response_task*)(call2))->set_caller_pool((dynamic_cast<rpc_response_task*>(task::get_current_task()))->caller_pool());
+                                    dsn_rpc_call(req2->server_address.c_addr(), call2);
+                                    return;
+                                }
+                                else
+                                {
+                                    derror("service access failed (%s), no more time for further tries, set error = ERR_TIMEOUT",
+                                        error_code(err).to_string());
+                                    err = ERR_TIMEOUT;
+                                }
+                            }
+                        }
+                        
+                        // any other cases (except return above)
+                        if (callback)
+                            callback(err, req, resp, context);
+                    },
+                    dsn_now_ms() + hdr.client.timeout_ms
+                    );
+            }
+
+            resolver->resolve(
+                partition_hash,
+                [=](dist::partition_resolver::resolve_result&& result) mutable
+                {
+                    if (result.err == ERR_OK)
+                    {
+                        // update gpid when necessary
+                        auto& hdr2 = request->header;
+                        if (*(uint64_t*)&hdr2->gpid != *(uint64_t*)&result.pid)
+                        {
+                            hdr2->gpid = result.pid;
+                            hdr2->client.hash = dsn_gpid_to_hash(result.pid);
+                            request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
+                        }
+
+                        call_address(result.address, request, call);
+                    }
+                    else
+                    {                        
+                        if (call != nullptr)
+                        {
+                            call->enqueue(result.err, nullptr);
+                        }
+                        else
+                        {
+                            // as ref_count for request may be zero
+                            request->add_ref();
+                            request->release_ref();
+                        }
+                    }
+                },
+                hdr.client.timeout_ms
+                );
+        }
+    }
+
+    void rpc_engine::call_group(rpc_address addr, message_ex* request, rpc_response_task* call)
+    {
+        dbg_dassert(addr.type() == HOST_TYPE_GROUP, "only group is now supported");
+
+        auto sp = task_spec::get(request->local_rpc_code);
+        switch (sp->grpc_mode)
+        {
+        case GRPC_TO_LEADER:
+            call_ip(request->server_address.group_address()->possible_leader(), request, call);
+            break;
+        case GRPC_TO_ANY:
+            // TODO: performance optimization
+            call_ip(request->server_address.group_address()->random_member(), request, call);
+            break;
+        case GRPC_TO_ALL:
+            dassert(false, "to be implemented");
             break;
         default:
-            dassert(false, "invalid target address type %d", (int)request->server_address.type());
-            break;
+            dassert(false, "invalid group rpc mode %d", (int)(sp->grpc_mode));
         }
-        return;
     }
 
     void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id, bool set_forwarded)
@@ -905,9 +997,8 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        auto sp = task_spec::get(response->local_rpc_code);
-
         response->header->server.error = err;
+        auto sp = task_spec::get(response->local_rpc_code);
         response->seal(sp->rpc_message_crc_required);
 
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
@@ -959,6 +1050,10 @@ namespace dsn {
         }
 
         // not connetion oriented network, we always use the named network to send msgs
+        else if (response->to_address.is_invalid())
+        {
+            no_fail = false;
+        }
         else
         {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
@@ -996,7 +1091,7 @@ namespace dsn {
         if (request->header->from_address.port() <= MAX_CLIENT_PORT)
         {
             auto resp = request->create_response();
-            ::marshall(resp, address);
+            ::dsn::marshall(resp, address);
             ::dsn::task::get_current_rpc()->reply(resp, ::dsn::ERR_FORWARD_TO_OTHERS);
         }
 

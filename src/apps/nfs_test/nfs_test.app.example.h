@@ -34,8 +34,7 @@
  */
 # pragma once
 # include <dsn/dist/replication.h>
-# include <dsn/tool/nfs_node_simple.h>
-# include "nfs_code_definition.h"
+# include <dsn/tool/nfs.h>
 
 namespace dsn {
     namespace replication {
@@ -53,8 +52,9 @@ namespace dsn {
                     return ::dsn::ERR_OK;
                 }
 
-                virtual void stop(bool cleanup = false)
+                virtual ::dsn::error_code stop(bool cleanup = false)
                 {
+                    return ::dsn::ERR_OK;
                 }
             };
 
@@ -87,9 +87,10 @@ namespace dsn {
                     return ::dsn::ERR_OK;
                 }
 
-                virtual void stop(bool cleanup = false)
+                virtual ::dsn::error_code stop(bool cleanup = false)
                 {
                     _request_timer->cancel(true);
+                    return ::dsn::ERR_OK;
                 }
 
                 void on_request_timer()

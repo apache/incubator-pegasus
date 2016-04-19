@@ -46,17 +46,18 @@
 
 void dsn_app_registration()
 {
+    // register simple-kv type here
+
     // register services
-    dsn::register_app<dsn::replication::replication_service_app>("replica");
+    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
     dsn::register_app<dsn::service::meta_service_app>("meta");
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
-    dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
+    dsn::register_app_with_type_1_replication_support< ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
+    //dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
 
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");
     dsn::replication::test::install_checkers();
 }
-
-extern void dsn_core_init();
 
 int main(int argc, char** argv)
 {
@@ -66,12 +67,10 @@ int main(int argc, char** argv)
         std::cerr << " e.g.: " << argv[0] << " case-000.ini case-000.act" << std::endl;
         return -1;
     }
-    
+
     dsn::replication::test::g_case_input = argv[2];
 
     dsn_app_registration();
-
-    dsn_core_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);

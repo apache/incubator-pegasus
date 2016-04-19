@@ -38,7 +38,7 @@
 //
 // developers define the following global function somewhere
 //
-//     MODULE_INIT_BEGIN
+//     MODULE_INIT_BEGIN(module_name)
 //          ...
 //     MODULE_INIT_END
 //    
@@ -57,9 +57,9 @@
 extern void dsn_module_init();
 
 # if defined(__GNUC__)
-# define MODULE_INIT_BEGIN __attribute__((constructor)) void dsn_module_init() {
+# define MODULE_INIT_BEGIN(x) __attribute__((constructor)) void dsn_module_init_##x() {
 # else
-# define MODULE_INIT_BEGIN void dsn_module_init() {
+# define MODULE_INIT_BEGIN(x) void dsn_module_init() {
 # endif
 
 # define MODULE_INIT_END }

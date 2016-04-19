@@ -131,6 +131,14 @@ then
     rm -rf $BUILD_DIR
 fi
 
+if [ ! -f "$ROOT/bin/Linux/thrift" ]
+then
+    echo "Downloading thrift..."
+    wget --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift
+    chmod u+x thrift
+    mv thrift $ROOT/bin/Linux
+fi
+
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."
@@ -174,7 +182,7 @@ echo "##########################################################################
 ##############################################
 if [ -z "$TEST_MODULE" ]
 then
-    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.idl.tests"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"

@@ -1,17 +1,11 @@
-
 include "../../dsn.thrift"
+include "../../dsn.layer2.thrift"
 
 namespace cpp dsn.replication
 
-struct global_partition_id
-{
-    1:i32  app_id = -1;
-    2:i32  pidx = -1;
-}
-
 struct mutation_header
 {
-    1:global_partition_id  gpid;
+    1:dsn.gpid             pid;
     2:i64                  ballot;
     3:i64                  decree;
     4:i64                  log_offset;
@@ -40,21 +34,9 @@ enum partition_status
     PS_POTENTIAL_SECONDARY,
 }
 
-struct partition_configuration
-{
-    1:string                 app_type;
-    2:global_partition_id    gpid;
-    3:i64                    ballot;
-    4:i32                    max_replica_count;
-    5:dsn.rpc_address        primary;
-    6:list<dsn.rpc_address>  secondaries;
-    7:list<dsn.rpc_address>  last_drops;
-    8:i64                    last_committed_decree;
-}
-
 struct replica_configuration
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid            pid;
     2:i64                 ballot;
     3:dsn.rpc_address     primary;
     4:partition_status    status = partition_status.PS_INVALID;
@@ -77,7 +59,7 @@ enum read_semantic
 
 struct read_request_header
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.task_code       code;
     3:read_semantic       semantic = read_semantic.ReadLastUpdate;
     4:i64                 version_decree = -1;
@@ -85,7 +67,7 @@ struct read_request_header
 
 struct write_request_header
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.task_code       code;
 }
 
@@ -96,7 +78,7 @@ struct rw_response_header
 
 struct prepare_ack
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.error_code      err;
     3:i64                 ballot;
     4:i64                 decree;
@@ -116,7 +98,7 @@ struct learn_state
 {
     1:i64            from_decree_excluded;
     2:i64            to_decree_included;
-    3:list<dsn.blob> meta;
+    3:dsn.blob       meta;
     4:list<string>   files;
 }
 
@@ -132,7 +114,7 @@ enum learner_status
 
 struct learn_request
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.rpc_address     learner; // learner's address
     3:i64                 signature; // learning signature
     4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
@@ -154,7 +136,7 @@ struct learn_response
 
 struct group_check_request
 {
-    1:string                app_type;
+    1:dsn.layer2.app_info          app;
     2:dsn.rpc_address       node;
     3:replica_configuration config;
     4:i64                   last_committed_decree;
@@ -162,7 +144,7 @@ struct group_check_request
 
 struct group_check_response
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.error_code      err;
     3:i64                 last_committed_decree_in_app;
     4:i64                 last_committed_decree_in_prepare_list;
@@ -185,26 +167,6 @@ enum config_type
     CT_ADD_SECONDARY_FOR_LB,
 }
 
-enum app_status
-{
-    AS_INVALID,
-    AS_AVAILABLE,
-    AS_CREATING,
-    AS_CREATE_FAILED,
-    AS_DROPPING,
-    AS_DROP_FAILED,
-    AS_DROPPED,
-}
-
-struct app_info
-{
-    1:app_status    status = app_status.AS_INVALID;
-    2:string        app_type;
-    3:string        app_name;
-    4:i32           app_id;
-    5:i32           partition_count;
-}
-
 enum node_status
 {
     NS_INVALID,
@@ -225,28 +187,21 @@ struct meta_response_header
 }
 
 // primary | secondary(upgrading) (w/ new config) => meta server
+// also served as proposals from meta server to replica servers
 struct configuration_update_request
 {
-    1:partition_configuration  config;
-    2:config_type              type = config_type.CT_INVALID;
-    3:dsn.rpc_address          node;
+    1:dsn.layer2.app_info                 info;
+    2:dsn.layer2.partition_configuration  config;
+    3:config_type              type = config_type.CT_INVALID;
+    4:dsn.rpc_address          node;
+    5:dsn.rpc_address          host_node; // only used by stateless apps    
 }
 
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
 struct configuration_update_response
 {
     1:dsn.error_code           err;
-    2:partition_configuration  config;
-}
-
-// proposal:  meta server(LBM) => primary  (w/ current config)
-struct configuration_proposal_request
-{
-    1:partition_configuration  config;
-    2:config_type              type = config_type.CT_INVALID;
-    3:dsn.rpc_address          node;
-    4:bool                     is_clean_data = false;
-    5:bool                     is_upgrade = false;
+    2:dsn.layer2.partition_configuration  config;
 }
 
 // client => meta server
@@ -255,12 +210,20 @@ struct configuration_query_by_node_request
     1:dsn.rpc_address  node;
 }
 
+struct configuration_query_by_node_response
+{
+    1:dsn.error_code                    err;
+    2:list<configuration_update_request> partitions;
+}
+
 struct create_app_options
 {
     1:i32              partition_count;
     2:i32              replica_count;
     3:bool             success_if_exist;
     4:string           app_type;
+    5:bool             is_stateful;
+    6:map<string, string>  envs;
 }
 
 struct configuration_create_app_request
@@ -282,7 +245,7 @@ struct configuration_drop_app_request
 
 struct configuration_list_apps_request
 {
-    1:app_status               status = app_status.AS_INVALID;
+    1:dsn.layer2.app_status    status = app_status.AS_INVALID;
 }
 
 struct configuration_list_nodes_request
@@ -318,7 +281,7 @@ enum balancer_type
 
 struct balancer_proposal_request
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:balancer_type       type;
     3:dsn.rpc_address     from_addr;
     4:dsn.rpc_address     to_addr;
@@ -336,8 +299,8 @@ struct configuration_drop_app_response
 
 struct configuration_list_apps_response
 {
-    1:dsn.error_code   err;
-    2:list<app_info>   infos;
+    1:dsn.error_code              err;
+    2:list<dsn.layer2.app_info>   infos;
 }
 
 struct configuration_list_nodes_response
@@ -346,29 +309,9 @@ struct configuration_list_nodes_response
     2:list<node_info>  infos;
 }
 
-struct configuration_query_by_node_response
-{
-    1:dsn.error_code                err;
-    2:list<partition_configuration> partitions;
-}
-
-struct configuration_query_by_index_request
-{
-    1:string           app_name;
-    2:list<i32>        partition_indices;
-}
-
-struct configuration_query_by_index_response
-{
-    1:dsn.error_code                err;
-    2:i32                           app_id;
-    3:i32                           partition_count;
-    4:list<partition_configuration> partitions;
-}
-
 struct query_replica_decree_request
 {
-    1:global_partition_id gpid;
+    1:dsn.gpid pid;
     2:dsn.rpc_address     node;
 }
 
@@ -380,7 +323,7 @@ struct query_replica_decree_response
 
 struct replica_info
 {
-    1:global_partition_id    gpid;
+    1:dsn.gpid               pid;
     2:i64                    ballot;
     3:partition_status       status;
     4:i64                    last_committed_decree;
@@ -399,6 +342,22 @@ struct query_replica_info_response
     2:list<replica_info>  replicas;
 }
 
+struct app_state
+{
+    1:dsn.layer2.app_info info;
+    2:dsn.atom_int available_partitions;
+    3:list< dsn.layer2.partition_configuration> partitions;
+}
+
+struct node_state
+{
+    1:bool            is_alive;
+    2:dsn.rpc_address address;
+    3:set<dsn.gpid>   primaries;
+    4:set<dsn.gpid>   partitions;
+}
+
+/*
 service replica_s
 {
     rw_response_header client_write(1:write_request_header req);
@@ -416,7 +375,10 @@ service replica_s
 
 service meta_s
 {
+    configuration_create_app_response create_app(1:configuration_create_app_request req);
+    configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
     configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
     configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
     configuration_update_response update_configuration(1:configuration_update_request update);
 }
+*/

@@ -47,12 +47,6 @@ namespace dsn
 
             std::string _service_dir;
 
-            dsn_handle_t _cli_deploy;
-            dsn_handle_t _cli_undeploy;
-            dsn_handle_t _cli_get_service_list;
-            dsn_handle_t _cli_get_service_info;
-            dsn_handle_t _cli_get_cluster_list;
-
         private:
             void download_service_resource_completed(error_code err, std::shared_ptr< ::dsn::dist::deployment_unit> svc);
             std::shared_ptr< ::dsn::dist::deployment_unit> get_service(const std::string& name);
@@ -85,15 +79,6 @@ namespace dsn
 
             void on_get_cluster_list_internal(const std::string& format, /*out*/ cluster_list& clist);
 
-            void on_deploy_cli(void *context, int argc, const char **argv, /*out*/ dsn_cli_reply *reply);
-
-            void on_undeploy_cli(void *context, int argc, const char **argv, /*out*/ dsn_cli_reply *reply);
-
-            void on_get_service_list_cli(void *context, int argc, const char **argv, /*out*/ dsn_cli_reply *reply);
-
-            void on_get_service_info_cli(void *context, int argc, const char **argv, /*out*/ dsn_cli_reply *reply);
-
-            void on_get_cluster_list_cli(void *context, int argc, const char **argv, /*out*/ dsn_cli_reply *reply);
         };
     }
 }

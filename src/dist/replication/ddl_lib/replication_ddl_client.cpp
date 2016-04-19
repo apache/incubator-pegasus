@@ -47,7 +47,7 @@ replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_addres
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
-dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
+dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless)
 {
     if(partition_count < 1)
     {
@@ -79,6 +79,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
     req->options.replica_count = replica_count;
     req->options.success_if_exist = true;
     req->options.app_type = app_type;
+    req->options.envs = envs;
+    req->options.is_stateful = !is_stateless;
 
     auto resp_task = request_meta<configuration_create_app_request>(
             RPC_CM_CREATE_APP,
@@ -92,7 +94,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
     }
 
     dsn::replication::configuration_create_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         std::cout << "create app " << app_name << " failed: [create] received server error: " << resp.err.to_string() << std::endl;
@@ -126,8 +128,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
             return query_task->error();
         }
 
-        dsn::replication::configuration_query_by_index_response query_resp;
-        ::unmarshall(query_task->response(), query_resp);
+        dsn::configuration_query_by_index_response query_resp;
+        ::dsn::unmarshall(query_task->response(), query_resp);
         if(query_resp.err != dsn::ERR_OK)
         {
             std::cout << "create app " << app_name << " failed: [query] received server error: " << query_resp.err.to_string() << std::endl;
@@ -174,7 +176,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     }
 
     dsn::replication::configuration_drop_app_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -182,7 +184,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -198,7 +200,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_st
     }
 
     dsn::replication::configuration_list_apps_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -221,22 +223,26 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::replication::app_st
         << std::setw(20) << std::left << "app_name"
         << std::setw(20) << std::left << "app_type"
         << std::setw(10) << std::left << "partition_count"
+        << std::setw(10) << std::left << "is_stateful"
+        << std::setw(10) << std::left << "envs#"
         << std::endl;
     for(int i = 0; i < resp.infos.size(); i++)
     {
-        dsn::replication::app_info info = resp.infos[i];
+        dsn::app_info info = resp.infos[i];
         out << std::setw(10) << std::left << info.app_id
             << std::setw(20) << std::left << enum_to_string(info.status)
             << std::setw(20) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
             << std::setw(10) << std::left << info.partition_count
+            << std::setw(10) << std::left << info.is_stateful
+            << std::setw(10) << std::left << info.envs.size()
             << std::endl;
     }
     out << std::endl << std::flush;
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
     req->status = status;
@@ -252,7 +258,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
 
     dsn::replication::configuration_list_nodes_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -303,8 +309,8 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
         return resp_task->error();
     }
 
-    dsn::replication::configuration_query_by_index_response resp;
-    ::unmarshall(resp_task->response(), resp);
+    dsn::configuration_query_by_index_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
@@ -328,7 +334,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
     if(detailed)
     {
         out << "details:" << std::endl
-            << std::setw(10) << std::left << "pidx"
+            << std::setw(10) << std::left << "partition_index"
             << std::setw(10) << std::left << "ballot"
             << std::setw(20) << std::left << "max_replica_count"
             << std::setw(25) << std::left << "primary"
@@ -336,8 +342,8 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             << std::endl;
         for(int i = 0; i < resp.partitions.size(); i++)
         {
-            const dsn::replication::partition_configuration& p = resp.partitions[i];
-            out << std::setw(10) << std::left << p.gpid.pidx
+            const dsn::partition_configuration& p = resp.partitions[i];
+            out << std::setw(10) << std::left << p.pid.get_partition_index()
                 << std::setw(10) << std::left << p.ballot
                 << std::setw(20) << std::left << p.max_replica_count
                 << std::setw(25) << std::left << p.primary.to_std_string()
@@ -367,7 +373,7 @@ dsn::error_code replication_ddl_client::control_meta_balancer_migration(bool sta
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::control_balancer_migration_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 
@@ -382,7 +388,7 @@ dsn::error_code replication_ddl_client::send_balancer_proposal(const balancer_pr
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::balancer_proposal_response resp;
-    ::unmarshall(response_task->response(), resp);
+    ::dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 

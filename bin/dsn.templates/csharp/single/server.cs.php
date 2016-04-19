@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 using System;
 using System.IO;
@@ -21,11 +22,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     if ($f->is_one_way()) {?>
         private void On<?=$f->name?>Internal(RpcReadStream request)
         {
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
+            <?=$f->get_csharp_request_type_name()?> args;
             
             try 
             {
-                request.Read(out <?=$f->get_first_param()->name?>);
+                request.Read(out args);
             } 
             catch (Exception e)
             {
@@ -33,10 +34,10 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 return;
             }
             
-            On<?=$f->name?>(<?=$f->get_first_param()->name?>);
+            On<?=$f->name?>(args);
         }
         
-        protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>)
+        protected virtual void On<?=$f->name?>(<?=$f->get_csharp_request_type_name()?> args)
         {
             Console.WriteLine("... exec <?=$f->get_rpc_code()?> ... (not implemented) ");
         }
@@ -44,11 +45,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     } else {?>
         private void On<?=$f->name?>Internal(RpcReadStream request, RpcWriteStream response)
         {
-            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
+            <?=$f->get_csharp_request_type_name()?> args;
             
             try 
             {
-                request.Read(out <?=$f->get_first_param()->name?>);
+                request.Read(out args);
             } 
             catch (Exception e)
             {
@@ -56,14 +57,14 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 return;
             }
             
-            On<?=$f->name?>(<?=$f->get_first_param()->name?>, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => 
+            On<?=$f->name?>(args, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => 
             {
                 s.Write(r);
                 s.Flush();
             }));
         }
         
-        protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)
+        protected virtual void On<?=$f->name?>(<?=$f->get_csharp_request_type_name()?> args, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)
         {
             Console.WriteLine("... exec <?=$f->get_rpc_code()?> ... (not implemented) ");
             var resp =  new <?=$f->get_csharp_return_type()?>();
@@ -73,17 +74,17 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php     } ?>
 <?php } ?>
         
-        public void OpenService()
+        public void OpenService(UInt64 gpid)
         {
 <?php foreach ($svc->functions as $f) { ?>
-            RegisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, "<?=$f->name?>", this.On<?=$f->name?>Internal);
+            RegisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, "<?=$f->name?>", this.On<?=$f->name?>Internal, gpid);
 <?php } ?>
         }
 
-        public void CloseService()
+        public void CloseService(UInt64 gpid)
         {
 <?php foreach ($svc->functions as $f) { ?>
-            UnregisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>);
+            UnregisterRpcHandler(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, gpid);
 <?php } ?>
         }
     }

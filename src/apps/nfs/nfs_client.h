@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 # pragma once
-# include "nfs_code_definition.h"
+# include <dsn/tool/nfs.h>
 # include <iostream>
 
 
@@ -74,8 +74,8 @@ public:
         const copy_request& request, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -85,9 +85,9 @@ public:
                     request, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 
@@ -118,8 +118,8 @@ public:
         const get_file_size_request& request, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        int request_hash = 0,
+        int reply_thread_hash = 0,
+        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -129,9 +129,9 @@ public:
                     request, 
                     this,
                     std::forward<TCallback>(callback),
-                    request_hash, 
+                    hash, 
                     timeout, 
-                    reply_hash
+                    reply_thread_hash
                     );
     }
 

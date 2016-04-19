@@ -2,6 +2,7 @@
 
 // the current program
 global $_PROG;
+global $_IDL_FORMAT;
 
 class thelpers
 {
@@ -37,7 +38,7 @@ class thelpers
             if (strpos($kvs, ",") == FALSE)
                 return $kvs;
             else
-                return trim(substr($kvs, 0, strpos($kvs, ",") - 1));
+                return trim(substr($kvs, 0, strpos($kvs, ",")));
         }
         else
             return FALSE;
@@ -639,7 +640,17 @@ class t_function
     {
         return $this->params[0];
     }
+
+    function get_cpp_request_type_name()
+    {
+        return $this->params[0]->get_cpp_type();
+    }
     
+    function get_csharp_request_type_name()
+    {
+        return $this->params[0]->get_csharp_type();
+    }
+
     function get_rpc_code()
     {
         return "RPC"

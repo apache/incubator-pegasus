@@ -122,7 +122,7 @@ public:
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
     void                    set_tracker(task_tracker* tracker) { _context_tracker.set_tracker(tracker, this); }
-
+    
     uint64_t                id() const { return _task_id; }
     task_state              state() const { return _state.load(std::memory_order_acquire); }
     dsn_task_code_t         code() const { return _spec->code; }
@@ -131,6 +131,7 @@ public:
     int                     delay_milliseconds() const { return _delay_milliseconds; }
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
+    task_tracker*           tracker() { return _context_tracker.tracker(); }
     bool                    is_empty() const { return _is_null; }
 
     // static helper utilities
@@ -163,6 +164,7 @@ protected:
     bool                   _is_null;
     error_code             _error;
     void                   *_context; // the context for the task/on_cancel callbacks
+    dsn_task_cancelled_handler_t _on_cancel;
 
 private:
     task(const task&);
@@ -177,8 +179,7 @@ private:
     task_spec              *_spec;
     service_node           *_node;
     trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
-    dsn_task_cancelled_handler_t _on_cancel;
-
+    
 public:
     // used by task queue only
     task*                  next;
@@ -306,6 +307,14 @@ protected:
     uint64_t         _enqueue_ts_ns;
 };
 
+typedef void(*dsn_rpc_response_handler_replace_t)(
+    dsn_rpc_response_handler_t callback,
+    dsn_error_t err,
+    dsn_message_t req,
+    dsn_message_t resp,
+    void* context,
+    uint64_t replace_context
+    );
 class rpc_response_task : public task, public transient_object
 {
 public:
@@ -322,7 +331,10 @@ public:
     void             enqueue(error_code err, message_ex* reply);
     virtual void     enqueue(); // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() { return _request; }
-    message_ex*      get_response() { return _response; }
+    message_ex*      get_response() { return _response; }    
+    void             replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context);
+    task_worker_pool* caller_pool() const { return _caller_pool; }
+    void             set_caller_pool(task_worker_pool* pl) { _caller_pool = pl; }
 
     virtual void  exec()
     {

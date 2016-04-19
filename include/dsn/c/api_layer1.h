@@ -460,7 +460,7 @@ RPC Message Utilities
 
 rpc message and buffer management
 
-all returned dsn_message_t are NOT add_ref by rDSN, so you
+all returned dsn_message_t are NOT add_ref by rDSN (unless explicitly specified), so you
 do not need to call msg_release_ref to release the msgs.  the decision is made for easier
 programming, and you may consider the later dsn_rpc_xxx calls do the resource gc work for
 you.  however, if you want to hold the message further after call dsn_rpc_xxx, you need to
@@ -501,20 +501,15 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param request_hash          if the task code is bound to a partitioned thread pool,
-   a thread hash is needed to specify which thread in the pool should handle the request
-
- \param partition_hash        if the target service is partitioned,
-   a partition hash is needed to specify which partition/shard should handle the request
-
+ \param hash                  used for both partition and thread hash to locate which thread
+   the request should be sent to
  \return RPC message handle
  */
 
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int request_hash DEFAULT(0),
-                                uint64_t partition_hash DEFAULT(0)
+                                uint64_t hash DEFAULT(0)
                                 );
 
 /*! create a RPC response message correspondent to the given request message */
@@ -529,13 +524,31 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 
+/*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
+extern DSN_API dsn_message_t dsn_msg_create_received_request(
+                            dsn_task_code_t rpc_code,
+                            void* buffer,
+                            int size,
+                            uint64_t hash DEFAULT(0)
+                            );
+
 /*! type of the parameter in \ref dsn_msg_context_t */
 typedef enum dsn_msg_parameter_type_t
 {
     MSG_PARAM_NONE = 0,           ///< nothing  
-    MSG_PARAM_PARTITION_HASH = 1  ///< partition hash
-
 } dsn_msg_parameter_type_t;
+
+enum dsn_msg_serialize_format
+{
+    DSF_THRIFT_BINARY,
+    DSF_THRIFT_COMPACT,
+    DSF_THRIFT_JSON,
+    DSF_PROTOC_BINARY,
+    DSF_PROTOC_JSON,
+
+    DSF_COUNT,
+    DSF_INVALID
+};
 
 /*! RPC message context */
 typedef union dsn_msg_context_t
@@ -543,29 +556,40 @@ typedef union dsn_msg_context_t
     struct {
         uint64_t is_request : 1;           ///< whether the RPC message is a request or response
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
-        uint64_t is_replication_needed: 1; ///< whether state replication is needed for this request
-        uint64_t unused : 8;               ///< not used yet
+        uint64_t unused : 5;               ///< not used yet
+        uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
         uint64_t parameter_type : 3;       ///< type of the parameter next, see  \ref dsn_msg_parameter_type_t        
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
     uint64_t context;                      ///< msg_context is of sizeof(uint64_t)
 } dsn_msg_context_t;
 
-# define DSN_VNID_BUILD(app_id, par_idx) (((uint64_t)(app_id) << 32) | (uint64_t)(par_idx))
-# define DSN_VNID_APP_ID(vnid)           ((int)(vnid >> 32))
-# define DSN_VNID_PARTITION_INDEX(vnid)  ((int)(vnid & 0x00000000FFFFFFFFULL))
+typedef union dsn_global_partition_id
+{
+    struct {
+        int32_t app_id;          ///< 1-based app id (0 for invalid)
+        int32_t partition_index; ///< zero-based partition index
+    } u;
+    uint64_t value;
+} dsn_gpid;
+
+
+inline uint64_t dsn_gpid_to_hash(dsn_gpid gpid)
+{
+    return gpid.value;
+}
 
 # define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get
 # define DSN_MSGM_HASH    (0x1 << 1) ///< thread hash is to be set/get
-# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (vnid) is to be set/get
+# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (gpid) is to be set/get
 # define DSN_MSGM_CONTEXT (0x1 << 3) ///< rpc message context is to be set/get
 
 /*! options for RPC messages, used by \ref dsn_msg_set_options and \ref dsn_msg_get_options */
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               request_hash; ///< thread hash on RPC server
-    uint64_t          vnid;        ///< virtual node id, 0 for none
+    int               hash; ///< thread hash on RPC server
+    dsn_gpid  gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
@@ -577,6 +601,9 @@ inline void dsn_address_size_checker()
 
     static_assert (sizeof(dsn_msg_context_t) == sizeof(uint64_t),
         "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
+
+    static_assert (sizeof(dsn_gpid) == sizeof(uint64_t),
+        "sizeof(dsn_gpid) must equal to sizeof(uint64_t)");    
 }
 
 /*!
@@ -603,6 +630,10 @@ extern DSN_API void         dsn_msg_get_options(
                                 /*out*/ dsn_msg_options_t* opts
                                 );
 
+DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt);
+
+DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg);
+
 /*! get message body size */
 extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);
 
@@ -617,6 +648,9 @@ extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
 /*! get rpc id of the message */
 extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
+
+/*! get task code of the message */
+extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);
 
 /*!
  get message write buffer
@@ -670,16 +704,18 @@ extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
-                                void* context
+                                void* context,
+                                dsn_gpid gpid DEFAULT(dsn_gpid{ 0 })
                                 );
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref dsn_rpc_register_handler  */
 extern DSN_API void*         dsn_rpc_unregiser_handler(
-                                dsn_task_code_t code
+                                dsn_task_code_t code,
+                                dsn_gpid gpid DEFAULT(dsn_gpid{ 0 })
                                 );
 
 /*! reply with a response which is created using dsn_msg_create_response */
-extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+extern DSN_API void          dsn_rpc_reply(dsn_message_t response, dsn_error_t err DEFAULT(0));
 
 /*! forward the request to another server instead */
 extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);
@@ -701,7 +737,7 @@ create a callback task to handle the response message from RPC server, or timeou
 \param cb               callback to handle rpc response or timeout, unlike the other
  kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
 \param context          context used by cb
-\param reply_hash       if the curren thread pool is partitioned, this specify which thread
+\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
  to execute the callback
 \param tracker          task tracker bound to the response task
 
@@ -711,7 +747,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* context, 
-                                int reply_hash DEFAULT(0),
+                                int reply_thread_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
@@ -723,7 +759,7 @@ create a callback task to handle the response message from RPC server, or timeou
  kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
 \param on_cancel        callback executed on task being-cancelled
 \param context          context used by cb
-\param reply_hash       if the curren thread pool is partitioned, this specify which thread
+\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
  to execute the callback
 \param tracker          task tracker bound to the response task
 
@@ -734,7 +770,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task_ex(
                                 dsn_rpc_response_handler_t cb, 
                                 dsn_task_cancelled_handler_t on_cancel,
                                 void* context, 
-                                int reply_hash DEFAULT(0),
+                                int reply_thread_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 

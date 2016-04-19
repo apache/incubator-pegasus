@@ -34,9 +34,11 @@
  */
 
 # pragma once
-# include "simple_kv.client.impl.h"
+# include "simple_kv.client.2.h"
 # include "simple_kv.client.perf.h"
 # include "simple_kv.server.h"
+
+# define TRANSPARENT_LAYER2_CLIENT
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
@@ -57,19 +59,21 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector< ::dsn::rpc_address> meta_servers;
-        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
-        
-        _simple_kv_client.reset(new simple_kv_client_impl(meta_servers, argv[1]));
-        _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER, this, [this]{on_test_timer();}, std::chrono::seconds(1));
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        _server = url_host_address(argv[1]);
+        _simple_kv_client.reset(new simple_kv_client2(_server));
+
+        _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER, this, [this] {on_test_timer(); }, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
- 
+
         _simple_kv_client.reset();
+
+        return ::dsn::ERR_OK;
     }
 
     void on_test_timer()
@@ -84,7 +88,7 @@ public:
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, return " << err.to_string() << std::endl;
             //async: 
             //_simple_kv_client->read(req, empty_callback);
-           
+
         }
         {
             kv_pair req;
@@ -95,7 +99,7 @@ public:
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, return " << err.to_string() << std::endl;
             //async: 
             //_simple_kv_client->write(req, empty_callback);
-           
+
         }
         {
             kv_pair req;
@@ -106,15 +110,14 @@ public:
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string() << std::endl;
             //async: 
             //_simple_kv_client->append(req, empty_callback);
-           
+
         }
     }
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::rpc_address _server;
-    
-    std::unique_ptr<simple_kv_client> _simple_kv_client;
+    ::dsn::url_host_address _server;
+    std::unique_ptr<simple_kv_client2> _simple_kv_client;
 };
 
 class simple_kv_perf_test_client_app : 
@@ -134,17 +137,20 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector< ::dsn::rpc_address> meta_servers;
-        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
+        rpc_address service_addr;
+        service_addr.assign_uri(dsn_uri_build(argv[1]));
 
-        _simple_kv_client.reset(new simple_kv_perf_test_client(meta_servers, argv[1]));
+        _simple_kv_client.reset(new simple_kv_perf_test_client(service_addr));
         _simple_kv_client->start_test();
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _simple_kv_client.reset();
+
+        return ::dsn::ERR_OK;
     }
     
 private:

@@ -67,9 +67,7 @@ namespace dsn
         void* read_buffer_ptr(int read_next);
         int read_buffer_capacity() const;
 
-        // after read, see if we can compose a message
-        // if read_next returns -1, it indicates that the message is with wrong checksum, in this caes, the returning
-        // message_ex should be nullptr
+        // after read, see if we can compose a message 
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer
@@ -92,7 +90,7 @@ namespace dsn
         // return buffer count used
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) = 0;
 
-        virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) = 0;
+        virtual int get_send_buffers_count(message_ex* msg) = 0;
 
         // all current read-ed content are discarded
         virtual void truncate_read() { _read_buffer_occupied = 0; }
@@ -144,7 +142,7 @@ namespace dsn
 
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 
-        virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) override;
+        virtual int get_send_buffers_count(message_ex* msg) override;
 
         virtual void truncate_read() override
         {

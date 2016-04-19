@@ -78,7 +78,7 @@ namespace dsn
                         unit->service_url = service_url;
 
                         std::stringstream ss;
-                        ss << unit->package_id << "." << unit->name;
+                        ss << unit->info.app_name << "." << unit->name;
                         unit->remote_package_directory = dsn::utils::filesystem::path_combine(_default_remote_package_directory, ss.str());
                     }
                 }

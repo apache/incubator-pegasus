@@ -202,7 +202,7 @@ static void send_message(::dsn::rpc_address addr,
     task_resp_queue q("response.queue");
     for (int i=0; i!=repeat_times; ++i) {
         dsn_message_t request = dsn_msg_create_request(RPC_TEST_STRING_COMMAND);
-        ::marshall(request, command);
+        ::dsn::marshall(request, command);
         dsn::task_ptr resp_task = ::dsn::rpc::call(
             addr,
             request,
@@ -225,7 +225,7 @@ TEST(core, group_address_no_response_2)
     ::dsn::rpc_address addr = build_group();
     rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {
         std::string result;
-        ::unmarshall(resp, result);
+        ::dsn::unmarshall(resp, result);
         ::dsn::rpc_address a = dsn_address_from_string(result);
         EXPECT_TRUE(a.port()==TEST_PORT_END);
     };
@@ -248,7 +248,7 @@ TEST(core, send_to_invalid_address)
 
     rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {
         std::string hehe_str;
-        ::unmarshall(resp, hehe_str);
+        ::dsn::unmarshall(resp, hehe_str);
         EXPECT_TRUE(hehe_str == "hehehe");
     };
     rpc_reply_handler action_on_failure = [](error_code err, dsn_message_t, dsn_message_t) {

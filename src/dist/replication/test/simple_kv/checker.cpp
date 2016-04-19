@@ -38,7 +38,6 @@
 
 # include "../../lib/replica.h"
 # include "../../lib/replica_stub.h"
-# include "../../lib/replication_failure_detector.h"
 # include "../../lib/mutation_log.h"
 # include "../../meta_server/meta_service.h"
 # include "../../meta_server/meta_server_failure_detector.h"
@@ -80,14 +79,14 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
     {
         if (0 == strcmp(app.type, "meta"))
         {
-            meta_service_app* meta_app = (meta_service_app*)app.app_context_ptr;
+            meta_service_app* meta_app = (meta_service_app*)app.app.app_context_ptr;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                         std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             _meta_servers.push_back(meta_app);
         }
         else if (0 == strcmp(app.type, "replica"))
         {
-            replication_service_app* replica_app = (replication_service_app*)app.app_context_ptr;
+            replication_service_app* replica_app = (replication_service_app*)app.app.app_context_ptr;
             replica_app->_stub->set_replica_state_subscriber_for_test(
                         std::bind(&test_checker::on_replica_state_change, this,
                                   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
@@ -181,7 +180,7 @@ void test_checker::on_replica_state_change(::dsn::rpc_address from, const replic
 
 void test_checker::on_config_change(const std::vector<app_state>& new_config)
 {
-    partition_configuration c = new_config[g_default_gpid.app_id - 1].partitions[g_default_gpid.pidx];
+    partition_configuration c = new_config[g_default_gpid.get_app_id() - 1].partitions[g_default_gpid.get_partition_index()];
     parti_config cur_config;
     cur_config.convert_from(c);
     if (cur_config != _last_config)
@@ -257,11 +256,11 @@ bool test_checker::check_replica_state(int primary_count, int secondary_count, i
         for (auto& replica : rs->_stub->_replicas)
         {
             auto status = replica.second->status();
-            if (status == PS_PRIMARY)
+            if (status == partition_status::PS_PRIMARY)
                 p++;
-            else if (status == PS_SECONDARY)
+            else if (status == partition_status::PS_SECONDARY)
                 s++;
-            else if (status == PS_INACTIVE)
+            else if (status == partition_status::PS_INACTIVE)
                 i++;
         }
     }

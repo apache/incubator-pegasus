@@ -24,24 +24,22 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/dist/replication.h>
+
 # include "simple_kv.code.definition.h"
 # include <iostream>
 
 namespace dsn { namespace replication { namespace test { 
 class simple_kv_service 
-    : public ::dsn::replication::replication_app_base
+    : public serverlet<simple_kv_service>
 {
 public:
-    simple_kv_service(::dsn::replication::replica* replica) 
-        : ::dsn::replication::replication_app_base(replica)
+    simple_kv_service()
+        : ::dsn::serverlet<simple_kv_service>("simple_kv")
     {
-        open_service();
     }
-    
-    virtual ~simple_kv_service() 
+
+    virtual ~simple_kv_service()
     {
-        close_service();
     }
 
 protected:
@@ -69,18 +67,18 @@ protected:
     }
     
 public:
-    void open_service()
+    void open_service(dsn_gpid gpid)
     {
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", &simple_kv_service::on_read);
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", &simple_kv_service::on_write);
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", &simple_kv_service::on_append);
+        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", &simple_kv_service::on_read, gpid);
+        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", &simple_kv_service::on_write, gpid);
+        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", &simple_kv_service::on_append, gpid);
     }
 
-    void close_service()
+    void close_service(dsn_gpid gpid)
     {
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ);
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE);
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND);
+        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, gpid);
+        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, gpid);
+        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, gpid);
     }
 };
 

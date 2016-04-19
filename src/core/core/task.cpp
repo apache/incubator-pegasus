@@ -403,6 +403,15 @@ void task::enqueue(task_worker_pool* pool)
 {
     this->add_ref(); // released in exec_internal (even when cancelled)
 
+    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
+        "(1). thread pool not designatd in '[%s] pools'; "
+        "(2). the caller is executed in io threads "
+        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
+        dsn_threadpool_code_to_string(_spec->pool_code),
+        _node->spec().config_section.c_str(),
+        _spec->name.c_str()
+        );
+
     if (spec().type == TASK_TYPE_COMPUTE)
     {
         spec().on_task_enqueue.execute(task::get_current_task(), this);
@@ -452,15 +461,6 @@ void task::enqueue(task_worker_pool* pool)
     }
 
     // normal path
-    dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
-        "(1). thread pool not designatd in '[%s] pools'; "
-        "(2). the caller is executed in io threads "
-        "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
-        dsn_threadpool_code_to_string(_spec->pool_code),
-        _node->spec().config_section.c_str(),
-        _spec->name.c_str()
-        );
-
     pool->enqueue(this);
 }
 
@@ -510,7 +510,7 @@ void timer_task::exec()
 rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
     : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
-        request->header->client.hash, node),
+        static_cast<int>(request->header->client.hash), node),
     _request(request),
     _handler(h),
     _enqueue_ts_ns(0)
@@ -546,7 +546,7 @@ rpc_response_task::rpc_response_task(
     service_node* node
     )
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, context, on_cancel,
-           hash == 0 ? request->header->client.hash : hash, node)
+           hash == 0 ? static_cast<int>(request->header->client.hash) : hash, node)
 {
     _cb = cb;
     _is_null = (_cb == nullptr);
@@ -582,7 +582,6 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
 
     if (nullptr != reply)
     {
-        dassert(err == ERR_OK, "error code must be success when reply is present");
         reply->add_ref(); // released in dctor
     }
 
@@ -600,6 +599,54 @@ void rpc_response_task::enqueue()
         auto pool = node()->computation()->get_pool(spec().pool_code);
         task::enqueue(pool);
     }
+}
+
+void rpc_response_task::replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context)
+{
+    struct hook_context : public transient_object
+    {
+        dsn_rpc_response_handler_t old_callback;
+        dsn_task_cancelled_handler_t old_on_cancel;
+        void* old_context;
+
+        dsn_rpc_response_handler_replace_t new_callback;
+        uint64_t new_context;
+    };
+
+    hook_context* nc = new hook_context();
+    nc->old_callback = _cb;
+    nc->old_context = _context;
+    nc->old_on_cancel = _on_cancel;
+    nc->new_callback = callback;
+    nc->new_context = context;
+
+    _context = nc;
+
+    _cb = [](dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* ctx)
+    {
+        auto nc = (hook_context*)ctx;
+        nc->new_callback(
+            nc->old_callback,
+            err,
+            req,
+            resp,
+            nc->old_context,
+            nc->new_context
+            );
+        delete nc;
+    };
+
+    _on_cancel = [](void* ctx)
+    {
+        auto nc = (hook_context*)ctx;
+        if (nc->old_on_cancel != nullptr)
+        {
+            nc->old_on_cancel(nc->old_context);
+        }
+        delete nc;
+    };
+
+    _is_null = false;
 }
 
 aio_task::aio_task(

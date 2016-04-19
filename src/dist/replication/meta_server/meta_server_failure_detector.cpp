@@ -122,9 +122,9 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::d
     
     for (auto& pri : pris)
     {
-        dinfo("%d.%d primary node for %s is gone, update configuration on meta server", 
-            pri.first.app_id,
-            pri.first.pidx,
+        dinfo("%d.%d node for %s is gone, update configuration on meta server", 
+            pri.first.get_app_id(),
+            pri.first.get_partition_index(),
             pri.second->node.to_string()
             );
         _svc->update_configuration_on_machine_failure(pri.second);

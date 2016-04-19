@@ -99,7 +99,6 @@ namespace dsn {
     //-------------------- msg parser manager --------------------
     message_parser_manager::message_parser_manager()
     {
-        _factory_vec.resize(network_header_format::max_value() + 1);
     }
 
     void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
@@ -213,9 +212,8 @@ namespace dsn {
         return i;
     }
 
-    int dsn_message_parser::get_send_buffers_count_and_total_length(message_ex* msg, int* total_length)
+    int dsn_message_parser::get_send_buffers_count(message_ex* msg)
     {
-        *total_length = (int)msg->body_size() + sizeof(message_header);
         return (int)msg->buffers.size();
     }
 

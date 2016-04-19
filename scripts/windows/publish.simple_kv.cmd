@@ -1,7 +1,7 @@
 SET cmd=%1
 SET build_dir=%~f2
 SET build_type=%3
-SET monitor_url=%4
+SET webstudio_url=%4
 SET bin_dir=%~dp0
 
 :start_build
@@ -23,9 +23,9 @@ GOTO exit
     set app=%1
     @MKDIR .\skv\%app%
 
-    IF "%monitor_url%" NEQ "" (
-        SET monitor_str=;monitor
-        COPY /Y %monitor_url% .\skv\%app%\MonitorPack.7z
+    IF "%webstudio_url%" NEQ "" (
+        SET webstudio_str=;webstudio
+        COPY /Y %webstudio_url% .\skv\%app%\WebStudio.7z
     )
     
     CALL %bin_dir%\copy_dsn_shared.cmd .\skv\%app% %build_dir% %build_type%
@@ -34,21 +34,21 @@ GOTO exit
         COPY /Y %build_dir%\bin\dsn.replication.simple_kv\config.ini .\skv\%app%
     )
 
-    SET has_monitor=
-    FOR /F "tokens=* USEBACKQ" %%F IN (`findstr apps.monitor .\skv\%app%\config.ini`) DO (
-        SET has_monitor=%%F
+    SET has_webstudio=
+    FOR /F "tokens=* USEBACKQ" %%F IN (`findstr apps.webstudio .\skv\%app%\config.ini`) DO (
+        SET has_webstudio=%%F
     )
     
-    IF "%monitor_url%" NEQ "" IF "%has_monitor%" EQU "" (
-        ECHO rewrite config.ini for starting embedded monitor ...
+    IF "%webstudio_url%" NEQ "" IF "%has_webstudio%" EQU "" (
+        ECHO rewrite config.ini for starting embedded webstudio ...
         (
             ECHO[
-            ECHO [apps.monitor]
-            ECHO type = monitor
+            ECHO [apps.webstudio]
+            ECHO type = webstudio
             ECHO arguments = 8088
             ECHO pools = THREAD_POOL_DEFAULT
             ECHO dmodule = dsn.dev.python_helper
-            ECHO dmodule_bridge_arguments = rDSN.monitor\rDSN.Monitor.py
+            ECHO dmodule_bridge_arguments = rDSN.WebStudio\rDSN.WebStudio.py
         ) >> .\skv\%app%\config.ini
     )
  
@@ -56,16 +56,16 @@ GOTO exit
     (
         ECHO SET ldir=%%~dp0
         ECHO cd /d ldir
-        ECHO IF NOT EXIST "rDSN.monitor" (
-        ECHO    CALL .\7z.exe x -y MonitorPack.7z 
-        ECHO    XCOPY /Y /E /I MonitorPack\* .\
-        ECHO    rmdir /s /q MonitorPack
+        ECHO IF NOT EXIST "rDSN.WebStudio" (
+        ECHO    CALL .\7z.exe x -y WebStudio.7z 
+        ECHO    XCOPY /Y /E /I WebStudio\* .\
+        ECHO    rmdir /s /q WebStudio
         ECHO ^)
         ECHO set i=0
         ECHO :loop
         ECHO     set /a i=%%i%%+1
         ECHO     echo run %%i%%th ... ^>^> ./running.txt
-        ECHO     .\dsn.replication.simple_kv.exe config.ini -app_list %app%@1%monitor_str%
+        ECHO     .\dsn.replication.simple_kv.exe config.ini -app_list %app%@1%webstudio_str%
         ECHO     ping -n 16 127.0.0.1 ^>nul
         ECHO goto loop
     )  > .\skv\%app%\start.cmd
@@ -73,6 +73,6 @@ GOTO exit
     GOTO:EOF
 
 :error
-    CALL %bin_dir%\echoc.exe 4  Usage: run publish^|republish build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel) [monitor_package_url]
+    CALL %bin_dir%\echoc.exe 4  Usage: run publish^|republish build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel) [webstudio_package_url]
 
 :exit

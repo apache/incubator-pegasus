@@ -8,17 +8,5 @@
 // type files with --gen=cpp etc. options
 //
 
-# if defined(DSN_USE_THRIFT_SERIALIZATION)
-
 # include "echo_types.h"
-
-# elif defined(DSN_USE_PROTO_SERIALIZATION)
-
-# include "echo.pb.h"
-
-# else // use rDSN's data encoding/decoding
-
-namespace dsn { namespace example { 
-} } 
-
-#endif 
+# include <dsn/cpp/serialization.h>
