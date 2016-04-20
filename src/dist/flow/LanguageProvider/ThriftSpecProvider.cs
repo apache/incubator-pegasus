@@ -51,22 +51,22 @@ namespace rDSN.Tron.LanguageProvider
             return ServiceSpecType.thrift;
         }
 
-        public string[] ToCommonSpec(ServiceSpec spec, string dir)
-        {
-            var translator = IdlTranslator.GetInstance(GetType());
-            var inputDir = spec.Directory;
-            var file = spec.MainSpecFile;
-            var outDir = dir;
-            var args = new List<string>
-            {
-                "-out " + outDir,
-                "-r" // recursively generate all included files
-            };
-            if (!translator.ToCommonInterface(inputDir, file, outDir, args)) return null;
-            const int threshhold = 30; // filter the .cs files by their LastWriteTimes
-            var output = SystemHelper.GetFilesByLastWrite(outDir, "*_common.cs", SearchOption.TopDirectoryOnly, threshhold);
-            return output.ToArray();
-        }
+        //public string[] ToCommonSpec(ServiceSpec spec, string dir)
+        //{
+        //    var translator = IdlTranslator.GetInstance(GetType());
+        //    var inputDir = spec.Directory;
+        //    var file = spec.MainSpecFile;
+        //    var outDir = dir;
+        //    var args = new List<string>
+        //    {
+        //        "-out " + outDir,
+        //        "-r" // recursively generate all included files
+        //    };
+        //    if (!translator.ToCommonInterface(inputDir, file, outDir, args)) return null;
+        //    const int threshhold = 30; // filter the .cs files by their LastWriteTimes
+        //    var output = SystemHelper.GetFilesByLastWrite(outDir, "*_common.cs", SearchOption.TopDirectoryOnly, threshhold);
+        //    return output.ToArray();
+        //}
 
         private static ErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
         {

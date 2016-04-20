@@ -38,6 +38,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using IDL;
 using rDSN.Tron.Utility;
 
 namespace rDSN.Tron.Contract
@@ -131,11 +132,7 @@ namespace rDSN.Tron.Contract
         {
             if (type.IsSimpleType())
                 return true;
-            if (type.IsGenericType)
-            {
-                return type.GetGenericArguments().All(IsDependentOfPrimitiveTypes);
-            }
-            return false;
+            return type.IsGenericType && type.GetGenericArguments().All(IsDependentOfPrimitiveTypes);
         }
 
         private static string GetThriftTypeName(Type type)
@@ -156,16 +153,13 @@ namespace rDSN.Tron.Contract
             {
                 return thriftTypeMapping[type];
             }
-            if (type.IsGenericType)
+            if (!type.IsGenericType) return type.Name;
+            if (type.GetGenericTypeDefinition().Name.Contains("List") ||
+                type.GetGenericTypeDefinition().Name.Contains("Array"))
             {
-                if (type.GetGenericTypeDefinition().Name.Contains("List") ||
-                    type.GetGenericTypeDefinition().Name.Contains("Array"))
-                {
-                    return "list<" + GetThriftTypeName(type.GetGenericArguments()[0]) + ">";
-                }
-                throw new NotSupportedException();
+                return "list<" + GetThriftTypeName(type.GetGenericArguments()[0]) + ">";
             }
-            return type.Name;
+            throw new NotSupportedException();
         }
 
         public static string GenerateStandAloneThriftSpec(Type type, List<string> dependentSpecFiles)
@@ -190,37 +184,28 @@ namespace rDSN.Tron.Contract
                     trackedTypes.Add(return_value_type);
                 }
 
-                if (!IsDependentOfPrimitiveTypes(parameter_type) && !trackedTypes.Contains(parameter_type))
-                {
-                    tobetracked.Enqueue(parameter_type);
-                    trackedTypes.Add(parameter_type);
-                }
+                if (IsDependentOfPrimitiveTypes(parameter_type) || trackedTypes.Contains(parameter_type)) continue;
+                tobetracked.Enqueue(parameter_type);
+                trackedTypes.Add(parameter_type);
             }
 
             while (tobetracked.Count > 0)
             {
                 var t = tobetracked.Dequeue();
-                foreach (var fld in t.GetFields())
+                foreach (var fld in t.GetFields().Where(fld =>!IsDependentOfPrimitiveTypes(fld.FieldType) && !trackedTypes.Contains(fld.FieldType)))
                 {
-                    if (!IsDependentOfPrimitiveTypes(fld.FieldType) && !trackedTypes.Contains(fld.FieldType))
+                    if (fld.FieldType.IsGenericType)
                     {
-                        if (fld.FieldType.IsGenericType)
+                        foreach (var p in fld.FieldType.GetGenericArguments().Where(p => !IsDependentOfPrimitiveTypes(p) && !trackedTypes.Contains(p)))
                         {
-                            foreach (var p in fld.FieldType.GetGenericArguments())
-                            {
-                                if (!IsDependentOfPrimitiveTypes(p) && !trackedTypes.Contains(p))
-                                {
-                                    tobetracked.Enqueue(p);
-                                    trackedTypes.Add(p);
-                                }
-                            }
+                            tobetracked.Enqueue(p);
+                            trackedTypes.Add(p);
                         }
-                        else
-                        {
-
-                            tobetracked.Enqueue(fld.FieldType);
-                            trackedTypes.Add(fld.FieldType);
-                        }
+                    }
+                    else
+                    {
+                        tobetracked.Enqueue(fld.FieldType);
+                        trackedTypes.Add(fld.FieldType);
                     }
                 }
             }
@@ -265,7 +250,15 @@ namespace rDSN.Tron.Contract
                 var idx = 0;
                 foreach (var fld in v.Owner.GetFields())
                 {
-                    builder.AppendLine(++idx + ":" + GetThriftTypeName(fld.FieldType) + " " + fld.Name + ";");
+                    if (fld.GetCustomAttributes().Any(a => a is FieldAttribute))
+                    {
+                        idx = ((FieldAttribute) fld.GetCustomAttributes().First(a => a is FieldAttribute)).index;
+                    }
+                    else
+                    {
+                        idx ++;
+                    }
+                    builder.AppendLine(idx + ":" + GetThriftTypeName(fld.FieldType) + " " + fld.Name + ";");
                 }
                 builder.EndBlock(); 
 
