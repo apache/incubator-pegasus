@@ -60,7 +60,8 @@ public enum ServiceSpecType
 	composition,
 	common,
 	proto,
-	thrift
+	thrift,
+    bond_3_0
 }
 
 public class ServiceSpec

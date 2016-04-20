@@ -51,11 +51,11 @@ namespace rDSN.Tron.LanguageProvider
 
         }
 
-        public string[] ToCommonSpec(ServiceSpec spec, string dir)
-        {
-            throw new NotImplementedException();
+        //public string[] ToCommonSpec(ServiceSpec spec, string dir)
+        //{
+        //    throw new NotImplementedException();
 
-        }
+        //}
 
         //public ServiceSpec FromCommonSpec(string spec, ServiceSpecType targetType)
         //{

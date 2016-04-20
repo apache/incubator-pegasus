@@ -62,23 +62,28 @@ namespace rDSN.Tron.LanguageProvider
        public static string GetCompilerPath(ServiceSpecType t, ClientPlatform p = ClientPlatform.Windows)
        {
            var path = "";
-           var prefix = "..\\..\\external\\";
+           var prefix = Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/windows");
            switch(t)
            {
                case ServiceSpecType.proto:
-                   path = prefix + "protobuf\\protoc.exe";
+                   path = Path.Combine(prefix, "protoc.exe");
                    break;
                case ServiceSpecType.thrift:
-                   path = prefix + "thrift\\thrift.exe";
+                   path = Path.Combine(prefix, "thrift.exe");
+                   break;
+               case ServiceSpecType.bond_3_0:
+                   path = Path.Combine(prefix, "bondc.exe");
                    break;
                default:
                    break;
            }
+
            if (File.Exists(path))
            {
                return path;
            }
-           Console.WriteLine("Cannot find thrift compiler at path: {0}!", path);
+
+           Console.WriteLine("Cannot find {0} compiler at path: {1}!", t.ToString(), path);
            return "";
        }
    }
