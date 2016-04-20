@@ -311,6 +311,7 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
             unmarshall_json(data, app);
 
             app.partitions.resize(app.partition_count);
+            app.partition_assists.resize(app.partition_count);
             for (unsigned int i=0; i!=app.partition_count; ++i)
             {
                 ans = file->read_next_buffer(data);
@@ -498,6 +499,7 @@ error_code server_state::initialize_apps()
 
     std::vector<partition_configuration>& partitions = _apps.back().partitions;
     partitions.resize(app.partition_count, pc);
+    _apps.back().partition_assists.resize(app.partition_count);
     for (unsigned int i=0; i!=partitions.size(); ++i)
         partitions[i].gpid.pidx = i;
 
@@ -607,7 +609,7 @@ error_code server_state::sync_apps_from_remote_storage()
 
                                 if (state.status == AS_DROPPED)
                                 {
-                                    _apps[app_id - 1].status = AS_DROPPED;
+                                    _apps[app_id - 1] = state;
                                     return;
                                 }
                                 else
@@ -616,6 +618,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                     state.available_partitions.store(0);
                                     _apps[app_id - 1] = state;
                                     _apps[app_id - 1].partitions.resize(state.partition_count);
+                                    _apps[app_id - 1].partition_assists.resize(state.partition_count);
                                 }
                             }
 
@@ -1045,6 +1048,7 @@ void server_state::create_app(dsn_message_t msg)
             init_partition_configuration(pc, app, request.options.replica_count);
 
             app.partitions.resize(app.partition_count, pc);
+            app.partition_assists.resize(app.partition_count);
             for (int i=0; i!=app.partitions.size(); ++i)
                 app.partitions[i].gpid.pidx = i;
 
@@ -1518,6 +1522,15 @@ void server_state::update_configuration_internal(const configuration_update_requ
         old = request.config;
         old.last_drops = drops;
         
+        if (request.type == CT_DOWNGRADE_TO_INACTIVE || request.type == CT_REMOVE)
+        {
+            partition_assist_info& assist_info = app.partition_assists[old.gpid.pidx];
+            dropout_history d = { request.node, dsn_now_ms() };
+            assist_info.history_queue.push_back(d);
+            if (assist_info.history_queue.size() > 3)
+                assist_info.history_queue.pop_front();
+        }
+
         std::stringstream cf;
         cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)

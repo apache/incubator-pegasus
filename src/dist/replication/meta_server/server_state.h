@@ -60,6 +60,17 @@ namespace dsn {
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
+struct dropout_history
+{
+    dsn::rpc_address addr;
+    uint64_t dropout_time;
+};
+
+struct partition_assist_info
+{
+    std::deque<dropout_history> history_queue;
+};
+
 struct app_state
 {
     app_status                           status;
@@ -68,6 +79,7 @@ struct app_state
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
+    std::vector<partition_assist_info>   partition_assists;
 
     // used only for creating app, to count the number of partitions whose node
     // has been ready on the remote storage
@@ -203,6 +215,11 @@ public:
     error_code dump_from_remote_storage(const char* format, const char* local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage);
 
+    const bool is_node_alive(dsn::rpc_address addr)
+    {
+        auto iter = _nodes.find(addr);
+        return iter!=_nodes.end() && iter->second.is_alive;
+    }
 public:
     static int32_t _default_max_replica_count;
 

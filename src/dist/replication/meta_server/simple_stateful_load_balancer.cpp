@@ -127,6 +127,7 @@ void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
         return;
 
     configuration_update_request proposal;
+    partition_assist_info& assist_info = _state->_apps[pc.gpid.app_id - 1].partition_assists[pc.gpid.pidx];
     proposal.config = pc;
 
     if (pc.primary.is_invalid())
@@ -174,9 +175,39 @@ void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
 
     else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
     {
+        proposal.node.set_invalid();
+        if (static_cast<int>(pc.secondaries.size()) + 1 >= mutation_2pc_min_replica_count)
+        {
+            while (!assist_info.history_queue.empty())
+            {
+                dropout_history d = assist_info.history_queue.front();
+                if (d.dropout_time + replica_assign_delay_ms_for_dropouts > dsn_now_ms())
+                    return;
+                assist_info.history_queue.pop_front();
+                if (_state->is_node_alive(d.addr))
+                {
+                    proposal.node = d.addr;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            while (proposal.node.is_invalid() && !assist_info.history_queue.empty())
+            {
+                dropout_history& d = assist_info.history_queue.front();
+                if (_state->is_node_alive(d.addr))
+                    proposal.node = d.addr;
+                assist_info.history_queue.pop_front();
+            }
+        }
+
         proposal.type = CT_ADD_SECONDARY;
-        proposal.node = find_minimal_load_machine(false);
-        if (proposal.node.is_invalid() == false && 
+
+        if (proposal.node.is_invalid())
+            proposal.node = find_minimal_load_machine(false);
+
+        if (proposal.node.is_invalid() == false &&
             proposal.node != pc.primary &&
             std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {

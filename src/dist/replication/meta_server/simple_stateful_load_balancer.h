@@ -53,7 +53,7 @@ public:
     virtual void run(global_partition_id gpid) override;
 
 private:
-    // meta server => partition server    
+    // meta server => partition server
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
     void on_query_decree_ack(error_code err, const std::shared_ptr<query_replica_decree_request>& query, const std::shared_ptr<query_replica_decree_response>& resp);
     
