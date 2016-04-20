@@ -11,8 +11,6 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH
     ${GTEST_INCLUDE_DIR} 
-    ${THRIFT_INCLUDE_DIR} 
-    ${PROTOBUF_INCLUDE_DIR}
 )
 
 set(MY_PROJ_LIBS gtest
@@ -46,6 +44,11 @@ if (WIN32)
 else ()
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/resources/sbin/run.sh.template" "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
 endif ()
+
+set(MY_SERIALIZATION_TYPE
+    "thrift"
+    "protobuf"
+)
 
 dsn_add_executable()
 add_dependencies(${MY_PROJ_NAME} googletest)

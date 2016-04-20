@@ -7,7 +7,7 @@
 namespace dsn {
     namespace replication {
         namespace application {
-            GENERATED_TYPE_SERIALIZATION(kv_pair)
+            GENERATED_TYPE_SERIALIZATION(kv_pair, THRIFT)
         }
     }
 }

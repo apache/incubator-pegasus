@@ -38,6 +38,7 @@ arguments = localhost:27001
 count = 1
 run = true
 pools = THREAD_POOL_DEFAULT
+delay_seconds = 1
 
 <?php foreach ($_PROG->services as $svc) { ?>
 [apps.client.perf.<?=$svc->name?>] 
@@ -46,6 +47,7 @@ type = client.perf.<?=$svc->name?>
 arguments = localhost:27001 
 count = 1
 run = false
+delay_seconds = 1
 <?php } ?>
 
 [core]

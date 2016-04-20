@@ -117,7 +117,7 @@ namespace dsn {
     {
         gproto_binary_writer wt2(writer);
         ::google::protobuf::io::CodedOutputStream os(&wt2);
-        val.SerializeWithCachedSizes(&os);
+        val.SerializeToCodedStream(&os);
     }
 
     template<typename T>

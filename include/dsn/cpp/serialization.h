@@ -183,13 +183,12 @@ namespace dsn
     BASIC_TYPE_SERIALIZATION(double)
     BASIC_TYPE_SERIALIZATION(std::string)
 
-#define GENERATED_TYPE_SERIALIZATION(GType) \
+#define GENERATED_TYPE_SERIALIZATION(GType, SerializationType) \
     inline void marshall(binary_writer& writer, const GType &value, dsn_msg_serialize_format fmt) \
     { \
         switch (fmt) \
         { \
-            THRIFT_GENERATED_TYPE_MARSHALLER \
-            PROTOBUF_GENERATED_TYPE_MARSHALLER \
+            SerializationType##_GENERATED_TYPE_MARSHALLER \
             default: dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str()); \
         } \
     } \
@@ -197,8 +196,7 @@ namespace dsn
     { \
         switch (fmt) \
         { \
-            THRIFT_GENERATED_TYPE_UNMARSHALLER \
-            PROTOBUF_GENERATED_TYPE_UNMARSHALLER \
+            SerializationType##_GENERATED_TYPE_UNMARSHALLER \
             default: dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str()); \
         } \
     }
