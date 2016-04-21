@@ -8,8 +8,8 @@
 
 namespace dsn {
     namespace fd {
-        GENERATED_TYPE_SERIALIZATION(beacon_msg)
-        GENERATED_TYPE_SERIALIZATION(beacon_ack)
-        GENERATED_TYPE_SERIALIZATION(config_master_message)
+        GENERATED_TYPE_SERIALIZATION(beacon_msg, THRIFT)
+        GENERATED_TYPE_SERIALIZATION(beacon_ack, THRIFT)
+        GENERATED_TYPE_SERIALIZATION(config_master_message, THRIFT)
     }
 }

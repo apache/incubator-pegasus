@@ -7,9 +7,9 @@
 
 namespace dsn {
     namespace service {
-        GENERATED_TYPE_SERIALIZATION(copy_request)
-        GENERATED_TYPE_SERIALIZATION(copy_response)
-        GENERATED_TYPE_SERIALIZATION(get_file_size_request)
-        GENERATED_TYPE_SERIALIZATION(get_file_size_response)
+        GENERATED_TYPE_SERIALIZATION(copy_request, THRIFT)
+        GENERATED_TYPE_SERIALIZATION(copy_response, THRIFT)
+        GENERATED_TYPE_SERIALIZATION(get_file_size_request, THRIFT)
+        GENERATED_TYPE_SERIALIZATION(get_file_size_response, THRIFT)
     }
 }

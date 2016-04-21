@@ -62,7 +62,7 @@ public:
         }
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        _server = url_host_address(argv[1]);
+        _server = ::dsn::url_host_address(argv[1]);
             
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client.reset(new <?=$svc->name?>_client(_server));
@@ -135,7 +135,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        _server = url_host_address(argv[1]);
+        _server = ::dsn::url_host_address(argv[1]);
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();

@@ -8,5 +8,5 @@
 # include <dsn/cpp/serialization.h>
 
 namespace dsn {
-    GENERATED_TYPE_SERIALIZATION(command)
+    GENERATED_TYPE_SERIALIZATION(command, THRIFT)
 } 

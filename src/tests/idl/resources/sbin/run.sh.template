@@ -5,7 +5,20 @@ export PATH=$DSN_ROOT/bin:$PATH
 export LIBRARY_PATH=$DSN_ROOT/lib:$LIBRARY_PATH
 export LD_LIBRARY_PATH=$DSN_ROOT/lib:$LD_LIBRARY_PATH
 
-./dsn.idl.tests $DSN_ROOT ./
+if [ -z "$REPORT_DIR" ]; then
+    REPORT_DIR="."
+fi
+GTEST_OUTPUT="xml:$REPORT_DIR/dsn.idl.tests"
+
+./dsn.idl.tests $DSN_ROOT ./ --gtest_output=$GTEST_OUTPUT
+
+if [ $? -ne 0 ]; then
+    ret=-1
+else
+    ret=0
+fi
 
 rm counter.*
-rm -rf log
+rm log
+
+exit $ret

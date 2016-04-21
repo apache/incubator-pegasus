@@ -6,7 +6,7 @@
 namespace dsn {
     namespace replication {
         namespace test {
-            GENERATED_TYPE_SERIALIZATION(kv_pair)
+            GENERATED_TYPE_SERIALIZATION(kv_pair, THRIFT)
         }
     }
 }

@@ -3,12 +3,23 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
-$idl_format = $argv[5];
 
 $dsf_object = array();
 foreach ($_PROG->structs as $s)
 {
     array_push($dsf_object, $s->name);
+}
+foreach ($_PROG->enums as $e)
+{
+    array_push($dsf_object, $e->name);
+}
+$idl_name = "";
+if ($idl_type == "thrift")
+{
+    $idl_name = "THRIFT";
+} else if ($idl_type == "proto")
+{
+    $idl_name = "PROTOBUF";
 }
 ?>
 # pragma once
@@ -32,7 +43,7 @@ foreach ($_PROG->structs as $s)
 
 <?php
 foreach ($_PROG->structs as $s){
-    Echo "    GENERATED_TYPE_SERIALIZATION(".$s->name.")".PHP_EOL;
+    Echo "    GENERATED_TYPE_SERIALIZATION(".$s->name.", ".$idl_name.")".PHP_EOL;
 } ?>
 
 <?=$_PROG->get_cpp_namespace_end()?>

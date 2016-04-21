@@ -593,7 +593,7 @@ class t_struct extends t_type
         $program->structs[] = $this;
     }
     
-    function add_field($name, $type_name, $id)
+    function add_field($name, $type_name, $id = "")
     {
         $this->fields[] = new t_field($name, $type_name, $id);
     }
@@ -623,7 +623,7 @@ class t_function
         $this->params = array();
     }
     
-    function add_param($name, $type_name, $id)
+    function add_param($name, $type_name, $id = "")
     {
         $this->params[] = new t_field($name, $type_name, $id);
     }
