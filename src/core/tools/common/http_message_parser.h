@@ -64,6 +64,7 @@ namespace dsn
             parsing_id,
             parsing_rpc_id,
             parsing_rpc_name,
+            parsing_payload_format,
             parsing_nothing
         } response_parse_state;
         std::string request_header_send_buffer, response_header_send_buffer;
