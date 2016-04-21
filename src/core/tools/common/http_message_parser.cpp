@@ -41,7 +41,10 @@
 #include "http_message_parser.h"
 #include <dsn/cpp/serialization.h>
 
+
 namespace dsn{
+template <typename T, size_t N>
+char(&ArraySizeHelper(T(&array)[N]))[N];
 http_message_parser::http_message_parser(int buffer_block_size, bool is_write_only)
     : message_parser(buffer_block_size, is_write_only)
 {
@@ -55,20 +58,28 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
     };
     _parser_setting.on_header_field = [](http_parser* parser, const char *at, size_t length)->int
     {
+#define StrLiteralLen(str) (sizeof(ArraySizeHelper(str)) - 1)
+#define MATCH(pat) (length >= StrLiteralLen(pat) && strncmp(at, pat, StrLiteralLen(pat)) == 0)
         auto owner = static_cast<http_message_parser*>(parser->data);
-        if (length >= 6 && strncmp(at, "rpc_id", 6) == 0)
+        if (MATCH("rpc_id"))
         {
             owner->response_parse_state = parsing_rpc_id;
         }
-        else if (length >= 2 && strncmp(at, "id", 2) == 0)
+        else if (MATCH("id"))
         {
             owner->response_parse_state = parsing_id;
         }
-        else if (length >= 8 && strncmp(at, "rpc_name", 8) == 0)
+        else if (MATCH("name"))
         {
             owner->response_parse_state = parsing_rpc_name;
         }
+        else if (MATCH("payload_format"))
+        {
+            owner->response_parse_state = parsing_payload_format;
+        }
         return 0;
+#undef StrLiteralLen
+#undef MATCH
     };
     _parser_setting.on_header_value = [](http_parser* parser, const char *at, size_t length)->int
     {
@@ -86,8 +97,12 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
             strncpy(owner->_current_message->header->rpc_name, at, length);
             owner->_current_message->header->rpc_name[length] = 0;
             break;
-        default:
+        case parsing_payload_format:
+            owner->_current_message->header->context.u.serialize_format = std::atoi(std::string(at, length).c_str());
+            break;
+        case parsing_nothing:
             ;
+            //no default
         }
         owner->response_parse_state = parsing_nothing;
         return 0;
@@ -162,6 +177,7 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, se
             ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
             ss << "id: " << msg->header->id << "\r\n";
             ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+            ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
             ss << "Content-Length: " << msg->body_size() << "\r\n";
             ss << "\r\n";
             request_header_send_buffer = ss.str();
@@ -190,6 +206,7 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, se
             ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
             ss << "id: " << msg->header->id << "\r\n";
             ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+            ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
             ss << "Content-Length: " << msg->body_size() << "\r\n";
             ss << "\r\n";
             response_header_send_buffer = ss.str();
