@@ -204,10 +204,17 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
         );
 
-    if (err != ERR_OK)
+    if (err == ERR_OK)
+    {
+        ddebug(
+            "%s: replay shared log succeed",
+            primary_address().to_string()
+            );
+    }
+    else
     {
         derror(
-            "%s: replication log replay failed, err %s, clear all logs ...",
+            "%s: replay shared log failed, err = %s, clear all logs ...",
             primary_address().to_string(),
             err.to_string()
             );

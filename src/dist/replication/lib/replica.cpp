@@ -249,7 +249,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         else
         {
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -274,7 +274,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         else
         {
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -299,7 +299,7 @@ void replica::execute_mutation(mutation_ptr& mu)
             // make sure private log saves the state,
             // catch-up will be done later after the checkpoint task is finished
 
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -311,7 +311,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
     }
     
-    ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+    dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
 
     _counter_commit_latency.set(dsn_now_ns() - mu->create_ts_ns());
 

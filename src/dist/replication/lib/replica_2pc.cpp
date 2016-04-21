@@ -531,7 +531,14 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     dassert(nullptr != mu->prepare_msg(), "");
     reply(mu->prepare_msg(), resp);
 
-    ddebug("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
+    if (err == ERR_OK)
+    {
+        dinfo("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
+    }
+    else
+    {
+        dwarn("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
+    }
 }
 
 void replica::cleanup_preparing_mutations(bool wait)

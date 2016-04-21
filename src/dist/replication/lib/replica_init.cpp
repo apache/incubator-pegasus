@@ -288,7 +288,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     auto offset = mu->data.header.log_offset;
     if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -301,7 +301,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     
     if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -331,7 +331,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 
     if (d <= last_committed_decree())
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64 ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -346,7 +346,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     auto old = _prepare_list->get_mutation_by_decree(d);
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 "), decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -366,7 +366,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         dassert(ret, "");
     }
 
-    ddebug(
+    dinfo(
         "%s: replay mutation ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64,
         name(),
         mu->data.header.ballot,
