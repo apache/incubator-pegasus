@@ -666,7 +666,8 @@ namespace dsn {
             ::dsn::binary_reader_transport trans(reader); \
             boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {}); \
             ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
-            proto.readStructBegin(std::string("value")); \
+            std::string struct_name("value"); \
+            proto.readStructBegin(struct_name); \
             proto.read##TMethod (val); \
             proto.readStructEnd(); \
         }

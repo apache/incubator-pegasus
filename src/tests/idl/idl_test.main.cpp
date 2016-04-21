@@ -459,9 +459,10 @@ TEST(TEST_THRIFT_HELPER, CSHARP_JSON)
 
 #endif
 */
+
 GTEST_API_ int main(int argc, char **argv)
 {
-    if (argc != 3)
+    if (argc < 3)
     {
         std::cout << "invalid parameters" << std::endl;
         return 1;
