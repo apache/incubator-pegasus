@@ -55,7 +55,7 @@ void simple_stateful_load_balancer::run()
 {
     if (s_disable_lb) return;
 
-    zauto_read_lock l(_state->_lock);
+    zauto_write_lock l(_state->_lock);
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
@@ -74,7 +74,7 @@ void simple_stateful_load_balancer::run(global_partition_id gpid)
 {
     if (s_disable_lb) return;
 
-    zauto_read_lock l(_state->_lock);
+    zauto_write_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
     run_lb(pc);
 }

@@ -74,6 +74,7 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     }
 
     // create lock service
+    ddebug("create distributed_lock_service: %s", distributed_lock_service_type);
     _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
         distributed_lock_service_type,
         PROVIDER_TYPE_MAIN

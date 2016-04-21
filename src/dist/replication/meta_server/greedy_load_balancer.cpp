@@ -494,7 +494,7 @@ void greedy_load_balancer::on_balancer_proposal(/*in*/const balancer_proposal_re
 
 void greedy_load_balancer::run()
 {
-    zauto_read_lock l(_state->_lock);
+    zauto_write_lock l(_state->_lock);
 
     dinfo("start to run global balancer");
     bool is_system_healthy = !_state->freezed();
@@ -583,7 +583,7 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
 
 void greedy_load_balancer::run(global_partition_id gpid)
 {
-    zauto_read_lock l(_state->_lock);
+    zauto_write_lock l(_state->_lock);
     if (_state->_apps[gpid.app_id - 1].status != AS_AVAILABLE)
         return;
 

@@ -47,7 +47,8 @@ namespace dsn
         // meta server => partition server
         void server_load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
         {
-            dinfo("send proposal %s of %s, current ballot = %" PRId64,
+            ddebug("send proposal to %s (%s of %s), current ballot = %" PRId64,
+                node.to_string(),
                 enum_to_string(proposal.type),
                 proposal.node.to_string(),
                 proposal.config.ballot

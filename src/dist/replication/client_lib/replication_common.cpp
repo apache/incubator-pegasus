@@ -52,7 +52,7 @@ replication_options::replication_options()
     batch_write_disabled = false;
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
-    mutation_2pc_min_replica_count = 1;    
+    mutation_2pc_min_replica_count = 2;
 
     group_check_disabled = false;
     group_check_interval_ms = 100000;

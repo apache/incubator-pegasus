@@ -108,7 +108,8 @@ error_code meta_service::start()
         "simple_stateful_load_balancer",
         "server_load_balancer provider type"
         );
-    
+
+    ddebug("create server_load_balancer: %s", server_load_balancer);
     _balancer = dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::create(
         server_load_balancer,
         PROVIDER_TYPE_MAIN,

@@ -393,6 +393,7 @@ error_code server_state::initialize()
     }
 
     // create storage
+    ddebug("create meta_state_service: %s", meta_state_service_type);
     _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
@@ -805,7 +806,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
     if (_node_live_count != old_lc)
     {
         _freeze = set_freeze();
-        dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
+        ddebug("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
     }
 }
 
