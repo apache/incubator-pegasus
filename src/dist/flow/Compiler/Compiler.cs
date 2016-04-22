@@ -130,7 +130,7 @@ namespace rDSN.Tron.Compiler
 
                 LinkageInfo linkInfo;
                 var err = provider.GenerateServiceClient(s, dir, ClientLanguage.Client_CSharp, ClientPlatform.Windows, out linkInfo);
-                Trace.Assert(ErrorCode.Success == err);
+                Trace.Assert(FlowErrorCode.Success == err);
 
                 sources.UnionWith(linkInfo.Sources);
                 libs.UnionWith(linkInfo.DynamicLibraries);
@@ -171,7 +171,7 @@ namespace rDSN.Tron.Compiler
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));
-                sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
+                sources.Add(Path.Combine(dir, "ThriftJsonHelper.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".main.composed.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".code.definition.cs"));
             }

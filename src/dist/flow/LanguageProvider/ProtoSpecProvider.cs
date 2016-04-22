@@ -72,7 +72,7 @@ namespace rDSN.Tron.LanguageProvider
         //}
 
 
-        public ErrorCode GenerateServiceClient(
+        public FlowErrorCode GenerateServiceClient(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -87,7 +87,7 @@ namespace rDSN.Tron.LanguageProvider
                 SystemHelper.RunProcess("php.exe",
                      Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " +
                     Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") != 0)
-                return ErrorCode.ProcessStartFailed;
+                return FlowErrorCode.ProcessStartFailed;
             linkInfo.Sources.Add(Path.Combine(dir, "GProtoBinaryHelper.cs"));
             linkInfo.Sources.Add(Path.Combine(dir, appName + ".cs"));
             linkInfo.Sources.Add(Path.Combine(dir, appName + ".client.cs"));
@@ -95,11 +95,11 @@ namespace rDSN.Tron.LanguageProvider
             linkInfo.DynamicLibraries.Add(Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "lib", "Google.Protobuf.dll"));
             linkInfo.DynamicLibraries.Add(Path.Combine("System.IO.dll"));
             linkInfo.DynamicLibraries.Add(Path.Combine("System.runtime.dll"));
-            return ErrorCode.Success;
+            return FlowErrorCode.Success;
         }
 
 
-        public ErrorCode GenerateServiceSketch(
+        public FlowErrorCode GenerateServiceSketch(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -108,7 +108,7 @@ namespace rDSN.Tron.LanguageProvider
             )
         {
             linkInfo = null;
-            return ErrorCode.Success;
+            return FlowErrorCode.Success;
         }
 
         public void GenerateClientCall(CodeBuilder builder, MethodCallExpression call, Service svc, Dictionary<Type, string> reWrittenTypes)

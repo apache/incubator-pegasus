@@ -51,11 +51,7 @@ namespace rDSN.Tron.LanguageProvider
                 {ClientLanguage.Client_Python, "py"},
                 {ClientLanguage.Client_Javascript, "js"}
             };
-           if (map.ContainsKey(lang))
-           {
-               return map[lang];
-           }
-           return "";
+           return map.ContainsKey(lang) ? map[lang] : "";
        }
 
        // TODO: return the correct path of compiler in Linux platform
@@ -83,7 +79,7 @@ namespace rDSN.Tron.LanguageProvider
                return path;
            }
 
-           Console.WriteLine("Cannot find {0} compiler at path: {1}!", t.ToString(), path);
+           Console.WriteLine($"Cannot find {t.ToString()} compiler at path: {path}!");
            return "";
        }
    }

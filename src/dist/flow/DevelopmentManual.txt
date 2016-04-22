@@ -44,7 +44,7 @@
      - string[] ToCommonSpec(ServiceSpec spec, string dir); 
 	       => used by step (1) above
 
-	 - ErrorCode GenerateServiceClient( => used by (2) above
+	 - FlowErrorCode GenerateServiceClient( => used by (2) above
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,       // C# 

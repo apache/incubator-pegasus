@@ -14,7 +14,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     public class <?=$svc->name?>Server : Serverlet<<?=$svc->name?>Server>
     {
         public <?=$svc->name?>Server() : base("<?=$svc->name?>") {}
-        ~<?=$svc->name?>Server() { CloseService(); }
+        ~<?=$svc->name?>Server() { CloseService(0); }
     
         // all service handlers to be implemented further
 <?php foreach ($svc->functions as $f) { ?>
@@ -28,7 +28,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             {
                 request.Read(out args);
             } 
-            catch (Exception e)
+            catch (Exception)
             {
                 // TODO: error handling
                 return;
@@ -51,7 +51,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             {
                 request.Read(out args);
             } 
-            catch (Exception e)
+            catch (Exception)
             {
                 // TODO: error handling
                 return;
