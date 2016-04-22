@@ -4,13 +4,13 @@ namespace csharp dsn.app.search
 
 struct StringQuery
 {
-    1: string Query;
+    1: string Query = "";
 }
 
 struct AlterativeQueryList
 {
     1: StringQuery RawQuery;
-    2: list<StringQuery> Alterations;
+    2: list<StringQuery> Alterations = [];
 }
 
 service QU

@@ -52,6 +52,7 @@ namespace dsn
         daemon_s_service::daemon_s_service() 
             : ::dsn::serverlet<daemon_s_service>("daemon_s"), _online(false)
         {
+            _under_deployment = false;
             _working_dir = utils::filesystem::path_combine(dsn_get_current_app_data_dir(), "apps");
             _package_server = rpc_address(
                 dsn_config_get_value_string("apps.daemon", "package_server_host", "", "the host name of the app store where to download package"),
@@ -377,6 +378,12 @@ namespace dsn
 
         void daemon_s_service::on_add_app(const ::dsn::replication::configuration_update_request & proposal)
         {
+            bool underd = false;
+            if (!_under_deployment.compare_exchange_strong(underd, true))
+            {
+                return;
+            }
+
             // check app exists or not
             std::shared_ptr<layer1_app_info> old_app, app;
 
@@ -465,6 +472,7 @@ namespace dsn
                             {
                                 cap_app->resource_ready = true;
                                 start_app(std::move(cap_app));
+                                _under_deployment = false;
                                 return;
                             }
                             else
@@ -477,19 +485,18 @@ namespace dsn
                                 err = ERR_OBJECT_NOT_FOUND;
                             }
                         }
-                        
-
-                        {
-                            ::dsn::service::zauto_write_lock l(_lock);
-                            _apps.erase(cap_app->configuration.pid);
-                        }
 
                         derror("add app %s failed, err = %s ...",
                             cap_app->app_type.c_str(),
                             err.to_string()
-                            );
+                        );
 
                         utils::filesystem::remove_path(cap_app->package_dir);
+                        {
+                            ::dsn::service::zauto_write_lock l(_lock);
+                            _apps.erase(cap_app->configuration.pid);
+                        }
+                        _under_deployment = false;
                         return;
                     }
                     );

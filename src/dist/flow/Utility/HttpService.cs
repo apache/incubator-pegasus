@@ -97,16 +97,16 @@ namespace rDSN.Tron.Utility
                 );
         }
 
-        public ErrorCode Start(int port)
+        public FlowErrorCode Start(int port)
         {
             if (_listener != null)
             {
-                return ErrorCode.HttpServiceAlreadyStarted;
+                return FlowErrorCode.HttpServiceAlreadyStarted;
             }
 
             if (!HttpListener.IsSupported)
             {
-                return ErrorCode.PlatformNotSupported;
+                return FlowErrorCode.PlatformNotSupported;
             }
 
             _sortedHandlerArrary = _handlers.ToArray();
@@ -119,9 +119,9 @@ namespace rDSN.Tron.Utility
 
             _port = port;
 
-            Console.WriteLine("Http service at url: {0}", _listener.Prefixes.First());
+            Console.WriteLine($"Http service at url: {_listener.Prefixes.First()}");
 
-            return ErrorCode.Success;
+            return FlowErrorCode.Success;
         }
 
         public void Stop()
@@ -179,7 +179,7 @@ namespace rDSN.Tron.Utility
         {
             if (query.Length > 0)
             {
-                Trace.TraceWarning("static file download does not support queries: {0}?{1}", subpath, query);
+                Trace.TraceWarning($"static file download does not support queries: {subpath}?{query}");
             }
 
             var localPath = (localRoot + subpath).Replace('/', '\\').Replace("\\\\", "\\");
