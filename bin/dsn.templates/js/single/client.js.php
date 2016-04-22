@@ -4,10 +4,25 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
 $idl_format = $argv[5];
-$_IDL_FORMAT = $argv[4];
+
+$serialization_fmt = "DSF";
+if ($idl_type == "thrift")
+{
+    $serialization_fmt = $serialization_fmt."_THRIFT";
+} else if ($idl_type == "proto")
+{
+    $serialization_fmt = $serialization_fmt."_PROTOC";
+}
+if ($idl_format == "binary")
+{
+    $serialization_fmt = $serialization_fmt."_BINARY";
+} else if ($idl_format == "json")
+{
+    $serialization_fmt = $serialization_fmt."_JSON";
+}
 ?>
 <?php
-function generate_request_helper($client, $func, $async)
+function generate_request_helper($client, $func, $async, $serialization_fmt)
 {
 ?>
 <?=$client?>.prototype.internal_<?php if ($async) { echo "async_";} ?><?=$func->name?> = function(args, <?php if ($async) {echo "on_success, on_fail,";} ?> hash) {
@@ -16,12 +31,20 @@ function generate_request_helper($client, $func, $async)
     dsn_call(
         this.get_<?=$func->name?>_address(hash),
         "POST",
-        this.marshall(args),
+<?php if ($func->params[0]->is_base_type()) { ?>
+        this.marshall_basic_type(args, "<?=$func->get_return_type()?>"),
+<?php } else { ?>
+        this.marshall_generated_type(args),
+<?php } ?>
+        "<?=$serialization_fmt?>",
         <?php if($async) {echo "true";} else {echo "false";}?>,
         function(result) {
+<?php if (thelpers::is_base_type($func->ret)) { ?>
+            ret = self.unmarshall_basic_type(result, "<?=$func->get_return_type()?>");
+<?php } else { ?>
             ret = new <?=$func->get_cpp_return_type()?>();
-            self.unmarshall(result, ret);
-            ret = ret.success;
+            self.unmarshall_generated_type(result, ret);
+<?php } ?>
 <?php if ($async) { ?>
             on_success(ret);
 <?php } ?>
@@ -50,12 +73,20 @@ foreach ($_PROG->services as $svc)
 
 <?=$client?>.prototype = {};
 
-<?=$client?>.prototype.marshall = function(value) {
-    return marshall_thrift_json(value);
+<?=$client?>.prototype.marshall_generated_type = function(value) {
+    return marshall_thrift_json_generated_type(value);
 }
 
-<?=$client?>.prototype.unmarshall = function(buf, ret) {
-    unmarshall_thrift_json(buf, ret);
+<?=$client?>.prototype.marshall_basic_type = function(value, type) {
+    return marshall_thrift_json_basic_type(value, type);
+}
+
+<?=$client?>.prototype.unmarshall_generated_type = function(buf, ret) {
+    unmarshall_thrift_json_generated_type(buf, ret);
+}
+
+<?=$client?>.prototype.unmarshall_basic_type = function(buf, type) {
+    return unmarshall_thrift_json_basic_type(buf, type);
 }
 
 <?=$client?>.prototype.get_address = function(url, hash) {
@@ -68,8 +99,8 @@ foreach ($_PROG->services as $svc)
 <?php
     foreach ($svc->functions as $func)
     {
-        generate_request_helper($client, $func, false);
-        generate_request_helper($client, $func, true);
+        generate_request_helper($client, $func, false, $serialization_fmt);
+        generate_request_helper($client, $func, true, $serialization_fmt);
 ?>
 <?=$client?>.prototype.<?=$func->name?> = function(obj) {
     if (!obj.async) {
