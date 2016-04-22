@@ -38,8 +38,11 @@
 # include <dsn/internal/singleton.h>
 # include <vector>
 # include <iomanip>
-#include "http_message_parser.h"
-#include <dsn/cpp/serialization.h>
+# include "http_message_parser.h"
+# include <dsn/cpp/serialization.h>
+# include <boost/xpressive/xpressive_static.hpp>
+# include <boost/lexical_cast.hpp>
+
 
 
 namespace dsn{
@@ -109,7 +112,10 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
     };
     _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
     {
+
+        using namespace boost::xpressive;
         auto owner = static_cast<http_message_parser*>(parser->data);
+        
         http_parser_url url;
         http_parser_parse_url(at, length, 1, &url);
         if (((url.field_set >> UF_PATH) & 1) == 0)
@@ -118,17 +124,37 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
             //error, reset parser state
             return 1;
         }
-        std::vector<std::string> args;
-        utils::split_args(std::string(at, length).c_str(), args, '/');
-        if (args.size() != 2)
-        {
-            derror("invalid url");
-            //error, reset parser state
-            return 1;
-        }
-        strcpy(owner->_current_message->header->rpc_name, args[0].c_str());
-        owner->_current_message->header->client.hash = stoi(args[1]);
+
         owner->_current_message->header->context.u.is_request = 1;
+        cregex url_regex = '/' >> (s1 = +_w) >> '/' >> (s2 = +_d) >> (s3 = '?' >> *_);
+        constexpr int const url_regex_subs[] = { 1, 2, 3 };
+        cregex_token_iterator cur(at, at + length, url_regex, url_regex_subs), end;
+        dassert(cur != end, "");
+        dassert(cur->length() <= DSN_MAX_TASK_CODE_NAME_LENGTH, "");
+        std::copy(range_begin(*cur), range_end(*cur), owner->_current_message->header->rpc_name);
+        ++cur;
+        dassert(cur != end, "");
+        owner->_current_message->header->client.hash = boost::lexical_cast<uint64_t>(*cur);
+        ++cur;
+        dassert(cur != end, "");
+        {
+            cregex query_regex = (as_xpr('?') | '&') >> (s1 = +_w) >> '=' >> (s2 = +_d);
+            constexpr int const query_regex_subs[] = { 1, 2 };
+            cur = cregex_token_iterator(range_begin(*cur), range_end(*cur), query_regex, query_regex_subs);
+            for (; cur != end; ++cur)
+            {
+                if (cur->compare("payload_format") == 0)
+                {
+                    ++cur;
+                    dassert(cur != end, "");
+                    owner->_current_message->header->context.u.serialize_format = boost::lexical_cast<uint64_t>(*cur);
+                }
+                else
+                {
+                    dwarn("unused parameter in url");
+                }
+            }
+        }
         return 0;
     };
     _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
