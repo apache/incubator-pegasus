@@ -666,6 +666,7 @@ dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration
     return result;
 }
 
+// return true if healthy (enough primary and secondaries)
 bool greedy_load_balancer::run_lb(partition_configuration &pc)
 {
     if (_state->freezed())
@@ -678,7 +679,9 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
     configuration_update_request proposal;
     partition_assist_info& assist_info = _state->_apps[pc.gpid.app_id - 1].partition_assists[pc.gpid.pidx];
     proposal.config = pc;
+    proposal.node.set_invalid();
 
+    // no primary
     if (pc.primary.is_invalid())
     {
         if (pc.secondaries.size() > 0)
@@ -710,56 +713,65 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
                 );
         }
 
-        if (proposal.node.is_invalid() == false)
+        if (!proposal.node.is_invalid())
         {
             send_proposal(proposal.node, proposal);
         }
 
         return false;
     }
+
+    // no enough secondaries
     else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
     {
-        proposal.node.set_invalid();
-        if (static_cast<int>(pc.secondaries.size()) + 1 >= mutation_2pc_min_replica_count)
+        bool is_emergency = (static_cast<int>(pc.secondaries.size()) + 1 < mutation_2pc_min_replica_count);
+        bool can_delay = false;
+        auto it = assist_info.history_queue.begin();
+        while (it != assist_info.history_queue.end())
         {
-            while (!assist_info.history_queue.empty())
+            dropout_history& d = *it;
+            if (d.addr == pc.primary ||
+                std::find(pc.secondaries.begin(), pc.secondaries.end(), d.addr) != pc.secondaries.end())
             {
-                dropout_history d = assist_info.history_queue.front();
-                if (d.dropout_time + replica_assign_delay_ms_for_dropouts > dsn_now_ms())
-                    return false;
-                assist_info.history_queue.pop_front();
-                if (_state->is_node_alive(d.addr))
-                {
-                    proposal.node = d.addr;
-                    break;
-                }
+                // erase if already primary or secondary, or have duplicate entry
+                it = assist_info.history_queue.erase(it);
             }
-        }
-        else
-        {
-            while (proposal.node.is_invalid() && !assist_info.history_queue.empty())
+            else if (_state->is_node_alive(d.addr))
             {
-                dropout_history& d = assist_info.history_queue.front();
-                if (_state->is_node_alive(d.addr))
-                    proposal.node = d.addr;
-                assist_info.history_queue.pop_front();
+                // if have alive node, the use the latest lost node
+                proposal.node = d.addr;
+                it++;
+            }
+            else if (proposal.node.is_invalid() && !is_emergency && !can_delay &&
+                d.dropout_time + replica_assign_delay_ms_for_dropouts > dsn_now_ms())
+            {
+                // if not emergency and some node is lost recently,
+                // then delay some time to wait it come back
+                can_delay = true;
+                it++;
+            }
+            else
+            {
+                it++;
             }
         }
 
         proposal.type = CT_ADD_SECONDARY;
 
-        if (proposal.node.is_invalid())
+        if (proposal.node.is_invalid() && !can_delay)
+        {
             proposal.node = find_minimal_load_machine(false);
+        }
 
-        if (proposal.node.is_invalid() == false &&
-            proposal.node != pc.primary &&
-            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
+        if (!proposal.node.is_invalid())
         {
             send_proposal(pc.primary, proposal);
         }
+
         return false;
     }
-    //we have too many secondaries, let's do remove
+
+    // too many secondaries, let's do remove
     else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
     {
         auto iter = _balancer_proposals_map.find(pc.gpid);
@@ -783,5 +795,7 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
         return false;
     }
     else
+    {
         return true;
+    }
 }

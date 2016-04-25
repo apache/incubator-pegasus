@@ -180,7 +180,7 @@ void replica::send_prepare_message(
         gpid_to_hash(get_gpid())
         );
 
-    ddebug( 
+    dinfo(
         "%s: mutation %s send_prepare_message to %s as %s",  
         name(), mu->name(),
         addr.to_string(),
@@ -445,14 +445,26 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     {
         ::unmarshall(reply, resp);
     }
-    
-    ddebug(
-        "%s: mutation %s on_prepare_reply from %s, err = %s",
-        name(), mu->name(),
-        node.to_string(),
-        resp.err.to_string()
-        );
-       
+
+    if (resp.err == ERR_OK)
+    {
+        dinfo(
+            "%s: mutation %s on_prepare_reply from %s, err = %s",
+            name(), mu->name(),
+            node.to_string(),
+            resp.err.to_string()
+            );
+    }
+    else
+    {
+        derror(
+            "%s: mutation %s on_prepare_reply from %s, err = %s",
+            name(), mu->name(),
+            node.to_string(),
+            resp.err.to_string()
+            );
+    }
+
     if (resp.err == ERR_OK)
     {
         dassert (resp.ballot == get_ballot(), "");

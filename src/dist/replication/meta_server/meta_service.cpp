@@ -105,8 +105,8 @@ error_code meta_service::start()
     const char* server_load_balancer = dsn_config_get_value_string(
         "meta_server",
         "server_load_balancer_type",
-        "simple_stateful_load_balancer",
-        "server_load_balancer provider type"
+        "greedy_load_balancer",
+        "server_load_balancer provider type, default is greedy_load_balancer"
         );
 
     ddebug("create server_load_balancer: %s", server_load_balancer);

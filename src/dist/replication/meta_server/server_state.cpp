@@ -203,7 +203,7 @@ server_state::server_state(meta_service* meta_svc)
     _meta_svc(meta_svc), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
-    _node_live_percentage_threshold_for_update = 65;
+    _node_live_percentage_threshold_for_update = 50;
     _freeze = true;
     _storage = nullptr;
 }
@@ -360,7 +360,13 @@ error_code server_state::initialize()
         "meta_server",
         "default_max_replica_count",
         3,
-        "the default value of max_replica_count for all apps");
+        "the default value of max_replica_count for all apps, default is 3");
+
+    _node_live_percentage_threshold_for_update = (int32_t)dsn_config_get_value_uint64(
+        "meta_server",
+        "node_live_percentage_threshold_for_update",
+        50,
+        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, then freeze the cluster; default is 50");
 
     const char* cluster_root = dsn_config_get_value_string(
         "meta_server",
@@ -1526,10 +1532,27 @@ void server_state::update_configuration_internal(const configuration_update_requ
         if (request.type == CT_DOWNGRADE_TO_INACTIVE || request.type == CT_REMOVE)
         {
             partition_assist_info& assist_info = app.partition_assists[old.gpid.pidx];
+            // erase duplicate entries
+            auto it = assist_info.history_queue.begin();
+            while (it != assist_info.history_queue.end())
+            {
+                if (it->addr == request.node)
+                {
+                    it = assist_info.history_queue.erase(it);
+                }
+                else
+                {
+                    it++;
+                }
+            }
+            // push to back
             dropout_history d = { request.node, dsn_now_ms() };
             assist_info.history_queue.push_back(d);
-            if (assist_info.history_queue.size() > 3)
+            // limit history_queue size
+            while (assist_info.history_queue.size() > 10)
+            {
                 assist_info.history_queue.pop_front();
+            }
         }
 
         std::stringstream cf;
