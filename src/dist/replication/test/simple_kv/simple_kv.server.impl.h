@@ -66,8 +66,7 @@ namespace dsn {
                     int64_t start,
                     void*   learn_request,
                     int     learn_request_size,
-                    /* inout */ dsn_app_learn_state& state,
-                    int state_capacity
+                    /* inout */ app_learn_state& state
                     ) override;
 
                 virtual ::dsn::error_code apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) override;

@@ -229,16 +229,14 @@ namespace rDSN.Tron.Compiler
 
         }
 
-        private void BuildServer(string serviceName, MethodInfo[] methods)
+        private void BuildServer(string serviceName, IEnumerable<MethodInfo> methods)
         {
             foreach (var m in methods)
             {
-                var respType = serviceName + "." + m.Name + "_result";
-                _builder.AppendLine("protected override void On" + m.Name + "(" + serviceName + "." + m.Name + "_args request, RpcReplier<" + respType + "> replier)");
+                var respType = m.ReturnType.GetGenericArguments()[0].FullName.GetCompilableTypeName();
+                _builder.AppendLine("protected override void On" + m.Name + "(" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + " request, RpcReplier<" + respType + "> replier)");
                 _builder.BeginBlock();
-                _builder.AppendLine("var resp = new " + respType + "();");
-                _builder.AppendLine("resp.Success = " + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request.Req));");
-                _builder.AppendLine("replier.Reply(resp);");
+                _builder.AppendLine("replier.Reply(" + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request)));");
                 _builder.EndBlock();
                 _builder.AppendLine();
             }

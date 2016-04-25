@@ -86,12 +86,86 @@ namespace dsn
         // if the capcity is not enough, applications should return ERR_CAPACITY_EXCEEDED and put required
         // buffer size in total-learn-state-size field, and our replication frameworks will retry with this new size
         //
+        struct app_learn_state
+        {
+            int64_t from_decree_excluded;
+            int64_t to_decree_included;
+            blob    meta_state;
+            std::vector<std::string> files;
+
+            ::dsn::error_code to_c_state(dsn_app_learn_state& state, int state_capacity)
+            {
+                bool succ = true;
+
+                state.total_learn_state_size = sizeof(dsn_app_learn_state);
+                state.from_decree_excluded = from_decree_excluded;
+                state.to_decree_included = to_decree_included;
+                state.meta_state_size = meta_state.length();
+                state.file_state_count = files.size();
+                
+                char* ptr = (char*)&state + sizeof(dsn_app_learn_state);
+                char* end = (char*)&state + state_capacity;
+                if (state.meta_state_size > 0)
+                {
+                    if (ptr + state.meta_state_size > end)
+                    {
+                        succ = false;
+                    }
+                    state.meta_state_ptr = ptr;
+                    if (succ) memcpy(ptr, meta_state.data(), state.meta_state_size);
+                    ptr += state.meta_state_size;
+                }
+                else
+                {
+                    state.meta_state_ptr = nullptr;
+                }
+
+                if (files.size() > 0)
+                {
+                    if (ptr + sizeof(const char*) * files.size() > end)
+                    {
+                        succ = false;
+                    }
+
+                    state.files = (const char**)ptr;
+
+                    const char** pptr = state.files;
+                    ptr = ptr + sizeof(const char*) * files.size();
+                    for (auto& file : files)
+                    {
+                        if (ptr + file.length() + 1 > end)
+                        {
+                            succ = false;
+                        }
+
+                        if (succ)
+                        {
+                            *pptr++ = ptr;
+                            memcpy(ptr, file.c_str(), file.length());
+                            ptr += file.length();
+                            *ptr++ = '\0';
+                        }
+                        else
+                        {
+                            ptr += file.length() + 1;
+                        }
+                    }
+                }
+                else
+                {
+                    state.files = nullptr;
+                }
+
+                state.total_learn_state_size = ptr - (char*)&state;
+                return succ ? ERR_OK : ERR_CAPACITY_EXCEEDED;
+            }
+        };
+
         virtual ::dsn::error_code get_checkpoint(
             int64_t start,
             void*   learn_request,
             int     learn_request_size,
-            /* inout */ dsn_app_learn_state& state,
-            int state_capacity
+            /* inout */ app_learn_state& state
             ) = 0;
 
         //
@@ -140,7 +214,16 @@ namespace dsn
             )
         {
             auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->get_checkpoint(start_decree, learn_request, learn_request_size, *state, state_capacity);
+            app_learn_state cpp_state;
+            auto err = sapp->get_checkpoint(start_decree, learn_request, learn_request_size, cpp_state);
+            if (err == ERR_OK)
+            {
+                return cpp_state.to_c_state(*state, state_capacity);
+            }
+            else
+            {
+                return err;
+            }
         }
         
         static dsn_error_t app_apply_checkpoint(void* app, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)

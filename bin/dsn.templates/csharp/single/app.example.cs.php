@@ -16,17 +16,18 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         public override ErrorCode Start(string[] args)
         {
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Server.OpenService();
+            _<?=$svc->name?>Server.OpenService(0);
 <?php } ?>
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Server.CloseService();
+            _<?=$svc->name?>Server.CloseService(0);
             _<?=$svc->name?>Server.Dispose();
 <?php } ?>
+            return ErrorCode.ERR_OK;
         }
 
 <?php foreach ($_PROG->services as $svc) { ?>
@@ -66,13 +67,14 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
             _timer.Cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client.Dispose();
             _<?=$svc->name?>Client = null;
 <?php } ?>
+            return ErrorCode.ERR_OK;
         }
 
         private void OnTestTimer()

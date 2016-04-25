@@ -10,7 +10,7 @@ using System.IO;
 using dsn.dev.csharp;
 using rDSN.Tron.App;
 
-namespace <?=$_PROG->get_csharp_namespace()?> 
+namespace <?=$_PROG->get_csharp_namespace()?>
 {
     // server app example
     public class <?=$_PROG->name?>ServerApp : ServiceApp
@@ -18,17 +18,19 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         public override ErrorCode Start(string[] args)
         {
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Server.OpenService();
+            _<?=$svc->name?>Server.OpenService(0);
 <?php } ?>
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Server.CloseService();
+            _<?=$svc->name?>Server.CloseService(0);
             _<?=$svc->name?>Server.Dispose();
 <?php } ?>
+
+            return ErrorCode.ERR_OK;
         }
 
 <?php foreach ($_PROG->services as $svc) { ?>
@@ -42,7 +44,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         {
             if (args.Length < 2)
             {
-                throw new Exception("wrong usage: server-url or server-host server-port");                
+                throw new Exception("wrong usage: server-url or server-host server-port");
             }
 
             if (args.Length == 2)
@@ -61,13 +63,15 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             return ErrorCode.ERR_OK;
         }
 
-        public override void Stop(bool cleanup = false)
+        public override ErrorCode Stop(bool cleanup = false)
         {
             _timer.Cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client.Dispose();
             _<?=$svc->name?>Client = null;
 <?php } ?>
+
+            return ErrorCode.ERR_OK;
         }
 
         private void OnTestTimer()
@@ -87,19 +91,19 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 <?=$f->get_csharp_return_type()?> resp;
                 var err = _<?=$svc->name?>Client.<?=$f->name?>(req, out resp);
 
-                Console.WriteLine("call <?=$f->get_rpc_code()?> end, return " + err.ToString() + " response:" + resp.ToString());
-                //async: 
+                Console.WriteLine("call <?=$f->get_rpc_code()?> end, return " + err.ToString());
+                //async:
                 // TODO:
-<?php } ?>           
+<?php } ?>
             }
-<?php }    
+<?php }
     }
 ?>
         }
 
         private SafeTaskHandle _timer;
         private RpcAddress  _server = new RpcAddress();
-        
+
 <?php foreach ($_PROG->services as $svc) { ?>
         private <?=$svc->name?>Client _<?=$svc->name?>Client;
 <?php } ?>

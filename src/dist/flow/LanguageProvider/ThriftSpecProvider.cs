@@ -68,24 +68,24 @@ namespace rDSN.Tron.LanguageProvider
         //    return output.ToArray();
         //}
 
-        private static ErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
+        private static FlowErrorCode GenerateRdsnClient(ServiceSpec spec, string dir, out LinkageInfo linkinfo)
         {
             linkinfo = new LinkageInfo();
             var appName = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
             if (
                 SystemHelper.RunProcess("php.exe",
                     Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/dsn.generate_code.php") + " " +
-                    Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " binary layer3") != 0)
-                return ErrorCode.ProcessStartFailed;
+                    Path.Combine(spec.Directory, spec.MainSpecFile) + " csharp " + dir + " json layer3") != 0)
+                return FlowErrorCode.ProcessStartFailed;
             var thriftGenPath = Path.Combine(dir, "thrift");
-            linkinfo.Sources.Add(Path.Combine(dir, "ThriftBinaryHelper.cs"));
+            linkinfo.Sources.Add(Path.Combine(dir, "ThriftJsonHelper.cs"));
             linkinfo.Sources.Add(Path.Combine(dir, appName + ".client.cs"));
             linkinfo.Sources.Add(Path.Combine(dir, appName + ".code.definition.cs"));
             linkinfo.Sources.AddRange(Directory.GetFiles(thriftGenPath, "*.cs", SearchOption.AllDirectories));
-            return ErrorCode.Success;
+            return FlowErrorCode.Success;
         }
 
-        public ErrorCode GenerateServiceClient(
+        public FlowErrorCode GenerateServiceClient(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -103,7 +103,7 @@ namespace rDSN.Tron.LanguageProvider
             if (compiler == "")
             {
 
-                return ErrorCode.SpecCompilerNotFound;
+                return FlowErrorCode.SpecCompilerNotFound;
             }
 
 
@@ -115,7 +115,7 @@ namespace rDSN.Tron.LanguageProvider
             arguments.Add("-r");
             arguments.Add("-out " + dir);
             arguments.Add(Path.Combine(spec.Directory, spec.MainSpecFile));
-            if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) != 0) return ErrorCode.ExceptionError;
+            if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) != 0) return FlowErrorCode.ExceptionError;
             // generally, thrift.exe will generate a folder in the name of the mainspec's namespace to the output dir,e.g. gen-csharp
             // all language libraries are availabe in the source code of thrift project, placed in the thrift\\lib\\{language} dir
             // in Tron project, we place thrift compiler at "external\\thrift\\bin", and place the libraries in at"external\\thrift\\lib\\{language}"
@@ -162,10 +162,10 @@ namespace rDSN.Tron.LanguageProvider
 
             }
 
-            return ErrorCode.Success;
+            return FlowErrorCode.Success;
         }
 
-        public ErrorCode GenerateServiceSketch(
+        public FlowErrorCode GenerateServiceSketch(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -174,7 +174,7 @@ namespace rDSN.Tron.LanguageProvider
             )
         {
             linkInfo = null;
-            return ErrorCode.NotImplemented;
+            return FlowErrorCode.NotImplemented;
         }
 
 
@@ -188,20 +188,14 @@ namespace rDSN.Tron.LanguageProvider
                 {ClientLanguage.Client_Javascript, "js"},
                 {ClientLanguage.Client_Python, "py"}
             };
-            if (map.ContainsKey(lang))
-            {
-                return map[lang];
-            }
-            return "";
+            return map.ContainsKey(lang) ? map[lang] : "";
         }
 
         public void GenerateClientCall(CodeBuilder builder, MethodCallExpression call, Service svc, Dictionary<Type, string> reWrittenTypes)
-        {
-            var thriftArgName = call.Method.GetParameters()[0].Name;
-            var upperedThriftArgName = char.ToUpper(thriftArgName[0]) + thriftArgName.Substring(1);
-            builder.AppendLine(svc.TypeName() + "." + call.Method.Name + "_result resp;");
-            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.TypeName() + "." + call.Method.Name + "_args(){" + upperedThriftArgName + "= req}, out resp);");
-            builder.AppendLine("return resp.Success;");
+        {   
+            builder.AppendLine(call.Method.ReturnType.FullName.GetCompilableTypeName() + " resp;");
+            builder.AppendLine("while (" + (call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(req, out resp) != ErrorCode.ERR_OK) {}");
+            builder.AppendLine("return resp;");
         }
     }
 

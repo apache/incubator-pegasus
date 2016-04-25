@@ -120,7 +120,7 @@ namespace rDSN.Tron.LanguageProvider
         /// {
         /// public service.name##_Client(ip, port) {}
         /// public TResponse Method1(TRequest request) {}
-        /// public ErrorCode Method1Async(TRequest request, callback, timeout) {}
+        /// public FlowErrorCode Method1Async(TRequest request, callback, timeout) {}
         /// };
         /// </summary>
         /// <param name="spec"> given package spec info </param>
@@ -128,7 +128,7 @@ namespace rDSN.Tron.LanguageProvider
         /// <param name="lang"> specified language type for generated code</param>
         /// <param name="lang"> platform where the client code will run on </param>
         /// <returns> error code </returns>
-        ErrorCode GenerateServiceClient(
+        FlowErrorCode GenerateServiceClient(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -144,7 +144,7 @@ namespace rDSN.Tron.LanguageProvider
         /// <param name="lang"> specified language type for generated code</param>
         /// <param name="lang"> platform where the service code will run on </param>
         /// <returns> error code </returns>
-        ErrorCode GenerateServiceSketch(
+        FlowErrorCode GenerateServiceSketch(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,

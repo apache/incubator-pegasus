@@ -173,7 +173,7 @@ bool test_code_generation(Language lang, IDL idl, Format format)
 }
 
 template<typename T>
-void thrift_basic_type_serialization_checker(std::vector<T> data, Format fmt)
+void thrift_basic_type_serialization_checker(std::vector<T> &data, Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
