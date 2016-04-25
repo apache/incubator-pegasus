@@ -126,7 +126,7 @@ namespace rDSN.Tron.LanguageProvider
             builder.AppendLine("return resp.Success;");
         }
 
-        public ErrorCode GenerateServiceClient(
+        public FlowErrorCode GenerateServiceClient(
             ServiceSpec spec,
             string dir,
             ClientLanguage lang,
@@ -139,13 +139,13 @@ namespace rDSN.Tron.LanguageProvider
             if (compiler == "")
             {
 
-                return ErrorCode.SpecCompilerNotFound;
+                return FlowErrorCode.SpecCompilerNotFound;
             }
 
             if (platform != ClientPlatform.Windows)
             {
                 Console.WriteLine("Bond compiler only supports windows platform!");
-                return ErrorCode.PlatformNotSupported;
+                return FlowErrorCode.PlatformNotSupported;
             }
 
 
@@ -169,22 +169,24 @@ namespace rDSN.Tron.LanguageProvider
                         Path.Combine(spec.Directory, spec.MainSpecFile),
                         spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)).ToArray(),
                         dir,
-                        new GeneratedFileType[] { GeneratedFileType.TYPES, GeneratedFileType.PROXIES, GeneratedFileType.CLIENTS },
-                        new GeneratedFileType[] { GeneratedFileType.TYPES }
+                        new[] { GeneratedFileType.TYPES, GeneratedFileType.PROXIES, GeneratedFileType.CLIENTS },
+                        new[] { GeneratedFileType.TYPES }
                     )
-                    .Select(s => Path.GetFileName(s))
+                    .Select(Path.GetFileName)
                     .ToList());
 
-                return ErrorCode.Success;
+                return FlowErrorCode.Success;
             }
 
-            List<string> arguments = new List<string>();
+            List<string> arguments = new List<string>
+            {
+                " ",
+                "/" + GetLanguageName(lang),
+                "/I:" + spec.Directory,
+                "/O:" + dir,
+                Path.Combine(spec.Directory, spec.MainSpecFile)
+            };
 
-            arguments.Add(" ");
-            arguments.Add("/" + GetLanguageName(lang));
-            arguments.Add("/I:" + spec.Directory);
-            arguments.Add("/O:" + dir);
-            arguments.Add(Path.Combine(spec.Directory, spec.MainSpecFile));
 
 
             if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) == 0)
@@ -207,7 +209,7 @@ namespace rDSN.Tron.LanguageProvider
                             });
                             var specName = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
                             var searchPattern = specName + "_*." + LanguageHelper.GetSourceExtension(lang);
-                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(dir, searchPattern, SearchOption.AllDirectories, 15).Select(f => Path.GetFileName(f)));
+                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(dir, searchPattern, SearchOption.AllDirectories, 15).Select(Path.GetFileName));
                             break;
                         }
 
@@ -233,15 +235,15 @@ namespace rDSN.Tron.LanguageProvider
 
                 }
 
-                return ErrorCode.Success;
+                return FlowErrorCode.Success;
             }
             else
             {
-                return ErrorCode.ExceptionError;
+                return FlowErrorCode.ExceptionError;
             }
         }
 
-        public ErrorCode GenerateServiceSketch(
+        public FlowErrorCode GenerateServiceSketch(
                 ServiceSpec spec,
                 string dir,
                 ClientLanguage lang,
@@ -254,13 +256,13 @@ namespace rDSN.Tron.LanguageProvider
             if (compiler == "")
             {
 
-                return ErrorCode.SpecCompilerNotFound;
+                return FlowErrorCode.SpecCompilerNotFound;
             }
 
             if (platform != ClientPlatform.Windows)
             {
                 Console.WriteLine("Bond compiler only supports windows platform!");
-                return ErrorCode.PlatformNotSupported;
+                return FlowErrorCode.PlatformNotSupported;
             }
 
 
@@ -282,23 +284,25 @@ namespace rDSN.Tron.LanguageProvider
                         Path.Combine(spec.Directory, spec.MainSpecFile),
                         spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)).ToArray(),
                         dir,
-                        new GeneratedFileType[] { GeneratedFileType.TYPES, GeneratedFileType.SERVICES },
-                        new GeneratedFileType[] { GeneratedFileType.TYPES }
+                        new[] { GeneratedFileType.TYPES, GeneratedFileType.SERVICES },
+                        new[] { GeneratedFileType.TYPES }
                     )
-                    .Select(s => Path.GetFileName(s))
+                    .Select(Path.GetFileName)
                     .ToList();
 
-                return ErrorCode.Success;
+                return FlowErrorCode.Success;
             }
 
 
-            List<string> arguments = new List<string>();
+            List<string> arguments = new List<string>
+            {
+                " ",
+                "/" + GetLanguageName(lang),
+                "/I:" + spec.Directory,
+                "/O:" + dir,
+                Path.Combine(spec.Directory, spec.MainSpecFile)
+            };
 
-            arguments.Add(" ");
-            arguments.Add("/" + GetLanguageName(lang));
-            arguments.Add("/I:" + spec.Directory);
-            arguments.Add("/O:" + dir);
-            arguments.Add(Path.Combine(spec.Directory, spec.MainSpecFile));
 
 
             if (SystemHelper.RunProcess(compiler, string.Join(" ", arguments)) == 0)
@@ -321,7 +325,7 @@ namespace rDSN.Tron.LanguageProvider
                             });
                             var specName = Path.GetFileNameWithoutExtension(spec.MainSpecFile);
                             var searchPattern = specName + "_*." + LanguageHelper.GetSourceExtension(lang);
-                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(dir, searchPattern, SearchOption.AllDirectories, 15).Select(f => Path.GetFileName(f)));
+                            linkInfo.Sources.AddRange(SystemHelper.GetFilesByLastWrite(dir, searchPattern, SearchOption.AllDirectories, 15).Select(Path.GetFileName));
                             break;
                         }
 
@@ -347,11 +351,11 @@ namespace rDSN.Tron.LanguageProvider
 
                 }
 
-                return ErrorCode.Success;
+                return FlowErrorCode.Success;
             }
             else
             {
-                return ErrorCode.ExceptionError;
+                return FlowErrorCode.ExceptionError;
             }
         }
 

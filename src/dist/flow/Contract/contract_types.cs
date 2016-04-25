@@ -34,7 +34,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-using System;
 using System.Collections.Generic;
 
 namespace rDSN.Tron

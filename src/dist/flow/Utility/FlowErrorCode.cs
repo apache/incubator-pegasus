@@ -35,7 +35,7 @@
 
 namespace rDSN.Tron.Utility
 {
-    public enum ErrorCode
+    public enum FlowErrorCode
     {
         Success,
         NotImplemented,

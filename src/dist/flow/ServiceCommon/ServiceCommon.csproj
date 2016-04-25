@@ -52,10 +52,6 @@
     <Compile Include="ValueOperators.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\dev\csharp\dsn.dev.csharp.csproj">
-      <Project>{41e40377-e430-42f8-910e-155053ee64e3}</Project>
-      <Name>dsn.dev.csharp</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Contract\Contract.csproj">
       <Project>{67c7d246-a7a7-4d54-aa03-b8d516055c01}</Project>
       <Name>Contract</Name>

@@ -52,7 +52,7 @@
   <ItemGroup>
     <Compile Include="CSharpCompiler.cs" />
     <Compile Include="DeploymentHelper.cs" />
-    <Compile Include="ErrorCode.cs" />
+    <Compile Include="FlowErrorCode.cs" />
     <Compile Include="ExpDelay.cs" />
     <Compile Include="ExpressionVisitor2.cs" />
     <Compile Include="Graph\AbstractGraphElement.cs" />

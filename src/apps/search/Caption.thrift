@@ -4,19 +4,19 @@ namespace csharp dsn.app.search
 
 struct ErrorResult
 {
-    1: i32 ErrorCode;
+    1: i32 ErrorCode = 0;
 }
 
 struct DocId
 {
-    1: string URL;
+    1: string URL = "";
 }
 
 struct Caption
 {
-    1: DocId DocIdentifier;
-    2: string Title;
-    3: string CaptionHtml;
+    1: DocId DocIdentifier ;
+    2: string Title = "";
+    3: string CaptionHtml = "";
 }
 
 service CDG

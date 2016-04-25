@@ -723,7 +723,7 @@ namespace dsn {
             // handle replication
             auto sp = task_spec::get(code);
             //if (sp->rpc_request_layer2_handler_required)
-            if (msg->header->gpid.value != 0)
+            if (msg->header->gpid.value != 0 && _node->get_l2_app_role() != nullptr)
             {
                 _node->handle_l2_rpc_request(msg->header->gpid, sp->rpc_request_is_write_operation, (dsn_message_t)(msg), delay_ms);
                 return;

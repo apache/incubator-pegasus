@@ -57,7 +57,7 @@ namespace dsn.dev.csharp
             Logging.dassert(_respStream.IsFlushed(),
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            Native.dsn_rpc_reply(_respStream.DangerousGetHandle());
+            Native.dsn_rpc_reply(_respStream.DangerousGetHandle(), ErrorCode.ERR_OK);
         }
 
         private RpcWriteStream _respStream;
@@ -142,7 +142,7 @@ namespace dsn.dev.csharp
             Logging.dassert(response.IsFlushed(),
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            Native.dsn_rpc_reply(response.DangerousGetHandle());
+            Native.dsn_rpc_reply(response.DangerousGetHandle(), ErrorCode.ERR_OK);
         }
 
         public string Name() { return _name; }

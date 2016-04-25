@@ -1544,11 +1544,12 @@ namespace rDSN.Tron.Utility
             }
             foundSoFar.Add(o);
 
-            if (o is IDictionary)
+            var entries = o as IDictionary;
+            if (entries != null)
             {
-                builder.Append(o);
+                builder.Append(entries);
                 builder.Append(":\n");
-                foreach (DictionaryEntry entry in (IDictionary)o)
+                foreach (DictionaryEntry entry in entries)
                 {
                     Indent(builder, indent);
                     builder.Append("Key: ");

@@ -86,6 +86,7 @@ namespace dsn
             typedef std::unordered_map< ::dsn::gpid, std::shared_ptr<layer1_app_info>> apps;
             apps _apps;
             std::atomic<bool> _online;
+            std::atomic<bool> _under_deployment;
 
             std::string _working_dir;
             rpc_address _package_server;
