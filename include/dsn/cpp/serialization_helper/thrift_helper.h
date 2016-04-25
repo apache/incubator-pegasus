@@ -657,8 +657,11 @@ namespace dsn {
             ::dsn::binary_writer_transport trans(writer); \
             boost::shared_ptr< ::dsn::binary_writer_transport> transport(&trans, [](::dsn::binary_writer_transport*) {}); \
             ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
-            proto.writeStructBegin("value"); \
+            proto.writeStructBegin("basic"); \
+            proto.writeFieldBegin("value", get_thrift_type(val), 1); \
             proto.write##TMethod (val); \
+            proto.writeFieldEnd(); \
+            proto.writeFieldStop(); \
             proto.writeStructEnd(); \
         } \
         inline void unmarshall_thrift_basic_##PROTOCOL (binary_reader& reader, CXXType &val) \
@@ -666,9 +669,32 @@ namespace dsn {
             ::dsn::binary_reader_transport trans(reader); \
             boost::shared_ptr< ::dsn::binary_reader_transport> transport(&trans, [](::dsn::binary_reader_transport*) {}); \
             ::apache::thrift::protocol::T##PROTOCOL##Protocol proto(transport); \
-            std::string struct_name("value"); \
-            proto.readStructBegin(struct_name); \
-            proto.read##TMethod (val); \
+            std::string fname; \
+            ::apache::thrift::protocol::TType ftype; \
+            int16_t fid; \
+            proto.readStructBegin(fname); \
+            while (true) \
+            { \
+                proto.readFieldBegin(fname, ftype, fid); \
+                if (ftype == ::apache::thrift::protocol::T_STOP) { \
+                    break; \
+                } \
+                switch (fid) \
+                { \
+                case 1: \
+                    if (ftype == get_thrift_type(val)) { \
+                        proto.read##TMethod (val); \
+                    } \
+                    else { \
+                        proto.skip(ftype); \
+                    } \
+                    break; \
+                default: \
+                    proto.skip(ftype); \
+                    break; \
+                } \
+                proto.readFieldEnd(); \
+            } \
             proto.readStructEnd(); \
         }
 

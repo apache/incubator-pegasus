@@ -141,6 +141,40 @@ class thelpers
         }
     }
 
+    public static function is_base_type($type)
+    {
+        static $base_types = array(
+            "list",
+            "map",
+            "set",
+            "vector",
+            "string",
+            "double",
+            "float",
+            "i64",
+            "int64",
+            "int64_t",
+            "uint64",
+            "uint64_t",
+            "i32",
+            "int32",
+            "uint32_t",
+            "byte",
+            "BYTE",
+            "Byte",
+            "bool",
+            "BOOL",
+            "Bool",
+            "sint32",
+            "sint64",
+            "fixed32",
+            "fixed64",
+            "sfixed32",
+            "sfixed64"
+        );
+        return in_array($type, $base_types);
+    }
+
     public static function get_cpp_type_name($full_name)
     {
         global $_PROG;
@@ -509,7 +543,7 @@ class t_type
     function is_void() { return false; }
     function is_enum() { return false; }
     function is_alias() { return false; }
-    function is_base_type() { return true; }
+    function is_base_type() { return thelpers::is_base_type($this->name); }
 }
 
 class t_typedef extends t_type
@@ -558,6 +592,11 @@ class t_field
         $this->id = $id;
     }
     
+    function get_type()
+    {
+        return $this->type_name;
+    }
+
     function get_cpp_type()
     {
         return thelpers::get_cpp_type_name($this->type_name);
@@ -570,15 +609,7 @@ class t_field
     
     function is_base_type()
     {
-        global $_PROG;
-        if (!array_key_exists($this->type_name, $_PROG->types))
-        {
-            return true;
-        }
-        else
-        {
-            return $_PROG->types[$this->type_name]->is_base_type();
-        }
+        return thelpers::is_base_type($this->type_name);
     }
 }
 
@@ -627,7 +658,12 @@ class t_function
     {
         $this->params[] = new t_field($name, $type_name, $id);
     }
-    
+
+    function get_return_type()
+    {
+        return $this->ret;
+    }
+
     function get_cpp_return_type()
     {
         return thelpers::get_cpp_type_name($this->ret);
@@ -641,6 +677,11 @@ class t_function
     function get_first_param()
     {
         return $this->params[0];
+    }
+
+    function get_request_type_name()
+    {
+        return $this->params[0]->get_type();
     }
 
     function get_cpp_request_type_name()
