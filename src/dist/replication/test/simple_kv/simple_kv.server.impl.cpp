@@ -267,8 +267,7 @@ namespace dsn {
                 int64_t start,
                 void*   learn_request,
                 int     learn_request_size,
-                /* inout */ dsn_app_learn_state& state,
-                int state_capacity
+                /* inout */ app_learn_state& state
                 )
             {
                 if (s_simple_kv_get_checkpoint_fail)
@@ -289,27 +288,9 @@ namespace dsn {
                         last_durable_decree()
                         );
 
-
-                    /*
-                    memory layout:
-                    learn-state
-                    char*[] for file ptrs
-                    file names
-                    */
-                    state.total_learn_state_size = (int)strlen(name) + 1 + sizeof(char*) + sizeof(dsn_app_learn_state);
-                    if (state.total_learn_state_size > state_capacity)
-                    {
-                        return ERR_CAPACITY_EXCEEDED;
-                    }
-
                     state.from_decree_excluded = 0;
                     state.to_decree_included = last_durable_decree();
-                    state.meta_state_ptr = nullptr;
-                    state.meta_state_size = 0;
-                    state.file_state_count = 1;
-                    state.files = (const char**)(&state + 1);
-                    state.files[0] = (const char*)state.files + sizeof(char*);
-                    strcpy((char*)state.files[0], name);
+                    state.files.push_back(std::string(name));
 
                     ddebug("simple_kv_service_impl get checkpoint succeed, last_durable_decree = %" PRId64 "", last_durable_decree());
                     return ERR_OK;
