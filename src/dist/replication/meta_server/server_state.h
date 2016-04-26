@@ -97,7 +97,8 @@ struct app_state
         app_name(other.app_name),
         app_id(other.app_id),
         partition_count(other.partition_count),
-        partitions(other.partitions)
+        partitions(other.partitions),
+        partition_assists(other.partition_assists)
     {
         available_partitions.store(other.available_partitions.load());
     }
@@ -108,7 +109,8 @@ struct app_state
         app_name(std::move(other.app_name)),
         app_id(other.app_id),
         partition_count(other.partition_count),
-        partitions(std::move(other.partitions))
+        partitions(std::move(other.partitions)),
+        partition_assists(std::move(other.partition_assists))
     {
         available_partitions.store(other.available_partitions.load());
     }
@@ -120,6 +122,7 @@ struct app_state
         app_id=other.app_id;
         partition_count=other.partition_count;
         partitions=other.partitions;
+        partition_assists=other.partition_assists;
         available_partitions.store(other.available_partitions.load());
         return *this;
     }
@@ -131,6 +134,7 @@ struct app_state
         app_id = other.app_id;
         partition_count = other.partition_count;
         partitions = std::move(other.partitions);
+        partition_assists = std::move(other.partition_assists);
         available_partitions.store(other.available_partitions.load());
         return *this;
     }

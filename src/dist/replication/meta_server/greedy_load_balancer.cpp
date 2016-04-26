@@ -656,7 +656,10 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
     dinfo("lb for gpid(%d.%d)", pc.gpid.app_id, pc.gpid.pidx);
 
     configuration_update_request proposal;
-    partition_assist_info& assist_info = _state->_apps[pc.gpid.app_id - 1].partition_assists[pc.gpid.pidx];
+    app_state& as = _state->_apps[pc.gpid.app_id - 1];
+    dassert((int32_t)as.partition_assists.size() == as.partition_count,
+            "partition_assists.size() = %d", (int)as.partition_assists.size());
+    partition_assist_info& assist_info = as.partition_assists[pc.gpid.pidx];
     proposal.config = pc;
     proposal.node.set_invalid();
 

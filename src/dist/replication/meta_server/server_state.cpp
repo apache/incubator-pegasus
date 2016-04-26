@@ -135,6 +135,7 @@ void unmarshall_json(const blob& buf, app_state& app)
     app.partitions.assign(app.partition_count, pc);
     for (unsigned int i=0; i!=app.partition_count; ++i)
         app.partitions[i].gpid.pidx = i;
+    app.partition_assists.resize(app.partition_count);
 }
 
 void unmarshall_json(const blob& buf, partition_configuration& pc)
@@ -257,6 +258,7 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
         {
             snapshot.partition_count = 0;
             snapshot.partitions.clear();
+            snapshot.partition_assists.clear();
         }
 
         if (strcmp(format, "json") == 0)
