@@ -73,7 +73,6 @@ private:
     bool walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
 
     dsn::rpc_address recommend_primary(partition_configuration& pc);
-    dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 
     void insert_balancer_proposal_request(const global_partition_id& gpid, balancer_type type, dsn::rpc_address from, dsn::rpc_address to)
     {

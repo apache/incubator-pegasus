@@ -99,6 +99,7 @@ namespace dsn
             void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
         protected:
             void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
+            dsn::rpc_address find_minimal_load_machine(const partition_configuration& pc, bool primaryOnly);
 
         protected:
             server_state* _state;

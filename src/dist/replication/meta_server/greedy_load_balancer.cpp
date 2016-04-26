@@ -606,48 +606,12 @@ void greedy_load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-dsn::rpc_address greedy_load_balancer::find_minimal_load_machine(bool primaryOnly)
-{
-    std::vector<std::pair< ::dsn::rpc_address, int>> stats;
-
-    for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); ++it)
-    {
-        if (it->second.is_alive)
-        {
-            stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.primaries.size()
-                : it->second.partitions.size())));
-        }
-    }
-
-    if (stats.empty())
-    {
-        return ::dsn::rpc_address();
-    }
-
-    std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
-    {
-        return l.second < r.second || (l.second == r.second && l.first < r.first);
-    });
-
-    int candidate_count = 1;
-    int val = stats[0].second;
-
-    for (size_t i = 1; i < stats.size(); i++)
-    {
-        if (stats[i].second > val)
-            break;
-        candidate_count++;
-    }
-
-    return stats[dsn_random32(0, candidate_count - 1)].first;
-}
-
 dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration& pc)
 {
-    auto find_machine_from_secondaries = [this](const std::vector<dsn::rpc_address>& addr_list)
+    auto find_machine_from_secondaries = [&pc, this](const std::vector<dsn::rpc_address>& addr_list)
     {
         if ( addr_list.empty() )
-            return find_minimal_load_machine(true);
+            return find_minimal_load_machine(pc, true);
         int target = -1;
         int load = -1;
         for (int i=0; i!=addr_list.size(); ++i)
@@ -775,10 +739,12 @@ bool greedy_load_balancer::run_lb(partition_configuration &pc)
 
         if (proposal.node.is_invalid() && !can_delay)
         {
-            proposal.node = find_minimal_load_machine(false);
+            proposal.node = find_minimal_load_machine(pc, false);
         }
 
-        if (!proposal.node.is_invalid())
+        if (!proposal.node.is_invalid() &&
+            proposal.node != pc.primary &&
+            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
             send_proposal(pc.primary, proposal);
         }
