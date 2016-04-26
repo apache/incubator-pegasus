@@ -30,9 +30,9 @@ int main(int argc, char** argv)
 
 # else
 
-# include <dsn/internal/module_int.cpp.h>
+# include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
+MODULE_INIT_BEGIN(<?=$_PROG->name?>)
     dsn_app_registration_<?=$_PROG->name?>();
 MODULE_INIT_END
 
