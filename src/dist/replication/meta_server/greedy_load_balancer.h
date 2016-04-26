@@ -84,7 +84,7 @@ private:
         request.to_addr = to;
     }
 private:
-    volatile bool _is_greedy_rebalancer_enabled;
+    volatile bool _is_migration_enabled;
 
     std::unordered_map<global_partition_id, dsn::rpc_address> _primary_recommender;
     std::unordered_map<global_partition_id, balancer_proposal_request> _balancer_proposals_map;

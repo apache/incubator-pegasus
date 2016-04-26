@@ -42,9 +42,13 @@
 
 greedy_load_balancer::greedy_load_balancer(server_state* state):
     dsn::dist::server_load_balancer(state),
-    serverlet<greedy_load_balancer>("greedy_load_balancer"),
-    _is_greedy_rebalancer_enabled(true)
+    serverlet<greedy_load_balancer>("greedy_load_balancer")
 {
+    _is_migration_enabled = dsn_config_get_value_bool(
+            "meta_server",
+            "enable_greedy_load_balancer_migration",
+            true,
+            "if enable greedy load balance migration, default is true");
 }
 
 greedy_load_balancer::~greedy_load_balancer()
@@ -345,7 +349,9 @@ void greedy_load_balancer::greedy_copy_secondary()
         dwarn("can't copy secondaries");
     }
     else
+    {
         execute_balancer_proposal();
+    }
 }
 
 // load balancer based on ford-fulkerson
@@ -353,14 +359,14 @@ void greedy_load_balancer::greedy_balancer(int total_replicas)
 {
     if ( !_balancer_proposals_map.empty() )
     {
-        dinfo("won't start new round of balancer coz old proposals(%d) exist", _balancer_proposals_map.size());
+        ddebug("won't start new round of rebalance migration because old proposals(%d) exist", _balancer_proposals_map.size());
         execute_balancer_proposal();
         return;
     }
 
-    if ( !_is_greedy_rebalancer_enabled )
+    if ( !_is_migration_enabled )
     {
-        dinfo("won't start balancer coz it is disabled");
+        ddebug("won't start rebalance migration because it is disabled");
         return;
     }
 
@@ -413,7 +419,7 @@ void greedy_load_balancer::greedy_balancer(int total_replicas)
 
     if (higher_count==0 && lower_count==0)
     {
-        dinfo("the primaries is balanced, start to do secondary balancer");
+        ddebug("the primaries is balanced, start to do secondary balancer");
         greedy_copy_secondary();
         return;
     }
@@ -470,10 +476,10 @@ void greedy_load_balancer::on_control_migration(/*in*/const control_balancer_mig
                                                 /*out*/control_balancer_migration_response& response)
 {
     zauto_write_lock l(_state->_lock);
-    dinfo("%s greedy rebalancer, ", request.enable_migration?"enable":"disable");
+    ddebug("greedy load balancer: migration ", request.enable_migration ? "enabled" : "disabled");
 
-    _is_greedy_rebalancer_enabled = request.enable_migration;
-    if ( !_is_greedy_rebalancer_enabled )
+    _is_migration_enabled = request.enable_migration;
+    if ( !_is_migration_enabled )
     {
         _balancer_proposals_map.clear();
     }
@@ -485,8 +491,17 @@ void greedy_load_balancer::on_balancer_proposal(/*in*/const balancer_proposal_re
 {
     zauto_write_lock l(_state->_lock);
     if ( !balancer_proposal_check(request) )
+    {
+        derror("greedy load balancer: invalid balancer proposal, gpid=%u.%u, type=%s, from=%s, to=%s",
+               request.gpid.app_id, request.gpid.pidx, enum_to_string(request.type),
+               request.from_addr.to_string(), request.to_addr.to_string());
         response.err = ERR_INVALID_PARAMETERS;
-    else {
+    }
+    else
+    {
+        ddebug("greedy load balancer: add balancer proposal, gpid=%u.%u, type=%s, from=%s, to=%s",
+               request.gpid.app_id, request.gpid.pidx, enum_to_string(request.type),
+               request.from_addr.to_string(), request.to_addr.to_string());
         _balancer_proposals_map[request.gpid] = request;
         response.err = ERR_OK;
     }
@@ -496,7 +511,7 @@ void greedy_load_balancer::run()
 {
     zauto_write_lock l(_state->_lock);
 
-    dinfo("start to run global balancer");
+    ddebug("start to run global balancer");
     bool is_system_healthy = !_state->freezed();
     int total_replicas = 0;
 
@@ -520,7 +535,7 @@ void greedy_load_balancer::run()
 
     if (is_system_healthy)
     {
-        dinfo("system is healthy, trying to do balancer");
+        ddebug("system is healthy, trying to do balancer");
         greedy_balancer(total_replicas);
     }
 }
