@@ -39,7 +39,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "load.balancer"
+# define __TITLE__ "simple.load.balancer"
 
 simple_stateful_load_balancer::simple_stateful_load_balancer(server_state* state):
     ::dsn::dist::server_load_balancer(state),

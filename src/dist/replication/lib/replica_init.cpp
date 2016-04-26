@@ -50,6 +50,8 @@ using namespace dsn::service;
 
 error_code replica::initialize_on_new()
 {
+    ddebug("initialize replica on new: %s", _dir.c_str());
+
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
@@ -92,6 +94,8 @@ error_code replica::initialize_on_new()
 
 error_code replica::initialize_on_load()
 {
+    ddebug("initialize replica on load: %s", _dir.c_str());
+
     if (!dsn::utils::filesystem::directory_exists(_dir))
     {
         derror("cannot load replica @ %s, because dir not exist", _dir.c_str());

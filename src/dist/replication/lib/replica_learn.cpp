@@ -389,9 +389,18 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
         response.type = LT_LOG;
         response.base_local_dir = _private_log->dir();
+        int learn_state_buffer_count = 0;
+        int learn_state_buffer_size = 0;
+        for (auto& b : response.state.meta)
+        {
+            learn_state_buffer_count++;
+            learn_state_buffer_size += b.length();
+        }
         ddebug(
-            "%s: on_learn[%016llx]: learner = %s, learn private logs succeed, base_local_dir = %s, learn_file_count = %u",
+            "%s: on_learn[%016llx]: learner = %s, learn private logs succeed, learn_start_decree = %" PRId64 ", "
+            "learn_state_buffer_count = %d, learn_state_buffer_size = %d, base_local_dir = %s, learn_file_count = %u",
             name(), request.signature, request.learner.to_string(),
+            learn_start_decree, learn_state_buffer_count, learn_state_buffer_size,
             response.base_local_dir.c_str(), static_cast<uint32_t>(response.state.files.size())
             );
     }

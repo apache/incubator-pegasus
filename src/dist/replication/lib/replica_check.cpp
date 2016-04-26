@@ -134,8 +134,9 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     check_hashed_access();
 
     ddebug(
-        "%s: on_group_check from %s",
-        name(), request.config.primary.to_string()
+        "%s: on_group_check from %s, ballot = %" PRId64 ", status = %s",
+        name(), request.config.primary.to_string(),
+        request.config.ballot, enum_to_string(request.config.status)
         );
     
     if (request.config.ballot < get_ballot())

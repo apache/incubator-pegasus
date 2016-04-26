@@ -44,11 +44,6 @@
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replication.app.client.base.h"
-
 namespace dsn { namespace replication {
 
     //error code

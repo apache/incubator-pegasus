@@ -36,6 +36,11 @@
 
 # include "server_load_balancer.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "server.load.balancer"
+
 namespace dsn
 {
     namespace dist
@@ -47,10 +52,12 @@ namespace dsn
         // meta server => partition server
         void server_load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
         {
-            ddebug("send proposal to %s (%s of %s), current ballot = %" PRId64,
+            ddebug("send proposal to %s: type = %s, node = %s, gpid = %u.%u, current ballot = %" PRId64,
                 node.to_string(),
                 enum_to_string(proposal.type),
                 proposal.node.to_string(),
+                proposal.config.gpid.app_id,
+                proposal.config.gpid.pidx,
                 proposal.config.ballot
                 );
 

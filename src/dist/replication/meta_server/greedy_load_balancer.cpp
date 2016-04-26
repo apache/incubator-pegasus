@@ -38,7 +38,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "load.balancer.greedy"
+# define __TITLE__ "greedy.load.balancer"
 
 greedy_load_balancer::greedy_load_balancer(server_state* state):
     dsn::dist::server_load_balancer(state),
