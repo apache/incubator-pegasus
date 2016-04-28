@@ -162,6 +162,9 @@ task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_
 
 task::~task()
 {
+    // ATTENTION: should do unset_tracker defore delete _wait_event
+    _context_tracker.unset_tracker();
+
     if (nullptr != _wait_event.load())
     {
         delete (utils::notify_event*)_wait_event.load();
