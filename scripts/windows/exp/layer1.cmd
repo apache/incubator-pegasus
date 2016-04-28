@@ -4,6 +4,10 @@ SET test_app=%1
 SET server_address=%2
 SET clientperf_address=%3
 if "%1" EQU "memcached" SET test_app_upper=MemCached
+if "%1" EQU "thumbnail" SET test_app_upper=ThumbnailServe
+if "%1" EQU "xlock" SET test_app_upper=XLock
+if "%1" EQU "leveldb" SET test_app_upper=LevelDb
+
 if "%test_app_upper%" EQU "" (
     CALL %bin_dir%\echoc.exe 4  no such app %1 for perf test, please check spelling
     GOTO:EOF
@@ -26,6 +30,7 @@ IF NOT EXIST "%bin_root%\dsn.svchost.exe" (
 )
 
 @mkdir "%exp_dir%layer1_test"
+@rmdir /Q /S "%exp_dir%layer1_test\%test_app_upper%"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%\log"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%\server"

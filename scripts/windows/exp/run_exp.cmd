@@ -1,4 +1,4 @@
-@ECHO OFF
+@ECHO ON
 SET TOP_DIR="%~dp0\..\..\.."
 SET exp_dir=%~dp0
 SET bin_dir=%TOP_DIR%"\scripts\windows"
@@ -16,7 +16,8 @@ if "%1" EQU "" GOTO usage
     GOTO:EOF
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1|layer2 leveldb|memcached|thumbnail|xlock|all server_address(eg.srgsi-11) client.perf_address(eg.srgsi-12)"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock|all server_address(eg.srgsi-11) client.perf_address(eg.srgsi-12)"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2 leveldb|memcached|thumbnail|xlock|all server_address(eg.srgsi-11) daemon1_address(eg.srgsi-12) daemon2_address(eg.srgsi-13) daemon3_address(eg.srgsi-14) client.perf_address(eg.srgsi-15)"
     GOTO:EOF
 
 :layer1

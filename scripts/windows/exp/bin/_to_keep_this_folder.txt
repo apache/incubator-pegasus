@@ -2,4 +2,7 @@ this folder should contains:
 
 dsn.apps.MemCached.dll (or any other app dll you need to do perf test)
 dsn.core.dll
+dsn.meta_server.dll
+dsn.layer2.stateless.dll
+zookeeper_mt.dll
 dsn.svchost.exe
