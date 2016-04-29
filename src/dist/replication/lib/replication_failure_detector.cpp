@@ -55,9 +55,9 @@ replication_failure_detector::replication_failure_detector(
 
     dsn_group_set_leader(_meta_servers.group_handle(),
         meta_servers[random32(0, (uint32_t)meta_servers.size() - 1)].c_addr());
-    // ATTENTION: here we disable update_leader_on_rpc_forward to avoid failure detecting
-    // logic affected by rpc forwarding.
-    dsn_group_set_update_leader_on_rpc_forward(_meta_servers.group_handle(), false);
+    // ATTENTION: here we disable dsn_group_set_update_leader_automatically to avoid
+    // failure detecting logic is affected by rpc failure or rpc forwarding.
+    dsn_group_set_update_leader_automatically(_meta_servers.group_handle(), false);
 }
 
 replication_failure_detector::~replication_failure_detector(void)

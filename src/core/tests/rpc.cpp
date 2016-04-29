@@ -143,7 +143,7 @@ TEST(core, group_address_change_leader)
     ::dsn::task_ptr resp_task;
 
     // not update leader on forwarding
-    addr.group_address()->set_update_leader_on_rpc_forward(false);
+    addr.group_address()->set_update_leader_automatically(false);
     dsn_group_set_leader(addr.group_handle(), ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
     resp_task = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
                                  nullptr, typed_callback);
@@ -153,7 +153,7 @@ TEST(core, group_address_change_leader)
         EXPECT_EQ(::dsn::rpc_address("localhost", TEST_PORT_BEGIN), ::dsn::rpc_address(dsn_group_get_leader(addr.group_handle())));
     }
     // update leader on forwarding
-    addr.group_address()->set_update_leader_on_rpc_forward(true);
+    addr.group_address()->set_update_leader_automatically(true);
     dsn_group_set_leader(addr.group_handle(), ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
     resp_task = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
                                  nullptr, typed_callback);

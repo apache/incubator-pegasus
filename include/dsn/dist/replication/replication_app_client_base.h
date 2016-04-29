@@ -118,9 +118,10 @@ namespace dsn { namespace replication {
 
         struct request_context : public ref_counter
         {
+            int                   query_config_rpc_fail_count;
             int                   partition_index;
             uint64_t              key_hash;
-            ::dsn::task_ptr callback_task;
+            ::dsn::task_ptr       callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
             bool                  is_read;
@@ -173,6 +174,7 @@ namespace dsn { namespace replication {
     private:
         std::string                             _app_name;
         dsn::rpc_address                        _meta_servers;
+        int                                     _meta_servers_count;
 
         mutable dsn::service::zrwlock_nr       _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
@@ -193,8 +195,8 @@ namespace dsn { namespace replication {
         void on_replica_request_timeout(request_context_ptr& rc);
 
         // with meta server
-        dsn::task_ptr query_partition_config(request_context_ptr request);
-        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context);
+        dsn::task_ptr query_config(request_context_ptr request);
+        void query_config_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context);
     };
 #pragma pack(pop)
 }} // namespace

@@ -417,6 +417,9 @@ extern DSN_API void          dsn_uri_destroy(dsn_uri_t uri);
 /*! build a group address with a name, must be destroyed later using \ref dsn_group_destroy */
 extern DSN_API dsn_group_t   dsn_group_build(const char* name);
 
+/*! get the RPC address count contained in the group address */
+extern DSN_API int           dsn_group_count(dsn_group_t g);
+
 /*! add an RPC address into the group address */
 extern DSN_API bool          dsn_group_add(dsn_group_t g, dsn_address_t ep);
 
@@ -433,10 +436,10 @@ extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
 extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
 
 /*! whether auto-update of the leader in rDSN runtime is allowed, default is true */
-extern DSN_API bool          dsn_group_is_update_leader_on_rpc_forward(dsn_group_t g);
+extern DSN_API bool          dsn_group_is_update_leader_automatically(dsn_group_t g);
 
 /*! set auto-update mode of the leader in rDSN runtime for this group address, true for yes */
-extern DSN_API void          dsn_group_set_update_leader_on_rpc_forward(dsn_group_t g, bool v);
+extern DSN_API void          dsn_group_set_update_leader_automatically(dsn_group_t g, bool v);
 
 /*! get the next address in the group right after (circularly) given ep, if ep is invalid, a random member is returned */
 extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);

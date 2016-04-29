@@ -45,6 +45,7 @@ replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_addres
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     for (auto& m : meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
+    _meta_servers_count = meta_servers.size();
 }
 
 dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count)
@@ -463,12 +464,8 @@ bool replication_ddl_client::valid_app_char(int c)
 
 void replication_ddl_client::end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
 {
-    if(err == dsn::ERR_TIMEOUT && retry_times < 5)
+    if(err != dsn::ERR_OK && retry_times + 1 < _meta_servers_count)
     {
-        rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());
-        rpc_address next = dsn_group_next(_meta_servers.group_handle(), leader.c_addr());
-        dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
-
         rpc::call(
             _meta_servers,
             request,
@@ -481,7 +478,9 @@ void replication_ddl_client::end_meta_request(task_ptr callback, int retry_times
          );
     }
     else
+    {
         callback->enqueue_rpc_response(err, resp);
+    }
 }
 
 }} // namespace

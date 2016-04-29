@@ -75,7 +75,7 @@ replication_app_client_base::replication_app_client_base(
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     for (auto& m : meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
-
+    _meta_servers_count = meta_servers.size();
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -123,6 +123,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = false;
+    rc->query_config_rpc_fail_count = 0;
     rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
@@ -157,6 +158,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = true;
+    rc->query_config_rpc_fail_count = 0;
     rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
@@ -244,9 +246,9 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
             }
         }
 
-        if (from_meta_ack)
+        if (from_meta_ack && request->query_config_rpc_fail_count >= _meta_servers_count)
         {
-            // delay 1 second for further config query, call again
+            // delay 1 second for further config query
             tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
                 std::bind(&replication_app_client_base::call, this, request, false),
                 0,
@@ -256,7 +258,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
         else
         {
             zauto_lock l(_requests_lock);
-            query_partition_config(request);
+            query_config(request);
         }
 
         return;
@@ -281,9 +283,9 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
     // target node not known
     else
     {
-        if (from_meta_ack)
+        if (from_meta_ack && request->query_config_rpc_fail_count >= _meta_servers_count)
         {
-            // delay 1 second for further config query, call again
+            // delay 1 second for further config query
             tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
                 std::bind(&replication_app_client_base::call, this, request, false),
                 0,
@@ -323,7 +325,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
             // init configuration query task if necessary
             if (it->second->query_config_task == nullptr)
             {
-                it->second->query_config_task = query_partition_config(request);
+                it->second->query_config_task = query_config(request);
             }
         }
     }
@@ -472,14 +474,21 @@ Handle_Failure:
 
     if(!retry)
     {
+        // no need to retry
         end_request(rc, err, (err == ERR_OK ? response : dsn_message_t(nullptr)));
         return;
     }
+
+    if (clear_config_cache)
+    {
+        // cache cleared, start to query config immediately
+        call(std::move(rc));
+    }
     else
     {
+        // if no more than 1 second left, unnecessary to retry
+        // because we need to sleep 1 second before retry
         auto nts = ::dsn_now_us();
-
-        // no more than 1 second left, unnecessary to retry
         if (nts + 1000000 >= rc->timeout_ts_us)
         {
             dsn_message_t nil(nullptr);
@@ -487,6 +496,7 @@ Handle_Failure:
             return;
         }
 
+        // sleep 1 second before retry
         tasking::enqueue(
             LPC_REPLICATION_DELAY_QUERY_CALL,
             this,
@@ -495,19 +505,21 @@ Handle_Failure:
                 replication_app_client_base::call(std::move(rc_capture));
             },
             0,
-            std::chrono::seconds(1) // sleep 1 second before retry
+            std::chrono::seconds(1)
             );
     }
 }
 
-void replication_app_client_base::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context)
+void replication_app_client_base::query_config_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context)
 {    
     int pidx = context->partition_index;
-    bool conti = true;
     error_code client_err = ERR_OK;
+    bool conti = true; // if can continue to the next step
 
     if (err == ERR_OK)
     {
+        context->query_config_rpc_fail_count = 0;
+
         configuration_query_by_index_response resp;
         ::unmarshall(response, resp);
         if (resp.err == ERR_OK)
@@ -564,13 +576,16 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
                 resp.err.to_string(),
                 pidx
                 );
+
             conti = false;
             client_err = resp.err;
         }
     }
     else
     {
-        derror("%s.client: query config reply err = %s, partition index = %d",
+        context->query_config_rpc_fail_count++;
+
+        dwarn("%s.client: query config reply err = %s, partition index = %d",
             _app_name.c_str(),
             err.to_string(),
             pidx
@@ -625,7 +640,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 }
 
 /*send rpc*/
-dsn::task_ptr replication_app_client_base::query_partition_config(request_context_ptr request)
+dsn::task_ptr replication_app_client_base::query_config(request_context_ptr request)
 {
     //dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_name.c_str(), _app_id, request->partition_index);
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
@@ -645,7 +660,7 @@ dsn::task_ptr replication_app_client_base::query_partition_config(request_contex
         this,
         [this, request_capture = std::move(request)](error_code err, dsn_message_t req, dsn_message_t resp)
         {
-            replication_app_client_base::query_partition_configuration_reply(err, req, resp, std::move(request_capture));
+            replication_app_client_base::query_config_reply(err, req, resp, std::move(request_capture));
         }
         );
 }
