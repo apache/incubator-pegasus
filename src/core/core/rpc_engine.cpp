@@ -133,8 +133,7 @@ namespace dsn {
         if (nullptr == reply)
         {
             call->set_delay(delay_ms);
-            // TODO(qinzuoyan): maybe set err as ERR_NETWORK_FAILURE to differ with ERR_TIMEOUT
-            call->enqueue(ERR_TIMEOUT, reply);
+            call->enqueue(ERR_NETWORK_FAILURE, reply);
             call->release_ref(); // added in on_call
             return true;
         }
