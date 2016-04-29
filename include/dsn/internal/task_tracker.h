@@ -54,9 +54,10 @@ namespace dsn
     {
     public:
         trackable_task() : _owner(nullptr) {}
-        virtual ~trackable_task();
+        virtual ~trackable_task() {}
 
         void set_tracker(task_tracker* owner, dsn_task_t task);
+        void unset_tracker();
         task_tracker* tracker() { return _owner; }
 
     private:
@@ -122,22 +123,7 @@ namespace dsn
         }
     }
 
-    inline trackable_task::owner_delete_state trackable_task::owner_delete_prepare()
-    {
-        return _deleting_owner.exchange(OWNER_DELETE_LOCKED, std::memory_order_acquire);
-    }
-
-    inline void trackable_task::owner_delete_commit()
-    {
-        {
-            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
-            _dl.remove();
-        }
-
-        _deleting_owner.store(OWNER_DELETE_FINISHED, std::memory_order_relaxed);
-    }
-
-    inline trackable_task::~trackable_task()
+    inline void trackable_task::unset_tracker()
     {
         if (nullptr != _owner)
         {
@@ -155,6 +141,22 @@ namespace dsn
             case OWNER_DELETE_FINISHED:
                 break;
             }
+            _owner = nullptr;
         }
+    }
+
+    inline trackable_task::owner_delete_state trackable_task::owner_delete_prepare()
+    {
+        return _deleting_owner.exchange(OWNER_DELETE_LOCKED, std::memory_order_acquire);
+    }
+
+    inline void trackable_task::owner_delete_commit()
+    {
+        {
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
+            _dl.remove();
+        }
+
+        _deleting_owner.store(OWNER_DELETE_FINISHED, std::memory_order_relaxed);
     }
 }
