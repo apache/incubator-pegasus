@@ -227,7 +227,8 @@ static void send_message(::dsn::rpc_address addr,
 TEST(core, group_address_no_response_2)
 {
     ::dsn::rpc_address addr = build_group();
-    rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {
+    rpc_reply_handler action_on_succeed = [](error_code err, dsn_message_t, dsn_message_t resp) {
+        EXPECT_TRUE(err == ERR_OK);
         std::string result;
         ::unmarshall(resp, result);
         ::dsn::rpc_address a = dsn_address_from_string(result);
@@ -250,7 +251,8 @@ TEST(core, send_to_invalid_address)
     /* here we assume 10.255.254.253:32766 is not assigned */
     dsn_group_set_leader(group.group_handle(), ::dsn::rpc_address("10.255.254.253", 32766).c_addr());
 
-    rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {
+    rpc_reply_handler action_on_succeed = [](error_code err, dsn_message_t, dsn_message_t resp) {
+        EXPECT_TRUE(err == ERR_OK);
         std::string hehe_str;
         ::unmarshall(resp, hehe_str);
         EXPECT_TRUE(hehe_str == "hehehe");
