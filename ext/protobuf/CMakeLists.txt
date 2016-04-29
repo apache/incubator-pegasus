@@ -1,5 +1,11 @@
 include(ExternalProject)
 
+if(DSN_GIT_SOURCE STREQUAL "xiaomi")
+    set(target_url "http://git.n.xiaomi.com/pegasus/protobuf.git")
+else()
+    set(target_url "https://github.com/ykwd/protobuf.git")
+endif()
+
 set(PROTOBUF_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/protobuf")
 
 set (PROTOBUF_CMAKE_ARGS 
@@ -13,7 +19,7 @@ if (WIN32)
 endif ()
 
 ExternalProject_Add(protobuf
-    GIT_REPOSITORY https://github.com/ykwd/protobuf.git
+    GIT_REPOSITORY ${target_url}
     GIT_TAG rdsn
     CMAKE_ARGS ${PROTOBUF_CMAKE_ARGS}
 )

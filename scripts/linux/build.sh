@@ -134,7 +134,12 @@ fi
 if [ ! -f "$ROOT/bin/Linux/thrift" ]
 then
     echo "Downloading thrift..."
-    wget --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift
+    if [ "$GIT_SOURCE" == "xiaomi" ]
+    then
+        wget http://git.n.xiaomi.com/pegasus/packages/raw/master/rdsn/thrift
+    else
+        wget --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift
+    fi
     chmod u+x thrift
     mv thrift $ROOT/bin/Linux
 fi
