@@ -317,6 +317,7 @@ typedef int(*dsn_app_prepare_get_checkpoint)(
 typedef int(*dsn_app_get_checkpoint)(
     void*,    ///< context from dsn_app_create
     int64_t,  ///< start decree
+    int64_t,  ///< local commit decree
     void*,    ///< learn request from prepare_get_checkpoint
     int,      ///< learn request size
     dsn_app_learn_state*, ///< learn state buffer to be filled in
@@ -325,8 +326,13 @@ typedef int(*dsn_app_get_checkpoint)(
 
 typedef int(*dsn_app_apply_checkpoint)(
     void*,                      ///< context from dsn_app_create
+    int64_t,                    ///< local commit decree
     const dsn_app_learn_state*, ///< learn state
     dsn_chkpt_apply_mode        ///< checkpoint apply mode
+    );
+
+typedef int(*dsn_app_physical_error_get)(
+    void*                       ///< context from dsn_app_create
     );
 
 # define DSN_APP_MASK_DEFAULT                 0x00 ///< default mask, only layer1 app model is supported
@@ -391,6 +397,7 @@ typedef struct dsn_app
         dsn_app_prepare_get_checkpoint  checkpoint_get_prepare; ///< optional
         dsn_app_get_checkpoint          chkpt_get;
         dsn_app_apply_checkpoint        chkpt_apply;
+        dsn_app_physical_error_get      physical_error_get;
     } layer2_apps_type_1;
 
     /*! TODO: layer 3 app definition */

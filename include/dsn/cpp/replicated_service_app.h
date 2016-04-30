@@ -47,7 +47,7 @@ namespace dsn
     class replicated_service_app_type_1 : public service_app
     {
     public:
-        replicated_service_app_type_1()  { }
+        replicated_service_app_type_1() { _physical_error = 0; }
 
         virtual ~replicated_service_app_type_1(void) {}
 
@@ -104,7 +104,7 @@ namespace dsn
                 state.to_decree_included = to_decree_included;
                 state.meta_state_size = meta_state.length();
                 state.file_state_count = files.size();
-                
+
                 char* ptr = (char*)&state + sizeof(dsn_app_learn_state);
                 char* end = (char*)&state + state_capacity;
                 if (state.meta_state_size > 0)
@@ -165,6 +165,7 @@ namespace dsn
 
         virtual ::dsn::error_code get_checkpoint(
             int64_t start,
+            int64_t local_commit,
             void*   learn_request,
             int     learn_request_size,
             /* inout */ app_learn_state& state
@@ -185,8 +186,15 @@ namespace dsn
         // Postconditions:
         // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
         // 
-        virtual ::dsn::error_code apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) = 0;
-        
+        virtual ::dsn::error_code apply_checkpoint(int64_t local_commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) = 0;
+
+        int get_last_physical_error() const { return _physical_error; }
+
+        void set_physcial_error(int err) { _physical_error = err; }
+
+    private:
+        int _physical_error;
+
     public:
         static dsn_error_t app_checkpoint(void* app, int64_t version)
         {
@@ -215,6 +223,7 @@ namespace dsn
         static dsn_error_t app_get_checkpoint(
             void*   app,
             int64_t start_decree,
+            int64_t local_commit,
             void*   learn_request,
             int     learn_request_size,
             /* inout */ dsn_app_learn_state* state,
@@ -223,7 +232,7 @@ namespace dsn
         {
             auto sapp = (replicated_service_app_type_1*)(app);
             app_learn_state cpp_state;
-            auto err = sapp->get_checkpoint(start_decree, learn_request, learn_request_size, cpp_state);
+            auto err = sapp->get_checkpoint(start_decree, local_commit, learn_request, learn_request_size, cpp_state);
             if (err == ERR_OK)
             {
                 return cpp_state.to_c_state(*state, state_capacity);
@@ -234,10 +243,16 @@ namespace dsn
             }
         }
         
-        static dsn_error_t app_apply_checkpoint(void* app, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
+        static dsn_error_t app_apply_checkpoint(void* app, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
         {
             auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->apply_checkpoint(*state, mode);
+            return sapp->apply_checkpoint(local_commit, *state, mode);
+        }
+
+        static int app_get_physical_error(void* app)
+        {
+            auto sapp = (replicated_service_app_type_1*)(app);
+            return sapp->get_last_physical_error();
         }
     };
 
@@ -259,6 +274,7 @@ namespace dsn
         app.layer2_apps_type_1.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
         app.layer2_apps_type_1.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2_apps_type_1.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
+        app.layer2_apps_type_1.physical_error_get = replicated_service_app_type_1::app_get_physical_error;
 
         dsn_register_app(&app);
     }

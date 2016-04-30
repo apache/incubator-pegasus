@@ -66,12 +66,13 @@ namespace dsn {
 
                 virtual ::dsn::error_code get_checkpoint(
                     int64_t start,
+                    int64_t commit,
                     void*   learn_request,
                     int     learn_request_size,
                     /* inout */ app_learn_state& state
                     ) override;
 
-                virtual ::dsn::error_code apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) override;
+                virtual ::dsn::error_code apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) override;
 
             private:
                 void recover();

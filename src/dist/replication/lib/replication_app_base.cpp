@@ -312,6 +312,7 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
     lstate = (dsn_app_learn_state*)buffer;
 
     error_code err = dsn_layer1_app_get_checkpoint(_app_context, start,
+        _last_committed_decree.load(),
         (void*)learn_request.data(),
         learn_request.length(),
         (dsn_app_learn_state*)buffer,
@@ -327,6 +328,7 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
         lstate = (dsn_app_learn_state*)buffer;
 
         err = dsn_layer1_app_get_checkpoint(_app_context, start,
+            _last_committed_decree.load(),
             (void*)learn_request.data(),
             learn_request.length(),
             (dsn_app_learn_state*)buffer,
@@ -377,7 +379,7 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
         lstate.files = &files[0];
     }
 
-    return dsn_layer1_app_apply_checkpoint(_app_context, &lstate, mode);
+    return dsn_layer1_app_apply_checkpoint(_app_context, _last_committed_decree.load(), &lstate, mode);
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)
@@ -429,12 +431,13 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             // empty mutation write
         }
 
-        /*if (_app_info->info.type1.physical_error != 0)
+        int perr = dsn_layer1_app_get_physical_error(_app_context);
+        if (perr != 0)
         {
             derror("%s: physical error %d occurs in replication local app %s",
-                   _replica->name(), _app_info->info.type1.physical_error, data_dir().c_str());
+                   _replica->name(), perr, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
-        }*/
+        }
     }
 
     ++_last_committed_decree;

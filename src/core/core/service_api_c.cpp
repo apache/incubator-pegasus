@@ -1472,6 +1472,7 @@ DSN_API int dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer
 DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
     void* app_context,
     int64_t start,
+    int64_t local_commit,
     void*   learn_request,
     int     learn_request_size,
     /* inout */ dsn_app_learn_state* state,
@@ -1479,11 +1480,17 @@ DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
     )
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_get(app->app_context, start, learn_request, learn_request_size, state, state_capacity);
+    return app->role->layer2_apps_type_1.chkpt_get(app->app_context, start, local_commit, learn_request, learn_request_size, state, state_capacity);
 }
 
-DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
+DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_apply(app->app_context, state, mode);
+    return app->role->layer2_apps_type_1.chkpt_apply(app->app_context, local_commit, state, mode);
+}
+
+extern DSN_API int dsn_layer1_app_get_physical_error(void* app_context)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.physical_error_get(app_context);
 }

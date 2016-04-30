@@ -260,6 +260,7 @@ namespace dsn {
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(
                 int64_t start,
+                int64_t commit,
                 void*   learn_request,
                 int     learn_request_size,
                 /* inout */ app_learn_state& state
@@ -270,10 +271,10 @@ namespace dsn {
                     return ERR_CORRUPTION;
                 }
 
-                /*if (last_durable_decree() == 0)
+                if (last_durable_decree() == 0)
                 {
-                    checkpoint();
-                }*/
+                    checkpoint(commit);
+                }
 
                 if (last_durable_decree() > 0)
                 {
@@ -299,7 +300,7 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
             {
                 if (s_simple_kv_apply_checkpoint_fail)
                 {

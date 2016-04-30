@@ -78,13 +78,16 @@ extern DSN_API int         dsn_layer1_app_prepare_learn_request(void* app_contex
 extern DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
                                 void* app_context,
                                 int64_t start,
+                                int64_t local_commit,
                                 void*   learn_request,
                                 int     learn_request_size,
                                 /* inout */ dsn_app_learn_state* state,
                                 int state_capacity
                                 );
 
-extern DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode);
+extern DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode);
+
+extern DSN_API int         dsn_layer1_app_get_physical_error(void* app_context);
 
 /*@}*/
 
