@@ -30,9 +30,10 @@ IF NOT EXIST "%bin_root%\dsn.svchost.exe" (
 )
 
 @mkdir "%exp_dir%layer1_test"
+@mkdir "%exp_dir%layer1_test\log"
+@mkdir "%exp_dir%layer1_test\log\%test_app_upper%"
 @rmdir /Q /S "%exp_dir%layer1_test\%test_app_upper%"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%"
-@mkdir "%exp_dir%layer1_test\%test_app_upper%\log"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%\server"
 @mkdir "%exp_dir%layer1_test\%test_app_upper%\client.perf"
 
@@ -47,36 +48,8 @@ IF NOT EXIST "%bin_root%\dsn.svchost.exe" (
     ECHO %clientperf_address%
 )  > %exp_dir%layer1_test\%test_app_upper%\client.perf\machines.txt
 
-copy /Y %exp_dir%\config.ini %exp_dir%layer1_test\%test_app_upper%
-
-(
-    ECHO[
-    ECHO [apps.server]
-    ECHO name = server
-    ECHO type = server
-    ECHO arguments = 
-    ECHO ports = 33001
-    ECHO run = true
-    ECHO pools = THREAD_POOL_DEFAULT
-    ECHO dmodule = dsn.apps.%test_app_upper%
-    ECHO[   
-    ECHO [apps.client.perf.%test_app%] 
-    ECHO name = client.perf.%test_app% 
-    ECHO type = client.perf.%test_app% 
-    ECHO arguments = %server_address%:33001 
-    ECHO count = 1
-    ECHO run = true
-    ECHO pools = THREAD_POOL_DEFAULT
-    ECHO delay_seconds = 1
-    ECHO dmodule = dsn.apps.%test_app_upper%
-    ECHO[ 
-    ECHO [apps.client.perf.test]
-    ECHO type = client.perf.%test_app% 
-    ECHO exit_after_test = true
-)  >> %exp_dir%layer1_test\%test_app_upper%\config.ini
-
-copy /Y %exp_dir%layer1_test\%test_app_upper%\config.ini %exp_dir%layer1_test\%test_app_upper%\server
-copy /Y %exp_dir%layer1_test\%test_app_upper%\config.ini %exp_dir%layer1_test\%test_app_upper%\client.perf
+copy /Y %exp_dir%config\layer1\%test_app_upper%\config.ini %exp_dir%layer1_test\%test_app_upper%\server
+copy /Y %exp_dir%config\layer1\%test_app_upper%\config.ini %exp_dir%layer1_test\%test_app_upper%\client.perf
 
 copy /Y %bin_root%\*.* %exp_dir%layer1_test\%test_app_upper%\server
 copy /Y %bin_root%\*.* %exp_dir%layer1_test\%test_app_upper%\client.perf
@@ -88,7 +61,7 @@ copy /Y %bin_root%\*.* %exp_dir%layer1_test\%test_app_upper%\client.perf
     ECHO :loop
     ECHO     set /a i=%%i%%+1
     ECHO     echo run %%i%%th ... ^>^> ./running.txt
-    ECHO     .\dsn.svchost.exe config.ini -app_list server
+    ECHO     .\dsn.svchost.exe config.ini -app_list server -cargs server_address=%server_address%
     ECHO     ping -n 16 127.0.0.1 ^>nul
     ECHO goto loop
 )  > %exp_dir%layer1_test\%test_app_upper%\server\start.cmd
@@ -100,10 +73,15 @@ copy /Y %bin_root%\*.* %exp_dir%layer1_test\%test_app_upper%\client.perf
     ECHO :loop
     ECHO     set /a i=%%i%%+1
     ECHO     echo run %%i%%th ... ^>^> ./running.txt
-    ECHO     .\dsn.svchost.exe config.ini -app_list client.perf.%test_app%
+    ECHO     .\dsn.svchost.exe config.ini -app_list client.perf.%test_app% -cargs server_address=%server_address%
     ECHO     ping -n 16 127.0.0.1 ^>nul
     ECHO goto loop
 )  > %exp_dir%layer1_test\%test_app_upper%\client.perf\start.cmd
+
+CALL %bin_dir%"\deploy.cmd" stop %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
+CALL %bin_dir%"\deploy.cmd" cleanup %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
+ECHO Wait for stop and cleanup finish, please continue after that
+PAUSE
 
 CALL %bin_dir%"\deploy.cmd" deploy %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
 ECHO Wait for deployment finish, please continue after that
@@ -112,9 +90,9 @@ PAUSE
 CALL %bin_dir%"\deploy.cmd" start %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
 :loop
     if exist \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.txt (
-        xcopy  /F /Y /S \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.* %exp_dir%layer1_test\%test_app_upper%\log
+        xcopy  /F /Y /S \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.* %exp_dir%layer1_test\log\%test_app_upper%\
         CALL %bin_dir%"\deploy.cmd" stop %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
-        CALL %bin_dir%"\deploy.cmd" cleanup %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
+        ::CALL %bin_dir%"\deploy.cmd" cleanup %exp_dir%layer1_test\%test_app_upper% d:\v-chlou
         goto:EOF
     )
 goto loop
