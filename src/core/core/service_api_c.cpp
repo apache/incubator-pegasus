@@ -1445,16 +1445,22 @@ DSN_API void dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t 
     }
 }
 
-DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context)
+DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context, int64_t version)
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt(app->app_context);
+    return app->role->layer2_apps_type_1.chkpt(app->app_context, version);
 }
 
-DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context)
+DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context, int64_t version)
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_async(app->app_context);
+    return app->role->layer2_apps_type_1.chkpt_async(app->app_context, version);
+}
+
+DSN_API dsn_error_t dsn_layer1_app_checkpoint_get_version(void* app_context)
+{
+    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
+    return app->role->layer2_apps_type_1.chkpt_get_version(app->app_context);
 }
 
 DSN_API int dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity)

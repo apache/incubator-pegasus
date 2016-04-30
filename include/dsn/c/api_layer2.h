@@ -67,9 +67,11 @@ extern DSN_API dsn_error_t dsn_layer1_app_destroy(void* app_context, bool cleanu
 
 extern DSN_API void        dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t msg, bool exec_inline);
 
-extern DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context);
+extern DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context, int64_t version);
 
-extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context);
+extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context, int64_t version);
+
+extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_get_version(void* app_context);
 
 extern DSN_API int         dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity);
 

@@ -56,9 +56,11 @@ namespace dsn {
 
                 virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-                virtual ::dsn::error_code checkpoint() override;
+                virtual ::dsn::error_code checkpoint(int64_t version) override;
 
-                virtual ::dsn::error_code checkpoint_async() override;
+                virtual ::dsn::error_code checkpoint_async(int64_t version) override;
+
+                virtual int64_t get_last_checkpoint_version() const override { return last_durable_decree(); }
 
                 virtual int prepare_get_checkpoint(void* buffer, int capacity) override { return 0; }
 
@@ -74,10 +76,9 @@ namespace dsn {
             private:
                 void recover();
                 void recover(const std::string& name, int64_t version);
-                const char* data_dir() { return _app_info->data_dir; }
-                int64_t last_committed_decree() { return _app_info->info.type1.last_committed_decree; }
-                int64_t last_durable_decree() { return _app_info->info.type1.last_durable_decree; }
-                void    set_last_durable_decree(int64_t d) { _app_info->info.type1.last_durable_decree = d; }
+                const char* data_dir() const { return _data_dir.c_str(); }
+                int64_t last_durable_decree() const { return _checkpoint_version; }
+                void    set_last_durable_decree(int64_t d) { _checkpoint_version = d; }
 
             private:
                 typedef std::map<std::string, std::string> simple_kv;
@@ -85,7 +86,8 @@ namespace dsn {
                 ::dsn::service::zlock _lock;
                 bool _test_file_learning;
 
-                dsn_app_info*        _app_info;
+                std::string _data_dir;
+                int64_t     _checkpoint_version;
             };
 
         }

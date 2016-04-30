@@ -184,19 +184,10 @@ replication_app_base::replication_app_base(replica* replica)
 {
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
-    _app_info = nullptr;
+    _last_committed_decree = 0;
     _replica = replica;
 
     install_perf_counters();
-}
-
-void replication_app_base::reset_states()
-{
-    /*_app_info->info.type1.batch_state = BS_NOT_BATCH;
-    _app_info->info.type1.last_committed_decree = 0;
-    _app_info->info.type1.last_durable_decree = 0;
-    _app_info->info.type1.physical_error = 0;*/
-    memset((void*)&_app_info->info.type1, sizeof(_app_info->info.type1), 0);
 }
 
 const char* replication_app_base::replica_name() const
@@ -254,7 +245,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     auto err = open();
     if (err == ERR_OK)
     {
-        _app_info->info.type1.last_committed_decree = last_durable_decree();
+        _last_committed_decree = last_durable_decree();
         if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
@@ -273,10 +264,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     ::dsn::error_code err = dsn_layer1_app_create(gd, &_app_context);
     if (err == ERR_OK)
     {
-        _app_info = dsn_get_app_info_ptr(gd);
-        dassert(_app_info, "");
-        strncpy(_app_info->data_dir, _dir_data.c_str(), sizeof(_app_info->data_dir) / sizeof(char));
-
+        _dir_data = dsn_get_current_app_data_dir(gd);
         err = dsn_layer1_app_start(_app_context);
     }
     return err;
@@ -399,14 +387,14 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     dassert(mu->data.updates.size() > 0, "");
 
     int count = static_cast<int>(mu->client_requests.size());
-    auto& bs = _app_info->info.type1.batch_state;
-    bs = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    //auto& bs = _app_info->info.type1.batch_state;
+    //bs = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
     for (int i = 0; i < count; i++)
     {
-        if (bs == BS_BATCH && i + 1 == count)
+        /*if (bs == BS_BATCH && i + 1 == count)
         {
             bs = BS_BATCH_LAST;
-        }
+        }*/
 
         const mutation_update& update = mu->data.updates[i];
         dsn_message_t req = mu->client_requests[i];
@@ -441,15 +429,16 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             // empty mutation write
         }
 
-        if (_app_info->info.type1.physical_error != 0)
+        /*if (_app_info->info.type1.physical_error != 0)
         {
             derror("%s: physical error %d occurs in replication local app %s",
                    _replica->name(), _app_info->info.type1.physical_error, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
-        }
+        }*/
     }
 
-    ++_app_info->info.type1.last_committed_decree;
+    ++_last_committed_decree;
+    //++_app_info->info.type1.last_committed_decree;
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);

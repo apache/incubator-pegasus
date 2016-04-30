@@ -44,7 +44,7 @@
 # endif
 # define __TITLE__ "simple_kv.main"
 
-void dsn_app_registration()
+void dsn_app_registration_simple_kv()
 {
     // register simple-kv type here
 
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
     dsn::replication::test::g_case_input = argv[2];
 
-    dsn_app_registration();
+    dsn_app_registration_simple_kv();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);

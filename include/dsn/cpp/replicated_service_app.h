@@ -54,9 +54,11 @@ namespace dsn
         //
         // for stateful apps with layer 2 support
         //
-        virtual ::dsn::error_code checkpoint() { return ERR_NOT_IMPLEMENTED; }
+        virtual ::dsn::error_code checkpoint(int64_t version) { return ERR_NOT_IMPLEMENTED; }
 
-        virtual ::dsn::error_code checkpoint_async() { return ERR_NOT_IMPLEMENTED; }
+        virtual ::dsn::error_code checkpoint_async(int64_t version) { return ERR_NOT_IMPLEMENTED; }
+
+        virtual int64_t get_last_checkpoint_version() const { return 0; }
 
         //
         // prepare an app-specific learning request (on learner, to be sent to learneee
@@ -186,16 +188,22 @@ namespace dsn
         virtual ::dsn::error_code apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) = 0;
         
     public:
-        static dsn_error_t app_checkpoint(void* app)
+        static dsn_error_t app_checkpoint(void* app, int64_t version)
         {
             auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->checkpoint();
+            return sapp->checkpoint(version);
         }
 
-        static dsn_error_t app_checkpoint_async(void* app)
+        static dsn_error_t app_checkpoint_async(void* app, int64_t version)
         {
             auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->checkpoint_async();
+            return sapp->checkpoint_async(version);
+        }
+
+        static int64_t app_checkpoint_get_version(void* app)
+        {
+            auto sapp = (replicated_service_app_type_1*)(app);
+            return sapp->get_last_checkpoint_version();
         }
 
         static int app_prepare_get_checkpoint(void* app, void* buffer, int capacity)
@@ -247,6 +255,7 @@ namespace dsn
 
         app.layer2_apps_type_1.chkpt = replicated_service_app_type_1::app_checkpoint;
         app.layer2_apps_type_1.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
+        app.layer2_apps_type_1.chkpt_get_version = replicated_service_app_type_1::app_checkpoint_get_version;
         app.layer2_apps_type_1.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
         app.layer2_apps_type_1.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2_apps_type_1.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;

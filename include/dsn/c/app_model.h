@@ -295,11 +295,17 @@ enum dsn_chkpt_apply_mode
 };
 
 typedef dsn_error_t (*dsn_app_checkpoint)(
-    void* ///< context from dsn_app_create
+    void*,  ///< context from dsn_app_create
+    int64_t ///< checkpoint version
     );
 
 typedef dsn_error_t(*dsn_app_checkpoint_async)(
-    void* ///< context from dsn_app_create
+    void*,  ///< context from dsn_app_create
+    int64_t ///< checkpoint version
+    );
+
+typedef int64_t(*dsn_app_checkpoint_get_version)(
+    void*  ///< context from dsn_app_create
     );
 
 typedef int(*dsn_app_prepare_get_checkpoint)(
@@ -381,6 +387,7 @@ typedef struct dsn_app
     {
         dsn_app_checkpoint              chkpt;
         dsn_app_checkpoint_async        chkpt_async;
+        dsn_app_checkpoint_get_version  chkpt_get_version;
         dsn_app_prepare_get_checkpoint  checkpoint_get_prepare; ///< optional
         dsn_app_get_checkpoint          chkpt_get;
         dsn_app_apply_checkpoint        chkpt_apply;
@@ -418,10 +425,10 @@ typedef struct dsn_app_info
     //
     // cross layer shared information
     //
-    union
+    /*union
     {
         dsn_app_cross_layer_shared_info_type_1 type1;
-    } info;
+    } info;*/
 } dsn_app_info;
 # pragma pack(pop)
 

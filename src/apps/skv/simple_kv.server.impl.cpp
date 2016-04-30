@@ -52,7 +52,7 @@ namespace dsn {
                 : _lock(true)
             {
                 _test_file_learning = false;
-                _app_info = nullptr;
+                _checkpoint_version = 0;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -103,7 +103,7 @@ namespace dsn {
             
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _app_info = dsn_get_app_info_ptr(gpid());
+                _data_dir = dsn_get_current_app_data_dir(gpid());
 
                 {
                     zauto_lock l(_lock);
@@ -212,16 +212,16 @@ namespace dsn {
                 set_last_durable_decree(version);
             }
 
-            ::dsn::error_code simple_kv_service_impl::checkpoint()
+            ::dsn::error_code simple_kv_service_impl::checkpoint(int64_t version)
             {
                 char name[256];
                 sprintf(name, "%s/checkpoint.%" PRId64, data_dir(),
-                    last_committed_decree()
+                    version
                     );
 
                 zauto_lock l(_lock);
 
-                if (last_committed_decree() == last_durable_decree())
+                if (version == last_durable_decree())
                 {
                     dassert(utils::filesystem::file_exists(name), 
                         "checkpoint file %s is missing!",
@@ -257,7 +257,7 @@ namespace dsn {
                 os.close();
 
                 // TODO: gc checkpoints
-                set_last_durable_decree(last_committed_decree());
+                set_last_durable_decree(version);
                 return ERR_OK;
             }
 
