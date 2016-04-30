@@ -190,7 +190,7 @@ namespace dsn
 
         int get_last_physical_error() const { return _physical_error; }
 
-        void set_physcial_error(int err) { _physical_error = err; }
+        void set_physical_error(int err) { _physical_error = err; }
 
     private:
         int _physical_error;

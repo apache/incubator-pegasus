@@ -1492,5 +1492,5 @@ DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, int64_t l
 extern DSN_API int dsn_layer1_app_get_physical_error(void* app_context)
 {
     auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.physical_error_get(app_context);
+    return app->role->layer2_apps_type_1.physical_error_get(app->app_context);
 }
