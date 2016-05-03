@@ -54,7 +54,7 @@ namespace dsn
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
-            dassert(0 == _message_count.load(), "sending queue is not cleared yet");
+            dassert(0 == _message_count, "sending queue is not cleared yet");
         }
     }
 
@@ -153,8 +153,7 @@ namespace dsn
                     break;
 
                 msg->remove();
-
-                _message_count.fetch_sub(1, std::memory_order_relaxed);
+                --_message_count;
             }
                         
             auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
@@ -205,7 +204,7 @@ namespace dsn
         }
         
         // added in send_message
-        _message_count.fetch_sub((int)_sending_msgs.size(), std::memory_order_relaxed);
+        _message_count -= (int)_sending_msgs.size();
         return _sending_msgs.size() > 0;
     }
     
@@ -262,7 +261,7 @@ namespace dsn
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg->dl.insert_before(&_messages);
-            _message_count.fetch_add(1, std::memory_order_relaxed); // -- in unlink_message
+            ++_message_count;
 
             if (SS_CONNECTED == _connect_state && !_is_sending_next)
             {
@@ -361,8 +360,8 @@ namespace dsn
         _parser(std::move(parser)),
         _is_client(is_client),
         _matcher(_net.engine()->matcher()),
-        _message_count(0),
         _is_sending_next(false),
+        _message_count(0),
         _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
         _message_sent(0),
         _delay_server_receive_ms(0)
