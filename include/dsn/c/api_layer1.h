@@ -1059,8 +1059,10 @@ extern DSN_API dsn_handle_t dsn_rwlock_nr_create();
 extern DSN_API void         dsn_rwlock_nr_destroy(dsn_handle_t l);
 extern DSN_API void         dsn_rwlock_nr_lock_read(dsn_handle_t l);
 extern DSN_API void         dsn_rwlock_nr_unlock_read(dsn_handle_t l);
+extern DSN_API bool         dsn_rwlock_nr_try_lock_read(dsn_handle_t l);
 extern DSN_API void         dsn_rwlock_nr_lock_write(dsn_handle_t l);
 extern DSN_API void         dsn_rwlock_nr_unlock_write(dsn_handle_t l);
+extern DSN_API bool         dsn_rwlock_nr_try_lock_write(dsn_handle_t l);
 /*@}*/
 
 /*!
