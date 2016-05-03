@@ -366,16 +366,22 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
         out << std::setw(width) << std::left << "details" << " : " << std::endl;
         out << std::setw(10) << std::left << "pidx"
             << std::setw(10) << std::left << "ballot"
-            << std::setw(20) << std::left << "max_replica_count"
+            << std::setw(20) << std::left << "replica_count"
             << std::setw(25) << std::left << "primary"
             << std::setw(40) << std::left << "secondaries"
             << std::endl;
         for(int i = 0; i < partitions.size(); i++)
         {
             const dsn::replication::partition_configuration& p = partitions[i];
+            int replica_count = 0;
+            if (!p.primary.is_invalid())
+                replica_count++;
+            replica_count += p.secondaries.size();
+            std::stringstream oss;
+            oss << replica_count << "/" << p.max_replica_count;
             out << std::setw(10) << std::left << p.gpid.pidx
                 << std::setw(10) << std::left << p.ballot
-                << std::setw(20) << std::left << p.max_replica_count
+                << std::setw(20) << std::left << oss.str()
                 << std::setw(25) << std::left << p.primary.to_std_string()
                 << std::left<< p.secondaries.size() << ":[";
             for(int j = 0; j < p.secondaries.size(); j++)
