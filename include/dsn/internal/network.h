@@ -267,9 +267,9 @@ namespace dsn {
         };
 
         // TODO: expose the queue to be customizable
-        std::atomic<int>                   _message_count;
         ::dsn::utils::ex_lock_nr           _lock; // [
-        bool                               _is_sending_next;
+        volatile bool                      _is_sending_next;
+        int                                _message_count; // count of _messages
         dlink                              _messages;        
         volatile session_state             _connect_state;
         uint64_t                           _message_sent;
