@@ -88,7 +88,7 @@ private:
 
 private:
     dsn::rpc_address _meta_servers;
-    std::vector<dsn::rpc_address> _meta_server_vector;
+    int _meta_servers_count;
 };
 
 }} //namespace

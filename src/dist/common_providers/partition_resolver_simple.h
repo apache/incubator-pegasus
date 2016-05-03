@@ -117,8 +117,8 @@ namespace dsn
             void on_timeout(request_context_ptr&& rc);
 
             // with meta server
-            dsn::task_ptr query_partition_config(int partition_index);
-            void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index);
+            dsn::task_ptr query_config(int partition_index);
+            void query_config_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index);
         };
 #pragma pack(pop)
     }
