@@ -107,9 +107,11 @@ public:
 
     virtual void lock_read() = 0;
     virtual void unlock_read() = 0;
+    virtual bool try_lock_read() = 0;
 
     virtual void lock_write() = 0;
     virtual void unlock_write() = 0;
+    virtual bool try_lock_write() = 0;
 
     rwlock_nr_provider* get_inner_provider() const { return _inner_provider; }
 

@@ -76,9 +76,11 @@ public:
 
     void lock_read() { dsn_rwlock_nr_lock_read(_h);  }
     void unlock_read() { dsn_rwlock_nr_unlock_read(_h); }
+    bool try_lock_read() { return dsn_rwlock_nr_try_lock_read(_h); }
 
     void lock_write() { dsn_rwlock_nr_lock_write(_h); }
     void unlock_write() { dsn_rwlock_nr_unlock_write(_h); }
+    bool try_lock_write() { return dsn_rwlock_nr_try_lock_write(_h); }
 
 private:
     dsn_handle_t _h;
