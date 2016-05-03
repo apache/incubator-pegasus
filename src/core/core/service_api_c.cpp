@@ -552,6 +552,13 @@ DSN_API void dsn_rwlock_nr_unlock_read(dsn_handle_t l)
     ((::dsn::rwlock_nr_provider*)(l))->unlock_read();
 }
 
+DSN_API bool dsn_rwlock_nr_try_lock_read(dsn_handle_t l)
+{
+    auto r = ((::dsn::rwlock_nr_provider*)(l))->try_lock_read();
+    if (r) ::dsn::lock_checker::zlock_shared_count++;
+    return r;
+}
+
 DSN_API void dsn_rwlock_nr_lock_write(dsn_handle_t l)
 {
     ((::dsn::rwlock_nr_provider*)(l))->lock_write();
@@ -564,6 +571,12 @@ DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l)
     ((::dsn::rwlock_nr_provider*)(l))->unlock_write();
 }
 
+DSN_API bool dsn_rwlock_nr_try_lock_write(dsn_handle_t l)
+{
+    auto r = ((::dsn::rwlock_nr_provider*)(l))->try_lock_write();
+    if (r) ::dsn::lock_checker::zlock_exclusive_count++;
+    return r;
+}
 
 DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {

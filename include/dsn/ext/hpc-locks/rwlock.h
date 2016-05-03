@@ -68,6 +68,33 @@ public:
         }
     }
 
+    bool tryLockReader()
+    {
+        Status oldStatus = m_status.load(std::memory_order_relaxed);
+        Status newStatus;
+
+        newStatus = oldStatus;
+        if (oldStatus.writers > 0)
+        {
+            return false;
+        }
+        else
+        {
+            newStatus.readers++;
+        }
+
+        if (m_status.compare_exchange_weak(oldStatus, newStatus,
+            std::memory_order_acquire, std::memory_order_relaxed))
+        {
+            return true;
+        }
+
+        else
+        {
+            return false;
+        }
+    }
+
     void lockWriter()
     {
         Status oldStatus = m_status.fetch_add(Status().writers.one(), std::memory_order_acquire);
@@ -106,6 +133,33 @@ public:
         else if (oldStatus.writers > 1)
         {
             m_writeSema.signal();
+        }
+    }
+
+    bool tryLockWriter()
+    {
+        Status oldStatus = m_status.load(std::memory_order_relaxed);
+        Status newStatus;
+
+        newStatus = oldStatus;
+        if (oldStatus.readers > 0 || oldStatus.writers > 0)
+        {
+            return false;
+        }
+        else
+        {
+            newStatus.writers++;
+        }
+
+        if (m_status.compare_exchange_weak(oldStatus, newStatus,
+            std::memory_order_acquire, std::memory_order_relaxed))
+        {
+            return true;
+        }
+
+        else
+        {
+            return false;
         }
     }
 };

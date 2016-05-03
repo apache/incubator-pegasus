@@ -1,0 +1,8 @@
+this folder should contains:
+
+dsn.core.dll
+dsn.meta_server.dll
+dsn.layer2.stateless.dll
+zookeeper_mt.dll
+dsn.svchost.exe
+dsn.apps.MemCached.dll (and other apps)
