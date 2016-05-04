@@ -27,17 +27,40 @@ public:
         perf_test_suite s;
         std::vector<perf_test_suite> suits;
 
-<?php foreach ($svc->functions as $f) { ?>
-        s.name = "<?=$svc->name?>.<?=$f->name?>";
-        s.config_section = "task.<?=$f->get_rpc_code()?>";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_<?=$f->name?>(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
+        const char* sections[10240];
+        int scount, used_count = sizeof(sections) / sizeof(const char*);
+        scount = dsn_config_get_all_sections(sections, &used_count);
+        dassert(scount == used_count, "too many sections (>10240) defined in config files");
 
-<?php } ?>
+        for (int i = 0; i < used_count; i++)
+        {
+            if (strstr(sections[i], "simple_kv.perf_test.case.") == sections[i])
+            {
+                s.name = std::string(sections[i]);
+                s.config_section = std::string(sections[i]);
+                s.send_one = [this](int payload_bytes, int key_space_size, const std::vector<double>& ratios){this->send_one(payload_bytes, key_space_size, ratios); };
+                s.cases.clear();
+                load_suite_config(s, <?=count($svc->functions)?>);
+                suits.push_back(s);
+            }
+        }
+        
         start(suits);
     }
+    
+    void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios)
+    {
+        auto prob = (double)dsn_random32(0, 1000) / 1000.0;
+        if (0) {}
+<?php $i = 0; foreach ($svc->functions as $f) {?>
+        else if (prob <= ratios[<?=$i?>])
+        {
+            send_one_<?=$f->name?>(payload_bytes, key_space_size);
+        }
+<?php $i++; }?>
+        else { /* nothing to do */ }
+    }
+    
 <?php foreach ($svc->functions as $f) { ?>
 
     void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)

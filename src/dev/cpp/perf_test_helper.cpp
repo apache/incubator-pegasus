@@ -77,12 +77,21 @@ namespace dsn {
             }
         }
 
-        void perf_client_helper::load_suite_config(perf_test_suite& s)
+        void perf_client_helper::load_suite_config(perf_test_suite& s, int max_request_kind_count_for_hybrid_test)
         {
             perf_test_opts opt;
             if (!read_config(s.config_section, opt, &_default_opts))
             {
                 dassert(false, "read configuration failed for section [%s]", s.config_section);
+            }
+
+            double ratio_sum = 0.0;
+            if (opt.perf_test_hybrid_request_ratio.size() == 0)
+                opt.perf_test_hybrid_request_ratio.push_back(1);
+
+            for (auto r : opt.perf_test_hybrid_request_ratio)
+            {
+                ratio_sum += (double)r;
             }
 
             s.cases.clear();
@@ -99,7 +108,16 @@ namespace dsn {
                         c.payload_bytes = bytes;
                         c.key_space_size = opt.perf_test_key_space_size;
                         c.timeout_ms = opt.perf_test_timeouts_ms[i];
-                        c.concurrency = cc;
+                        c.concurrency = cc;                        
+                        c.ratios.resize(max_request_kind_count_for_hybrid_test, 0.0);
+                        
+                        double ratio = 0.0;
+                        for (size_t i = 0; i < std::min(opt.perf_test_hybrid_request_ratio.size(), c.ratios.size()); i++)
+                        {
+                            ratio += (double)(opt.perf_test_hybrid_request_ratio[i]) / ratio_sum;
+                            c.ratios[i] = ratio;
+                        }
+
                         s.cases.push_back(c);
                     }
                 }
@@ -169,15 +187,15 @@ namespace dsn {
             if (_current_case->concurrency == 0)
             {
                 // exponentially increase
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
+                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
+                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
             }
             else
             {
                 // maintain fixed concurrent number
                 while (!_quiting_current_case && _live_rpc_count <= _current_case->concurrency)
                 {
-                    _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size);
+                    _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
                 }
             }
         }
@@ -306,7 +324,7 @@ namespace dsn {
             dwarn(ss.str().c_str());
 
             // start
-            suit.send_one(_current_case->payload_bytes, _current_case->key_space_size);
+            suit.send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
         }
     }
 }

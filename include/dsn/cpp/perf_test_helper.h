@@ -61,6 +61,7 @@ namespace dsn {
             std::vector<int> perf_test_concurrency;
             std::vector<int> perf_test_payload_bytes;
             std::vector<int> perf_test_timeouts_ms;
+            std::vector<int> perf_test_hybrid_request_ratio; // e.g., 1,1,1
         };
 
         CONFIG_BEGIN(perf_test_opts)
@@ -69,6 +70,7 @@ namespace dsn {
             CONFIG_FLD_INT_LIST(perf_test_concurrency, "concurrency list: 0 for expotentially growing concurrenty, >0 for fixed")
             CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "size list: byte size of each rpc request test")
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout list: timeout (ms) for each rpc call")
+            CONFIG_FLD_INT_LIST(perf_test_hybrid_request_ratio, "hybrid request ratio, e.g., 1,2,1 - the numbers are ordered by the task code appeared in task code registration")
         CONFIG_END
         
         class perf_client_helper
@@ -84,6 +86,7 @@ namespace dsn {
                 int  key_space_size;
                 int  concurrency;
                 int  timeout_ms;
+                std::vector<double> ratios;
 
                 // statistics 
                 std::atomic<int> timeout_rounds;
@@ -104,6 +107,7 @@ namespace dsn {
                     key_space_size = r.key_space_size;
                     timeout_ms = r.timeout_ms;
                     concurrency = r.concurrency;
+                    ratios = r.ratios;
 
                     timeout_rounds.store(r.timeout_rounds.load());
                     error_rounds.store(r.error_rounds.load());
@@ -135,11 +139,11 @@ namespace dsn {
             {
                 const char* name;
                 const char* config_section;
-                std::function<void(int, int)> send_one;
+                std::function<void(int, int, const std::vector<double>&)> send_one;
                 std::vector<perf_test_case> cases;
             };
 
-            void load_suite_config(perf_test_suite& s);
+            void load_suite_config(perf_test_suite& s, int max_request_kind_count_for_hybrid_test);
 
             void start(const std::vector<perf_test_suite>& suits);
 

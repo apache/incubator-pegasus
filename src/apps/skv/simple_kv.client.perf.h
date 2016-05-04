@@ -51,29 +51,46 @@ public:
         perf_test_suite s;
         std::vector<perf_test_suite> suits;
 
-        s.name = "simple_kv.write";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_write(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-        
-        s.name = "simple_kv.append";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_append(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
+        const char* sections[10240];
+        int scount, used_count = sizeof(sections) / sizeof(const char*);
+        scount = dsn_config_get_all_sections(sections, &used_count);
+        dassert(scount == used_count, "too many sections (>10240) defined in config files");
 
-        s.name = "simple_kv.read";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-        s.send_one = [this](int payload_bytes, int key_space_size) {this->send_one_read(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
+        for (int i = 0; i < used_count; i++)
+        {
+            if (strstr(sections[i], "simple_kv.perf_test.case.") == sections[i])
+            {
+                s.name = sections[i];
+                s.config_section = sections[i];
+                s.send_one = [this](int payload_bytes, int key_space_size, const std::vector<double>& ratios){this->send_one(payload_bytes, key_space_size, ratios); };
+                s.cases.clear();
+                load_suite_config(s, 3);
+                suits.push_back(s);
+            }
+        }
         
         start(suits);
-    }                
+    }
+    
+    void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios)
+    {
+        auto prob = (double)dsn_random32(0, 1000) / 1000.0;
+        if (0) {}
+        else if (prob <= ratios[0])
+        {
+            send_one_read(payload_bytes, key_space_size);
+        }
+        else if (prob <= ratios[1])
+        {
+            send_one_write(payload_bytes, key_space_size);
+        }
+        else if (prob <= ratios[2])
+        {
+            send_one_append(payload_bytes, key_space_size);
+        }
+        else { /* nothing to do */ }
+    }
+    
 
     void send_one_read(int payload_bytes, int key_space_size)
     {
