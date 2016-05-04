@@ -16,9 +16,10 @@ if "%1" EQU "" GOTO usage
     GOTO:EOF
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock server_address(eg.srgsi-11) client.perf_address(eg.srgsi-12)"
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail server_address(eg.srgsi-11) daemon1_address(eg.srgsi-12) daemon2_address(eg.srgsi-13) daemon3_address(eg.srgsi-14) client.perf_address(eg.srgsi-15)"
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|rrdb|redis server_address(eg.srgsi-11) daemon1_address(eg.srgsi-12) daemon2_address(eg.srgsi-13) daemon3_address(eg.srgsi-14) client.perf_address(eg.srgsi-15)"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd <test_type> <app> <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock|kyotocabinet <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|rrdb|redis <cluster>"
     GOTO:EOF
 
 :layer1
