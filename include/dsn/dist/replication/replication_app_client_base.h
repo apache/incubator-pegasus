@@ -118,7 +118,6 @@ namespace dsn { namespace replication {
 
         struct request_context : public ref_counter
         {
-            int                   query_config_rpc_fail_count;
             int                   partition_index;
             uint64_t              key_hash;
             ::dsn::task_ptr       callback_task;
@@ -174,7 +173,6 @@ namespace dsn { namespace replication {
     private:
         std::string                             _app_name;
         dsn::rpc_address                        _meta_servers;
-        int                                     _meta_servers_count;
 
         mutable dsn::service::zrwlock_nr       _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;

@@ -75,7 +75,6 @@ replication_app_client_base::replication_app_client_base(
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     for (auto& m : meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
-    _meta_servers_count = meta_servers.size();
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -123,7 +122,6 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = false;
-    rc->query_config_rpc_fail_count = 0;
     rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
@@ -158,7 +156,6 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = true;
-    rc->query_config_rpc_fail_count = 0;
     rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
@@ -246,7 +243,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
             }
         }
 
-        if (from_meta_ack && request->query_config_rpc_fail_count >= _meta_servers_count)
+        if (from_meta_ack)
         {
             // delay 1 second for further config query
             tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
@@ -283,7 +280,7 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
     // target node not known
     else
     {
-        if (from_meta_ack && request->query_config_rpc_fail_count >= _meta_servers_count)
+        if (from_meta_ack)
         {
             // delay 1 second for further config query
             tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
@@ -479,11 +476,6 @@ Handle_Failure:
         return;
     }
 
-    if (clear_config_cache)
-    {
-        // cache cleared, start to query config immediately
-        call(std::move(rc));
-    }
     else
     {
         // if no more than 1 second left, unnecessary to retry
@@ -518,8 +510,6 @@ void replication_app_client_base::query_config_reply(error_code err, dsn_message
 
     if (err == ERR_OK)
     {
-        context->query_config_rpc_fail_count = 0;
-
         configuration_query_by_index_response resp;
         ::unmarshall(response, resp);
         if (resp.err == ERR_OK)
@@ -583,8 +573,6 @@ void replication_app_client_base::query_config_reply(error_code err, dsn_message
     }
     else
     {
-        context->query_config_rpc_fail_count++;
-
         dwarn("%s.client: query config reply err = %s, partition index = %d",
             _app_name.c_str(),
             err.to_string(),
