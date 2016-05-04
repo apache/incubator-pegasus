@@ -142,7 +142,7 @@ public:
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _deploy_svc_client = new deploy_svc_perf_test_client(_server);
-        _deploy_svc_client->start_test();
+        _deploy_svc_client->start_test("deploy_svc.perf-test.case", 0);
         return ::dsn::ERR_OK;
     }
 

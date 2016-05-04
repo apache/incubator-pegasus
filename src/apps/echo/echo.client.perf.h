@@ -48,19 +48,9 @@ public:
     {
     }
 
-    void start_test()
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-        s.name = "echo.perf-test";
-        s.config_section = "echo.perf-test.case.0";
-        s.send_one = [this](int payload_bytes, int key_space_size, const std::vector<double>& ratios) {this->send_one_ping(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s, 1);
-        suits.push_back(s);
-
-        start(suits);
+        return send_one_ping(payload_bytes, key_space_size);
     }
 
     void send_one_ping(int payload_bytes, int key_space_size)

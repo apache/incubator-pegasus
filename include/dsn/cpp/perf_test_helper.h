@@ -75,8 +75,18 @@ namespace dsn {
         
         class perf_client_helper
         {
+        public:
+            void start_test(const char* prefix, int max_request_kind_count_in_hybrid);
+
         protected:
             perf_client_helper();
+
+            void* prepare_send_one();
+            void end_send_one(void* context, error_code err);
+
+            virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) = 0;
+            
+        private:
 
             struct perf_test_case
             {
@@ -139,7 +149,6 @@ namespace dsn {
             {
                 const char* name;
                 const char* config_section;
-                std::function<void(int, int, const std::vector<double>&)> send_one;
                 std::vector<perf_test_case> cases;
             };
 
@@ -147,10 +156,6 @@ namespace dsn {
 
             void start(const std::vector<perf_test_suite>& suits);
 
-            void* prepare_send_one();
-
-            void end_send_one(void* context, error_code err);
-            
         private:
             void finalize_case();
 

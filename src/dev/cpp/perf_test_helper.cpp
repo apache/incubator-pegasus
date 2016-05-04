@@ -77,6 +77,31 @@ namespace dsn {
             }
         }
 
+        void perf_client_helper::start_test(const char* prefix, int max_request_kind_count_in_hybrid)
+        {
+            perf_test_suite s;
+            std::vector<perf_test_suite> suits;
+
+            const char* sections[10240];
+            int scount, used_count = sizeof(sections) / sizeof(const char*);
+            scount = dsn_config_get_all_sections(sections, &used_count);
+            dassert(scount == used_count, "too many sections (>10240) defined in config files");
+
+            for (int i = 0; i < used_count; i++)
+            {
+                if (strstr(sections[i], prefix) == sections[i])
+                {
+                    s.name = sections[i];
+                    s.config_section = sections[i];
+                    s.cases.clear();
+                    load_suite_config(s, max_request_kind_count_in_hybrid);
+                    suits.push_back(s);
+                }
+            }
+
+            start(suits);
+        }
+
         void perf_client_helper::load_suite_config(perf_test_suite& s, int max_request_kind_count_for_hybrid_test)
         {
             perf_test_opts opt;
@@ -187,15 +212,15 @@ namespace dsn {
             if (_current_case->concurrency == 0)
             {
                 // exponentially increase
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
-                _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
+                send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
+                send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
             }
             else
             {
                 // maintain fixed concurrent number
                 while (!_quiting_current_case && _live_rpc_count <= _current_case->concurrency)
                 {
-                    _suits[_current_suit_index].send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
+                    send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
                 }
             }
         }
@@ -324,7 +349,7 @@ namespace dsn {
             dwarn(ss.str().c_str());
 
             // start
-            suit.send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
+            send_one(_current_case->payload_bytes, _current_case->key_space_size, _current_case->ratios);
         }
     }
 }

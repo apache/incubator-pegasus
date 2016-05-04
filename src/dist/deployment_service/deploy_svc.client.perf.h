@@ -14,13 +14,9 @@ public:
     {
     }
 
-    void start_test()
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-        
-        start(suits);
+        return;
     }
 
     void send_one_deploy(int payload_bytes, int key_space_size)
