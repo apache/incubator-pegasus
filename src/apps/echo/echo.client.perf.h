@@ -53,11 +53,11 @@ public:
         perf_test_suite s;
         std::vector<perf_test_suite> suits;
 
-        s.name = "echo.ping";
-        s.config_section = "task.RPC_ECHO_ECHO_PING";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_ping(payload_bytes, key_space_size); };
+        s.name = "echo.perf-test";
+        s.config_section = "echo.perf-test.case.0";
+        s.send_one = [this](int payload_bytes, int key_space_size, const std::vector<double>& ratios) {this->send_one_ping(payload_bytes, key_space_size); };
         s.cases.clear();
-        load_suite_config(s);
+        load_suite_config(s, 1);
         suits.push_back(s);
 
         start(suits);
