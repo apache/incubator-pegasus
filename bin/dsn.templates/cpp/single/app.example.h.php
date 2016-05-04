@@ -138,7 +138,7 @@ public:
         _server = ::dsn::url_host_address(argv[1]);
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
-        _<?=$svc->name?>_client->start_test();
+        _<?=$svc->name?>_client->start_test("<?=$svc->name?>.perf-test.case.", <?=count($svc->functions)?>);
         return ::dsn::ERR_OK;
     }
 

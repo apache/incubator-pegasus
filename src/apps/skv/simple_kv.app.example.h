@@ -142,7 +142,7 @@ public:
         service_addr.assign_uri(dsn_uri_build(argv[1]));
 
         _simple_kv_client.reset(new simple_kv_perf_test_client(service_addr));
-        _simple_kv_client->start_test();
+        _simple_kv_client->start_test("simple_kv.perf-test.case", 3);
         return ::dsn::ERR_OK;
     }
 

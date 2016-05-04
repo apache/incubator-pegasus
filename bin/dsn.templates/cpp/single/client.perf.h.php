@@ -21,23 +21,20 @@ public:
         : <?=$svc->name?>_client(server)
     {
     }
-
-    void start_test()
+    
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-<?php foreach ($svc->functions as $f) { ?>
-        s.name = "<?=$svc->name?>.<?=$f->name?>";
-        s.config_section = "task.<?=$f->get_rpc_code()?>";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_<?=$f->name?>(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-<?php } ?>
-        start(suits);
+        auto prob = (double)dsn_random32(0, 1000) / 1000.0;
+        if (0) {}
+<?php $i = 0; foreach ($svc->functions as $f) {?>
+        else if (prob <= ratios[<?=$i?>])
+        {
+            send_one_<?=$f->name?>(payload_bytes, key_space_size);
+        }
+<?php $i++; }?>
+        else { /* nothing to do */ }
     }
+    
 <?php foreach ($svc->functions as $f) { ?>
 
     void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
