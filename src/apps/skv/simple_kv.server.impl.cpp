@@ -209,6 +209,7 @@ namespace dsn {
                     _store[key] = value;
                 }
 
+                is.close();
                 set_last_durable_decree(version);
             }
 
