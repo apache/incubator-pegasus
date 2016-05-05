@@ -171,6 +171,8 @@ namespace rDSN.Tron.LanguageProvider
             Service svc,
             Dictionary<Type, string> reWrittenTypes
             );
+        
+        void GenerateClientDeclaration(CodeBuilder builder, MemberExpression exp, Service svc);
     }
 
     public class SpecProviderManager : Singleton<SpecProviderManager>

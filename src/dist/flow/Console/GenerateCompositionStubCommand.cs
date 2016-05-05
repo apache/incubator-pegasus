@@ -72,22 +72,22 @@ namespace rDSN.Tron.ControlPanel
         public override bool Execute(List<string> args)
         {
             SystemHelper.CreateOrCleanDirectory("tmp");
-            var compiler = LanguageHelper.GetCompilerPath(ServiceSpecType.bond_3_0);
-            var bondc_dir = Path.GetDirectoryName(compiler);
+            var compiler = LanguageHelper.GetCompilerPath(ServiceSpecType.Bond30);
+            var bondcDir = Path.GetDirectoryName(compiler);
             string[] templates = { "bond_composition_stub.tt" };
-            var arguments = args[0] + " /c#" +
-                templates.VerboseCombine(" ", t => " /T:" + Path.Combine(bondc_dir, t))
+            var arguments = string.Join(" ", args.ToArray()) + " /c#" +
+                templates.VerboseCombine(" ", t => " /T:" + Path.Combine(bondcDir, t))
                 + " /O:tmp";
-
+            Console.Write(arguments);
             var err = SystemHelper.RunProcess(compiler, arguments);
             Trace.Assert(err == 0, "bondc code generation failed");
 
             CSharpCompiler.ToDiskAssembly(
                 Directory.GetFiles("tmp", "*_composition_stub.cs", SearchOption.AllDirectories).ToArray(),
-                new[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll" },
-                args.ToArray(),
-                "compo.dll"
-                );
+                new[] { "rDSN.Tron.Utility.dll", "rDSN.Tron.Contract.dll", "Microsoft.Bond.dll", "Microsoft.Bond.Interfaces.dll", "Microsoft.Bond.Rpc.dll", "Microsoft.Bond.TypeProvider.dll" },
+                args.ToArray(),                                            
+                "compo.dll"                                              
+                );                                                        
             Console.ReadLine();
             return true;
         }
