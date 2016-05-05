@@ -112,7 +112,11 @@ namespace dsn { namespace replication {
 
         ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
 
+        int get_app_id() const { return _app_id; }
+
         int get_partition_count() const { return _app_partition_count; }
+
+        virtual int get_partition_index(int partition_count, uint64_t key_hash);
 
     public:
 
@@ -135,9 +139,6 @@ namespace dsn { namespace replication {
             // ]
         };
         typedef ::dsn::ref_ptr<request_context> request_context_ptr;
-
-    protected:
-        virtual int get_partition_index(int partition_count, uint64_t key_hash);
         
     private:
         struct partition_context

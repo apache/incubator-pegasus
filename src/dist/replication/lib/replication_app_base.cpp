@@ -126,8 +126,11 @@ replication_app_base::replication_app_base(replica* replica)
     _dir_learn = replica->dir() + "/learn";
     _is_delta_state_learning_supported = false;
     _batch_state = BS_NOT_BATCH;
+    _batch_ballot = -1;
+    _batch_decree = -1;
 
     _replica = replica;
+    _gpid = replica->get_gpid();
     _last_committed_decree = _last_durable_decree = 0;
 
     if (!dsn::utils::filesystem::create_directory(_dir_data))
@@ -147,6 +150,8 @@ void replication_app_base::reset_states()
 {
     _physical_error = 0;
     _batch_state = BS_NOT_BATCH;
+    _batch_ballot = -1;
+    _batch_decree = -1;
     _last_committed_decree = _last_durable_decree = 0;
 }
 
@@ -204,6 +209,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
 
     int count = static_cast<int>(mu->client_requests.size());
     _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    _batch_ballot = mu->data.header.ballot;
+    _batch_decree = mu->data.header.decree;
     for (int i = 0; i < count; i++)
     {
         if (_batch_state == BS_BATCH && i + 1 == count)
@@ -229,17 +236,21 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         else
         {
             // empty mutation write
+            dwarn("%s: mutation %s dispatch rpc call: %s",
+                  _replica->name(), mu->name(), update.code.to_string());
         }
 
         if (_physical_error != 0)
         {
-            derror("%s: physical error %d occurs in replication local app %s",
-                   _replica->name(), _physical_error, data_dir().c_str());
+            derror("%s: mutation %s committed into app failed: physical error %d occurs in replication local app %s",
+                   _replica->name(), mu->name(), _physical_error, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
         }
     }
 
     ++_last_committed_decree;
+
+    ddebug("%s: mutation %s committed into app", _replica->name(), mu->name());
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
