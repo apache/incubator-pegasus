@@ -2,6 +2,7 @@ SET exp_dir=%~dp0
 SET bin_root=%~dp0bin
 SET test_app=%1
 SET cluster=%2
+SET ifauto=%3
 
 if "%1" EQU "simple_kv" (
     SET test_app_upper=simple_kv
@@ -16,11 +17,6 @@ if "%1" EQU "leveldb" (
 if "%1" EQU "xlock" (
     SET test_app_upper=XLock
     SET dll_name=dsn.apps.XLock.dll
-)
-
-if "%1" EQU "rrdb" (
-    SET test_app_upper=rrdb
-    SET dll_name=dsn.apps.rrdb.dll
 )
 
 if "%1" EQU "redis" (
@@ -145,35 +141,64 @@ copy /Y %bin_root%\*.* %app_dir%\client.perf
     ECHO goto loop
 )  > %app_dir%\client.perf\start.cmd
 
+CALL %bin_dir%\echoc.exe 3 *****TEST [LAYER2.STATEFUL] [%test_app_upper%] BEGIN***** 
+
 CALL %bin_dir%"\deploy.cmd" stop %app_dir% d:\v-chlou
 CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% d:\v-chlou
-ECHO Wait for stop and cleanup finish, please continue after that
-PAUSE
+CALL %bin_dir%\echoc.exe 3 *****STOPING AND CLEANUPING...***** 
+
+if "%ifauto%" EQU "auto" (
+    ping -n 16 127.0.0.1
+) else (
+    CALL %bin_dir%\echoc.exe 3 *****PRESS ENTER AFTER DONE***** 
+    PAUSE
+)
+
 CALL %bin_dir%"\deploy.cmd" deploy %app_dir% d:\v-chlou
-ECHO Wait for deployment finish, please continue after that
-PAUSE
+CALL %bin_dir%\echoc.exe 3 *****DEPOLYING...***** 
+
+if "%ifauto%" EQU "auto" (
+    ping -n 16 127.0.0.1
+) else (
+    CALL %bin_dir%\echoc.exe 3 *****PRESS ENTER AFTER DONE***** 
+    PAUSE
+)
 
 CALL %bin_dir%"\deploy.cmd" start %app_dir% d:\v-chlou
-ECHO Starting all nodes...
- 
+CALL %bin_dir%\echoc.exe 3 *****STARTING...***** 
+
+set /a counter=0
+CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING LOG IN ROUND***** 
 :loop
-    if exist \\%clientperf_address%\D$\v-chlou\client\data\client.perf.test\*.txt (
-        xcopy  /F /Y /S \\%clientperf_address%\D$\v-chlou\client\data\client.perf.test\*.* %log_dir%
+    ping -n 16 127.0.0.1
+    if exist \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.txt (
+        xcopy  /F /Y /S \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.* %exp_dir%log\layer2\%test_app_upper%\
+        CALL %bin_dir%\echoc.exe 2 *****TEST [LAYER2.STATEFUL] [%test_app_upper%] SUCCESS***** 
+        CALL %bin_dir%\echoc.exe 3 *****LOG AND CONFIG SAVDED IN %exp_dir%log\layer2\%test_app_upper%\***** 
         CALL %bin_dir%"\deploy.cmd" stop %app_dir% d:\v-chlou
+        CALL %bin_dir%\echoc.exe 3 *****STOPING AND CLEANUPING...***** 
         ::redis will invoke another process called redis-server.exe, so we need to call another kill.cmd to clean that process
         if %test_app% EQU "redis" (
+            CALL %bin_dir%\echoc.exe 3 *****KILLING REDIS-SERVER.exe...***** 
             TASKKILL /F /S %replica1_address% /IM redis-server.exe
             TASKKILL /F /S %replica2_address% /IM redis-server.exe
             TASKKILL /F /S %replica3_address% /IM redis-server.exe
 
         )
         ::CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% d:\v-chlou
-        goto:EOF
+        goto end
+    )
+    set /a counter=%counter%+1
+    CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING FOR TIME %counter%***** 
+
+    if "%counter%" == "50" (
+        CALL %bin_dir%\echoc.exe 2 *****TEST [LAYER2.STATEFUL] [%test_app_upper%] FAIL***** 
+        GOTO end
     )
 goto loop
 
-
-
+:end
+    CALL %bin_dir%\echoc.exe 3 *****TEST [LAYER2.STATEFUL] [%test_app_upper%] END*****
 
 
 

@@ -3,6 +3,7 @@ SET TOP_DIR="%~dp0\..\..\.."
 SET exp_dir=%~dp0
 SET bin_dir=%TOP_DIR%"\scripts\windows"
 SET old_dsn_root=%DSN_ROOT%
+
 if "%1" EQU "" GOTO usage
 
 :main
@@ -19,7 +20,8 @@ if "%1" EQU "" GOTO usage
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd <test_type> <app> <cluster>"
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock|kyotocabinet <cluster>"
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail <cluster>"
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|rrdb|redis <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|redis <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd all <cluster>"
     GOTO:EOF
 
 :layer1
@@ -28,5 +30,21 @@ if "%1" EQU "" GOTO usage
     CALL %exp_dir%%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
 
+:all
+    CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] BEGIN***** 
+
+    ::for %%x in (leveldb memcached thumbnail xlock kyotocabinet) do (
+    ::    CALL :layer1 layer1 %%x %2 auto
+    ::)
+    ::for %%x in (memcached thumbnail) do (
+    ::    CALL :layer2.stateless layer2.stateless %%x %2 auto
+    ::)
+    for %%x in (leveldb xlock redis) do (
+        CALL :layer2.stateful layer2.stateful %%x %2 auto
+    )
+
+    CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] END***** 
+
+    GOTO all
 :exit
 
