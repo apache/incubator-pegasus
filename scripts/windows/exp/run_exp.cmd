@@ -6,6 +6,14 @@ SET old_dsn_root=%DSN_ROOT%
 
 if "%1" EQU "" GOTO usage
 
+
+IF NOT EXIST "%exp_dir%\setting.ini" (
+    CALL %bin_dir%\echoc.exe 4  %exp_dir%\setting.ini not exist, please check
+    GOTO:EOF
+)
+
+for /f "delims=" %%x in (setting.ini) do (set "%%x")
+
 :main
     CALL :%1 %1 %2 %3 %4 %5 %6 %7 %8 %9
 
@@ -33,12 +41,12 @@ if "%1" EQU "" GOTO usage
 :all
     CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] BEGIN***** 
 
-    ::for %%x in (leveldb memcached thumbnail xlock kyotocabinet) do (
-    ::    CALL :layer1 layer1 %%x %2 auto
-    ::)
-    ::for %%x in (memcached thumbnail) do (
-    ::    CALL :layer2.stateless layer2.stateless %%x %2 auto
-    ::)
+    for %%x in (leveldb memcached thumbnail xlock kyotocabinet) do (
+        CALL :layer1 layer1 %%x %2 auto
+    )
+    for %%x in (memcached thumbnail) do (
+        CALL :layer2.stateless layer2.stateless %%x %2 auto
+    )
     for %%x in (leveldb xlock redis) do (
         CALL :layer2.stateful layer2.stateful %%x %2 auto
     )

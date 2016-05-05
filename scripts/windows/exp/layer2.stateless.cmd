@@ -153,45 +153,45 @@ CALL %bin_dir%\7z.exe a -y %app_dir%\meta\packages\%test_app%.7z %app_dir%\%test
 
 CALL %bin_dir%\echoc.exe 3 *****TEST [LAYER2.STATELESS] [%test_app_upper%] BEGIN***** 
 
-CALL %bin_dir%"\deploy.cmd" stop %app_dir% d:\v-chlou
-CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% d:\v-chlou
+CALL %bin_dir%"\deploy.cmd" stop %app_dir% %local_path%
+CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% %local_path%
 CALL %bin_dir%\echoc.exe 3 *****STOPING AND CLEANUPING...***** 
 
 if "%ifauto%" EQU "auto" (
-    ping -n 16 127.0.0.1
+    ping -n %l2stateless_stop_and_cleanup_wait_duration% 127.0.0.1
 ) else (
     CALL %bin_dir%\echoc.exe 3 *****PRESS ENTER AFTER DONE***** 
     PAUSE
 )
-CALL %bin_dir%"\deploy.cmd" deploy %app_dir% d:\v-chlou
+CALL %bin_dir%"\deploy.cmd" deploy %app_dir% %local_path%
 CALL %bin_dir%\echoc.exe 3 *****DEPOLYING...***** 
 
 if "%ifauto%" EQU "auto" (
-    ping -n 16 127.0.0.1
+    ping -n %l2stateless_deploy_wait_duration% 127.0.0.1
 ) else (
     CALL %bin_dir%\echoc.exe 3 *****PRESS ENTER AFTER DONE***** 
     PAUSE
 )
-CALL %bin_dir%"\deploy.cmd" start %app_dir% d:\v-chlou
+CALL %bin_dir%"\deploy.cmd" start %app_dir% %local_path%
 CALL %bin_dir%\echoc.exe 3 *****STARTING...***** 
  
 set /a counter=0
 CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING LOG IN ROUND***** 
 :loop
-    ping -n 16 127.0.0.1
-    if exist \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.txt (
-        xcopy  /F /Y /S \\%clientperf_address%\D$\v-chlou\client\data\client.perf.%test_app%\*.* %exp_dir%log\layer2\%test_app_upper%\
+    ping -n %l2stateless_fetch_wait_duration% 127.0.0.1
+    if exist \\%clientperf_address%\%remote_path%\client\data\client.perf.%test_app%\*.txt (
+        xcopy  /F /Y /S \\%clientperf_address%\%remote_path%\client\data\client.perf.%test_app%\*.* %exp_dir%log\layer2\%test_app_upper%\
         CALL %bin_dir%\echoc.exe 2 *****TEST [LAYER2.STATELESS] [%test_app_upper%] SUCCESS***** 
         CALL %bin_dir%\echoc.exe 3 *****LOG AND CONFIG SAVDED IN %exp_dir%log\layer2\%test_app_upper%\***** 
-        CALL %bin_dir%"\deploy.cmd" stop %app_dir% d:\v-chlou
+        CALL %bin_dir%"\deploy.cmd" stop %app_dir% %local_path%
         CALL %bin_dir%\echoc.exe 3 *****STOPING AND CLEANUPING...***** 
-        ::CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% d:\v-chlou
+        ::CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% %local_path%
         goto end
     )
     set /a counter=%counter%+1
     CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING FOR TIME %counter%***** 
 
-    if "%counter%" == "50" (
+    if "%counter%" == "%l2stateless_try_fetch_log_times%" (
         CALL %bin_dir%\echoc.exe 2 *****TEST [LAYER2.STATELESS] [%test_app_upper%] FAIL***** 
         GOTO end
     )
