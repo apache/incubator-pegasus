@@ -75,7 +75,7 @@ namespace rDSN.Tron.Utility
 
         public static string GetCompilableTypeName(this string typeName)
         {
-            return typeName.Replace("::", ".");
+            return typeName.Replace("::", ".").Replace("+", ".");
         }
 
         private static void EchoLine(int indent, string line)

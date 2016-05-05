@@ -1,4 +1,4 @@
-/*
+﻿/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
@@ -93,9 +93,9 @@ namespace rDSN.Tron.LanguageProvider
         {
             switch (t)
             {
-                case ServiceSpecType.proto:
+                case ServiceSpecType.Proto:
                     return new ProtoGenerator();
-                case ServiceSpecType.thrift:
+                case ServiceSpecType.Thrift:
                     return new ThriftGenerator();
                 default:
                     return null;
@@ -208,9 +208,9 @@ namespace rDSN.Tron.LanguageProvider
                 {
                     var defaultValue = "";
                     var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
-                    if (fieldAttribute.defaultValue != null)
+                    if (fieldAttribute.DefaultValue != null)
                     {
-                        defaultValue = " = " + fieldAttribute.defaultValue;
+                        defaultValue = " = " + fieldAttribute.DefaultValue;
                     }
                     c.AppendLine(member.Name + defaultValue + ";");
                 }
@@ -254,9 +254,9 @@ namespace rDSN.Tron.LanguageProvider
                     var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute != null)
                     {
-                        lineNumber = fieldAttribute.index;
-                        modifier = fieldAttribute.modifier;// == "optional" ? "" : fieldAttribute.modifier;
-                        defaultValue = fieldAttribute.defaultValue;
+                        lineNumber = fieldAttribute.Index;
+                        modifier = fieldAttribute.Modifier;// == "optional" ? "" : fieldAttribute.modifier;
+                        defaultValue = fieldAttribute.DefaultValue;
                         if (defaultValue != null)
                         {
                             defaultValue = " [default = " + defaultValue + "];";
@@ -397,9 +397,9 @@ namespace rDSN.Tron.LanguageProvider
                 {
                     var defaultValue = "";
                     var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
-                    if (fieldAttribute.defaultValue != null)
+                    if (fieldAttribute.DefaultValue != null)
                     {
-                        defaultValue = " = " + fieldAttribute.defaultValue;
+                        defaultValue = " = " + fieldAttribute.DefaultValue;
                     }
                     c.AppendLine(member.Name + defaultValue + ";");
                 }
@@ -443,9 +443,9 @@ namespace rDSN.Tron.LanguageProvider
                     var fieldAttribute = member.GetCustomAttribute(typeof(FieldAttribute)) as FieldAttribute;
                     if (fieldAttribute != null)
                     {
-                        lineNumber = fieldAttribute.index;
-                        modifier = fieldAttribute.modifier;// == "optional" ? "" : fieldAttribute.modifier;
-                        defaultValue = fieldAttribute.defaultValue;
+                        lineNumber = fieldAttribute.Index;
+                        modifier = fieldAttribute.Modifier;// == "optional" ? "" : fieldAttribute.modifier;
+                        defaultValue = fieldAttribute.DefaultValue;
                         if (defaultValue != null)
                         {
                             defaultValue = " [default = " + defaultValue + "];";

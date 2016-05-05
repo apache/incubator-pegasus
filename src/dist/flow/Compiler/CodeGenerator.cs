@@ -94,10 +94,6 @@ namespace rDSN.Tron.Compiler
             _builder.AppendLine("static void Main(string[] args)");
             _builder.BeginBlock();
             _builder.AppendLine(_appClassName + "Helper.InitCodes();");
-            foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
-            {
-                _builder.AppendLine(s.Value.Spec.MainSpecFile.Split('.')[0] + "Helper.InitCodes();");
-            }
             _builder.AppendLine("ServiceApp.RegisterApp<" + _appClassName + "ServerApp>(\"server\");");
             _builder.AppendLine("ServiceApp.RegisterApp<" + _appClassName + "ClientApp>(\"client\");");
             _builder.AppendLine("string[] args2 = (new string[] { \"" + _appClassName + "\" }).Union(args).ToArray();");
@@ -161,8 +157,7 @@ namespace rDSN.Tron.Compiler
         {
             foreach (var s in _contexts.SelectMany(c => c.Services).DistinctBy(s => s.Key.Member.Name))
             {
-                _builder.AppendLine("private " + s.Value.TypeName() + "Client " + s.Key.Member.Name + " = new " + s.Value.TypeName() + "Client(new RpcAddress(\"" + s.Value.URL + "\"));");
-                _builder.AppendLine();
+                SpecProviderManager.Instance().GetProvider(s.Value.Spec.SType).GenerateClientDeclaration(_builder, s.Key, s.Value);
             }
         }
         
@@ -200,7 +195,7 @@ namespace rDSN.Tron.Compiler
 
         private void BuildQueryRdsn(QueryContext c)
         {
-            _builder.AppendLine("public " + c.OutputType.GetGenericArguments()[0].FullName.GetCompilableTypeName()
+            _builder.AppendLine("public " + c.OutputType.GetCompilableTypeName(_rewrittenTypes)
                         + " " + c.Name + "(" + c.InputType.GetCompilableTypeName(_rewrittenTypes) + " request)");
 
             _builder.AppendLine("{");
@@ -236,7 +231,7 @@ namespace rDSN.Tron.Compiler
                 var respType = m.ReturnType.GetGenericArguments()[0].FullName.GetCompilableTypeName();
                 _builder.AppendLine("protected override void On" + m.Name + "(" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + " request, RpcReplier<" + respType + "> replier)");
                 _builder.BeginBlock();
-                _builder.AppendLine("replier.Reply(" + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request)));");
+                _builder.AppendLine("replier.Reply(" + m.Name + "(new IValue<" + m.GetParameters()[0].ParameterType.GetGenericArguments()[0].FullName.GetCompilableTypeName() + ">(request)).Value());");
                 _builder.EndBlock();
                 _builder.AppendLine();
             }
@@ -273,7 +268,7 @@ namespace rDSN.Tron.Compiler
             _builder.AppendLine();
         }
         
-        private string VerboseStringArray(string[] parameters)
+        private string VerboseStringArray(IEnumerable<string> parameters)
         {
             var ps = parameters.Aggregate("", (current, s) => current + ("@\"" + s + "\","));
             if (ps.Length > 0)
@@ -285,6 +280,12 @@ namespace rDSN.Tron.Compiler
         
         private void BuildRewrittenTypes()
         {
+            /*
+            foreach (var t in _contexts.Select(c => c.OutputType.GetGenericArguments()[0]).Where(t => !_rewrittenTypes.ContainsKey(t)))
+            {
+                _rewrittenTypes.Add(t, t.Name);
+            }
+            */
             foreach (var t in _contexts.SelectMany(c => c.RewrittenTypes.Where(t => !_rewrittenTypes.ContainsKey(t.Key))))
             {
                 _rewrittenTypes.Add(t.Key, t.Value);
@@ -297,7 +298,7 @@ namespace rDSN.Tron.Compiler
 
             foreach (var typeMap in _rewrittenTypes)
             {
-                _builder.AppendLine("class " + typeMap.Value);
+                _builder.AppendLine("public class " + typeMap.Value);
                 _builder.AppendLine("{");
                 _builder++;
 
@@ -335,7 +336,9 @@ namespace rDSN.Tron.Compiler
                 "System.Threading",
                 "rDSN.Tron.Contract",
                 "rDSN.Tron.Runtime",
-                "rDSN.Tron.App"
+                "rDSN.Tron.App",
+                "BondNetlibTransport",
+                "BondTransport"
             };
 
             //namespaces.Add("rDSN.Tron.Utility");
