@@ -271,10 +271,12 @@ protected:
 
     // see comments for batch_state, this function is not thread safe
     batch_state get_current_batch_state() { return _batch_state; }
-    int64_t get_current_batch_ballot() { return _batch_ballot; }
-    int64_t get_current_batch_decree() { return _batch_decree; }
-    int32_t get_app_id() { return _gpid.app_id; }
+    ballot get_current_batch_ballot() { return _batch_ballot; }
+    decree get_current_batch_decree() { return _batch_decree; }
+
+    int32_t get_app_id() { return _gpid.app_id;}
     int32_t get_partition_index() { return _gpid.pidx; }
+    ballot get_ballot();
 
     // reset all states when reopen the app
     void reset_states();
@@ -320,8 +322,8 @@ private:
     bool        _is_delta_state_learning_supported;
     replica_init_info   _info;
     batch_state         _batch_state;
-    int64_t             _batch_ballot;
-    int64_t             _batch_decree;
+    ballot              _batch_ballot;
+    decree              _batch_decree;
     std::atomic<decree> _last_committed_decree;
 
     perf_counter_ _app_commit_throughput;

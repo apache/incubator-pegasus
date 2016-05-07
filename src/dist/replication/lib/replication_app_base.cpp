@@ -301,4 +301,9 @@ void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader
     }    
 }
 
+ballot replication_app_base::get_ballot()
+{
+    return _replica->get_ballot();
+}
+
 }} // end namespace
