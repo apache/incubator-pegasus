@@ -415,16 +415,16 @@ void task::enqueue(task_worker_pool* pool)
         _spec->name.c_str()
         );
 
-    if (spec().type == TASK_TYPE_COMPUTE)
-    {
-        spec().on_task_enqueue.execute(task::get_current_task(), this);
-    }
-
     // for delayed tasks, refering to timer service
     if (_delay_milliseconds != 0)
     {
         pool->add_timer(this);
         return;
+    }
+
+    if (spec().type == TASK_TYPE_COMPUTE)
+    {
+        spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
     // fast execution
