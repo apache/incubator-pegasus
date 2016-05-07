@@ -138,7 +138,8 @@ public:
         int32_t max_log_file_mb,
         bool force_flush = false,
         bool is_private = false,
-        gpid private_gpid = gpid()
+        gpid private_gpid = gpid(),
+        replica* r = nullptr
         );
     virtual ~mutation_log();
 
@@ -317,7 +318,8 @@ private:
 private:
     std::string               _dir;
     bool                      _is_private;
-    gpid       _private_gpid; // only used for private log
+    gpid                      _private_gpid; // only used for private log
+    replica                   *_owner_replica; // only used for private log
 
     // options
     int64_t                   _max_log_file_size_in_bytes;    

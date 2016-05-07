@@ -38,6 +38,7 @@
 #ifdef _WIN32
 #include <io.h>
 #endif
+#include "replica.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -54,7 +55,8 @@ mutation_log::mutation_log(
     int32_t max_log_file_mb,
     bool force_flush,
     bool is_private,
-    gpid private_gpid
+    gpid private_gpid,
+    replica* r
     )
 {
     _dir = dir;
@@ -63,6 +65,7 @@ mutation_log::mutation_log(
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
     _force_flush = force_flush;
+    _owner_replica = r;
     init_states();
 }
 
@@ -471,29 +474,18 @@ void mutation_log::internal_write_callback(
         }
     }
 
-    if (!_is_private)
+
+    for (auto& cb : *callbacks)
     {
-        for (auto& cb : *callbacks)
-        {
-            cb->enqueue_aio(err, size);
-        }
+        cb->enqueue_aio(err, size);
     }
-    else
+
+    // notify error for private logs when necessary
+    if (err != ERR_OK &&
+        callbacks->size() == 0 &&
+        _owner_replica != nullptr)
     {
-        for (auto& cb : *callbacks)
-        {
-            if (err == ERR_OK)
-            {
-                bool r = cb->cancel(false);
-                dassert(r, "cancel must success as the task has never been enqueued yet");
-            }
-            else
-            {
-                cb->enqueue_aio(err, size);
-                err = ERR_OK; // to cancel further callbacks as one callback is enough
-                              // to notify the failure
-            }
-        }
+        _owner_replica->inject_error(err);
     }
 }
 
