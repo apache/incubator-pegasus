@@ -3,7 +3,16 @@ SET TOP_DIR="%~dp0\..\..\.."
 SET exp_dir=%~dp0
 SET bin_dir=%TOP_DIR%"\scripts\windows"
 SET old_dsn_root=%DSN_ROOT%
+
 if "%1" EQU "" GOTO usage
+
+
+IF NOT EXIST "%exp_dir%\setting.ini" (
+    CALL %bin_dir%\echoc.exe 4  %exp_dir%\setting.ini not exist, please check
+    GOTO:EOF
+)
+
+for /f "delims=" %%x in (setting.ini) do (set "%%x")
 
 :main
     CALL :%1 %1 %2 %3 %4 %5 %6 %7 %8 %9
@@ -16,9 +25,11 @@ if "%1" EQU "" GOTO usage
     GOTO:EOF
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock server_address(eg.srgsi-11) client.perf_address(eg.srgsi-12)"
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail server_address(eg.srgsi-11) daemon1_address(eg.srgsi-12) daemon2_address(eg.srgsi-13) daemon3_address(eg.srgsi-14) client.perf_address(eg.srgsi-15)"
-    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|rrdb|redis server_address(eg.srgsi-11) daemon1_address(eg.srgsi-12) daemon2_address(eg.srgsi-13) daemon3_address(eg.srgsi-14) client.perf_address(eg.srgsi-15)"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd <test_type> <app> <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock|kyotocabinet <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|redis <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd all <cluster>"
     GOTO:EOF
 
 :layer1
@@ -27,5 +38,21 @@ if "%1" EQU "" GOTO usage
     CALL %exp_dir%%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
 
+:all
+    CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] BEGIN***** 
+
+    for %%x in (leveldb memcached thumbnail xlock kyotocabinet) do (
+        CALL :layer1 layer1 %%x %2 auto
+    )
+    for %%x in (memcached thumbnail) do (
+        CALL :layer2.stateless layer2.stateless %%x %2 auto
+    )
+    for %%x in (leveldb xlock redis) do (
+        CALL :layer2.stateful layer2.stateful %%x %2 auto
+    )
+
+    CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] END***** 
+
+    GOTO all
 :exit
 
