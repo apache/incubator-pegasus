@@ -92,6 +92,13 @@ function gen_thrift($prog, $last) {
 
 function gen_compo($prog, $out, $idl_type) {
     $out("namespace ".$prog->get_csharp_namespace()." {");
+    foreach ($prog->enums as $e) {
+        $out("public enum ".$e->name."{");
+        foreach ($e->values as $k => $v) {
+            $out ($k.",");
+        }
+        $out("}");
+    }
     foreach ($prog->structs as $s) {
         $out("public class ".$s->get_csharp_name()."{ ");
         foreach ($s->fields as $fld) {

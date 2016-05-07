@@ -74,9 +74,11 @@ public:
 
     virtual void lock_read() { _lock.lock_read(); }
     virtual void unlock_read() { _lock.unlock_read(); }
+    virtual bool try_lock_read() { return _lock.try_lock_read(); }
 
     virtual void lock_write() { _lock.lock_write(); }
     virtual void unlock_write() { _lock.unlock_write(); }
+    virtual bool try_lock_write() { return _lock.try_lock_write(); }
 
 private:
     utils::rw_lock_nr _lock;

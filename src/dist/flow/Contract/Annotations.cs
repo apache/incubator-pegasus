@@ -87,7 +87,7 @@ namespace IDL
         }
         public SchemaAttribute(string n)
         {
-            name = n;
+            Name = n;
         }
         /// <summary>
         /// to represent the source type
@@ -97,12 +97,12 @@ namespace IDL
         /// </value>
         public SchemaAttribute(string n, string v)
         {
-            name = n;
-            version = v;
+            Name = n;
+            Version = v;
         }
 
-        public string name;
-        public string version;
+        public string Name;
+        public string Version;
     }
 
     [AttributeUsage(AttributeTargets.Field)]
@@ -111,49 +111,49 @@ namespace IDL
        
         public FieldAttribute(int i)
         {
-            index = i;
-            modifier = "optional";
-            defaultValue = "";
+            Index = i;
+            Modifier = "optional";
+            DefaultValue = "";
         }
         public FieldAttribute(int i, string m)
         {
-            index = i;
-            modifier = m;
+            Index = i;
+            Modifier = m;
 
         }
         public FieldAttribute(int i, string m, int d)
         {
-            index = i;
-            modifier = m;
-            defaultValue = d.ToString();
+            Index = i;
+            Modifier = m;
+            DefaultValue = d.ToString();
 
         }
 
         public FieldAttribute(int i, string m, double d)
         {
-            index = i;
-            modifier = m;
-            defaultValue = d.ToString();
+            Index = i;
+            Modifier = m;
+            DefaultValue = d.ToString();
 
         }
 
         public FieldAttribute(int i, string m, string d)
         {
-            index = i;
-            modifier = m;
-            defaultValue = d;
+            Index = i;
+            Modifier = m;
+            DefaultValue = d;
 
         }
 
-        public int index { get; set; }
+        public int Index { get; set; }
 
         /// <summary>
         /// to represent: required, optional, repeated,etc.
         /// </summary>
-        public string modifier { get; set; }
+        public string Modifier { get; set; }
 
 
-        public string defaultValue { get; set; }
+        public string DefaultValue { get; set; }
 
     }
 
@@ -163,15 +163,15 @@ namespace IDL
 
         public MethodAttribute()
         {
-            isOneWay = false;
+            IsOneWay = false;
 
         }
 
         public MethodAttribute(bool t)
         {
-            isOneWay = t;
+            IsOneWay = t;
         }
-        public bool isOneWay;
+        public bool IsOneWay;
 
     }
 
@@ -180,10 +180,10 @@ namespace IDL
     {
         public DocAttribute(string d)
         {
-            doc = d;
+            Doc = d;
         }
 
-        public string doc;
+        public string Doc;
     }
 
 

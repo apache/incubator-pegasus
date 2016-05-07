@@ -61,13 +61,13 @@ namespace rDSN.Tron.LanguageProvider
            var prefix = Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin/windows");
            switch(t)
            {
-               case ServiceSpecType.proto:
+               case ServiceSpecType.Proto:
                    path = Path.Combine(prefix, "protoc.exe");
                    break;
-               case ServiceSpecType.thrift:
+               case ServiceSpecType.Thrift:
                    path = Path.Combine(prefix, "thrift.exe");
                    break;
-               case ServiceSpecType.bond_3_0:
+               case ServiceSpecType.Bond30:
                    path = Path.Combine(prefix, "bondc.exe");
                    break;
                default:

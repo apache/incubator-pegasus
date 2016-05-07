@@ -90,7 +90,7 @@ namespace rDSN.Tron.Contract
         public Service(string package, string url, string name = "")
         {
             PackageName = package;
-            URL = url;
+            Url = url;
             Name = !string.IsNullOrEmpty(name) ? name : url;
 
             Properties = new ServiceProperty();
@@ -107,7 +107,7 @@ namespace rDSN.Tron.Contract
         /// universal remote link for the service, which is used for service address resolve
         /// example:  http://service-manager-url/service-name
         /// </summary>
-        public string URL { get; private set; }
+        public string Url { get; private set; }
 
         /// <summary>
         /// service name for print and RPC resolution (e.g., service-name.method-name for invoking a RPC)
@@ -263,7 +263,7 @@ namespace rDSN.Tron.Contract
         }
     }
 
-    public class SLA
+    public class Sla
     {
         public enum Metric
         { 
@@ -279,27 +279,27 @@ namespace rDSN.Tron.Contract
         { 
             Any,
             Atomic,
-            ACID
+            Acid
         }
 
-        public SLA Add<TValue>(Metric prop, TValue value)
+        public Sla Add<TValue>(Metric prop, TValue value)
         {
             return Add(prop, value.ToString());
         }
 
-        public SLA Add(Metric prop, string value)
+        public Sla Add(Metric prop, string value)
         {
-            m_properties.Add(prop, value);
+            _mProperties.Add(prop, value);
             return this;
         }
 
         public string Get(Metric prop)
         {
             string v;
-            m_properties.TryGetValue(prop, out v);
+            _mProperties.TryGetValue(prop, out v);
             return v;
         }
 
-        private Dictionary<Metric, string> m_properties = new Dictionary<Metric, string>();
+        private Dictionary<Metric, string> _mProperties = new Dictionary<Metric, string>();
     }
 }

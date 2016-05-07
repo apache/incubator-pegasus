@@ -47,7 +47,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public new ServiceSpecType GetType()
         {
-            return ServiceSpecType.proto;
+            return ServiceSpecType.Proto;
 
         }
 
@@ -116,6 +116,11 @@ namespace rDSN.Tron.LanguageProvider
             builder.AppendLine(call.Type.GetCompilableTypeName(reWrittenTypes) + " resp;");
             builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(req, out resp);");
             builder.AppendLine("return resp;");
+        }
+
+        public void GenerateClientDeclaration(CodeBuilder builder, MemberExpression exp, Service svc)
+        {
+            throw new NotImplementedException();
         }
     }
 

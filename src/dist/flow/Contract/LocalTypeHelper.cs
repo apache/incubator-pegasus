@@ -214,6 +214,7 @@ namespace rDSN.Tron.Contract
             {
                 return GetCompilableTypeName(TypeHelper.GetElementType(t), rewrittenTypes) + "[]";
             }
+            
 
             if (t.IsGrouping())
             {

@@ -98,7 +98,7 @@ namespace rDSN.Tron.Compiler
             {
                 DependentServices = contexts
                     .SelectMany(c => c.Value.Services.Select(r => r.Value))
-                    .DistinctBy(s => s.URL)
+                    .DistinctBy(s => s.Url)
                     .ToArray(),
                 Package = new ServicePackage()
             };
@@ -139,11 +139,11 @@ namespace rDSN.Tron.Compiler
             // step: fill service plan
             plan.Package.Spec = new ServiceSpec
             {
-                SType = ServiceSpecType.thrift,
+                SType = ServiceSpecType.Thrift,
                 MainSpecFile = serviceObject.GetType().Name + ".thrift",
                 ReferencedSpecFiles = plan.DependentServices
                     .DistinctBy(s => s.PackageName)
-                    .Where(s => s.Spec.SType == ServiceSpecType.thrift)
+                    .Where(s => s.Spec.SType == ServiceSpecType.Thrift)
                     .SelectMany(s =>
                     {
                         var spec = s.ExtractSpec();
@@ -167,7 +167,7 @@ namespace rDSN.Tron.Compiler
             plan.Package.MainSpec = ServiceContract.GenerateStandAloneThriftSpec(serviceObject.GetType(), plan.Package.Spec.ReferencedSpecFiles);
             SystemHelper.StringToFile(plan.Package.MainSpec, Path.Combine(name, plan.Package.Spec.MainSpecFile));
 
-            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " binary layer3") == 0)
+            if (SystemHelper.RunProcess("php.exe", Path.Combine(Environment.GetEnvironmentVariable("DSN_ROOT"), "bin", "dsn.generate_code.php") + " " + Path.Combine(name, plan.Package.Spec.MainSpecFile) + " csharp " + dir + " json layer3") == 0)
             {
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".client.cs"));
                 sources.Add(Path.Combine(dir, serviceObject.GetType().Name + ".server.cs"));

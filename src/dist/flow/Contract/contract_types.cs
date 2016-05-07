@@ -47,7 +47,7 @@ public class ServiceMethod
 	public string ParameterName{ get; set; } 
 }
 
-public class ServiceAPI
+public class ServiceApi
 {
 	public string Name{ get; set; } 
 	public Dictionary<string, ServiceMethod> Methods{ get; set; } 
@@ -55,12 +55,12 @@ public class ServiceAPI
 
 public enum ServiceSpecType
 {
-	unknown,
-	composition,
-	common,
-	proto,
-	thrift,
-    bond_3_0
+	Unknown,
+	Composition,
+	Common,
+	Proto,
+	Thrift,
+    Bond30
 }
 
 public class ServiceSpec
@@ -172,7 +172,7 @@ public class AppServerInfo
 
 public enum ServicePartitionAction
 {
-	PUT,
-	REMOVE
+	Put,
+	Remove
 }
 }

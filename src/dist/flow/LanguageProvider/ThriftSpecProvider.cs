@@ -48,7 +48,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public new ServiceSpecType GetType()
         {
-            return ServiceSpecType.thrift;
+            return ServiceSpecType.Thrift;
         }
 
         //public string[] ToCommonSpec(ServiceSpec spec, string dir)
@@ -196,6 +196,11 @@ namespace rDSN.Tron.LanguageProvider
             builder.AppendLine(call.Method.ReturnType.FullName.GetCompilableTypeName() + " resp;");
             builder.AppendLine("while (" + (call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(req, out resp) != ErrorCode.ERR_OK) {}");
             builder.AppendLine("return resp;");
+        }
+
+        public void GenerateClientDeclaration(CodeBuilder builder, MemberExpression exp, Service svc)
+        {
+            throw new NotImplementedException();
         }
     }
 

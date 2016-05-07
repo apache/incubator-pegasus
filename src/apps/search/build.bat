@@ -5,7 +5,7 @@ for /f %%f in ('dir *.thrift /b') do (
     cd /d %cdir%
     echo %%f    
     @rmdir /Q /S %cdir%\%%~nf
-    dsn.cg.bat %cdir%\%%f csharp %cdir%\%%~nf binary single
+    dsn.cg.bat %cdir%\%%f csharp %cdir%\%%~nf json single
     cd /d %cdir%\%%~nf
     @mkdir build
     cd build

@@ -175,18 +175,18 @@ namespace rDSN.Tron.Contract
             
             foreach (var m in GetServiceCalls(type))
             {
-                var return_value_type = m.ReturnType.GetGenericArguments()[0];
-                var parameter_type = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
+                var returnValueType = m.ReturnType.GetGenericArguments()[0];
+                var parameterType = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
 
-                if (!IsDependentOfPrimitiveTypes(return_value_type) && !trackedTypes.Contains(return_value_type))
+                if (!IsDependentOfPrimitiveTypes(returnValueType) && !trackedTypes.Contains(returnValueType))
                 {
-                    tobetracked.Enqueue(return_value_type);
-                    trackedTypes.Add(return_value_type);
+                    tobetracked.Enqueue(returnValueType);
+                    trackedTypes.Add(returnValueType);
                 }
 
-                if (IsDependentOfPrimitiveTypes(parameter_type) || trackedTypes.Contains(parameter_type)) continue;
-                tobetracked.Enqueue(parameter_type);
-                trackedTypes.Add(parameter_type);
+                if (IsDependentOfPrimitiveTypes(parameterType) || trackedTypes.Contains(parameterType)) continue;
+                tobetracked.Enqueue(parameterType);
+                trackedTypes.Add(parameterType);
             }
 
             while (tobetracked.Count > 0)
@@ -218,11 +218,9 @@ namespace rDSN.Tron.Contract
                 var v = g.CreateVertex(typeof(TypeVertex), (ulong)t.GetHashCode());
                 v.Owner =  t;
             }
-
             foreach (var t in trackedTypes)
             {
                 var fv = g.Vertices.First(v => v.Value.Owner == t);
-
                 foreach (var fld in t.GetFields().Where(fld => !IsDependentOfPrimitiveTypes(fld.FieldType)))
                 {
                     if (fld.FieldType.IsGenericType)
@@ -234,14 +232,11 @@ namespace rDSN.Tron.Contract
                     }
                     else
                     {
-
                         var tv = g.Vertices.First(v => v.Value.Owner == fld.FieldType);
-
                         tv.Value.ConnectTo<TypeEdge>(fv.Value);
                     }
                 }
             }
-
             var traversal = new DAGTraverserSatisfied<TypeVertex, TypeEdge, TypeGraph>(true);
             traversal.Traverse(g, v => {
                 builder.AppendLine("struct " + GetThriftTypeName(v.Owner));
@@ -252,7 +247,7 @@ namespace rDSN.Tron.Contract
                 {
                     if (fld.GetCustomAttributes().Any(a => a is FieldAttribute))
                     {
-                        idx = ((FieldAttribute) fld.GetCustomAttributes().First(a => a is FieldAttribute)).index;
+                        idx = ((FieldAttribute) fld.GetCustomAttributes().First(a => a is FieldAttribute)).Index;
                     }
                     else
                     {
@@ -260,8 +255,7 @@ namespace rDSN.Tron.Contract
                     }
                     builder.AppendLine(idx + ":" + GetThriftTypeName(fld.FieldType) + " " + fld.Name + ";");
                 }
-                builder.EndBlock(); 
-
+                builder.EndBlock();
                 builder.AppendLine();
                 return true;
             }, false, false);
@@ -271,11 +265,11 @@ namespace rDSN.Tron.Contract
 
             foreach (var m in GetServiceCalls(type))
             {
-                var return_value_type = m.ReturnType.GetGenericArguments()[0];
-                var parameter_type = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
-                var return_value_name = GetThriftTypeName(return_value_type);
-                var parameter_name = GetThriftTypeName(parameter_type);
-                builder.AppendLine(return_value_name + " " + m.Name + "(1: " + parameter_name + " req);");
+                var returnValueType = m.ReturnType.GetGenericArguments()[0];
+                var parameterType = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
+                var returnValueName = GetThriftTypeName(returnValueType);
+                var parameterName = GetThriftTypeName(parameterType);
+                builder.AppendLine(returnValueName + " " + m.Name + "(1: " + parameterName + " req);");
             }
 
             builder.EndBlock();
@@ -306,11 +300,11 @@ namespace rDSN.Tron.Contract
 
             foreach (var m in GetServiceCalls(type))
             {
-                var return_value_type = m.ReturnType.GetGenericArguments()[0];
-                var parameter_type = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
-                var return_value_name = GetThriftTypeName(return_value_type);
-                var parameter_name = GetThriftTypeName(parameter_type);
-                builder.AppendLine(return_value_name + " " + m.Name + "(1: " + parameter_name + " req);");
+                var returnValueType = m.ReturnType.GetGenericArguments()[0];
+                var parameterType = m.GetParameters()[0].ParameterType.GetGenericArguments()[0];
+                var returnValueName = GetThriftTypeName(returnValueType);
+                var parameterName = GetThriftTypeName(parameterType);
+                builder.AppendLine(returnValueName + " " + m.Name + "(1: " + parameterName + " req);");
             }
 
             builder.EndBlock();
@@ -352,6 +346,7 @@ namespace rDSN.Tron.Contract
 
             foreach (var m in GetServiceCalls(iface))
             {
+                Debug.Assert(m.DeclaringType != null, "m.DeclaringType != null");
                 if (m.DeclaringType.IsInterface)
                 {
                     cb.AppendLine("public " + m.ReturnType.FullName + " " + m.Name + "(" + m.GetParameters().VerboseCombine(", ", p => p.ParameterType.FullName + " " + p.Name) + ")");
@@ -381,8 +376,9 @@ namespace rDSN.Tron.Contract
             cb.EndBlock();
         }
 
-        public static bool IsServiceCall(MethodInfo m)
+        private static bool IsServiceCall(MethodInfo m)
         {
+            Debug.Assert(m.DeclaringType != null, "m.DeclaringType != null");
             return m.GetParameters().Length == 1
                    && !IsUpCall(m)
                    && (m.DeclaringType.IsInterface || (
@@ -393,12 +389,12 @@ namespace rDSN.Tron.Contract
                    ;
         }
 
-        public static MethodInfo[] GetServiceCalls(Type service)
+        public static IEnumerable<MethodInfo> GetServiceCalls(Type service)
         {
             return service.GetMethods().Where(IsServiceCall).ToArray();
         }
 
-        public static bool IsUpCall(MethodInfo m)
+        private static bool IsUpCall(MethodInfo m)
         {
             var attrs = m.GetCustomAttributes(typeof(UpCall), false).Cast<UpCall>().ToArray();
             return attrs.Length > 0;
@@ -422,7 +418,7 @@ namespace rDSN.Tron.Contract
             return attrs.Length > 0;
         }
 
-        public static ServiceProperty GetProps(Type iface)
+        private static ServiceProperty GetProps(Type iface)
         {
             var attrs = iface.GetCustomAttributes(typeof(TronService), false).Cast<TronService>().ToArray();
             if (attrs.Length > 0)
