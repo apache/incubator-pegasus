@@ -313,7 +313,8 @@ private:
                                  log_file_ptr file,
                                  std::shared_ptr<log_block> block,
                                  pending_callbacks_ptr callbacks,
-                                 decree max_commit);
+                                 decree max_commit,
+                                 const std::vector<mutation_ptr>& mus);
 
 private:
     std::string               _dir;
@@ -346,6 +347,7 @@ private:
     task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
     pending_callbacks_ptr          _pending_write_callbacks;
+    std::vector<mutation_ptr>      _pending_write_mutations;
     decree                         _pending_write_max_commit; // only used for private log
 
     // replica log info

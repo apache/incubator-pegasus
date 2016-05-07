@@ -363,23 +363,31 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
             _current_log_file,
             _pending_write,
             _pending_write_callbacks,
-            _pending_write_max_commit),
+            _pending_write_max_commit,
+            std::move(_pending_write_mutations)
+            ),
         -1
         );
+
+    _pending_write_mutations.clear();
 
     if (_issued_write_task == nullptr)
     {
         tasking::enqueue(
             code,
             this,
-            std::bind(
-                &mutation_log::internal_write_callback, this,
-                ERR_FILE_OPERATION_FAILED,
-                0,
-                _current_log_file,
-                _pending_write,
-                _pending_write_callbacks,
-                _pending_write_max_commit)
+            [this, pm_cap = std::move(_pending_write_mutations)]() mutable
+            {
+                this->internal_write_callback(
+                    ERR_FILE_OPERATION_FAILED,
+                    0,
+                    _current_log_file,
+                    _pending_write,
+                    _pending_write_callbacks,
+                    _pending_write_max_commit,
+                    pm_cap
+                    );
+            }
             );
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -391,7 +399,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
     _pending_write_max_commit = 0;
-
+    
     if (new_log_file)
     {
         error_code ret = create_new_log_file();
@@ -412,7 +420,8 @@ void mutation_log::internal_write_callback(
     log_file_ptr file,
     std::shared_ptr<log_block> block,
     mutation_log::pending_callbacks_ptr callbacks,
-    decree max_commit
+    decree max_commit,
+    const std::vector<mutation_ptr>& mus
     )
 {
     dassert(_is_writing, "");
@@ -813,6 +822,11 @@ void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offse
     {
         tsk = dsn::file::create_aio_task(callback_code, callback_host, std::move(callback), hash);
         _pending_write_callbacks->push_back(tsk);
+    }
+    else
+    {
+        // to avoid invalid mutation buffers during real write
+        _pending_write_mutations.push_back(mu);
     }
 
     if (_is_private)

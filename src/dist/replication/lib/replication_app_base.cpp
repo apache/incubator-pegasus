@@ -389,7 +389,16 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
         lstate.files = &files[0];
     }
 
-    return dsn_layer1_app_apply_checkpoint(_app_context, &lstate, mode);
+    auto lcd = last_committed_decree();
+    auto err = dsn_layer1_app_apply_checkpoint(_app_context, &lstate, mode);
+    if (err == ERR_OK)
+    {
+        if (lstate.to_decree_included > lcd)
+        {
+            _app_info->info.type1.last_committed_decree = lstate.to_decree_included;
+        }
+    }
+    return err;
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)

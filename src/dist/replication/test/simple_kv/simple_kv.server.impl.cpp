@@ -169,7 +169,6 @@ namespace dsn {
                 if (max_version > 0)
                 {
                     recover(name, max_version);
-                    dassert(max_version == last_committed_decree(), "");
                     set_last_durable_decree(max_version);
                 }
                 ddebug("simple_kv_service_impl recovered, last_committed_decree = %" PRId64 ", last_durable_decree = %" PRId64 "",
@@ -212,8 +211,7 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _app_info->info.type1.last_committed_decree = version;
-                ddebug("simple_kv_service_impl recover from checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
+                // ddebug("simple_kv_service_impl recover from checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
             }
 
             ::dsn::error_code simple_kv_service_impl::checkpoint()
