@@ -35,6 +35,7 @@
 
 
 # include "hpc_task_queue.h"
+# include <boost/function_output_iterator.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -81,7 +82,7 @@ namespace dsn
         void hpc_task_priority_queue::enqueue(task* task)
         {
             dassert(task->next == nullptr, "task is not alone");
-            int idx = (int)task->spec().priority;
+            auto idx = static_cast<int>(task->spec().priority);
             {
                 utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock[idx]);
                 _tasks[idx].add(task);
@@ -92,11 +93,11 @@ namespace dsn
 
         task* hpc_task_priority_queue::dequeue(/*inout*/int& batch_size)
         {
-            task* t;
+            task* t = nullptr;
 
             _sema.wait();
 
-            for (int i = TASK_PRIORITY_COUNT - 1; i >= 0; --i)
+            for (auto i = TASK_PRIORITY_COUNT - 1; i >= 0; --i)
             {
                 _lock[i].lock();
                 t = _tasks[i].pop_one();
@@ -111,41 +112,41 @@ namespace dsn
             return t;
         }
 
-        void hpc_concurrent_task_queue::enqueue(task* task)
+        hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider): task_queue(pool, index, inner_provider)
         {
-            _queue[task->spec().priority].enqueue(task);
-            _sema.signal(1);
         }
 
+        void hpc_concurrent_task_queue::enqueue(task* task)
+        {
+            _queues[task->spec().priority].q.enqueue(task);
+            _sema.signal(1);
+        }
         task* hpc_concurrent_task_queue::dequeue(int& batch_size)
         {
-            std::vector<task*> out;
-            out.reserve(batch_size);
-            auto count = _sema.waitMany(batch_size);
-            batch_size = static_cast<int>(count);
-
-            if (count == 0)
+            batch_size = _sema.waitMany(batch_size);
+            if (batch_size == 0)
             {
                 return nullptr;
             }
-            //TODO: deal with should-be-size_t types
-            
-            while (count != 0)
-            {
-                for (int i = TASK_PRIORITY_COUNT - 1; i >= 0 && count != 0; i--)
+            task* head = nullptr;
+            auto out = boost::make_function_output_iterator(
+                [&head] (task* in)
                 {
-                    count -= _queue[i].try_dequeue_bulk(std::back_inserter(out), count);
+                    in->next = head;
+                    head = in;
+                });
+            auto count = batch_size;
+            do {
+                for (auto& qs : _queues)
+                {
+                    count -= qs.q.try_dequeue_bulk(out, count);
+                    if (count == 0)
+                    {
+                        break;
+                    }
                 }
-            }
-
-            count = batch_size - 1;
-            for (int i = 0; i < count; i++)
-            {
-                out[i]->next = out[i + 1];
-            }
-            out[count]->next = nullptr;
-
-            return out[0];
+            } while (count != 0);
+            return head;
         }
     }
 }

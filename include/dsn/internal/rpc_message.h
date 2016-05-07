@@ -100,7 +100,7 @@ namespace dsn
     {
     public:
         message_header         *header;
-        std::vector<blob>      buffers; // header included for *send* message, 
+        std::vector<blob, transient_allocator<blob>>      buffers; // header included for *send* message, 
                                         // header not included for *recieved* 
 
         // by rpc and network

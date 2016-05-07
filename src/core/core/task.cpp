@@ -64,9 +64,9 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     task_queue* queue    // owner queue if io_mode == IOE_PER_QUEUE
     )
 {
-    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
-    dsn::tls_dsn.magic = 0xdeadbeef;
-    dsn::tls_dsn.worker_index = -1;
+    memset(static_cast<void*>(&tls_dsn), 0, sizeof(tls_dsn));
+    tls_dsn.magic = 0xdeadbeef;
+    tls_dsn.worker_index = -1;
 
     if (node)
     {
@@ -104,7 +104,7 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     auto worker_idx = worker ? worker->index() : -1;
     if (worker_idx == -1)
     {
-        worker_idx = ::dsn::utils::get_current_tid();
+        worker_idx = utils::get_current_tid();
     }
     tls_dsn.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
     tls_dsn.last_lower32_task_id = worker ? 0 : ((uint32_t)(++tls_dsn_lower32_task_id_mask)) << 16;
@@ -154,7 +154,7 @@ task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_
 
     if (tls_dsn.magic != 0xdeadbeef)
     {
-        task::set_tls_dsn_context(nullptr, nullptr, nullptr);
+        set_tls_dsn_context(nullptr, nullptr, nullptr);
     }
 
     _task_id = tls_dsn.node_pool_thread_ids + (++tls_dsn.last_lower32_task_id);
@@ -267,7 +267,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
 
     if (cs >= TASK_STATE_FINISHED)
     {
-        spec().on_task_wait_post.execute(task::get_current_task(), this, true);
+        spec().on_task_wait_post.execute(get_current_task(), this, true);
         return true;
     }
 
@@ -285,7 +285,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
         }
     }
 
-    spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds);
+    spec().on_task_wait_pre.execute(get_current_task(), this, (uint32_t)timeout_milliseconds);
 
     bool ret = (state() >= TASK_STATE_FINISHED);
     if (!ret)
@@ -294,7 +294,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
         ret = (nevt->wait_for(timeout_milliseconds));
     }
 
-    spec().on_task_wait_post.execute(task::get_current_task(), this, ret);
+    spec().on_task_wait_post.execute(get_current_task(), this, ret);
     return ret;
 }
 
@@ -304,7 +304,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
 bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/)
 {
     task_state READY_STATE = TASK_STATE_READY;
-    task *current_tsk = task::get_current_task();
+    task *current_tsk = get_current_task();
     bool finish = false;
     bool succ = false;
     
@@ -389,7 +389,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
 
 const char* task::get_current_node_name()
 {
-    auto n = task::get_current_node2();
+    auto n = get_current_node2();
     return n ? n->name() : "unknown";
 }
 
@@ -417,7 +417,7 @@ void task::enqueue(task_worker_pool* pool)
 
     if (spec().type == TASK_TYPE_COMPUTE)
     {
-        spec().on_task_enqueue.execute(task::get_current_task(), this);
+        spec().on_task_enqueue.execute(get_current_task(), this);
     }
 
     // for delayed tasks, refering to timer service
@@ -434,7 +434,7 @@ void task::enqueue(task_worker_pool* pool)
         exec_internal();
         return;
     }
-    else if (_spec->allow_inline)
+    if (_spec->allow_inline)
     {
         // inlined
         // warning - this may lead to deadlocks, e.g., allow_inlined
@@ -442,7 +442,7 @@ void task::enqueue(task_worker_pool* pool)
         // by the caller task
         if (_spec->type == TASK_TYPE_COMPUTE)
         {
-            if (_node != task::get_current_node())
+            if (_node != get_current_node())
             {
                 tools::node_scoper ns(_node);
                 exec_internal();
@@ -455,7 +455,7 @@ void task::enqueue(task_worker_pool* pool)
         }
 
         // io tasks only inlined in io threads
-        else if (task::get_current_worker2() == nullptr)
+        if (get_current_worker2() == nullptr)
         {
             dassert(_node == task::get_current_node(), "");
             exec_internal();
@@ -564,8 +564,8 @@ rpc_response_task::rpc_response_task(
     _request = request;
     _response = nullptr;
 
-    _caller_pool = task::get_current_worker() ? 
-        task::get_current_worker()->pool() : nullptr;
+    _caller_pool = get_current_worker() ? 
+        get_current_worker()->pool() : nullptr;
 
     _request->add_ref(); // released in dctor
 }
@@ -671,7 +671,7 @@ aio_task::aio_task(
         );
     set_error_code(ERR_IO_PENDING);
 
-    auto disk = task::get_current_disk();
+    auto disk = get_current_disk();
     if (!disk) disk = node->node_disk();
     _aio = disk->prepare_aio_context(this);
 }

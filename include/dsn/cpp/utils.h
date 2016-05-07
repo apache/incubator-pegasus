@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/internal/callocator.h>
 # include <functional>
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
@@ -243,6 +244,8 @@ namespace dsn {
         const char*            _data;
         int                    _length; // data length
     };
+
+    struct transient_blob : dsn::transient_object, blob{};
 
     class binary_reader
     {

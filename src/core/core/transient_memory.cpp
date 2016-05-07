@@ -79,7 +79,7 @@ namespace dsn
                 tls_trans_mem_alloc(min_size);
         }
 
-        *ptr = (void*)tls_trans_memory.next;
+        *ptr = static_cast<void*>(tls_trans_memory.next);
         *sz = tls_trans_memory.remain_bytes;
         tls_trans_memory.committed = false;
     }
