@@ -41,7 +41,7 @@ namespace rDSN.Tron.Contract
         public string Value;
     }
     
-    public interface SampleServiceInterfaceSpec
+    public interface ISampleServiceInterfaceSpec
     {
         /// <summary>
         /// put key, value pair
@@ -58,7 +58,7 @@ namespace rDSN.Tron.Contract
         string Get(string key);
     }
 
-    public interface SampleServiceInterfaceSpec2
+    public interface ISampleServiceInterfaceSpec2
     {
         /// <summary>
         /// put key, value pair

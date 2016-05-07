@@ -208,9 +208,7 @@ namespace dsn {
 
                     _store[key] = value;
                 }
-
                 is.close();
-                set_last_durable_decree(version);
             }
 
             ::dsn::error_code simple_kv_service_impl::checkpoint()

@@ -49,7 +49,7 @@ namespace rDSN.Tron.LanguageProvider
     {
         public new ServiceSpecType GetType()
         {
-            return ServiceSpecType.bond_3_0;
+            return ServiceSpecType.Bond30;
         }
 
         private enum GeneratedFileType
@@ -59,38 +59,37 @@ namespace rDSN.Tron.LanguageProvider
             TYPES = 2,
             PROXIES = 3,
             SERVICES = 4,
-            CLIENTS = 5
         }
 
-        private string[] _postfix = { "_IDL.cs", "_IDL_NoService.cs", "_types.cs", "_proxies.cs", "_services.cs", "_Client.cs" };
+        private string[] _postfix = { "_IDL.cs", "_IDL_NoService.cs", "_types.cs", "_proxies.cs", "_services.cs"};
 
-        private string[] FromSpecToSources(string specFile, string outputDir, GeneratedFileType[] types)
+        private IEnumerable<string> FromSpecToSources(string specFile, string outputDir, IEnumerable<GeneratedFileType> types)
         {
-            var compiler = LanguageHelper.GetCompilerPath(ServiceSpecType.bond_3_0);
-            var bondc_dir = Path.GetDirectoryName(compiler);
+            var compiler = LanguageHelper.GetCompilerPath(ServiceSpecType.Bond30);
+            var bondcDir = Path.GetDirectoryName(compiler);
             string[] templates = { "Rules_Bond_CSharp_Client.tt" };
             var arguments = specFile + " /c#" +
-                templates.VerboseCombine(" ", t => " /T:" + Path.Combine(bondc_dir, t))
+                templates.VerboseCombine(" ", t => " /T:" + Path.Combine(bondcDir, t))
                 + " /O:" + outputDir;
 
             var err = SystemHelper.RunProcess(compiler, arguments);
             Trace.Assert(err == 0, "bondc code generation failed");
 
-            List<string> sources = new List<string>();
+            var sources = new List<string>();
             foreach (var t in types)
             {
-                string fname = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(specFile) + _postfix[(int)t]);
+                var fname = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(specFile) + _postfix[(int)t]);
                 Trace.Assert(File.Exists(fname));
-
+                Console.WriteLine("-----------" + fname);
                 sources.Add(fname);
             }
 
-            return sources.ToArray();
+            return sources;
         }
-
-        private string[] FromAllSpecToSources(string mainSpecFile, string[] refSpecFiles, string outputDir, GeneratedFileType[] typesForMain, GeneratedFileType[] typesForReferenced)
+        
+        private IEnumerable<string> FromAllSpecToSources(string mainSpecFile, IEnumerable<string> refSpecFiles, string outputDir, IEnumerable<GeneratedFileType> typesForMain, GeneratedFileType[] typesForReferenced)
         {
-            List<string> sources = new List<string>();
+            var sources = new List<string>();
 
             sources.AddRange(FromSpecToSources(mainSpecFile, outputDir, typesForMain));
 
@@ -120,12 +119,16 @@ namespace rDSN.Tron.LanguageProvider
             Dictionary<Type, string> reWrittenTypes
             )
         {
-            var argTypeName = call.Method.GetParameters()[0].Name;
-            builder.AppendLine(svc.TypeName() + "." + argTypeName + "_result resp;");
-            builder.AppendLine((call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(new " + svc.TypeName() + "." + call.Method.Name + "_args(){" + argTypeName + "= req}, out resp);");
-            builder.AppendLine("return resp.Success;");
+            var proxyName = svc.TypeName() + "_Proxy";
+            builder.AppendLine("return " + (call.Object as MemberExpression).Member.Name + "." + call.Method.Name + "(req);");
         }
 
+        public void GenerateClientDeclaration(CodeBuilder builder, MemberExpression exp, Service svc)
+        {
+            var proxyName = svc.TypeName() + "_Proxy";
+            builder.AppendLine("private " + proxyName + " " + exp.Member.Name + " = new " + proxyName + "((new NetlibTransport(new BinaryProtocolFactory())).Connect(" + svc.Url +"));");
+        }
+        
         public FlowErrorCode GenerateServiceClient(
             ServiceSpec spec,
             string dir,
@@ -147,8 +150,6 @@ namespace rDSN.Tron.LanguageProvider
                 Console.WriteLine("Bond compiler only supports windows platform!");
                 return FlowErrorCode.PlatformNotSupported;
             }
-
-
             // hack for C# for the time being
             if (lang == ClientLanguage.Client_CSharp)
             {
@@ -167,18 +168,17 @@ namespace rDSN.Tron.LanguageProvider
 
                 linkInfo.Sources.AddRange(FromAllSpecToSources(
                         Path.Combine(spec.Directory, spec.MainSpecFile),
-                        spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)).ToArray(),
+                        spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)),
                         dir,
-                        new[] { GeneratedFileType.TYPES, GeneratedFileType.PROXIES, GeneratedFileType.CLIENTS },
+                        new[] { GeneratedFileType.TYPES, GeneratedFileType.PROXIES},
                         new[] { GeneratedFileType.TYPES }
                     )
-                    .Select(Path.GetFileName)
-                    .ToList());
+                    );
 
                 return FlowErrorCode.Success;
             }
 
-            List<string> arguments = new List<string>
+            var arguments = new List<string>
             {
                 " ",
                 "/" + GetLanguageName(lang),
@@ -282,7 +282,7 @@ namespace rDSN.Tron.LanguageProvider
                             });
                 linkInfo.Sources = FromAllSpecToSources(
                         Path.Combine(spec.Directory, spec.MainSpecFile),
-                        spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)).ToArray(),
+                        spec.ReferencedSpecFiles.Select(rs => Path.Combine(spec.Directory, rs)),
                         dir,
                         new[] { GeneratedFileType.TYPES, GeneratedFileType.SERVICES },
                         new[] { GeneratedFileType.TYPES }
@@ -294,7 +294,7 @@ namespace rDSN.Tron.LanguageProvider
             }
 
 
-            List<string> arguments = new List<string>
+            var arguments = new List<string>
             {
                 " ",
                 "/" + GetLanguageName(lang),
@@ -362,26 +362,14 @@ namespace rDSN.Tron.LanguageProvider
 
         private string GetLanguageName(ClientLanguage lang)
         {
-            Dictionary<ClientLanguage, string> map = new Dictionary<ClientLanguage, string>()
+            var map = new Dictionary<ClientLanguage, string>()
             {
                 {ClientLanguage.Client_CPlusPlus, "c++"},
                 {ClientLanguage.Client_CSharp, "c#"},
                 {ClientLanguage.Client_Java, "java"},
             };
-            if (map.ContainsKey(lang))
-            {
-                return map[lang];
-            }
-            else
-            {
-                return "";
-            }
+            return map.ContainsKey(lang) ? map[lang] : "";
         }
-
-
-
-
-
     }
 
 }
