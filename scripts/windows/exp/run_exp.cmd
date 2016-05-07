@@ -29,6 +29,7 @@ for /f "delims=" %%x in (setting.ini) do (set "%%x")
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer1 leveldb|memcached|thumbnail|xlock|kyotocabinet <cluster>"
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateless memcached|thumbnail <cluster>"
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd layer2.stateful simple_kv|leveldb|xlock|redis <cluster>"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd toollets <cluster>"
     CALL %bin_dir%\echoc.exe 4  "Usage: run_exp.cmd all <cluster>"
     GOTO:EOF
 
@@ -38,16 +39,29 @@ for /f "delims=" %%x in (setting.ini) do (set "%%x")
     CALL %exp_dir%%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
 
+:toollets
+    CALL %bin_dir%\echoc.exe 12 *****TEST [TOOLLETS_TEST] BEGIN***** 
+
+    for %%x in (leveldb memcached thumbnail xlock kyotocabinet redis) do (
+    ::for %%x in (redis) do (
+        for %%y in (bare tracer profiler fault_injector all) do (
+            CALL :layer1 layer1 %%x %2 auto %%y
+        )
+    )
+    CALL %bin_dir%\echoc.exe 12 *****TEST [TOOLLETS_TEST] END***** 
+
+    GOTO toollets
+
 :all
     CALL %bin_dir%\echoc.exe 12 *****TEST [ALL_TEST] BEGIN***** 
 
-    for %%x in (leveldb memcached thumbnail xlock kyotocabinet) do (
-        CALL :layer1 layer1 %%x %2 auto
-    )
-    for %%x in (memcached thumbnail) do (
-        CALL :layer2.stateless layer2.stateless %%x %2 auto
-    )
-    for %%x in (leveldb xlock redis) do (
+    ::for %%x in (leveldb memcached thumbnail xlock kyotocabinet redis) do (
+    ::    CALL :layer1 layer1 %%x %2 auto
+    ::)
+    ::for %%x in (memcached thumbnail) do (
+    ::    CALL :layer2.stateless layer2.stateless %%x %2 auto
+    ::)
+    for %%x in (leveldb xlock kyotocabinet redis) do (
         CALL :layer2.stateful layer2.stateful %%x %2 auto
     )
 

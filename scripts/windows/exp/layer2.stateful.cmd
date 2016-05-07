@@ -19,6 +19,12 @@ if "%1" EQU "xlock" (
     SET dll_name=dsn.apps.XLock.dll
 )
 
+if "%1" EQU "kyotocabinet" (
+    SET test_app_upper=KyotoCabinet
+    SET dll_name=dsn.apps.KyotoCabinet.dll
+)
+
+
 if "%1" EQU "redis" (
     SET test_app_upper=redis
     SET dll_name=redis.dll
@@ -185,6 +191,7 @@ CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING LOG IN ROUND*****
             TASKKILL /F /S %replica3_address% /IM redis-server.exe
 
         )
+        ping -n %l1_fetch_wait_duration% 127.0.0.1
         ::CALL %bin_dir%"\deploy.cmd" cleanup %app_dir% %local_path%
         goto end
     )
