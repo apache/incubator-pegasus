@@ -59,6 +59,7 @@ namespace dsn {
             RPC_SERVER_LATENCY_NS,
             RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
             RPC_CLIENT_TIMEOUT_THROUGHPUT,
+			TASK_IN_QUEUE,
 
             PREF_COUNTER_COUNT,
             PREF_COUNTER_INVALID
