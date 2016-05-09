@@ -109,9 +109,12 @@ namespace dsn {
             }
 
             task_ext_for_profiler::get(callee) = dsn_now_ns();
-            auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
-            if (ptr != nullptr)
-                ptr->increment();
+            if (callee->delay_milliseconds() == 0)
+            {
+                auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
+                if (ptr != nullptr)
+                    ptr->increment();
+            }
         }
 
         static void profiler_on_task_begin(task* this_)

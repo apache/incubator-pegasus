@@ -59,7 +59,12 @@ namespace dsn
                 spec.env_factory_name = ("dsn::tools::hpc_env_provider");
 
             if (spec.timer_factory_name == "")
-                spec.timer_factory_name = "dsn::tools::io_looper_timer_service";
+            {
+                if (use_mixed_queue)
+                    spec.timer_factory_name = "dsn::tools::io_looper_timer_service";
+                else
+                    spec.timer_factory_name = "dsn::tools::simple_timer_service";
+            }
 
             {
                 network_client_config cs;
