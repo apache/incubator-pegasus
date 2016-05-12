@@ -75,7 +75,7 @@ START<======== queue(server) ======ENQUEUE <===================== net(reply) ===
 # endif
 # define __TITLE__ "toollet.profiler"
 using namespace dsn::service;
-
+    
 namespace dsn {
     namespace tools {
 
@@ -92,7 +92,8 @@ namespace dsn {
             new counter_info({ "aio.latency",  "al" },          AIO_LATENCY_NS,                     COUNTER_TYPE_NUMBER_PERCENTILES,    "AIO.LATENCY(ns)", "ns"),
             new counter_info({ "rpc.server.latency", "rpcsl" }, RPC_SERVER_LATENCY_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.SERVER(ns)",  "ns"),
             new counter_info({ "rpc.client.latency", "rpccl" }, RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,  COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.CLIENT(ns)",  "ns"),
-            new counter_info({ "rpc.client.timeout", "rpcto" }, RPC_CLIENT_TIMEOUT_THROUGHPUT,      COUNTER_TYPE_RATE,                  "TIMEOUT(#/s)",    "#/s")
+            new counter_info({ "rpc.client.timeout", "rpcto" }, RPC_CLIENT_TIMEOUT_THROUGHPUT,      COUNTER_TYPE_RATE,                  "TIMEOUT(#/s)",    "#/s"),
+            new counter_info({ "task.inqueue", "tiq" }, TASK_IN_QUEUE,      COUNTER_TYPE_NUMBER,                "InQueue(#)",    "#")
         };
 
         // call normal task
@@ -108,6 +109,12 @@ namespace dsn {
             }
 
             task_ext_for_profiler::get(callee) = dsn_now_ns();
+            if (callee->delay_milliseconds() == 0)
+            {
+                auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
+                if (ptr != nullptr)
+                    ptr->increment();
+            }
         }
 
         static void profiler_on_task_begin(task* this_)
@@ -118,6 +125,10 @@ namespace dsn {
             if(ptr !=nullptr)
                 ptr->set(now - qts);
             qts = now;
+
+            ptr = s_spec_profilers[this_->spec().code].ptr[TASK_IN_QUEUE];
+            if (ptr != nullptr)
+                ptr->decrement();
 
         }
 
@@ -181,6 +192,10 @@ namespace dsn {
             if (ptr != nullptr)
                 ptr->set(now - ats);
             ats = now;
+
+            ptr = s_spec_profilers[this_->spec().code].ptr[TASK_IN_QUEUE];
+            if (ptr != nullptr)
+                ptr->increment();
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
@@ -207,6 +222,10 @@ namespace dsn {
             uint64_t now = dsn_now_ns();
             task_ext_for_profiler::get(callee) = now;
             message_ext_for_profiler::get(callee->get_request()) = now;
+
+            auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
+            if (ptr != nullptr)
+                ptr->increment();
         }
 
         static void profiler_on_rpc_create_response(message_ex* req, message_ex* resp)
@@ -249,6 +268,10 @@ namespace dsn {
                     ptr->increment();
             }
             cts = now;
+
+            auto ptr = s_spec_profilers[resp->spec().code].ptr[TASK_IN_QUEUE];
+            if (ptr != nullptr)
+                ptr->increment();
         }
 
         void register_command_profiler()
@@ -360,6 +383,11 @@ namespace dsn {
 
                 if (!s_spec_profilers[i].is_profile)
                     continue;
+
+                if (config()->get_value<bool>(section_name.c_str(), "profiler::inqueue", true,
+                    "whether to profile the number of this kind of tasks in all queues"))
+                    s_spec_profilers[i].ptr[TASK_IN_QUEUE] = dsn::perf_counters::instance().get_counter("zion", "profiler", (name + std::string(".inqueue(#)")).c_str(), COUNTER_TYPE_NUMBER, 
+                        "task number in all queues", true);
 
                 if (config()->get_value<bool>(section_name.c_str(), "profiler::queue", true,
                     "whether to profile the queuing time of a task"))

@@ -56,6 +56,8 @@ namespace dsn {
 
             double          rpc_request_drop_ratio;
             double          rpc_response_drop_ratio;
+            double          rpc_request_delay_ratio;
+            double          rpc_response_delay_ratio;
             double          disk_read_fail_ratio;
             double          disk_write_fail_ratio;
 
@@ -83,6 +85,8 @@ namespace dsn {
 
             CONFIG_FLD(double, double, rpc_request_drop_ratio, 0, "drop ratio for rpc request messages")
             CONFIG_FLD(double, double, rpc_response_drop_ratio, 0, "drop ratio for rpc response messages")
+            CONFIG_FLD(double, double, rpc_request_delay_ratio, 0, "delay ratio for rpc request messages")
+            CONFIG_FLD(double, double, rpc_response_delay_ratio, 0, "delay ratio for rpc response messages")
             CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001, "failure ratio for disk read operations")
             CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001, "failure ratio for disk write operations")
 
@@ -232,8 +236,11 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[callee->spec().code];
             if (callee->delay_milliseconds() == 0 && task_ext_for_fj::get(callee) == 0)
             {
-                callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
-                task_ext_for_fj::get(callee) = 1; // ensure only fd once
+                if (dsn_probability() < opt.rpc_request_delay_ratio)
+                {
+                    callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    task_ext_for_fj::get(callee) = 1; // ensure only fd once
+                }
             }
         }
 
@@ -263,8 +270,11 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[resp->spec().code];
             if (resp->delay_milliseconds() == 0 && task_ext_for_fj::get(resp) == 0)
             {
-                resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
-                task_ext_for_fj::get(resp) = 1; // ensure only fd once
+                if (dsn_probability() < opt.rpc_response_delay_ratio)
+                {
+                    resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    task_ext_for_fj::get(resp) = 1; // ensure only fd once
+                }
             }
         }
 

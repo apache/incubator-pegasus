@@ -61,9 +61,9 @@ namespace rDSN.Tron.LanguageProvider
         {
             switch(t)
             {
-                case ServiceSpecType.thrift:
+                case ServiceSpecType.Thrift:
                     return new ThriftTranslator();
-                case ServiceSpecType.proto:
+                case ServiceSpecType.Proto:
                     throw new NotImplementedException();
                 default:
                     return null;

@@ -137,7 +137,7 @@ public:
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _echo_client = new echo_perf_test_client(_server);
-        _echo_client->start_test();
+        _echo_client->start_test("echo.perf-test.case", 1);
         return ::dsn::ERR_OK;
     }
 
