@@ -70,7 +70,10 @@ namespace dsn {
             void set_options();  
             void on_message_read(message_ex* msg)
             {
-                on_recv_message(msg, 0);
+                if (!on_recv_message(msg, 0))
+                {
+                    on_failure(false);
+                }
             }
 
         private:
