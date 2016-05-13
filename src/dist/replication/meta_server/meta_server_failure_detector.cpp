@@ -151,6 +151,8 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
         "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
+
+    _svc->on_node_changed(node);
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)

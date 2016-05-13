@@ -433,8 +433,24 @@ void meta_service::on_load_balance_timer()
 
 void meta_service::on_config_changed(global_partition_id gpid)
 {
+    if (_state->freezed())
+        return;
+
     if (_failure_detector->is_primary())
     {
         _balancer->run(gpid);
     }
+}
+
+void meta_service::on_node_changed(rpc_address node)
+{
+    tasking::enqueue(LPC_LBM_RUN, this, [this](){
+        if (_state->freezed())
+            return;
+
+        if (_failure_detector->is_primary())
+        {
+            _balancer->run();
+        }
+    });
 }

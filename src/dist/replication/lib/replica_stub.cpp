@@ -148,6 +148,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         _options.log_shared_file_size_mb,
         _options.log_shared_force_flush
         );
+    ddebug("shared log object created, dir = %s", _options.slog_dir.c_str());
 
     // init rps
     replicas rps;
@@ -175,10 +176,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 dassert(false, "conflict replica dir: %s <--> %s", r->dir().c_str(), rps[r->get_gpid()]->dir().c_str());
             }
-            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
-                r->get_gpid().app_id, r->get_gpid().pidx,
-                primary_address().to_string(),
-                dir.c_str(),
+            ddebug("%s: load replica succeed, durable = %" PRId64 ", committed = %" PRId64 ", prepared = %" PRId64,
+                r->name(),
                 r->last_durable_decree(),
                 r->last_committed_decree(),
                 r->last_prepared_decree()
@@ -189,6 +188,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     dir_list.clear();
 
     // init shared prepare log
+    ddebug("start to replay shared log");
+    uint64_t start_time = dsn_now_ms();
     error_code err = _log->open(
         [&rps](mutation_ptr& mu)
         {
@@ -203,19 +204,20 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             }
         }
         );
+    uint64_t finish_time = dsn_now_ms();
 
     if (err == ERR_OK)
     {
         ddebug(
-            "%s: replay shared log succeed",
-            primary_address().to_string()
+            "replay shared log succeed, time_used = %" PRIu64 " ms",
+            finish_time - start_time
             );
     }
     else
     {
         derror(
-            "%s: replay shared log failed, err = %s, clear all logs ...",
-            primary_address().to_string(),
+            "replay shared log failed, err = %s, time_used = %" PRIu64 " ms, clear all logs ...",
+            finish_time - start_time,
             err.to_string()
             );
 
@@ -272,11 +274,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             }
         }
 
-        dwarn(
-            "%u.%u @ %s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-            "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
-            it->first.app_id, it->first.pidx,
-            primary_address().to_string(),
+        ddebug(
+            "%s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "prepared = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", "
+            "log_offset = <%" PRId64 ", %" PRId64 ">",
+            it->second->name(),
             err.to_string(),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
@@ -323,6 +325,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             LPC_QUERY_CONFIGURATION_ALL,
             this,
             [this] {query_configuration_by_node();},
+            std::chrono::milliseconds(_options.config_sync_interval_ms),
+            0,
             std::chrono::milliseconds(_options.config_sync_interval_ms)
             );
     }
@@ -689,10 +693,7 @@ void replica_stub::query_configuration_by_node()
 
 void replica_stub::on_meta_server_connected()
 {
-    ddebug(
-        "%s: meta server connected",
-        primary_address().to_string()
-        );
+    ddebug("meta server connected");
 
     zauto_lock l(_replicas_lock);
     if (_state == NS_Disconnected)
@@ -704,11 +705,7 @@ void replica_stub::on_meta_server_connected()
 
 void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
 {
-    ddebug(
-        "%s: node view replied, err = %s",
-        primary_address().to_string(),
-        err.to_string()
-        );    
+    ddebug("node query replied, err = %s", err.to_string());
 
     if (err != ERR_OK)
     {
@@ -795,7 +792,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     else
     {
         ddebug(
-            "%u.%u @ %s: replica not exists on replica server, remove it from meta server",
+            "%u.%u@%s: replica not exists on replica server, remove it from meta server",
             config.gpid.app_id, config.gpid.pidx,
             primary_address().to_string()
             );
@@ -813,7 +810,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
     if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
     {
         ddebug(
-            "%u.%u @ %s: replica not exists on meta server, removed",
+            "%u.%u@%s: replica not exists on meta server, remove",
             gpid.app_id, gpid.pidx,
             primary_address().to_string()
             );
@@ -856,10 +853,8 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
 void replica_stub::on_meta_server_disconnected()
 {
-    ddebug(
-        "%s: meta server disconnected",
-        primary_address().to_string()
-        );
+    ddebug("meta server disconnected");
+
     zauto_lock l(_replicas_lock);
     if (NS_Disconnected == _state)
         return;

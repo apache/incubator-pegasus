@@ -95,6 +95,7 @@ private:
     void start_load_balance();
     void on_load_balance_timer();
     void on_config_changed(global_partition_id gpid);
+    void on_node_changed(rpc_address gpid);
 
     // common routines
     int check_primary(dsn_message_t req);

@@ -504,10 +504,11 @@ void mutation_log::internal_write_callback(
     )
 {
     end_offset = log->start_offset();
-    ddebug("start to replay mutation log %s: offset = [%" PRId64 ", %" PRId64 ")",
+    ddebug("start to replay mutation log %s, offset = [%" PRId64 ", %" PRId64 "), size = %" PRId64,
         log->path().c_str(),
         log->start_offset(),
-        log->end_offset()
+        log->end_offset(),
+        log->end_offset() - log->start_offset()
         );
 
     ::dsn::blob bb;
@@ -561,7 +562,7 @@ void mutation_log::internal_write_callback(
         end_offset += sizeof(log_block_header);
     }
 
-    ddebug("finish to replay mutation log %s: err = %s",
+    ddebug("finish to replay mutation log %s, err = %s",
         log->path().c_str(),
         err.to_string()
         );
