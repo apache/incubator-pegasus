@@ -189,8 +189,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (!_options->log_private_disabled/*
-            || !_app->is_delta_state_learning_supported()*/)
+        if (!_options->log_private_disabled)
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
 

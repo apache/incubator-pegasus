@@ -51,6 +51,8 @@ extern void fd_test_init();
 class test_client : public ::dsn::service_app
 {
 public:
+    test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);

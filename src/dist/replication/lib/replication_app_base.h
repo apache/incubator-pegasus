@@ -95,11 +95,12 @@ public:
     {
         if (_app_context)
         {
-            auto err = dsn_layer1_app_destroy(_app_context, clear_state);
+            auto err = dsn_hosted_app_destroy(_app_context, clear_state);
             if (err == ERR_OK)
             {
                 _last_committed_decree.store(0);
                 _app_context = nullptr;
+                _app_context_callbacks = nullptr;
             }
 
             return err;
@@ -119,7 +120,7 @@ public:
     //
     ::dsn::error_code checkpoint()
     {
-        return dsn_layer1_app_checkpoint(_app_context, _last_committed_decree.load());
+        return _callbacks.calls.chkpt(_app_context_callbacks, _last_committed_decree.load());
     }
 
     //
@@ -133,7 +134,7 @@ public:
     //
     ::dsn::error_code checkpoint_async() 
     { 
-        return dsn_layer1_app_checkpoint_async(_app_context, _last_committed_decree.load());
+        return _callbacks.calls.chkpt_async(_app_context_callbacks, _last_committed_decree.load());
     }
     
     //
@@ -182,7 +183,7 @@ public:
     //    
     ::dsn::replication::decree last_durable_decree() 
     {
-        return _app_context ? dsn_layer1_app_checkpoint_get_version(_app_context) : 0;
+        return _app_context ? _callbacks.calls.chkpt_get_version(_app_context_callbacks) : 0;
     }
 
 public:
@@ -211,6 +212,8 @@ private:
 
 private:
     void* _app_context;
+    void* _app_context_callbacks;
+    dsn_app_callbacks _callbacks;
 
 private:
     std::string _dir_data; // ${replica_dir}/data

@@ -73,8 +73,8 @@ class test_client :
     public ::dsn::service_app    
 {
 public:
-    test_client()
-        : ::dsn::serverlet<test_client>("test-server", 7)
+    test_client(dsn_gpid gpid)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
     {
 
     }

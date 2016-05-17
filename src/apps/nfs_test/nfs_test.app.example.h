@@ -44,7 +44,7 @@ namespace dsn {
             class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::clientlet
             {
             public:
-                nfs_server_app() {}
+                nfs_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
                 virtual ::dsn::error_code start(int argc, char** argv)
                 {
@@ -62,7 +62,8 @@ namespace dsn {
             class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
             {
             public:
-                nfs_client_app()
+                nfs_client_app(dsn_gpid gpid)
+                    : ::dsn::service_app(gpid)
                 {
                     _req_index = 0;
                     _is_copying = false;

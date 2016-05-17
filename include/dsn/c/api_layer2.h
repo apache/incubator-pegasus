@@ -54,40 +54,27 @@ extern "C" {
 /*!
 Creates layer 1 application.
 
-\param gpid        the gpid.
-\param app_context output context for the application.
+\param type        registered app type
+\param gpid        assigned gpid.
+\param data_idr    assigned data directory
+\param app_context_for_downcalls app_context for usage by dsn_hosted_app_create/start/destroy
+\param app_context_for_callbacks   app_context used by upcalls retrived from dsn_get_app_callbacks
 
 \return error code: ERR_OK, ERR_SERVICE_ALREADY_EXIST (app_context is also valid)
 */
-extern DSN_API dsn_error_t dsn_layer1_app_create(dsn_gpid gpid, /*our*/ void** app_context);
+extern DSN_API dsn_error_t dsn_hosted_app_create(
+    const char* type,
+    dsn_gpid gpid, 
+    const char* data_dir,
+    /*our*/ void** app_context_for_downcalls, 
+    /*out*/void** app_context_for_callbacks
+    );
 
-extern DSN_API dsn_error_t dsn_layer1_app_start(void* app_context);
+extern DSN_API dsn_error_t dsn_hosted_app_start(void* app_context_for_downcalls, int argc, char** argv);
 
-extern DSN_API dsn_error_t dsn_layer1_app_destroy(void* app_context, bool cleanup);
+extern DSN_API dsn_error_t dsn_hosted_app_destroy(void* app_context_for_downcalls, bool cleanup);
 
-extern DSN_API void        dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t msg, bool exec_inline);
-
-extern DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context, int64_t version);
-
-extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context, int64_t version);
-
-extern DSN_API dsn_error_t dsn_layer1_app_checkpoint_get_version(void* app_context);
-
-extern DSN_API int         dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity);
-
-extern DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
-                                void* app_context,
-                                int64_t start,
-                                int64_t local_commit,
-                                void*   learn_request,
-                                int     learn_request_size,
-                                /* inout */ dsn_app_learn_state* state,
-                                int state_capacity
-                                );
-
-extern DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode);
-
-extern DSN_API int         dsn_layer1_app_get_physical_error(void* app_context);
+extern DSN_API void        dsn_hosted_app_commit_rpc_request(void* app_context_for_downcalls, dsn_message_t msg, bool exec_inline);
 
 /*@}*/
 

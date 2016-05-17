@@ -47,7 +47,8 @@ namespace dsn
     class replicated_service_app_type_1 : public service_app
     {
     public:
-        replicated_service_app_type_1() { _physical_error = 0; }
+        replicated_service_app_type_1(dsn_gpid gpid) 
+            : service_app(gpid) { _physical_error = 0; }
 
         virtual ~replicated_service_app_type_1(void) {}
 
@@ -262,19 +263,19 @@ namespace dsn
     {
         dsn_app app;
         memset(&app, 0, sizeof(app));
-        app.mask = DSN_L2_REPLICATION_APP_TYPE_1;
+        app.mask = DSN_APP_MASK_FRAMEWORK;
         strncpy(app.type_name, type_name, sizeof(app.type_name));
         app.layer1.create = service_app::app_create<TServiceApp>;
         app.layer1.start = service_app::app_start;
         app.layer1.destroy = service_app::app_destroy;
 
-        app.layer2_apps_type_1.chkpt = replicated_service_app_type_1::app_checkpoint;
-        app.layer2_apps_type_1.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
-        app.layer2_apps_type_1.chkpt_get_version = replicated_service_app_type_1::app_checkpoint_get_version;
-        app.layer2_apps_type_1.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
-        app.layer2_apps_type_1.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
-        app.layer2_apps_type_1.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
-        app.layer2_apps_type_1.physical_error_get = replicated_service_app_type_1::app_get_physical_error;
+        app.layer2.apps.calls.chkpt = replicated_service_app_type_1::app_checkpoint;
+        app.layer2.apps.calls.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
+        app.layer2.apps.calls.chkpt_get_version = replicated_service_app_type_1::app_checkpoint_get_version;
+        app.layer2.apps.calls.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
+        app.layer2.apps.calls.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
+        app.layer2.apps.calls.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
+        app.layer2.apps.calls.physical_error_get = replicated_service_app_type_1::app_get_physical_error;
 
         dsn_register_app(&app);
     }

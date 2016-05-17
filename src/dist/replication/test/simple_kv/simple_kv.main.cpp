@@ -49,7 +49,7 @@ void dsn_app_registration_simple_kv()
     // register simple-kv type here
 
     // register services
-    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
+    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_APP_MASK_FRAMEWORK);
     dsn::register_app<dsn::service::meta_service_app>("meta");
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
     dsn::register_app_with_type_1_replication_support< ::dsn::replication::test::simple_kv_service_impl>("simple_kv");

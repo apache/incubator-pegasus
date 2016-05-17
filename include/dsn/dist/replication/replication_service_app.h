@@ -48,7 +48,7 @@ class replication_service_app :
     public ::dsn::layer2_handler
 {
 public:
-    replication_service_app();
+    replication_service_app(dsn_gpid gpid);
 
     ~replication_service_app(void);
 

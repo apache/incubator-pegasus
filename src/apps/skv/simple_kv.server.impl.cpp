@@ -48,8 +48,8 @@ namespace dsn {
     namespace replication {
         namespace application {
             
-            simple_kv_service_impl::simple_kv_service_impl()
-                : _lock(true)
+            simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
+                : _lock(true), ::dsn::replicated_service_app_type_1(gpid)
             {
                 _test_file_learning = false;
                 _checkpoint_version = 0;
@@ -103,7 +103,7 @@ namespace dsn {
             
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _data_dir = dsn_get_current_app_data_dir(gpid());
+                _data_dir = dsn_get_app_data_dir(gpid());
 
                 {
                     zauto_lock l(_lock);
@@ -123,7 +123,7 @@ namespace dsn {
                     zauto_lock l(_lock);
                     if (clear_state)
                     {
-                        dsn_get_current_app_data_dir(gpid());
+                        dsn_get_app_data_dir(gpid());
 
                         if (!dsn::utils::filesystem::remove_path(data_dir()))
                         {

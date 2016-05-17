@@ -43,8 +43,8 @@ namespace dsn {
             bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
             bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 
-            simple_kv_service_impl::simple_kv_service_impl()
-                : _lock(true)
+            simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
+                : _lock(true), replicated_service_app_type_1(gpid)
             {
                 _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
                 _checkpoint_version = 0;
@@ -98,7 +98,7 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _data_dir = dsn_get_current_app_data_dir(gpid());
+                _data_dir = dsn_get_app_data_dir(gpid());
                 open_service(gpid());
 
                 if (s_simple_kv_open_fail)

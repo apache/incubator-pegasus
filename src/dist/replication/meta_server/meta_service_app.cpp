@@ -88,7 +88,8 @@ namespace dsn {
                 PROVIDER_TYPE_MAIN);
         }
 
-        meta_service_app::meta_service_app()
+        meta_service_app::meta_service_app(dsn_gpid gpid)
+            : service_app(gpid)
         {
             // create in constructor because it may be used in checker before started
             _service = new meta_service();

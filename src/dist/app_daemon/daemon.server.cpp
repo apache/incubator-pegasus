@@ -53,7 +53,7 @@ namespace dsn
             : ::dsn::serverlet<daemon_s_service>("daemon_s"), _online(false)
         {
             _under_deployment = false;
-            _working_dir = utils::filesystem::path_combine(dsn_get_current_app_data_dir(), "apps");
+            _working_dir = utils::filesystem::path_combine(dsn_get_app_data_dir(), "apps");
             _package_server = rpc_address(
                 dsn_config_get_value_string("apps.daemon", "package_server_host", "", "the host name of the app store where to download package"),
                 (uint16_t)dsn_config_get_value_uint64("apps.daemon", "package_server_port", 26788, "the port of the app store where to download package")
@@ -284,7 +284,7 @@ namespace dsn
                         // worker nodes stored in last-drops
                         req.node = appc.config.last_drops[i];
 
-                        std::shared_ptr<layer1_app_info> app(new layer1_app_info(req));
+                        std::shared_ptr<app_internal> app(new app_internal(req));
                         app->exited = true;
                         app->working_port = req.node.port();
 
@@ -313,7 +313,7 @@ namespace dsn
                 gpid gpid;
                 gpid.set_app_id(atoi(argv[0]));
                 gpid.set_partition_index(atoi(argv[1]));
-                std::shared_ptr<layer1_app_info> app = nullptr;
+                std::shared_ptr<app_internal> app = nullptr;
                 {
                     ::dsn::service::zauto_write_lock l(_lock);
                     auto it = _apps.find(gpid);
@@ -385,7 +385,7 @@ namespace dsn
             }
 
             // check app exists or not
-            std::shared_ptr<layer1_app_info> old_app, app;
+            std::shared_ptr<app_internal> old_app, app;
 
             {
                 ::dsn::service::zauto_write_lock l(_lock);
@@ -405,7 +405,7 @@ namespace dsn
                     }
                 }
 
-                app.reset(new layer1_app_info(proposal));
+                app.reset(new app_internal(proposal));
 
                 // package dir as work-dir/package-id
                 app->package_dir = utils::filesystem::path_combine(_working_dir, proposal.info.app_type);
@@ -506,7 +506,7 @@ namespace dsn
         void daemon_s_service::on_remove_app(const ::dsn::replication::configuration_update_request & proposal)
         {
             // check app exists or not
-            std::shared_ptr<layer1_app_info> app;
+            std::shared_ptr<app_internal> app;
 
             {
                 ::dsn::service::zauto_read_lock l(_lock);
@@ -536,7 +536,7 @@ namespace dsn
             }
         }
 
-        void daemon_s_service::start_app(std::shared_ptr<layer1_app_info> && app)
+        void daemon_s_service::start_app(std::shared_ptr<app_internal> && app)
         {
             // set port and run
             for (int i = 0; i < 10; i++)
@@ -626,7 +626,7 @@ namespace dsn
             }
         }
         
-        void daemon_s_service::kill_app(std::shared_ptr<layer1_app_info> && app)
+        void daemon_s_service::kill_app(std::shared_ptr<app_internal> && app)
         {
             dinfo("kill app %s at working dir %s, port %d",
                 app->app_type.c_str(),
@@ -698,7 +698,7 @@ namespace dsn
             apps.clear();
         }
         
-        void daemon_s_service::update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info>&& app)
+        void daemon_s_service::update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<app_internal>&& app)
         {
             rpc_address node = primary_address();
             node.assign_ipv4(node.ip(), app->working_port);
@@ -748,7 +748,7 @@ namespace dsn
         }
 
         void daemon_s_service::on_update_configuration_on_meta_server_reply(
-            ::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info> &&  app,
+            ::dsn::replication::config_type::type type, std::shared_ptr<app_internal> &&  app,
             error_code err, dsn_message_t request, dsn_message_t response
             )
         {
@@ -798,7 +798,8 @@ namespace dsn
             return ERR_OK;
         }
 
-        daemon::daemon()
+        daemon::daemon(dsn_gpid gpid)
+            : ::dsn::service_app(gpid)
         {
 
         }

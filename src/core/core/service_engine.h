@@ -41,6 +41,7 @@
 # include <dsn/cpp/auto_codes.h>
 # include <sstream>
 # include <dsn/internal/synchronize.h>
+# include "app_manager.h"
 
 namespace dsn { 
 
@@ -55,46 +56,6 @@ class task_queue;
 class task_worker_pool;
 class timer_service;
 class aio_provider;
-class rpc_server_dispatcher;
-class service_node;
-class service_app;
-
-class layer2_handler_core
-{
-public:
-    layer2_handler_core(service_node* node);
-
-    error_code create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context);
-
-    error_code start_layer1_app(void* app_context);
-
-    error_code destroy_layer1_app(void* app_context, bool cleanup);
-
-    bool  rpc_register_handler(dsn_gpid gpid, rpc_handler_info* handler);
-
-    rpc_handler_info* rpc_unregister_handler(dsn_gpid gpid, dsn_task_code_t rpc_code);
-
-    dsn_app_info* get_app_info(dsn_gpid gpid);
-
-public:
-    struct layer1_app_info
-    {
-        union {
-            void*                 app_context;
-            service_app*          app_for_cpp;
-        };
-        
-        dsn_gpid              gpid;
-        dsn_app               *role;
-        dsn_app_info   info;
-        std::unique_ptr<rpc_server_dispatcher> server_dispatcher;
-    };
-
-private:
-    service_node  *_owner_node;
-    utils::rw_lock_nr _apps_lock;
-    std::unordered_map<uint64_t, std::unique_ptr<layer1_app_info> > _layer1_apps;
-};
 
 //
 //
@@ -151,14 +112,13 @@ public:
     rpc_handler_info* rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
 
     dsn_app_info* get_l1_info() { return &_app_info; }
-    dsn_app* get_l2_app_role() { return _hosted_app_role; }
-    layer2_handler_core& get_l2_handler() { return _layer2_handler; }
-    void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
+    app_manager& get_l2_handler() { return _layer2_handler; }
+    bool handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
 
     static dsn_error_t start_app(void* app_context, const std::string& args, dsn_app_start start, const std::string& app_name);
 
 private:
-    dsn_app_info  _app_info;
+    dsn_app_info     _app_info;
     
     service_app_spec _app_spec;
     task_engine*     _computation;
@@ -168,8 +128,7 @@ private:
     std::list<io_engine>                        _ios; // all ios
 
     // when this app is hosted by a layer2 handler app
-    layer2_handler_core                         _layer2_handler;
-    dsn_app                                     *_hosted_app_role;
+    app_manager                                 _layer2_handler;
 
 private:
     error_code init_io_engine(io_engine& io, ioe_mode mode);

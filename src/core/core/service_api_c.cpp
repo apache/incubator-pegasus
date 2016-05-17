@@ -925,22 +925,7 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app(dsn_app* app_type)
-{
-    dsn_app* app;
-    auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
-    if (store.get(app_type->type_name, app))
-    {
-        dassert(false, "app type %s is already registered", app_type->type_name);
-        return false;
-    }
-    
-    app = new dsn_app();
-    *app = *app_type;
-    auto r = store.put(app_type->type_name, app);
-    dassert(r, "app type %s is already registered", app_type->type_name);
-    return r;
-}
+
 
 static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list);
 
@@ -1058,7 +1043,7 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     return false;
 }
 
-DSN_API const char* dsn_get_current_app_data_dir(dsn_gpid gpid)
+DSN_API const char* dsn_get_app_data_dir(dsn_gpid gpid)
 {
     auto info = dsn_get_app_info_ptr(gpid);
     return info ? info->data_dir : nullptr;
@@ -1420,90 +1405,4 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));
     }
     return i;
-}
-
-
-DSN_API dsn_error_t dsn_layer1_app_create(dsn_gpid gpid, /*our*/ void** app_context)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().create_layer1_app(gpid, app_context);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_start(void* app_context)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().start_layer1_app(app_context);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_destroy(void* app_context, bool cleanup)
-{
-    return ::dsn::task::get_current_node2()->get_l2_handler().destroy_layer1_app(app_context, cleanup);
-}
-
-DSN_API void dsn_layer1_app_commit_rpc_request(void* app_context, dsn_message_t msg, bool exec_inline)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-
-    if (exec_inline)
-    {
-        app->server_dispatcher->on_request_with_inline_execution((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
-    }
-    else
-    {
-        auto tsk = app->server_dispatcher->on_request((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
-        if (tsk)
-            tsk->enqueue();
-        else
-        {
-            dassert(false, "to be handled");
-        }
-    }
-}
-
-DSN_API dsn_error_t dsn_layer1_app_checkpoint(void* app_context, int64_t version)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt(app->app_context, version);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_checkpoint_async(void* app_context, int64_t version)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_async(app->app_context, version);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_checkpoint_get_version(void* app_context)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_get_version(app->app_context);
-}
-
-DSN_API int dsn_layer1_app_prepare_learn_request(void* app_context, void* buffer, int capacity)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.checkpoint_get_prepare(app->app_context, buffer, capacity);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_get_checkpoint(
-    void* app_context,
-    int64_t start,
-    int64_t local_commit,
-    void*   learn_request,
-    int     learn_request_size,
-    /* inout */ dsn_app_learn_state* state,
-    int state_capacity
-    )
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_get(app->app_context, start, local_commit, learn_request, learn_request_size, state, state_capacity);
-}
-
-DSN_API dsn_error_t dsn_layer1_app_apply_checkpoint(void* app_context, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.chkpt_apply(app->app_context, local_commit, state, mode);
-}
-
-extern DSN_API int dsn_layer1_app_get_physical_error(void* app_context)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-    return app->role->layer2_apps_type_1.physical_error_get(app->app_context);
 }

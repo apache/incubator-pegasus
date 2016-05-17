@@ -250,7 +250,7 @@ namespace dsn
 
         error_code meta_state_service_simple::initialize(int argc, const char** argv)
         {
-            const char* work_dir = argc > 0 ? argv[0] : dsn_get_current_app_data_dir();
+            const char* work_dir = argc > 0 ? argv[0] : dsn_get_app_data_dir();
 
             _offset = 0;
             std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");

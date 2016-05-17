@@ -45,7 +45,8 @@ namespace dsn {
 
         using namespace ::dsn::replication;
 
-        repli_app::repli_app()
+        repli_app::repli_app(dsn_gpid gpid)
+            : service_app(gpid)
         {
         }
 

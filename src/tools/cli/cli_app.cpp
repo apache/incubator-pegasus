@@ -40,7 +40,8 @@
 namespace dsn {
     namespace service {
 
-        cli::cli()
+        cli::cli(dsn_gpid gpid)
+            : service_app(gpid)
         {
             _timeout = std::chrono::seconds(10); // 10 seconds by default
         }

@@ -46,7 +46,7 @@ namespace dsn {
                 public replicated_service_app_type_1
             {
             public:
-                simple_kv_service_impl();
+                simple_kv_service_impl(dsn_gpid gpid);
 
                 // RPC_SIMPLE_KV_READ
                 virtual void on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply);

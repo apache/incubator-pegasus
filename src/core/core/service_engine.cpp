@@ -63,7 +63,6 @@ service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _hosted_app_role = nullptr;
 
     memset(&_app_info, 0, sizeof(_app_info));
     _app_info.app.app_context_ptr = nullptr;
@@ -73,16 +72,6 @@ service_node::service_node(service_app_spec& app_spec)
     strncpy(_app_info.type, spec().type.c_str(), sizeof(_app_info.type));
     strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
     strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
-
-    if (!app_spec.hosted_app_type_name.empty())
-    {
-        auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
-        if (!store.get(_app_spec.hosted_app_type_name, _hosted_app_role))
-        {
-            dassert(false, "service app type name '%s' not registered\n",
-                _app_spec.hosted_app_type_name.c_str());
-        }
-    }
 }
 
 bool service_node::rpc_register_handler(rpc_handler_info* handler, dsn_gpid gpid)
@@ -368,17 +357,6 @@ error_code service_node::start()
         ::dsn::tools::node_scoper scoper(this);
         _app_info.app.app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name, dsn_gpid{ 0 });
     }
-
-    // check if this app is going to host other apps
-    if (_hosted_app_role != nullptr)
-    {
-        auto framework = dynamic_cast<layer2_handler*> ((service_app*)_app_info.app.app_context_ptr);
-
-        dassert(nullptr != framework,
-            "service app with type '%s' is not a layer2 handler app, please make sure create the app by inheriting class layer2_handler ",
-            _app_spec.role->type_name
-            );
-    }
     return err;
 }
 
@@ -459,166 +437,23 @@ void service_node::get_queue_info(
 }
 
 
-void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
+bool service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
 {
     auto msg = (message_ex*)(req);
+    auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
 
-    if (nullptr == _hosted_app_role)
+    if (nullptr != cb)
     {
-        dwarn(
-            "skip recved message with type %s from %s, rpc_id = %016llx, as replicator is required but not insalled on server",
-            msg->header->rpc_name,
-            msg->header->from_address.to_string(),
-            msg->header->rpc_id
-            );
-
-        dassert(msg->get_count() == 0,
-            "request should not be referenced by anybody so far");
-        delete msg;
+        cb(_app_info.app.app_context_ptr, gpid, is_write, req, delay);
+        return true;
     }
     else
     {
-        _app_spec.role->layer2_frameworks.on_rpc_request(_app_info.app.app_context_ptr, gpid, is_write, req, delay);
+        return false;
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-
-layer2_handler_core::layer2_handler_core(service_node* node)
-    : _owner_node(node)
-{
-}
-
-error_code layer2_handler_core::create_layer1_app(dsn_gpid gpid, /*our*/ void** app_context)
-{
-    layer1_app_info* app = nullptr;
-
-    {
-        utils::auto_write_lock l(_apps_lock);
-
-        auto it = _layer1_apps.find(gpid.value);
-        if (it != _layer1_apps.end())
-        {
-            *app_context = it->second.get();
-            return ERR_SERVICE_ALREADY_EXIST;
-        }
-        else
-        {
-            app = new layer2_handler_core::layer1_app_info();
-            app->gpid = gpid;
-            app->role = _owner_node->get_l2_app_role();
-            app->server_dispatcher.reset(new rpc_server_dispatcher());
-
-            memset(&app->info, 0, sizeof(app->info));
-            app->info.app_id = gpid.u.app_id;
-            app->info.index = gpid.u.partition_index;
-            strncpy(app->info.role, _owner_node->spec().role_name.c_str(), sizeof(app->info.role));
-            strncpy(app->info.type, _owner_node->spec().hosted_app_type_name.c_str(), sizeof(app->info.type));
-            strncpy(app->info.name, _owner_node->spec().name.c_str(), sizeof(app->info.name));
-            strncpy(app->info.data_dir, _owner_node->spec().data_dir.c_str(), sizeof(app->info.data_dir));
-
-            _layer1_apps.emplace(gpid.value,
-                std::unique_ptr<layer2_handler_core::layer1_app_info>(app));
-        }
-    }
-
-    app->app_context = app->role->layer1.create(_owner_node->spec().role->type_name, gpid);
-    app->info.app.app_context_ptr = app->app_context;
-    *app_context = app;
-    return ERR_OK;
-}
-
-error_code layer2_handler_core::start_layer1_app(void* app_context)
-{
-    auto app = (::dsn::layer2_handler_core::layer1_app_info*)(app_context);
-
-    return service_node::start_app(app->info.app.app_context_ptr,
-        _owner_node->spec().hosted_app_arguments,
-        app->role->layer1.start,
-        _owner_node->spec().name
-        );
-}
-
-error_code layer2_handler_core::destroy_layer1_app(void* app_context, bool cleanup)
-{
-    auto app = (layer2_handler_core::layer1_app_info*)(app_context);
-    error_code err = app->role->layer1.destroy(app->app_context, cleanup);
-
-    if (err == ERR_OK)
-    {
-        utils::auto_write_lock l(_apps_lock);
-        auto it = _layer1_apps.find(app->gpid.value);
-        if (it != _layer1_apps.end())
-        {
-            _layer1_apps.erase(it);
-        }
-        else
-        {
-            dassert(false,
-                "layer 1 app is missing, gpid = %d.%d!",
-                app->gpid.u.app_id,
-                app->gpid.u.partition_index
-                );
-        }
-    }
-    else
-    {
-        derror("destroy layer 1 app %s failed, err = %s",
-            app->info.name,
-            err.to_string()
-            );
-    }
-
-    return err;
-}
-
-bool layer2_handler_core::rpc_register_handler(dsn_gpid gpid, rpc_handler_info* handler)
-{
-    layer1_app_info* app;
-    {
-        utils::auto_read_lock l(_apps_lock);
-        auto it = _layer1_apps.find(gpid.value);
-        if (it != _layer1_apps.end())
-        {
-            app = it->second.get();
-        }
-        else
-            return false;
-    }
-    
-    return app->server_dispatcher->register_rpc_handler(handler);
-}
-
-rpc_handler_info* layer2_handler_core::rpc_unregister_handler(dsn_gpid gpid, dsn_task_code_t rpc_code)
-{
-    layer1_app_info* app;
-    {
-        utils::auto_read_lock l(_apps_lock);
-        auto it = _layer1_apps.find(gpid.value);
-        if (it != _layer1_apps.end())
-        {
-            app = it->second.get();
-        }
-        else
-            return false;
-    }
-
-    return app->server_dispatcher->unregister_rpc_handler(rpc_code);
-}
-
-dsn_app_info* layer2_handler_core::get_app_info(dsn_gpid gpid)
-{
-    utils::auto_read_lock l(_apps_lock);
-    auto it = _layer1_apps.find(gpid.value);
-    if (it != _layer1_apps.end())
-    {
-        return &it->second->info;
-    }
-    else
-        return nullptr;
-}
-
-//////////////////////////////////////////////////////////
 
 service_engine::service_engine(void)
 {

@@ -46,7 +46,7 @@ namespace dsn {
         class repli_app : public service_app
         {
         public:
-            repli_app();
+            repli_app(dsn_gpid gpid);
             virtual ::dsn::error_code start(int argc, char** argv);
             virtual ::dsn::error_code stop(bool cleanup = false);
 

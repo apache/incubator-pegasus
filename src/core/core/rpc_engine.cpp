@@ -722,11 +722,16 @@ namespace dsn {
 
             // handle replication
             auto sp = task_spec::get(code);
-            //if (sp->rpc_request_layer2_handler_required)
-            if (msg->header->gpid.value != 0 && _node->get_l2_app_role() != nullptr)
+            if (msg->header->gpid.value != 0)
             {
-                _node->handle_l2_rpc_request(msg->header->gpid, sp->rpc_request_is_write_operation, (dsn_message_t)(msg), delay_ms);
-                return;
+                // if framework handles this request, then end of processing
+                if (_node->handle_l2_rpc_request(
+                    msg->header->gpid, 
+                    sp->rpc_request_is_write_operation,
+                    (dsn_message_t)(msg), 
+                    delay_ms)
+                    )
+                    return;
             }
 
             rpc_request_task* tsk = _rpc_dispatcher.on_request(msg, _node);
@@ -829,7 +834,7 @@ namespace dsn {
                                 resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
 
                                 // still got time, retry
-                                int64_t nms = dsn_now_ms();
+                                uint64_t nms = dsn_now_ms();
                                 if (nms + 1 < timeout_ts_ms)
                                 {
                                     req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);

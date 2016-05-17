@@ -42,7 +42,7 @@ namespace dsn { namespace replication { namespace test {
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client_app();
+    simple_kv_client_app(dsn_gpid gpid);
     virtual ~simple_kv_client_app();
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
