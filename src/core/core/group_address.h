@@ -49,16 +49,17 @@ namespace dsn
         void set_leader(rpc_address addr);
         bool remove(rpc_address addr);
         bool contains(rpc_address addr);
+        int count();
 
         dsn_group_t handle() const { return (dsn_group_t)this; }
         const std::vector<rpc_address>& members() const { return _members; }
-        rpc_address random_member() const { alr_t l(_lock);  return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
+        rpc_address random_member() const { alr_t l(_lock); return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
         rpc_address next(rpc_address current) const;
-        rpc_address leader() const { alr_t l(_lock);  return _leader_index >= 0 ? _members[_leader_index] : _invalid; }
+        rpc_address leader() const { alr_t l(_lock); return _leader_index >= 0 ? _members[_leader_index] : _invalid; }
         void leader_forward();
         rpc_address possible_leader();
-        bool is_update_leader_on_rpc_forward() const { return _update_leader_on_rpc_forward; }
-        void set_update_leader_on_rpc_forward(bool value) { _update_leader_on_rpc_forward = value; }
+        bool is_update_leader_automatically() const { return _update_leader_automatically; }
+        void set_update_leader_automatically(bool value) { _update_leader_automatically = value; }
         const char* name() const { return _name.c_str(); }
         rpc_address address() const { return _group_address; }
 
@@ -70,7 +71,7 @@ namespace dsn
         mutable ::dsn::utils::rw_lock_nr _lock;
         members_t   _members;
         int         _leader_index;
-        bool        _update_leader_on_rpc_forward;
+        bool        _update_leader_automatically;
         std::string _name;
         rpc_address _group_address;
         static const rpc_address _invalid;
@@ -82,7 +83,7 @@ namespace dsn
     {
         _name = name;
         _leader_index = -1;
-        _update_leader_on_rpc_forward = true;
+        _update_leader_automatically = true;
         _group_address.assign_group(handle());
     }
 
@@ -157,6 +158,12 @@ namespace dsn
     {
         alr_t l(_lock);
         return _members.end() != std::find(_members.begin(), _members.end(), addr);
+    }
+
+    inline int rpc_group_address::count()
+    {
+        alr_t l(_lock);
+        return _members.size();
     }
 
     inline rpc_address rpc_group_address::next(rpc_address current) const

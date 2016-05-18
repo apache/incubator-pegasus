@@ -160,6 +160,7 @@ namespace dsn {
 
         // client session management
         rpc_session_ptr get_client_session(::dsn::rpc_address ep);
+        void on_client_session_connected(rpc_session_ptr& s);
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
@@ -231,7 +232,7 @@ namespace dsn {
     protected:
         bool try_connecting(); // return true when it is permitted
         void set_connected();
-        void set_disconnected();
+        bool set_disconnected(); // return true when it is permitted
         bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
         bool is_connected() const { return _connect_state == SS_CONNECTED; }        
@@ -266,9 +267,9 @@ namespace dsn {
         };
 
         // TODO: expose the queue to be customizable
-        std::atomic<int>                   _message_count;
         ::dsn::utils::ex_lock_nr           _lock; // [
-        bool                               _is_sending_next;
+        volatile bool                      _is_sending_next;
+        int                                _message_count; // count of _messages
         dlink                              _messages;        
         volatile session_state             _connect_state;
         uint64_t                           _message_sent;

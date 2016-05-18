@@ -123,26 +123,35 @@ namespace dsn {
         }
 
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
+        dbg_dassert(timeout_task != nullptr, "rpc timeout task cannot be empty");
+
         if (timeout_task != task::get_current_task())
         {
             timeout_task->cancel(false); // no need to wait
         }
         timeout_task->release_ref(); // added above in the same function
 
+        auto req = call->get_request();
+        auto spec = task_spec::get(req->local_rpc_code);
+
         // if rpc is early terminated with empty reply
         if (nullptr == reply)
         {
+            if (req->server_address.type() == HOST_TYPE_GROUP &&
+                spec->grpc_mode == GRPC_TO_LEADER &&
+                req->server_address.group_address()->is_update_leader_automatically())
+            {
+                req->server_address.group_address()->leader_forward();
+            }
+
             call->set_delay(delay_ms);
-            // TODO(qinzuoyan): maybe set err as ERR_NETWORK_FAILURE to differ with ERR_TIMEOUT
-            call->enqueue(ERR_TIMEOUT, reply);
+            call->enqueue(ERR_NETWORK_FAILURE, reply);
             call->release_ref(); // added in on_call
             return true;
         }
 
         // normal reply
         auto err = reply->error();
-        auto req = call->get_request();
-        auto sp = task_spec::get(req->local_rpc_code);
 
         // if this is pure client (no server port assigned), we can only do fake forwarding,
         // in this case, the server will return ERR_FORWARD_TO_OTHERS
@@ -157,10 +166,10 @@ namespace dsn {
             switch (req->server_address.type())
             {
             case HOST_TYPE_GROUP:
-                switch (sp->grpc_mode)
+                switch (spec->grpc_mode)
                 {
                 case GRPC_TO_LEADER:
-                    if (req->server_address.group_address()->is_update_leader_on_rpc_forward())
+                    if (req->server_address.group_address()->is_update_leader_automatically())
                     {
                         req->server_address.group_address()->set_leader(addr);
                     }
@@ -191,10 +200,10 @@ namespace dsn {
                 switch (req->server_address.type())
                 {
                 case HOST_TYPE_GROUP:
-                    switch (sp->grpc_mode)
+                    switch (spec->grpc_mode)
                     {
                     case GRPC_TO_LEADER:
-                        if (err == ERR_OK && req->server_address.group_address()->is_update_leader_on_rpc_forward())
+                        if (err == ERR_OK && req->server_address.group_address()->is_update_leader_automatically())
                         {
                             req->server_address.group_address()->set_leader(reply->header->from_address);
                         }
@@ -211,7 +220,7 @@ namespace dsn {
             }
 
             // failure injection not applied
-            if (sp->on_rpc_response_enqueue.execute(call, true))
+            if (spec->on_rpc_response_enqueue.execute(call, true))
             {
                 call->set_delay(delay_ms);
                 call->enqueue(err, reply);

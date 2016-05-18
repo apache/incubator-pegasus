@@ -61,6 +61,7 @@ void docker_scheduler::deploy_docker_unit(void* context, int argc, const char** 
         std::string ldir = argv[1];
         std::string rdir = argv[2];
         std::function<void(error_code,rpc_address)> cb = [](error_code err,rpc_address addr){
+            err.end_tracking();
             dinfo("deploy err %s",err.to_string());
         };
         docker->create_containers(name,cb,ldir,rdir);
@@ -83,6 +84,7 @@ void docker_scheduler::undeploy_docker_unit(void* context, int argc, const char*
         std::string ldir = argv[1];
         std::string rdir = argv[2];
         std::function<void(error_code,const std::string&)> cb = [](error_code err,const std::string& err_msg){
+            err.end_tracking();
             dinfo("deploy err %s",err.to_string());
         };
         docker->delete_containers(name,cb,ldir,rdir);
