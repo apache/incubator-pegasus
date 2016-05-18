@@ -46,7 +46,8 @@
 
 namespace dsn { namespace replication { namespace test {
 
-simple_kv_client_app::simple_kv_client_app() : _simple_kv_client(nullptr)
+simple_kv_client_app::simple_kv_client_app(dsn_gpid gpid)
+    : _simple_kv_client(nullptr), ::dsn::service_app(gpid)
 {
 }
 

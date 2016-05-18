@@ -47,7 +47,7 @@ namespace dsn
             public ::dsn::service_app
         {
         public:
-            daemon();
+            daemon(dsn_gpid gpid);
             ~daemon();
 
             virtual ::dsn::error_code start(int argc, char** argv) override;

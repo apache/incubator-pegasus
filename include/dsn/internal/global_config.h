@@ -112,9 +112,6 @@ struct service_app_spec
     std::string          dmodule_bridge_arguments; 
     dsn_app              *role;
 
-    std::string          hosted_app_type_name; // empty if type is not layer 2 framework
-    std::string          hosted_app_arguments; 
-
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
 
@@ -144,8 +141,6 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
     CONFIG_FLD(int, uint64, count, 1, "count of app instances for this type (ports are automatically calculated accordingly to avoid confliction)")
     CONFIG_FLD(bool, bool, run, true, "whether to run the app instances or not")
-    CONFIG_FLD_STRING(hosted_app_type_name, "", "registered app name as hosted apps for layer 2 frameworks whose types are designated by type")
-    CONFIG_FLD_STRING(hosted_app_arguments, "", "arguments for the hosted app instances inside layer 2 frameworks")
 CONFIG_END
 
 struct service_spec

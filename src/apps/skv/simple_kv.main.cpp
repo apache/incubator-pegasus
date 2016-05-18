@@ -40,7 +40,7 @@
 // framework specific tools
 # include <dsn/dist/replication/replication.global_check.h>
 
-static void dsn_app_registration()
+static void dsn_app_registration_simple_kv()
 {
     // register all possible services
     dsn::register_app_with_type_1_replication_support< ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
@@ -56,14 +56,14 @@ static void dsn_app_registration()
 # include <dsn/internal/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(simple_kv)
-    dsn_app_registration();
+    dsn_app_registration_simple_kv();
 MODULE_INIT_END
 
 # else
 
 int main(int argc, char** argv)
 {
-    dsn_app_registration();
+    dsn_app_registration_simple_kv();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);

@@ -155,7 +155,7 @@ TEST(core, lpc_perf_test_sync)
                 LPC_TEST_HASH,
                 nullptr,
                 [&results, j]() {
-                    std::string r = dsn_get_current_app_data_dir();
+                    std::string r = dsn_get_app_data_dir();
                     results[j] = std::move(r);
                 }
                 );

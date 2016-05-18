@@ -43,11 +43,11 @@ namespace dsn {
             bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
             bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 
-            simple_kv_service_impl::simple_kv_service_impl()
-                : _lock(true)
+            simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
+                : _lock(true), replicated_service_app_type_1(gpid)
             {
                 _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-                _app_info = nullptr;
+                _checkpoint_version = 0;
 
                 ddebug("simple_kv_service_impl inited");
             }
@@ -68,7 +68,7 @@ namespace dsn {
                     value = it->second;
                 }
 
-                ddebug("=== on_exec_read:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), key.c_str(), value.c_str());
+                //ddebug("=== on_exec_read:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), key.c_str(), value.c_str());
                 reply(value);
             }
 
@@ -78,7 +78,7 @@ namespace dsn {
                 dsn::service::zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
 
-                ddebug("=== on_exec_write:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+                //ddebug("=== on_exec_write:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
                 reply(0);
             }
 
@@ -92,13 +92,13 @@ namespace dsn {
                 else
                     _store[pr.key] = pr.value;
 
-                ddebug("=== on_exec_append:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+                //ddebug("=== on_exec_append:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
                 reply(0);
             }
 
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _app_info = dsn_get_app_info_ptr(gpid());
+                _data_dir = dsn_get_app_data_dir(gpid());
                 open_service(gpid());
 
                 if (s_simple_kv_open_fail)
@@ -129,7 +129,6 @@ namespace dsn {
                     }
                     _store.clear();
                     //reset_states();
-                    memset((void*)&_app_info->info.type1, sizeof(_app_info->info.type1), 0);
                 }
                 ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
                 return ERR_OK;
@@ -171,8 +170,8 @@ namespace dsn {
                     recover(name, max_version);
                     set_last_durable_decree(max_version);
                 }
-                ddebug("simple_kv_service_impl recovered, last_committed_decree = %" PRId64 ", last_durable_decree = %" PRId64 "",
-                       last_committed_decree(), last_durable_decree());
+                ddebug("simple_kv_service_impl recovered, last_durable_decree = %" PRId64 "",
+                       last_durable_decree());
             }
 
             void simple_kv_service_impl::recover(const std::string& name, int64_t version)
@@ -210,15 +209,13 @@ namespace dsn {
 
                     _store[key] = value;
                 }
-
-                // ddebug("simple_kv_service_impl recover from checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
             }
 
-            ::dsn::error_code simple_kv_service_impl::checkpoint()
+            ::dsn::error_code simple_kv_service_impl::checkpoint(int64_t version)
             {
                 dsn::service::zauto_lock l(_lock);
 
-                if (last_committed_decree() == last_durable_decree())
+                if (version == last_durable_decree())
                 {
                     ddebug("simple_kv_service_impl no need to create checkpoint, checkpoint already the latest, last_durable_decree = %" PRId64 "", last_durable_decree());
                     return ERR_NO_NEED_OPERATE;
@@ -226,7 +223,7 @@ namespace dsn {
 
                 // TODO: should use async write instead
                 char name[256];
-                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_committed_decree());
+                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), version);
                 std::ofstream os(name, std::ios::binary);
 
                 uint64_t count = (uint64_t)_store.size();
@@ -250,19 +247,20 @@ namespace dsn {
                     os.write((const char*)&v[0], sz);
                 }
 
-                set_last_durable_decree(last_committed_decree());
+                set_last_durable_decree(version);
                 ddebug("simple_kv_service_impl create checkpoint succeed, last_durable_decree = %" PRId64 "", last_durable_decree());
                 return ERR_OK;
             }
 
-            ::dsn::error_code simple_kv_service_impl::checkpoint_async()
+            ::dsn::error_code simple_kv_service_impl::checkpoint_async(int64_t version)
             {
-                return checkpoint();
+                return checkpoint(version);
             }
 
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(
                 int64_t start,
+                int64_t commit,
                 void*   learn_request,
                 int     learn_request_size,
                 /* inout */ app_learn_state& state
@@ -275,7 +273,7 @@ namespace dsn {
 
                 if (last_durable_decree() == 0)
                 {
-                    checkpoint();
+                    checkpoint(commit);
                 }
 
                 if (last_durable_decree() > 0)
@@ -302,7 +300,7 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
             {
                 if (s_simple_kv_apply_checkpoint_fail)
                 {
@@ -312,7 +310,7 @@ namespace dsn {
                 if (mode == DSN_CHKPT_LEARN)
                 {
                     recover(state.files[0], state.to_decree_included);
-                    ddebug("simple_kv_service_impl learn checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
+                    //ddebug("simple_kv_service_impl learn checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
                     return ERR_OK;
                 }
                 else

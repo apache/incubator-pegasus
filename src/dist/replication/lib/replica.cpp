@@ -78,6 +78,10 @@ void replica::update_commit_statistics(int count)
 
 void replica::init_state()
 {
+    memset(&_app_callbacks, 0, sizeof(_app_callbacks));
+    bool r = dsn_get_app_callbacks(_app_info.app_type.c_str(), &_app_callbacks);
+    dassert(r, "app '%s' must be registered at this point", _app_info.app_type.c_str());
+
     _inactive_is_transient = false;
     _prepare_list = new prepare_list(
         0, 
@@ -130,7 +134,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
 
     dassert (_app != nullptr, "");
 
-    dsn_layer1_app_commit_rpc_request(_app->app_context(), request, true);
+    dsn_hosted_app_commit_rpc_request(_app->app_context(), request, true);
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error)

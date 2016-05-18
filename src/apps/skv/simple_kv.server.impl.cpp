@@ -48,11 +48,11 @@ namespace dsn {
     namespace replication {
         namespace application {
             
-            simple_kv_service_impl::simple_kv_service_impl()
-                : _lock(true)
+            simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
+                : _lock(true), ::dsn::replicated_service_app_type_1(gpid)
             {
                 _test_file_learning = false;
-                _app_info = nullptr;
+                _checkpoint_version = 0;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -103,7 +103,7 @@ namespace dsn {
             
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _app_info = dsn_get_app_info_ptr(gpid());
+                _data_dir = dsn_get_app_data_dir(gpid());
 
                 {
                     zauto_lock l(_lock);
@@ -123,7 +123,7 @@ namespace dsn {
                     zauto_lock l(_lock);
                     if (clear_state)
                     {
-                        dsn_get_current_app_data_dir(gpid());
+                        dsn_get_app_data_dir(gpid());
 
                         if (!dsn::utils::filesystem::remove_path(data_dir()))
                         {
@@ -210,16 +210,16 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::checkpoint()
+            ::dsn::error_code simple_kv_service_impl::checkpoint(int64_t version)
             {
                 char name[256];
                 sprintf(name, "%s/checkpoint.%" PRId64, data_dir(),
-                    last_committed_decree()
+                    version
                     );
 
                 zauto_lock l(_lock);
 
-                if (last_committed_decree() == last_durable_decree())
+                if (version == last_durable_decree())
                 {
                     dassert(utils::filesystem::file_exists(name), 
                         "checkpoint file %s is missing!",
@@ -255,13 +255,14 @@ namespace dsn {
                 os.close();
 
                 // TODO: gc checkpoints
-                set_last_durable_decree(last_committed_decree());
+                set_last_durable_decree(version);
                 return ERR_OK;
             }
 
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(
                 int64_t start,
+                int64_t commit,
                 void*   learn_request,
                 int     learn_request_size,
                 /* inout */ app_learn_state& state
@@ -289,7 +290,7 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
             {
                 if (mode == DSN_CHKPT_LEARN)
                 {

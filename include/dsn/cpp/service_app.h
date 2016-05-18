@@ -51,7 +51,8 @@ namespace dsn
     class service_app
     {
     public:
-        service_app() : _started(false) { }
+        service_app(dsn_gpid gpid) 
+            : _started(false), _gpid(gpid) { }
 
         virtual ~service_app(void) {}
 
@@ -80,8 +81,7 @@ namespace dsn
         template<typename TServiceApp>
         static void* app_create(const char* /*tname*/, dsn_gpid gpid)
         {
-            auto svc =  new TServiceApp();
-            svc->_gpid = gpid;
+            auto svc =  new TServiceApp(gpid);
             return (void*)(dynamic_cast<service_app*>(svc));
         }
 
@@ -114,7 +114,7 @@ namespace dsn
     {
         dsn_app app;
         memset(&app, 0, sizeof(app));
-        app.mask = DSN_APP_MASK_DEFAULT;
+        app.mask = DSN_APP_MASK_APP;
         strncpy(app.type_name, type_name, sizeof(app.type_name));
         app.layer1.create = service_app::app_create<TServiceApp>;
         app.layer1.start = service_app::app_start;

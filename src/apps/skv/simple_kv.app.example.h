@@ -47,7 +47,7 @@ class simple_kv_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client_app() {}
+    simple_kv_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
     
     ~simple_kv_client_app() 
     {
@@ -125,7 +125,7 @@ class simple_kv_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_perf_test_client_app() {}
+    simple_kv_perf_test_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
     ~simple_kv_perf_test_client_app()
     {

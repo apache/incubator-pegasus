@@ -3,7 +3,7 @@
 # include "../cluster_scheduler/scheduler_providers/scheduler_providers.h"
 
 
-void dsn_app_registration()
+void dsn_app_registration_deploy_svc()
 {
     dsn::dist::register_cluster_scheduler_providers();
     // register all possible service apps
@@ -16,7 +16,7 @@ void dsn_app_registration()
 
 int main(int argc, char** argv)
 {
-    dsn_app_registration();
+    dsn_app_registration_deploy_svc();
     
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);
@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 # include <dsn/internal/module_int.cpp.h>
 
 MODULE_INIT_BEGIN(deploy_svc)
-    dsn_app_registration();
+    dsn_app_registration_deploy_svc();
 MODULE_INIT_END
 
 # endif

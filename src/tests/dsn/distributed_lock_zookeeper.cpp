@@ -23,6 +23,8 @@ int64_t result = 0;
 class simple_adder_server: public dsn::service_app
 {
 public:
+    simple_adder_server(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    
     error_code start(int argc, char** argv)
     {
         ddebug("name: %s, argc=%d", name().c_str(), argc);

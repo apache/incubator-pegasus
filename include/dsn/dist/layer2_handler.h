@@ -52,11 +52,12 @@
 namespace dsn
 {
     class service_node;
-    class layer2_handler_core;
+    class app_manager;
 
     class layer2_handler : public service_app
     {
     public:
+        layer2_handler(dsn_gpid gpid) : service_app(gpid) {}
         virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) = 0;
 
     public:
@@ -79,7 +80,7 @@ namespace dsn
         app.layer1.start = service_app::app_start;
         app.layer1.destroy = service_app::app_destroy;
 
-        app.layer2_frameworks.on_rpc_request = layer2_handler::on_layer2_rpc_request;
+        app.layer2.frameworks.on_rpc_request = layer2_handler::on_layer2_rpc_request;
 
         dsn_register_app(&app);
     }

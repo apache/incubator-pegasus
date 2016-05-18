@@ -16,7 +16,8 @@ class <?=$_PROG->name?>_server_app :
     public ::dsn::service_app
 {
 public:
-    <?=$_PROG->name?>_server_app() {}
+    <?=$_PROG->name?>_server_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid) {}
 
     virtual ::dsn::error_code start(int argc, char** argv) override
     {
@@ -46,8 +47,9 @@ class <?=$_PROG->name?>_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    <?=$_PROG->name?>_client_app() {}
-    
+    <?=$_PROG->name?>_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid) {}
+        
     ~<?=$_PROG->name?>_client_app() 
     {
         stop();
@@ -119,7 +121,8 @@ class <?=$svc->name?>_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    <?=$svc->name?>_perf_test_client_app()
+    <?=$svc->name?>_perf_test_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _<?=$svc->name?>_client = nullptr;
     }

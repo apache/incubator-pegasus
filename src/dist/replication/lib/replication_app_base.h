@@ -45,6 +45,7 @@
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
 # include <dsn/cpp/perf_counter_.h>
+# include <atomic>
 
 namespace dsn { namespace replication {
 
@@ -94,11 +95,12 @@ public:
     {
         if (_app_context)
         {
-            auto err = dsn_layer1_app_destroy(_app_context, clear_state);
+            auto err = dsn_hosted_app_destroy(_app_context, clear_state);
             if (err == ERR_OK)
             {
-                _app_info = nullptr;
+                _last_committed_decree.store(0);
                 _app_context = nullptr;
+                _app_context_callbacks = nullptr;
             }
 
             return err;
@@ -118,7 +120,7 @@ public:
     //
     ::dsn::error_code checkpoint()
     {
-        return dsn_layer1_app_checkpoint(_app_context);
+        return _callbacks.calls.chkpt(_app_context_callbacks, _last_committed_decree.load());
     }
 
     //
@@ -132,7 +134,7 @@ public:
     //
     ::dsn::error_code checkpoint_async() 
     { 
-        return dsn_layer1_app_checkpoint_async(_app_context);
+        return _callbacks.calls.chkpt_async(_app_context_callbacks, _last_committed_decree.load());
     }
     
     //
@@ -181,7 +183,7 @@ public:
     //    
     ::dsn::replication::decree last_durable_decree() 
     {
-        return _app_info ? _app_info->info.type1.last_durable_decree : 0;
+        return _app_context ? _callbacks.calls.chkpt_get_version(_app_context_callbacks) : 0;
     }
 
 public:
@@ -191,11 +193,9 @@ public:
     const char* replica_name() const;
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
-    ::dsn::replication::decree last_committed_decree() const { return _app_info ? _app_info->info.type1.last_committed_decree : 0; }
+    ::dsn::replication::decree last_committed_decree() const { return _last_committed_decree.load(); }
     void* app_context() { return _app_context; }
     void reset_counters_after_learning();
-    // reset all states when reopen the app
-    void reset_states();
     
 private:
     // routines for replica internal usage
@@ -212,15 +212,16 @@ private:
 
 private:
     void* _app_context;
+    void* _app_context_callbacks;
+    dsn_app_callbacks _callbacks;
 
 private:
     std::string _dir_data; // ${replica_dir}/data
     std::string _dir_learn;
     replica*    _replica;
-
+    std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;
-    dsn_app_info *_app_info;
-
+    
     perf_counter_ _app_commit_throughput;
     perf_counter_ _app_commit_latency;
     perf_counter_ _app_commit_decree;
