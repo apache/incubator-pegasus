@@ -77,6 +77,8 @@ public:
 
 GTEST_API_ int main(int argc, char **argv) 
 {
+    testing::InitGoogleTest(&argc, argv);
+
     // register all possible services
     dsn::register_app<test_client>("test");
     lock_test_init();

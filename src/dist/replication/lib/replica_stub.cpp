@@ -138,11 +138,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         count++;
     }
 
-    _log = new mutation_log(
+    _log = new mutation_log_shared(
         _options.slog_dir,
-        _options.log_shared_batch_buffer_kb,
-        _options.log_shared_file_size_mb,
-        _options.log_shared_force_flush
+        _options.log_shared_file_size_mb
         );
 
     // init rps
@@ -233,11 +231,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             dassert(false, "remove directory %s failed", _options.slog_dir.c_str());
         }
-        _log = new mutation_log(
+        _log = new mutation_log_shared(
             _options.slog_dir,
-            opts.log_shared_batch_buffer_kb,
-            opts.log_shared_file_size_mb,
-            opts.log_shared_force_flush
+            opts.log_shared_file_size_mb
             );
         auto lerr = _log->open(nullptr);
         dassert(lerr == ERR_OK, "restart log service must succeed");

@@ -168,17 +168,19 @@ void mutation::write_to(binary_writer& writer) const
     return mu;
 }
 
-void mutation::write_to_log_file(std::function<void(blob)> inserter) const
+void mutation::write_to_log_file(std::function<void(const blob&)> inserter) const
 {
     {
         binary_writer temp_writer;
-        marshall(temp_writer, data.header, DSF_THRIFT_BINARY);
-        marshall(temp_writer, static_cast<int>(data.updates.size()), DSF_THRIFT_BINARY);
+        temp_writer.write_pod(data.header);        
+        temp_writer.write_pod(static_cast<int>(data.updates.size()));
+
         for (const mutation_update& update : data.updates)
         {
-            marshall(temp_writer, update.code, DSF_THRIFT_BINARY);
-            marshall(temp_writer, static_cast<int>(update.data.length()), DSF_THRIFT_BINARY);
+            temp_writer.write_pod(static_cast<int>(update.code));
+            temp_writer.write_pod(static_cast<int>(update.data.length()));
         }
+
         inserter(temp_writer.get_buffer());
     }
 
@@ -191,20 +193,22 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 /*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data.header, DSF_THRIFT_BINARY);
+    reader.read_pod(mu->data.header);
     int size;
-    unmarshall(reader, size, DSF_THRIFT_BINARY);
+    reader.read_pod(size);
     mu->data.updates.resize(size);
     std::vector<int> lengths(size, 0);
     for (int i = 0; i < size; ++i)
     {
-        unmarshall(reader, mu->data.updates[i].code, DSF_THRIFT_BINARY);
-        unmarshall(reader, lengths[i], DSF_THRIFT_BINARY);
+        int code;
+        reader.read_pod(code);
+        mu->data.updates[i].code = ::dsn::task_code(code);
+        reader.read_pod(lengths[i]);
     }
     for (int i = 0; i < size; ++i)
     {
         int len = lengths[i];
-        std::shared_ptr<char> holder(new char[len], [](char* ptr){ delete []ptr; });
+        std::shared_ptr<char> holder((char*)dsn_transient_malloc(len), [](char* ptr){ dsn_transient_free((void*)ptr); });
         reader.read(holder.get(), len);
         mu->data.updates[i].data.assign(holder, 0, len);
     }

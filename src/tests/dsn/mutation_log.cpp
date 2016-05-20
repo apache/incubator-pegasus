@@ -131,6 +131,8 @@ TEST(replication, log_file)
 
         lf->flush();
         offset += writer->size();
+
+        delete writer;
     }
     lf->close();
     lf = nullptr;
@@ -295,13 +297,12 @@ TEST(replication, mutation_log)
     utils::filesystem::create_directory(logp);
 
     // writing logs
-    mutation_log_ptr mlog = new mutation_log(
+    mutation_log_ptr mlog = new mutation_log_private(
         logp,
-        1,
         4,
-        true,
-        true,
-        gpid
+        gpid,
+        nullptr,
+        1024
         );
 
     auto err = mlog->open(nullptr);
@@ -335,13 +336,12 @@ TEST(replication, mutation_log)
     mlog->close();
 
     // reading logs
-    mlog = new mutation_log(
+    mlog = new mutation_log_private(
         logp,
-        1,
         4,
-        true,
-        true,
-        gpid
+        gpid,
+        nullptr,
+        1024
         );
 
     int mutation_index = -1;

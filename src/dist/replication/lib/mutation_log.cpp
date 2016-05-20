@@ -49,24 +49,279 @@ namespace dsn { namespace replication {
 
 using namespace ::dsn::service;
 
+::dsn::task_ptr mutation_log_shared::append(mutation_ptr& mu,
+    dsn_task_code_t callback_code,
+    clientlet* callback_host,
+    aio_handler callback,
+    int hash
+    )
+{
+    dinfo("start append shared log for mutation %s", mu->name());
+
+    auto hdr = (log_block_header*)dsn_transient_malloc(sizeof(log_block_header));
+    hdr->magic = 0xdeadbeef;
+    hdr->length = 0;
+    hdr->body_crc = 0;
+    hdr->local_offset = 0;
+
+    blob bb((const char*)hdr, 0, sizeof(log_block_header));
+    log_block blk;
+
+    blk.add(bb);
+    mu->write_to_log_file([&](const blob& bb) 
+    {
+        blk.add(bb);
+    });
+
+    auto pr = mark_new_update(blk.size(), mu->data.header.pid, mu->data.header.decree);
+    mu->data.header.log_offset = pr.second;
+
+    // patch, fix marshalled data
+    ((mutation_header*)blk.data().front().data())->log_offset = pr.second;
+
+    return pr.first->commit_log_block(blk, pr.second,
+        LPC_WRITE_REPLICATION_LOG_SHARED, this,
+        [bb_cap = std::move(bb), cb_cap = std::move(callback)](error_code err, size_t sz) 
+        {
+            cb_cap(err, sz); 
+
+            auto hdr = (log_block_header*)bb_cap.data();
+            dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
+
+            dsn_transient_free((void*)bb_cap.data()); 
+        },
+        gpid_to_hash(mu->data.header.pid)
+        );
+}
+
+void mutation_log_shared::flush()
+{
+    dsn_task_tracker_wait_all(tracker());
+}
+
+////////////////////////////////////////////////////
+
+::dsn::task_ptr mutation_log_private::append(mutation_ptr& mu,
+    dsn_task_code_t callback_code,
+    clientlet* callback_host,
+    aio_handler callback,
+    int hash)
+{
+    dassert(nullptr == callback, "callback is not needed in private mutation log");
+
+    auto d = mu->data.header.decree;
+    error_code err = ERR_OK;
+
+    zauto_lock l(_plock);
+    std::pair<log_file_ptr, int64_t> pr = mark_new_update(0, mu->data.header.pid, d);
+
+    // save mu for pinning buffer
+    _pending_write_mutations.push_back(mu);
+
+    // init pending buffer
+    if (nullptr == _pending_write)
+    {
+        _pending_write.reset(log_file::prepare_log_block());
+        _pending_write_start_offset = pr.second;
+    }
+    
+    // write mutation to pending buffer
+    mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
+    //printf("%lld: %lld\n", d, mu->data.header.log_offset);
+    mu->write_to_log_file([this](blob bb)
+    {
+        _pending_write->add(bb);
+    });
+
+    // update meta
+    _pending_write_max_commit = std::max(_pending_write_max_commit,
+        mu->data.header.last_committed_decree);
+
+    // start to write if possible
+    if (_issued_write.expired() 
+        && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+    {
+        err = write_pending_mutations(pr.first);
+        dassert(
+            err == ERR_OK,
+            "write pending mutation failed, err = %s",
+            err.to_string()
+            );
+    }
+    
+    return nullptr;
+}
+
+void mutation_log_private::get_learn_state_in_memory(
+    binary_writer& writer
+    ) const
+{
+    // learn pending buffer
+    std::vector<std::shared_ptr<log_block>> pending_buffers;
+
+    _plock.lock();
+    if (auto locked_issued_ptr = _issued_write.lock())
+    {
+        pending_buffers.emplace_back(std::move(locked_issued_ptr));
+    }
+
+    if (_pending_write)
+    {
+        //we have a lock here, so no race
+        pending_buffers.push_back(_pending_write);
+    }
+    _plock.unlock();
+
+    for (auto& block : pending_buffers)
+    {
+        dassert(!block->data().empty(), "log block can never be empty");
+        auto hdr = (log_block_header*)block->front().data();
+
+        //skip the block header
+        auto bb_iterator = std::next(block->data().begin());
+
+        if (hdr->local_offset == 0)
+        {
+            //we have a lock, so we are safe here
+            dassert(bb_iterator != block->data().end(), "there is no file header in a local_offset=0 log block");
+            //skip the file header
+            ++bb_iterator;
+        }
+
+        for (; bb_iterator != block->data().end(); ++bb_iterator)
+        {
+            writer.write(bb_iterator->data(), bb_iterator->length());
+        }
+    }
+}
+
+void mutation_log_private::flush()
+{
+    while (true)
+    {
+        dsn_task_tracker_wait_all(tracker());
+
+        {
+            zauto_lock l(_plock);
+            if (_pending_write)
+            {
+                if (_issued_write.expired())
+                {
+                    auto pr = mark_new_update(0, dsn_gpid{ 0 }, 0);
+                    auto err = write_pending_mutations(pr.first);
+                    dassert(
+                        err == ERR_OK,
+                        "write pending mutation failed, err = %s",
+                        err.to_string()
+                        );
+                }
+            }
+            else
+                break;
+        }
+    }
+}
+
+void mutation_log_private::init_states()
+{
+    mutation_log::init_states();
+
+    _issued_write.reset();
+    _issued_write_task = nullptr;
+    _pending_write_start_offset = 0;
+    _pending_write = nullptr;
+    _pending_write_mutations.clear();
+    _pending_write_max_commit = 0;
+}
+
+error_code mutation_log_private::write_pending_mutations(log_file_ptr& lf)
+{
+    dassert(_pending_write != nullptr, "");
+    dassert(_issued_write.expired(), "");
+
+    _issued_write = _pending_write;
+    auto offset = mark_new_offset(_pending_write->size());
+    dassert(offset == _pending_write_start_offset, "");
+
+    auto pwu = std::move(_pending_write_mutations);
+    _pending_write_mutations.clear();
+
+    auto blk = std::move(_pending_write);
+    _pending_write = nullptr;
+
+    auto max_commit = _pending_write_max_commit;
+    _pending_write_max_commit = 0;
+
+    _issued_write_task = lf->commit_log_block(
+        *blk,
+        _pending_write_start_offset,
+        LPC_WRITE_REPLICATION_LOG_PRIVATE,
+        this,
+        [this, lf, 
+        block = blk, 
+        max_commit,
+        mutations = std::move(pwu)
+        ](error_code err, size_t sz) mutable
+        {
+            auto hdr = (log_block_header*)block->front().data();
+            dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
+                        
+            if (err == ERR_OK)
+            {
+                dassert(sz == block->size(),
+                    "log write size must equal to the given size: %d vs %d",
+                    (int)sz,
+                    block->size()
+                    );
+            
+                dassert(hdr->length + sizeof(log_block_header) == sz, "");
+
+                // flush to ensure that there is no gap between private log and in-memory buffer
+                // so that we can get all mutations in learning process.
+                //
+                // FIXME : the file could have been closed
+                lf->flush();
+            
+                // update _private_max_commit_on_disk after writen into log file done
+                update_max_commit_on_disk(max_commit);
+            }
+            
+            // notify error when necessary
+            if (err != ERR_OK)
+            {
+                if (owner_replica())
+                    owner_replica()->inject_error(err);
+            }
+            else
+            {
+                // TODO: write-pending-mutations>?
+            }
+        },
+        0
+        );
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////
+
 mutation_log::mutation_log(
     const std::string& dir,
-    int32_t batch_buffer_size_kb,
     int32_t max_log_file_mb,
-    bool force_flush,
-    bool is_private,
-    gpid private_gpid,
+    gpid gpid,
     replica* r
     )
 {
     _dir = dir;
-    _is_private = is_private;
-    _private_gpid = private_gpid;
+    _is_private = (gpid.raw().value != 0);
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
-    _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
-    _force_flush = force_flush;
     _owner_replica = r;
-    init_states();
+    _private_gpid = gpid;
+
+    if (r)
+    {
+        dassert(_private_gpid == r->get_gpid(), "");
+    }
+    mutation_log::init_states();
 }
 
 void mutation_log::init_states()
@@ -79,14 +334,6 @@ void mutation_log::init_states()
     _current_log_file = nullptr;
     _global_start_offset = 0;
     _global_end_offset = 0;
-
-    // buffering
-    _is_writing = false;
-    _issued_write.reset();
-    _issued_write_task = nullptr;
-    _pending_write.reset();
-    _pending_write_callbacks = nullptr;
-    _pending_write_max_commit = 0;
 
     // replica states
     _shared_log_info_map.clear();
@@ -235,40 +482,8 @@ void mutation_log::close()
     init_states();
 }
 
-void mutation_log::flush()
-{
-    while (true)
-    {
-        if (_is_writing)
-        {
-            // TODO(qinzuoyan): why need wait about 25ms?
-            dsn_task_tracker_wait_all(tracker());
-        }
-        else
-        {
-            zauto_lock _(_lock);
-            if (_is_writing)
-            {
-                continue;
-            }
-            if (_pending_write == nullptr)
-            {
-                break;
-            }
-            auto err = write_pending_mutations();
-            dassert(
-                err == ERR_OK,
-                "write pending mutation failed, err = %s",
-                err.to_string()
-                );
-        }
-    }
-}
-
 error_code mutation_log::create_new_log_file()
 {
-    dassert(_pending_write == nullptr, "");
-    dassert(_pending_write_callbacks == nullptr, "");
     if (_current_log_file != nullptr)
     {
         dassert(_current_log_file->end_offset() == _global_end_offset, "");
@@ -299,203 +514,67 @@ error_code mutation_log::create_new_log_file()
     _current_log_file = logf;
 
     // create new pending buffer because we need write file header
-    create_new_pending_buffer();
-    dassert(_global_end_offset == _current_log_file->start_offset() + sizeof(log_block_header), "");
-
     // write file header into pending buffer
     size_t header_len = 0;
+    binary_writer temp_writer;
     if (_is_private)
     {
         replica_log_info_map ds;
         ds[_private_gpid] = replica_log_info(_private_log_info.max_decree, _private_log_info.valid_start_offset);
-        binary_writer temp_writer;
         header_len = logf->write_file_header(temp_writer, ds);
-        _pending_write->add(temp_writer.get_buffer());
     }
     else
     {
-        binary_writer temp_writer;
         header_len = logf->write_file_header(temp_writer, _shared_log_info_map);
-        _pending_write->add(temp_writer.get_buffer());
     }
-    dassert(_pending_write->size() == sizeof(log_block_header) + header_len, "");
-    _global_end_offset += header_len;
 
-    return ERR_OK;
-}
+    auto blk = logf->prepare_log_block();
+    blk->add(temp_writer.get_buffer());
+    _global_end_offset += blk->size();
 
-void mutation_log::create_new_pending_buffer()
-{
-    dassert(_pending_write == nullptr, "");
-    dassert(_pending_write_callbacks == nullptr, "");
-
-    _pending_write = _current_log_file->prepare_log_block();
-    _pending_write_callbacks.reset(new std::list< ::dsn::task_ptr>);
-    _global_end_offset += _pending_write->data().front().length();
-}
-
-error_code mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
-{
-    dassert(_pending_write != nullptr, "");
-    dassert(_pending_write_callbacks != nullptr, "");
-    dassert(!_is_writing, "");
-
-    uint64_t start_offset = _global_end_offset - _pending_write->size();
-    bool new_log_file = create_new_log_when_necessary
-        && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
-        ;
-
-    auto code = _force_flush ? 
-        LPC_WRITE_REPLICATION_LOG_FLUSH
-        : LPC_WRITE_REPLICATION_LOG_WITHOUT_FLUSH;
-
-    _is_writing = true;
-    _issued_write = _pending_write;
-    _issued_write_task = _current_log_file->commit_log_block(
-        *_pending_write,
-        start_offset,
-        code,
-        this,
-        std::bind(
-            &mutation_log::internal_write_callback, this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            _current_log_file,
-            _pending_write,
-            _pending_write_callbacks,
-            _pending_write_max_commit,
-            std::move(_pending_write_mutations)
-            ),
-        -1
-        );
-
-    _pending_write_mutations.clear();
-
-    if (_issued_write_task == nullptr)
-    {
-        tasking::enqueue(
-            code,
-            this,
-            [this, pm_cap = std::move(_pending_write_mutations)]() mutable
+    logf->commit_log_block(*blk, _current_log_file->start_offset(), LPC_WRITE_REPLICATION_LOG, this,
+        [this, blk, logf](::dsn::error_code err, size_t sz) 
+        {
+            delete blk; 
+            if (ERR_OK != err)
             {
-                this->internal_write_callback(
-                    ERR_FILE_OPERATION_FAILED,
-                    0,
-                    _current_log_file,
-                    _pending_write,
-                    _pending_write_callbacks,
-                    _pending_write_max_commit,
-                    pm_cap
-                    );
+                derror("write file header of %s failed, err = %s", 
+                    logf->path().c_str(), err.to_string());
             }
-            );
-        return ERR_FILE_OPERATION_FAILED;
-    }
-    else
-    {
-        dassert(_global_end_offset == _current_log_file->end_offset(), "");
-    }
-
-    _pending_write = nullptr;
-    _pending_write_callbacks = nullptr;
-    _pending_write_max_commit = 0;
+        },
+        0
+        );
     
-    if (new_log_file)
-    {
-        error_code ret = create_new_log_file();
-        if (ret != ERR_OK)
-        {
-            derror("create new log file failed, err = %s", ret.to_string());
-        }
-        return ret;
-    }
-
+    dassert(_global_end_offset == _current_log_file->start_offset() + sizeof(log_block_header) + header_len, 
+        "");
     return ERR_OK;
 }
 
-// called in background thread
-void mutation_log::internal_write_callback(
-    error_code err,
-    size_t size,
-    log_file_ptr file,
-    std::shared_ptr<log_block> block,
-    mutation_log::pending_callbacks_ptr callbacks,
-    decree max_commit,
-    const std::vector<mutation_ptr>& mus
-    )
+int64_t mutation_log::mark_new_offset(size_t size)
 {
-    dassert(_is_writing, "");
+    zauto_lock l(_lock);
+    int64_t offset = _global_end_offset;
+    _global_end_offset += size;
+    return offset;
+}
 
-    dinfo(
-        "%s mutation log write callback, err = %s, size = %d",
-        _is_private ? "private" : "shared",
-        err.to_string(),
-        (int)size
-        );
+std::pair<log_file_ptr, int64_t> mutation_log::mark_new_update(size_t size, gpid gpid, decree d)
+{
+    zauto_lock l(_lock);
 
-    auto hdr = (log_block_header*)block->front().data();
-    dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
-
-    if (err == ERR_OK)
+    if (_current_log_file == nullptr 
+        || _global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
     {
-        dassert(size == block->size(),
-            "log write size must equal to the given size: %d vs %d",
-            (int)size,
-            block->size()
-            );
-
-        if(_force_flush)
-        {
-            // flush to ensure that there is no gap between private log and in-memory buffer
-            // so that we can get all mutations in learning process.
-            //
-            // FIXME : the file could have been closed
-            file->flush();
-        }
-
-        if (_is_private)
-        {
-            // update _private_max_commit_on_disk after writen into log file done
-            update_max_commit_on_disk(max_commit);
-        }
+        create_new_log_file();
     }
 
-    // here we use _is_writing instead of _issued_write.expired() to check writing done,
-    // because the following callbacks may run before "block" released, which may cause
-    // the next init_prepare() not starting the write.
-    _is_writing = false;
+    int64_t offset = _global_end_offset;
+    _global_end_offset += size;
 
-    if (err == ERR_OK)
-    {
-        zauto_lock l(_lock);
+    if (d > 0)
+        update_max_decree_no_lock(gpid, d);
 
-        // trigger another round of writing if possible
-        if (!_is_writing
-            && _pending_write != nullptr
-            && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
-        {
-            auto err = write_pending_mutations();
-            dassert(
-                err == ERR_OK,
-                "write pending mutation failed, err = %s",
-                err.to_string()
-                );
-        }
-    }
-
-
-    for (auto& cb : *callbacks)
-    {
-        cb->enqueue_aio(err, size);
-    }
-
-    // notify error for private logs when necessary
-    if (err != ERR_OK &&
-        callbacks->size() == 0 &&
-        _owner_replica != nullptr)
-    {
-        _owner_replica->inject_error(err);
-    }
+    return std::make_pair(_current_log_file, offset);
 }
 
 /*static*/ error_code mutation_log::replay(
@@ -773,82 +852,6 @@ void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offse
     }
 }
 
-::dsn::task_ptr mutation_log::append(
-                        mutation_ptr& mu,
-                        dsn_task_code_t callback_code,
-                        clientlet* callback_host,
-                        aio_handler callback,
-                        int hash
-                        )
-{
-    auto d = mu->data.header.decree;
-    error_code err = ERR_OK;
-
-    dinfo("start append %s log for mutation %s", (_is_private ? "private" : "shared"), mu->name());
-
-    zauto_lock l(_lock);
-    dassert(_is_opened, "");
-
-    if (nullptr == _current_log_file)
-    {
-        err = create_new_log_file();
-        dassert(
-            ERR_OK == err,
-            "create write log file failed, err = %s",
-            err.to_string()
-            );
-    }
-
-    // update meta data
-    update_max_decree_no_lock(mu->data.header.pid, d);
-
-    //
-    // write to buffer
-    //
-    if (_pending_write == nullptr)
-    {
-        create_new_pending_buffer();
-    }
-
-    mu->data.header.log_offset = _global_end_offset;
-    mu->write_to_log_file([this](blob bb)
-    {
-        _pending_write->add(bb);
-        _global_end_offset += bb.length();
-    });
-
-    task_ptr tsk = nullptr;
-    if (callback)
-    {
-        tsk = dsn::file::create_aio_task(callback_code, callback_host, std::move(callback), hash);
-        _pending_write_callbacks->push_back(tsk);
-    }
-    else
-    {
-        // to avoid invalid mutation buffers during real write
-        _pending_write_mutations.push_back(mu);
-    }
-
-    if (_is_private)
-    {
-        _pending_write_max_commit = std::max(_pending_write_max_commit,
-                                             mu->data.header.last_committed_decree);
-    }
-
-    // start to write if possible
-    if (!_is_writing && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
-    {
-        err = write_pending_mutations();
-        dassert(
-            err == ERR_OK,
-            "write pending mutation failed, err = %s",
-            err.to_string()
-            );
-    }
-
-    return tsk;
-}
-
 void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset)
 {
     zauto_lock l(_lock);
@@ -971,38 +974,9 @@ void mutation_log::get_learn_state(
         files = _log_files;
         cfile = _current_log_file;
 
-        // also learn pending buffer
-        std::vector<std::shared_ptr<log_block>> pending_buffers;
-        if (auto locked_issued_ptr = _issued_write.lock())
-        {
-            pending_buffers.emplace_back(std::move(locked_issued_ptr));
-        }
-        if (_pending_write)
-        {
-            //we have a lock here, so no race
-            pending_buffers.push_back(_pending_write);
-        }
-
         binary_writer temp_writer;
-        for (auto& block : pending_buffers) {
-            dassert(!block->data().empty(), "log block can never be empty");
-            auto hdr = (log_block_header*)block->front().data();
+        get_learn_state_in_memory(temp_writer);
 
-            //skip the block header
-            auto bb_iterator = std::next(block->data().begin());
-            
-            if (hdr->local_offset == 0)
-            {
-                //we have a lock, so we are safe here
-                dassert(bb_iterator != block->data().end(), "there is no file header in a local_offset=0 log block");
-                //skip the file header
-                ++bb_iterator;
-            }
-            for (; bb_iterator != block->data().end(); ++bb_iterator)
-            {
-                temp_writer.write(bb_iterator->data(), bb_iterator->length());
-            }
-        }
         state.meta = temp_writer.get_buffer();
     }
 
@@ -1689,7 +1663,7 @@ error_code log_file::read_next_log_block(/*out*/::dsn::blob& bb)
 
         return err;
     }
-    log_block_header hdr = *reinterpret_cast<const log_block_header*>(bb.data());
+    const log_block_header& hdr = *reinterpret_cast<const log_block_header*>(bb.data());
 
     if (hdr.magic != 0xdeadbeef)
     {
@@ -1723,21 +1697,21 @@ error_code log_file::read_next_log_block(/*out*/::dsn::blob& bb)
     return ERR_OK;
 }
 
-std::shared_ptr<log_block> log_file::prepare_log_block() const
+log_block* log_file::prepare_log_block()
 {
     log_block_header hdr;
     hdr.magic = 0xdeadbeef;
     hdr.length = 0;
     hdr.body_crc = 0;
-    hdr.local_offset = static_cast<uint32_t>(_end_offset - _start_offset);
+    hdr.local_offset = 0;
     
     binary_writer temp_writer;
     temp_writer.write_pod(hdr);
-    return std::shared_ptr<log_block>(new log_block(temp_writer.get_buffer()));
+    return new log_block(temp_writer.get_buffer());
 }
 
 ::dsn::task_ptr log_file::commit_log_block(
-                log_block& block,
+                log_block& block,                
                 int64_t offset,
                 dsn_task_code_t evt,
                 clientlet* callback_host,
@@ -1746,53 +1720,60 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
                 )
 {
     dassert(!_is_read, "log file must be of write mode");
-    dassert(offset == end_offset(), "block start offset should match with file's end offset");
     dassert(block.size() > 0, "log_block can not be empty");
-
-    int64_t local_offset = end_offset() - start_offset();
+    
+    auto size = (long long)block.size();    
+    int64_t local_offset = offset - start_offset();
     auto hdr = reinterpret_cast<log_block_header*>(const_cast<char*>(block.front().data()));
 
     dassert(hdr->magic == 0xdeadbeef, "");
-    dassert(hdr->local_offset == static_cast<uint32_t>(local_offset), "");
-
+    hdr->local_offset = local_offset;
     hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
-    hdr->body_crc = _crc32;
-    for (auto log_iter = std::next(block.data().begin()) ; log_iter != block.data().end(); ++ log_iter)
+    if (hdr->length > 1000000)
     {
-        hdr->body_crc = dsn_crc32_compute(
-            static_cast<const void*>(log_iter->data()),
-            static_cast<size_t>(log_iter->length()), hdr->body_crc
-            );
+        printf("xx");
+    }
+    hdr->body_crc = _crc32;
+
+    auto vec_size = (int)block.data().size();
+    dsn_file_buffer_t* buffer_vector = (dsn_file_buffer_t*)alloca(sizeof(dsn_file_buffer_t) * vec_size);
+    for (int i = 0; i < vec_size; i++)
+    {
+        auto & blk = block.data()[i];
+        buffer_vector[i].buffer = reinterpret_cast<void*>(const_cast<char*>(blk.data()));
+        buffer_vector[i].size = blk.length(); 
+        
+        // skip block header
+        if (i > 0)
+        {
+            hdr->body_crc = dsn_crc32_compute(
+                static_cast<const void*>(blk.data()),
+                static_cast<size_t>(blk.length()), hdr->body_crc
+                );
+        }        
     }
     _crc32 = hdr->body_crc;
-
-    std::unique_ptr<dsn_file_buffer_t[]> buffer_vector(new dsn_file_buffer_t[block.data().size()]);
-    std::transform(block.data().begin(), block.data().end(), buffer_vector.get(), [](const blob& bb)
-    {
-        return dsn_file_buffer_t
-            {
-                reinterpret_cast<void*>(const_cast<char*>(bb.data())),
-                bb.length()
-            };
-    });
-
+    
     task_ptr tsk;
-    if (callback) {
+    if (callback) 
+    {
         tsk = file::write_vector(
             _handle,
-            buffer_vector.get(),
-            static_cast<int>(block.data().size()),
+            buffer_vector,
+            vec_size,
             static_cast<uint64_t>(local_offset),
             evt,
             callback_host,
             std::move(callback),
             hash
             );
-    } else {
+    }
+    else 
+    {
         tsk = file::write_vector(
             _handle,
-            buffer_vector.get(),
-            static_cast<int>(block.data().size()),
+            buffer_vector,
+            vec_size,
             static_cast<uint64_t>(local_offset),
             evt,
             callback_host,
@@ -1800,7 +1781,8 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
             hash
             );
     }
-    _end_offset += block.size();
+
+    _end_offset.fetch_add(size);
     return tsk;
 }
 

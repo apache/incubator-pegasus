@@ -195,13 +195,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
-            _private_log = new mutation_log(
-                log_dir,
-                _options->log_private_batch_buffer_kb,
+            _private_log = new mutation_log_private(
+                log_dir,                
                 _options->log_private_file_size_mb,
-                _options->log_private_force_flush,
-                true,
-                get_gpid()
+                get_gpid(),
+                this,
+                _options->log_private_batch_buffer_kb * 1024
                 );
         }
 
