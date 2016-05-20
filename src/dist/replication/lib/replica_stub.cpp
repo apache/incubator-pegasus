@@ -851,7 +851,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         _failure_detector->get_servers(),
         msg,
         nullptr,
-        [](error_code, dsn_message_t, dsn_message_t) {}
+        [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); }
         );
 }
 

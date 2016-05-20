@@ -224,7 +224,7 @@ namespace dsn
                     if (nullptr == it->second->query_config_task)
                     {
                         // TODO: delay if from_meta_ack = true
-                        it->second->query_config_task = query_partition_config(pindex);
+                        it->second->query_config_task = query_config(pindex);
                     }
                 }
                 else
@@ -232,7 +232,7 @@ namespace dsn
                     _pending_requests_before_partition_count_unknown.push_back(std::move(request));
                     if (_pending_requests_before_partition_count_unknown.size() == 1)
                     {
-                        _query_config_task = query_partition_config(pindex);
+                        _query_config_task = query_config(pindex);
                     }
                 }
             }
@@ -241,7 +241,7 @@ namespace dsn
         /*send rpc*/
         DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-        dsn::task_ptr partition_resolver_simple::query_partition_config(int partition_index)
+        dsn::task_ptr partition_resolver_simple::query_config(int partition_index)
         {
             //dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_path.c_str(), _app_id, request->partition_index);
             dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
@@ -261,12 +261,12 @@ namespace dsn
                 this,
                 [this, partition_index](error_code err, dsn_message_t req, dsn_message_t resp)
                 {
-                    query_partition_configuration_reply(err, req, resp, partition_index);
+                    query_config_reply(err, req, resp, partition_index);
                 }
                 );
         }
 
-        void partition_resolver_simple::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index)
+        void partition_resolver_simple::query_config_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index)
         {
             error_code client_err = ERR_OK;
 

@@ -247,6 +247,12 @@ DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with rel
     return g;
 }
 
+DSN_API int dsn_group_count(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    return grp->count();
+}
+
 DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t ep)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
@@ -273,16 +279,16 @@ DSN_API bool dsn_group_is_leader(dsn_group_t g, dsn_address_t ep)
     return grp->leader() == ep;
 }
 
-DSN_API bool dsn_group_is_update_leader_on_rpc_forward(dsn_group_t g)
+DSN_API bool dsn_group_is_update_leader_automatically(dsn_group_t g)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
-    return grp->is_update_leader_on_rpc_forward();
+    return grp->is_update_leader_automatically();
 }
 
-DSN_API void dsn_group_set_update_leader_on_rpc_forward(dsn_group_t g, bool v)
+DSN_API void dsn_group_set_update_leader_automatically(dsn_group_t g, bool v)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
-    grp->set_update_leader_on_rpc_forward(v);
+    grp->set_update_leader_automatically(v);
 }
 
 DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep)

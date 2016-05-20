@@ -58,6 +58,7 @@ void kubernetes_cluster_scheduler::deploy_k8s_unit(void* context, int argc, cons
         std::string name = argv[0];
         std::string directory = argv[1];
         std::function<void(error_code,rpc_address)> cb = [](error_code err,rpc_address addr){
+            err.end_tracking();
             dinfo("deploy err %s",err.to_string());
         };
         k8s->create_pod(name,cb,directory);
@@ -79,6 +80,7 @@ void kubernetes_cluster_scheduler::undeploy_k8s_unit(void* context, int argc, co
         std::string name = argv[0];
         std::string directory = argv[1];
         std::function<void(error_code,const std::string&)> cb = [](error_code err,const std::string err_msg){
+            err.end_tracking();
             dinfo("deploy err %s",err.to_string());
         };
         k8s->delete_pod(name,cb,directory);

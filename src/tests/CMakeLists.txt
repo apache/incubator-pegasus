@@ -1,2 +1,4 @@
 add_subdirectory(dsn)
-add_subdirectory(idl)
+if(WIN32)
+    add_subdirectory(idl)
+endif()
