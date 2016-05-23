@@ -226,8 +226,17 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 [this](mutation_ptr& mu)
                 {
                     return replay_mutation(mu, true);
+                },
+                [this](error_code err) 
+                {
+                    tasking::enqueue(
+                        LPC_REPLICATION_ERROR,
+                        this, 
+                        [this, err]() { handle_local_failure(err); },
+                        gpid_to_hash(get_gpid())
+                        );
                 }
-            );
+                );
 
             if (err == ERR_OK)
             {
@@ -332,13 +341,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this, mu](error_code err, size_t size)
-        {
-            if (err != ERR_OK)
-            {
-                handle_local_failure(err);
-            }
-        },
+            nullptr,
             gpid_to_hash(get_gpid())
             );
     }

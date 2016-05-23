@@ -195,7 +195,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 return false;
             }
-        }
+        },
+        [this](error_code err) { this->handle_log_failure(err); }
         );
 
     if (err != ERR_OK)
@@ -235,7 +236,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             _options.slog_dir,
             opts.log_shared_file_size_mb
             );
-        auto lerr = _log->open(nullptr);
+        auto lerr = _log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); });
         dassert(lerr == ERR_OK, "restart log service must succeed");
     }
 
@@ -254,6 +255,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 _log->update_max_decree(it->first, pmax);
                 smax = pmax;
+            }
+
+            else if (err == ERR_OK && pmax < smax)
+            {
+                it->second->private_log()->flush();
+                pmax = it->second->private_log()->max_decree(it->first);
             }
         }
 

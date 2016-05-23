@@ -305,7 +305,7 @@ TEST(replication, mutation_log)
         1024
         );
 
-    auto err = mlog->open(nullptr);
+    auto err = mlog->open(nullptr, nullptr);
     EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
@@ -366,7 +366,7 @@ TEST(replication, mutation_log)
         EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
         EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
         return true;
-    }
+    }, nullptr
     );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
     mlog->close();

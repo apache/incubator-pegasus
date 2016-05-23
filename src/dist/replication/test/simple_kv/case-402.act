@@ -178,7 +178,7 @@ client:begin_write:id=167,key=k167,value=v167,timeout=0
 client:begin_write:id=168,key=k168,value=v168,timeout=0
 client:begin_write:id=169,key=k169,value=v169,timeout=0
 
-inject:on_aio_call:node=r2
+inject:on_aio_call:node=r2,task_code=LPC_WRITE_REPLICATION_LOG_SHARED
 config:{4,r1,[r3]}
 
 state:{{r1,pri,4,23},{r3,sec,4,20}}

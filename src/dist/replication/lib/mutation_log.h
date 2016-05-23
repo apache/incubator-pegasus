@@ -127,6 +127,7 @@ public:
     // return true when the mutation's offset is not less than
     // the remembered (shared or private) valid_start_offset therefore valid for the replica
     typedef std::function<bool (mutation_ptr&)> replay_callback;
+    typedef std::function<void(dsn::error_code err)> io_failure_callback;
 
 public:
     // append a log mutation
@@ -138,9 +139,12 @@ public:
         aio_handler callback,
         int hash = 0) = 0;
 
-    virtual void get_learn_state_in_memory(
+    virtual bool get_learn_state_in_memory(
+        bool start_decree,
         binary_writer& writer
-        ) const {}
+        ) const {
+        return true;
+    }
     
     // flush the pending buffer
     // thread safe
@@ -166,7 +170,7 @@ public:
     // open and replay
     // returns ERR_OK if succeed
     // not thread safe, but only be called when init
-    error_code open(replay_callback callback);
+    error_code open(replay_callback read_callback, io_failure_callback write_error_callback);
 
     // close the log
     // thread safe
@@ -268,9 +272,9 @@ public:
 
 protected:
     // thread-safe
-    std::pair<log_file_ptr, int64_t> mark_new_update(size_t size, gpid gpid, decree d);
+    std::pair<log_file_ptr, int64_t> mark_new_update(size_t size, gpid gpid, decree d, bool create_new_log_if_needed);
     // thread-safe
-    int64_t mark_new_offset(size_t size);
+    int64_t get_global_offset() const { zauto_lock l(_lock); return _global_end_offset;  }
 
     // init memory states
     virtual void init_states();
@@ -303,22 +307,24 @@ private:
     // - _pending_write == nullptr (because we need create new pending buffer to write file header)
     error_code create_new_log_file();
 
-private:
+protected:
     std::string               _dir;
     bool                      _is_private;
     gpid                      _private_gpid; // only used for private log
     replica                   *_owner_replica; // only used for private log
+    io_failure_callback       _io_error_callback;
 
     // options
     int64_t                   _max_log_file_size_in_bytes;    
     bool                      _force_flush;
 
+private:
     ///////////////////////////////////////////////
     //// memory states
     ///////////////////////////////////////////////
     mutable zlock                  _lock;
     bool                           _is_opened;
-
+    
     // logs
     int                            _last_file_index; // new log file index = _last_file_index + 1
     std::map<int, log_file_ptr>    _log_files; // index -> log_file_ptr
@@ -376,7 +382,8 @@ public:
         aio_handler callback,
         int hash = 0) override;
 
-    virtual void get_learn_state_in_memory(
+    virtual bool get_learn_state_in_memory(
+        bool start_decree,
         binary_writer& writer
         ) const override;
 
@@ -388,7 +395,7 @@ private:
     // Preconditions:
     // - _pending_write != nullptr
     // - _issued_write.expired() == true (because only one async write is allowed at the same time)
-    error_code write_pending_mutations(log_file_ptr& lf);
+    error_code write_pending_mutations();
 
     virtual void init_states() override;
 
@@ -400,6 +407,7 @@ private:
     std::shared_ptr<log_block>     _pending_write;
     std::vector<mutation_ptr>      _pending_write_mutations;
     decree                         _pending_write_max_commit; 
+    decree                         _pending_write_max_decree;
     mutable zlock                  _plock;
 
     uint32_t                       _batch_buffer_bytes;
