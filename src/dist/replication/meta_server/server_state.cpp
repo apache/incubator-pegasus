@@ -41,9 +41,7 @@
 # include <boost/lexical_cast.hpp>
 
 # include <rapidjson/document.h>
-# include <rapidjson/prettywriter.h>
 # include <rapidjson/writer.h>
-# include <rapidjson/stringbuffer.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -67,7 +65,7 @@ void init_partition_configuration(/*out*/partition_configuration& pc, /*in*/cons
 
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
 {
-    auto it = std::find(drops.begin(), drops.end(), node);
+    auto it = find(drops.begin(), drops.end(), node);
     if (is_add)
     {
         if (it != drops.end())
@@ -122,7 +120,7 @@ std::string join_path(const std::string& input1, const std::string& input2)
 
 /// server state member functions
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
+    : serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -311,7 +309,7 @@ error_code server_state::initialize()
 
     // prepare parameters
     std::vector<std::string> args;
-    dsn::utils::split_args(meta_state_service_parameters, args);
+    utils::split_args(meta_state_service_parameters, args);
     int argc = static_cast<int>(args.size());
     std::vector<const char*> args_ptr;
     args_ptr.resize(argc);
@@ -321,7 +319,7 @@ error_code server_state::initialize()
     }
 
     // create storage
-    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
+    _storage = utils::factory_store< dist::meta_state_service>::create(
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
@@ -1079,7 +1077,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
                         _nodes[pc.primary].primaries.erase(pc.pid);
                         pc.primary.set_invalid();
                     }
-                    for (dsn::rpc_address& addr: pc.secondaries) {
+                    for (rpc_address& addr: pc.secondaries) {
                         if (_nodes.find(addr) != _nodes.end()) {
                             _nodes[addr].partitions.erase(pc.pid);
                         }
@@ -1162,7 +1160,7 @@ void server_state::list_apps(configuration_list_apps_request& request, /*out*/ c
         {
             if ( request.status == app_status::AS_INVALID || request.status == app.info.status)
             {
-                dsn::app_info info;
+                app_info info;
                 info.app_id = app.info.app_id;
                 info.status = app.info.status;
                 info.app_type = app.info.app_type;
@@ -1173,7 +1171,7 @@ void server_state::list_apps(configuration_list_apps_request& request, /*out*/ c
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
 }
 
@@ -1186,13 +1184,13 @@ void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/
             node_status::type status = node.second.is_alive ? node_status::NS_ALIVE : node_status::NS_UNALIVE;
             if (request.status == node_status::NS_INVALID || request.status == status)
             {
-                dsn::replication::node_info info;
+                node_info info;
                 info.status = status;
                 info.address = node.first;
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
 }
 
@@ -1341,8 +1339,8 @@ void server_state::update_configuration(
                 if (config_type::CT_REMOVE == req->type)
                 {
                     // not found
-                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
-                        std::find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
+                        find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
                     {
                         response.err = ERR_OK;
                         response.config = old;
@@ -1357,7 +1355,7 @@ void server_state::update_configuration(
                 else
                 {
                     // added already
-                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
                     {
                         response.err = ERR_OK;
                         response.config = old;
@@ -1384,7 +1382,7 @@ void server_state::update_configuration(
             tasking::enqueue(
                 LPC_CM_UPDATE_CONFIGURATION,
                 nullptr,
-                [this, cb = std::move(callback), req_ptr = std::move(req)]() mutable
+                [this, cb = move(callback), req_ptr = move(req)]() mutable
                 {
                     this->update_configuration(req_ptr, nullptr, cb);
                 },
@@ -1407,7 +1405,10 @@ void server_state::update_configuration(
         {
             maintain_drops(req->config.last_drops, *req);
         }
-        _pending_requests.emplace(req->config.pid, callback);
+        {
+            zauto_write_lock l(_lock);
+            _pending_requests.emplace(req->config.pid, callback);
+        }
 
         update_configuration_on_remote(req, request_msg);
     }
@@ -1421,7 +1422,7 @@ void server_state::exec_pending_request(const std::shared_ptr<configuration_upda
     {
         zauto_write_lock l(_lock);
         auto iter = _pending_requests.find(req->config.pid);
-        callback = std::move(iter->second);
+        callback = move(iter->second);
         dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", 
             req->config.pid.get_app_id(), req->config.pid.get_partition_index()
             );
@@ -1627,7 +1628,7 @@ void server_state::check_consistency(gpid gpid)
             dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
             dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
 
-            auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
             dassert(it2 == config.last_drops.end(), "");
         }
 
@@ -1637,7 +1638,7 @@ void server_state::check_consistency(gpid gpid)
             dassert(it != _nodes.end(), "");
             dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
 
-            auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
             dassert(it2 == config.last_drops.end(), "");
         }
     }
@@ -1675,7 +1676,7 @@ void server_state::static_cli_json_state(void* context, int argc, const char** a
     auto _server_state = reinterpret_cast<server_state*>(context);
     std::stringstream out;
     _server_state->json_state(out);
-    auto danglingstring = new std::string(std::move(out.str()));
+    auto danglingstring = new std::string(move(out.str()));
     reply->message = danglingstring->c_str();
     reply->size = danglingstring->size();
     reply->context = danglingstring;

@@ -552,9 +552,6 @@ void message_ex::write_next(void** ptr, size_t* size, size_t min_size)
     // printf("%p %s\n", this, __FUNCTION__);
     dassert(!this->_is_read && this->_rw_committed, "there are pending msg write not committed"
         ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
-    //reserve a slot for the following buffers.push_back
-    //since we cannot pushback in the middle of tls_trans_mem_next and tls_trans_mem_connit
-    this->buffers.reserve(this->buffers.size() + 1);
     ::dsn::tls_trans_mem_next(ptr, size, min_size);
     this->_rw_committed = false;
 

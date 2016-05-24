@@ -245,8 +245,6 @@ namespace dsn {
         int                    _length; // data length
     };
 
-    struct transient_blob : dsn::transient_object, blob{};
-
     class binary_reader
     {
     public:
