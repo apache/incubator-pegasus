@@ -95,7 +95,12 @@ namespace dsn
 
                 {
                     zauto_write_lock l(_config_lock);
-                    _config_cache.erase(partition_index);
+                    auto it = _config_cache.find(partition_index);
+                    if (it != _config_cache.end())
+                    {
+                        // TODO: opt to remove unnecessary cache invalidation
+                        _config_cache.erase(it);
+                    }
                 }
             }
         }
@@ -299,11 +304,15 @@ namespace dsn
                         auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                         if (it2 == _config_cache.end())
                         {
-                            _config_cache[new_config.pid.get_partition_index()] = new_config;
+                            std::unique_ptr<partition_info> pi(new partition_info);
+                            pi->timeout_count = 0;
+                            pi->config = new_config;
+                            _config_cache.emplace(new_config.pid.get_partition_index(), std::move(pi));
                         }
-                        else if (it2->second.ballot < new_config.ballot)
+                        else if (it2->second->config.ballot < new_config.ballot)
                         {
-                            it2->second = new_config;
+                            it2->second->config = new_config;
+                            it2->second->timeout_count = 0;
                         }
                         else
                         {
@@ -473,14 +482,14 @@ namespace dsn
         //ERR_OK                in cache and valid
         error_code partition_resolver_simple::get_address(int partition_index, /*out*/ dsn::rpc_address& addr)
         {
-            partition_configuration config;
+            //partition_configuration config;
             {
                 zauto_read_lock l(_config_lock);
                 auto it = _config_cache.find(partition_index);
                 if (it != _config_cache.end())
                 {
-                    config = it->second;
-                    addr = get_address(config);
+                    //config = it->second->config;
+                    addr = get_address(it->second->config);
                     if (addr.is_invalid())
                     {
                         return ERR_IO_PENDING;

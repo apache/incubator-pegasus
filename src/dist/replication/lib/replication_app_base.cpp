@@ -182,8 +182,8 @@ error_code replica_app_info::store(const char* file)
 
 replication_app_base::replication_app_base(replica* replica)
 {
-    _dir_data = replica->dir() + "/data";
-    _dir_learn = replica->dir() + "/learn";
+    _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
+    _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
     _last_committed_decree = 0;
     _replica = replica;
     _callbacks = replica->get_app_callbacks();

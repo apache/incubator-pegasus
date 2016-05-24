@@ -85,7 +85,7 @@ public:
     static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
 
     // write-to/read-from mutation log file, for better performance
-    void write_to_log_file(std::function<void(blob)> inserter) const;
+    void write_to_log_file(std::function<void(const blob&)> inserter) const;
     static mutation_ptr read_from_log_file(binary_reader& reader, dsn_message_t from);
 
     // data

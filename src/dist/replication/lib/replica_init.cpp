@@ -195,13 +195,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
-            _private_log = new mutation_log(
-                log_dir,
-                _options->log_private_batch_buffer_kb,
+            _private_log = new mutation_log_private(
+                log_dir,                
                 _options->log_private_file_size_mb,
-                _options->log_private_force_flush,
-                true,
-                get_gpid()
+                get_gpid(),
+                this,
+                _options->log_private_batch_buffer_kb * 1024
                 );
         }
 
@@ -227,8 +226,17 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 [this](mutation_ptr& mu)
                 {
                     return replay_mutation(mu, true);
+                },
+                [this](error_code err) 
+                {
+                    tasking::enqueue(
+                        LPC_REPLICATION_ERROR,
+                        this, 
+                        [this, err]() { handle_local_failure(err); },
+                        gpid_to_hash(get_gpid())
+                        );
                 }
-            );
+                );
 
             if (err == ERR_OK)
             {
@@ -333,13 +341,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this, mu](error_code err, size_t size)
-        {
-            if (err != ERR_OK)
-            {
-                handle_local_failure(err);
-            }
-        },
+            nullptr,
             gpid_to_hash(get_gpid())
             );
     }
