@@ -122,9 +122,9 @@ namespace dsn
             std::vector<task*> out;
             out.reserve(batch_size);
             auto count = _sema.waitMany(batch_size);
-			batch_size = static_cast<int>(count);
+            batch_size = static_cast<int>(count);
 
-			if (count == 0)
+            if (count == 0)
             {
                 return nullptr;
             }
@@ -138,14 +138,14 @@ namespace dsn
                 }
             }
 
-			count = batch_size - 1;
-			for (int i = 0; i < count; i++)
-			{
-				out[i]->next = out[i + 1];
-			}
-			out[count]->next = nullptr;
+            count = batch_size - 1;
+            for (int i = 0; i < count; i++)
+            {
+                out[i]->next = out[i + 1];
+            }
+            out[count]->next = nullptr;
 
-			return out[0];
+            return out[0];
         }
     }
 }

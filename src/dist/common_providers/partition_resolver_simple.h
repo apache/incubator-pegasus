@@ -67,11 +67,11 @@ namespace dsn
             int get_partition_count() const { return _app_partition_count; }
 
         private:
-			struct partition_info
-			{
-				int timeout_count;
-				::dsn::partition_configuration config;
-			};
+            struct partition_info
+            {
+                int timeout_count;
+                ::dsn::partition_configuration config;
+            };
             mutable dsn::service::zrwlock_nr     _config_lock;
             std::unordered_map<int, std::unique_ptr<partition_info> > _config_cache;
 

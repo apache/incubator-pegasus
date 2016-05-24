@@ -146,15 +146,15 @@ aio_task* disk_file::on_write_completed(aio_task* wk, void* ctx, error_code err,
 
         if (err == ERR_OK)
         {
-			size_t this_size = (size_t)wk->aio()->buffer_size;
-			dassert(size >= this_size, 
-				"written buffer size does not equal to input buffer's size: %d vs %d",
-				(int)size,
-				(int)this_size
-				);
+            size_t this_size = (size_t)wk->aio()->buffer_size;
+            dassert(size >= this_size, 
+                "written buffer size does not equal to input buffer's size: %d vs %d",
+                (int)size,
+                (int)this_size
+                );
 
-			wk->enqueue(err, this_size);
-			size -= this_size;
+            wk->enqueue(err, this_size);
+            size -= this_size;
         }
         else
         {
@@ -166,11 +166,11 @@ aio_task* disk_file::on_write_completed(aio_task* wk, void* ctx, error_code err,
         wk = next;
     }
 
-	if (err == ERR_OK)
-	{
-		dassert(size == 0, 
-			"written buffer size does not equal to input buffer's size");
-	}
+    if (err == ERR_OK)
+    {
+        dassert(size == 0, 
+            "written buffer size does not equal to input buffer's size");
+    }
 
     return ret;
 }
