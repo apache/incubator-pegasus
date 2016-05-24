@@ -488,11 +488,6 @@ void mutation_log::close()
 
 error_code mutation_log::create_new_log_file()
 {
-    if (_current_log_file != nullptr)
-    {
-        dassert(_current_log_file->end_offset() == _global_end_offset, "");
-    }
-
     // create file
     log_file_ptr logf = log_file::create_write(
         _dir.c_str(),
@@ -1726,7 +1721,6 @@ log_block* log_file::prepare_log_block()
 {
     dassert(!_is_read, "log file must be of write mode");
     dassert(block.size() > 0, "log_block can not be empty");
-    dassert(offset == _end_offset, "");
     
     auto size = (long long)block.size();    
     int64_t local_offset = offset - start_offset();

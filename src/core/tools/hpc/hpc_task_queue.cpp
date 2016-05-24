@@ -122,12 +122,14 @@ namespace dsn
             std::vector<task*> out;
             out.reserve(batch_size);
             auto count = _sema.waitMany(batch_size);
-            if (count == 0)
+			batch_size = static_cast<int>(count);
+
+			if (count == 0)
             {
                 return nullptr;
             }
             //TODO: deal with should-be-size_t types
-            batch_size = static_cast<int>(count);
+            
             while (count != 0)
             {
                 for (int i = TASK_PRIORITY_COUNT - 1; i >= 0 && count != 0; i--)
@@ -135,19 +137,15 @@ namespace dsn
                     count -= _queue[i].try_dequeue_bulk(std::back_inserter(out), count);
                 }
             }
-            for (auto it = out.begin(); it != out.end(); ++it)
-            {
-                auto next_it = std::next(it);
-                if (next_it != out.end())
-                {
-                    (*it)->next = *next_it;
-                }
-                else
-                {
-                    (*it)->next = nullptr;
-                }
-            }
-            return *out.begin();
+
+			count = batch_size - 1;
+			for (int i = 0; i < count; i++)
+			{
+				out[i]->next = out[i + 1];
+			}
+			out[count]->next = nullptr;
+
+			return out[0];
         }
     }
 }
