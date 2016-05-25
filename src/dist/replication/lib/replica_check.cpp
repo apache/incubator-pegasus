@@ -49,6 +49,8 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
+    ddebug("%s: init group check", name());
+
     if (PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
@@ -66,10 +68,7 @@ void replica::broadcast_group_check()
 {
     dassert (nullptr != _primary_states.group_check_task, "");
 
-    ddebug(
-        "%s: start broadcast group check",
-        name()
-    );
+    ddebug("%s: start to broadcast group check", name());
 
     if (_primary_states.group_check_pending_replies.size() > 0)
     {
@@ -106,7 +105,7 @@ void replica::broadcast_group_check()
         }
 
         ddebug(
-            "%s: init_group_check for %s with state %s",
+            "%s: send group check to %s with state %s",
             name(),
             addr.to_string(),
             enum_to_string(it->second)
@@ -134,7 +133,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     check_hashed_access();
 
     ddebug(
-        "%s: on_group_check from %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+        "%s: process group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
         name(), request.config.primary.to_string(),
         request.config.ballot, enum_to_string(request.config.status),
         request.last_committed_decree
@@ -143,6 +142,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     if (request.config.ballot < get_ballot())
     {
         response.err = ERR_VERSION_OUTDATED;
+        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
         return;
     }
     else if (request.config.ballot > get_ballot())
@@ -150,6 +150,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
         if (!update_local_configuration(request.config))
         {
             response.err = ERR_INVALID_STATE;
+            dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
             return;
         }
     }
@@ -183,6 +184,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     if (status() == PS_ERROR)
     {
         response.err = ERR_INVALID_STATE;
+        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();

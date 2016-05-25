@@ -124,7 +124,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dassert(false, "Fail to get absolute path from %s.", _options.slog_dir.c_str());
     }
     _options.slog_dir = cdir;
-    ddebug("app[%s]: slog_dir=%s", _options.app_name.c_str(), _options.slog_dir.c_str());
     int count = 0;
     for (auto& dir : _options.data_dirs)
     {
@@ -138,7 +137,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             dassert(false, "Fail to get absolute path from %s.", dir.c_str());
         }
         dir = cdir;
-        ddebug("app[%s]: data_dirs[%d]=%s", _options.app_name.c_str(), count, dir.c_str());
+        ddebug("data_dirs[%d] = %s", count, dir.c_str());
         count++;
     }
 
@@ -148,7 +147,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         _options.log_shared_file_size_mb,
         _options.log_shared_force_flush
         );
-    ddebug("shared log object created, dir = %s", _options.slog_dir.c_str());
+    ddebug("slog_dir = %s", _options.slog_dir.c_str());
 
     // init rps
     replicas rps;
@@ -167,7 +166,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     for (auto& dir : dir_list)
     {
         if (dir.length() >= 4 && dir.substr(dir.length() - 4) == ".err")
+        {
+            ddebug("ignore dir %s", dir.c_str());
             continue;
+        }
+
+        ddebug("process dir %s", dir.c_str());
 
         auto r = replica::load(this, dir.c_str());
         if (r != nullptr)
@@ -441,13 +445,20 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 {
     if (!is_connected())
     {
-        dwarn("on_config_proposal: not connected, ignore");
+        dwarn("%u.%u@%s: received config proposal %s for %s: not connected, ignore",
+              proposal.config.gpid.app_id, proposal.config.gpid.pidx, _primary_address.to_string(),
+              enum_to_string(proposal.type), proposal.node.to_string());
         return;
     }
 
+    ddebug("%u.%u@%s: received config proposal %s for %s",
+           proposal.config.gpid.app_id, proposal.config.gpid.pidx, _primary_address.to_string(),
+           enum_to_string(proposal.type), proposal.node.to_string());
+
     // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
     // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
-    replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
+    //replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
+    replica_ptr rep = get_replica(proposal.config.gpid, false, proposal.config.app_type.c_str());
     if (rep == nullptr)
     {
         if (proposal.type == CT_ASSIGN_PRIMARY)
@@ -534,11 +545,19 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 {
     if (!is_connected())
     {
-        dwarn("on_group_check: not connected, ignore");
+        dwarn("%u.%u@%s: received group check: not connected, ignore",
+              request.config.gpid.app_id, request.config.gpid.pidx, _primary_address.to_string());
         return;
     }
 
-    replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
+    ddebug("%u.%u@%s: received group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+           request.config.gpid.app_id, request.config.gpid.pidx, _primary_address.to_string(),
+           request.config.primary.to_string(), request.config.ballot,
+           enum_to_string(request.config.status), request.last_committed_decree);
+
+    // TODO(qinzuoyan): if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
+    //replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
     if (rep != nullptr)
     {
         rep->on_group_check(request, response);
@@ -607,6 +626,19 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
 
 void replica_stub::on_add_learner(const group_check_request& request)
 {
+    if (!is_connected())
+    {
+        dwarn("%u.%u@%s: received add learner: not connected, ignore",
+              request.config.gpid.app_id, request.config.gpid.pidx, _primary_address.to_string(),
+              request.config.primary.to_string());
+        return;
+    }
+
+    ddebug("%u.%u@%s: received add learner, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+           request.config.gpid.app_id, request.config.gpid.pidx, _primary_address.to_string(),
+           request.config.primary.to_string(), request.config.ballot,
+           enum_to_string(request.config.status), request.last_committed_decree);
+
     replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
     if (rep != nullptr)
     {
@@ -679,6 +711,8 @@ void replica_stub::query_configuration_by_node()
     req.node = _primary_address;
     ::marshall(msg, req);
 
+    ddebug("send query node partitions request to meta server");
+
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
         target,
@@ -705,7 +739,7 @@ void replica_stub::on_meta_server_connected()
 
 void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
 {
-    ddebug("node query replied, err = %s", err.to_string());
+    ddebug("query node partitions replied, err = %s", err.to_string());
 
     if (err != ERR_OK)
     {
@@ -791,15 +825,20 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     }
     else
     {
-        ddebug(
-            "%u.%u@%s: replica not exists on replica server, remove it from meta server",
-            config.gpid.app_id, config.gpid.pidx,
-            primary_address().to_string()
-            );
-
         if (config.primary == _primary_address)
         {
+            ddebug(
+                "%u.%u@%s: replica not exists on replica server, which is primary, remove it from meta server",
+                config.gpid.app_id, config.gpid.pidx, _primary_address.to_string()
+                );
             remove_replica_on_meta_server(config);
+        }
+        else
+        {
+            ddebug(
+                "%u.%u@%s: replica not exists on replica server, which is not primary, just ignore",
+                config.gpid.app_id, config.gpid.pidx, _primary_address.to_string()
+                );
         }
     }
 }
@@ -811,8 +850,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
     {
         ddebug(
             "%u.%u@%s: replica not exists on meta server, remove",
-            gpid.app_id, gpid.pidx,
-            primary_address().to_string()
+            gpid.app_id, gpid.pidx, _primary_address.to_string()
             );
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
@@ -1067,7 +1105,8 @@ void replica_stub::on_gc()
 void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     std::string dir = get_replica_dir(app_type.c_str(), gpid);
-    dwarn("open replica '%s'", dir.c_str());
+    ddebug("%u.%u@%s: start to open replica %s group_check, dir = %s",
+           gpid.app_id, gpid.pidx, _primary_address.to_string(), req ? "with" : "without", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());
 

@@ -192,7 +192,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 true,
                 get_gpid()
                 );
-            ddebug("%s: private log object created, dir = %s", name(), log_dir.c_str());
+            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
         }
 
         // sync valid_start_offset between app and logs
