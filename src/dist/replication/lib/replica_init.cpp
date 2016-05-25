@@ -202,6 +202,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 this,
                 _options->log_private_batch_buffer_kb * 1024
                 );
+            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
         }
 
         // sync valid_start_offset between app and logs

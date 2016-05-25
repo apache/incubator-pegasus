@@ -894,9 +894,13 @@ void replica::on_learn_completion_notification(const group_check_response& repor
 
 void replica::on_add_learner(const group_check_request& request)
 {
+    ddebug("%s: process add learner, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+           name(), request.config.primary.to_string(), request.config.ballot,
+           enum_to_string(request.config.status), request.last_committed_decree);
+
     if (request.config.ballot < get_ballot())
     {
-        ddebug("%s: %s ballot is old, skipped", name(), __FUNCTION__);
+        dwarn("%s: on_add_learner ballot is old, skipped", name());
         return;
     }   
 

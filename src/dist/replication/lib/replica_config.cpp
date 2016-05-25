@@ -51,7 +51,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s", 
+        "%s: process config proposal %s for %s",
         name(),
         enum_to_string(proposal.type),
         proposal.node.to_string()
@@ -60,7 +60,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     if (proposal.config.ballot < get_ballot())
     {
         dwarn(
-            "%s: on_config_proposal is out-dated, %" PRId64 " vs %" PRId64,
+            "%s: on_config_proposal out-dated, %" PRId64 " vs %" PRId64,
             name(),
             proposal.config.ballot,
             get_ballot()
@@ -162,12 +162,15 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     {
         if (proposal.type == config_type::CT_ADD_SECONDARY)
         {
-            dinfo("name(%s): already have enough secondaries, ignore add secondary command", name());
-            return;
+            if (_primary_states.learners.find(proposal.node) == _primary_states.learners.end())
+            {
+                ddebug("%s: already have enough secondaries or potential secondaries, ignore new potential secondary proposal", name());
+                return;
+            }
         }
         else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB)
         {
-            dinfo("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            ddebug("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
         }
         else
         {
@@ -353,6 +356,9 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
         _primary_states.reconfiguration_task->cancel(true);
     }
 
+    ddebug("%s: send update configuration request to meta server, ballot = %" PRId64 ", type = %s, node = %s",
+           name(), request->config.ballot, enum_to_string(request->type), request->node.to_string());
+
     rpc_address target(_stub->_failure_detector->get_servers());
     _primary_states.reconfiguration_task = rpc::call(
         target,
@@ -526,7 +532,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     {
     case partition_status::PS_ERROR:
         {
-            ddebug(
+            dwarn(
                 "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed",
                 name(),
                 enum_to_string(old_status),
@@ -541,7 +547,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         if ((config.status == partition_status::PS_PRIMARY || config.status == partition_status::PS_SECONDARY)
             && !_inactive_is_transient)
         {
-            ddebug(
+            dwarn(
                 "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed when inactive state is not transient",
                 name(),
                 enum_to_string(old_status),
@@ -803,7 +809,7 @@ bool replica::update_local_configuration_with_no_ballot_change(partition_status:
 
 void replica::on_config_sync(const partition_configuration& config)
 {
-    ddebug( "%s: configuration sync", name());
+    ddebug("%s: configuration sync", name());
 
     // no outdated update
     if (config.ballot < get_ballot())
