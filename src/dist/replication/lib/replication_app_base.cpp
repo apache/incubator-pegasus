@@ -39,6 +39,7 @@
 # include <dsn/internal/factory_store.h>
 # include "mutation_log.h"
 # include <fstream>
+# include <sstream>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -106,17 +107,21 @@ error_code replica_init_info::store(const char* file)
 
     if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
+        derror("move file from %s to %s failed", tmp_file.c_str(), ffile.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    ddebug("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
-        ffile.c_str(),
-        init_ballot,
-        init_decree,
-        init_offset_in_shared_log,
-        init_offset_in_private_log
-        );
     return ERR_OK;
+}
+
+std::string replica_init_info::to_string()
+{
+    std::ostringstream oss;
+    oss << "init_ballot = " << init_ballot
+        << ", init_decree = " << init_decree
+        << ", init_offset_in_shared_log = " << init_offset_in_shared_log
+        << ", init_offset_in_private_log = " << init_offset_in_private_log;
+    return oss.str();
 }
 
 replication_app_base::replication_app_base(replica* replica)
@@ -193,6 +198,10 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
+            if (err == ERR_OK)
+            {
+                ddebug("%s: load replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
+            }
         }
     }
 
@@ -270,7 +279,12 @@ error_code replication_app_base::update_init_info(replica* r, int64_t shared_log
     _info.init_offset_in_private_log = private_log_offset;
 
     std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
-    return _info.store(info_path.c_str());
+    auto err = _info.store(info_path.c_str());
+    if (err == ERR_OK)
+    {
+        ddebug("%s: store replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
+    }
+    return err;
 }
 
 void replication_app_base::dispatch_rpc_call(dsn_task_code_t code, binary_reader& reader, dsn_message_t response)

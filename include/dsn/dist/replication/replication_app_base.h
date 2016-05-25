@@ -82,6 +82,7 @@ public:
     replica_init_info() { memset((void*)this, 0, sizeof(*this)); }
     error_code load(const char* file);
     error_code store(const char* file);
+    std::string to_string();
 };
 
 template<typename TResponse>
