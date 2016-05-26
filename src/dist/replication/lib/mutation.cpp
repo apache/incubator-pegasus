@@ -192,19 +192,19 @@ void mutation::write_to_log_file(std::function<void(const blob&)> inserter) cons
 
 void mutation::write_to_log_file(binary_writer& writer) const
 {
-	writer.write_pod(data.header);
-	writer.write_pod(static_cast<int>(data.updates.size()));
+    writer.write_pod(data.header);
+    writer.write_pod(static_cast<int>(data.updates.size()));
 
-	for (const mutation_update& update : data.updates)
-	{
-		writer.write_pod(static_cast<int>(update.code));
-		writer.write_pod(static_cast<int>(update.data.length()));
-	}
+    for (const mutation_update& update : data.updates)
+    {
+        writer.write_pod(static_cast<int>(update.code));
+        writer.write_pod(static_cast<int>(update.data.length()));
+    }
 
-	for (const mutation_update& update : data.updates)
-	{
-		writer.write(update.data.data(), update.data.length());
-	}
+    for (const mutation_update& update : data.updates)
+    {
+        writer.write(update.data.data(), update.data.length());
+    }
 }
 
 /*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)

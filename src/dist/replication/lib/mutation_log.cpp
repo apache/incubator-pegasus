@@ -118,12 +118,12 @@ void mutation_log_shared::flush()
     if (nullptr == _pending_write)
     {
         _pending_write.reset(log_file::prepare_log_block());
-		_pending_write_mutations.reset(new mutations());
+        _pending_write_mutations.reset(new mutations());
         _pending_write_start_offset = mark_new_update(0, _private_gpid, 0, true).second;
     }
 
-	// save mu for pinning buffer
-	_pending_write_mutations->push_back(mu);
+    // save mu for pinning buffer
+    _pending_write_mutations->push_back(mu);
     
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
@@ -160,32 +160,32 @@ bool mutation_log_private::get_learn_state_in_memory(
 {
     // learn pending buffer
     bool r;
-	std::shared_ptr<mutations> issued_mutations;
-	mutations pending_mutations;
+    std::shared_ptr<mutations> issued_mutations;
+    mutations pending_mutations;
 
     _plock.lock();
     
     r = start_decree <= _pending_write_max_decree;
 
-	issued_mutations = _issued_write_mutations.lock();
-	if (_pending_write_mutations)
-	{
-		pending_mutations = *_pending_write_mutations;
-	}
+    issued_mutations = _issued_write_mutations.lock();
+    if (_pending_write_mutations)
+    {
+        pending_mutations = *_pending_write_mutations;
+    }
     _plock.unlock();
 
-	if (issued_mutations)
-	{
-		for (auto& mu : *issued_mutations)
-		{
-			mu->write_to_log_file(writer);
-		}
-	}
+    if (issued_mutations)
+    {
+        for (auto& mu : *issued_mutations)
+        {
+            mu->write_to_log_file(writer);
+        }
+    }
     
-	for (auto& mu : pending_mutations)
-	{
-		mu->write_to_log_file(writer);
-	}
+    for (auto& mu : pending_mutations)
+    {
+        mu->write_to_log_file(writer);
+    }
 
     return r;
 }
@@ -221,11 +221,11 @@ void mutation_log_private::init_states()
     mutation_log::init_states();
 
     _issued_write.reset();
-	_issued_write_mutations.reset();
+    _issued_write_mutations.reset();
     _issued_write_task = nullptr;
     _pending_write_start_offset = 0;
     _pending_write = nullptr;
-	_pending_write_mutations = nullptr;
+    _pending_write_mutations = nullptr;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -236,12 +236,12 @@ error_code mutation_log_private::write_pending_mutations()
     dassert(_issued_write.expired(), "");
 
     _issued_write = _pending_write;
-	_issued_write_mutations = _pending_write_mutations;
+    _issued_write_mutations = _pending_write_mutations;
     auto pr = mark_new_update(_pending_write->size(), _private_gpid, _pending_write_max_decree, false);
     dassert(pr.second == _pending_write_start_offset, "");
 
     auto pwu = std::move(_pending_write_mutations);
-	_pending_write_mutations = nullptr;
+    _pending_write_mutations = nullptr;
 
     auto blk = std::move(_pending_write);
     _pending_write = nullptr;
