@@ -146,7 +146,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 {
     if (status() != PS_PRIMARY)
     {
-        dwarn("ignore add secondary proposal for invalid state, state = %s", enum_to_string(status()));
+        dwarn("%s: ignore add secondary proposal for invalid state, state = %s", name(), enum_to_string(status()));
         return;
     }
 
@@ -163,12 +163,15 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     {
         if (proposal.type == CT_ADD_SECONDARY)
         {
-            ddebug("name(%s): already have enough secondaries, ignore add secondary command", name());
-            return;
+            if (_primary_states.learners.find(proposal.node) == _primary_states.learners.end())
+            {
+                ddebug("%s: already have enough secondaries or potential secondaries, ignore new potential secondary proposal", name());
+                return;
+            }
         }
         else if (proposal.type == CT_ADD_SECONDARY_FOR_LB)
         {
-            ddebug("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            ddebug("%s: add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
         }
         else
         {
