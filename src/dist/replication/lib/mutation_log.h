@@ -84,7 +84,7 @@ struct log_file_header
 };
 
 // a memory structure holding data which belongs to one block.
-class log_block : public ::dsn::transient_object
+class log_block/* : public ::dsn::transient_object*/
 {
     std::vector<blob> _data; // the first blob is log_block_header
     size_t            _size; // total data size of all blobs

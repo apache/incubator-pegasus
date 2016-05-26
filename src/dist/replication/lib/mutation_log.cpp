@@ -296,7 +296,19 @@ error_code mutation_log_private::write_pending_mutations()
             }
             else
             {
-                // TODO: write-pending-mutations>?
+                // start to write if possible
+                zauto_lock l(_plock);
+                block = nullptr;
+                if (_pending_write
+                    && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+                {
+                    err = write_pending_mutations();
+                    dassert(
+                        err == ERR_OK,
+                        "write pending mutation failed, err = %s",
+                        err.to_string()
+                    );
+                }
             }
         },
         0
