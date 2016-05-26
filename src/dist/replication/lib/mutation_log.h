@@ -401,11 +401,13 @@ private:
 
 private:
     // bufferring - only one concurrent write is allowed
+	typedef std::vector<mutation_ptr> mutations;
     std::weak_ptr<log_block>       _issued_write;
+	std::weak_ptr<mutations>       _issued_write_mutations;
     task_ptr                       _issued_write_task; // for debugging
     int64_t                        _pending_write_start_offset;
     std::shared_ptr<log_block>     _pending_write;
-    std::vector<mutation_ptr>      _pending_write_mutations;
+    std::shared_ptr<mutations>     _pending_write_mutations;
     decree                         _pending_write_max_commit; 
     decree                         _pending_write_max_decree;
     mutable zlock                  _plock;
