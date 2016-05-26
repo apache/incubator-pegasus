@@ -279,9 +279,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
 
         ddebug(
-            "%s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-            "prepared = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", "
-            "log_offset = <%" PRId64 ", %" PRId64 ">",
+            "%s: load replica done, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "prepared = %" PRId64 ", ballot = %" PRId64 ", max_decree_shared = %" PRId64 ", max_decree_private = %" PRId64 ", "
+            "init_log_offset_shared = %" PRId64 ", init_log_offset_private = %" PRId64 "",
             it->second->name(),
             err.to_string(),
             it->second->last_durable_decree(),
@@ -848,10 +848,14 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
     replica_ptr replica = get_replica(gpid);
     if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
     {
-        ddebug(
-            "%u.%u@%s: replica not exists on meta server, remove",
-            gpid.app_id, gpid.pidx, _primary_address.to_string()
-            );
+        if (replica->status() == PS_INACTIVE
+            && (now_ms() - replica->create_time_milliseconds() < _options.gc_memory_replica_interval_ms))
+        {
+            ddebug("%s: replica not exists on meta server, wait to close", replica->name());
+            return;
+        }
+
+        ddebug("%s: replica not exists on meta server, remove", replica->name());
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
 }
@@ -1062,7 +1066,7 @@ void replica_stub::on_gc()
         auto it2 = _closing_replicas.find(gpid);
         if (it2 != _closing_replicas.end())
         {
-            if (it2->second.second->status() == PS_INACTIVE 
+            if (it2->second.second->status() == PS_INACTIVE
                 && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
@@ -1156,13 +1160,20 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (remove_replica(r))
     {
+        int delay_ms = 0;
+        if (r->status() == PS_INACTIVE)
+        {
+            delay_ms = _options.gc_memory_replica_interval_ms;
+            ddebug("%s: delay %d milliseconds to close replica, status = PS_INACTIVE", r->name(), delay_ms);
+        }
+
         task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA, this,
             [=]()
             {
                 close_replica(r);
             }, 
             0, 
-            std::chrono::milliseconds(r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
+            std::chrono::milliseconds(delay_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();
@@ -1176,7 +1187,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
 void replica_stub::close_replica(replica_ptr r)
 {
-    dwarn( "close replica '%s'", r->dir().c_str());
+    ddebug("%s: start to close replica", r->name());
 
     r->close();
 

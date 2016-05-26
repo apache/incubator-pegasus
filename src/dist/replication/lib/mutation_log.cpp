@@ -145,7 +145,19 @@ error_code mutation_log::open(replay_callback callback)
             }
         }
 
-        ddebug("open log file %s succeed", fpath.c_str());
+        if (_is_private)
+        {
+            auto& max_decrees = log->previous_log_max_decrees();
+            auto it = max_decrees.find(_private_gpid);
+            dassert(it != max_decrees.end(), "impossible for private logs");
+            ddebug("open private log file %s succeed, global_start_offset = %" PRId64 ", global_end_offset = %" PRId64 ", privious_max_decree = %" PRId64,
+                   fpath.c_str(), log->start_offset(), log->end_offset(), it->second.max_decree);
+        }
+        else
+        {
+            ddebug("open shared log file %s succeed, global_start_offset = %" PRId64 ", global_end_offset = %" PRId64,
+                   fpath.c_str(), log->start_offset(), log->end_offset());
+        }
 
         dassert(_log_files.find(log->index()) == _log_files.end(), "");
         _log_files[log->index()] = log;

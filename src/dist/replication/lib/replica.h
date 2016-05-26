@@ -125,6 +125,7 @@ public:
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
     bool group_configuration(/*out*/ partition_configuration& config) const;
+    uint64_t create_time_milliseconds() const { return _create_time_ms; }
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
@@ -212,6 +213,7 @@ private:
 
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
+    uint64_t                _create_time_ms;
     uint64_t                _last_config_change_time_ms;
 
     // prepare list

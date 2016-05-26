@@ -97,7 +97,8 @@ void replica::init_state()
     _config.gpid.app_id = 0;
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
-    _last_config_change_time_ms = now_ms();
+    _create_time_ms = now_ms();
+    _last_config_change_time_ms = _create_time_ms;
     _private_log = nullptr;
 }
 

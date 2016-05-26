@@ -358,6 +358,8 @@ private:
     // replica log info for private log
     replica_log_info               _private_log_info;
     decree                         _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
+                                                                // used for limiting garbage collection of shared log, because
+                                                                // the ending of private log should be covered by shared log
 };
 
 //
