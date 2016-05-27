@@ -215,12 +215,16 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         {
             ddebug("%s: start to replay private log", name());
 
+            std::map<global_partition_id, decree> replay_condition;
+            replay_condition[_config.gpid] = _app->last_committed_decree();
+
             uint64_t start_time = now_ms();
             err = _private_log->open(
                 [this](mutation_ptr& mu)
                 {
                     return replay_mutation(mu, true);
-                }
+                },
+                replay_condition
             );
             uint64_t finish_time = now_ms();
 

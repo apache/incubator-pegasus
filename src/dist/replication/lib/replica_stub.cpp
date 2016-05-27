@@ -193,6 +193,13 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init shared prepare log
     ddebug("start to replay shared log");
+
+    std::map<global_partition_id, decree> replay_condition;
+    for (auto it = rps.begin(); it != rps.end(); ++it)
+    {
+        replay_condition[it->first] = it->second->last_committed_decree();
+    }
+
     uint64_t start_time = dsn_now_ms();
     error_code err = _log->open(
         [&rps](mutation_ptr& mu)
@@ -206,8 +213,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 return false;
             }
-        }
-        );
+        },
+        replay_condition
+    );
     uint64_t finish_time = dsn_now_ms();
 
     if (err == ERR_OK)
@@ -266,9 +274,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 
         decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
+        decree pmax_commit = invalid_decree;
         if (it->second->private_log())
         {
             pmax = it->second->private_log()->max_decree(it->first);
+            pmax_commit = it->second->private_log()->max_commit_on_disk();
 
             // possible when shared log is restarted
             if (smax == 0)
@@ -280,18 +290,20 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
         ddebug(
             "%s: load replica done, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-            "prepared = %" PRId64 ", ballot = %" PRId64 ", max_decree_shared = %" PRId64 ", max_decree_private = %" PRId64 ", "
-            "init_log_offset_shared = %" PRId64 ", init_log_offset_private = %" PRId64 "",
+            "prepared = %" PRId64 ", ballot = %" PRId64 ", "
+            "valid_offset_in_plog = %" PRId64 ", max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64 ", "
+            "valid_offset_in_slog = %" PRId64 ", max_decree_in_slog = %" PRId64 "",
             it->second->name(),
             err.to_string(),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
             it->second->get_ballot(),
-            smax,
+            it->second->get_app()->init_info().init_offset_in_private_log,
             pmax,
+            pmax_commit,
             it->second->get_app()->init_info().init_offset_in_shared_log,
-            it->second->get_app()->init_info().init_offset_in_private_log
+            smax
             );
 
         if (err == ERR_OK)
@@ -957,6 +969,8 @@ void replica_stub::init_gc_for_test()
 
 void replica_stub::on_gc()
 {
+    ddebug("start to garbage collection");
+
     replicas rs;
     {
         zauto_lock l(_replicas_lock);
@@ -966,8 +980,6 @@ void replica_stub::on_gc()
     // gc shared prepare log
     if (_log != nullptr)
     {
-        // gc condition is:
-        //   d <= last_durable_decree && d <= private_log.max_commit_decree
         replica_log_info_map gc_condition;
         for (auto it = rs.begin(); it != rs.end(); ++it)
         {
@@ -996,7 +1008,7 @@ void replica_stub::on_gc()
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
         {
-            dwarn("on_gc(): failed to get subdirectories in %s", dir.c_str());
+            dwarn("gc: failed to get subdirectories in %s", dir.c_str());
             return;
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -1012,7 +1024,7 @@ void replica_stub::on_gc()
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt))
             {
-                dwarn("on_gc(): failed to get last write time of %s", fpath.c_str());
+                dwarn("gc: failed to get last write time of %s", fpath.c_str());
                 continue;
             }
 
@@ -1020,7 +1032,11 @@ void replica_stub::on_gc()
             {
                 if (!dsn::utils::filesystem::remove_path(fpath))
                 {
-                    dwarn("on_gc(): failed to delete directory %s", fpath.c_str());
+                    dwarn("gc: failed to delete directory %s", fpath.c_str());
+                }
+                else
+                {
+                    ddebug("gc: deleted directory %s", fpath.c_str());
                 }
             }
         }
@@ -1044,6 +1060,8 @@ void replica_stub::on_gc()
         }
     }
 #endif
+
+    ddebug("finish to garbage collection");
 }
 
 ::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)

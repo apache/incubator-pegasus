@@ -98,6 +98,12 @@ mutation_log::~mutation_log()
 
 error_code mutation_log::open(replay_callback callback)
 {
+    std::map<global_partition_id, decree> replay_condition;
+    open(callback, replay_condition);
+}
+
+error_code mutation_log::open(replay_callback callback, const std::map<global_partition_id, decree>& replay_condition)
+{
     dassert(!_is_opened, "cannot open a opened mutation_log");
     dassert(nullptr == _current_log_file, "the current log file must be null at this point");
 
@@ -147,16 +153,13 @@ error_code mutation_log::open(replay_callback callback)
 
         if (_is_private)
         {
-            auto& max_decrees = log->previous_log_max_decrees();
-            auto it = max_decrees.find(_private_gpid);
-            dassert(it != max_decrees.end(), "impossible for private logs");
-            ddebug("open private log file %s succeed, global_start_offset = %" PRId64 ", global_end_offset = %" PRId64 ", privious_max_decree = %" PRId64,
-                   fpath.c_str(), log->start_offset(), log->end_offset(), it->second.max_decree);
+            ddebug("open private log %s succeed, start_offset = %" PRId64 ", end_offset = %" PRId64 ", size = %" PRId64 ", privious_max_decree = %" PRId64,
+                   fpath.c_str(), log->start_offset(), log->end_offset(), log->end_offset() - log->start_offset(), log->previous_log_max_decree(_private_gpid));
         }
         else
         {
-            ddebug("open shared log file %s succeed, global_start_offset = %" PRId64 ", global_end_offset = %" PRId64,
-                   fpath.c_str(), log->start_offset(), log->end_offset());
+            ddebug("open shared log %s succeed, start_offset = %" PRId64 ", end_offset = %" PRId64 ", size = %" PRId64 "",
+                   fpath.c_str(), log->start_offset(), log->end_offset(), log->end_offset() - log->start_offset());
         }
 
         dassert(_log_files.find(log->index()) == _log_files.end(), "");
@@ -165,10 +168,100 @@ error_code mutation_log::open(replay_callback callback)
 
     file_list.clear();
 
+    // filter useless log
+    std::map<int, log_file_ptr>::iterator replay_begin = _log_files.begin();
+    std::map<int, log_file_ptr>::iterator replay_end = _log_files.end();
+    if (!replay_condition.empty())
+    {
+        if (_is_private)
+        {
+            auto find = replay_condition.find(_private_gpid);
+            dassert(find != replay_condition.end(), "");
+            for (auto it = _log_files.begin(); it != _log_files.end(); ++it)
+            {
+                if (it->second->previous_log_max_decree(_private_gpid) <= find->second)
+                {
+                    // previous logs can be ignored
+                    replay_begin = it;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // find the largest file which can be ignored.
+            // after iterate, the 'mark_it' will point to the largest file which can be ignored.
+            std::map<int, log_file_ptr>::reverse_iterator mark_it;
+            std::set<global_partition_id> kickout_replicas;
+            replica_log_info_map max_decrees; // max_decrees for log file at mark_it.
+            for (mark_it = _log_files.rbegin(); mark_it != _log_files.rend(); ++mark_it)
+            {
+                bool ignore_this = true;
+
+                if (mark_it == _log_files.rbegin())
+                {
+                    // the last file should not be ignored
+                    ignore_this = false;
+                }
+
+                if (ignore_this)
+                {
+                    for (auto& kv : replay_condition)
+                    {
+                        if (kickout_replicas.find(kv.first) != kickout_replicas.end())
+                        {
+                            // no need to consider this replica
+                            continue;
+                        }
+
+                        auto find = max_decrees.find(kv.first);
+                        if (find == max_decrees.end() || find->second.max_decree <= kv.second)
+                        {
+                            // can ignore for this replica
+                            kickout_replicas.insert(kv.first);
+                        }
+                        else
+                        {
+                            ignore_this = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (ignore_this)
+                {
+                    // found the largest file which can be ignored
+                    break;
+                }
+
+                // update max_decrees for the next log file
+                max_decrees = mark_it->second->previous_log_max_decrees();
+            }
+
+            if (mark_it != _log_files.rend())
+            {
+                // set replay_begin to the next position of mark_it.
+                replay_begin = _log_files.find(mark_it->first);
+                dassert(replay_begin != _log_files.end(), "");
+                replay_begin++;
+                dassert(replay_begin != _log_files.end(), "");
+            }
+        }
+
+        for (auto it = _log_files.begin(); it != replay_begin; it++)
+        {
+            ddebug("ignore private log %s", it->second->path().c_str());
+        }
+    }
+
     // replay with the found files
+    std::map<int, log_file_ptr> replay_logs(replay_begin, replay_end);
     int64_t end_offset = 0;
     err = replay(
-        _log_files,
+        replay_logs,
         [this, callback](mutation_ptr& mu)
         {
             bool ret = true;
@@ -1829,6 +1922,12 @@ void log_file::reset_stream()
         _stream->reset(0);
     }
     _crc32 = 0;
+}
+
+decree log_file::previous_log_max_decree(const global_partition_id& gpid)
+{
+    auto it = _previous_log_max_decrees.find(gpid);
+    return it == _previous_log_max_decrees.end() ? 0 : it->second.max_decree;
 }
 
 int log_file::read_file_header(binary_reader& reader)

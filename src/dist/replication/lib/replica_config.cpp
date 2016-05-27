@@ -758,7 +758,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     ddebug(
-        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration=%" PRIu64 " ms",
+        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration = %" PRIu64 " ms",
         name(),
         enum_to_string(old_status),
         old_ballot,

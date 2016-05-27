@@ -150,6 +150,7 @@ public:
     // returns ERR_OK if succeed
     // not thread safe, but only be called when init
     error_code open(replay_callback callback);
+    error_code open(replay_callback callback, const std::map<global_partition_id, decree>& replay_condition);
 
     // close the log
     // thread safe
@@ -457,6 +458,8 @@ public:
     const std::string& path() const { return _path; }
     // previous decrees
     const replica_log_info_map& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    // previous decree for speicified gpid
+    decree previous_log_max_decree(const global_partition_id& gpid);
     // file header
     log_file_header& header() { return _header;}
 
