@@ -20,16 +20,21 @@ var vm = new Vue({
     ready: function ()
     {
         var self = this;
-
-        $.post("/api/cli", { 
-            command: "pq table"
-            }, function(data){ 
+        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+        result = client.call({
+                args: new command({
+                cmd: "pq",
+                arguments: ['table']
+            }),
+            async: true,
+            on_success: function (data){
                 self.tableData = JSON.parse(data);
                 $('#table').DataTable({
                     data: self.tableData,
                 });
-            }
-        );
+            },
+            on_fail: function (xhr, textStatus, errorThrown) {}
+        });
     }
 });
 

@@ -142,28 +142,36 @@ var send_req_button = Vue.extend({
         document.getElementById("jsontable").innerHTML = "";
 
         var thisp = this;
+        var query_cmd, query_arguments;
+        query_arguments = thisp.cmdtext.split(" ");
+        query_cmd = query_arguments.shift();
         for (machineNum in this.machines)
         {
             var machine = this.machines[machineNum];
             (function(machine){
-                $.post("http://" + machine + "/api/cli", {
-                    command: thisp.cmdtext
-                }, function(data){
-                    var resp = {};
-                    try {
-                        data = JSON.parse(data);
-                    } catch (e){
-                    }
-                    resp[machine] = data;
-                    var node = JsonHuman.format(resp);
-                    document.getElementById("jsontable").appendChild(node);
-                }
-                )
-                .fail(function() {
-                    thisp.stop();
+                var client = new cliApp("http://" + machine);
+                result = client.call({
+                        args: new command({
+                        cmd: query_cmd,
+                        arguments: query_arguments
+                    }),
+                    async: true,
+                    on_success: function (data){
+                        var resp = {};
+                        try {
+                            data = JSON.parse(data);
+                        } catch (e){
+                        }
+                        resp[machine] = data;
+                        var node = JsonHuman.format(resp);
+                        document.getElementById("jsontable").appendChild(node);
+                    },
+                    on_fail: function (xhr, textStatus, errorThrown) {
+                        thisp.stop();
                     thisp.info = "Error: lost connection to the server " + machine;
                     $('#info-modal').modal('show');
                     return;
+                    }
                 });
             })(machine);
         }

@@ -196,42 +196,54 @@ var viewChart = Vue.extend({
         }
 
         var self = this;
-        var command;
+        var query_cmd, query_arguments;
         if(self.counterInfo[counter].index == 0)
-            command = "counter." + ((self.graphtype=='bar')?'value':self.graphtype) + " " + self.counterInfo[counter].name;
+        {
+            query_cmd = "counter." + ((self.graphtype=='bar')?'value':self.graphtype)
+            query_arguments = [self.counterInfo[counter].name];
+        }
         else
-            command = "counter." + ((self.graphtype=='bar')?'value':self.graphtype) + "i " + self.counterInfo[counter].index;
+        {
+            query_cmd = "counter." + ((self.graphtype=='bar')?'value':self.graphtype) + "i";
+            query_arguments = [self.counterInfo[counter].index];
+        }
 
-        $.post("http://" + machine + "/api/cli", {
-            command: command
-        }, function(data){
-            try {
-                data = JSON.parse(data);
+        var client = new cliApp("http://" + machine);
+        result = client.call({
+                args: new command({
+                cmd: query_cmd,
+                arguments: query_arguments
+            }),
+            async: true,
+            on_success: function (data){
+                try {
+                    data = JSON.parse(data);
+                }
+                catch(err) {
+                    data = {'val':'Invalid Data','time':'Invalid Data'};
+                }
+
+                if(data['counter_name']!=self.counterInfo[counter].name)
+                {
+                    self.counterInfo[counter].index = 0;
+                    return;
+                }
+                else
+                    self.counterInfo[counter].index = data['counter_index'];
+
+                self.currentValue.$set(counter, data['val']);
+                self.currentTime.$set(counter, nstostr(data['time']));
+                if (self.stopFlag)
+                    self.colorlist.$set(counter,'blue');
+                else
+                    self.colorlist.$set(counter,'black');
+
+                if(self.graphtype!='bar')
+                    self.NextSlot[Number(counter)+1][1]=data['val'];
+            },
+            on_fail: function (xhr, textStatus, errorThrown) {
+                self.colorlist.$set(counter,'red');
             }
-            catch(err) {
-                data = {'val':'Invalid Data','time':'Invalid Data'};
-            }
-
-            if(data['counter_name']!=self.counterInfo[counter].name)
-            {
-                self.counterInfo[counter].index = 0;
-                return;
-            }
-            else
-                self.counterInfo[counter].index = data['counter_index'];
-
-            self.currentValue.$set(counter, data['val']);
-            self.currentTime.$set(counter, nstostr(data['time']));
-            if (self.stopFlag)
-                self.colorlist.$set(counter,'blue');
-            else
-                self.colorlist.$set(counter,'black');
-
-            if(self.graphtype!='bar')
-                self.NextSlot[Number(counter)+1][1]=data['val'];
-        })
-        .fail(function() {
-            self.colorlist.$set(counter,'red');
         });
       },
   },

@@ -1,43 +1,35 @@
 {% extends "static/view/template.html" %}
 {% block body %}
 
-<div class="container">
 
-	<div class="page-header">
-	</div>
+<div id="app">
+    <div class="container">
 
-	<div class="page-header">
-        <h1> <font color= #333333><center>Config-dump</center></font>
-			<small><center><font color= #778899>Here lists all avaiable configuration options and detailed descriptions</font></center></small>
-		</h1>
-	</div>
+        <div class="page-header">
+        </div>
 
-</div>
+        <div class="page-header">
+            <h1> <font color= #333333><center>Config-dump</center></font>
+                <small><center><font color= #778899>Here are all avaiable configuration options and detailed descriptions</font></center></small>
+            </h1>
+        </div>
+        {{state}}
+
+    </div>
+<div>
 
 <script src="js/codemirror.js"></script>
 <link rel="stylesheet" href="css/codemirror.css">
 <link rel="stylesheet" href="css/solarized.css">
 <script src="js/toml.js"></script>
 <script src="js/vim.js"></script>
-<form><textarea id="code" name="code">
-{{CONTENT}}
-</textarea></form>
+<script src="js/vue.js"></script>
+<script src="js/configure.js"></script>
 <style>
 .CodeMirror {
   border: 1px solid #eee;
   height: auto;
 }
 </style>
-<script>
-var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("code"), {
-  mode:  "toml",
-  theme: "solarized",
-keyMap : "vim",
-lineNumbers: true,
-matchBrackets: true,
-        showCursorWhenSelecting: true,
-});
-</script>
-
 
 {% endblock %}

@@ -28,6 +28,13 @@ def start_dsn():
         
         Native.dsn_run(2, argv, c_bool(1))
 
+    elif sys.argv[1] == 'light':
+        #rDSN.WebStudio run as a simple HTTP server 
+        print "rDSN.WebStudio running in light mode."
+
+        
+        start_http_server(sys.argv[2])
+
     else:
         print '''Wrong parameters. 
         Usage:
@@ -35,6 +42,8 @@ def start_dsn():
                 dsn.replication.simple_kv config.ini
             For standalone mode, run:
                 python rDSN.WebStudio.py standalone
+            For light mode, run:
+                python rDSN.WebStudio.py light 8088(portnum)
 
         '''
 

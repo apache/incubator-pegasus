@@ -210,5 +210,5 @@ class ApiDelScenarioHandler(BaseHandler):
 
 class ApiMetaServerQueryHandler(BaseHandler):
     def post(self):
-        queryRes = Native.dsn_config_get_meta_server()
+        queryRes = Native.dsn_config_get_all_keys('meta_servers')
         self.response.write(queryRes)

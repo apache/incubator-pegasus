@@ -13,6 +13,11 @@
 <link href="http://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=Lato" rel="stylesheet" type="text/css">
 
+<script src="js/dsn/thrift.js"></script>
+<script src="js/dsn/dsn_transport.js"></script>
+<script src="js/dsn/cli.client.js"></script>
+<script src="js/dsn/cli_types.js"></script>
+
 <!-- Load d3.js and c3.js -->
 <script src="js/d3.min.js"></script>
 <script src="js/c3.min.js"></script>
@@ -85,11 +90,9 @@ body {
                 </ul>
             </li>
             <li class="dropdown">
-			    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-wrench"></span>Operation<span class="caret"></span></a>
+			    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-tree-deciduous"></span>Single-node Operation<span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    <li><a href="analyzer.html" data-toggle="tooltip right" title="Build your own counter view with counter analyzer!"><span class="glyphicon glyphicon-star"></span>Counter Analyzer</a></li>
                     <li><a href="task_analyzer.html" data-toggle="tooltip right" title="Dig into a specific task to see more detailed information"><span class="glyphicon glyphicon-certificate"></span>Task Analyzer</a></li>
-			        <li><a href="multicmd.html" data-toggle="tooltip right" title="An online editor for editing files"><span class="glyphicon glyphicon-bullhorn"></span>Multi-node Command</a></li>
                     <li><a href="table.html" data-toggle="tooltip right" title="A table showing all counter info for all task codes"><span class="glyphicon glyphicon-align-justify"></span>Table</a></li>
                     <li><a href="queue.html" data-toggle="tooltip right" title="A bar plot showing all queues sorted by task pending number"><span class="glyphicon glyphicon-signal"></span>Queue</a></li>
 			        <li><a href="editor.html" data-toggle="tooltip right" title="An online editor for editing files"><span class="glyphicon glyphicon-pencil"></span>Vim</a></li>
@@ -98,6 +101,14 @@ body {
                     <li><a href="configure.html" data-toggle="tooltip right" title="Show all configuration with descriptions"><span class="glyphicon glyphicon-list-alt"></span> Configuration</a></li>
                 </ul>
             </li>
+            <li class="dropdown">
+			    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-tree-conifer"></span>Multi-node Operation<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="analyzer.html" data-toggle="tooltip right" title="Build your own counter view with counter analyzer!"><span class="glyphicon glyphicon-star"></span>Counter Analyzer</a></li>
+			        <li><a href="multicmd.html" data-toggle="tooltip right" title=""><span class="glyphicon glyphicon-bullhorn"></span>Multi-node Command</a></li>
+                </ul>
+            </li>
+            <li><a href="setting.html" data-toggle="tooltip bottom" title="Set up configuration for webstudio"><span class="glyphicon glyphicon-wrench"></span> Setting</a></li>
 		</ul>
         <ul class="nav navbar-nav navbar-right">
 			<li><a href="fileview.html" data-toggle="tooltip bottom" title="Show app folder content"><span class="glyphicon glyphicon-folder-open"></span> AppFolder</a></li>

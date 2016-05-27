@@ -64,7 +64,7 @@ Take `simple_kv` as an example.
 dsn.replication.simple_kv.exe config.ini
 ```
 
-The target prrogram will automatically startup with rDSN.WebStudio on.
+The target program will automatically startup with rDSN.WebStudio on.
 
 ##Mode II: Standalone Mode
 This mode is convenient when you're writing new functions for rDSN.WebStudio and want to test it. Here we take "simple_kv" as an example.
@@ -99,5 +99,38 @@ python rDSN.WebStudio.py standalone
 The Python script will start a thread to run simple_kv and a thread to host the http server.
 
 Now you could visit [here](http://localhost:8080).
+
+##Mode III: Light Mode
+In this mode, rDSN.WebStudio will only launch as a python HTTP server, has nothing to do with rDSN process. But this mode also has the lightest dependency, all you need is python.
+
+###Open HTTP port for webstudio in rDSN app config
+```bash
+[apps.meta]
+type = meta
+dmodule = dsn.meta_server
+arguments = 
+ports = 34601
+run = true
+count = 1 
+pools = THREAD_POOL_DEFAULT,THREAD_POOL_META_SERVER,THREAD_POOL_FD
+
+```
+
+add new port for webstudio `34602` to ports:
+```bash
+ports = 34601, 34602
+```
+
+add the following line:
+```bash
+network.server.34602.RPC_CHANNEL_TCP = NET_HDR_HTTP, dsn::tools::asio_network_provider, 65536
+```
+
+###Launch target program and http server
+```bash
+cd .\rDSN.WebStudio
+python rDSN.WebStudio.py light 8088
+```
+
 
 

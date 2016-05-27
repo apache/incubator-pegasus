@@ -43,9 +43,14 @@ var vm = new Vue({
             $( "#chart_dep" ).remove();
             $( "#linkgraph" ).append( "<div id='chart_dep'></div>" );
 
-            $.post("/api/cli", { 
-                command: "pq call"
-                }, function(data){ 
+            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: "pq",
+                    arguments: ['call']
+                }),
+                async: true,
+                on_success: function (data){
                     data = JSON.parse(data);
                     task_list = data.task_list;
                     call_matrix = data.call_matrix;
@@ -133,16 +138,22 @@ var vm = new Vue({
 
                         updateSankey(self.sankeyNodes,self.sankeyLinks,vm);
                     }
-                    
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
 
-            $.post("/api/cli", { 
-                command: "pq pool_sharer " + self.currentTask
-                }, function(data){ 
+            client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: "pq",
+                    arguments: ['pool_sharer',self.currentTask]
+                }),
+                async: true,
+                on_success: function (data){
                     self.sharer_list = JSON.parse(data);
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
 
         },
 
@@ -161,9 +172,14 @@ var vm = new Vue({
         updateDrawTypeAsDistribution: function ()
         {
             var self = this;
-            $.post("/api/cli", { 
-                command: "pq counter_sample " + self.currentTask
-                }, function(data){ 
+            client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: "pq",
+                    arguments: ['counter_sample',self.currentTask]
+                }),
+                async: true,
+                on_success: function (data){
                     data = JSON.parse(data);
 
                     var xs = {};
@@ -197,37 +213,40 @@ var vm = new Vue({
 
                     if(self.remoteMachine != '')
                     {
-                        $.ajax({
-                          type: 'POST',
-                          url: "http://" + self.remoteMachine + "/api/cli",
-                          data: {command: "pq counter_sample " + self.currentTask},
-                          async:false
-                        })
-                        .done(function( data ) {
-                            data = JSON.parse(data);
-                            length_list = [];
-                            for(index in data)
-                            {
-                                if(data[index].samples.length>0)
+                        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                        result = client.call({
+                                args: new command({
+                                cmd: "pq",
+                                arguments: ['counter_sample',self.currentTask]
+                            }),
+                            async: false,
+                            on_success: function (data){
+                                data = JSON.parse(data);
+                                length_list = [];
+                                for(index in data)
                                 {
-                                    xs[data[index].name] = "x2";
-                                    length_list.push(data[index].samples.length);
+                                    if(data[index].samples.length>0)
+                                    {
+                                        xs[data[index].name] = "x2";
+                                        length_list.push(data[index].samples.length);
+                                    }
                                 }
-                            }
 
-                            column = ['x2'];
-                            x_length = Math.max.apply(Math,length_list);
-                            for(i=0;i<x_length;++i)
-                                column.push(i*100/(x_length-1));
-                            columns.push(column);
-
-                            for(i=0;i<data.length;++i)
-                            {
-                                column = [data[i].name];
-                                for(j=0;j<data[i].samples.length;++j)
-                                    column.push(data[i].samples[j]);
+                                column = ['x2'];
+                                x_length = Math.max.apply(Math,length_list);
+                                for(i=0;i<x_length;++i)
+                                    column.push(i*100/(x_length-1));
                                 columns.push(column);
-                            }
+
+                                for(i=0;i<data.length;++i)
+                                {
+                                    column = [data[i].name];
+                                    for(j=0;j<data[i].samples.length;++j)
+                                        column.push(data[i].samples[j]);
+                                    columns.push(column);
+                                }
+                            },
+                            on_fail: function (xhr, textStatus, errorThrown) {}
                         });
                     }
 
@@ -264,17 +283,23 @@ var vm = new Vue({
                             }
                         }
                     });
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
         },
         updateDrawTypeAsRealtime: function ()
         {
             function updateData(task, a)
             {
                 if(self.drawType != 'Realtime' || task != self.currentTask) return;
-                $.post("/api/cli", { 
-                    command: "pq counter_realtime " + self.currentTask
-                    }, function(data){ 
+                var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                result = client.call({
+                        args: new command({
+                        cmd: "pq",
+                        arguments: ['counter_realtime',self.currentTask]
+                    }),
+                    async: true,
+                    on_success: function (data){
                         data = JSON.parse(data);
 
                         var columns = [['x', a]];
@@ -291,15 +316,20 @@ var vm = new Vue({
                                 },0);
                             }
                         });
-                    }
-                );
+                    },
+                    on_fail: function (xhr, textStatus, errorThrown) {}
+                });
             }
 
             var self = this;
-
-            $.post("/api/cli", { 
-                command: "pq counter_realtime " + self.currentTask
-                }, function(data){ 
+            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: "pq",
+                    arguments: ['counter_realtime',self.currentTask]
+                }),
+                async: true,
+                on_success: function (data){
                     data = JSON.parse(data);
 
                     var columns = [['x', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ]];
@@ -334,34 +364,41 @@ var vm = new Vue({
                         
                     });
                     updateData(self.currentTask, 20);
-                }
-            );
-
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
         },
         updateDrawTypeAsBreakdown: function ()
         {
             var self = this;
-
-            $.post("/api/cli", { 
-                command: "pq counter_breakdown " + self.currentTask + " 50"
-                }, function(data){ 
+            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: "pq",
+                    arguments: ['counter_breakdown',self.currentTask,'50']
+                }),
+                async: true,
+                on_success: function (data){
                     data = JSON.parse(data);
                     
                     if(self.remoteMachine != '')
                     {
-                        $.ajax({
-                          type: 'POST',
-                          url: "http://" + self.remoteMachine + "/api/cli",
-                          data: {command: "pq counter_breakdown " + self.currentTask + " 50"},
-                          async:false
-                        })
-                        .done(function( data2 ) {
-                            data2 = JSON.parse(data2);
+                        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                        result = client.call({
+                                args: new command({
+                                cmd: "pq",
+                                arguments: ['counter_breakdown',self.currentTask,'50']
+                            }),
+                            async: false,
+                            on_success: function (data2){
+                                data2 = JSON.parse(data2);
                         
-                            for(index in data)
-                            {
-                                data[index] = (data[index]!=0)?data[index]:data2[index];
-                            }
+                                for(index in data)
+                                {
+                                    data[index] = (data[index]!=0)?data[index]:data2[index];
+                                }
+                            },
+                            on_fail: function (xhr, textStatus, errorThrown) {}
                         });
                     }
 
@@ -414,8 +451,9 @@ var vm = new Vue({
                             }
                         }
                     });
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
         },
         linkRemoteMachine: function()
         {
@@ -437,17 +475,22 @@ var vm = new Vue({
     {
         var self = this;
         
-        $.post("/api/cli", { 
-            command: "pq task_list"
-            }, function(data){
+        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+        result = client.call({
+                args: new command({
+                cmd: "pq",
+                arguments: ['task_list']
+            }),
+            async: true,
+            on_success: function (data){
                 if(data.indexOf('unknown command') > -1) 
                     self.setcurrentTask('Profiler is not opened. Please set "toolets = profiler" in the config file');
                     
                 self.taskList = JSON.parse(data);
                 self.setcurrentTask(self.taskList[0]);
-                
-            }
-        )
+            },
+            on_fail: function (xhr, textStatus, errorThrown) {}
+        });
     }
 });
 

@@ -71,10 +71,7 @@ class PageEditorHandler(BaseHandler):
 
 class PageConfigureHandler(BaseHandler):
     def get(self):
-        params = {}
-        queryRes = Native.dsn_cli_run('config-dump')
-        params['CONTENT'] = queryRes 
-        self.render_template('configure.html',params)
+        self.render_template_Vue('configure.html')
 
 class PageFileViewHandler(BaseHandler):
     def get(self):
@@ -271,4 +268,8 @@ class PageServiceMetaHandler(BaseHandler):
 class PageMachineHandler(BaseHandler):
     def get(self):
         self.render_template_Vue('machine.html')
+
+class PageSettingHandler(BaseHandler):
+    def get(self):
+        self.render_template_Vue('setting.html')
 

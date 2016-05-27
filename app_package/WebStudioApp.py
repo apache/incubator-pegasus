@@ -24,6 +24,7 @@ def start_http_server(portNum):
         ('/multicmd.html', PageMulticmdHandler),
         ('/service_meta.html', PageServiceMetaHandler),
         ('/machine.html', PageMachineHandler),
+        ('/setting.html', PageSettingHandler),
 
         ('/api/cli', ApiCliHandler),
         ('/api/bash', ApiBashHandler),

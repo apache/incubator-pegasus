@@ -59,15 +59,21 @@ var vm = new Vue({
             self.appList = [];
             self.sectionList = [];
             self.counterList = [];
-            $.post("http://" + machine + "/api/cli", {
-                command: "counter.list"
-                }, function(data){
+            var client = new cliApp("http://" + machine );
+            result = client.call({
+                    args: new command({
+                    cmd: "counter.list",
+                    arguments: ['']
+                }),
+                async: true,
+                on_success: function (data){
                     self.counterJSON = JSON.parse(data);
                     for (app in self.counterJSON) {
                         self.appList.push(app);
                     }
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
         },
         App2Section: function (app) {
             var self = this;

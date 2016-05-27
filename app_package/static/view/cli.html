@@ -7,7 +7,7 @@
 
 	<div class="page-header">
         <h1> <font color= #333333><center>Command Line Interface</center></font>
-			<small><center><font color= #778899>type 'h' to see profiling commands</font></center></small>
+			<small><center><font color= #778899>type 'command-list' to see profiling commands</font></center></small>
 		</h1>
 	</div>
 
@@ -18,14 +18,25 @@
  <div id="term_demo"></div>
     <script>
     jQuery(function($, undefined) {
-    $('#term_demo').terminal(function(command, term) {
-        if (command !== '') {
-             $.post("/api/cli", { 
-                command: command
-                }, function(data){ 
+    $('#term_demo').terminal(function(input_cmd, term) {
+        if (input_cmd !== '') {
+
+            var query_cmd, query_arguments;
+            query_arguments = input_cmd.split(" ");
+            query_cmd = query_arguments.shift();
+
+            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            result = client.call({
+                    args: new command({
+                    cmd: query_cmd,
+                    arguments: query_arguments
+                }),
+                async: true,
+                on_success: function (data){
                     term.echo(data);
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
         }
     }, {
         greetings: 'rDSN Remote Interface',
