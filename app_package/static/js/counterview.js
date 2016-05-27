@@ -248,9 +248,9 @@ var viewChart = Vue.extend({
       },
   },
   ready: function () {
-      this.counterlist = JSON.parse(localStorage['counterList']);
-      this.graphtype = localStorage['graphtype'];
-      this.interval = localStorage['interval'];
+      this.counterlist = JSON.parse(localStorage[getParameterByName('id')+'counterList']);
+      this.graphtype = localStorage[getParameterByName('id')+'graphtype'];
+      this.interval = localStorage[getParameterByName('id')+'interval'];
   }
 })
 
@@ -259,10 +259,10 @@ var opButton = Vue.extend({
   props: ['stopFlag','graphtype','viewname','interval','counterlist'],
   methods: {
     refresh: function () {
-        localStorage.setItem('graphtype', this.graphtype);
-        localStorage.setItem('viewname', this.viewname);
-        localStorage.setItem('interval', this.interval);
-        localStorage.setItem('counterList', JSON.stringify(this.counterlist));
+        localStorage.setItem(getParameterByName('id')+'graphtype', this.graphtype);
+        localStorage.setItem(getParameterByName('id')+'viewname', this.viewname);
+        localStorage.setItem(getParameterByName('id')+'interval', this.interval);
+        localStorage.setItem(getParameterByName('id')+'counterList', JSON.stringify(this.counterlist));
         
         location.reload();
     },
@@ -291,8 +291,8 @@ var vm = new Vue({
         'op-button': opButton,
     },
     ready: function () {
-        this.viewname = localStorage['viewname'];
-        if (localStorage['graphtype']=='sample' || localStorage['graphtype']=='value')
+        this.viewname = localStorage[getParameterByName('id')+'viewname'];
+        if (localStorage[getParameterByName('id')+'graphtype']=='sample' || localStorage[getParameterByName('id')+'graphtype']=='value')
             this.$refs.viewChart.realtime_init();   
         else if (this.graphtype=='bar')
             this.$refs.viewChart.bar_init();   

@@ -147,7 +147,8 @@ var vm = new Vue({
         },
 
         runView: function () {
-            var url = "counterview.html"
+            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0,v=c=='x'?r:r&0x3|0x8;return v.toString(16);});
+            var url = "counterview.html?id="+uuid;
 
             if (this.graphtype=='')
             {
@@ -164,10 +165,10 @@ var vm = new Vue({
                 return;
             }
                 
-            localStorage.setItem('graphtype', this.graphtype)
-            localStorage.setItem('viewname', this.viewName)
-            localStorage.setItem('interval', this.interval)
-            localStorage.setItem('counterList', JSON.stringify(this.counterPool))
+            localStorage.setItem(uuid+'graphtype', this.graphtype)
+            localStorage.setItem(uuid+'viewname', this.viewName)
+            localStorage.setItem(uuid+'interval', this.interval)
+            localStorage.setItem(uuid+'counterList', JSON.stringify(this.counterPool))
 
             window.open(url);
         },
@@ -204,7 +205,8 @@ var vm = new Vue({
             );
         },
         playView: function (view) {
-            var url = "counterview.html"
+            var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0,v=c=='x'?r:r&0x3|0x8;return v.toString(16);});
+            var url = "counterview.html?id="+uuid;
 
             if (view.graphtype=='')
             {
@@ -220,10 +222,10 @@ var vm = new Vue({
                 return;
             }
                 
-            localStorage.setItem('graphtype', view.graphtype)
-            localStorage.setItem('viewname', view.viewname)
-            localStorage.setItem('interval', view.interval)
-            localStorage.setItem('counterList', view.counterList)
+            localStorage.setItem(uuid+'graphtype', view.graphtype)
+            localStorage.setItem(uuid+'viewname', view.viewname)
+            localStorage.setItem(uuid+'interval', view.interval)
+            localStorage.setItem(uuid+'counterList', view.counterList)
 
             window.open(url);
             
