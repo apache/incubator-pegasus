@@ -82,19 +82,6 @@ def sqlOp(op='',dataType='',dataName='',val_list=''):
     conn.close()
     return res
 
-class ApiCliHandler(BaseHandler):
-    def get(self):
-        command = self.request.get('command');
-        queryRes = Native.dsn_cli_run(command)
-        self.response.write(queryRes)
-
-    def post(self):
-        command = self.request.get('command');
-        queryRes = Native.dsn_cli_run(command)
-
-        self.response.headers['Access-Control-Allow-Origin'] = '*'
-        self.response.write(queryRes)
-
 class ApiBashHandler(BaseHandler):
     def get(self):
         command = self.request.get('command');
@@ -207,8 +194,3 @@ class ApiDelScenarioHandler(BaseHandler):
         sqlOp(op='delete',dataType='cmd_scenario',dataName=self.request.get('name'))
 
         self.response.write('success')
-
-class ApiMetaServerQueryHandler(BaseHandler):
-    def post(self):
-        queryRes = Native.dsn_config_get_all_keys('meta_servers')
-        self.response.write(queryRes)
