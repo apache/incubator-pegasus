@@ -363,6 +363,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
     out << std::setw(width) << std::left << "partition_count" << " : " << partition_count << std::endl;
     if(detailed)
     {
+        std::map<rpc_address, std::pair<int, int> > node_stat;
         out << std::setw(width) << std::left << "details" << " : " << std::endl;
         out << std::setw(10) << std::left << "pidx"
             << std::setw(10) << std::left << "ballot"
@@ -375,7 +376,10 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             const dsn::replication::partition_configuration& p = partitions[i];
             int replica_count = 0;
             if (!p.primary.is_invalid())
+            {
                 replica_count++;
+                node_stat[p.primary].first++;
+            }
             replica_count += p.secondaries.size();
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
@@ -389,8 +393,23 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
                 if(j!= 0)
                     out << ",";
                 out << p.secondaries[j].to_std_string();
+                node_stat[p.secondaries[j]].second++;
             }
             out << "]" << std::endl;
+        }
+        out << std::endl;
+        out << std::setw(25) << std::left << "node"
+            << std::setw(10) << std::left << "primary"
+            << std::setw(10) << std::left << "secondary"
+            << std::setw(10) << std::left << "total"
+            << std::endl;
+        for (auto& kv : node_stat)
+        {
+            out << std::setw(25) << std::left << kv.first.to_string()
+                << std::setw(10) << std::left << kv.second.first
+                << std::setw(10) << std::left << kv.second.second
+                << std::setw(10) << std::left << (kv.second.first + kv.second.second)
+                << std::endl;
         }
     }
     out << std::endl;
