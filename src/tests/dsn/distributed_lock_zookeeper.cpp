@@ -154,6 +154,7 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
         opt
     );
     ASSERT_TRUE(cb_pair.first!=nullptr && cb_pair.second!=nullptr);
+    cb_pair.first->wait();
     
     /* recursive lock */
     std::pair<task_ptr, task_ptr> cb_pair2 = dlock_svc->lock(lock_id, my_id, 
