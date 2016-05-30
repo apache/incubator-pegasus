@@ -184,7 +184,7 @@ CALL %bin_dir%\echoc.exe 3 *****TRY FETCHING LOG IN ROUND*****
         CALL %bin_dir%"\deploy.cmd" stop %app_dir% %local_path%
         CALL %bin_dir%\echoc.exe 3 *****STOPING AND CLEANUPING...***** 
         ::redis will invoke another process called redis-server.exe, so we need to call another kill.cmd to clean that process
-        if %test_app% EQU "redis" (
+        if "%test_app%" EQU "redis" (
             CALL %bin_dir%\echoc.exe 3 *****KILLING REDIS-SERVER.exe...***** 
             TASKKILL /F /S %replica1_address% /IM redis-server.exe
             TASKKILL /F /S %replica2_address% /IM redis-server.exe
