@@ -1250,8 +1250,9 @@ void server_state::update_configuration(
     int delay_ms = 0;
 
     configuration_update_response response;
-    {
-        zauto_write_lock l(_lock);
+    zauto_write_lock l(_lock);
+
+    {        
         app_state& app = _apps[req->config.pid.get_app_id() - 1];
         partition_configuration& old = app.partitions[req->config.pid.get_partition_index()];
         
@@ -1405,10 +1406,7 @@ void server_state::update_configuration(
         {
             maintain_drops(req->config.last_drops, *req);
         }
-        {
-            zauto_write_lock l(_lock);
-            _pending_requests.emplace(req->config.pid, callback);
-        }
+        _pending_requests.emplace(req->config.pid, callback);
 
         update_configuration_on_remote(req, request_msg);
     }
