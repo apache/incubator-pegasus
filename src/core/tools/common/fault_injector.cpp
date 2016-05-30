@@ -180,6 +180,7 @@ namespace dsn {
             }
         }
 
+        
         static void replace_value(std::vector<blob>& buffer_list, int offset)
         {
             for (blob& bb: buffer_list)

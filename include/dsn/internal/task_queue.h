@@ -55,11 +55,10 @@ public:
     typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
 
 public:
-    task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
-    ~task_queue();
+    task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+    virtual ~task_queue();
     
     virtual void     enqueue(task* task) = 0;
-
     // dequeue may return more than 1 tasks, but there is a configured
     // best batch size for each worker so that load among workers
     // are balanced,

@@ -41,7 +41,6 @@
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/rpc_message.h>
-# include <dsn/internal/link.h>
 # include <dsn/internal/callocator.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
@@ -131,7 +130,8 @@ public:
     int                     delay_milliseconds() const { return _delay_milliseconds; }
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
-    task_tracker*           tracker() { return _context_tracker.tracker(); }
+    task_tracker*           tracker() const
+    { return _context_tracker.tracker(); }
     bool                    is_empty() const { return _is_null; }
 
     // static helper utilities
@@ -201,7 +201,7 @@ public:
         _cb = cb;
     }
 
-    virtual void exec() override
+    void exec() override
     {
         _cb(_context);
     }
@@ -226,9 +226,9 @@ public:
         service_node* node = nullptr
         );
 
-    virtual void exec();
-    
-    virtual void enqueue();
+    void exec() override;
+
+    void enqueue() override;
 
 private:
     uint32_t           _interval_milliseconds;
@@ -246,9 +246,9 @@ struct rpc_handler_info
     dsn_rpc_request_handler_t c_handler;
     void*                     parameter;
 
-    rpc_handler_info(dsn_task_code_t code)
-        : code(code), unregistered(false), running_count(0) 
-    {
+    explicit rpc_handler_info(dsn_task_code_t code)
+        : code(code), unregistered(false), running_count(0), c_handler(nullptr), parameter(nullptr)
+        {
     }
     ~rpc_handler_info() { }
 
@@ -288,14 +288,16 @@ public:
     rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node);
     ~rpc_request_task();
 
-    message_ex*  get_request() { return _request; }
-    virtual void enqueue() override;
+    message_ex*  get_request() const
+    { return _request; }
 
-    virtual void  exec() override
+    void enqueue() override;
+
+    void  exec() override
     {
         if (0 == _enqueue_ts_ns
             || dsn_now_ns() - _enqueue_ts_ns < 
-            (uint64_t)_request->header->client.timeout_ms * 1000000ULL)
+            static_cast<uint64_t>(_request->header->client.timeout_ms) * 1000000ULL)
         {
             _handler->run(_request);
         }
@@ -329,14 +331,16 @@ public:
     ~rpc_response_task();
 
     void             enqueue(error_code err, message_ex* reply);
-    virtual void     enqueue(); // re-enqueue after above enqueue, e.g., after delay
-    message_ex*      get_request() { return _request; }
-    message_ex*      get_response() { return _response; }    
+    void     enqueue() override; // re-enqueue after above enqueue, e.g., after delay
+    message_ex*      get_request() const
+    { return _request; }
+    message_ex*      get_response() const
+    { return _response; }    
     void             replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context);
     task_worker_pool* caller_pool() const { return _caller_pool; }
     void             set_caller_pool(task_worker_pool* pl) { _caller_pool = pl; }
 
-    virtual void  exec()
+    void  exec() override
     {
         if (_cb)
         {
@@ -381,7 +385,8 @@ public:
     disk_engine *engine;
     void*        file_object;
 
-    disk_aio() : type(aio_type::AIO_Invalid) {}
+    disk_aio() : file(nullptr), buffer(nullptr), buffer_size(0), file_offset(0), type(AIO_Invalid), engine(nullptr), file_object(nullptr)
+    {}
     virtual ~disk_aio(){}
 };
 
@@ -452,7 +457,7 @@ __inline /*static*/ void task::check_tls_dsn()
 {
     if (tls_dsn.magic != 0xdeadbeef)
     {
-        task::on_tls_dsn_not_set();
+        on_tls_dsn_not_set();
     }
 }
 
