@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/internal/callocator.h>
 # include <functional>
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION

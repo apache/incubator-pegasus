@@ -80,8 +80,8 @@ public:
         }
     };
 
-public:    
-    service_node(service_app_spec& app_spec);
+public:
+    explicit service_node(service_app_spec& app_spec);
        
     rpc_engine*  rpc(task_queue* q) const;
     disk_engine* disk(task_queue* q) const;

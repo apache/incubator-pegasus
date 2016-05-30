@@ -36,7 +36,6 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <memory>
 
 namespace dsn {
 
@@ -49,7 +48,7 @@ namespace dsn {
     public:
         void* operator new(size_t size)
         {
-            return a((uint32_t)size);
+            return a(uint32_t(size));
         }
 
         void operator delete(void* p)
@@ -71,11 +70,11 @@ namespace dsn {
     typedef callocator_object<dsn_transient_malloc, dsn_transient_free> transient_object;
 
     template <typename T, t_allocate a, t_deallocate d>
-    class callocator : public std::allocator<T>
+    class callocator
     {
     public:
+        typedef T value_type;
         typedef size_t size_type;
-        typedef T* pointer;
         typedef const T* const_pointer;
 
         template<typename _Tp1>
@@ -84,18 +83,34 @@ namespace dsn {
             typedef callocator<_Tp1, a, d> other;
         };
 
-        pointer allocate(size_type n, const void *hint = 0)
+        static T* allocate(size_type n)
         {
-            return a((uint32_t)n);
+            return static_cast<T*>(a(uint32_t(n * sizeof(T))));
         }
 
-        void deallocate(pointer p, size_type n)
+        static void deallocate(T* p, size_type n)
         {
-            return d(p);
+            d(p);
         }
 
-        callocator() throw() : std::allocator<T>() { }
-        callocator(const callocator<T, a, d> &ac) throw() : std::allocator<T>(ac) { }
+        callocator() throw()  {}
+        template<typename U>
+        callocator(const callocator<U, a, d> &ac) throw(){ }
         ~callocator() throw() { }
     };
+
+    template<typename T>
+    using transient_allocator = callocator<T, dsn_transient_malloc, dsn_transient_free>;
+
+
+    template <class T, class U>
+    bool operator==(const transient_allocator<T>&, const transient_allocator<U>&)
+    {
+        return true;
+    }
+    template <class T, class U>
+    bool operator!=(const transient_allocator<T>&, const transient_allocator<U>&)
+    {
+        return false;
+    }
 }

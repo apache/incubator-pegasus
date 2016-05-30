@@ -43,10 +43,8 @@ namespace dsn
     class ref_counter
     {
     public:
-        ref_counter()
+        ref_counter() : _counter(0) , _magic(0xdeadbeef)
         {
-            _counter = 0;
-            _magic = 0xdeadbeef;
         }
 
         virtual ~ref_counter()
@@ -84,7 +82,7 @@ namespace dsn
             }
         }
 
-        long get_count()
+        long get_count() const
         {
             return _counter.load();
         }
@@ -94,16 +92,8 @@ namespace dsn
         std::atomic<long> _counter;   
 
     public:
-        ref_counter(const ref_counter&)
-        {
-            dassert(false, "this is not allowed");
-        }
-
-        ref_counter& operator=(const ref_counter&)
-        {
-            dassert(false, "this is not allowed");
-            return *this;
-        }
+        ref_counter(const ref_counter&) = delete;
+        ref_counter& operator=(const ref_counter&) = delete;
     };
 
     template<typename T>  // T : ref_counter

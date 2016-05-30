@@ -223,6 +223,7 @@ uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
 {
+    buffers.reserve(2);
     _rw_committed = true;
     _rw_index = -1;
     _rw_offset = 0;
@@ -536,12 +537,13 @@ void message_ex::prepare_buffer_header()
         (int)((char*)(ptr) - ::dsn::tls_trans_memory.block->get()),
         (int)sizeof(message_header)
         );
+
+    ::dsn::tls_trans_mem_commit(sizeof(message_header));
+
     this->_rw_index = 0;
     this->_rw_offset = (int)sizeof(message_header);
     this->buffers.push_back(buffer);
 
-    ::dsn::tls_trans_mem_commit(sizeof(message_header));
-    
     header = (message_header*)ptr;
 }
 
@@ -556,7 +558,7 @@ void message_ex::write_next(void** ptr, size_t* size, size_t min_size)
     // optimization
     if (this->_rw_index >= 0)
     {
-        ::dsn::blob& lbb = *this->buffers.rbegin();
+        auto& lbb = *this->buffers.rbegin();
 
         // if the current allocation is within the same buffer with the previous one
         if (*ptr == lbb.data() + lbb.length()
