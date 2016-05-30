@@ -104,7 +104,7 @@ namespace dsn
                 state.from_decree_excluded = from_decree_excluded;
                 state.to_decree_included = to_decree_included;
                 state.meta_state_size = meta_state.length();
-                state.file_state_count = files.size();
+                state.file_state_count = static_cast<int>(files.size());
 
                 char* ptr = (char*)&state + sizeof(dsn_app_learn_state);
                 char* end = (char*)&state + state_capacity;
@@ -159,7 +159,7 @@ namespace dsn
                     state.files = nullptr;
                 }
 
-                state.total_learn_state_size = ptr - (char*)&state;
+                state.total_learn_state_size = static_cast<int>(ptr - (char*)&state);
                 return succ ? ERR_OK : ERR_CAPACITY_EXCEEDED;
             }
         };

@@ -82,9 +82,9 @@ namespace dsn
                 {
                     task->enqueue();
                 }
-                else
+                else if (ec != ::boost::asio::error::operation_aborted)
                 {
-                    dfatal("delayed execution failed for task %s, err = %u",
+                    dfatal("timer failed for task %s, err = %u",
                         task->spec().name.c_str(), ec.value());
                 }
 

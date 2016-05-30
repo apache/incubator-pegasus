@@ -114,15 +114,16 @@ void mutation_log_shared::flush()
 
     zauto_lock l(_plock);
 
-    // save mu for pinning buffer
-    _pending_write_mutations.push_back(mu);
-
     // init pending buffer
     if (nullptr == _pending_write)
     {
         _pending_write.reset(log_file::prepare_log_block());
+        _pending_write_mutations.reset(new mutations());
         _pending_write_start_offset = mark_new_update(0, _private_gpid, 0, true).second;
     }
+
+    // save mu for pinning buffer
+    _pending_write_mutations->push_back(mu);
     
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
@@ -158,36 +159,32 @@ bool mutation_log_private::get_learn_state_in_memory(
     ) const
 {
     // learn pending buffer
-    std::vector<std::shared_ptr<log_block>> pending_buffers;
     bool r;
+    std::shared_ptr<mutations> issued_mutations;
+    mutations pending_mutations;
 
     _plock.lock();
     
     r = start_decree <= _pending_write_max_decree;
 
-    if (auto locked_issued_ptr = _issued_write.lock())
+    issued_mutations = _issued_write_mutations.lock();
+    if (_pending_write_mutations)
     {
-        pending_buffers.emplace_back(std::move(locked_issued_ptr));
-    }
-
-    if (_pending_write)
-    {
-        //we have a lock here, so no race
-        pending_buffers.push_back(_pending_write);
+        pending_mutations = *_pending_write_mutations;
     }
     _plock.unlock();
 
-    for (auto& block : pending_buffers)
+    if (issued_mutations)
     {
-        dassert(!block->data().empty(), "log block can never be empty");
-        auto hdr = (log_block_header*)block->front().data();
-
-        //skip the block header
-        auto bb_iterator = std::next(block->data().begin());
-        for (; bb_iterator != block->data().end(); ++bb_iterator)
+        for (auto& mu : *issued_mutations)
         {
-            writer.write(bb_iterator->data(), bb_iterator->length());
+            mu->write_to_log_file(writer);
         }
+    }
+    
+    for (auto& mu : pending_mutations)
+    {
+        mu->write_to_log_file(writer);
     }
 
     return r;
@@ -224,10 +221,11 @@ void mutation_log_private::init_states()
     mutation_log::init_states();
 
     _issued_write.reset();
+    _issued_write_mutations.reset();
     _issued_write_task = nullptr;
     _pending_write_start_offset = 0;
     _pending_write = nullptr;
-    _pending_write_mutations.clear();
+    _pending_write_mutations = nullptr;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -238,11 +236,12 @@ error_code mutation_log_private::write_pending_mutations()
     dassert(_issued_write.expired(), "");
 
     _issued_write = _pending_write;
+    _issued_write_mutations = _pending_write_mutations;
     auto pr = mark_new_update(_pending_write->size(), _private_gpid, _pending_write_max_decree, false);
     dassert(pr.second == _pending_write_start_offset, "");
 
     auto pwu = std::move(_pending_write_mutations);
-    _pending_write_mutations.clear();
+    _pending_write_mutations = nullptr;
 
     auto blk = std::move(_pending_write);
     _pending_write = nullptr;
@@ -297,7 +296,19 @@ error_code mutation_log_private::write_pending_mutations()
             }
             else
             {
-                // TODO: write-pending-mutations>?
+                // start to write if possible
+                zauto_lock l(_plock);
+                block = nullptr;
+                if (_pending_write
+                    && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+                {
+                    err = write_pending_mutations();
+                    dassert(
+                        err == ERR_OK,
+                        "write pending mutation failed, err = %s",
+                        err.to_string()
+                    );
+                }
             }
         },
         0

@@ -370,13 +370,13 @@ namespace dsn {
         void resize(std::size_t new_size)
         {
             std::shared_ptr<char> b(new char[new_size], std::default_delete<char[]>());
-            _buffer.assign(b, 0, new_size);
+            _buffer.assign(b, 0, static_cast<int>(new_size));
         }
         void assign(const char* ptr, std::size_t size)
         {
             std::shared_ptr<char> b(new char[size], std::default_delete<char[]>());
             memcpy(b.get(), ptr, size);
-            _buffer.assign(b, 0, size);
+            _buffer.assign(b, 0, static_cast<int>(size));
         }
         const char* data() const
         {
@@ -439,7 +439,7 @@ namespace dsn {
         //for optimization, it is dangerous if the oprot is not a binary proto
         apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
         const char* name = to_string();
-        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
+        return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
     }
 
     inline uint32_t blob::read(apache::thrift::protocol::TProtocol *iprot)
@@ -469,7 +469,7 @@ namespace dsn {
         //for optimization, it is dangerous if the oprot is not a binary proto
         apache::thrift::protocol::TBinaryProtocol* binary_proto = static_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
         const char* name = to_string();
-        return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
+        return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
     }
 
     DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
@@ -508,7 +508,7 @@ namespace dsn {
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
             // FIXME:
-            auto sp = task_spec::get(msg->header->rpc_id);
+            auto sp = task_spec::get(static_cast<int>(msg->header->rpc_id));
 
             proto.writeMessageBegin(msg->header->rpc_name,
                 sp->type == TASK_TYPE_RPC_REQUEST ?
