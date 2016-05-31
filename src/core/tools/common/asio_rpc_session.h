@@ -57,7 +57,7 @@ namespace dsn {
             virtual ~asio_rpc_session();
             virtual void send(uint64_t signature) override { return write(signature); }
             virtual void close_on_fault_injection() override {
-                _socket->close();
+                safe_close();
             }
 
         public:
@@ -75,6 +75,7 @@ namespace dsn {
                     on_failure(false);
                 }
             }
+            void safe_close();
 
         private:
             std::shared_ptr<boost::asio::ip::tcp::socket> _socket;            
