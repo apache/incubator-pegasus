@@ -170,18 +170,23 @@ namespace dsn {
         {
             if (on_disconnected(is_write))
             {
-                try {
-                    _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
-                    _socket->close();
-                }
-                catch (std::exception& /*ex*/)
-                {
-                    /*dwarn("network session %s exits failed, err = %s",
-                    remote_address().to_ip_string().c_str(),
-                    static_cast<int>remote_address().port(),
-                    ex.what()
-                    );*/
-                }
+                safe_close();
+            }
+        }
+
+        void asio_rpc_session::safe_close()
+        {
+            try {
+                _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+                _socket->close();
+            }
+            catch (std::exception& /*ex*/)
+            {
+                /*dwarn("network session %s exits failed, err = %s",
+                remote_address().to_ip_string().c_str(),
+                static_cast<int>remote_address().port(),
+                ex.what()
+                );*/
             }
         }
 

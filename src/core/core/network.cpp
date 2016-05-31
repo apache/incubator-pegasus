@@ -368,8 +368,9 @@ namespace dsn
     {
     }
 
-    bool rpc_session::on_disconnected(bool /*is_write*/)
+    bool rpc_session::on_disconnected(bool is_write)
     {
+        bool ret;
         if (set_disconnected())
         {
             rpc_session_ptr sp = this;
@@ -382,14 +383,19 @@ namespace dsn
                 _net.on_server_session_disconnected(sp);
             }
 
-            clear_send_queue(false);
-
-            return true;
+            ret = true;
         }
         else
         {
-            return false;
+            ret = false;
         }
+
+        if (is_write)
+        {
+            clear_send_queue(false);
+        }
+
+        return ret;
     }
 
     void rpc_session::on_recv_message(message_ex* msg, int delay_ms)
