@@ -562,9 +562,17 @@ namespace dsn {
     template<typename T>
     inline void marshall_thrift_internal(const T &val, ::apache::thrift::protocol::TProtocol *proto)
     {
-        proto->writeFieldBegin("args", get_thrift_type(val), 0);
+        /* 
+           Here we must invoke writeStructBegin. 
+           Although it does nothing when protocol is binary,
+           json protocol indeed need it to generate a complete json object.
+        */
+        proto->writeStructBegin("args");
+        proto->writeFieldBegin("value", get_thrift_type(val), 0);
         marshall_base<T>(proto, val);
         proto->writeFieldEnd();
+        proto->writeFieldStop();
+        proto->writeStructEnd();
     }
 
     template<typename T>
@@ -593,11 +601,33 @@ namespace dsn {
         std::string fname;
         ::apache::thrift::protocol::TType ftype;
         int16_t fid;
-        proto->readFieldBegin(fname, ftype, fid);
-        if (ftype == get_thrift_type(val))
-            unmarshall_base<T>(proto, val);
-        else
-            proto->skip(ftype);
+        proto->readStructBegin(fname);
+        while (true)
+        {
+            proto->readFieldBegin(fname, ftype, fid);
+            if (ftype == ::apache::thrift::protocol::T_STOP)
+            {
+                break;
+            }
+            switch (fid)
+            {
+            case 0:
+                if (ftype == get_thrift_type(val))
+                {
+                    unmarshall_base<T>(proto, val);
+                }
+                else
+                {
+                    proto->skip(ftype);
+                }
+                break;
+            default:
+                proto->skip(ftype);
+                break;
+            }
+            proto->readFieldEnd();
+        }
+        proto->readStructEnd();
     }
 
     template<typename T>

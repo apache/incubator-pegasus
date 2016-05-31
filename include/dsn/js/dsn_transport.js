@@ -92,14 +92,15 @@ var DSN = {
         'DSF_PROTOC_JSON' : 4,
     },
     
-    thrift_basic_type : {
+    thrift_type : {
         "bool" : Thrift.Type.BOOL,
         "byte" : Thrift.Type.BYTE,
         "i16" : Thrift.Type.I16,
         "i32" : Thrift.Type.I32,
         "i64" : Thrift.Type.I64,
         "double" : Thrift.Type.DOUBLE,
-        "string" : Thrift.Type.STRING 
+        "string" : Thrift.Type.STRING,
+        'struct' : Thrift.Type.STRUCT,
     }
 };
 
@@ -129,81 +130,58 @@ function dsn_call(url, method, send_data, payload_format, is_async, on_success, 
     )
 }
 
-function marshall_thrift_json_generated_type(value)
+function marshall_json_internal(value, type, protocol)
 {
-    var transport = new Thrift.DSNTransport();
-    var protocol  = new Thrift.TJSONProtocol(transport);
-    
-    value.write(protocol);
-    transport.write(protocol.tstack.pop());
-    return transport.getSendBuffer();
-}
-
-function unmarshall_thrift_json_generated_type(buffer, value)
-{
-    var transport = new Thrift.DSNTransport(buffer);
-    var protocol  = new Thrift.TJSONProtocol(transport);
-    
-    protocol.rstack = [];
-    protocol.rpos = [];
-    protocol.robj = JSON.parse(protocol.transport.readAll());
-    protocol.rstack.push(protocol.robj);
-    
-    value.read(protocol);
-}
-
-function marshall_thrift_json_basic_type(value, type)
-{
-    var transport = new Thrift.DSNTransport();
-    var protocol  = new Thrift.TJSONProtocol(transport);
-    protocol.writeStructBegin('basic');
-    if (value !== null && value !== undefined)
+    protocol.writeStructBegin("args");
+    protocol.writeFieldBegin('args', DSN.thrift_type[type], 0);
+    switch(type)
     {
-        protocol.writeFieldBegin('value', DSN.thrift_basic_type[type], 1);
-        switch(type)
-        {
-            case "bool" :
-                protocol.writeBool(value);
-                break;
-            case "byte" :
-                protocol.writeByte(value);
-                break;
-            case "i16" :
-                protocol.writeI16(value);
-                break;
-            case "i32" :
-                protocol.writeI32(value);
-                break;
-            case "i64" :
-                protocol.writeI64(value);
-                break;
-            case "double" :
-                protocol.writeDouble(value);
-                break;
-            case "string" :
-                protocol.writeString(value);
-                break;
-        }
-        protocol.writeFieldEnd();
+        case "bool" :
+            protocol.writeBool(value);
+            break;
+        case "byte" :
+            protocol.writeByte(value);
+            break;
+        case "i16" :
+            protocol.writeI16(value);
+            break;
+        case "i32" :
+            protocol.writeI32(value);
+            break;
+        case "i64" :
+            protocol.writeI64(value);
+            break;
+        case "double" :
+            protocol.writeDouble(value);
+            break;
+        case "string" :
+            protocol.writeString(value);
+            break;
+        case "struct" :
+            value.write(protocol);
+            break;
     }
+    protocol.writeFieldEnd();
     protocol.writeFieldStop();
     protocol.writeStructEnd();
+}
+
+function marshall_thrift_json(value, type)
+{
+    var transport = new Thrift.DSNTransport();
+    var protocol  = new Thrift.TJSONProtocol(transport);
+    marshall_json_internal(value, type, protocol);
     transport.write(protocol.tstack.pop());
     return transport.getSendBuffer();
 }
-
-function unmarshall_thrift_json_basic_type(buffer, type)
+function unmarshall_thrift_internal(value, type, protocol)
 {
-    var transport = new Thrift.DSNTransport(buffer);
-    var protocol  = new Thrift.TJSONProtocol(transport);
-    
     protocol.rstack = [];
     protocol.rpos = [];
     protocol.robj = JSON.parse(protocol.transport.readAll());
     protocol.rstack.push(protocol.robj);
     
     protocol.readStructBegin();
-    var value = null;
     while (true)
     {
         var ret = protocol.readFieldBegin();
@@ -215,8 +193,8 @@ function unmarshall_thrift_json_basic_type(buffer, type)
         }
         switch (fid)
         {
-            case 1:
-            if (ftype == DSN.thrift_basic_type[type])
+            case 0:
+            if (ftype == DSN.thrift_type[type])
             {
                 switch(type)
                 {
@@ -241,6 +219,9 @@ function unmarshall_thrift_json_basic_type(buffer, type)
                     case "string" :
                         value = protocol.readString().value;
                         break;
+                    case "struct" :
+                        value.read(protocol);
+                        break;
                 }
             } else {
                 protocol.skip(ftype);
@@ -255,5 +236,20 @@ function unmarshall_thrift_json_basic_type(buffer, type)
         protocol.readFieldEnd();
     }
     protocol.readStructEnd()
-    return value;
+    if (type == "struct")
+    {
+        /* struct is reference type */
+        return null;
+    }
+    else
+    {
+        return value;
+    }
+}
+
+function unmarshall_thrift_json(buffer, value, type)
+{
+    var transport = new Thrift.DSNTransport(buffer);
+    var protocol  = new Thrift.TJSONProtocol(transport);
+    return unmarshall_thrift_internal(value, type, protocol)
 }
