@@ -321,6 +321,7 @@ namespace dsn {
                 {
                     // reset timeout task
                     it->second.timeout_task = new_timeout_task;
+                    new_timeout_task->add_ref(); // make sure later enqueue is valid, released below after enqueue
                 }
             }
 
@@ -343,6 +344,7 @@ namespace dsn {
             // use rest of the timeout to resend once only
             new_timeout_task->set_delay(static_cast<int>(timeout_ts_ms - now_ts_ms));
             new_timeout_task->enqueue();
+            new_timeout_task->release_ref(); // added above in the same function
         }
         else
         {
