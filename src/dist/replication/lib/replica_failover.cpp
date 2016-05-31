@@ -56,7 +56,7 @@ void replica::handle_local_failure(error_code error)
     
     if (status() == partition_status::PS_PRIMARY)
     {
-        _stub->remove_replica_on_meta_server(_primary_states.membership);
+        _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
     }
 
     update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
