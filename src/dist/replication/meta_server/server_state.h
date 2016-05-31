@@ -162,6 +162,7 @@ private:
 
     // check consistency of memory state, between _nodes, _apps, _node_live_count
     void check_consistency(gpid gpid);
+    void check_consistency(bool is_stateful, const partition_configuration& config);
 
     // do real work of update configuration
     void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);

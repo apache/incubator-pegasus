@@ -460,7 +460,7 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
         }   
         else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
-            remove_replica_on_meta_server(proposal.config);
+            remove_replica_on_meta_server(proposal.info, proposal.config);
         }
     }
 
@@ -810,7 +810,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const con
 
         if (req.config.primary == _primary_address)
         {
-            remove_replica_on_meta_server(req.config);
+            remove_replica_on_meta_server(req.info, req.config);
         }
     }
 }
@@ -829,11 +829,12 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
     }
 }
 
-void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
+void replica_stub::remove_replica_on_meta_server(const app_info& info, const partition_configuration& config)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    request->info = info;
     request->config = config;
     request->config.ballot++;        
     request->node = _primary_address;

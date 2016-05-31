@@ -340,6 +340,7 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
     
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    request->info = _app_info;
     request->config = newConfig;
     request->config.ballot++;
     request->type = type;
@@ -822,7 +823,7 @@ void replica::on_config_sync(const partition_configuration& config)
                 || config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 )
             {
-                _stub->remove_replica_on_meta_server(config);
+                _stub->remove_replica_on_meta_server(_app_info, config);
             }
         }
     }

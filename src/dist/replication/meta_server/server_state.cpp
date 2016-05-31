@@ -587,11 +587,14 @@ error_code server_state::sync_apps_from_remote_storage()
                                             partition_configuration pc;
                                             binary_reader reader(value);
                                             unmarshall(reader, pc, DSF_THRIFT_JSON);
+# ifndef NDEBUG
+                                            this->check_consistency(_apps[app_id - 1].info.is_stateful, pc);
+# endif
 
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                             dassert(pc.pid.get_app_id() == app_id && pc.pid.get_partition_index() == i, "invalid partition config");
-
+                                            
                                             _apps[app_id -1].available_partitions.atom()++;
                                         }
                                         else if (ec == ERR_OBJECT_NOT_FOUND)
@@ -731,6 +734,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
                         dassert(old.primary == it->first, "");
 
                         auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                        request->info = app.info;
                         request->node = old.primary;
                         request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
@@ -749,6 +753,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
                         {
                             partition_configuration& old = app.partitions[pri.get_partition_index()];
                             auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                            request->info = app.info;
                             request->type = config_type::CT_REMOVE;
                             request->host_node = it->first;
 
@@ -1197,6 +1202,10 @@ void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/
 void server_state::update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req,
                                                   dsn_message_t request_msg)
 {
+# ifndef NDEBUG
+    check_consistency(req->info.is_stateful, req->config);
+# endif
+
     std::string partition_path = get_partition_path(req->config.pid);
     binary_writer writer;
     marshall(writer, req->config, DSF_THRIFT_JSON);
@@ -1374,6 +1383,12 @@ void server_state::update_configuration(
         if (write)
         {
             _pending_requests.emplace(req->config.pid, callback);
+
+            if (req->info.is_stateful)
+            {
+                req->config.last_drops = old.last_drops;
+                maintain_drops(req->config.last_drops, *req);
+            }
         }
     }
 
@@ -1407,11 +1422,6 @@ void server_state::update_configuration(
             dsn_msg_add_ref(request_msg);
         }
 
-        if (req->info.is_stateful)
-        {
-            maintain_drops(req->config.last_drops, *req);
-        }
-        
         update_configuration_on_remote(req, request_msg);
     }
 }
@@ -1613,6 +1623,31 @@ void server_state::update_configuration_internal(const configuration_update_requ
     if (_config_change_subscriber)
     {
         _config_change_subscriber(_apps);
+    }
+}
+
+void server_state::check_consistency(bool is_stateful, const partition_configuration& config)
+{
+    if (is_stateful)
+    {
+        if (config.primary.is_invalid() == false)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+
+        for (auto& ep : config.secondaries)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+    }
+
+    // stateless
+    else
+    {
+        partition_configuration_stateless pcs((partition_configuration&)config);
+        dassert(pcs.host_replicas().size() == pcs.worker_replicas().size(), "");
     }
 }
 
