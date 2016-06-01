@@ -1,4 +1,3 @@
-from WebStudioCodeDefinition import *
 from WebStudioLib import *
 from WebStudioUtil import *
 from WebStudioBase import *
