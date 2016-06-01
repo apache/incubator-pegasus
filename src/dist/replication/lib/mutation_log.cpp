@@ -253,7 +253,7 @@ error_code mutation_log::open(replay_callback callback, const std::map<global_pa
 
         for (auto it = _log_files.begin(); it != replay_begin; it++)
         {
-            ddebug("ignore private log %s", it->second->path().c_str());
+            ddebug("ignore log %s", it->second->path().c_str());
         }
     }
 
