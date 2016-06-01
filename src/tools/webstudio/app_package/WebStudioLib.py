@@ -1,5 +1,3 @@
-from dev.python.NativeCall import *
-
 from paste.cascade import Cascade
 from paste import httpserver
 import webapp2
