@@ -117,6 +117,7 @@ namespace dsn {
             if (opt.execution_extra_delay_us_max > 0)
             {
                 auto d = dsn_random32(0, opt.execution_extra_delay_us_max);
+                ddebug("fault inject %s at %s with delay %u us", this_->spec().name.c_str(), __FUNCTION__, d);
                 std::this_thread::sleep_for(std::chrono::microseconds(d));
             }
         }
@@ -152,7 +153,7 @@ namespace dsn {
             case AIO_Read:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
                 {
-                    ddebug("fault inject %s", __FUNCTION__);
+                    ddebug("fault inject %s at %s", callee->spec().name.c_str(), __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -160,7 +161,7 @@ namespace dsn {
             case AIO_Write:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
                 {
-                    ddebug("fault inject %s", __FUNCTION__);
+                    ddebug("fault inject %s at %s", callee->spec().name.c_str(), __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -176,6 +177,7 @@ namespace dsn {
             if (this_->delay_milliseconds() == 0 && task_ext_for_fj::get(this_) == 0)
             {
                 this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+                ddebug("fault inject %s at %s with delay %u ms", this_->spec().name.c_str(), __FUNCTION__, this_->delay_milliseconds());
                 task_ext_for_fj::get(this_) = 1; // ensure only fd once
             }
         }
@@ -217,7 +219,11 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[req->local_rpc_code];
             if (dsn_probability() < opt.rpc_request_drop_ratio)
             {
-                ddebug("fault inject %s", __FUNCTION__);
+                ddebug("fault inject %s at %s: %s => %s", 
+                    req->header->rpc_name, __FUNCTION__,
+                    req->header->from_address.to_string(),
+                    req->to_address.to_string()
+                    );
                 return false;
             }
             else
@@ -240,6 +246,7 @@ namespace dsn {
                 if (dsn_probability() < opt.rpc_request_delay_ratio)
                 {
                     callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    ddebug("fault inject %s at %s with delay %u ms", callee->spec().name.c_str(), __FUNCTION__, callee->delay_milliseconds());
                     task_ext_for_fj::get(callee) = 1; // ensure only fd once
                 }
             }
@@ -251,7 +258,11 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[msg->local_rpc_code];
             if (dsn_probability() < opt.rpc_response_drop_ratio)
             {
-                ddebug("fault inject %s", __FUNCTION__);
+                ddebug("fault inject %s at %s: %s => %s",
+                    msg->header->rpc_name, __FUNCTION__,
+                    msg->header->from_address.to_string(),
+                    msg->to_address.to_string()
+                    );
                 return false;
             }
             else
@@ -274,6 +285,7 @@ namespace dsn {
                 if (dsn_probability() < opt.rpc_response_delay_ratio)
                 {
                     resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    ddebug("fault inject %s at %s with delay %u ms", resp->spec().name.c_str(), __FUNCTION__, resp->delay_milliseconds());
                     task_ext_for_fj::get(resp) = 1; // ensure only fd once
                 }
             }
