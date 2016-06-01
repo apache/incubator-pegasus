@@ -19,6 +19,7 @@ $dsn_root = getenv("DSN_ROOT");
 <script src="https://code.jquery.com/jquery-2.2.2.min.js"   integrity="sha256-36cp2Co+/62rEAAYHLmRCPIych47CvdM+uTBJwSzWjI="   crossorigin="anonymous"></script>
 <script src="<?=$dsn_root?>/include/dsn/js/thrift.js"></script>
 <script src="<?=$dsn_root?>/include/dsn/js/dsn_transport.js"></script>
+<script src="<?=$dsn_root?>/include/dsn/js/dsn_types.js"></script>
 <script src="<?=$file_prefix?>.client.js"></script>
 <script src="thrift/<?=$_PROG->name?>_types.js"></script>
 </head>
