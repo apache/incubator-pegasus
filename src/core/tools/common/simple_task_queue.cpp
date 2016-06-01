@@ -88,7 +88,7 @@ namespace dsn
                         task->spec().name.c_str(), ec.value());
                 }
 
-                // to consume the added ref count by another task::enqueue
+                // to consume the added ref count by task::enqueue for add_timer
                 task->release_ref();
             });
         }
