@@ -21,7 +21,8 @@ Previously rDSN.WebStudio needed to attach on rDSN process, but now we've alread
 
 ##Simple Installation
 1. install python 2.7.11+
-2. run `python -m pip install -r requirement.txt`
+2. upgrade your pip to 8+: `python -m pip install --upgrade pip`
+3. run `python -m pip install -r requirement.txt`
 
 ###Open HTTP port for webstudio in rDSN app config
 
