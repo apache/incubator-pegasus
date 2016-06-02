@@ -339,12 +339,104 @@ namespace dsn {
 
     inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     {
-        return iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            return iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string host;
+            int port;
+
+            uint32_t xfer = 0;
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRING) {
+                        xfer += iprot->readString(host);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                case 2:
+                    if (ftype == ::apache::thrift::protocol::T_I32) {
+                        xfer += iprot->readI32(port);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+
+            //currently only support ipv4 format
+            this->assign_ipv4(host.c_str(), port);
+            
+            return xfer;
+        }
     }
 
     inline uint32_t rpc_address::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        return oprot->writeI64((int64_t)_addr.u.value);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            return oprot->writeI64((int64_t)_addr.u.value);
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string host(this->to_string());
+            int port = 0;
+            size_t sep_index = host.find(':');
+            if (sep_index != std::string::npos)
+            {
+                port = std::stoi(host.substr(sep_index + 1));
+                host = host.substr(0, sep_index);
+            }
+            
+            uint32_t xfer = 0;
+
+            xfer += oprot->writeStructBegin("rpc_address");
+
+            xfer += oprot->writeFieldBegin("host", ::apache::thrift::protocol::T_STRING, 1);
+            xfer += oprot->writeString(host);
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldBegin("port", ::apache::thrift::protocol::T_I32, 2);
+            xfer += oprot->writeI32(port);
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
+        }
     }
     
     inline uint32_t atom_int::read(apache::thrift::protocol::TProtocol *iprot)
@@ -362,12 +454,77 @@ namespace dsn {
 
     inline uint32_t gpid::read(apache::thrift::protocol::TProtocol *iprot)
     {
-        return iprot->readI64(reinterpret_cast<int64_t&>(_value.value));
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            return iprot->readI64(reinterpret_cast<int64_t&>(_value.value));
+        }
+        else
+        {
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_I64) {
+                        xfer += iprot->readI64(reinterpret_cast<int64_t&>(_value.value));
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+
+            return xfer;
+        }
     }
 
     inline uint32_t gpid::write(apache::thrift::protocol::TProtocol *oprot) const
     {
-        return oprot->writeI64((int64_t)_value.value);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(oprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            return oprot->writeI64((int64_t)_value.value);
+        }
+        else
+        {
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+
+            xfer += oprot->writeStructBegin("gpid");
+
+            xfer += oprot->writeFieldBegin("id", ::apache::thrift::protocol::T_I64, 1);
+            xfer += oprot->writeI64((int64_t)_value.value);
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
+        }
     }
     
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
@@ -435,7 +592,6 @@ namespace dsn {
         {
             //the protocol is json protocol
             uint32_t xfer = 0;
-            apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
             xfer += oprot->writeStructBegin("task_code");
 
             xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);
@@ -528,7 +684,6 @@ namespace dsn {
         {
             //the protocol is json protocol
             uint32_t xfer = 0;
-            apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
             xfer += oprot->writeStructBegin("error_code");
 
             xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);

@@ -111,3 +111,122 @@ task_code.prototype.write = function(output) {
   return;
 };
 
+gpid = function(args) {
+  this.id = null;
+  if (args) {
+    if (args.id !== undefined && args.id !== null) {
+      this.id = args.id;
+    }
+  }
+};
+gpid.prototype = {};
+gpid.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+      if (ftype == Thrift.Type.I64) {
+        this.id = input.readI64().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 0:
+        input.skip(ftype);
+        break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+gpid.prototype.write = function(output) {
+  output.writeStructBegin('gpid');
+  if (this.id !== null && this.id !== undefined) {
+    output.writeFieldBegin('id', Thrift.Type.I64, 1);
+    output.writeI64(this.id);
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
+rpc_address = function(args) {
+  this.host = null;
+  this.port = null;
+  if (args) {
+    if (args.host !== undefined && args.host !== null) {
+      this.host = args.host;
+    }
+    if (args.port !== undefined && args.port !== null) {
+      this.port = args.port;
+    }
+  }
+};
+rpc_address.prototype = {};
+rpc_address.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+      if (ftype == Thrift.Type.STRING) {
+        this.host = input.readString().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 2:
+      if (ftype == Thrift.Type.I32) {
+        this.port = input.readI32().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+rpc_address.prototype.write = function(output) {
+  output.writeStructBegin('rpc_address');
+  if (this.host !== null && this.host !== undefined) {
+    output.writeFieldBegin('host', Thrift.Type.STRING, 1);
+    output.writeString(this.host);
+    output.writeFieldEnd();
+  }
+  if (this.port !== null && this.port !== undefined) {
+    output.writeFieldBegin('port', Thrift.Type.I32, 2);
+    output.writeI32(this.port);
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
