@@ -257,7 +257,7 @@ void replica::on_prepare(dsn_message_t request)
     else if (partition_status::PS_POTENTIAL_SECONDARY == status())
     {
         // new learning process
-        if (rconfig.learner_signature != _potential_secondary_states.learning_signature)
+        if (rconfig.learner_signature != _potential_secondary_states.learning_version)
         {
             init_learn(rconfig.learner_signature);
             // no need response as rpc is already gone

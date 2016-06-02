@@ -56,8 +56,6 @@ using namespace ::dsn::service;
     int hash
     )
 {
-    dinfo("start append shared log for mutation %s", mu->name());
-
     auto hdr = (log_block_header*)dsn_transient_malloc(sizeof(log_block_header));
     hdr->magic = 0xdeadbeef;
     hdr->length = 0;
@@ -74,14 +72,17 @@ using namespace ::dsn::service;
     });
 
     auto pr = mark_new_update(blk.size(), mu->data.header.pid, mu->data.header.decree, true);
-    mu->data.header.log_offset = pr.second + sizeof(log_block_header);
+    uint64_t offset = pr.second + sizeof(log_block_header);
+    mu->data.header.log_offset = offset;
+
+    dinfo("start append shared log for mutation %s, offset = %" PRIu64, mu->name(), offset);
 
     // patch, fix marshalled data
-    ((mutation_header*)blk.data()[1].data())->log_offset = pr.second + sizeof(log_block_header);
+    ((mutation_header*)blk.data()[1].data())->log_offset = offset;
 
     return pr.first->commit_log_block(blk, pr.second,
         LPC_WRITE_REPLICATION_LOG_SHARED, this,
-        [bb_cap = std::move(bb), cb_cap = std::move(callback)](error_code err, size_t sz) 
+        [bb_cap = std::move(bb), cb_cap = std::move(callback), offset](error_code err, size_t sz)
         {
             cb_cap(err, sz); 
 
@@ -89,6 +90,8 @@ using namespace ::dsn::service;
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
             dsn_transient_free((void*)bb_cap.data()); 
+
+            dinfo("end append shared log for offset = %" PRIu64, offset);
         },
         gpid_to_hash(mu->data.header.pid)
         );
