@@ -2,10 +2,11 @@
 
 function usage()
 {
-    echo "dsn.cg %name%.thrift|.proto cpp|csharp %out_dir%  [binary|json] [single|replication]".PHP_EOL;
+    echo "dsn.cg %name%.thrift|.proto cpp|csharp|js %out_dir%  [binary|json] [single|replication]".PHP_EOL;
     echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
+    echo "\tnotice : currently for js we only support binary format of thrift".PHP_EOL;
 }
 
 if (count($argv) < 4)
