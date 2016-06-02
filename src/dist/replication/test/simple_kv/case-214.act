@@ -88,8 +88,7 @@ wait:on_task_enqueue:node=r3,task_code=LPC_DELAY_LEARN
 wait:on_task_begin:node=r3,task_code=LPC_DELAY_LEARN
 wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
 wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
-state:{{r1,sec,3,10},{r2,sec,2,10},{r3,err,2,0}}
-state:{{r1,sec,3,10},{r2,sec,2,10}}
+state:{{r1,sec,3,10},{r2,sec,2,10},{r3,ina,2,0}}
 
 # change primary from r1 to r2
 client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2

@@ -867,6 +867,8 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
             gpid.get_app_id(), gpid.get_partition_index(),
             primary_address().to_string()
             );
+
+        // TODO: set PS_INACTIVE instead for further state reuse
         replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }
