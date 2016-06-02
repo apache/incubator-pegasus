@@ -70,6 +70,7 @@ extern "C" {
 # define DSN_MAX_ADDRESS_NAME_LENGTH       48
 # define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
+# define DSN_MAX_CALLBAC_COUNT             32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 # define DSN_MAX_PATH                      1024
 # define TIME_MS_MAX                       0xffffffff

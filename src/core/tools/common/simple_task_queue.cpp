@@ -82,13 +82,13 @@ namespace dsn
                 {
                     task->enqueue();
                 }
-                else
+                else if (ec != ::boost::asio::error::operation_aborted)
                 {
-                    dfatal("delayed execution failed for task %s, err = %u",
+                    dfatal("timer failed for task %s, err = %u",
                         task->spec().name.c_str(), ec.value());
                 }
 
-                // to consume the added ref count by another task::enqueue
+                // to consume the added ref count by task::enqueue for add_timer
                 task->release_ref();
             });
         }

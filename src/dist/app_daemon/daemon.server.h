@@ -58,7 +58,7 @@ namespace dsn
         private:
             std::unique_ptr<slave_failure_detector_with_multimaster> _fd;
             
-            struct layer1_app_info
+            struct app_internal
             {
                 ::dsn::partition_configuration configuration;
                 std::unique_ptr<std::thread> wait_thread;
@@ -71,7 +71,7 @@ namespace dsn
                 uint16_t working_port;
                 std::string app_type;
 
-                layer1_app_info(const ::dsn::replication::configuration_update_request & proposal)
+                app_internal(const ::dsn::replication::configuration_update_request & proposal)
                 {
                     configuration = proposal.config;
                     process_handle = nullptr;
@@ -83,7 +83,7 @@ namespace dsn
             };
 
             ::dsn::service::zrwlock_nr _lock;
-            typedef std::unordered_map< ::dsn::gpid, std::shared_ptr<layer1_app_info>> apps;
+            typedef std::unordered_map< ::dsn::gpid, std::shared_ptr<app_internal>> apps;
             apps _apps;
             std::atomic<bool> _online;
             std::atomic<bool> _under_deployment;
@@ -110,12 +110,12 @@ namespace dsn
             void on_add_app(const ::dsn::replication::configuration_update_request& proposal);
             void on_remove_app(const ::dsn::replication::configuration_update_request& proposal);
 
-            void start_app(std::shared_ptr<layer1_app_info> &&  app);
-            void kill_app(std::shared_ptr<layer1_app_info> &&  app);
+            void start_app(std::shared_ptr<app_internal> &&  app);
+            void kill_app(std::shared_ptr<app_internal> &&  app);
 
-            void update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info>&& app);
+            void update_configuration_on_meta_server(::dsn::replication::config_type::type type, std::shared_ptr<app_internal>&& app);
             void on_update_configuration_on_meta_server_reply(
-                ::dsn::replication::config_type::type type, std::shared_ptr<layer1_app_info> &&  app,
+                ::dsn::replication::config_type::type type, std::shared_ptr<app_internal> &&  app,
                 error_code err, dsn_message_t request, dsn_message_t response
                 );
 

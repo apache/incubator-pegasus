@@ -65,15 +65,15 @@ class test_client :
     public ::dsn::service_app    
 {
 public:
-    test_client()
-        : ::dsn::serverlet<test_client>("test-server", 7)
+    test_client(dsn_gpid gpid)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
     {
 
     }
 
     void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
     {
-        std::string r = dsn_get_current_app_data_dir();
+        std::string r = dsn_get_app_data_dir();
         replier(std::move(r));
     }
 

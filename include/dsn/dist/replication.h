@@ -44,17 +44,9 @@ namespace dsn
 {
     namespace replication 
     {
-        /*
-#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
-        inline bool operator == (const gpid& l, const gpid& r)
-        {
-            return l.app_id == r.app_id && l.partition_index == r.partition_index;
-        }
-#endif*/
-
         inline uint64_t gpid_to_hash(gpid gpid)
         {
-            return gpid.value();
+            return dsn_gpid_to_hash(gpid.raw());
         }
     }
 }

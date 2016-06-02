@@ -53,12 +53,14 @@ namespace dsn
     class trackable_task
     {
     public:
-        trackable_task() : _owner(nullptr) {}
+        trackable_task() : _task(nullptr), _owner(nullptr), _dl_bucket_id(0)
+        {}
         virtual ~trackable_task() {}
 
         void set_tracker(task_tracker* owner, dsn_task_t task);
         void unset_tracker();
-        task_tracker* tracker() { return _owner; }
+        task_tracker* tracker() const
+        { return _owner; }
 
     private:
         friend class task_tracker;
@@ -91,7 +93,7 @@ namespace dsn
     class task_tracker
     {
     public:
-        task_tracker(int task_bucket_count = 13);
+        explicit task_tracker(int task_bucket_count = 13);
         virtual ~task_tracker();
 
         void cancel_outstanding_tasks();
@@ -111,7 +113,7 @@ namespace dsn
         dassert(_owner == nullptr, "task tracker is already set");
         _owner = owner;
         _task = task;
-        _deleting_owner = OWNER_DELETE_NOT_LOCKED;
+        _deleting_owner.store(OWNER_DELETE_NOT_LOCKED, std::memory_order_release);
 
         if (nullptr != _owner)
         {

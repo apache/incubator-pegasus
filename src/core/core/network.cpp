@@ -43,7 +43,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "rpc_session"
+# define __TITLE__ "network"
 
 namespace dsn 
 {
@@ -54,12 +54,14 @@ namespace dsn
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
-            dassert(0 == _message_count.load(), "sending queue is not cleared yet");
+            dassert(0 == _message_count, "sending queue is not cleared yet");
         }
     }
 
     bool rpc_session::try_connecting()
     {
+        dassert(is_client(), "must be client session");
+
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (_connect_state == SS_DISCONNECTED)
         {
@@ -67,24 +69,37 @@ namespace dsn
             return true;
         }
         else
+        {
             return false;
+        }
     }
 
     void rpc_session::set_connected()
     {
+        dassert(is_client(), "must be client session");
+
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(_connect_state == SS_CONNECTING, "session must be connecting");
             _connect_state = SS_CONNECTED;
         }
 
-        dinfo("client session connected to %s", remote_address().to_string());
+        rpc_session_ptr sp = this;
+        _net.on_client_session_connected(sp);
     }
 
-    void rpc_session::set_disconnected()
+    bool rpc_session::set_disconnected()
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        _connect_state = SS_DISCONNECTED;
+        if (_connect_state != SS_DISCONNECTED)
+        {
+            _connect_state = SS_DISCONNECTED;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     void rpc_session::clear_send_queue(bool resend_msgs)
@@ -138,8 +153,7 @@ namespace dsn
                     break;
 
                 msg->remove();
-
-                _message_count.fetch_sub(1, std::memory_order_relaxed);
+                --_message_count;
             }
                         
             auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
@@ -190,7 +204,7 @@ namespace dsn
         }
         
         // added in send_message
-        _message_count.fetch_sub((int)_sending_msgs.size(), std::memory_order_relaxed);
+        _message_count -= (int)_sending_msgs.size();
         return _sending_msgs.size() > 0;
     }
     
@@ -240,13 +254,15 @@ namespace dsn
     void rpc_session::send_message(message_ex* msg)
     {
         //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
-        _message_count.fetch_add(1, std::memory_order_relaxed); // -- in unlink_message
 
-        msg->add_ref(); // released in on_send_completed        
+        msg->add_ref(); // released in on_send_completed
+
         uint64_t sig;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg->dl.insert_before(&_messages);
+            ++_message_count;
+
             if (SS_CONNECTED == _connect_state && !_is_sending_next)
             {
                 _is_sending_next = true;
@@ -344,8 +360,8 @@ namespace dsn
         _parser(std::move(parser)),
         _is_client(is_client),
         _matcher(_net.engine()->matcher()),
-        _message_count(0),
         _is_sending_next(false),
+        _message_count(0),
         _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
         _message_sent(0),
         _delay_server_receive_ms(0)
@@ -354,17 +370,24 @@ namespace dsn
 
     bool rpc_session::on_disconnected(bool is_write)
     {
-        if (is_client())
+        bool ret;
+        if (set_disconnected())
         {
-            set_disconnected();
             rpc_session_ptr sp = this;
-            _net.on_client_session_disconnected(sp);
+            if (is_client())
+            {
+                _net.on_client_session_disconnected(sp);
+            }
+            else
+            {
+                _net.on_server_session_disconnected(sp);
+            }
+
+            ret = true;
         }
-        
         else
         {
-            rpc_session_ptr sp = this;
-            _net.on_server_session_disconnected(sp);
+            ret = false;
         }
 
         if (is_write)
@@ -372,7 +395,7 @@ namespace dsn
             clear_send_queue(false);
         }
 
-        return true;
+        return ret;
     }
 
     void rpc_session::on_recv_message(message_ex* msg, int delay_ms)
@@ -515,7 +538,6 @@ namespace dsn
     void connection_oriented_network::send_message(message_ex* request)
     {
         rpc_session_ptr client = nullptr;
-        bool new_client = false;
         auto& to = request->to_address;
 
         // TODO: thread-local client ptr cache
@@ -528,6 +550,8 @@ namespace dsn
             }
         }
 
+        int scount = 0;
+        bool new_client = false;
         if (nullptr == client.get())
         {
             utils::auto_write_lock l(_clients_lock);
@@ -542,11 +566,14 @@ namespace dsn
                 _clients.insert(client_sessions::value_type(to, client));
                 new_client = true;
             }
+            scount = (int)_clients.size();
         }
 
         // init connection if necessary
         if (new_client) 
         {
+            ddebug("client session created, remote_server = %s, current_count = %d",
+                   client->remote_address().to_string(), scount);
             client->connect();
         }
 
@@ -574,17 +601,19 @@ namespace dsn
             else
             {
                 pr.first->second = s;
-                dwarn("server session on %s already exists, preempted", s->remote_address().to_string());
+                dwarn("server session already exists, remote_client = %s, preempted",
+                      s->remote_address().to_string());
             }
             scount = (int)_servers.size();
         }
 
-        ddebug("server session %s accepted (%d in total)", s->remote_address().to_string(), scount);
+        ddebug("server session accepted, remote_client = %s, current_count = %d",
+               s->remote_address().to_string(), scount);
     }
 
     void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr& s)
     {
-        int scount;
+        int scount = 0;
         bool r = false;
         {
             utils::auto_write_lock l(_servers_lock);
@@ -599,10 +628,8 @@ namespace dsn
 
         if (r)
         {
-            ddebug("server session %s disconnected (%d in total)",
-                s->remote_address().to_string(),
-                scount
-                );
+            ddebug("server session disconnected, remote_client = %s, current_count = %d",
+                   s->remote_address().to_string(), scount);
         }
     }
 
@@ -613,9 +640,30 @@ namespace dsn
         return it != _clients.end() ? it->second : nullptr;
     }
 
+    void connection_oriented_network::on_client_session_connected(rpc_session_ptr& s)
+    {
+        int scount = 0;
+        bool r = false;
+        {
+            utils::auto_read_lock l(_clients_lock);
+            auto it = _clients.find(s->remote_address());
+            if (it != _clients.end() && it->second.get() == s.get())
+            {
+                r = true;
+            }
+            scount = (int)_clients.size();
+        }
+
+        if (r)
+        {
+            ddebug("client session connected, remote_server = %s, current_count = %d",
+                   s->remote_address().to_string(), scount);
+        }
+    }
+
     void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr& s)
     {
-        int scount;
+        int scount = 0;
         bool r = false;
         {
             utils::auto_write_lock l(_clients_lock);
@@ -630,7 +678,8 @@ namespace dsn
 
         if (r)
         {
-            ddebug("client session %s disconnected (%d in total)", s->remote_address().to_string(), scount);
+            ddebug("client session disconnected, remote_server = %s, current_count = %d",
+                   s->remote_address().to_string(), scount);
         }
     }
 }

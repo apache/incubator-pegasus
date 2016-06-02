@@ -304,7 +304,7 @@ namespace dsn {
                         "dump the result and exit the process after the test is finished")
                         )
                     {
-                        std::string data_dir(dsn_get_current_app_data_dir());
+                        std::string data_dir(dsn_get_app_data_dir());
                         std::stringstream fns;
                         fns << "perf-result-" << ts << ".txt";
                         std::string report = ::dsn::utils::filesystem::path_combine(data_dir, fns.str());

@@ -23,6 +23,8 @@ int64_t result = 0;
 class simple_adder_server: public dsn::service_app
 {
 public:
+    simple_adder_server(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    
     error_code start(int argc, char** argv)
     {
         ddebug("name: %s, argc=%d", name().c_str(), argc);
@@ -152,6 +154,7 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
         opt
     );
     ASSERT_TRUE(cb_pair.first!=nullptr && cb_pair.second!=nullptr);
+    cb_pair.first->wait();
     
     /* recursive lock */
     std::pair<task_ptr, task_ptr> cb_pair2 = dlock_svc->lock(lock_id, my_id, 

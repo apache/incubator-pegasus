@@ -38,6 +38,8 @@
 class test_client : public ::dsn::service_app
 {
 public:
+    test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+
     ::dsn::error_code start(int argc, char** argv)
     {
         auto err = _docker.initialize();

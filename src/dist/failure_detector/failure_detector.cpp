@@ -388,6 +388,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         dwarn("received beacon ack without corresponding master, ignore it, "
             "remote_master[%s], local_worker[%s]",
             node.to_string(), primary_address().to_string());
+        err.end_tracking();
         return false;
     }
 
@@ -399,6 +400,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
             node.to_string(), primary_address().to_string());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
+        err.end_tracking();
         return false;
     }
 
@@ -406,6 +408,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     {
         // out-dated beacon acks, do nothing
         dinfo("ignore out dated beacon acks");
+        err.end_tracking();
         return false;
     }
 

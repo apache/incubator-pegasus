@@ -78,7 +78,7 @@ client:end_write:id=21,err=ERR_OK,resp=0
 
 # kick r1
 client:begin_write:id=22,key=k22,value=v22,timeout=0
-inject:on_aio_call:node=r1
+inject:on_aio_call:node=r1,task_code=LPC_WRITE_REPLICATION_LOG_SHARED
 config:{5,-,[r3]}
 client:end_write:id=22,err=ERR_TIMEOUT,resp=0
 

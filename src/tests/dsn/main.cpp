@@ -51,6 +51,8 @@ extern void fd_test_init();
 class test_client : public ::dsn::service_app
 {
 public:
+    test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);
@@ -75,6 +77,8 @@ public:
 
 GTEST_API_ int main(int argc, char **argv) 
 {
+    testing::InitGoogleTest(&argc, argv);
+
     // register all possible services
     dsn::register_app<test_client>("test");
     lock_test_init();

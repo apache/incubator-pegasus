@@ -96,8 +96,8 @@ namespace dsn {
         class fault_injector : public toollet
         {
         public:
-            fault_injector(const char* name);
-            virtual void install(service_spec& spec);
+            explicit fault_injector(const char* name);
+            void install(service_spec& spec) override;
         };
     }
 }

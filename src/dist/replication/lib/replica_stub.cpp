@@ -138,11 +138,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         count++;
     }
 
-    _log = new mutation_log(
+    _log = new mutation_log_shared(
         _options.slog_dir,
-        _options.log_shared_batch_buffer_kb,
-        _options.log_shared_file_size_mb,
-        _options.log_shared_force_flush
+        _options.log_shared_file_size_mb
         );
 
     // init rps
@@ -197,7 +195,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 return false;
             }
-        }
+        },
+        [this](error_code err) { this->handle_log_failure(err); }
         );
 
     if (err != ERR_OK)
@@ -233,13 +232,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             dassert(false, "remove directory %s failed", _options.slog_dir.c_str());
         }
-        _log = new mutation_log(
+        _log = new mutation_log_shared(
             _options.slog_dir,
-            opts.log_shared_batch_buffer_kb,
-            opts.log_shared_file_size_mb,
-            opts.log_shared_force_flush
+            opts.log_shared_file_size_mb
             );
-        auto lerr = _log->open(nullptr);
+        auto lerr = _log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); });
         dassert(lerr == ERR_OK, "restart log service must succeed");
     }
 
@@ -258,6 +255,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             {
                 _log->update_max_decree(it->first, pmax);
                 smax = pmax;
+            }
+
+            else if (err == ERR_OK && pmax < smax)
+            {
+                it->second->private_log()->flush();
+                pmax = it->second->private_log()->max_decree(it->first);
             }
         }
 
@@ -457,7 +460,7 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
         }   
         else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
-            remove_replica_on_meta_server(proposal.config);
+            remove_replica_on_meta_server(proposal.info, proposal.config);
         }
     }
 
@@ -807,7 +810,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const con
 
         if (req.config.primary == _primary_address)
         {
-            remove_replica_on_meta_server(req.config);
+            remove_replica_on_meta_server(req.info, req.config);
         }
     }
 }
@@ -826,11 +829,12 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
     }
 }
 
-void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
+void replica_stub::remove_replica_on_meta_server(const app_info& info, const partition_configuration& config)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    request->info = info;
     request->config = config;
     request->config.ballot++;        
     request->node = _primary_address;
@@ -855,7 +859,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         _failure_detector->get_servers(),
         msg,
         nullptr,
-        [](error_code, dsn_message_t, dsn_message_t) {}
+        [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); }
         );
 }
 

@@ -33,19 +33,16 @@
  *     2016-01-05, Tianyi Wang, first version
  */
 #include <dsn/cpp/address.h>
-#include <dsn/internal/aio_provider.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
-#include <dsn/internal/priority_queue.h>
-#include "../core/group_address.h"
 #include "test_utils.h"
 #include <boost/lexical_cast.hpp>
 
 TEST(core, rpc_perf_test)
 {
-    ::dsn::rpc_address localhost("localhost", 20101);
+    rpc_address localhost("localhost", 20101);
 
-    ::dsn::rpc_read_stream response;
+    rpc_read_stream response;
     std::mutex lock;
     for (auto concurrency : {10, 100, 1000, 10000})
     {
@@ -67,7 +64,7 @@ TEST(core, rpc_perf_test)
                     break;
                 }
             }
-            ::dsn::rpc::call(
+            rpc::call(
                 localhost,
                 RPC_TEST_HASH,
                 0,
@@ -93,22 +90,22 @@ TEST(core, rpc_perf_test)
 
 TEST(core, rpc_perf_test_sync)
 {
-    ::dsn::rpc_address localhost("localhost", 20101);
+    rpc_address localhost("localhost", 20101);
 
     std::chrono::steady_clock clock;
     auto tic = clock.now();
 
-    int round = 100000;
-    int concurrency = 10;
-    int total_query_count = round * concurrency;
+    auto round = 100000;
+    auto concurrency = 10;
+    auto total_query_count = round * concurrency;
 
     std::vector<task_ptr> tasks;
-    for (int i = 0; i < round; i++)
+    for (auto i = 0; i < round; i++)
     {
-        for (int j = 0; j < concurrency; j++)
+        for (auto j = 0; j < concurrency; j++)
         {
-            int req = 0;
-            auto task = ::dsn::rpc::call(
+            auto req = 0;
+            auto task = rpc::call(
                 localhost,
                 RPC_TEST_HASH,
                 req,
@@ -141,21 +138,21 @@ TEST(core, lpc_perf_test_sync)
     std::chrono::steady_clock clock;
     auto tic = clock.now();
 
-    int round = 1000000;
-    int concurrency = 10;
-    int total_query_count = round * concurrency;
+    auto round = 1000000;
+    auto concurrency = 10;
+    auto total_query_count = round * concurrency;
     std::vector<task_ptr> tasks;
     std::vector<std::string> results;
-    for (int i = 0; i < round; i++)
+    for (auto i = 0; i < round; i++)
     {
         results.resize(concurrency);
-        for (int j = 0; j < concurrency; j++)
+        for (auto j = 0; j < concurrency; j++)
         {
-            auto task = ::dsn::tasking::enqueue(
+            auto task = tasking::enqueue(
                 LPC_TEST_HASH,
                 nullptr,
                 [&results, j]() {
-                    std::string r = dsn_get_current_app_data_dir();
+                    std::string r = dsn_get_app_data_dir();
                     results[j] = std::move(r);
                 }
                 );

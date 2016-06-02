@@ -143,7 +143,8 @@ public:
 class test_worker: public service_app, public serverlet<test_worker>
 {
 public:
-    test_worker(): serverlet("test_worker") {}
+    test_worker(dsn_gpid gpid): service_app(gpid), serverlet("test_worker") {}
+
     error_code start(int argc, char** argv) override
     {
         std::vector<rpc_address> master_group;
@@ -180,6 +181,8 @@ private:
 class test_master: public service_app
 {
 public:
+    test_master(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+
     error_code start(int, char **) override
     {
         _master_fd = new master_fd_test();

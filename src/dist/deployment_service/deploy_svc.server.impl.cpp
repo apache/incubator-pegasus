@@ -50,7 +50,7 @@ namespace dsn
 
         error_code deploy_svc_service_impl::start()
         {
-            std::string pdir = utils::filesystem::path_combine(dsn_get_current_app_data_dir(), "services");
+            std::string pdir = utils::filesystem::path_combine(dsn_get_app_data_dir(), "services");
             _service_dir = dsn_config_get_value_string("deploy.service",
                 "deploy_dir",
                 pdir.c_str(),

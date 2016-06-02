@@ -122,18 +122,17 @@ namespace dsn {
 
             struct user_request
             {
-                zlock                   user_req_lock;
+                zlock                    user_req_lock;
 
-                get_file_size_request  file_size_req;
-                aio_task*              nfs_task;
-                std::atomic<int>       finished_files;
-                bool                   is_finished;
+                get_file_size_request    file_size_req;
+                ::dsn::ref_ptr<aio_task> nfs_task;
+                std::atomic<int>         finished_files;
+                bool                     is_finished;
 
                 std::unordered_map<std::string, file_context*> file_context_map; // map file name and file info
 
                 user_request()
                 {
-                    nfs_task = nullptr;
                     finished_files = 0;
                 }
             };

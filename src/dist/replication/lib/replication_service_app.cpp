@@ -48,7 +48,7 @@
 # include <dsn/internal/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(replication_type1)
-    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_L2_REPLICATION_FRAMEWORK_TYPE_1);
+    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_APP_MASK_FRAMEWORK);
 MODULE_INIT_END
 
 # endif
@@ -56,8 +56,8 @@ MODULE_INIT_END
 
 namespace dsn { namespace replication {
 
-replication_service_app::replication_service_app()
-    : layer2_handler()
+replication_service_app::replication_service_app(dsn_gpid gpid)
+    : layer2_handler(gpid)
 {
     _stub = new replica_stub();
 }

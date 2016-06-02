@@ -41,7 +41,7 @@ namespace dsn
     namespace dist
     {
         //------------------------------------------------------------------------------------
-        using namespace ::dsn::service;
+        using namespace service;
 
         partition_resolver_simple::partition_resolver_simple(
             rpc_address meta_server,
@@ -54,7 +54,7 @@ namespace dsn
 
         void partition_resolver_simple::resolve(
             uint64_t partition_hash,
-            std::function<void(dist::partition_resolver::resolve_result&&)>&& callback,
+            std::function<void(resolve_result&&)>&& callback,
             int timeout_ms
             )
         {
@@ -65,7 +65,7 @@ namespace dsn
                 rpc_address target;
                 if (ERR_OK == get_address(idx, target))
                 {
-                    callback(partition_resolver::resolve_result{
+                    callback(resolve_result{
                         ERR_OK,
                         target,
                         {_app_id, idx}
@@ -76,7 +76,7 @@ namespace dsn
             
             auto rc = new request_context();
             rc->partition_hash = partition_hash;
-            rc->callback = std::move(callback);
+            rc->callback = move(callback);
             rc->partition_index = idx;
             rc->timeout_timer = nullptr;
             rc->timeout_ms = timeout_ms;
@@ -95,7 +95,12 @@ namespace dsn
 
                 {
                     zauto_write_lock l(_config_lock);
-                    _config_cache.erase(partition_index);
+                    auto it = _config_cache.find(partition_index);
+                    if (it != _config_cache.end())
+                    {
+                        // TODO: opt to remove unnecessary cache invalidation
+                        _config_cache.erase(it);
+                    }
                 }
             }
         }
@@ -109,7 +114,7 @@ namespace dsn
         void partition_resolver_simple::clear_all_pending_requests()
         {
             dinfo("%s.client: clear all pending tasks", _app_path.c_str());
-            service::zauto_lock l(_requests_lock);
+            zauto_lock l(_requests_lock);
             //clear _pending_requests
             for (auto& pc : _pending_requests)
             {
@@ -128,13 +133,13 @@ namespace dsn
         DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
         DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
             
-        void partition_resolver_simple::on_timeout(request_context_ptr&& rc)
+        void partition_resolver_simple::on_timeout(request_context_ptr&& rc) const
         {
             dsn_message_t nil(nullptr);
             end_request(std::move(rc), ERR_TIMEOUT, rpc_address());
         }
 
-        void partition_resolver_simple::end_request(request_context_ptr&& request, error_code err, rpc_address addr)
+        void partition_resolver_simple::end_request(request_context_ptr&& request, error_code err, rpc_address addr) const
         {
             zauto_lock l(request->lock);
             if (request->completed)
@@ -146,7 +151,7 @@ namespace dsn
             if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
                 request->timeout_timer->cancel(false);
 
-            request->callback(partition_resolver::resolve_result{
+            request->callback(resolve_result{
                 err, 
                 addr, 
                 {_app_id, request->partition_index}
@@ -160,8 +165,8 @@ namespace dsn
             if (-1 != pindex)
             {
                 // fill target address if possible
-                ::dsn::rpc_address addr;
-                error_code err = get_address(pindex, addr);
+                rpc_address addr;
+                auto err = get_address(pindex, addr);
 
                 // target address known
                 if (err == ERR_OK)
@@ -171,7 +176,7 @@ namespace dsn
                 }
             }
             
-            auto nts = ::dsn_now_us();
+            auto nts = dsn_now_us();
 
             // timeout will happen very soon, no way to get the rpc call done
             if (nts + 100 >= request->timeout_ts_us) // within 100 us
@@ -224,7 +229,7 @@ namespace dsn
                     if (nullptr == it->second->query_config_task)
                     {
                         // TODO: delay if from_meta_ack = true
-                        it->second->query_config_task = query_partition_config(pindex);
+                        it->second->query_config_task = query_config(pindex);
                     }
                 }
                 else
@@ -232,7 +237,7 @@ namespace dsn
                     _pending_requests_before_partition_count_unknown.push_back(std::move(request));
                     if (_pending_requests_before_partition_count_unknown.size() == 1)
                     {
-                        _query_config_task = query_partition_config(pindex);
+                        _query_config_task = query_config(pindex);
                     }
                 }
             }
@@ -241,10 +246,10 @@ namespace dsn
         /*send rpc*/
         DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-        dsn::task_ptr partition_resolver_simple::query_partition_config(int partition_index)
+        task_ptr partition_resolver_simple::query_config(int partition_index)
         {
-            //dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_path.c_str(), _app_id, request->partition_index);
-            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
+            dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_path.c_str(), _app_id, partition_index);
+            auto msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
 
             configuration_query_by_index_request req;
             req.app_name = _app_path;
@@ -252,28 +257,27 @@ namespace dsn
             {
                 req.partition_indices.push_back(partition_index);
             }
-            ::dsn::marshall(msg, req);
+            marshall(msg, req);
 
-            rpc_address target(_meta_server);
             return rpc::call(
-                target,
+                _meta_server,
                 msg,
                 this,
                 [this, partition_index](error_code err, dsn_message_t req, dsn_message_t resp)
                 {
-                    query_partition_configuration_reply(err, req, resp, partition_index);
+                    query_config_reply(err, req, resp, partition_index);
                 }
                 );
         }
 
-        void partition_resolver_simple::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index)
+        void partition_resolver_simple::query_config_reply(error_code err, dsn_message_t request, dsn_message_t response, int partition_index)
         {
-            error_code client_err = ERR_OK;
+            auto client_err = ERR_OK;
 
             if (err == ERR_OK)
             {
                 configuration_query_by_index_response resp;
-                ::dsn::unmarshall(response, resp);
+                unmarshall(response, resp);
                 if (resp.err == ERR_OK)
                 {
                     zauto_write_lock l(_config_lock);
@@ -294,16 +298,26 @@ namespace dsn
 
                     for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
                     {
-                        partition_configuration& new_config = *it;
+                        auto& new_config = *it;
+
+                        dinfo("query_partition_config reply, gpid:[%s,%d,%d], ballot = %" PRId64 ", primary = %s",
+                            _app_path.c_str(), _app_id, partition_index,
+                            new_config.ballot,
+                            new_config.primary.to_string()
+                            );
 
                         auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                         if (it2 == _config_cache.end())
                         {
-                            _config_cache[new_config.pid.get_partition_index()] = new_config;
+                            std::unique_ptr<partition_info> pi(new partition_info);
+                            pi->timeout_count = 0;
+                            pi->config = new_config;
+                            _config_cache.emplace(new_config.pid.get_partition_index(), std::move(pi));
                         }
-                        else if (it2->second.ballot < new_config.ballot)
+                        else if (it2->second->config.ballot < new_config.ballot)
                         {
-                            it2->second = new_config;
+                            it2->second->config = new_config;
+                            it2->second->timeout_count = 0;
                         }
                         else
                         {
@@ -369,10 +383,10 @@ namespace dsn
                 std::list<request_context_ptr> reqs2;
                 {
                     zauto_lock l(_requests_lock);
-                    reqs = std::move(_pending_requests);
+                    reqs = move(_pending_requests);
                     _pending_requests.clear();
 
-                    reqs2 = std::move(_pending_requests_before_partition_count_unknown);
+                    reqs2 = move(_pending_requests_before_partition_count_unknown);
                     _pending_requests_before_partition_count_unknown.clear();
                 }
              
@@ -428,7 +442,7 @@ namespace dsn
         }
 
         /*search in cache*/
-        dsn::rpc_address partition_resolver_simple::get_address(const partition_configuration& config)
+        rpc_address partition_resolver_simple::get_address(const partition_configuration& config) const
         {
             if (_app_is_stateful)
                 return config.primary;
@@ -436,7 +450,7 @@ namespace dsn
             {
                 if (config.last_drops.size() == 0)
                 {
-                    return ::dsn::rpc_address();
+                    return rpc_address();
                 }
                 else
                 {
@@ -471,16 +485,16 @@ namespace dsn
         //ERR_OBJECT_NOT_FOUND  not in cache.
         //ERR_IO_PENDING        in cache but invalid, remove from cache.
         //ERR_OK                in cache and valid
-        error_code partition_resolver_simple::get_address(int partition_index, /*out*/ dsn::rpc_address& addr)
+        error_code partition_resolver_simple::get_address(int partition_index, /*out*/ rpc_address& addr)
         {
-            partition_configuration config;
+            //partition_configuration config;
             {
                 zauto_read_lock l(_config_lock);
                 auto it = _config_cache.find(partition_index);
                 if (it != _config_cache.end())
                 {
-                    config = it->second;
-                    addr = get_address(config);
+                    //config = it->second->config;
+                    addr = get_address(it->second->config);
                     if (addr.is_invalid())
                     {
                         return ERR_IO_PENDING;
@@ -499,7 +513,7 @@ namespace dsn
 
         int partition_resolver_simple::get_partition_index(int partition_count, uint64_t partition_hash)
         {
-            return partition_hash % (uint64_t)partition_count;
+            return partition_hash % static_cast<uint64_t>(partition_count);
         }
     }
 }

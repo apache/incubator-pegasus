@@ -9,7 +9,8 @@ class deploy_svc_server_app :
     public ::dsn::service_app
 {
 public:
-    deploy_svc_server_app()
+    deploy_svc_server_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
@@ -34,7 +35,8 @@ class deploy_svc_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    deploy_svc_client_app() 
+    deploy_svc_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _deploy_svc_client = nullptr;
     }
@@ -124,7 +126,8 @@ class deploy_svc_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    deploy_svc_perf_test_client_app()
+    deploy_svc_perf_test_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _deploy_svc_client = nullptr;
     }

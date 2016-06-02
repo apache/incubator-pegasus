@@ -43,7 +43,7 @@ class echo_server_app :
     public ::dsn::service_app
 {
 public:
-    echo_server_app() {}
+    echo_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
@@ -67,7 +67,7 @@ class echo_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    echo_client_app() {}
+    echo_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
     
     ~echo_client_app() 
     {
@@ -119,7 +119,8 @@ class echo_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    echo_perf_test_client_app()
+    echo_perf_test_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _echo_client = nullptr;
     }

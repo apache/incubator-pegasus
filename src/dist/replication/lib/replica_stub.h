@@ -146,7 +146,7 @@ private:
     void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response);
     void on_node_query_reply_scatter(replica_stub_ptr this_, const configuration_update_request& config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpid);
-    void remove_replica_on_meta_server(const partition_configuration& config);
+    void remove_replica_on_meta_server(const app_info& info, const partition_configuration& config);
     ::dsn::task_ptr begin_open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req);
     void    open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req);
     ::dsn::task_ptr begin_close_replica(replica_ptr r);

@@ -263,8 +263,7 @@ namespace dsn {
 
             if (ERR_OK != err)
             {
-                if (ERR_TIMEOUT == err)
-                    dwarn("copy checkpoint failed, err(%s), remote_addr(%s)", err.to_string(), resp->address.to_string());
+                dwarn("copy checkpoint failed, err(%s), remote_addr(%s)", err.to_string(), resp->address.to_string());
                 _primary_states.checkpoint_task = nullptr;
                 return;
             }

@@ -41,9 +41,7 @@
 # include <boost/lexical_cast.hpp>
 
 # include <rapidjson/document.h>
-# include <rapidjson/prettywriter.h>
 # include <rapidjson/writer.h>
-# include <rapidjson/stringbuffer.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -67,7 +65,7 @@ void init_partition_configuration(/*out*/partition_configuration& pc, /*in*/cons
 
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
 {
-    auto it = std::find(drops.begin(), drops.end(), node);
+    auto it = find(drops.begin(), drops.end(), node);
     if (is_add)
     {
         if (it != drops.end())
@@ -88,6 +86,29 @@ void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address
     }
 }
 
+void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const configuration_update_request& req)
+{
+    switch (req.type)
+    {
+    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_ADD_SECONDARY:
+    case config_type::CT_UPGRADE_TO_SECONDARY:
+    case config_type::CT_ADD_SECONDARY_FOR_LB:
+        maintain_drops(drops, req.node, true);
+        break;
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_REMOVE:
+        if (req.config.primary.is_invalid())
+            maintain_drops(drops, req.node, false);
+        break;
+    case config_type::CT_UPGRADE_TO_PRIMARY:
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+        break;
+    default:
+        dassert(false, "unhandled request type for drops maintainance");
+    }
+}
+
 std::string join_path(const std::string& input1, const std::string& input2)
 {
     size_t pos1 = input1.size(); // last_valid_pos + 1
@@ -99,7 +120,7 @@ std::string join_path(const std::string& input1, const std::string& input2)
 
 /// server state member functions
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
+    : serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -288,7 +309,7 @@ error_code server_state::initialize()
 
     // prepare parameters
     std::vector<std::string> args;
-    dsn::utils::split_args(meta_state_service_parameters, args);
+    utils::split_args(meta_state_service_parameters, args);
     int argc = static_cast<int>(args.size());
     std::vector<const char*> args_ptr;
     args_ptr.resize(argc);
@@ -298,7 +319,7 @@ error_code server_state::initialize()
     }
 
     // create storage
-    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
+    _storage = utils::factory_store< dist::meta_state_service>::create(
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
@@ -566,11 +587,14 @@ error_code server_state::sync_apps_from_remote_storage()
                                             partition_configuration pc;
                                             binary_reader reader(value);
                                             unmarshall(reader, pc, DSF_THRIFT_JSON);
+# ifndef NDEBUG
+                                            this->check_consistency(_apps[app_id - 1].info.is_stateful, pc);
+# endif
 
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                             dassert(pc.pid.get_app_id() == app_id && pc.pid.get_partition_index() == i, "invalid partition config");
-
+                                            
                                             _apps[app_id -1].available_partitions.atom()++;
                                         }
                                         else if (ec == ERR_OBJECT_NOT_FOUND)
@@ -710,6 +734,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
                         dassert(old.primary == it->first, "");
 
                         auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                        request->info = app.info;
                         request->node = old.primary;
                         request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
@@ -728,6 +753,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
                         {
                             partition_configuration& old = app.partitions[pri.get_partition_index()];
                             auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                            request->info = app.info;
                             request->type = config_type::CT_REMOVE;
                             request->host_node = it->first;
 
@@ -1056,7 +1082,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
                         _nodes[pc.primary].primaries.erase(pc.pid);
                         pc.primary.set_invalid();
                     }
-                    for (dsn::rpc_address& addr: pc.secondaries) {
+                    for (rpc_address& addr: pc.secondaries) {
                         if (_nodes.find(addr) != _nodes.end()) {
                             _nodes[addr].partitions.erase(pc.pid);
                         }
@@ -1139,7 +1165,7 @@ void server_state::list_apps(configuration_list_apps_request& request, /*out*/ c
         {
             if ( request.status == app_status::AS_INVALID || request.status == app.info.status)
             {
-                dsn::app_info info;
+                app_info info;
                 info.app_id = app.info.app_id;
                 info.status = app.info.status;
                 info.app_type = app.info.app_type;
@@ -1150,7 +1176,7 @@ void server_state::list_apps(configuration_list_apps_request& request, /*out*/ c
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
 }
 
@@ -1163,19 +1189,23 @@ void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/
             node_status::type status = node.second.is_alive ? node_status::NS_ALIVE : node_status::NS_UNALIVE;
             if (request.status == node_status::NS_INVALID || request.status == status)
             {
-                dsn::replication::node_info info;
+                node_info info;
                 info.status = status;
                 info.address = node.first;
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
 }
 
 void server_state::update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req,
                                                   dsn_message_t request_msg)
 {
+# ifndef NDEBUG
+    check_consistency(req->info.is_stateful, req->config);
+# endif
+
     std::string partition_path = get_partition_path(req->config.pid);
     binary_writer writer;
     marshall(writer, req->config, DSF_THRIFT_JSON);
@@ -1229,7 +1259,8 @@ void server_state::update_configuration(
     int delay_ms = 0;
 
     configuration_update_response response;
-    {
+    
+    {        
         zauto_write_lock l(_lock);
         app_state& app = _apps[req->config.pid.get_app_id() - 1];
         partition_configuration& old = app.partitions[req->config.pid.get_partition_index()];
@@ -1318,8 +1349,8 @@ void server_state::update_configuration(
                 if (config_type::CT_REMOVE == req->type)
                 {
                     // not found
-                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
-                        std::find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
+                        find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
                     {
                         response.err = ERR_OK;
                         response.config = old;
@@ -1334,7 +1365,7 @@ void server_state::update_configuration(
                 else
                 {
                     // added already
-                    if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
                     {
                         response.err = ERR_OK;
                         response.config = old;
@@ -1346,6 +1377,17 @@ void server_state::update_configuration(
                     }
                 }
 
+            }
+        }
+
+        if (write)
+        {
+            _pending_requests.emplace(req->config.pid, callback);
+
+            if (req->info.is_stateful)
+            {
+                req->config.last_drops = old.last_drops;
+                maintain_drops(req->config.last_drops, *req);
             }
         }
     }
@@ -1361,7 +1403,7 @@ void server_state::update_configuration(
             tasking::enqueue(
                 LPC_CM_UPDATE_CONFIGURATION,
                 nullptr,
-                [this, cb = std::move(callback), req_ptr = std::move(req)]() mutable
+                [this, cb = move(callback), req_ptr = move(req)]() mutable
                 {
                     this->update_configuration(req_ptr, nullptr, cb);
                 },
@@ -1380,26 +1422,6 @@ void server_state::update_configuration(
             dsn_msg_add_ref(request_msg);
         }
 
-        if (req->info.is_stateful)
-        {
-            // maintain dropouts
-            switch (req->type)
-            {
-            case config_type::CT_ASSIGN_PRIMARY:
-            case config_type::CT_ADD_SECONDARY:
-            case config_type::CT_UPGRADE_TO_SECONDARY:
-                maintain_drops(req->config.last_drops, req->node, true);
-                break;
-            case config_type::CT_DOWNGRADE_TO_INACTIVE:
-            case config_type::CT_REMOVE:
-                //only maintain last drops for primary
-                if (req->config.primary.is_invalid())
-                    maintain_drops(req->config.last_drops, req->node, false);
-                break;
-            }
-        }
-        _pending_requests.emplace(req->config.pid, callback);
-
         update_configuration_on_remote(req, request_msg);
     }
 }
@@ -1412,7 +1434,7 @@ void server_state::exec_pending_request(const std::shared_ptr<configuration_upda
     {
         zauto_write_lock l(_lock);
         auto iter = _pending_requests.find(req->config.pid);
-        callback = std::move(iter->second);
+        callback = move(iter->second);
         dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", 
             req->config.pid.get_app_id(), req->config.pid.get_partition_index()
             );
@@ -1445,181 +1467,153 @@ void server_state::update_configuration_internal(const configuration_update_requ
 
     else if (app.info.is_stateful)
     {
-        if (old.ballot + 1 != request.config.ballot)
+        dassert(old.ballot + 1 == request.config.ballot, "");
+
+        response.err = ERR_OK;
+        response.config = request.config;
+
+        auto it = _nodes.find(request.node);
+        dassert(it != _nodes.end(), "");
+        node_state& node = it->second;
+
+        switch (request.type)
         {
-            response.err = ERR_INVALID_VERSION;
-            response.config = old;
-        }
-        else
-        {
-            // TODO: update _storage first
-
-            response.err = ERR_OK;
-            response.config = request.config;
-
-            auto it = _nodes.find(request.node);
-            dassert(it != _nodes.end(), "");
-            node_state& node = it->second;
-
-            switch (request.type)
+        case config_type::CT_ASSIGN_PRIMARY:
+# ifndef NDEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
+            node.partitions.insert(old.pid);
+            node.primaries.insert(old.pid);
+            break;
+        case config_type::CT_UPGRADE_TO_PRIMARY:
+# ifndef NDEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            node.partitions.insert(old.pid);
+            node.primaries.insert(old.pid);
+            break;
+        case config_type::CT_ADD_SECONDARY:
+            dassert(false, "invalid execution flow");
+            break;
+        case config_type::CT_DOWNGRADE_TO_SECONDARY:
+# ifndef NDEBUG
+            dassert(old.primary == request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
+            node.primaries.erase(old.pid);
+            break;
+        case config_type::CT_DOWNGRADE_TO_INACTIVE:
+        case config_type::CT_REMOVE:
+# ifndef NDEBUG
+            dassert(old.primary == request.node ||
+                std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            if (request.node == old.primary)
             {
-            case config_type::CT_ASSIGN_PRIMARY:
-# ifndef NDEBUG
-                dassert(old.primary != request.node, "");
-                dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
-# endif
-                node.partitions.insert(old.pid);
-                node.primaries.insert(old.pid);
-                break;
-            case config_type::CT_UPGRADE_TO_PRIMARY:
-# ifndef NDEBUG
-                dassert(old.primary != request.node, "");
-                dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
-# endif
-                node.partitions.insert(old.pid);
-                node.primaries.insert(old.pid);
-                break;
-            case config_type::CT_ADD_SECONDARY:
-                dassert(false, "invalid execution flow");
-                break;
-            case config_type::CT_DOWNGRADE_TO_SECONDARY:
-# ifndef NDEBUG
-                dassert(old.primary == request.node, "");
-                dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
-# endif
                 node.primaries.erase(old.pid);
-                break;
-            case config_type::CT_DOWNGRADE_TO_INACTIVE:
-            case config_type::CT_REMOVE:
+            }
+            node.partitions.erase(old.pid);
+            break;
+        case config_type::CT_UPGRADE_TO_SECONDARY:
 # ifndef NDEBUG
-                dassert(old.primary == request.node ||
-                    std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
-                if (request.node == old.primary)
-                {
-                    node.primaries.erase(old.pid);
-                }
-                node.partitions.erase(old.pid);
-                break;
-            case config_type::CT_UPGRADE_TO_SECONDARY:
-# ifndef NDEBUG
-                dassert(old.primary != request.node, "");
-                dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
-# endif
-                node.partitions.insert(old.pid);
-                break;
-            default:
-                dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
-            }
-
-            // maintain dropouts
-            auto drops = old.last_drops;
-            switch (request.type)
-            {
-            case config_type::CT_ASSIGN_PRIMARY:
-            case config_type::CT_ADD_SECONDARY:
-            case config_type::CT_UPGRADE_TO_SECONDARY:
-                maintain_drops(drops, request.node, true);
-                break;
-            case config_type::CT_DOWNGRADE_TO_INACTIVE:
-            case config_type::CT_REMOVE:
-                if (request.config.primary.is_invalid())
-                    maintain_drops(drops, request.node, false);
-                break;
-            }
-
-            // update to new config        
-            old = request.config;
-            old.last_drops = drops;
-
-            std::stringstream cf;
-            cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
-            for (auto& s : request.config.secondaries)
-            {
-                cf << s.to_string() << ",";
-            }
-            cf << "], drops = [";
-            for (auto& s : drops)
-            {
-                cf << s.to_string() << ",";
-            }
-            cf << "]}";
-
-            ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
-                request.config.pid.get_app_id(),
-                request.config.pid.get_partition_index(),
-                request.config.ballot,
-                enum_to_string(request.type),
-                request.node.to_string(),
-                cf.str().c_str()
-                );
+            node.partitions.insert(old.pid);
+            break;
+        default:
+            dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
+
+        // maintain dropouts
+        auto drops = old.last_drops;
+        maintain_drops(drops, request);
+
+        // update to new config        
+        old = request.config;
+        old.last_drops = drops;
+
+        std::stringstream cf;
+        cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
+        for (auto& s : request.config.secondaries)
+        {
+            cf << s.to_string() << ",";
+        }
+        cf << "], drops = [";
+        for (auto& s : drops)
+        {
+            cf << s.to_string() << ",";
+        }
+        cf << "]}";
+
+        ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
+            request.config.pid.get_app_id(),
+            request.config.pid.get_partition_index(),
+            request.config.ballot,
+            enum_to_string(request.type),
+            request.node.to_string(),
+            cf.str().c_str()
+            );
     }
     else
     {
-        if (request.config.ballot != old.ballot)
+        dassert(request.config.ballot == old.ballot, "");
+
+        partition_configuration_stateless pcs(old);
+
+        // remove
+        if (config_type::CT_REMOVE == request.type)
         {
-            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
-                request.node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), request.config.ballot, old.ballot);
-            response.err = ERR_INVALID_VERSION;
-            response.config = old;
+            // remove working node address
+            auto it1 = std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
+            dassert(it1 != pcs.worker_replicas().end(), "node must exit in the given vector");
+            pcs.worker_replicas().erase(it1);
+
+            // remove host node address
+            it1 = std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
+            dassert(it1 != pcs.host_replicas().end(), "node must exit in the given vector");
+            pcs.host_replicas().erase(it1);
+
+            auto it = _nodes.find(request.host_node);
+            dassert(it != _nodes.end(), "");
+            it->second.partitions.erase(request.config.pid);
         }
+
+        // add
         else
         {
-            partition_configuration_stateless pcs(old);
-
-            // remove
-            if (config_type::CT_REMOVE == request.type)
+            // add
+            if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node) == pcs.host_replicas().end())
             {
-                // remove working node address
-                auto it1 = std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
-                dassert(it1 != pcs.worker_replicas().end(), "node must exit in the given vector");
-                pcs.worker_replicas().erase(it1);
-
-                // remove host node address
-                it1 = std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
-                dassert(it1 != pcs.host_replicas().end(), "node must exit in the given vector");
-                pcs.host_replicas().erase(it1);
+                pcs.worker_replicas().emplace_back(request.node);
+                pcs.host_replicas().emplace_back(request.host_node);
 
                 auto it = _nodes.find(request.host_node);
                 dassert(it != _nodes.end(), "");
-                it->second.partitions.erase(request.config.pid);
+                it->second.partitions.insert(request.config.pid);
             }
-
-            // add
-            else
-            {
-                // add
-                if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node) == pcs.host_replicas().end())
-                {
-                    pcs.worker_replicas().emplace_back(request.node);
-                    pcs.host_replicas().emplace_back(request.host_node);
-
-                    auto it = _nodes.find(request.host_node);
-                    dassert(it != _nodes.end(), "");
-                    it->second.partitions.insert(request.config.pid);
-                }
-            }
-            response.err = ERR_OK;
-            response.config = old;
-
-            std::stringstream cf;
-            cf << "{replicas = [";
-            for (size_t i = 0; i < pcs.host_replicas().size(); i++)
-            {
-                cf << pcs.host_replicas()[i].to_string() << " (work-port = " << pcs.worker_replicas()[i].port() << "),";
-            }
-            cf << "]}";
-
-            ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
-                response.config.pid.get_app_id(),
-                response.config.pid.get_partition_index(),
-                response.config.ballot,
-                enum_to_string(request.type),
-                request.node.to_string(),
-                cf.str().c_str()
-                );
         }
+        response.err = ERR_OK;
+        response.config = old;
+
+        std::stringstream cf;
+        cf << "{replicas = [";
+        for (size_t i = 0; i < pcs.host_replicas().size(); i++)
+        {
+            cf << pcs.host_replicas()[i].to_string() << " (work-port = " << pcs.worker_replicas()[i].port() << "),";
+        }
+        cf << "]}";
+
+        ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
+            response.config.pid.get_app_id(),
+            response.config.pid.get_partition_index(),
+            response.config.ballot,
+            enum_to_string(request.type),
+            request.node.to_string(),
+            cf.str().c_str()
+            );
     }
 
 #ifndef NDEBUG
@@ -1629,6 +1623,31 @@ void server_state::update_configuration_internal(const configuration_update_requ
     if (_config_change_subscriber)
     {
         _config_change_subscriber(_apps);
+    }
+}
+
+void server_state::check_consistency(bool is_stateful, const partition_configuration& config)
+{
+    if (is_stateful)
+    {
+        if (config.primary.is_invalid() == false)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+
+        for (auto& ep : config.secondaries)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+    }
+
+    // stateless
+    else
+    {
+        partition_configuration_stateless pcs((partition_configuration&)config);
+        dassert(pcs.host_replicas().size() == pcs.worker_replicas().size(), "");
     }
 }
 
@@ -1646,7 +1665,7 @@ void server_state::check_consistency(gpid gpid)
             dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
             dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
 
-            auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
             dassert(it2 == config.last_drops.end(), "");
         }
 
@@ -1656,7 +1675,7 @@ void server_state::check_consistency(gpid gpid)
             dassert(it != _nodes.end(), "");
             dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
 
-            auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
             dassert(it2 == config.last_drops.end(), "");
         }
     }
@@ -1694,7 +1713,7 @@ void server_state::static_cli_json_state(void* context, int argc, const char** a
     auto _server_state = reinterpret_cast<server_state*>(context);
     std::stringstream out;
     _server_state->json_state(out);
-    auto danglingstring = new std::string(std::move(out.str()));
+    auto danglingstring = new std::string(move(out.str()));
     reply->message = danglingstring->c_str();
     reply->size = danglingstring->size();
     reply->context = danglingstring;
