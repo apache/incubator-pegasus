@@ -76,22 +76,30 @@ void replica::init_learn(uint64_t signature)
         return;
     }   
 
+    if (signature < _potential_secondary_states.learning_version)
+    {
+        dwarn("%s: learning request is out-dated, therefore skipped: %" PRIx64 " vs %" PRIx64,
+            name(), signature, _potential_secondary_states.learning_version
+        );
+        return;
+    }
+
     // learn timeout or primary change, the (new) primary starts another round of learning process
     // be cautious: primary should not issue signatures frequently to avoid learning abort
-    if (signature != _potential_secondary_states.learning_signature)
+    if (signature != _potential_secondary_states.learning_version)
     {
         if (!_potential_secondary_states.cleanup(false))
         {
             dwarn("%s: previous learning with signature[%016llx] is still in-process, skip init new learning with signature [%016llx]",
-                name(), _potential_secondary_states.learning_signature, signature
+                name(), _potential_secondary_states.learning_version, signature
                 );
             return;
         }   
 
-        _potential_secondary_states.learning_signature = signature;
+        _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
         _potential_secondary_states.learning_status = learner_status::LearningWithoutPrepare;
-        _prepare_list->reset(_app->last_committed_decree());
+        _prepare_list->truncate(_app->last_committed_decree());
     }
     else
     {
@@ -123,7 +131,7 @@ void replica::init_learn(uint64_t signature)
                             auto err = _app->write_internal(mu);
                             if (ERR_OK != err)
                             {
-                                handle_learning_error(err);
+                                handle_learning_error(err, true);
                                 return;
                             }
                         }
@@ -177,7 +185,7 @@ void replica::init_learn(uint64_t signature)
     request.last_committed_decree_in_app = _app->last_committed_decree();
     request.last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request.learner = _stub->_primary_address;
-    request.signature = _potential_secondary_states.learning_signature;
+    request.signature = _potential_secondary_states.learning_version;
     _app->prepare_get_checkpoint(request.app_specific_learn_request);
 
     ddebug(
@@ -420,11 +428,11 @@ void replica::on_learn_reply(
     check_hashed_access();
 
     dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
-    dassert(req.signature == _potential_secondary_states.learning_signature, "");
+    dassert(req.signature == _potential_secondary_states.learning_version, "");
 
     if (err != ERR_OK)
     {
-        handle_learning_error(err);
+        handle_learning_error(err, false);
         return;
     }
 
@@ -460,7 +468,7 @@ void replica::on_learn_reply(
         }
         else
         {
-            handle_learning_error(err);
+            handle_learning_error(resp.err, false);
         }
         return;
     }
@@ -561,9 +569,9 @@ void replica::on_learn_reply(
 
         // reset preparelist
         _potential_secondary_states.learning_start_prepare_decree = resp.prepare_start_decree;
-        _prepare_list->reset(_app->last_committed_decree());
+        _prepare_list->truncate(_app->last_committed_decree());
         ddebug(
-            "%s: on_learn_reply[%016llx]: learnee = %s, reset_prepare_list = %" PRId64 ", current_learning_status = %s",
+            "%s: on_learn_reply[%016llx]: learnee = %s, truncate_prepare_list = %" PRId64 ", current_learning_status = %s",
             name(), req.signature, resp.config.primary.to_string(),
             _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
@@ -574,10 +582,12 @@ void replica::on_learn_reply(
         while (!reader.is_eof())
         {
             auto mu = mutation::read_from(reader, nullptr);
-            mu->set_logged();
-            dinfo("%s: on_learn_reply[%016llx]: apply learned mutation %s", name(), req.signature, mu->name());
+            mu->set_logged();            
             if (mu->data.header.decree > last_committed_decree())
+            {
+                dinfo("%s: on_learn_reply[%016llx]: apply learned mutation %s", name(), req.signature, mu->name());
                 _prepare_list->prepare(mu, partition_status::PS_POTENTIAL_SECONDARY);
+            }   
         }
 
         // further states are synced using 2pc
@@ -749,7 +759,7 @@ void replica::on_copy_remote_state_completed(
         "appCommit(%" PRId64 " => %" PRId64 "), appDurable(%" PRId64 " => %" PRId64 "), localCommit(%" PRId64 "), "
         "remoteCommit(%" PRId64 "), prepareStart(%" PRId64 "), currentState(%s)",
         name(), 
-        _potential_secondary_states.learning_signature,
+        _potential_secondary_states.learning_version,
         resp.state.files.size(), _dir.c_str(), err.to_string(),
         _potential_secondary_states.duration_ms(),
         old_committed, _app->last_committed_decree(),
@@ -768,7 +778,7 @@ void replica::on_copy_remote_state_completed(
         ddebug(
             "%s: on_copy_remote_state_completed[%016llx], flush done, err = %s, learn duration = %" PRIu64 " ms, lastC/DDecree = <%" PRId64 ", %" PRId64 ">",
             name(),
-            _potential_secondary_states.learning_signature,
+            _potential_secondary_states.learning_version,
             err.to_string(), 
             _potential_secondary_states.duration_ms(),
             _app->last_committed_decree(), _app->last_durable_decree()
@@ -806,7 +816,7 @@ void replica::on_learn_remote_state_completed(error_code err)
     ddebug(
         "%s: on_learn_remote_state_completed[%016llx], err = %s, learn duration = %" PRIu64 " ms, lastC/DDecree = <%" PRId64 ", %" PRId64 ">",
         name(),
-        _potential_secondary_states.learning_signature,
+        _potential_secondary_states.learning_version,
         err.to_string(),
         _potential_secondary_states.duration_ms(),
         _app->last_committed_decree(), _app->last_durable_decree()
@@ -816,28 +826,28 @@ void replica::on_learn_remote_state_completed(error_code err)
 
     if (err != ERR_OK)
     {
-        handle_learning_error(err);
+        handle_learning_error(err, true);
     }
     else
     {
         // continue
-        init_learn(_potential_secondary_states.learning_signature);
+        init_learn(_potential_secondary_states.learning_version);
     }
 }
 
-void replica::handle_learning_error(error_code err)
+void replica::handle_learning_error(error_code err, bool is_local_error)
 {
     check_hashed_access();
 
     derror(
         "%s: handle_learning_error[%016llx], err = %s, learn duration = %" PRIu64 " ms",
         name(),
-        _potential_secondary_states.learning_signature,
+        _potential_secondary_states.learning_version,
         err.to_string(),
         _potential_secondary_states.duration_ms()
         );
 
-    update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
+    update_local_configuration_with_no_ballot_change(is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
 }
 
 void replica::handle_learning_succeeded_on_primary(
@@ -861,7 +871,7 @@ void replica::notify_learn_completion()
     report.err = ERR_OK;
     report.last_committed_decree_in_app = _app->last_committed_decree();
     report.last_committed_decree_in_prepare_list = last_committed_decree();
-    report.learner_signature = _potential_secondary_states.learning_signature;
+    report.learner_signature = _potential_secondary_states.learning_version;
     report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = _stub->_primary_address;
 

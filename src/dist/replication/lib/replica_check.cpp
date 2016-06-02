@@ -191,7 +191,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     response.last_committed_decree_in_app = _app->last_committed_decree();
     response.last_committed_decree_in_prepare_list = last_committed_decree();
     response.learner_status_ = _potential_secondary_states.learning_status;
-    response.learner_signature = _potential_secondary_states.learning_signature;
+    response.learner_signature = _potential_secondary_states.learning_version;
 }
 
 void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_check_request>& req, const std::shared_ptr<group_check_response>& resp)

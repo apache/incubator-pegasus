@@ -189,7 +189,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     }
     else
     {
-        state.signature = random64(0, (uint64_t)(-1LL));
+        state.signature = ++_primary_states.next_learning_version;
         _primary_states.learners[proposal.node] = state;
         _primary_states.statuses[proposal.node] = partition_status::PS_POTENTIAL_SECONDARY;
     }
@@ -201,9 +201,10 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     request.last_committed_decree = last_committed_decree();
 
     ddebug(
-        "%s: call one way %s to start learning",
+        "%s: call one way %s to start learning with signature [%" PRIx64"]",
         name(),
-        proposal.node.to_string()
+        proposal.node.to_string(),
+        state.signature
     );
 
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
