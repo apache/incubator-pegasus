@@ -465,7 +465,9 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
     {
         if (proposal.type == config_type::CT_ASSIGN_PRIMARY)
         {
-            begin_open_replica(proposal.info, proposal.config.pid, nullptr);
+            std::shared_ptr<configuration_update_request> req2(new configuration_update_request);
+            *req2 = proposal;
+            begin_open_replica(proposal.info, proposal.config.pid, nullptr, req2);
         }   
         else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY)
         {
@@ -569,7 +571,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
             std::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
 
-            begin_open_replica(request.app, request.config.pid, req);
+            begin_open_replica(request.app, request.config.pid, req, nullptr);
             response.err = ERR_OK;
             response.learner_signature = invalid_signature;
         }
@@ -648,7 +650,7 @@ void replica_stub::on_add_learner(const group_check_request& request)
     {
         std::shared_ptr<group_check_request> req(new group_check_request);
         *req = request;
-        begin_open_replica(request.app, request.config.pid, req);
+        begin_open_replica(request.app, request.config.pid, req, nullptr);
     }
 }
 
@@ -1057,7 +1059,9 @@ void replica_stub::on_gc()
 #endif
 }
 
-::dsn::task_ptr replica_stub::begin_open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
+::dsn::task_ptr replica_stub::begin_open_replica(const app_info& app, gpid gpid, 
+    std::shared_ptr<group_check_request> req,
+    std::shared_ptr<configuration_update_request> req2)
 {
     _replicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -1107,7 +1111,8 @@ void replica_stub::on_gc()
         }
         else 
         {
-            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app, gpid, req));
+            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, 
+                std::bind(&replica_stub::open_replica, this, app, gpid, req, req2));
 
             _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
@@ -1117,7 +1122,9 @@ void replica_stub::on_gc()
     }
 }
 
-void replica_stub::open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req)
+void replica_stub::open_replica(const app_info& app, gpid gpid, 
+    std::shared_ptr<group_check_request> req,
+    std::shared_ptr<configuration_update_request> req2)
 {
     std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
     ddebug("%u.%u@%s: start to open replica %s group_check, dir = %s",
@@ -1150,6 +1157,10 @@ void replica_stub::open_replica(const app_info& app, gpid gpid, std::shared_ptr<
     if (nullptr != req)
     {
         rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.pid));
+    }
+    else if (nullptr != req2)
+    {
+        rpc::call_one_way_typed(_primary_address, RPC_CONFIG_PROPOSAL, *req2, gpid_to_hash(req2->config.pid));
     }
 }
 
