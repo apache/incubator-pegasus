@@ -162,7 +162,7 @@ namespace dsn {
         uint32_t xfer = 0;
 
         xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRUCT, ::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(val.size()));
-        for (std::map<T_KEY, T_VALUE> ::const_iterator iter = val.begin(); iter != val.end(); ++iter)
+        for (auto iter = val.begin(); iter != val.end(); ++iter)
         {
             xfer += marshall_base(oprot, iter->first);
             xfer += marshall_base(oprot, iter->second);
