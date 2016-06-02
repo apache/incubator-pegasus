@@ -22,6 +22,7 @@ endif()
 dsn_common_setup()
 dsn_add_pseudo_projects()
 
+include(ext/gitsource.cmake)
 add_subdirectory(ext/thrift)
 add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)
