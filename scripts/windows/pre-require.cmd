@@ -38,7 +38,7 @@ IF NOT EXIST "%TOP_DIR%\ext\cmake-3.2.2" (
 )
 
 IF NOT EXIST "%TOP_DIR%\bin\Windows\thrift.exe" (
-    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift.exe?raw=true
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/ykwd/thrift/raw/master/pre-built/windows8.1/thrift.exe
     @move thrift.exe %TOP_DIR%\bin\Windows\
 )
 

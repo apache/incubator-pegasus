@@ -5,7 +5,7 @@ environment:
     DSN_BOOST: boost_1_59_0
     DSN_BOOST_LIB: lib64-msvc-14.0
     DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_59_0_vc14_amd64.7z?raw=true
-    DSN_THRIFT_EXE: https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift.exe?raw=true
+    DSN_THRIFT_EXE: https://github.com/ykwd/thrift/commits/master/pre-built/windows8.1/thrift.exe
     DSN_CMAKE_BUILD_TYPE: Debug
 
 install:
@@ -26,6 +26,13 @@ install:
             appveyor DownloadFile "${env:DSN_THRIFT_EXE}" -FileName thrift.exe -Timeout 1200000
         }
 
+        if (!(Test-Path php.exe)) {
+            echo "Downloading php ..."
+            appveyor DownloadFile "https://github.com/imzhenyu/packages/raw/master/windows/php5.dll?raw=true" -FileName php5.dll -Timeout 1200000
+            appveyor DownloadFile "https://github.com/imzhenyu/packages/raw/master/windows/php.exe?raw=true" -FileName php.exe -Timeout 1200000
+            appveyor DownloadFile "https://github.com/imzhenyu/packages/raw/master/windows/php.ini?raw=true" -FileName php.ini -Timeout 1200000
+        }
+
     - cmd: >-
         echo "Extracting boost libs to %APPVEYOR_BUILD_FOLDER% ..."
 
@@ -33,7 +40,11 @@ install:
 
         copy /Y thrift.exe bin\Windows\
 
-    - cinst php
+        copy /Y php5.dll bin\Windows\
+
+        copy /Y php.exe bin\Windows\
+
+        copy /Y php.ini bin\Windows\
         
 cache:
     - boost-1.59.7z
