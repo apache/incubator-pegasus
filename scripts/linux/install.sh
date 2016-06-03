@@ -28,17 +28,18 @@ echo "INSTALL_DIR=$INSTALL_DIR"
 echo "Copying files..."
 cp -r -v `pwd`/builder/output/* $INSTALL_DIR
 echo "Install succeed"
-if [ -z "$DSN_ROOT" ]
+if [ -z "$DSN_ROOT" -o "$DSN_ROOT" != "$INSTALL_DIR" ]
 then
-    export DSN_ROOT=$INSTALL_DIR
     if ! grep -q '^export DSN_ROOT=' ~/.bashrc
     then
         echo "export DSN_ROOT=$INSTALL_DIR" >>~/.bashrc
+    else
+        sed -i "s@^export DSN_ROOT=.*@export DSN_ROOT=$INSTALL_DIR@" ~/.bashrc
     fi
     if ! grep -q '^export LD_LIBRARY_PATH=.*DSN_ROOT' ~/.bashrc
     then
         echo 'export LD_LIBRARY_PATH=$DSN_ROOT/lib:$LD_LIBRARY_PATH' >>~/.bashrc
     fi
-    echo "====== THIS IS THE FIRST TIME REGISTER \$DSN_ROOT, please run 'source ~/.bashrc' ======"
+    echo "====== ENVIRONMENT VARIABLE \$DSN_ROOT SET OR CHANGED, please run 'source ~/.bashrc' ======"
 fi
 
