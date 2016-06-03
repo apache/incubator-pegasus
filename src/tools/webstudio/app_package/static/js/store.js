@@ -66,9 +66,6 @@ function validateForm() {
 var vm = new Vue({
     el: '#app',
     data:{
-        metaServer: '',
-        commonPort: '',
-
         packList: [],
 
         detail_schema_info: '',
@@ -132,29 +129,28 @@ var vm = new Vue({
         deploy: function()
         {
             var self = this;
-            var command = "meta.create_app ";
-            var jsObj = JSON.stringify({
-                req: {
-                    app_name: self.app_name,
-                    options: {
-                        partition_count: parseInt(self.partition_count),
-                        replica_count: parseInt(self.replica_count),
-                        success_if_exist: (self.success_if_exist=='true')?true:false,
-                        app_type: self.package_id_to_deploy,
-                        is_stateful: (self.if_stateful_to_deploy=='true')?true:false,
-                        package_id: self.package_id_to_deploy
-                    }
-                }
 
-            });
-            command += jsObj;
-            $.post("http://" + self.metaServer + ":" + self.commonPort + "/api/cli", { 
-                command: command
-                }, function(data){ 
+            var client = new meta_sApp("http://"+localStorage['meta_server_address']);
+            result = client.create_app({
+                args: new configuration_create_app_request({
+                    'app_name': self.app_name,
+                    'options': new create_app_options({
+                        'partition_count': parseInt(self.partition_count),
+                        'replica_count': parseInt(self.replica_count),
+                        'success_if_exist': (self.success_if_exist=='true')?true:false,
+                        'app_type': self.package_id_to_deploy,
+                        'is_stateful': (self.if_stateful_to_deploy=='true')?true:false,
+                        'package_id': self.package_id_to_deploy
+                    })
+                }),
+                async: true,
+                on_success: function (data){
                     console.log(data);
                     window.location.href = 'service_meta.html';
-                }
-            );
+                },
+                on_fail: function (xhr, textStatus, errorThrown) {}
+            });
+
         },
         remove: function(packname)
         {
@@ -203,12 +199,6 @@ var vm = new Vue({
     ready: function ()
     {
         var self = this;
-        $.post("/api/metaserverquery", { 
-            }, function(data){ 
-                self.metaServer = data.split(":")[0];
-                self.commonPort = window.location.href.split("/")[2].split(":")[1];
-            }
-        );
         self.updatePackList();    
         setInterval(function () {
             self.updatePackList();    
