@@ -6,7 +6,7 @@ function usage()
     echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
-    echo "\tnotice : currently for js we only support binary format of thrift".PHP_EOL;
+    echo "\tnotice : currently for js we only support json format of thrift".PHP_EOL;
 }
 
 if (count($argv) < 4)
@@ -107,6 +107,18 @@ else
         echo "unknown idl type for input file '".$g_idl."'".PHP_EOL;
         exit(0);
     }
+}
+
+if ($g_lang != "cpp" && $g_lang != "csharp" && $g_lang != "js")
+{
+    echo "unsupported language : ".$g_lang.PHP_EOL;
+    exit(0);
+}
+
+if ($g_lang == "js" && ($g_idl_type != "thrift" || $g_idl_format != "json"))
+{
+    echo "currently for js we only support json format of thrift, please check your arguments.".PHP_EOL;
+    exit(0);
 }
 
 $pos = strrpos($g_idl, "\\");
