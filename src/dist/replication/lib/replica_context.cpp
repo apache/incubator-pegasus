@@ -88,6 +88,8 @@ void primary_context::cleanup(bool clean_pending_mutations)
 
     // clean up checkpoint
     CLEANUP_TASK_ALWAYS(checkpoint_task)
+
+    membership.ballot = 0;
 }
 
 bool primary_context::is_cleaned()
@@ -115,6 +117,11 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     {
         learners.clear();
     }
+
+    if (config.ballot > membership.ballot)
+        next_learning_version = ((uint64_t)config.ballot) << 32 + 1;
+    else
+        ++next_learning_version;
 
     membership = config;
 
@@ -209,7 +216,7 @@ bool potential_secondary_context::cleanup(bool force)
 
     CLEANUP_TASK(catchup_with_private_log_task, force)
     
-    learning_signature = 0;
+    learning_version = 0;
     learning_start_ts_ns = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;

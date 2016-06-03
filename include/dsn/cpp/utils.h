@@ -296,7 +296,6 @@ namespace dsn {
     public:
         binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
-
         virtual ~binary_writer();
 
         template<typename T> void write_pod(const T& val);

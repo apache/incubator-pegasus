@@ -50,9 +50,13 @@ public:
 
     dsn::error_code list_apps(const dsn::app_status::type status, const std::string& file_name);
 
+    dsn::error_code cluster_info(const std::string& file_name);
+
     dsn::error_code list_nodes(const dsn::replication::node_status::type status, const std::string& file_name);
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
+
+    dsn::error_code list_app(const std::string& app_name, int32_t& app_id, int32_t& partition_count, std::vector<partition_configuration>& partitions);
 
     dsn::error_code control_meta_balancer_migration(bool start);
 

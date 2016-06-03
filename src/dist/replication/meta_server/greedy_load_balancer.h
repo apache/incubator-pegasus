@@ -73,7 +73,6 @@ private:
     bool walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
 
     dsn::rpc_address recommend_primary(partition_configuration& pc);
-    dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 
     void insert_balancer_proposal_request(const gpid& gpid, balancer_type::type type, dsn::rpc_address from, dsn::rpc_address to)
     {
@@ -84,7 +83,7 @@ private:
         request.to_addr = to;
     }
 private:
-    volatile bool _is_greedy_rebalancer_enabled;
+    volatile bool _is_migration_enabled;
 
     std::unordered_map<gpid, dsn::rpc_address> _primary_recommender;
     std::unordered_map<gpid, balancer_proposal_request> _balancer_proposals_map;

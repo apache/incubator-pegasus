@@ -50,7 +50,7 @@ class replication_service_app :
 public:
     replication_service_app(dsn_gpid gpid);
 
-    ~replication_service_app(void);
+    virtual ~replication_service_app(void);
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
 

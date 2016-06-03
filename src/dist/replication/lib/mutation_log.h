@@ -171,7 +171,7 @@ public:
     // returns ERR_OK if succeed
     // not thread safe, but only be called when init
     error_code open(replay_callback read_callback, io_failure_callback write_error_callback);
-
+    error_code open(replay_callback read_callback, io_failure_callback write_error_callback, const std::map<gpid, decree>& replay_condition);
     // close the log
     // thread safe
     void close();
@@ -270,6 +270,8 @@ public:
     // thread safe
     void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
 
+    int64_t size() const { return _global_end_offset - _global_start_offset; }
+
 protected:
     // thread-safe
     std::pair<log_file_ptr, int64_t> mark_new_update(size_t size, gpid gpid, decree d, bool create_new_log_if_needed);
@@ -342,6 +344,8 @@ private:
     // replica log info for private log
     replica_log_info               _private_log_info;
     decree                         _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
+                                                                // used for limiting garbage collection of shared log, because
+                                                                // the ending of private log should be covered by shared log
 };
 
 class mutation_log_shared : public mutation_log
@@ -510,6 +514,8 @@ public:
     const std::string& path() const { return _path; }
     // previous decrees
     const replica_log_info_map& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    // previous decree for speicified gpid
+    decree previous_log_max_decree(const gpid& pid);
     // file header
     log_file_header& header() { return _header;}
 

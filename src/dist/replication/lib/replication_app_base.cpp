@@ -39,6 +39,7 @@
 # include <dsn/internal/factory_store.h>
 # include "mutation_log.h"
 # include <fstream>
+# include <sstream>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -101,6 +102,7 @@ error_code replica_init_info::store(const char* file)
 
     if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
+        derror("move file from %s to %s failed", tmp_file.c_str(), ffile.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -114,6 +116,15 @@ error_code replica_init_info::store(const char* file)
     return ERR_OK;
 }
 
+std::string replica_init_info::to_string()
+{
+    std::ostringstream oss;
+    oss << "init_ballot = " << init_ballot
+        << ", init_decree = " << init_decree
+        << ", init_offset_in_shared_log = " << init_offset_in_shared_log
+        << ", init_offset_in_private_log = " << init_offset_in_private_log;
+    return oss.str();
+}
 
 error_code replica_app_info::load(const char* file)
 {
@@ -188,6 +199,11 @@ replication_app_base::replication_app_base(replica* replica)
     _replica = replica;
     _callbacks = replica->get_app_callbacks();
 
+    _is_delta_state_learning_supported = false;
+    _batch_state = BS_NOT_BATCH;
+    _batch_ballot = -1;
+    _batch_decree = -1;
+
     install_perf_counters();
 }
 
@@ -251,6 +267,10 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
+            if (err == ERR_OK)
+            {
+                ddebug("%s: load replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
+            }
         }
 
         _app_commit_decree.add(last_committed_decree());
@@ -402,8 +422,10 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     dassert(mu->data.updates.size() > 0, "");
 
     int count = static_cast<int>(mu->client_requests.size());
-    //auto& bs = _app_info->info.type1.batch_state;
-    //bs = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    _batch_ballot = mu->data.header.ballot;
+    _batch_decree = mu->data.header.decree;
+
     for (int i = 0; i < count; i++)
     {
         /*if (bs == BS_BATCH && i + 1 == count)
@@ -442,6 +464,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         else
         {
             // empty mutation write
+            dwarn("%s: mutation %s dispatch rpc call: %s",
+                  _replica->name(), mu->name(), update.code.to_string());
         }
 
         int perr = _callbacks.calls.physical_error_get(_app_context_callbacks);
@@ -455,6 +479,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
 
     ++_last_committed_decree;
     //++_app_info->info.type1.last_committed_decree;
+
+    ddebug("%s: mutation %s committed into app", _replica->name(), mu->name());
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
@@ -474,7 +500,12 @@ error_code replication_app_base::update_init_info(replica* r, int64_t shared_log
     _info.init_offset_in_private_log = private_log_offset;
 
     std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
-    return _info.store(info_path.c_str());
+    auto err = _info.store(info_path.c_str());
+    if (err == ERR_OK)
+    {
+        ddebug("%s: store replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
+    }
+    return err;
 }
 
 }} // end namespace

@@ -39,8 +39,8 @@ namespace dsn {
         public:
             counter_service_impl(replica* replica);
 
-            virtual void on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply) override;
-            virtual void on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply) override;
+            virtual void on_add(const ::dsn::example::count_op& op, ::dsn::replication_app_replier<int32_t>& reply) override;
+            virtual void on_read(const std::string& name, ::dsn::replication_app_replier<int32_t>& reply) override;
 
             //
             // interfaces to be implemented by app

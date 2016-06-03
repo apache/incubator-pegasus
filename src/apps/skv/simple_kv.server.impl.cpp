@@ -208,6 +208,7 @@ namespace dsn {
 
                     _store[key] = value;
                 }
+                is.close();
             }
 
             ::dsn::error_code simple_kv_service_impl::checkpoint(int64_t version)

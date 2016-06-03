@@ -128,6 +128,7 @@ public:
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
     bool group_configuration(/*out*/ partition_configuration& config) const;
+    uint64_t create_time_milliseconds() const { return _create_time_ms; }
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
@@ -164,7 +165,7 @@ private:
     void on_learn_reply(error_code err, learn_request&& req, learn_response&& resp);
     void on_copy_remote_state_completed(error_code err, size_t size, learn_request&& req, learn_response&& resp);
     void on_learn_remote_state_completed(error_code err);
-    void handle_learning_error(error_code err);
+    void handle_learning_error(error_code err, bool is_local_error);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state& state);
@@ -215,6 +216,7 @@ private:
 
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
+    uint64_t                _create_time_ms;
     uint64_t                _last_config_change_time_ms;
 
     // prepare list
@@ -245,6 +247,8 @@ private:
 
     // perf counters
     perf_counter_               _counter_commit_latency;
+    perf_counter_               _counter_private_log_size;
+
 };
 
 }} // namespace

@@ -1,0 +1,78 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     The thrift rpc message parser
+ *
+ * Revision history:
+ *     2016-04-04 Weijie Sun(sunweijie[at]xiaomi.com) First version
+ */
+
+#ifndef THRIFT_RPC_H
+#define THRIFT_RPC_H
+
+# include <dsn/internal/message_parser.h>
+
+namespace dsn
+{
+typedef union
+{
+    struct {
+        uint64_t is_forward_msg_disabled: 1;
+        uint64_t is_replication_needed: 1;
+        uint64_t unused: 63;
+    }u;
+    uint64_t o;
+}dsn_thrift_header_options;
+
+struct dsn_thrift_header
+{
+    header_type hdr_type;
+    int32_t hdr_crc32;
+    int32_t body_offset;
+    int32_t body_length;
+    int32_t request_hash;
+    int32_t client_timeout;
+    dsn_thrift_header_options opt;
+};
+
+class thrift_header_parser
+{
+private:
+    static void adjust_thrift_response(message_ex* msg);
+    static void add_postfix_for_thrift_response(message_ex* msg);
+
+public:
+    static void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer);
+    static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data);
+    static void add_prefix_for_thrift_response(message_ex* msg);
+    static int prepare_buffers_on_send(message_ex* msg, int offest, /*out*/message_parser::send_buf* buffers);
+    static int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/int* total_length);
+};
+
+}
+#endif // THRIFT_RPC_H

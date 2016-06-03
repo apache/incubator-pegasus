@@ -51,7 +51,7 @@ namespace dsn {
                 // RPC_SIMPLE_KV_READ
                 virtual void on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply);
                 // RPC_SIMPLE_KV_WRITE
-                virtual void on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
+                virtual void on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t> &reply);
                 // RPC_SIMPLE_KV_APPEND
                 virtual void on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
 

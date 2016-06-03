@@ -65,6 +65,7 @@ public:
     replica_init_info() { memset((void*)this, 0, sizeof(*this)); }
     error_code load(const char* file);
     error_code store(const char* file);
+    std::string to_string();
 };
 
 class replica_app_info
@@ -80,6 +81,17 @@ public:
 
 class replication_app_base
 {
+public:
+    // requests may be batched by replication and fed to replication
+    // app with the same decree, in this case, apps may need to
+    // be aware of the batch state for the current request
+    enum batch_state
+    {
+        BS_NOT_BATCH,  // request is not batched
+        BS_BATCH,      // request is batched but not the last in the same batch
+        BS_BATCH_LAST  // request is batched and the last in the same batch
+    };
+
 public:
     replication_app_base(::dsn::replication::replica* replica);
     ~replication_app_base() { }
@@ -222,6 +234,13 @@ private:
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;
     
+    //uncomment this because currently the app won't return the physical error
+    //int _physical_error;
+    bool _is_delta_state_learning_supported;
+    batch_state _batch_state;
+    ballot _batch_ballot;
+    decree _batch_decree;
+
     perf_counter_ _app_commit_throughput;
     perf_counter_ _app_commit_latency;
     perf_counter_ _app_commit_decree;

@@ -63,7 +63,21 @@ namespace dsn
             typedef server_load_balancer* (*factory)(server_state* state);
             
         public:
-            server_load_balancer(server_state* state): _state(state) {}
+            server_load_balancer(server_state* state): _state(state)
+            {
+                replica_assign_delay_ms_for_dropouts = dsn_config_get_value_uint64(
+                    "meta_server",
+                    "replica_assign_delay_ms_for_dropouts",
+                    300000,
+                    "replica_assign_delay_ms_for_dropouts, default is 300000"
+                    );
+                mutation_2pc_min_replica_count = dsn_config_get_value_uint64(
+                    "meta_server",
+                    "mutation_2pc_min_replica_count",
+                    2,
+                    "mutation_2pc_min_replica_count, default is 2"
+                    );
+            }
             virtual ~server_load_balancer() {}
 
             // load balancing for all
@@ -86,9 +100,13 @@ namespace dsn
 
         protected:
             void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
+            dsn::rpc_address find_minimal_load_machine(const partition_configuration& pc, bool primaryOnly);
 
         protected:
             server_state* _state;
+            uint64_t replica_assign_delay_ms_for_dropouts;
+            uint64_t mutation_2pc_min_replica_count;
+
         public:
             // switchs for replication test
             static bool s_disable_lb;

@@ -291,7 +291,140 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     return dsn::ERR_OK;
 }
 
+dsn::error_code replication_ddl_client::cluster_info(const std::string& file_name)
+{
+    std::shared_ptr<configuration_cluster_info_request> req(new configuration_cluster_info_request());
+
+    auto resp_task = request_meta<configuration_cluster_info_request>(
+            RPC_CM_CLUSTER_INFO,
+            req
+    );
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    configuration_cluster_info_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_cluster_info_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    size_t width = 0;
+    for(int i = 0; i < resp.keys.size(); i++)
+    {
+        if (resp.keys[i].size() > width)
+            width = resp.keys[i].size();
+    }
+
+    for(int i = 0; i < resp.keys.size(); i++)
+    {
+        out << std::setw(width) << std::left << resp.keys[i]
+            << " : " << resp.values[i] << std::endl;
+    }
+    out << std::endl << std::flush;
+    return dsn::ERR_OK;
+}
+
 dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
+{
+    int32_t app_id;
+    int32_t partition_count;
+    std::vector<partition_configuration> partitions;
+    dsn::error_code err = list_app(app_name, app_id, partition_count, partitions);
+    if(err != dsn::ERR_OK)
+    {
+        return err;
+    }
+
+    // print configuration_query_by_index_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    int width = strlen("partition_count");
+    out << std::setw(width) << std::left << "app_name" << " : " << app_name << std::endl;
+    out << std::setw(width) << std::left << "app_id" << " : " << app_id << std::endl;
+    out << std::setw(width) << std::left << "partition_count" << " : " << partition_count << std::endl;
+    if(detailed)
+    {
+        std::map<rpc_address, std::pair<int, int> > node_stat;
+        out << std::setw(width) << std::left << "details" << " : " << std::endl;
+        out << std::setw(10) << std::left << "pidx"
+            << std::setw(10) << std::left << "ballot"
+            << std::setw(20) << std::left << "replica_count"
+            << std::setw(25) << std::left << "primary"
+            << std::setw(40) << std::left << "secondaries"
+            << std::endl;
+        for(int i = 0; i < partitions.size(); i++)
+        {
+            const dsn::partition_configuration& p = partitions[i];
+            int replica_count = 0;
+            if (!p.primary.is_invalid())
+            {
+                replica_count++;
+                node_stat[p.primary].first++;
+            }
+            replica_count += p.secondaries.size();
+            std::stringstream oss;
+            oss << replica_count << "/" << p.max_replica_count;
+            out << std::setw(10) << std::left << p.pid.get_partition_index()
+                << std::setw(10) << std::left << p.ballot
+                << std::setw(20) << std::left << oss.str()
+                << std::setw(25) << std::left << p.primary.to_std_string()
+                << std::left<< p.secondaries.size() << ":[";
+            for(int j = 0; j < p.secondaries.size(); j++)
+            {
+                if(j!= 0)
+                    out << ",";
+                out << p.secondaries[j].to_std_string();
+                node_stat[p.secondaries[j]].second++;
+            }
+            out << "]" << std::endl;
+        }
+        out << std::endl;
+        out << std::setw(25) << std::left << "node"
+            << std::setw(10) << std::left << "primary"
+            << std::setw(10) << std::left << "secondary"
+            << std::setw(10) << std::left << "total"
+            << std::endl;
+        for (auto& kv : node_stat)
+        {
+            out << std::setw(25) << std::left << kv.first.to_string()
+                << std::setw(10) << std::left << kv.second.first
+                << std::setw(10) << std::left << kv.second.second
+                << std::setw(10) << std::left << (kv.second.first + kv.second.second)
+                << std::endl;
+        }
+    }
+    out << std::endl;
+    return dsn::ERR_OK;
+}
+
+dsn::error_code replication_ddl_client::list_app(const std::string& app_name,
+                                                 int32_t& app_id, int32_t& partition_count,
+                                                 std::vector<partition_configuration>& partitions)
 {
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
@@ -311,54 +444,16 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
     }
 
     dsn::configuration_query_by_index_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    dsn::unmarshall(resp_task->response(), resp);
     if(resp.err != dsn::ERR_OK)
     {
         return resp.err;
     }
 
-    // print configuration_query_by_index_response
-    std::streambuf * buf;
-    std::ofstream of;
+    app_id = resp.app_id;
+    partition_count = resp.partition_count;
+    partitions = resp.partitions;
 
-    if(!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
-
-    out << "app_name: " << app_name << std::endl
-        << "app_id: " << resp.app_id << std::endl
-        << "partition_count: " << resp.partition_count << std::endl;
-    if(detailed)
-    {
-        out << "details:" << std::endl
-            << std::setw(10) << std::left << "partition_index"
-            << std::setw(10) << std::left << "ballot"
-            << std::setw(20) << std::left << "max_replica_count"
-            << std::setw(25) << std::left << "primary"
-            << std::setw(40) << std::left << "secondaries"
-            << std::endl;
-        for(int i = 0; i < resp.partitions.size(); i++)
-        {
-            const dsn::partition_configuration& p = resp.partitions[i];
-            out << std::setw(10) << std::left << p.pid.get_partition_index()
-                << std::setw(10) << std::left << p.ballot
-                << std::setw(20) << std::left << p.max_replica_count
-                << std::setw(25) << std::left << p.primary.to_std_string()
-                << std::left<< p.secondaries.size() << ":[";
-            for(int j = 0; j < p.secondaries.size(); j++)
-            {
-                if(j!= 0)
-                    out << ",";
-                out << p.secondaries[j].to_std_string();
-            }
-            out << "]" << std::endl;
-        }
-    }
-    out << std::endl;
     return dsn::ERR_OK;
 }
 
