@@ -95,7 +95,7 @@ void replication_options::read_meta_servers()
 {
     // read meta_servers from machine list file
     meta_servers.clear();
-    std::string server_list = dsn_config_get_value_string("meta_server", "server_list", "", "meta server_list");
+    std::string server_list = dsn_config_get_value_string("meta_servers", "server_list", "", "meta server_list");
     std::list<std::string> lv;
     ::dsn::utils::split_args(server_list.c_str(), lv, ',');
     for (auto& s : lv)
@@ -108,7 +108,7 @@ void replication_options::read_meta_servers()
             meta_servers.push_back(ep);
         }
     }
-    dassert(meta_servers.size() > 0, "no meta server specified in config [meta_server].server_list");
+    dassert(meta_servers.size() > 0, "no meta server specified in config [meta_servers].server_list");
 
     std::ostringstream oss;
     for (auto& s : meta_servers)
