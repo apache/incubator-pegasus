@@ -434,33 +434,45 @@ void task::enqueue(task_worker_pool* pool)
         exec_internal();
         return;
     }
+    
     if (_spec->allow_inline)
     {
         // inlined
         // warning - this may lead to deadlocks, e.g., allow_inlined
         // task tries to get a non-recursive lock that is already hold
         // by the caller task
-        if (_spec->type == TASK_TYPE_COMPUTE)
+        
+        if (_node != get_current_node())
         {
-            if (_node != get_current_node())
-            {
-                tools::node_scoper ns(_node);
-                exec_internal();
-            }
-            else
-            {
-                exec_internal();
-            }
-            return;
+            tools::node_scoper ns(_node);
+            exec_internal();
+        }
+        else
+        {
+            exec_internal();
         }
 
-        // io tasks only inlined in io threads
-        if (get_current_worker2() == nullptr)
-        {
-            dassert(_node == task::get_current_node(), "");
-            exec_internal();
-            return;
-        }
+        //if (_spec->type == TASK_TYPE_COMPUTE)
+        //{
+        //    if (_node != get_current_node())
+        //    {
+        //        tools::node_scoper ns(_node);
+        //        exec_internal();
+        //    }
+        //    else
+        //    {
+        //        exec_internal();
+        //    }
+        //    return;
+        //}
+
+        //// io tasks only inlined in io threads
+        //if (get_current_worker2() == nullptr)
+        //{
+        //    dassert(_node == task::get_current_node(), "");
+        //    exec_internal();
+        //    return;
+        //}
     }
 
     // normal path

@@ -42,6 +42,7 @@
 # include <iostream>
 # include <vector>
 # include "stdlib.h"
+
 //#define DSN_IDL_TESTS_DEBUG
 
 enum Language {lang_cpp, lang_csharp};
@@ -177,27 +178,28 @@ void thrift_basic_type_serialization_checker(std::vector<T> &data, Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
-    for (auto input : data)
+    for (auto& i : data)
     {
+        T input = i;
         dsn::blob b(buf, 0, bufsize);
         dsn::binary_writer writer(b);
         if (fmt == format_binary)
         {
-            dsn::marshall_thrift_basic_Binary(writer, input);
+            dsn::marshall_thrift_binary(writer, input);
         }
         else
         {
-            dsn::marshall_thrift_basic_JSON(writer, input);
+            dsn::marshall_thrift_json(writer, input);
         }
         dsn::binary_reader reader(b);
         T output;
         if (fmt == format_binary)
         {
-            dsn::unmarshall_thrift_basic_Binary(reader, output);
+            dsn::unmarshall_thrift_binary(reader, output);
         }
         else
         {
-            dsn::unmarshall_thrift_basic_JSON(reader, output);
+            dsn::unmarshall_thrift_json(reader, output);
         }
         EXPECT_TRUE(input == output);
     }
@@ -206,17 +208,34 @@ void test_thrift_basic_type_serialization(Format fmt)
 {
     std::vector<bool> data_bool_t{true, false};
     thrift_basic_type_serialization_checker(data_bool_t, fmt);
+
     std::vector<int8_t> data_int8_t{std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), 0, 1 , -1, 13, -13};
     thrift_basic_type_serialization_checker(data_int8_t, fmt);
+
     std::vector<int16_t> data_int16_t{std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), 0, 1 , -1, 13, -13};
     thrift_basic_type_serialization_checker(data_int16_t, fmt);
+
     std::vector<int32_t> data_int32_t{std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), 0, 1 , -1, 13, -13};
     thrift_basic_type_serialization_checker(data_int32_t, fmt);
+
     std::vector<int64_t> data_int64_t{std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), 0, 1 , -1, 13, -13};
     thrift_basic_type_serialization_checker(data_int32_t, fmt);
+
     std::vector<std::string> data_string_t{std::string("hello"), std::string("world"), std::string("")};
     thrift_basic_type_serialization_checker(data_string_t, fmt);
+
     //TODO:: test double type
+
+    std::vector<std::vector<int32_t> > data_vec_int32_t{data_int32_t, std::vector<int32_t>()};
+    thrift_basic_type_serialization_checker(data_vec_int32_t, fmt);
+
+    std::map<int, std::string> m1;
+    m1[1] = "hello";
+    m1[233] = "world";
+    m1[-22] = "";
+    std::map<int, std::string> m2;
+    std::vector<std::map<int, std::string> > data_map_int32_str_t{m1, m2};
+    thrift_basic_type_serialization_checker(data_map_int32_str_t, fmt);
 }
 
 void check_thrift_generated_type_serialization(const dsn::idl::test::test_thrift_item &input, Format fmt)

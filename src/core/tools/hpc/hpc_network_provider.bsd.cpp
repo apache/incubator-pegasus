@@ -483,7 +483,7 @@ namespace dsn
                 socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
                 if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
                 {
-                    dassert(false, "(server) getpeername failed, err = %s", strerror(errno));
+                    derror("(server) getpeername failed, err = %s", strerror(errno));
                 }
 
                 _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
@@ -518,8 +518,10 @@ namespace dsn
                 socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
                 if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
                 {
-                    dassert(false, "(s = %d) (client) getpeername failed, err = %s",
+                    derror("(s = %d) (client) getpeername failed, err = %s",
                         _socket, strerror(errno));
+                    on_failure();
+                    return;
                 }
 
                 dinfo("(s = %d) client session %s connected",
@@ -549,7 +551,7 @@ namespace dsn
 
                 if (getsockopt(_socket, SOL_SOCKET, SO_ERROR, (void*)&err, &err_len) < 0)
                 {
-                    dassert(false, "getsockopt for SO_ERROR failed, err = %s", strerror(errno));
+                    derror("getsockopt for SO_ERROR failed, err = %s", strerror(errno));
                 }
 
                 derror("(s = %d) connect failed (in epoll), err = %s", _socket, strerror(err));

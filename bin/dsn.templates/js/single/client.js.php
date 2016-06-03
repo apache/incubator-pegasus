@@ -32,18 +32,18 @@ function generate_request_helper($client, $func, $async, $serialization_fmt)
         this.get_<?=$func->name?>_address(hash),
         "POST",
 <?php if ($func->params[0]->is_base_type()) { ?>
-        this.marshall_basic_type(args, "<?=$func->get_return_type()?>"),
+        this.marshall(args, "<?=$func->get_request_type_name()?>"),
 <?php } else { ?>
-        this.marshall_generated_type(args),
+        this.marshall(args, "struct"),
 <?php } ?>
         "<?=$serialization_fmt?>",
         <?php if($async) {echo "true";} else {echo "false";}?>,
         function(result) {
 <?php if (thelpers::is_base_type($func->ret)) { ?>
-            ret = self.unmarshall_basic_type(result, "<?=$func->get_return_type()?>");
+            ret = self.unmarshall(result, null, "<?=$func->get_return_type()?>");
 <?php } else { ?>
             ret = new <?=$func->get_cpp_return_type()?>();
-            self.unmarshall_generated_type(result, ret);
+            self.unmarshall(result, ret, "struct");
 <?php } ?>
 <?php if ($async) { ?>
             on_success(ret);
@@ -73,20 +73,12 @@ foreach ($_PROG->services as $svc)
 
 <?=$client?>.prototype = {};
 
-<?=$client?>.prototype.marshall_generated_type = function(value) {
-    return marshall_thrift_json_generated_type(value);
+<?=$client?>.prototype.marshall = function(value, type) {
+    return marshall_thrift_json(value, type);
 }
 
-<?=$client?>.prototype.marshall_basic_type = function(value, type) {
-    return marshall_thrift_json_basic_type(value, type);
-}
-
-<?=$client?>.prototype.unmarshall_generated_type = function(buf, ret) {
-    unmarshall_thrift_json_generated_type(buf, ret);
-}
-
-<?=$client?>.prototype.unmarshall_basic_type = function(buf, type) {
-    return unmarshall_thrift_json_basic_type(buf, type);
+<?=$client?>.prototype.unmarshall = function(buf, value, type) {
+    return unmarshall_thrift_json(buf, value, type);
 }
 
 <?=$client?>.prototype.get_address = function(url, hash) {

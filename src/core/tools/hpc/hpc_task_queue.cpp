@@ -128,12 +128,21 @@ namespace dsn
             {
                 return nullptr;
             }
-            task* head = nullptr;
+            task* head = nullptr, * last = nullptr;
             auto out = boost::make_function_output_iterator(
-                [&head] (task* in)
+                [&head, &last] (task* in)
                 {
-                    in->next = head;
-                    head = in;
+                    if (last)
+                    {
+                        last->next = in;
+                    }
+                    else
+                    {
+                        head = in;
+                    }
+ 
+                    last = in;
+                    last->next = nullptr;
                 });
             auto count = batch_size;
             do {

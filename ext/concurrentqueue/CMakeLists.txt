@@ -2,15 +2,12 @@
 #project(gtest_builder C CXX)
 include(ExternalProject)
 
-if(DSN_GIT_SOURCE STREQUAL "xiaomi")
-    set(target_url "http://git.n.xiaomi.com/pegasus/concurrentqueue.git")
-else()
-    set(target_url "https://github.com/imzhenyu/concurrentqueue.git")
-endif()
+set(target_url ${CONQUEUE_GIT_SOURCE})
+set(git_tag ${CONQUEUE_GIT_TAG})
 
 ExternalProject_Add(concurrentqueue
     GIT_REPOSITORY ${target_url}
-    GIT_TAG master
+    GIT_TAG ${git_tag}
 # Disable install step
     INSTALL_COMMAND ""
 )
