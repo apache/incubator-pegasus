@@ -17,9 +17,9 @@ set(RAPIDJSON_GIT_SOURCE "https://github.com/shengofsun/rapidjson-header.git")
 set(RAPIDJSON_GIT_TAG "master")
 
 #for protobuf
-set(PROTOBUF_GIT_SOURCE "https://github.com/ykwd/protobuf.git")
-set(PROTOBUF_GIT_TAG "rdsn")
+set(PROTOBUF_GIT_SOURCE "https://github.com/imzhenyu/protobuf.git")
+set(PROTOBUF_GIT_TAG "master")
 
 #for thrift
-set(THRIFT_GIT_SOURCE "https://github.com/ykwd/thrift.git")
+set(THRIFT_GIT_SOURCE "https://github.com/imzhenyu/thrift.git")
 set(THRIFT_GIT_TAG "master")

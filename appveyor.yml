@@ -5,7 +5,7 @@ environment:
     DSN_BOOST: boost_1_59_0
     DSN_BOOST_LIB: lib64-msvc-14.0
     DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_59_0_vc14_amd64.7z?raw=true
-    DSN_THRIFT_EXE: https://github.com/ykwd/thrift/commits/master/pre-built/windows8.1/thrift.exe
+    DSN_THRIFT_EXE: https://github.com/imzhenyu/thrift/commits/master/pre-built/windows8.1/thrift.exe
     DSN_CMAKE_BUILD_TYPE: Debug
 
 install:
