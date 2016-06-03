@@ -53,7 +53,7 @@ namespace dsn {
         {
         public:
             meta_service_app(dsn_gpid gpid);
-            ~meta_service_app();
+            virtual ~meta_service_app();
 
             virtual ::dsn::error_code start(int argc, char** argv) override;
 

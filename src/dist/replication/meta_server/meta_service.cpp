@@ -56,7 +56,7 @@ meta_service::meta_service()
 {
     _opts.initialize();
     // create in constructor because it may be used in checker before started
-    _state = new server_state();
+    _state = new server_state(this);
 }
 
 meta_service::~meta_service()
@@ -114,7 +114,8 @@ error_code meta_service::start()
         "simple_load_balancer",
         "server_load_balancer provider type"
         );
-    
+
+    ddebug("create server_load_balancer: %s", server_load_balancer);
     _balancer = dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::create(
         server_load_balancer,
         PROVIDER_TYPE_MAIN,
@@ -174,6 +175,12 @@ void meta_service::register_rpc_handlers()
         RPC_CM_LIST_NODES,
         "RPC_CM_LIST_NODES",
         &meta_service::on_list_nodes
+        );
+
+    register_rpc_handler(
+        RPC_CM_CLUSTER_INFO,
+        "RPC_CM_CLUSTER_INFO",
+        &meta_service::on_cluster_info
         );
 
     register_rpc_handler(
@@ -238,29 +245,38 @@ void meta_service::start_load_balance()
     _started = true;
 }
 
-bool meta_service::check_primary(dsn_message_t req)
+int meta_service::check_primary(dsn_message_t req)
 {
     if (!_failure_detector->is_primary())
     {
+        dsn_msg_options_t options;
+        dsn_msg_get_options(req, &options);
+        if ( options.context.u.is_forward_disabled )
+            return -1;
+
         auto primary = _failure_detector->get_primary();
         dinfo("primary address: %s", primary.to_string());
         if (!primary.is_invalid())
         {
             dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
-            return false;
+            return 0;
         }
     }
 
-    return true;
+    return 1;
+}
+
+rpc_address meta_service::get_primary()
+{
+    return _failure_detector->get_primary();
 }
 
 #define META_STATUS_CHECK_ON_RPC(dsn_msg, response_struct)\
     dinfo("rpc %s called", __FUNCTION__);\
-    if ( !check_primary(dsn_msg) )\
-        return;\
-    if ( !_started )\
-    {\
-        response_struct.err = ERR_SERVICE_NOT_ACTIVE;\
+    int result = check_primary(dsn_msg);\
+    if (result == 0) return;\
+    if (result == -1 || !_started) {\
+        response_struct.err = (result==-1)?ERR_FORWARD_TO_OTHERS:ERR_SERVICE_NOT_ACTIVE;\
         reply(dsn_msg, response_struct);\
         return;\
     }\
@@ -306,6 +322,13 @@ void meta_service::on_list_nodes(dsn_message_t req)
     configuration_list_nodes_request request;
     _state->list_nodes(request, response);
     reply(req, response);
+}
+
+void meta_service::on_cluster_info(dsn_message_t req)
+{
+    configuration_cluster_info_response response;
+    META_STATUS_CHECK_ON_RPC(req, response);
+    _state->cluster_info(req);
 }
 
 // partition server & client => meta server
@@ -431,8 +454,24 @@ void meta_service::on_load_balance_timer()
 
 void meta_service::on_config_changed(gpid gpid)
 {
+    if (_state->freezed())
+        return;
+
     if (_failure_detector->is_primary())
     {
         _balancer->run(gpid);
     }
+}
+
+void meta_service::on_node_changed(rpc_address node)
+{
+    tasking::enqueue(LPC_LBM_RUN, this, [this](){
+        if (_state->freezed())
+            return;
+
+        if (_failure_detector->is_primary())
+        {
+            _balancer->run();
+        }
+    });
 }

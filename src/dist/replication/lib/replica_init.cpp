@@ -51,16 +51,18 @@ using namespace dsn::service;
 
 error_code replica::initialize_on_new()
 {
+    ddebug("%s: initialize replica on new, dir = %s", name(), _dir.c_str());
+
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
-        derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
+        derror("%s: cannot allocate new replica, because dir %s is already exists", name(), _dir.c_str());
         return ERR_PATH_ALREADY_EXIST;
     }
 
     if (!dsn::utils::filesystem::create_directory(_dir))
     {
-        derror("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
+        derror("%s: cannot allocate new replica, because create dir %s failed", name(), _dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -89,7 +91,7 @@ error_code replica::initialize_on_new()
     }
     else
     {
-        derror("%s: new replica failed: %s", rep->name(), err.to_string());
+        derror("%s: new replica failed, err = %s", rep->name(), err.to_string());
         rep->close();
         delete rep;
         rep = nullptr;
@@ -103,9 +105,11 @@ error_code replica::initialize_on_new()
 
 error_code replica::initialize_on_load()
 {
+    ddebug("%s: initialize replica on load, dir = %s", name(), _dir.c_str());
+
     if (!dsn::utils::filesystem::directory_exists(_dir))
     {
-        derror("cannot load replica @ %s, because dir not exist", _dir.c_str());
+        derror("%s: cannot load replica, because dir %s is not exist", name(), _dir.c_str());
         return ERR_PATH_NOT_FOUND;
     }
 
@@ -145,12 +149,12 @@ error_code replica::initialize_on_load()
     err = rep->initialize_on_load();
     if (err == ERR_OK)
     {
-        ddebug("%s: load replica @ %s succeed", dir, rep->name());
+        ddebug("%s: load replica succeed", rep->name());
         return rep;
     }
     else
     {
-        derror("%s: load replica @ %s failed: %s", rep->name(), dir, err.to_string());
+        derror("%s: load replica failed, err = %s", rep->name(), err.to_string());
         rep->close();
         delete rep;
         rep = nullptr;
@@ -223,6 +227,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         // replay the logs
         if (nullptr != _private_log)
         {
+            ddebug("%s: start to replay private log", name());
+
+            std::map<gpid, decree> replay_condition;
+            replay_condition[_config.pid] = _app->last_committed_decree();
+
+            uint64_t start_time = now_ms();
             err = _private_log->open(
                 [this](mutation_ptr& mu)
                 {
@@ -238,13 +248,15 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         );
                 }
                 );
+            uint64_t finish_time = now_ms();
 
             if (err == ERR_OK)
             {
                 ddebug(
-                    "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
+                    "%s: replay private log succeed, durable = %" PRId64 ", committed = %" PRId64 ", "
                     "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
-                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64,
+                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64 ", "
+                    "time_used = %" PRIu64 " ms",
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
@@ -252,7 +264,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     get_ballot(),
                     _app->init_info().init_offset_in_private_log,
                     _private_log->max_decree(get_gpid()),
-                    _private_log->max_commit_on_disk()
+                    _private_log->max_commit_on_disk(),
+                    finish_time - start_time
                     );
                 _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
@@ -261,15 +274,17 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             else
             {
                 derror(
-                    "%s: private log initialized with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-                    "maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64,
+                    "%s: replay private log failed, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+                    "maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                    "time_used = %" PRIu64 " ms",
                     name(),
                     err.to_string(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->init_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log,
+                    finish_time - start_time
                     );
 
                 set_inactive_state_transient(false);
@@ -295,7 +310,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
     if (err != ERR_OK)
     {
-        derror( "%s: open replica failed, error = %s", name(), err.to_string());
+        derror("%s: open replica failed, err = %s", name(), err.to_string());
         _app->close(false);
         _app = nullptr;
     }
@@ -312,7 +327,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     auto offset = mu->data.header.log_offset;
     if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -325,7 +340,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     
     if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -349,7 +364,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 
     if (d <= last_committed_decree())
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64 ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -364,7 +379,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     auto old = _prepare_list->get_mutation_by_decree(d);
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
-        ddebug(
+        dinfo(
             "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 "), decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
@@ -384,7 +399,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         dassert(ret, "");
     }
 
-    ddebug(
+    dinfo(
         "%s: replay mutation ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64,
         name(),
         mu->data.header.ballot,

@@ -64,7 +64,6 @@ typedef std::unordered_map<gpid, std::shared_ptr<configuration_update_request> >
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
-
 struct partition_configuration_stateless
 {
     ::dsn::partition_configuration& config;
@@ -75,14 +74,14 @@ struct partition_configuration_stateless
     std::vector<dsn::rpc_address>& worker_replicas() { return config.last_drops; }
 
     std::vector<dsn::rpc_address>& host_replicas() { return config.secondaries; }
-
 };
 
+class meta_service;
 class server_state :
     public ::dsn::serverlet<server_state>
 {
 public:
-    server_state();
+    server_state(meta_service* meta_svc);
     virtual ~server_state();
 
     // initialize server state
@@ -137,6 +136,8 @@ public:
     void list_apps(configuration_list_apps_request& request, /*out*/ configuration_list_apps_response& response);
     void list_nodes(configuration_list_nodes_request& request, /*out*/ configuration_list_nodes_response& response);
 
+    void cluster_info(dsn_message_t msg);
+
     void unfree_if_possible_on_start();
 
     // if is freezed
@@ -149,6 +150,11 @@ public:
     error_code dump_from_remote_storage(const char* format, const char* local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage);
 
+    const bool is_node_alive(dsn::rpc_address addr)
+    {
+        auto iter = _nodes.find(addr);
+        return iter!=_nodes.end() && iter->second.is_alive;
+    }
 public:
     static int32_t _default_max_replica_count;
 
@@ -196,6 +202,8 @@ private:
     friend class dsn::dist::server_load_balancer;
     friend class simple_load_balancer;
     friend class greedy_load_balancer;
+
+    meta_service*                                       _meta_svc;
 
     std::string                                         _cluster_root;
 

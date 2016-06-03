@@ -365,6 +365,12 @@ mutation_log::~mutation_log()
 
 error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback)
 {
+    std::map<gpid, decree> replay_condition;
+    open(read_callback, write_error_callback, replay_condition);
+}
+
+error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback, const std::map<gpid, decree>& replay_condition)
+{
     dassert(!_is_opened, "cannot open a opened mutation_log");
     dassert(nullptr == _current_log_file, "the current log file must be null at this point");
 
@@ -413,7 +419,16 @@ error_code mutation_log::open(replay_callback read_callback, io_failure_callback
             }
         }
 
-        ddebug("open log file %s succeed", fpath.c_str());
+        if (_is_private)
+        {
+            ddebug("open private log %s succeed, start_offset = %" PRId64 ", end_offset = %" PRId64 ", size = %" PRId64 ", privious_max_decree = %" PRId64,
+                   fpath.c_str(), log->start_offset(), log->end_offset(), log->end_offset() - log->start_offset(), log->previous_log_max_decree(_private_gpid));
+        }
+        else
+        {
+            ddebug("open shared log %s succeed, start_offset = %" PRId64 ", end_offset = %" PRId64 ", size = %" PRId64 "",
+                   fpath.c_str(), log->start_offset(), log->end_offset(), log->end_offset() - log->start_offset());
+        }
 
         dassert(_log_files.find(log->index()) == _log_files.end(), "");
         _log_files[log->index()] = log;
@@ -421,10 +436,100 @@ error_code mutation_log::open(replay_callback read_callback, io_failure_callback
 
     file_list.clear();
 
+    // filter useless log
+    std::map<int, log_file_ptr>::iterator replay_begin = _log_files.begin();
+    std::map<int, log_file_ptr>::iterator replay_end = _log_files.end();
+    if (!replay_condition.empty())
+    {
+        if (_is_private)
+        {
+            auto find = replay_condition.find(_private_gpid);
+            dassert(find != replay_condition.end(), "");
+            for (auto it = _log_files.begin(); it != _log_files.end(); ++it)
+            {
+                if (it->second->previous_log_max_decree(_private_gpid) <= find->second)
+                {
+                    // previous logs can be ignored
+                    replay_begin = it;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // find the largest file which can be ignored.
+            // after iterate, the 'mark_it' will point to the largest file which can be ignored.
+            std::map<int, log_file_ptr>::reverse_iterator mark_it;
+            std::set<gpid> kickout_replicas;
+            replica_log_info_map max_decrees; // max_decrees for log file at mark_it.
+            for (mark_it = _log_files.rbegin(); mark_it != _log_files.rend(); ++mark_it)
+            {
+                bool ignore_this = true;
+
+                if (mark_it == _log_files.rbegin())
+                {
+                    // the last file should not be ignored
+                    ignore_this = false;
+                }
+
+                if (ignore_this)
+                {
+                    for (auto& kv : replay_condition)
+                    {
+                        if (kickout_replicas.find(kv.first) != kickout_replicas.end())
+                        {
+                            // no need to consider this replica
+                            continue;
+                        }
+
+                        auto find = max_decrees.find(kv.first);
+                        if (find == max_decrees.end() || find->second.max_decree <= kv.second)
+                        {
+                            // can ignore for this replica
+                            kickout_replicas.insert(kv.first);
+                        }
+                        else
+                        {
+                            ignore_this = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (ignore_this)
+                {
+                    // found the largest file which can be ignored
+                    break;
+                }
+
+                // update max_decrees for the next log file
+                max_decrees = mark_it->second->previous_log_max_decrees();
+            }
+
+            if (mark_it != _log_files.rend())
+            {
+                // set replay_begin to the next position of mark_it.
+                replay_begin = _log_files.find(mark_it->first);
+                dassert(replay_begin != _log_files.end(), "");
+                replay_begin++;
+                dassert(replay_begin != _log_files.end(), "");
+            }
+        }
+
+        for (auto it = _log_files.begin(); it != replay_begin; it++)
+        {
+            ddebug("ignore log %s", it->second->path().c_str());
+        }
+    }
+
     // replay with the found files
+    std::map<int, log_file_ptr> replay_logs(replay_begin, replay_end);
     int64_t end_offset = 0;
     err = replay(
-        _log_files,
+        replay_logs,
         [this, read_callback](mutation_ptr& mu)
         {
             bool ret = true;
@@ -598,10 +703,11 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_update(size_t size, gpid
     )
 {
     end_offset = log->start_offset();
-    dinfo("replay mutation log %s: offset = [%" PRId64 ", %" PRId64 ")",
+    ddebug("start to replay mutation log %s, offset = [%" PRId64 ", %" PRId64 "), size = %" PRId64,
         log->path().c_str(),
         log->start_offset(),
-        log->end_offset()
+        log->end_offset(),
+        log->end_offset() - log->start_offset()
         );
 
     ::dsn::blob bb;
@@ -655,6 +761,10 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_update(size_t size, gpid
         end_offset += sizeof(log_block_header);
     }
 
+    ddebug("finish to replay mutation log %s, err = %s",
+        log->path().c_str(),
+        err.to_string()
+        );
     return err;
 }
 
@@ -1155,6 +1265,7 @@ int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t v
         }
     }
 
+    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
     return deleted;
 }
 
@@ -1330,6 +1441,8 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
             _log_files.erase(it->first);
         }
     }
+
+    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
 
     return deleted;
 }
@@ -1807,6 +1920,12 @@ void log_file::reset_stream()
         _stream->reset(0);
     }
     _crc32 = 0;
+}
+
+decree log_file::previous_log_max_decree(const dsn::gpid &pid)
+{
+    auto it = _previous_log_max_decrees.find(pid);
+    return it == _previous_log_max_decrees.end() ? 0 : it->second.max_decree;
 }
 
 int log_file::read_file_header(binary_reader& reader)

@@ -8,7 +8,7 @@ endif()
 
 set(THRIFT_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/thrift")
 
-set (THRIFT_CMAKE_ARGS
+set(THRIFT_CMAKE_ARGS
     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE};"
     "-DWITH_JAVA=OFF;"
     "-DWITH_PYTHON=OFF;"
@@ -24,7 +24,7 @@ set (THRIFT_CMAKE_ARGS
     "-DCMAKE_INSTALL_PREFIX=${THRIFT_INSTALL_PREFIX};"
 )
 
-if (WIN32)
+if(WIN32)
     list(APPEND THRIFT_CMAKE_ARGS
         "${THRIFT_CMAKE_ARGS}"
         "-DBUILD_CSHARP=ON;"
@@ -33,11 +33,11 @@ if (WIN32)
         "-DBOOST_INCLUDEDIR=${BOOST_INCLUDEDIR};"
         "-DBOOST_LIBRARYDIR=${BOOST_LIBRARYDIR};"
     )
-else ()
+else()
     list(APPEND THRIFT_CMAKE_ARGS
         "-DWITH_STATIC_LIB=OFF;"
     )
-endif ()
+endif()
 
 ExternalProject_Add(thrift
     GIT_REPOSITORY ${target_url}

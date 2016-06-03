@@ -43,12 +43,15 @@
 # include <rapidjson/document.h>
 # include <rapidjson/writer.h>
 
+# include "../zookeeper/zookeeper_session_mgr.h"
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "meta.server.state"
 
 # include "dump_file.h"
+# include "meta_service.h"
 
 int32_t server_state::_default_max_replica_count = 3;
 
@@ -119,11 +122,12 @@ std::string join_path(const std::string& input1, const std::string& input2)
 }
 
 /// server state member functions
-server_state::server_state()
-    : serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
+server_state::server_state(meta_service* meta_svc)
+    : ::dsn::serverlet<server_state>("meta.server.state"),
+    _meta_svc(meta_svc), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
-    _node_live_percentage_threshold_for_update = 65;
+    _node_live_percentage_threshold_for_update = 50;
     _freeze = true;
     _storage = nullptr;    
 }
@@ -279,7 +283,13 @@ error_code server_state::initialize()
         "meta_server",
         "default_max_replica_count",
         3,
-        "the default value of max_replica_count for all apps");
+        "the default value of max_replica_count for all apps, default is 3");
+
+    _node_live_percentage_threshold_for_update = (int32_t)dsn_config_get_value_uint64(
+        "meta_server",
+        "node_live_percentage_threshold_for_update",
+        50,
+        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, then freeze the cluster; default is 50");
 
     _min_live_node_count_for_unfreeze = (int32_t)dsn_config_get_value_uint64(
         "meta_server", 
@@ -792,7 +802,7 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
     if (_node_live_count != old_lc)
     {
         _freeze = set_freeze();
-        dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
+        ddebug("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
     }
 }
 
@@ -1247,6 +1257,32 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
             }
         }
         );
+}
+
+void server_state::cluster_info(dsn_message_t msg)
+{
+    configuration_cluster_info_request request;
+    configuration_cluster_info_response response;
+    ::unmarshall(msg, request);
+    {
+        response.keys.push_back("meta_servers");
+        std::ostringstream oss;
+        for (size_t i = 0; i < _meta_svc->get_opts().meta_servers.size(); ++i)
+        {
+            if (i != 0)
+                oss << ", ";
+            oss << _meta_svc->get_opts().meta_servers[i].to_string();
+        }
+        response.values.push_back(oss.str());
+        response.keys.push_back("primary_meta_server");
+        response.values.push_back(_meta_svc->get_primary().to_string());
+        response.keys.push_back("zookeeper_servers");
+        response.values.push_back(::dsn::dist::zookeeper_session_mgr::instance().zoo_hosts());
+        response.keys.push_back("zookeeper_cluster_root");
+        response.values.push_back(_cluster_root);
+        response.err = dsn::ERR_OK;
+    }
+    reply(msg, response);
 }
 
 void server_state::update_configuration(

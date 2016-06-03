@@ -31,6 +31,8 @@
  * Revision history:
  *     2016-01-05, Tianyi Wang, first version
  */
+
+#include <cinttypes>
 #include <dsn/cpp/address.h>
 #include <dsn/internal/aio_provider.h>
 #include <gtest/gtest.h>

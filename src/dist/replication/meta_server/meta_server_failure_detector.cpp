@@ -74,6 +74,7 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     }
 
     // create lock service
+    ddebug("create distributed_lock_service: %s", distributed_lock_service_type);
     _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
         distributed_lock_service_type,
         PROVIDER_TYPE_MAIN
@@ -150,6 +151,8 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
         "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
+
+    _svc->on_node_changed(node);
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
@@ -286,7 +289,7 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
     _lock_svc = nullptr;
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state();
+    _state = new server_state(nullptr);
 }
 
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address, bool is_myself_leader)
@@ -294,6 +297,6 @@ void meta_server_failure_detector::set_leader_for_test(rpc_address leader_addres
     utils::auto_lock<zlock> l(_primary_address_lock);
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state();
+    _state = new server_state(nullptr);
 }
 

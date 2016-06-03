@@ -530,7 +530,6 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_BUSY_CREATING)
     DEFINE_ERR_CODE(ERR_BUSY_DROPPING)
     DEFINE_ERR_CODE(ERR_NETWORK_FAILURE)
-
 /*@}*/
 } // end namespace
 

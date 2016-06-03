@@ -83,48 +83,6 @@ void simple_load_balancer::run(gpid gpid)
     run_lb(_state->_apps[gpid.get_app_id() - 1].info, pc, _state->_apps[gpid.get_app_id() - 1].info.is_stateful);
 }
 
-::dsn::rpc_address simple_load_balancer::find_minimal_load_machine(bool primaryOnly)
-{
-    std::vector<std::pair< ::dsn::rpc_address, int>> stats;
-
-    for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); ++it)
-    {
-        if (it->second.is_alive)
-        {
-            stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.primaries.size()
-                : it->second.partitions.size())));
-        }
-    }
-
-    if (stats.empty())
-    {
-        return ::dsn::rpc_address();
-    }
-    
-    std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
-    {
-        return l.second < r.second || (l.second == r.second && l.first < r.first);
-    });
-
-    if (s_lb_for_test)
-    {
-        // alway use the first (minimal) one
-        return stats[0].first;
-    }
-
-    int candidate_count = 1;
-    int val = stats[0].second;
-
-    for (size_t i = 1; i < stats.size(); i++)
-    {
-        if (stats[i].second > val)
-            break;
-        candidate_count++;
-    }
-
-    return stats[dsn_random32(0, candidate_count - 1)].first;
-}
-
 void simple_load_balancer::run_lb(app_info& info, partition_configuration& pc, bool is_stateful)
 {
     if (_state->freezed() && is_stateful)
@@ -155,7 +113,7 @@ void simple_load_balancer::run_lb(app_info& info, partition_configuration& pc, b
 
             else if (pc.last_drops.size() == 0)
             {
-                proposal.node = find_minimal_load_machine(true);
+                proposal.node = find_minimal_load_machine(pc, true);
                 proposal.type = config_type::CT_ASSIGN_PRIMARY;
             }
 
@@ -182,7 +140,7 @@ void simple_load_balancer::run_lb(app_info& info, partition_configuration& pc, b
         else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
         {
             proposal.type = config_type::CT_ADD_SECONDARY;
-            proposal.node = find_minimal_load_machine(false);
+            proposal.node = find_minimal_load_machine(pc, false);
             if (proposal.node.is_invalid() == false &&
                 proposal.node != pc.primary &&
                 std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
@@ -204,7 +162,7 @@ void simple_load_balancer::run_lb(app_info& info, partition_configuration& pc, b
         if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
         {
             proposal.type = config_type::CT_ADD_SECONDARY;
-            proposal.node = find_minimal_load_machine(false);
+            proposal.node = find_minimal_load_machine(pc, false);
             if (proposal.node.is_invalid() == false)
             {
                 bool send = true;

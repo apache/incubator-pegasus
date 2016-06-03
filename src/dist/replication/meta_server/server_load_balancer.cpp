@@ -36,6 +36,11 @@
 
 # include "server_load_balancer.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "server.load.balancer"
+
 namespace dsn
 {
     namespace dist
@@ -47,13 +52,60 @@ namespace dsn
         // meta server => partition server
         void server_load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
         {
-            dinfo("send proposal %s of %s, current ballot = %" PRId64,
+            ddebug("send proposal to %s: type = %s, node = %s, gpid = %u.%u, current ballot = %" PRId64,
+                node.to_string(),
                 enum_to_string(proposal.type),
                 proposal.node.to_string(),
+                proposal.config.pid.get_app_id(),
+                proposal.config.pid.get_partition_index(),
                 proposal.config.ballot
                 );
             dassert(proposal.info.app_type != "", "make sure app-info is filled properly before sending the proposal");
             rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.pid));
+        }
+
+        ::dsn::rpc_address server_load_balancer::find_minimal_load_machine(const partition_configuration& pc, bool primaryOnly)
+        {
+            std::vector<std::pair< ::dsn::rpc_address, int>> stats;
+
+            for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); ++it)
+            {
+                if (it->second.is_alive &&
+                    it->first != pc.primary &&
+                    std::find(pc.secondaries.begin(), pc.secondaries.end(), it->first) == pc.secondaries.end())
+                {
+                    stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.primaries.size()
+                        : it->second.partitions.size())));
+                }
+            }
+
+            if (stats.empty())
+            {
+                return ::dsn::rpc_address();
+            }
+
+            std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
+            {
+                return l.second < r.second || (l.second == r.second && l.first < r.first);
+            });
+
+            if (s_lb_for_test)
+            {
+                // alway use the first (minimal) one
+                return stats[0].first;
+            }
+
+            int candidate_count = 1;
+            int val = stats[0].second;
+
+            for (size_t i = 1; i < stats.size(); i++)
+            {
+                if (stats[i].second > val)
+                    break;
+                candidate_count++;
+            }
+
+            return stats[dsn_random32(0, candidate_count - 1)].first;
         }
 
         void server_load_balancer::explictly_send_proposal(gpid gpid, rpc_address receiver, config_type::type type, rpc_address node)

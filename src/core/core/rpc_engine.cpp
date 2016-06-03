@@ -222,7 +222,8 @@ namespace dsn {
             // failure injection not applied
             if (spec->on_rpc_response_enqueue.execute(call, true))
             {
-                call->set_delay(delay_ms);
+                if (call->delay_milliseconds() == 0)
+                    call->set_delay(delay_ms);
                 call->enqueue(err, reply);
             }
 

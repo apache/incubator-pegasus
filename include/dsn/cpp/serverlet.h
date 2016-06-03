@@ -111,6 +111,8 @@ namespace dsn
         template<typename TResponse>
         void reply(dsn_message_t request, const TResponse& resp);
 
+        template<typename TResponse>
+        void reply_field(dsn_message_t request, const TResponse& resp, int field_id);
     public:
         const std::string& name() const { return _name; }
 
@@ -236,7 +238,6 @@ namespace dsn
         ::dsn::marshall(msg, resp);
         dsn_rpc_reply(msg);
     }
-
     /*@}*/
 } // end namespace
 

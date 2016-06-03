@@ -64,6 +64,11 @@ replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char*
     std::stringstream ss;
     ss << _name << ".2pc.latency(ns)";
     _counter_commit_latency.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
+
+    ss.str("");
+    ss << _name << ".private_log_size(MB)";
+    _counter_private_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
+
 }
 
 //void replica::json_state(std::stringstream& out) const
@@ -98,7 +103,8 @@ void replica::init_state()
     _config.pid.set_partition_index(0);
     _config.status = partition_status::PS_INACTIVE;
     _primary_states.membership.ballot = 0;
-    _last_config_change_time_ms = now_ms();
+    _create_time_ms = now_ms();
+    _last_config_change_time_ms = _create_time_ms;
     _private_log = nullptr;
 }
 
@@ -119,6 +125,8 @@ void replica::on_client_read(task_code code, dsn_message_t request)
 {    
     if (status() == partition_status::PS_INACTIVE || status() == partition_status::PS_POTENTIAL_SECONDARY)
     {
+        derror("%s: invalid status: partition_status=%s",
+               name(), enum_to_string(status()));
         response_client_message(request, ERR_INVALID_STATE);
         return;
     }
@@ -128,8 +136,21 @@ void replica::on_client_read(task_code code, dsn_message_t request)
         // a small window where the state is not the latest yet
         last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
     {
-        response_client_message(request, ERR_INVALID_STATE);
-        return;
+        if (status() != partition_status::PS_PRIMARY)
+        {
+            derror("%s: invalid status: partition_status=%s",
+                   name(), enum_to_string(status()));
+            response_client_message(request, ERR_INVALID_STATE);
+            return;
+        }
+
+        if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
+        {
+            derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
+                   name(), last_committed_decree(), _primary_states.last_prepare_decree_on_new_primary);
+            response_client_message(request, ERR_INVALID_STATE);
+            return;
+        }
     }
 
     dassert (_app != nullptr, "");
@@ -145,7 +166,14 @@ void replica::response_client_message(dsn_message_t request, error_code error)
         return;
     }   
 
-    ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
+    if (error == ERR_OK)
+    {
+        ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
+    }
+    else
+    {
+        derror("%s: reply client read/write, err = %s", name(), error.to_string());
+    }
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
@@ -197,13 +225,11 @@ void replica::check_state_completeness()
 
     auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_shared_log);
     dassert(mind <= last_durable_decree(), "");
-    _stub->_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_shared_log);
 
     if (_private_log != nullptr)
     {   
         auto mind = _private_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_private_log);
         dassert(mind <= last_durable_decree(), "");
-        _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
     }
 }
 
@@ -227,7 +253,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         else
         {
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -252,7 +278,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         else
         {
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -277,7 +303,7 @@ void replica::execute_mutation(mutation_ptr& mu)
             // make sure private log saves the state,
             // catch-up will be done later after the checkpoint task is finished
 
-            ddebug(
+            dinfo(
                 "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -289,7 +315,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
     }
     
-    ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+    dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
 
     _counter_commit_latency.set(dsn_now_ns() - mu->create_ts_ns());
 
