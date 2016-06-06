@@ -110,6 +110,11 @@ $.get("/api/psutil", function(data, status){
 }, 5000);
     });
     }
+
+if(localStorage['meta_server_address']==undefined && localStorage['dsn_rpc_address']==undefined)
+{
+    alert('Please set dsn_rpc_address and meta_server_address in the setting!')
+}
 </script>
 
 <style>

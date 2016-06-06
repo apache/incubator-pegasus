@@ -27,9 +27,12 @@ var vm = new Vue({
                 async: true,
                 on_success: function (appdata){
                     try {
-                        self.$set('appList', JSON.parse(appdata))
+                        appdata = new configuration_list_apps_response(appdata);
+                        self.$set('appList', appdata)
+                    
                     }
                     catch(err) {
+                        console.log(err);
                     }
 
                     if(self.appTotal !=self.appList.infos.length)
@@ -49,7 +52,9 @@ var vm = new Vue({
                                 async: true,
                                 on_success: function (servicedata){
                                     try {
-                                        self.partitionList.$set(app, JSON.parse(servicedata))
+                                        servicedata = new configuration_query_by_index_response(servicedata);
+                                        console.log(JSON.stringify(servicedata))
+                                        self.partitionList.$set(app, servicedata)
                                     }
                                     catch(err) {
                                         return;
@@ -64,7 +69,7 @@ var vm = new Vue({
                                         {
                                             if(par.primary!='invalid address')
                                             {
-                                                par.membership += 'P: ("' + par.primary + '"), ';
+                                                par.membership += 'P: ("' + par.primary.host + ':'+ par.primary.port  + '"), ';
                                                 
                                             }
                                             else
@@ -75,14 +80,14 @@ var vm = new Vue({
                                             par.membership += 'S: [';
                                             for (secondary in par.secondaries)
                                             {
-                                                par.membership += '"' + par.secondaries[secondary]+ '",'
+                                                par.membership += '"' + par.secondaries[secondary].host + ':' + par.secondaries[secondary].port + '",'
                                             }
                                             par.membership += '],';
 
                                             par.membership += 'D: [';
                                             for (drop in par.last_drops)
                                             {
-                                                par.membership += '"' + par.last_drops[drop]+ '",'
+                                                par.membership += '"' + par.last_drops[drop].host +':'+ par.last_drops[drop].port + '",'
                                             }
                                             par.membership += ']';
                                         }
@@ -91,7 +96,7 @@ var vm = new Vue({
                                             par.membership += 'replicas: [';
                                             for (secondary in par.secondaries)
                                             {
-                                                par.membership += '"' + par.secondaries[secondary]+ '",'
+                                                par.membership += '"' + par.secondaries[secondary].host + ':' + par.secondaries[secondary].port + '",'
                                             }
                                             par.membership += ']';
                                         }
@@ -117,7 +122,8 @@ var vm = new Vue({
                 }),
                 async: true,
                 on_success: function (data){
-                    console.log(data);
+                    data = new configuration_drop_app_response(data);
+                    alert(JSON.stringify(data));
                 },
                 on_fail: function (xhr, textStatus, errorThrown) {}
             });

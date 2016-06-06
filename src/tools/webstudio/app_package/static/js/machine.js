@@ -20,8 +20,9 @@ var vm = new Vue({
                 async: true,
                 on_success: function (nodedata){
                     try {
-                        //self.nodeList = JSON.parse(nodedata);
-                        self.$set('nodeList', JSON.parse(nodedata));
+                        nodedata = new configuration_list_nodes_response(nodedata);
+                        console.log(JSON.stringify(nodedata));
+                        self.$set('nodeList', nodedata);
                     }
                     catch(err) {
                     }
@@ -37,12 +38,14 @@ var vm = new Vue({
                         (function(nodeIndex){
                             result = client.query_configuration_by_node({
                                 args: new configuration_query_by_node_request({
-                                    'node': new rpc_address({host:self.nodeList.infos[nodeIndex].address,port:0})
+                                    'node': new rpc_address({host:self.nodeList.infos[nodeIndex].address.host,port:self.nodeList.infos[nodeIndex].address.port})
                                 }),
                                 async: true,
                                 on_success: function (servicedata){
                                     try {
-                                        self.partitionList.$set(nodeIndex, JSON.parse(servicedata));
+                                        servicedata = new configuration_query_by_node_response(servicedata);
+                                        console.log(JSON.stringify(servicedata));
+                                        self.partitionList.$set(nodeIndex, servicedata);
                                     }
                                     catch(err) {
                                         return;
@@ -54,18 +57,34 @@ var vm = new Vue({
                                         par.role = '';
                                         par.working_point = '';
 
-                                        if(par.package_id=='')
+                                        var addressList = {};
+                                        addressList['primary'] = par.config.primary.host+':'+par.config.primary.port;
+                                        addressList['secondaries'] = [];
+                                        for (secondary in par.config.secondaries)
+                                        {
+                                            addressList['secondaries'][secondary] = par.config.secondaries[secondary].host +':'+ par.config.secondaries[secondary].port;
+                                        } 
+                                        addressList['last_drops'] = [];
+                                        for (drop in par.config.last_drops)
+                                        {
+                                            addressList['last_drops'][drop] = par.config.last_drops[drop].host +':'+ par.config.last_drops[drop].port;
+                                        } 
+
+
+                                        if(par.info.is_stateful==true)
                                         {
                                             //stateful service
-                                            if (par.primary == self.nodeList.infos[nodeIndex].address)
+                                            if (addressList.primary== self.nodeList.infos[nodeIndex].address.host+':'+self.nodeList.infos[nodeIndex].address.port) 
                                             {
                                                 par['role'] = 'primary';
                                             }
-                                            else if (par.secondaries.indexOf(self.nodeList.infos[nodeIndex].address) > -1)
+                                            else if (addressList.secondaries.indexOf(
+                                                self.nodeList.infos[nodeIndex].address.host+':'+self.nodeList.infos[nodeIndex].address.port) > -1)
                                             {
                                                 par['role'] = 'secondary';
                                             }
-                                            else if (par.last_drops.indexOf(self.nodeList.infos[nodeIndex].address) > -1)
+                                            else if (addressList.last_drops.indexOf(
+                                                self.nodeList.infos[nodeIndex].address.host+':'+self.nodeList.infos[nodeIndex].address.port) > -1)
                                             {
                                                 par['role'] = 'drop';
                                             }
@@ -74,7 +93,9 @@ var vm = new Vue({
                                         }
                                         else
                                         {
-                                            par['working_point'] = par.last_drops[par.secondaries.indexOf(self.nodeList.infos[nodeIndex].address)];
+                                            par['working_point'] = par.last_drops[addressList.secondaries.indexOf(
+                                                    self.nodeList.infos[nodeIndex].address.host +':'+
+                                                        self.nodeList.infos[nodeIndex].address.port)];
                                         }
                                     }
                                 },

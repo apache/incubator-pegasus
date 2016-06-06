@@ -145,7 +145,8 @@ var vm = new Vue({
                 }),
                 async: true,
                 on_success: function (data){
-                    console.log(data);
+                    data = new configuration_create_app_response(data);
+                    alert(JSON.stringify(data));
                     window.location.href = 'service_meta.html';
                 },
                 on_fail: function (xhr, textStatus, errorThrown) {}
