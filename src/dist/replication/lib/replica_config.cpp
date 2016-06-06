@@ -170,7 +170,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         }
         else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB)
         {
-            ddebug("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            ddebug("%s: add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
         }
         else
         {

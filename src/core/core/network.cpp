@@ -394,6 +394,7 @@ namespace dsn
         {
             clear_send_queue(false);
         }
+
         return ret;
     }
 
