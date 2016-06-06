@@ -79,7 +79,7 @@ enum worker_priority_t
     THREAD_xPRIORITY_ABOVE_NORMAL,
     THREAD_xPRIORITY_HIGHEST,
     THREAD_xPRIORITY_COUNT,
-    THREAD_xPRIORITY_INVALID,
+    THREAD_xPRIORITY_INVALID
 };
 
 ENUM_BEGIN(worker_priority_t, THREAD_xPRIORITY_INVALID)
@@ -96,7 +96,6 @@ enum task_state
     TASK_STATE_RUNNING,
     TASK_STATE_FINISHED,
     TASK_STATE_CANCELLED,
-
     TASK_STATE_COUNT,
     TASK_STATE_INVALID
 };
@@ -126,11 +125,11 @@ typedef enum grpc_mode_t
     GRPC_TO_LEADER,  // the rpc is sent to the leader (if exist)
     GRPC_TO_ALL,     // the rpc is sent to all
     GRPC_TO_ANY,     // the rpc is sent to one of the group member
-    GRPC_TARGET_COUNT,
-    GRPC_TARGET_INVALID
+    GRPC_COUNT,
+    GRPC_INVALID
 } grpc_mode_t;
 
-ENUM_BEGIN(grpc_mode_t, GRPC_TARGET_INVALID)
+ENUM_BEGIN(grpc_mode_t, GRPC_INVALID)
     ENUM_REG(GRPC_TO_LEADER)
     ENUM_REG(GRPC_TO_ALL)
     ENUM_REG(GRPC_TO_ANY)
@@ -141,6 +140,7 @@ typedef enum throttling_mode_t
     TM_NONE,    // no throttling applied
     TM_REJECT,  // reject the incoming request 
     TM_DELAY,   // delay network receive ops to reducing incoming rate
+    TM_COUNT,
     TM_INVALID
 } throttling_mode_t;
 
@@ -149,7 +149,6 @@ ENUM_BEGIN(throttling_mode_t, TM_INVALID)
     ENUM_REG(TM_REJECT)
     ENUM_REG(TM_DELAY)
 ENUM_END(throttling_mode_t)
-
 
 ENUM_BEGIN(dsn_msg_serialize_format, DSF_INVALID)
     ENUM_REG(DSF_THRIFT_BINARY)
@@ -269,7 +268,7 @@ public:
 
 CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
-    CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
+    CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
     CONFIG_FLD(bool, bool, allow_inline, false, 
         "allow task executed in other thread pools or tasks "

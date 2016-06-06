@@ -128,7 +128,7 @@ namespace dsn
         const char* type, 
         dsn_gpid gpid, 
         const char* data_dir,
-        /*our*/ void** app_context,
+        /*out*/ void** app_context,
         /*out*/ void** app_context_for_callbacks)
     {
         app_internal* app = nullptr;
