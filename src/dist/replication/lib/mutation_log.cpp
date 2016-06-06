@@ -369,7 +369,7 @@ mutation_log::~mutation_log()
 error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback)
 {
     std::map<gpid, decree> replay_condition;
-    open(read_callback, write_error_callback, replay_condition);
+    return open(read_callback, write_error_callback, replay_condition);
 }
 
 error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback, const std::map<gpid, decree>& replay_condition)

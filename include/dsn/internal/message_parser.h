@@ -86,7 +86,7 @@ namespace dsn
         };
 # endif
 
-        // caller must ensure buffers length is correct as get_send_buffers_count_and_total_length(...);
+        // caller must ensure buffers length is correct as get_send_buffers_count(...);
         // return buffer count used
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) = 0;
 

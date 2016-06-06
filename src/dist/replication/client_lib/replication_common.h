@@ -104,7 +104,6 @@ public:
     ~replication_options();
 
 private:
-    void read_meta_servers();
     void sanity_check();
 };
 

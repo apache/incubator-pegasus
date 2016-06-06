@@ -1,0 +1,5 @@
+.matchfile
+bin/Linux/thrift
+builder/
+install/
+test_reports/

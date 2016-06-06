@@ -196,7 +196,8 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, se
     int buffer_iter = 0;
     if (msg->header->context.u.is_request)
     {
-        if (offset == 0) {
+        if (offset == 0)
+        {
             std::stringstream ss;
             ss << "POST /" << msg->header->rpc_name << "/" << msg->header->client.hash << " HTTP/1.1\r\n";
             ss << "Content-Type: text/plain\r\n";

@@ -91,31 +91,6 @@ replication_options::~replication_options()
 {
 }
 
-void replication_options::read_meta_servers()
-{
-    // read meta_servers from machine list file
-    meta_servers.clear();
-    std::string server_list = dsn_config_get_value_string("meta_servers", "server_list", "", "meta server_list");
-    std::list<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
-    for (auto& s : lv)
-    {
-        // name:port
-        auto pos1 = s.find_first_of(':');
-        if (pos1 != std::string::npos)
-        {
-            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
-            meta_servers.push_back(ep);
-        }
-    }
-    dassert(meta_servers.size() > 0, "no meta server specified in config [meta_servers].server_list");
-
-    std::ostringstream oss;
-    for (auto& s : meta_servers)
-        oss << "[" << s.to_string() << "] ";
-    ddebug("read meta servers from config: %s", oss.str().c_str());
-}
-
 void replication_options::initialize()
 {
     dsn_app_info app_info;
@@ -356,7 +331,7 @@ void replication_options::initialize()
         "every this period(ms) the meta server will do load balance"
         );
 
-    read_meta_servers();
+    replica_helper::load_meta_servers(meta_servers);
 
     sanity_check();
 }
@@ -404,22 +379,14 @@ void replication_options::sanity_check()
     }
 }
 
-void replica_helper::load_meta_servers(
-    /*out*/ std::vector<dsn::rpc_address>& servers,
-    const char* section)
+void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& servers)
 {
-    // read meta_servers from machine list file
     servers.clear();
-
-    const char* server_ss[10];
-    int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys(section, server_ss, &capacity);
-    dassert(need_count <= capacity, "too many meta servers specified in config [%s]", section);
-
-    for (int i = 0; i < capacity; i++)
+    std::string server_list = dsn_config_get_value_string("meta_server", "server_list", "", "meta server list");
+    std::vector<std::string> lv;
+    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
+    for (auto& s : lv)
     {
-        std::string s(server_ss[i]);
-
         // name:port
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
@@ -428,7 +395,7 @@ void replica_helper::load_meta_servers(
             servers.push_back(ep);
         }
     }
-    dassert(servers.size() > 0, "no meta server specified in config [%s]", section);
+    dassert(servers.size() > 0, "no meta server specified in config [meta_servers].server_list");
 }
 
 }} // end namespace

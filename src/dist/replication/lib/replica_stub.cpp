@@ -93,9 +93,18 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
-    //zauto_lock l(_replicas_lock);
-    set_options(opts);
     _primary_address = primary_address();
+    ddebug("primary_address = %s", _primary_address.to_string());
+
+    set_options(opts);
+    std::ostringstream oss;
+    for (int i = 0; i < _options.meta_servers.size(); ++i)
+    {
+        if (i != 0)
+            oss << ",";
+        oss << _options.meta_servers[i].to_string();
+    }
+    ddebug("meta_servers = %s", oss.str().c_str());
 
     // clear dirs if need
     if (clear)
