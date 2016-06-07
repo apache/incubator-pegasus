@@ -55,13 +55,19 @@ th, td {
                     <tr>
                         <td>{{setting.label}}</td>
                         <td>{{setting.description}}</td>
-                        <td><input type="text" v-model="setting.value" placeholder=""></td>
+                        <td><input type="text" v-model="setting.value" placeholder="(e.g. locahost:34602)"></td>
                     </tr>
                 </tbody>
             </table>
         </div>
         <div class="col-xs-1"></div>
     </div>
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10"></div> 
+        <div class="col-xs-1">{{state}}</div>
+    </div>
+
 
     <div id="info-modal" class="modal fade" role="dialog">
       <div class="modal-dialog">

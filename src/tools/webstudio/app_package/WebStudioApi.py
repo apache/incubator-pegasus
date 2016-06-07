@@ -67,7 +67,7 @@ def sqlOp(op='',dataType='',dataName='',val_list=''):
     
     c.execute(TCreate.render({'dataType':dataType,'elems': sqlDataType[dataType]['elems']}))
     if op == 'save':
-        c.execute(TDeleteall.render({'dataType':dataType}))
+        c.execute(TDelete.render({'dataType':dataType,'dataName':val_list[0]}))
         c.execute(TInsert.render({'dataType':dataType,'val_list':val_list}))
     elif op == 'load':
         res = list(c.execute(TSelect.render({'dataType':dataType})))

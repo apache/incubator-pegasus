@@ -59,6 +59,8 @@ a:hover {
                     <textarea class="form-control" rows="2" id="cmdtext" v-model="cmdtext" placeholder="eg. system.queue"></textarea>
                 </div>
 
+                <div class="row">
+                <div id="call" class="collapse">
                 <h3 class="text-center">Repeat Setting</h3>
                 <div class="well" style="max-height: 300px;overflow: auto;">
                     <label for="interval">&nbsp interval(s) &nbsp</label>
@@ -70,10 +72,12 @@ a:hover {
                            placeholder="eg. 3 (blank or 0 for infinity)"
                            v-model="times"></input>
                 </div>
+                </div>
+                </div>
             </div>
         </div>
         <div class="row">
-            <div class="col-xs-9"></div>
+            <div class="col-xs-8"></div>
             <send-req-button :machines="machines" 
                              :cmdtext="cmdtext"
                              :interval.sync="interval"
@@ -221,7 +225,7 @@ a:hover {
     <li class="list-group-item edit">
     <input class="new-machine" style="width: 100%;"
         autofocus autocomplete="off"
-        placeholder="(Type MachineName:PortNum)"
+        placeholder="(Add MachineName:PortNum)"
         v-model="newMachine"
         @keyup.enter="add">
     </li>
@@ -234,6 +238,7 @@ a:hover {
 
 <script type="x/template" id="send-req-button">
 <button class="btn btn-primary col-xs-2" @click="send">Send command requests</button>
+<button class="btn btn-default dropdown-toggle col-xs-1" data-toggle="collapse" data-target="#call">Repeat</button>
 <button class="btn btn-danger col-xs-1" @click="stop">Stop</button>
 </script>
 
