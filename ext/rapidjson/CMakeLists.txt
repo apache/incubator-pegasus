@@ -1,14 +1,11 @@
 include(ExternalProject)
 
-if(DSN_GIT_SOURCE STREQUAL "xiaomi")
-    set(target_url "http://git.n.xiaomi.com/pegasus/rapidjson-header.git")
-else()
-    set(target_url "https://github.com/shengofsun/rapidjson-header.git")
-endif()
+set(target_url ${RAPIDJSON_GIT_SOURCE})
+set(git_tag ${RAPIDJSON_GIT_TAG})
 
 ExternalProject_Add(rapidjson_header
     GIT_REPOSITORY ${target_url}
-    GIT_TAG master
+    GIT_TAG ${RAPIDJSON_GIT_TAG}
     INSTALL_COMMAND ""
 )
 

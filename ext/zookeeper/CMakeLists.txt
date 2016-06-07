@@ -1,10 +1,7 @@
 set(project_name zookeeper)
 
-if(DSN_GIT_SOURCE STREQUAL "xiaomi")
-    set(target_url "http://git.n.xiaomi.com/pegasus/zookeeper_client_c.git")
-else()
-    set(target_url "https://github.com/shengofsun/zookeeper_client_c.git")
-endif()
+set(target_url ${ZOOKEEPER_GIT_SOURCE})
+set(git_tag ${ZOOKEEPER_GIT_TAG})
 
 set(my_cmake_args "")
 

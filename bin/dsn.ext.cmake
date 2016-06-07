@@ -12,6 +12,10 @@ include(ExternalProject)
 
 string(TOUPPER ${project_name} PROJECT_NAME_U)
 
+if (NOT DEFINED git_tag)
+    set(get_tag "master")
+endif()
+
 set(target_bin_dir ${PROJECT_BINARY_DIR}/${project_name})
 if (DEFINED target_bin_subdir)
     set(target_bin_subdir /${target_bin_subdir})
@@ -37,7 +41,7 @@ endif()
 
 ExternalProject_Add(${project_name}
     GIT_REPOSITORY ${target_url}
-    GIT_TAG master
+    GIT_TAG ${git_tag}
     CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX};${my_cmake_args};"
     BINARY_DIR "${target_bin_dir}"
     INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"

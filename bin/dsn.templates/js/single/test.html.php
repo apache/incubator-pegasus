@@ -88,7 +88,7 @@ function test_<?=$svc->name?>_<?=$func->name?>(args, async)
             async: false
         });
     }
-    outputAppend(result);
+    outputAppend(JSON.stringify(result));
     if (result == null)
     {
         outputAppend("\tfailed\n");
