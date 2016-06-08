@@ -58,11 +58,15 @@ struct dsn_thrift_header
     int32_t request_hash;
     int32_t client_timeout;
     dsn_thrift_header_options opt;
+    dsn_gpid gpid;
 };
 
 class thrift_header_parser
 {
 private:
+    //buffer to store the thrift response: message_total_length + error_code_string
+    static __thread char response_header_buffer[128];
+
     static void adjust_thrift_response(message_ex* msg);
     static void add_postfix_for_thrift_response(message_ex* msg);
 
@@ -71,7 +75,7 @@ public:
     static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data);
     static void add_prefix_for_thrift_response(message_ex* msg);
     static int prepare_buffers_on_send(message_ex* msg, int offest, /*out*/message_parser::send_buf* buffers);
-    static int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/int* total_length);
+    static int get_send_buffers_count(message_ex* msg);
 };
 
 }

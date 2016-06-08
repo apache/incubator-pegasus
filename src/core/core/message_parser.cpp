@@ -280,7 +280,7 @@ namespace dsn {
         if (msg->header->hdr_type == header_type::hdr_dsn_thrift)
         {
 #ifdef DSN_ENABLE_THRIFT_RPC
-            return thrift_header_parser::get_send_buffers_count_and_total_length(msg, total_length);
+            return thrift_header_parser::get_send_buffers_count(msg);
 #else
             dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
             return -1;

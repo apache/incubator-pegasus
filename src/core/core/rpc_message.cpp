@@ -221,18 +221,6 @@ DSN_API void dsn_msg_get_options(
     opts->gpid = hdr->gpid;
 }
 
-DSN_API dsn_msg_header_type dsn_msg_get_header_type(
-    dsn_message_t msg
-    )
-{
-    dsn::header_type& type = ((::dsn::message_ex*)msg)->header->hdr_type;
-    if (type == dsn::header_type::hdr_dsn_default)
-        return ht_default;
-    else if (type == dsn::header_type::hdr_dsn_thrift)
-        return ht_thrift;
-    return ht_invalid;
-}
-
 namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);

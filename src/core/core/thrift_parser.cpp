@@ -41,6 +41,8 @@
 
 namespace dsn{
 
+__thread char thrift_header_parser::response_header_buffer[128];
+
 void thrift_header_parser::read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer)
 {
     result.hdr_type = header_type(buffer);
@@ -56,6 +58,8 @@ void thrift_header_parser::read_thrift_header_from_buffer(/*out*/dsn_thrift_head
     result.client_timeout = be32toh( *(int32_t*)(buffer) );
     buffer += sizeof(int32_t);
     result.opt.o = be64toh( *(int64_t*)(buffer) );
+    buffer += sizeof(int64_t);
+    result.gpid.value = be64toh( *(int64_t*)(buffer) );
 }
 
 dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data)
@@ -65,8 +69,9 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
     dsn::message_header* dsn_hdr = msg->header;
 
     dsn::rpc_read_stream stream(msg);
-    boost::shared_ptr< ::dsn::binary_reader_transport > input_trans(new ::dsn::binary_reader_transport( stream ));
-    ::apache::thrift::protocol::TBinaryProtocol iprot(input_trans);
+    ::dsn::binary_reader_transport binary_transport(stream);
+    boost::shared_ptr< ::dsn::binary_reader_transport > trans_ptr(&binary_transport, [](::dsn::binary_reader_transport*) {});
+    ::apache::thrift::protocol::TBinaryProtocol iprot(trans_ptr);
 
     std::string fname;
     ::apache::thrift::protocol::TMessageType mtype;
@@ -83,12 +88,11 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
         dsn_hdr->context.u.is_request = 1;
 
     dsn_hdr->id = seqid;
-    dsn_hdr->context.u.is_replication_needed = header->opt.u.is_replication_needed;
+    dsn_hdr->gpid.value = header->gpid.value;
     dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
     dsn_hdr->client.hash = header->request_hash;
     dsn_hdr->client.timeout_ms = header->client_timeout;
 
-    iprot.readStructBegin(fname);
     return msg;
 }
 
@@ -99,8 +103,8 @@ void thrift_header_parser::add_prefix_for_thrift_response(message_ex* msg)
     boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
     ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
+    //add message begin for each thrift response, corresponding with thrift_parser::add_post_fix's writeMessageEnd
     msg_proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
-    msg_proto.writeStructBegin(""); //resp args
 }
 
 void thrift_header_parser::add_postfix_for_thrift_response(message_ex* msg)
@@ -110,10 +114,6 @@ void thrift_header_parser::add_postfix_for_thrift_response(message_ex* msg)
     boost::shared_ptr< ::dsn::binary_writer_transport> trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
     ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
-    //after all fields, write a field stop
-    msg_proto.writeFieldStop();
-    //writestruct end, this is because all thirft returning values are in a struct
-    msg_proto.writeStructEnd();
     //write message end, which indicate the end of a thrift message
     msg_proto.writeMessageEnd();
 }
@@ -133,11 +133,26 @@ int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, int offset, /
 
     dassert(!msg->buffers.empty(), "buffers is not possible to be empty");
 
-    // we ignore header for thrift resp, and add a length field in the beginning of body
-    offset += (sizeof(message_header) - sizeof(int32_t));
+    // write the thrift message header
+    int length;
+    char* ptr = response_header_buffer + sizeof(int32_t)*2;
+    strncpy(ptr, error_code(msg->header->server.error).to_string(), 120);
+    length = strlen(ptr);
 
-    int count=0;
-    //ignore the msg header
+    // first buffer is the response header
+    buffers[0].buf = response_header_buffer;
+    buffers[0].sz = length + sizeof(int32_t)*2;
+    //then the response error code string length
+    ptr -= sizeof(int32_t);
+    *((int*)ptr) = htobe32(length);
+    //then the total length of all message: error_code_string's memory + msg_body
+    ptr -= sizeof(int32_t);
+    length = length + sizeof(int32_t) + msg->header->body_length;
+    *((int*)ptr) = htobe32(length);
+
+    // we ignore the message header when response thrift
+    offset += sizeof(message_header);
+    int count = 1;
     for (unsigned int i=0; i!=msg->buffers.size(); ++i)
     {
         blob& bb = msg->buffers[i];
@@ -152,22 +167,16 @@ int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, int offset, /
         offset = 0;
         ++count;
     }
-
-    if (count > 0)
-    {
-        *(int*)(buffers[0].buf) = htobe32(msg->header->body_length);
-    }
     return count;
 }
 
-int thrift_header_parser::get_send_buffers_count_and_total_length(message_ex* msg, /*out*/int* total_length)
+int thrift_header_parser::get_send_buffers_count(message_ex* msg)
 {
     if ( !msg->is_response_adjusted_for_custom_rpc )
         adjust_thrift_response(msg);
 
-    // when send thrift message, we ignore the header, but we add a custom header
-    *total_length = msg->header->body_length + sizeof(int32_t);
-    return msg->buffers.size();
+    //the message payload & the extra thrift header
+    return msg->buffers.size() + 1;
 }
 }
 #endif

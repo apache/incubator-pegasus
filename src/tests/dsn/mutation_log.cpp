@@ -306,7 +306,7 @@ TEST(replication, mutation_log)
         );
 
     auto err = mlog->open(nullptr, nullptr);
-    EXPECT_TRUE(err == ERR_OK);
+    EXPECT_EQ(err, ERR_OK);
 
     for (int i = 0; i < 1000; i++)
     {
