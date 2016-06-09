@@ -187,7 +187,11 @@ namespace dsn
         // Postconditions:
         // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
         // 
-        virtual ::dsn::error_code apply_checkpoint(int64_t local_commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) = 0;
+        virtual ::dsn::error_code apply_checkpoint(
+            int64_t local_commit,
+            const dsn_app_learn_state& state,
+            dsn_chkpt_apply_mode mode
+            ) = 0;
 
         int get_last_physical_error() const { return _physical_error; }
 
@@ -272,7 +276,7 @@ namespace dsn
         app.layer2.apps.calls.chkpt = replicated_service_app_type_1::app_checkpoint;
         app.layer2.apps.calls.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
         app.layer2.apps.calls.chkpt_get_version = replicated_service_app_type_1::app_checkpoint_get_version;
-        app.layer2.apps.calls.checkpoint_get_prepare = replicated_service_app_type_1::app_prepare_get_checkpoint;
+        app.layer2.apps.calls.chkpt_prepare_get = replicated_service_app_type_1::app_prepare_get_checkpoint;
         app.layer2.apps.calls.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2.apps.calls.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
         app.layer2.apps.calls.physical_error_get = replicated_service_app_type_1::app_get_physical_error;

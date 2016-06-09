@@ -308,7 +308,7 @@ typedef int64_t(*dsn_app_checkpoint_get_version)(
     void*  ///< context from dsn_app_create
     );
 
-typedef int(*dsn_app_checkpoint_get_prepare)(
+typedef int(*dsn_app_checkpoint_prepare_get)(
     void*,    ///< context from dsn_app_create
     void*,    ///< buffer for filling in learn request
     int       ///< buffer capacity
@@ -353,7 +353,7 @@ typedef union dsn_app_callbacks
         dsn_app_checkpoint              chkpt;
         dsn_app_checkpoint_async        chkpt_async;
         dsn_app_checkpoint_get_version  chkpt_get_version;
-        dsn_app_checkpoint_get_prepare  checkpoint_get_prepare;
+        dsn_app_checkpoint_prepare_get  chkpt_prepare_get;
         dsn_app_checkpoint_get          chkpt_get;
         dsn_app_checkpoint_apply        chkpt_apply;
         dsn_app_physical_error_get      physical_error_get;

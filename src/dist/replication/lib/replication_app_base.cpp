@@ -298,7 +298,7 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
 {
     int size = 4096;
     void* buffer = dsn_transient_malloc(size);
-    int sz2 = _callbacks.calls.checkpoint_get_prepare(_app_context_callbacks, buffer, size);
+    int sz2 = _callbacks.calls.chkpt_prepare_get(_app_context_callbacks, buffer, size);
 
     while (sz2 > size)
     {
@@ -306,7 +306,7 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
 
         size = sz2;
         buffer = dsn_transient_malloc(size);
-        sz2 = _callbacks.calls.checkpoint_get_prepare(_app_context_callbacks, buffer, size);
+        sz2 = _callbacks.calls.chkpt_prepare_get(_app_context_callbacks, buffer, size);
     }
 
     if (sz2 == 0)
