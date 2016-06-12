@@ -15,8 +15,12 @@
 
 <script src="js/dsn/thrift.js"></script>
 <script src="js/dsn/dsn_transport.js"></script>
+<script src="js/dsn/dsn_types.js"></script>
 <script src="js/dsn/cli.client.js"></script>
 <script src="js/dsn/cli_types.js"></script>
+<script src="js/dsn/replication.client.js"></script>
+<script src="js/dsn/dsn.layer2_types.js"></script>
+<script src="js/dsn/replication_types.js"></script>
 
 <!-- Load d3.js and c3.js -->
 <script src="js/d3.min.js"></script>
@@ -46,7 +50,7 @@ body {
 </style>
 <body>
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script   src="https://code.jquery.com/jquery-2.2.4.min.js"   integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="   crossorigin="anonymous"></script>
 <script src="https://cdn.datatables.net/1.10.9/js/jquery.dataTables.min.js"></script>
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
@@ -97,7 +101,6 @@ body {
                     <li><a href="queue.html" data-toggle="tooltip right" title="A bar plot showing all queues sorted by task pending number"><span class="glyphicon glyphicon-signal"></span>Queue</a></li>
 			        <li><a href="editor.html" data-toggle="tooltip right" title="An online editor for editing files"><span class="glyphicon glyphicon-pencil"></span>Vim</a></li>
                     <li><a href="cli.html" data-toggle="tooltip right" title="A query interface, type h for more info"><span class="glyphicon glyphicon-console"></span> Cli</a></li>
-                    <li><a href="bash.html" data-toggle="tooltip right" title="A bash interface"><span class="glyphicon glyphicon-console"></span> Bash</a></li>
                     <li><a href="configure.html" data-toggle="tooltip right" title="Show all configuration with descriptions"><span class="glyphicon glyphicon-list-alt"></span> Configuration</a></li>
                 </ul>
             </li>

@@ -357,6 +357,16 @@ struct node_state
     4:set<dsn.gpid>   partitions;
 }
 
+service meta_s
+{
+    configuration_create_app_response create_app(1:configuration_create_app_request req);
+    configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
+    configuration_list_nodes_response list_nodes(1:configuration_list_nodes_request req);
+    configuration_list_apps_response list_apps(1:configuration_list_apps_request req);
+    configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
+    configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
+    
+}
 /*
 service replica_s
 {

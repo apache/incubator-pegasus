@@ -6,7 +6,7 @@ function usage()
     echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
-    echo "\tnotice : currently for js we only support binary format of thrift".PHP_EOL;
+    echo "\tnotice : currently for js we only support json format of thrift".PHP_EOL;
 }
 
 if (count($argv) < 4)
@@ -18,6 +18,7 @@ if (count($argv) < 4)
 global $g_idl;
 global $g_out_dir;
 global $g_cg_dir;
+global $g_php_path;
 global $g_cg_libs;
 global $g_idl_type;
 global $g_idl_post;
@@ -31,11 +32,17 @@ $g_lang = $argv[2];
 $g_out_dir = $argv[3];
 $g_cg_dir = __DIR__;
 $g_templates = $g_cg_dir."/dsn.templates";
+$g_php_path = "php";
 $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
 $g_idl_php = "";
 $g_idl_format = "";
+
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') 
+{
+    $g_php_path = $g_cg_dir."/Windows/php.exe";
+}
 
 if (count($argv) >= 5)
 {
@@ -100,6 +107,18 @@ else
         echo "unknown idl type for input file '".$g_idl."'".PHP_EOL;
         exit(0);
     }
+}
+
+if ($g_lang != "cpp" && $g_lang != "csharp" && $g_lang != "js")
+{
+    echo "unsupported language : ".$g_lang.PHP_EOL;
+    exit(0);
+}
+
+if ($g_lang == "js" && ($g_idl_type != "thrift" || $g_idl_format != "json"))
+{
+    echo "currently for js we only support json format of thrift, please check your arguments.".PHP_EOL;
+    exit(0);
 }
 
 $pos = strrpos($g_idl, "\\");
@@ -212,6 +231,7 @@ function generate_files_from_dir($dr)
     global $g_out_dir;
     global $g_idl_type;
     global $g_idl_format;
+    global $g_php_path;
     
     foreach (scandir($dr) as $template)
     {
@@ -235,8 +255,8 @@ function generate_files_from_dir($dr)
             $output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
         else
             $output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
-            
-        $command = "php -f ".$dr."/".$template
+
+        $command = $g_php_path." -f ".$dr."/".$template
                     ." ".$g_templates."/type.php"
                     ." ".$g_idl_php
                     ." ".$g_program
