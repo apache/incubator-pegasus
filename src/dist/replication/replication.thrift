@@ -15,7 +15,10 @@ struct mutation_header
 struct mutation_update
 {
     1:dsn.task_code  code;
-    2:dsn.blob       data;
+
+    //the serialization type of data, this need to store in log and replicate to secondaries by primary
+    2:i32            serialization_type;
+    3:dsn.blob       data;
 }
 
 struct mutation_data

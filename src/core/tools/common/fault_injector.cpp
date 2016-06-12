@@ -166,6 +166,8 @@ namespace dsn {
                     return false;
                 }
                 break;
+            default:
+                break;
             }
             
             return true;
@@ -183,20 +185,18 @@ namespace dsn {
         }
 
         
-        static void replace_value(std::vector<blob>& buffer_list, int offset)
+        static void replace_value(std::vector<blob>& buffer_list, unsigned int offset)
         {
             for (blob& bb: buffer_list)
             {
                 if (offset < bb.length())
                 {
                     (const_cast<char*>(bb.data()))[offset]++;
-                    offset = -1;
                     break;
                 }
                 else
                     offset -= bb.length();
             }
-            dassert(offset == -1, "invalid offset when trying to corrupt data");
         }
 
         static void corrupt_data(message_ex* request, const std::string& corrupt_type)

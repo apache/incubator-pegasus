@@ -313,6 +313,8 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
     case partition_status::PS_ERROR:
         break;
+    default:
+        dassert(false, "");
     }
     
     dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());

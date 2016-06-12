@@ -113,6 +113,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
     if (request != nullptr)
     {
         update.code = code;
+        update.serialization_type = dsn_msg_get_serialize_format(request);
         dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;

@@ -165,7 +165,6 @@ TEST(tools_common, asio_udp_provider)
     start_result = client->start(RPC_CHANNEL_UDP, 0, true, modifier);
     ASSERT_TRUE(start_result == ERR_OK);
 
-    auto server = new asio_udp_provider(task::get_current_rpc(), nullptr);
     start_result = client->start(RPC_CHANNEL_UDP, TEST_PORT, false, modifier);
     ASSERT_TRUE(start_result == ERR_OK);
 

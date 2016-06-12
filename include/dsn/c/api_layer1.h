@@ -37,6 +37,7 @@
 # pragma once
 
 # include <dsn/c/api_common.h>
+# include <dsn/c/api_task.h>
 
 # ifdef __cplusplus
 extern "C" {
@@ -111,7 +112,7 @@ extern DSN_API int         dsn_task_get_ref(dsn_task_t task);
  \param wait_until_finished true if wait until finished is needed
 
  \return true if THIS cancellation succeeds, false if the task is already running 
- (when wait_until_finished = false), or completed successfully, or cancelled.
+ (when wait_until_finished = false), or completed successfully, or already cancelled.
  */
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
 
@@ -186,7 +187,7 @@ extern DSN_API bool        dsn_task_is_running_inside(dsn_task_t t);
 /*!
  task trackers are used to track task context
  
- when a task executes, it usually accesses certain context when the context is gone, all tasks
+ When a task executes, it usually accesses certain context. When the context is gone, all tasks
  accessing this context needs to be cancelled automatically to avoid invalid context access. 
  To release this burden from developers, rDSN provides task tracker which can be embedded into
  a context, and destroyed when the context is gone.
@@ -285,7 +286,7 @@ extern DSN_API dsn_task_t  dsn_task_create_timer(
                             );
 
 /*!
-similar to \ref dsn_task_create_ex, except an on_cancel callback is provided
+similar to \ref dsn_task_create, except an on_cancel callback is provided
 to be executed when the task is cancelled, see \ref dsn_task_cancelled_handler_t for
 more details.
 */
@@ -294,7 +295,7 @@ extern DSN_API dsn_task_t  dsn_task_create_ex(
                             dsn_task_handler_t cb,              // callback function
                             dsn_task_cancelled_handler_t on_cancel, 
                             void* context,                      // context to the two callbacks above
-                            int hash DEFAULT(0), // hash to callback
+                            int hash DEFAULT(0),                // hash to callback
                             dsn_task_tracker_t tracker DEFAULT(nullptr)
                             );
 
@@ -309,7 +310,7 @@ extern DSN_API dsn_task_t  dsn_task_create_timer_ex(
                             dsn_task_cancelled_handler_t on_cancel,
                             void* context,
                             int hash,
-                            int interval_milliseconds,         // timer period
+                            int interval_milliseconds,          // timer period
                             dsn_task_tracker_t tracker DEFAULT(nullptr)
                             );
 
@@ -351,7 +352,6 @@ typedef enum dsn_host_type_t
     HOST_TYPE_IPV4 = 1,  ///< 4 bytes for IPv4
     HOST_TYPE_GROUP = 2, ///< reference to an address group object
     HOST_TYPE_URI = 3,   ///< universal resource identifier as a string
-    HOST_TYPE_COUNT = 4
 } dsn_host_type_t;
 
 
@@ -530,6 +530,7 @@ extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 /*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
 extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_task_code_t rpc_code,
+                            int32_t serialization_type,
                             void* buffer,
                             int size,
                             uint64_t hash DEFAULT(0)
@@ -541,17 +542,15 @@ typedef enum dsn_msg_parameter_type_t
     MSG_PARAM_NONE = 0,           ///< nothing  
 } dsn_msg_parameter_type_t;
 
-enum dsn_msg_serialize_format
+typedef enum dsn_msg_serialize_format
 {
-    DSF_THRIFT_BINARY,
-    DSF_THRIFT_COMPACT,
-    DSF_THRIFT_JSON,
-    DSF_PROTOC_BINARY,
-    DSF_PROTOC_JSON,
-
-    DSF_COUNT,
-    DSF_INVALID
-};
+    DSF_INVALID = 0,
+    DSF_THRIFT_BINARY = 1,
+    DSF_THRIFT_COMPACT = 2,
+    DSF_THRIFT_JSON = 3,
+    DSF_PROTOC_BINARY = 4,
+    DSF_PROTOC_JSON = 5,
+} dsn_msg_serialize_format;
 
 /*! RPC message context */
 typedef union dsn_msg_context_t
@@ -592,8 +591,8 @@ inline uint64_t dsn_gpid_to_hash(dsn_gpid gpid)
 typedef struct dsn_msg_options_t
 {
     int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               hash; ///< thread hash on RPC server
-    dsn_gpid  gpid;        ///< virtual node id, 0 for none
+    int               hash;        ///< thread hash on RPC server
+    dsn_gpid          gpid;        ///< virtual node id, 0 for none
     dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
@@ -632,6 +631,22 @@ extern DSN_API void          dsn_msg_set_options(
 extern DSN_API void         dsn_msg_get_options(
                                 dsn_message_t msg,
                                 /*out*/ dsn_msg_options_t* opts
+                                );
+
+/*! rpc_message header type */
+typedef enum dsn_msg_header_type{
+    DHT_INVALID = 0,
+    DHT_DEFAULT = 1,
+    DHT_THRIFT = 2,
+} dsn_msg_header_type;
+
+/*!
+ get the message header type
+
+ \param msg  the message handle
+ */
+extern DSN_API dsn_msg_header_type dsn_msg_get_header_type(
+                                dsn_message_t msg
                                 );
 
 DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt);
@@ -829,7 +844,7 @@ typedef struct
 {
     void* buffer;
     int size;
-}dsn_file_buffer_t;
+} dsn_file_buffer_t;
 
 /*!
  open file

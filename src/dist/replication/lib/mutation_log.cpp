@@ -213,8 +213,11 @@ void mutation_log_private::flush()
                         );
                 }
             }
-            else
+            else if (_issued_write.expired())
+            {
+                // no pending and writing now
                 break;
+            }
         }
     }
 }
@@ -366,7 +369,7 @@ mutation_log::~mutation_log()
 error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback)
 {
     std::map<gpid, decree> replay_condition;
-    open(read_callback, write_error_callback, replay_condition);
+    return open(read_callback, write_error_callback, replay_condition);
 }
 
 error_code mutation_log::open(replay_callback read_callback, io_failure_callback write_error_callback, const std::map<gpid, decree>& replay_condition)
@@ -1541,7 +1544,7 @@ private:
         bool _have_ongoing_task;
         task_ptr _task;
 
-        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _have_ongoing_task(false), _file_offset_of_buffer(0) {}
+        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _file_offset_of_buffer(0), _have_ongoing_task(false) {}
         size_t length() const
         {
             return _end - _begin;

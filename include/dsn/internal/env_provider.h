@@ -58,7 +58,7 @@ public:
     virtual uint64_t random64(uint64_t min, uint64_t max);
 
 protected:
-    static __thread int _tls_magic;
+    static __thread unsigned int _tls_magic;
     static __thread std::ranlux48_base* _rng;
 };
 

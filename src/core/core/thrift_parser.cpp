@@ -126,7 +126,7 @@ void thrift_header_parser::adjust_thrift_response(message_ex* msg)
     add_postfix_for_thrift_response(msg);
 }
 
-int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, int offset, /*out*/message_parser::send_buf* buffers)
+int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/message_parser::send_buf* buffers)
 {
     if ( !msg->is_response_adjusted_for_custom_rpc )
         adjust_thrift_response(msg);

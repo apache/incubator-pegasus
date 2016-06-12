@@ -347,7 +347,7 @@ namespace dsn
             {
                 wn = snprintf_p(ptr, capacity - 1, "-- cannot printf due to that log entry has error ---");
             }
-            else if (wn >= capacity)
+            else if (static_cast<unsigned>(wn) >= capacity)
             {
                 // log truncated
                 wn = capacity - 1;

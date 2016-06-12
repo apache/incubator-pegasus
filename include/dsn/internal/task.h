@@ -331,7 +331,7 @@ public:
     ~rpc_response_task();
 
     void             enqueue(error_code err, message_ex* reply);
-    void     enqueue() override; // re-enqueue after above enqueue, e.g., after delay
+    void             enqueue() override; // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() const
     { return _request; }
     message_ex*      get_response() const

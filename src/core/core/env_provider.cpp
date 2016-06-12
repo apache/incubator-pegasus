@@ -40,7 +40,7 @@
 namespace dsn {
 
 //------------ env_provider ---------------
-__thread int env_provider::_tls_magic;
+__thread unsigned int env_provider::_tls_magic;
 __thread std::ranlux48_base* env_provider::_rng;
 
 env_provider::env_provider(env_provider* inner_provider)

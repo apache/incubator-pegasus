@@ -592,8 +592,8 @@ void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_updat
         else if (_balancer_proposals_map.find(gpid) != _balancer_proposals_map.end())
         {
             balancer_proposal_request& p = _balancer_proposals_map[gpid];
-            if (p.type == balancer_type::BT_COPY_SECONDARY && request->node==p.from_addr||
-                p.type == balancer_type::BT_MOVE_PRIMARY && request->node==p.to_addr)
+            if ((p.type == balancer_type::BT_COPY_SECONDARY && request->node==p.from_addr) ||
+                (p.type == balancer_type::BT_MOVE_PRIMARY && request->node==p.to_addr))
                 _balancer_proposals_map.erase(gpid);
         }
         break;

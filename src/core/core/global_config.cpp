@@ -372,7 +372,6 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
     std::vector<std::string> all_section_names;
     config->get_all_sections(all_section_names);
 
-    int app_id = 0;
     std::vector< std::pair<std::string, std::string> > modules;
     for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it)
     {

@@ -138,7 +138,7 @@ namespace dsn {
             __inline void wait()   { _ready.wait(); }
             __inline bool wait_for(int milliseconds) 
             {
-                if (TIME_MS_MAX == milliseconds)
+                if (TIME_MS_MAX == static_cast<unsigned int>(milliseconds))
                 {
                     _ready.wait();
                     return true;
@@ -181,7 +181,7 @@ namespace dsn {
 
             inline bool wait(int milliseconds)
             {
-                if (TIME_MS_MAX == milliseconds)
+                if (TIME_MS_MAX == static_cast<unsigned int>(milliseconds))
                 {
                     _sema.wait();
                     return true;

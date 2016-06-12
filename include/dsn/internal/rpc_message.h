@@ -100,15 +100,15 @@ namespace dsn
     typedef struct message_header
     {
         header_type    hdr_type;
-        int32_t        hdr_crc32;
-        int32_t        body_crc32;
-        int32_t        body_length;
+        uint32_t       hdr_crc32;
+        uint32_t       body_crc32;
+        uint32_t       body_length;
         int32_t        version;
         uint64_t       id;      // sequence id, can be used to track source
         uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
         fast_rpc_name  rpc_name_fast;
-        dsn_gpid  gpid; // global partition id
+        dsn_gpid       gpid;    // global partition id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
                                         // generally, it is the from_node's primary address, except the
@@ -142,7 +142,7 @@ namespace dsn
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
-        uint32_t               local_rpc_code;
+        int32_t                local_rpc_code;
 
         // by message queuing
         dlink                  dl;
@@ -160,7 +160,7 @@ namespace dsn
         error_code error() const { return header->server.error; }
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
-        static int  get_body_length(char* hdr)
+        static unsigned int get_body_length(char* hdr)
         {
             return ((message_header*)hdr)->body_length;
         }

@@ -182,7 +182,7 @@ typedef enum dsn_task_type_t
                              ///< tasks by thread-synchronization operations.
                              ///< so that each "task" is non-blocking
     TASK_TYPE_COUNT,
-    TASK_TYPE_INVALID,
+    TASK_TYPE_INVALID
 } dsn_task_type_t;
 
 /*! callback prototype for \ref TASK_TYPE_COMPUTE */
@@ -218,7 +218,7 @@ typedef enum dsn_task_priority_t
     TASK_PRIORITY_COMMON,
     TASK_PRIORITY_HIGH,
     TASK_PRIORITY_COUNT,
-    TASK_PRIORITY_INVALID,
+    TASK_PRIORITY_INVALID
 } dsn_task_priority_t;
 
 /*!

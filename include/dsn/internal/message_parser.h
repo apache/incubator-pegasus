@@ -65,10 +65,11 @@ namespace dsn
 
         // before read
         void* read_buffer_ptr(int read_next);
-        int read_buffer_capacity() const;
+        unsigned int read_buffer_capacity() const;
 
-        // after read, see if we can compose a message 
-        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
+        // after read, see if we can compose a message
+        // if read_next returns -1, indicated the the message is corrupted
+        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) = 0;
 
         // before send, prepare buffer
         // be compatible with WSABUF on windows and iovec on linux
@@ -86,9 +87,9 @@ namespace dsn
         };
 # endif
 
-        // caller must ensure buffers length is correct as get_send_buffers_count_and_total_length(...);
+        // caller must ensure buffers length is correct as get_send_buffers_count(...);
         // return buffer count used
-        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) = 0;
+        virtual int prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers) = 0;
 
         virtual int get_send_buffers_count(message_ex* msg) = 0;
 
@@ -96,13 +97,13 @@ namespace dsn
         virtual void truncate_read() { _read_buffer_occupied = 0; }
         
     protected:
-        void create_new_buffer(int sz);
-        void mark_read(int read_length);
+        void create_new_buffer(unsigned int sz);
+        void mark_read(unsigned int read_length);
 
     protected:        
         blob            _read_buffer;
-        int             _read_buffer_occupied;
-        int             _buffer_block_size;
+        unsigned int    _read_buffer_occupied;
+        unsigned int    _buffer_block_size;
     };
 
     class message_parser_manager : public utils::singleton<message_parser_manager>
@@ -137,10 +138,10 @@ namespace dsn
         bool _header_checked;
     public:
         dsn_message_parser(int buffer_block_size, bool is_write_only);
-        message_ex* receive_message_with_thrift_header(int read_length, /*out*/ int& read_next);
-        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
+        message_ex* receive_message_with_thrift_header(unsigned int read_length, /*out*/int& read_next);
+        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) override;
 
-        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
+        virtual int prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers) override;
 
         virtual int get_send_buffers_count(message_ex* msg) override;
 

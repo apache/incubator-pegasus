@@ -246,7 +246,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         [this, err]() { handle_local_failure(err); },
                         gpid_to_hash(get_gpid())
                         );
-                }
+                },
+                replay_condition
                 );
             uint64_t finish_time = now_ms();
 

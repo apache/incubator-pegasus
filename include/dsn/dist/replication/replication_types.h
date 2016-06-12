@@ -263,8 +263,9 @@ inline std::ostream& operator<<(std::ostream& out, const mutation_header& obj)
 }
 
 typedef struct _mutation_update__isset {
-  _mutation_update__isset() : code(false), data(false) {}
+  _mutation_update__isset() : code(false), serialization_type(false), data(false) {}
   bool code :1;
+  bool serialization_type :1;
   bool data :1;
 } _mutation_update__isset;
 
@@ -273,22 +274,27 @@ class mutation_update {
 
   mutation_update(const mutation_update&);
   mutation_update& operator=(const mutation_update&);
-  mutation_update() {
+  mutation_update() : serialization_type(0) {
   }
 
   virtual ~mutation_update() throw();
    ::dsn::task_code code;
+  int32_t serialization_type;
    ::dsn::blob data;
 
   _mutation_update__isset __isset;
 
   void __set_code(const  ::dsn::task_code& val);
 
+  void __set_serialization_type(const int32_t val);
+
   void __set_data(const  ::dsn::blob& val);
 
   bool operator == (const mutation_update & rhs) const
   {
     if (!(code == rhs.code))
+      return false;
+    if (!(serialization_type == rhs.serialization_type))
       return false;
     if (!(data == rhs.data))
       return false;

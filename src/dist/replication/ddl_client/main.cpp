@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     std::cout << "Init succeed" << std::endl;
 
     std::vector<dsn::rpc_address> meta_servers;
-    dsn::replication::replica_helper::load_meta_servers(meta_servers);
+    replica_helper::load_meta_servers(meta_servers);
     replication_ddl_client client(meta_servers);
     std::string command = argv[2];
 

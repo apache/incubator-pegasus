@@ -102,7 +102,6 @@ namespace dsn {
                 std::cout << "previous_log_max_decrees={" << std::endl;
                 std::cout << "  /* app_id.partition_index : previous_max_decree : valid_start_offset */" << std::endl;
                 const replica_log_info_map& previous = lf->previous_log_max_decrees();
-                int i = 0;
                 for (auto& kv : previous)
                 {
                     std::cout << "  " << kv.first.get_app_id() << "." << kv.first.get_partition_index() << " : " << kv.second.max_decree

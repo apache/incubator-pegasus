@@ -52,9 +52,9 @@ typedef union
 struct dsn_thrift_header
 {
     header_type hdr_type;
-    int32_t hdr_crc32;
-    int32_t body_offset;
-    int32_t body_length;
+    uint32_t hdr_crc32;
+    uint32_t body_offset;
+    uint32_t body_length;
     int32_t request_hash;
     int32_t client_timeout;
     dsn_thrift_header_options opt;
@@ -74,7 +74,7 @@ public:
     static void read_thrift_header_from_buffer(/*out*/dsn_thrift_header& result, const char* buffer);
     static dsn::message_ex* parse_dsn_message(dsn_thrift_header* header, dsn::blob& message_data);
     static void add_prefix_for_thrift_response(message_ex* msg);
-    static int prepare_buffers_on_send(message_ex* msg, int offest, /*out*/message_parser::send_buf* buffers);
+    static int prepare_buffers_on_send(message_ex* msg, unsigned int offest, /*out*/message_parser::send_buf* buffers);
     static int get_send_buffers_count(message_ex* msg);
 };
 

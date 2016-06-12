@@ -112,15 +112,15 @@ public:
     }
 
 private:
-    std::string _full_name; 
     std::string _app;
-    std::string _section; 
-    std::string _name;        
+    std::string _name;
+    std::string _section;
     std::string _dsptr;
     dsn_perf_counter_type_t _type;
 
-    friend class perf_counters;
     uint64_t    _index; // for quick query in perf_counters: index << 32 | version
+    std::string _full_name;
+    friend class perf_counters;
 };
 
 } // end namespace

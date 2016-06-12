@@ -44,7 +44,7 @@ namespace dsn {
             bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 
             simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
-                : _lock(true), replicated_service_app_type_1(gpid)
+                : replicated_service_app_type_1(gpid), _lock(true)
             {
                 _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
                 _checkpoint_version = 0;

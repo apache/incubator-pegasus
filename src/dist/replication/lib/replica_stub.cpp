@@ -93,9 +93,18 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
-    //zauto_lock l(_replicas_lock);
-    set_options(opts);
     _primary_address = primary_address();
+    ddebug("primary_address = %s", _primary_address.to_string());
+
+    set_options(opts);
+    std::ostringstream oss;
+    for (int i = 0; i < _options.meta_servers.size(); ++i)
+    {
+        if (i != 0)
+            oss << ",";
+        oss << _options.meta_servers[i].to_string();
+    }
+    ddebug("meta_servers = %s", oss.str().c_str());
 
     // clear dirs if need
     if (clear)
@@ -885,20 +894,14 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
     replica_ptr replica = get_replica(gpid);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY)
     {
-        if ((replica->status() == partition_status::PS_INACTIVE ||
-            replica->status() == partition_status::PS_SECONDARY)
-            && now_ms() - replica->last_config_change_time_milliseconds()
-            < _options.gc_memory_replica_interval_ms)
+        if (replica->status() == partition_status::PS_INACTIVE
+            && now_ms() - replica->create_time_milliseconds() < _options.gc_memory_replica_interval_ms)
         {
             ddebug("%s: replica not exists on meta server, wait to close", replica->name());
             return;
         }
 
-        ddebug(
-            "%u.%u @ %s: replica not exists on meta server, removed",
-            gpid.get_app_id(), gpid.get_partition_index(),
-            primary_address().to_string()
-            );
+        ddebug("%s: replica not exists on meta server, remove", replica->name());
 
         // TODO: set PS_INACTIVE instead for further state reuse
         replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
@@ -1234,7 +1237,7 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
                 close_replica(r);
             }, 
             0, 
-            std::chrono::milliseconds(r->status() == partition_status::PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
+            std::chrono::milliseconds(delay_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();

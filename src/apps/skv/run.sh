@@ -19,9 +19,9 @@ if [ -f core ] || ! grep ERR_OK out; then
     ls -l
     echo "---- head -n 100 out ----"
     head -n 100 out
-    if find . -name log.1.txt; then
+    if [ -f data/logs/log.1.txt ]; then
         echo "---- tail -n 100 log.1.txt ----"
-        tail -n 100 `find . -name log.1.txt`
+        tail -n 100 data/logs/log.1.txt
     fi
     if [ -f core ]; then
         echo "---- gdb ./dsn.replication.simple_kv core ----"

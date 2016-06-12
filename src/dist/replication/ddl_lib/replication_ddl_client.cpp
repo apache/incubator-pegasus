@@ -141,7 +141,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
         for(int i = 0; i < partition_count; i++)
         {
             const partition_configuration& pc = query_resp.partitions[i];
-            if (!pc.primary.is_invalid() && (pc.secondaries.size() >= replica_count / 2))
+            if (!pc.primary.is_invalid() && (pc.secondaries.size() >= (unsigned int)replica_count / 2))
             {
                 ready_count++;
             }

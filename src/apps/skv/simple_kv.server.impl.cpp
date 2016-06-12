@@ -49,7 +49,7 @@ namespace dsn {
         namespace application {
             
             simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
-                : _lock(true), ::dsn::replicated_service_app_type_1(gpid)
+                : ::dsn::replicated_service_app_type_1(gpid), _lock(true)
             {
                 _test_file_learning = false;
                 _checkpoint_version = 0;

@@ -125,7 +125,6 @@ void kubernetes_cluster_scheduler::schedule(
                 std::shared_ptr<deployment_unit>& unit
                 )
 {
-    int ret = -1;
     bool found = false;
     {
         zauto_lock l(_lock);

@@ -56,13 +56,13 @@ namespace dsn {
         }
     }
 
-    void message_parser::create_new_buffer(int sz)
+    void message_parser::create_new_buffer(unsigned int sz)
     {
         _read_buffer.assign(std::shared_ptr<char>(new char[sz], std::default_delete<char[]>{}), 0, sz);
         _read_buffer_occupied = 0;
     }
 
-    void message_parser::mark_read(int read_length)
+    void message_parser::mark_read(unsigned int read_length)
     {
         dassert(read_length + _read_buffer_occupied <= _read_buffer.length(), "");
         _read_buffer_occupied += read_length;
@@ -71,7 +71,7 @@ namespace dsn {
     // before read
     void* message_parser::read_buffer_ptr(int read_next)
     {
-        if (read_next + _read_buffer_occupied >  _read_buffer.length())
+        if (read_next + _read_buffer_occupied > _read_buffer.length())
         {
             // remember currently read content
             auto rb = _read_buffer.range(0, _read_buffer_occupied);
@@ -95,7 +95,7 @@ namespace dsn {
         return (void*)(_read_buffer.data() + _read_buffer_occupied);
     }
 
-    int message_parser::read_buffer_capacity() const
+    unsigned int message_parser::read_buffer_capacity() const
     {
         return _read_buffer.length() - _read_buffer_occupied;
     }
@@ -107,7 +107,7 @@ namespace dsn {
 
     void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
     {
-        if (fmt >= _factory_vec.size())
+        if (static_cast<unsigned int>(fmt) >= _factory_vec.size())
         {
             _factory_vec.resize(fmt + 1);
         }
@@ -132,14 +132,14 @@ namespace dsn {
     {
     }
 
-    message_ex* dsn_message_parser::receive_message_with_thrift_header(int read_length, /*out*/int& read_next)
+    message_ex* dsn_message_parser::receive_message_with_thrift_header(unsigned int, /*out*/int& read_next)
     {
 #ifdef DSN_ENABLE_THRIFT_RPC
         if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
         {
             dsn_thrift_header header;
             thrift_header_parser::read_thrift_header_from_buffer(header, _read_buffer.data());
-            int total_length = header.body_offset + header.body_length;
+            unsigned int total_length = header.body_offset + header.body_length;
             // msg done
             if ( _read_buffer_occupied >= total_length)
             {
@@ -170,11 +170,11 @@ namespace dsn {
 #endif
     }
 
-    message_ex* dsn_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
+    message_ex* dsn_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
     {
         mark_read(read_length);
 
-        if ( _read_buffer_occupied < sizeof(int32_t) )
+        if (_read_buffer_occupied < sizeof(int32_t) )
         {
             read_next = sizeof(int32_t);
             return nullptr;
@@ -203,8 +203,7 @@ namespace dsn {
                 }
             }
 
-            int msg_sz = sizeof(message_header) +
-                message_ex::get_body_length((char*)_read_buffer.data());
+            unsigned int msg_sz = sizeof(message_header) + message_ex::get_body_length((char*)_read_buffer.data());
 
             // msg done
             if (_read_buffer_occupied >= msg_sz)
@@ -245,7 +244,7 @@ namespace dsn {
         }
     }
 
-    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers)
+    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers)
     {
         if (msg->header->hdr_type == header_type::hdr_dsn_thrift)
         {

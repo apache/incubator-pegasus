@@ -50,7 +50,7 @@ namespace dsn
             : public meta_state_service, public clientlet
         {
         public:
-            explicit meta_state_service_simple() : _root("/", nullptr), _log_lock(true), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
+            explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log_lock(true), _log(nullptr), _offset(0){}
 
             // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
             virtual error_code initialize(int argc, const char** argv) override;
@@ -131,7 +131,7 @@ namespace dsn
                 std::unordered_map<std::string, state_node*> children;
 
                 state_node(const std::string& nm, state_node* pt, const blob& dt = {})
-                    : name(nm), parent(pt), data(dt)
+                    : name(nm), data(dt), parent(pt)
                 {}
             };
 
