@@ -266,7 +266,6 @@ typedef dsn_error_t(*dsn_app_destroy)(
     bool            ///< cleanup app state or not
     );
 
-
 /*! callback for layer2 app & framework to handle incoming rpc request */
 typedef void(*dsn_framework_rpc_request_handler)(
     void*,          ///< context from dsn_app_create
@@ -275,7 +274,6 @@ typedef void(*dsn_framework_rpc_request_handler)(
     dsn_message_t,  ///< incoming rpc request
     int             ///< delay (imposed by tools)
     );
-
 
 struct dsn_app_learn_state
 {
@@ -335,8 +333,14 @@ typedef int(*dsn_app_physical_error_get)(
     void*                       ///< context from dsn_app_create
     );
 
-# define DSN_APP_MASK_APP        0x00 ///< app mask
-# define DSN_APP_MASK_FRAMEWORK  0x01 ///< framework mask
+typedef void(*dsn_app_batched_request_handler)(
+    void*,           ///< context from dsn_app_create
+    dsn_message_t*,  ///< request array ptr
+    int              ///< request count
+    );
+
+# define DSN_APP_MASK_APP        0x01 ///< app mask
+# define DSN_APP_MASK_FRAMEWORK  0x02 ///< framework mask
 
 # pragma pack(push, 4)
 
@@ -350,6 +354,7 @@ typedef union dsn_app_callbacks
     dsn_app_create placeholder[DSN_MAX_CALLBAC_COUNT];
     struct app_callbacks
     {
+        dsn_app_batched_request_handler batch_handler;
         dsn_app_checkpoint              chkpt;
         dsn_app_checkpoint_async        chkpt_async;
         dsn_app_checkpoint_get_version  chkpt_get_version;

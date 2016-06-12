@@ -122,8 +122,8 @@ error_code docker_scheduler::initialize()
         char buff[512];
         while( fgets(buff,sizeof(buff),in) != nullptr)
         {
-            constexpr const char * substr = "docker start/running";
-            constexpr size_t length = strlen(substr);
+            constexpr const char substr[] = "docker start/running";
+            constexpr size_t length = sizeof(substr) - 1;
             if( strncmp(substr,buff,length) != 0 )
             {
                 dinfo("docker daemon is not running");
