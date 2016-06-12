@@ -60,7 +60,7 @@ namespace dsn
         virtual ::dsn::error_code checkpoint_async(int64_t version) { return ERR_NOT_IMPLEMENTED; }
 
         virtual int64_t get_last_checkpoint_version() const { return 0; }
-
+        
         //
         // prepare an app-specific learning request (on learner, to be sent to learneee
         // and used by method get_checkpoint), so that the learning process is more efficient
@@ -188,7 +188,9 @@ namespace dsn
         // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
         // 
         virtual ::dsn::error_code apply_checkpoint(int64_t local_commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) = 0;
-
+        
+        virtual void on_batched_rpc_requests(dsn_message_t* requests, int count) { }
+        
         int get_last_physical_error() const { return _physical_error; }
 
         void set_physical_error(int err) { _physical_error = err; }
@@ -255,6 +257,12 @@ namespace dsn
             auto sapp = (replicated_service_app_type_1*)(app);
             return sapp->get_last_physical_error();
         }
+
+        static void app_on_batched_rpc_requests(void* app, dsn_message_t* requests, int count)
+        {
+            auto sapp = (replicated_service_app_type_1*)(app);
+            sapp->on_batched_rpc_requests(requests, count);
+        }
     };
 
     /*! C++ wrapper of the \ref dsn_register_app function for layer 1 */
@@ -276,6 +284,12 @@ namespace dsn
         app.layer2.apps.calls.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2.apps.calls.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
         app.layer2.apps.calls.physical_error_get = replicated_service_app_type_1::app_get_physical_error;
+
+        if (std::is_same<decltype(&TServiceApp::on_batched_rpc_requests),
+                         decltype(&replicated_service_app_type_1::on_batched_rpc_requests)>())
+            app.layer2.apps.calls.batch_handler = nullptr;
+        else
+            app.layer2.apps.calls.batch_handler = replicated_service_app_type_1::app_on_batched_rpc_requests;
 
         dsn_register_app(&app);
     }

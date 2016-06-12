@@ -402,15 +402,12 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     dassert(mu->data.updates.size() > 0, "");
 
     int count = static_cast<int>(mu->client_requests.size());
-    //auto& bs = _app_info->info.type1.batch_state;
-    //bs = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    dsn_message_t* batched_requests = (dsn_message_t*)alloca(sizeof(dsn_message_t) * count);
+    dsn_message_t* faked_requests = (dsn_message_t*)alloca(sizeof(dsn_message_t) * count);
+    int j = 0, k =0;
+
     for (int i = 0; i < count; i++)
     {
-        /*if (bs == BS_BATCH && i + 1 == count)
-        {
-            bs = BS_BATCH_LAST;
-        }*/
-
         const mutation_update& update = mu->data.updates[i];
         dsn_message_t req = mu->client_requests[i];
         if (update.code != RPC_REPLICATION_WRITE_EMPTY)
@@ -421,40 +418,49 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             if (req == nullptr)
             {                
                 req = dsn_msg_create_received_request(update.code, (void*)update.data.data(), update.data.length());
-                dsn_hosted_app_commit_rpc_request(_app_context, req, true);
-                dsn_msg_release_ref(req);
-                req = nullptr;
-            }
-            else
-            {
-                dsn_hosted_app_commit_rpc_request(_app_context, req, true);
+                faked_requests[k++] = req;
             }
 
-            //binary_reader reader(update.data);
-            //dsn_message_t resp = (req ? dsn_msg_create_response(req) : nullptr);
-
-            ////uint64_t now = dsn_now_ns();
-            //dispatch_rpc_call(update.code, reader, resp);
-            ////now = dsn_now_ns() - now;
-
-            ////_app_commit_latency.set(now);
+            batched_requests[j++] = req;
         }
         else
         {
             // empty mutation write
         }
+    }
 
-        int perr = _callbacks.calls.physical_error_get(_app_context_callbacks);
-        if (perr != 0)
+    // batch processing
+    uint64_t now = dsn_now_ns();
+    if (_callbacks.calls.batch_handler)
+    {
+        _callbacks.calls.batch_handler(_app_context_callbacks, batched_requests, j);
+    }   
+    else
+    {
+        for (int i = 0; i < j; i++)
         {
-            derror("%s: physical error %d occurs in replication local app %s",
-                   _replica->name(), perr, data_dir().c_str());
-            return ERR_LOCAL_APP_FAILURE;
+            dsn_hosted_app_commit_rpc_request(_app_context, batched_requests[i], true);
         }
+    }
+    
+    now = dsn_now_ns() - now;
+    _app_commit_latency.set(now);
+
+    // release faked requests
+    for (int i = 0; i < k; i++)
+    {
+        dsn_msg_release_ref(faked_requests[i]);
+    }
+
+    int perr = _callbacks.calls.physical_error_get(_app_context_callbacks);
+    if (perr != 0)
+    {
+        derror("%s: physical error %d occurs in replication local app %s",
+            _replica->name(), perr, data_dir().c_str());
+        return ERR_LOCAL_APP_FAILURE;
     }
 
     ++_last_committed_decree;
-    //++_app_info->info.type1.last_committed_decree;
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
