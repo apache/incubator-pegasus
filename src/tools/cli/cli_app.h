@@ -45,9 +45,9 @@ namespace dsn {
         class cli : public service_app
         {
         public:
-            cli();
+            cli(dsn_gpid gpid);
             virtual ::dsn::error_code start(int argc, char** argv);
-            virtual void stop(bool cleanup = false);
+            virtual ::dsn::error_code stop(bool cleanup = false);
 
         private:
             cli_client     _client;

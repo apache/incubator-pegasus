@@ -1,8 +1,11 @@
 include(ExternalProject)
 
+set(target_url ${RAPIDJSON_GIT_SOURCE})
+set(git_tag ${RAPIDJSON_GIT_TAG})
+
 ExternalProject_Add(rapidjson_header
-    GIT_REPOSITORY https://github.com/shengofsun/rapidjson-header.git
-    GIT_TAG master
+    GIT_REPOSITORY ${target_url}
+    GIT_TAG ${RAPIDJSON_GIT_TAG}
     INSTALL_COMMAND ""
 )
 

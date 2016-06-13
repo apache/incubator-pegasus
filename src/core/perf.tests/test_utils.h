@@ -65,21 +65,21 @@ class test_client :
     public ::dsn::service_app    
 {
 public:
-    test_client()
-        : ::dsn::serverlet<test_client>("test-server", 7)
+    test_client(dsn_gpid gpid)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
     {
 
     }
 
     void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
     {
-        std::string r = dsn_get_current_app_data_dir();
+        std::string r = dsn_get_app_data_dir();
         replier(std::move(r));
     }
 
     void on_rpc_string_test(dsn_message_t message) {
         std::string command;
-        ::unmarshall(message, command);
+        ::dsn::unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
@@ -124,8 +124,8 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    void stop(bool cleanup = false)
+    ::dsn::error_code stop(bool cleanup = false)
     {
-
+        return ERR_OK;
     }
 };

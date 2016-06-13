@@ -14,54 +14,16 @@ public:
     {
     }
 
-    void start_test()
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-        s.name = "deploy_svc.deploy";
-        s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_DEPLOY";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_deploy(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        s.name = "deploy_svc.undeploy";
-        s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_UNDEPLOY";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_undeploy(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        s.name = "deploy_svc.get_service_list";
-        s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_LIST";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_get_service_list(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        s.name = "deploy_svc.get_service_info";
-        s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_SERVICE_INFO";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_get_service_info(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        s.name = "deploy_svc.get_cluster_list";
-        s.config_section = "task.RPC_DEPLOY_SVC_DEPLOY_SVC_GET_CLUSTER_LIST";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_get_cluster_list(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        start(suits);
+        return;
     }
 
     void send_one_deploy(int payload_bytes, int key_space_size)
     {
         deploy_request req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -79,7 +41,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -97,7 +59,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -115,7 +77,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
@@ -133,7 +95,7 @@ public:
     {
         std::string req;
         // TODO: randomize the value of req
-        // auto rs = random64(0, 10000000);
+        // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();

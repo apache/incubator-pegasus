@@ -1,5 +1,8 @@
 set(project_name zookeeper)
-set(target_url  https://github.com/shengofsun/zookeeper_client_c.git)
+
+set(target_url ${ZOOKEEPER_GIT_SOURCE})
+set(git_tag ${ZOOKEEPER_GIT_TAG})
+
 set(my_cmake_args "")
 
 if(WIN32)

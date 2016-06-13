@@ -14,7 +14,8 @@ set(MY_PROJ_INC_PATH "")
 
 set(MY_BOOST_PACKAGES system)
 
-set(MY_PROJ_LIBS dsn.tools.nfs
+set(MY_PROJ_LIBS dsn.dist.providers.common
+                 dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
                  dsn.tools.simulator

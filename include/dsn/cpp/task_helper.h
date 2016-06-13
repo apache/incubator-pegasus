@@ -93,6 +93,11 @@ namespace dsn
             return dsn_task_cancel2(_task, wait_until_finished, finished);
         }
 
+        void set_delay(int delay_ms)
+        {
+            dsn_task_set_delay(_task, delay_ms);
+        }
+
         void wait() const
         {
             return dsn_task_wait(_task);

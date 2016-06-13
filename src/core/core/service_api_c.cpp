@@ -254,6 +254,23 @@ DSN_API double dsn_config_get_value_double(const char* section, const char* key,
     return dsn_all.config->get_value<double>(section, key, default_value, dsptr);
 }
 
+DSN_API int dsn_config_get_all_sections(const char** buffers, /*inout*/ int* buffer_count)
+{
+    std::vector<const char*> sections;
+    dsn_all.config->get_all_section_ptrs(sections);
+    int scount = (int)sections.size();
+
+    if (*buffer_count > scount)
+        *buffer_count = scount;
+
+    for (int i = 0; i < *buffer_count; i++)
+    {
+        buffers[i] = sections[i];
+    }
+
+    return scount;
+}
+
 DSN_API int dsn_config_get_all_keys(const char* section, const char** buffers, /*inout*/ int* buffer_count) // return all key count (may greater than buffer_count)
 {
     std::vector<const char*> keys;
@@ -404,6 +421,11 @@ DSN_API bool dsn_task_cancel(dsn_task_t task, bool wait_until_finished)
     return ((::dsn::task*)(task))->cancel(wait_until_finished);
 }
 
+DSN_API void dsn_task_set_delay(dsn_task_t task, int delay_ms)
+{
+    ((::dsn::task*)(task))->set_delay(delay_ms);
+}
+
 DSN_API bool dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, bool* finished)
 {
     return ((::dsn::task*)(task))->cancel(wait_until_finished, finished);
@@ -530,6 +552,13 @@ DSN_API void dsn_rwlock_nr_unlock_read(dsn_handle_t l)
     ((::dsn::rwlock_nr_provider*)(l))->unlock_read();
 }
 
+DSN_API bool dsn_rwlock_nr_try_lock_read(dsn_handle_t l)
+{
+    auto r = ((::dsn::rwlock_nr_provider*)(l))->try_lock_read();
+    if (r) ::dsn::lock_checker::zlock_shared_count++;
+    return r;
+}
+
 DSN_API void dsn_rwlock_nr_lock_write(dsn_handle_t l)
 {
     ((::dsn::rwlock_nr_provider*)(l))->lock_write();
@@ -542,6 +571,12 @@ DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l)
     ((::dsn::rwlock_nr_provider*)(l))->unlock_write();
 }
 
+DSN_API bool dsn_rwlock_nr_try_lock_write(dsn_handle_t l)
+{
+    auto r = ((::dsn::rwlock_nr_provider*)(l))->try_lock_write();
+    if (r) ::dsn::lock_checker::zlock_exclusive_count++;
+    return r;
+}
 
 DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {
@@ -590,7 +625,13 @@ DSN_API dsn_address_t dsn_primary_address()
     return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
-DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
+DSN_API bool dsn_rpc_register_handler(
+    dsn_task_code_t code,
+    const char* name, 
+    dsn_rpc_request_handler_t cb, 
+    void* param, 
+    dsn_gpid gpid
+    )
 {
     ::dsn::rpc_handler_info* h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
@@ -598,18 +639,18 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
     h->parameter = param;
 
     h->add_ref();
-    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
+
+    bool r = ::dsn::task::get_current_node()->rpc_register_handler(h, gpid);
     if (!r)
     {
         delete h;
-    }      
-
+    }
     return r;
 }
 
-DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
+DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, dsn_gpid gpid)
 {
-    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, 0);
+    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, gpid);
     void* param = nullptr;
 
     if (nullptr != h)
@@ -623,20 +664,20 @@ DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, 
-    void* context, int reply_hash, dsn_task_tracker_t tracker)
+    void* context, int reply_thread_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task_ex(dsn_message_t request, dsn_rpc_response_handler_t cb, 
     dsn_task_cancelled_handler_t on_cancel,
-    void* context, int reply_hash, dsn_task_tracker_t tracker)
+    void* context, int reply_thread_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
@@ -684,10 +725,10 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn_message_t response)
+DSN_API void dsn_rpc_reply(dsn_message_t response, dsn_error_t err)
 {
     auto msg = ((::dsn::message_ex*)response);
-    ::dsn::task::get_current_rpc()->reply(msg);
+    ::dsn::task::get_current_rpc()->reply(msg, err);
 }
 
 DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
@@ -884,22 +925,7 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app(dsn_app* app_type)
-{
-    dsn_app* app;
-    auto& store = ::dsn::utils::singleton_store<std::string, dsn_app*>::instance();
-    if (store.get(app_type->type_name, app))
-    {
-        dassert(false, "app type %s is already registered", app_type->type_name);
-        return false;
-    }
-    
-    app = new dsn_app();
-    *app = *app_type;
-    auto r = store.put(app_type->type_name, app);
-    dassert(r, "app type %s is already registered", app_type->type_name);
-    return r;
-}
+
 
 static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list);
 
@@ -1017,27 +1043,38 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     return false;
 }
 
-DSN_API const char* dsn_get_current_app_data_dir()
+DSN_API const char* dsn_get_app_data_dir(dsn_gpid gpid)
 {
-    return ::dsn::task::get_current_node()->spec().data_dir.c_str();
+    auto info = dsn_get_app_info_ptr(gpid);
+    return info ? info->data_dir : nullptr;
 }
 
 DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
 {
-    auto cnode = ::dsn::task::get_current_node2();
-    if (cnode != nullptr)
+    auto info = dsn_get_app_info_ptr(dsn_gpid{ 0 });
+    if (info)
     {
-        app_info->app_context_ptr = cnode->get_app_context_ptr();
-        app_info->app_id = cnode->id();
-        app_info->index = cnode->spec().index;
-        strncpy(app_info->role, cnode->spec().role_name.c_str(), sizeof(app_info->role));
-        strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
-        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
-        strncpy(app_info->data_dir, cnode->spec().data_dir.c_str(), sizeof(app_info->data_dir));
+        memcpy(app_info, info, sizeof(*info));
         return true;
     }
     else
         return false;
+}
+
+DSN_API dsn_app_info* dsn_get_app_info_ptr(dsn_gpid gpid)
+{
+    auto cnode = ::dsn::task::get_current_node2();
+    if (cnode != nullptr)
+    {
+        if (gpid.value == 0)
+            return cnode->get_l1_info();
+        else
+        {
+            return cnode->get_l2_handler().get_app_info(gpid);
+        }
+    }
+    else
+        return nullptr;
 }
 
 ::dsn::utils::notify_event s_loader_event;
@@ -1128,8 +1165,11 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
+extern void dsn_core_init();
+
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list)
 {
+    dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 
     dsn_all.engine_ready = false;
@@ -1357,7 +1397,7 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
 
         dsn::service_node* node = kv.second;
         dsn_app_info& info = info_buffer[i++];
-        info.app_context_ptr = node->get_app_context_ptr();
+        info.app.app_context_ptr = node->get_app_context_ptr();
         info.app_id = node->id();
         info.index = node->spec().index;
         strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));

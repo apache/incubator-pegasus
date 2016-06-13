@@ -150,9 +150,19 @@ ENUM_BEGIN(throttling_mode_t, TM_INVALID)
     ENUM_REG(TM_DELAY)
 ENUM_END(throttling_mode_t)
 
+
+ENUM_BEGIN(dsn_msg_serialize_format, DSF_INVALID)
+    ENUM_REG(DSF_THRIFT_BINARY)
+    ENUM_REG(DSF_THRIFT_COMPACT)
+    ENUM_REG(DSF_THRIFT_JSON)
+    ENUM_REG(DSF_PROTOC_BINARY)
+    ENUM_REG(DSF_PROTOC_JSON)
+ENUM_END(dsn_msg_serialize_format)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP);
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
@@ -204,8 +214,11 @@ public:
     // for other tasks - allow-inline allows a task being execution in io-thread
     bool                   allow_inline;
     bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
-    network_header_format  rpc_call_header_format;
+    network_header_format    rpc_call_header_format;
+    dsn_msg_serialize_format rpc_msg_payload_serialize_default_format;
     rpc_channel            rpc_call_channel;
+    bool                   rpc_message_crc_required;
+
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_request_resend_timeout_milliseconds; // 0 for no auto-resend
     throttling_mode_t      rpc_request_throttling_mode; // 
@@ -213,8 +226,8 @@ public:
     bool                   rpc_request_dropped_before_execution_when_timeout;
 
     // layer 2 configurations
-    bool                   rpc_request_is_replicated_write_operation; // need stateful replication 
-    
+    bool                   rpc_request_layer2_handler_required; // need layer 2 handler
+    bool                   rpc_request_is_write_operation;      // need stateful replication
     // ]
 
     task_rejection_handler rejection_handler;
@@ -265,7 +278,9 @@ CONFIG_BEGIN(task_spec)
         )
     CONFIG_FLD(bool, bool, randomize_timer_delay_if_zero, false, "whether to randomize the timer delay to random(0, timer_interval), if the initial delay is zero, to avoid multiple timers executing at the same time (e.g., checkpointing)")
     CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
+    CONFIG_FLD_ENUM(dsn_msg_serialize_format, rpc_msg_payload_serialize_default_format, DSF_THRIFT_BINARY, DSF_INVALID, false, "what kind of payload serialization format for this kind of msgs")
     CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
+    CONFIG_FLD(bool, bool, rpc_message_crc_required, false, "whether to calculate the crc checksum when send request/response")
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
     CONFIG_FLD(int32_t, uint64, rpc_request_resend_timeout_milliseconds, 0, "for how long (ms) the request will be resent if no response is received yet, 0 for disable this feature")
     CONFIG_FLD_ENUM(throttling_mode_t, rpc_request_throttling_mode, TM_NONE, TM_INVALID, false, "throttling mode for rpc requets: TM_NONE, TM_REJECT, TM_DELAY when queue length > pool.queue_length_throttling_threshold")
@@ -273,8 +288,9 @@ CONFIG_BEGIN(task_spec)
     CONFIG_FLD(bool, bool, rpc_request_dropped_before_execution_when_timeout, false, "whether to drop a request right before execution when its queueing time is already greater than its timeout value")    
 
     // layer 2 configurations
-    CONFIG_FLD(bool, bool, rpc_request_is_replicated_write_operation, false, "whether this is a replicated and write request")
-
+    CONFIG_FLD(bool, bool, rpc_request_layer2_handler_required, false, "whether this request needs to be handled by a layer2 handler (e.g., replicated or partitioned)")
+    CONFIG_FLD(bool, bool, rpc_request_is_write_operation, false, "whether this request updates app's state which needs to be replicated using a replication layer2 handler")
+    
 CONFIG_END
 
 struct threadpool_spec

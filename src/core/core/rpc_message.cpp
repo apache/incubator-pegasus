@@ -50,11 +50,26 @@ using namespace dsn::utils;
 DSN_API dsn_message_t dsn_msg_create_request(
     dsn_task_code_t rpc_code, 
     int timeout_milliseconds, 
-    int request_hash, 
-    uint64_t partition_hash
+    uint64_t hash
     )
 {
-    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, request_hash, partition_hash);
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
+}
+
+DSN_API dsn_message_t dsn_msg_create_received_request(
+    dsn_task_code_t rpc_code,
+    void* buffer,
+    int size,
+    uint64_t hash
+    )
+{
+    ::dsn::blob bb((const char*)buffer, 0, size);
+    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    msg->local_rpc_code = rpc_code;
+    msg->header->client.hash = hash;
+
+    msg->add_ref(); // released by callers explicitly using dsn_msg_release
+    return msg;
 }
 
 DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
@@ -123,6 +138,31 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->header->rpc_id;
 }
 
+DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
+{
+    auto msg2 = ((::dsn::message_ex*)msg);
+    if (msg2->local_rpc_code != (uint32_t)(-1))
+    {
+        return msg2->local_rpc_code;
+    }
+    else
+    {
+        uint32_t code = 0;
+        auto binary_hash = msg2->header->rpc_name_fast.local_hash;
+        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
+        {
+            code = msg2->header->rpc_name_fast.local_rpc_id;
+        }
+        else
+        {
+            code = dsn_task_code_from_string(msg2->header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        }
+
+        msg2->local_rpc_code = code;
+        return code;
+    }
+}
+
 DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
     dsn_msg_options_t *opts,
@@ -138,18 +178,30 @@ DSN_API void dsn_msg_set_options(
     
     if (mask & DSN_MSGM_HASH)
     {
-        hdr->client.hash = opts->request_hash;
+        hdr->client.hash = opts->hash;
     }
     
     if (mask & DSN_MSGM_VNID)
     {
-        hdr->vnid = opts->vnid;
+        hdr->gpid = opts->gpid;
     }
 
     if (mask & DSN_MSGM_CONTEXT)
     {
         hdr->context = opts->context;
     }
+}
+
+DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg)
+{
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    return static_cast<dsn_msg_serialize_format>(hdr->context.u.serialize_format);
+}
+
+DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt)
+{
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    hdr->context.u.serialize_format = fmt;
 }
 
 DSN_API void dsn_msg_get_options(
@@ -159,9 +211,9 @@ DSN_API void dsn_msg_get_options(
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
     opts->context = hdr->context;
-    opts->request_hash = hdr->client.hash;
+    opts->hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
-    opts->vnid = hdr->vnid;
+    opts->gpid = hdr->gpid;
 }
 
 namespace dsn {
@@ -171,11 +223,13 @@ uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
 {
+    buffers.reserve(2);
     _rw_committed = true;
     _rw_index = -1;
     _rw_offset = 0;
     header = nullptr;
     _is_read = false;
+    local_rpc_code = ::dsn::TASK_CODE_INVALID;
 }
 
 message_ex::~message_ex()
@@ -189,7 +243,7 @@ message_ex::~message_ex()
 void message_ex::seal(bool fill_crc)
 {
     dassert  (!_is_read && _rw_committed, "seal can only be applied to write mode messages");
-    dbg_dassert(header->body_length > 0, "message %s is empty!", header->rpc_name);
+    //dbg_dassert(header->body_length > 0, "message %s is empty!", header->rpc_name);
 
     if (fill_crc)
     {
@@ -335,7 +389,19 @@ message_ex* message_ex::create_receive_message(const blob& data)
     auto data2 = data.range((int)sizeof(message_header));
     msg->buffers.push_back(data2);
 
-    dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
+    //dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
+    return msg;
+}
+
+message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data)
+{
+    message_ex* msg = new message_ex();
+    msg->buffers.push_back(data);
+    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(sizeof(message_header))), [](char* c) {dsn_transient_free(c);});
+    msg->header = reinterpret_cast<message_header*>(header_holder.get());
+    memset(msg->header, 0, sizeof(message_header));
+    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    msg->_is_read = true;
     return msg;
 }
 
@@ -393,7 +459,7 @@ message_ex* message_ex::copy_and_prepare_send()
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int request_hash, uint64_t partition_hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, uint64_t hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -404,7 +470,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     memset(&hdr, 0, sizeof(hdr));
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
-    hdr.client.hash = request_hash;
+    hdr.client.hash = hash;
 
     if (0 == timeout_milliseconds)
     {
@@ -423,12 +489,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.id = new_id();
 
     hdr.context.u.is_request = true;
-    if (0 != partition_hash)
-    {
-        hdr.context.u.parameter_type = MSG_PARAM_PARTITION_HASH;
-        hdr.context.u.parameter = partition_hash;
-    }
-    hdr.context.u.is_replication_needed = sp->rpc_request_is_replicated_write_operation;
+    hdr.context.u.serialize_format = sp->rpc_msg_payload_serialize_default_format;
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;
@@ -476,12 +537,13 @@ void message_ex::prepare_buffer_header()
         (int)((char*)(ptr) - ::dsn::tls_trans_memory.block->get()),
         (int)sizeof(message_header)
         );
+
+    ::dsn::tls_trans_mem_commit(sizeof(message_header));
+
     this->_rw_index = 0;
     this->_rw_offset = (int)sizeof(message_header);
     this->buffers.push_back(buffer);
 
-    ::dsn::tls_trans_mem_commit(sizeof(message_header));
-    
     header = (message_header*)ptr;
 }
 
@@ -496,7 +558,7 @@ void message_ex::write_next(void** ptr, size_t* size, size_t min_size)
     // optimization
     if (this->_rw_index >= 0)
     {
-        ::dsn::blob& lbb = *this->buffers.rbegin();
+        auto& lbb = *this->buffers.rbegin();
 
         // if the current allocation is within the same buffer with the previous one
         if (*ptr == lbb.data() + lbb.length()
@@ -580,7 +642,7 @@ void message_ex::read_commit(size_t size)
 
 void* message_ex::rw_ptr(size_t offset_begin)
 {
-    // printf("%p %s\n", this, __FUNCTION__);
+    //printf("%p %s\n", this, __FUNCTION__);
     int i_max = (int)this->buffers.size();
 
     if (!_is_read)

@@ -41,12 +41,12 @@
 namespace dsn { namespace replication { namespace test {
 
 extern std::string g_case_input;
-extern global_partition_id g_default_gpid;
+extern gpid g_default_gpid;
 extern bool g_done;
 extern bool g_fail;
 
-const char* partition_status_to_short_string(partition_status s);
-partition_status partition_status_from_short_string(const std::string& str);
+const char* partition_status_to_short_string(partition_status::type s);
+partition_status::type partition_status_from_short_string(const std::string& str);
 
 // transfer primary_address to node_name
 // return "-" if addr.is_invalid()
@@ -56,29 +56,29 @@ std::string address_to_node(rpc_address addr);
 // return invalid addr if not found
 rpc_address node_to_address(const std::string& name);
 
-std::string gpid_to_string(global_partition_id gpid);
-bool gpid_from_string(const std::string& str, global_partition_id& gpid);
+std::string gpid_to_string(gpid gpid);
+bool gpid_from_string(const std::string& str, gpid& gpid);
 
 struct replica_id
 {
-    global_partition_id gpid;
+    gpid pid;
     std::string node;
-    replica_id() : gpid(g_default_gpid) {}
-    replica_id(global_partition_id g, const std::string& n) : gpid(g), node(n) {}
+    replica_id() : pid(g_default_gpid) {}
+    replica_id(gpid g, const std::string& n) : pid(g), node(n) {}
     replica_id& operator= (const replica_id& o)
     {
         if (this == &o) return *this;
-        gpid = o.gpid;
+        pid = o.pid;
         node = o.node;
         return *this;
     }
     bool operator< (const replica_id& o) const
     {
-        return (gpid < o.gpid) || (gpid == o.gpid && node < o.node);
+        return (pid < o.pid) || (pid == o.pid && node < o.node);
     }
     bool operator== (const replica_id& o) const
     {
-        return gpid == o.gpid && node == o.node;
+        return pid == o.pid && node == o.node;
     }
     bool operator!= (const replica_id& o) const
     {
@@ -91,11 +91,11 @@ struct replica_id
 struct replica_state
 {
     replica_id id;
-    partition_status status;
+    partition_status::type status;
     int64_t ballot;
     decree last_committed_decree;
     decree last_durable_decree; // -1 means not set
-    replica_state() : status(PS_INACTIVE), ballot(0), last_committed_decree(0),last_durable_decree(-1) {}
+    replica_state() : status(partition_status::PS_INACTIVE), ballot(0), last_committed_decree(0),last_durable_decree(-1) {}
     replica_state& operator= (const replica_state& o)
     {
         if (this == &o) return *this;
@@ -164,15 +164,15 @@ struct state_snapshot
 
 struct parti_config
 {
-    global_partition_id gpid;
+    gpid pid;
     int64_t ballot;
     std::string primary;
     std::vector<std::string> secondaries;
-    parti_config() : gpid(g_default_gpid), ballot(0) {}
+    parti_config() : pid(g_default_gpid), ballot(0) {}
     parti_config& operator= (const parti_config& o)
     {
         if (this == &o) return *this;
-        gpid = o.gpid;
+        pid = o.pid;
         ballot = o.ballot;
         primary = o.primary;
         secondaries = o.secondaries;
@@ -180,7 +180,7 @@ struct parti_config
     }
     bool operator== (const parti_config& o) const
     {
-        return gpid == o.gpid && ballot == o.ballot
+        return pid == o.pid && ballot == o.ballot
                 && primary == o.primary && secondaries == o.secondaries;
     }
     bool operator!= (const parti_config& o) const
@@ -189,7 +189,7 @@ struct parti_config
     }
     bool operator< (const parti_config& o) const
     {
-        return gpid == o.gpid && ballot < o.ballot;
+        return pid == o.pid && ballot < o.ballot;
     }
     std::string to_string() const;
     bool from_string(const std::string& str);

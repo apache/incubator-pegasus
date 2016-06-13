@@ -55,11 +55,10 @@ public:
     typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
 
 public:
-    task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
-    ~task_queue();
+    task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+    virtual ~task_queue();
     
     virtual void     enqueue(task* task) = 0;
-
     // dequeue may return more than 1 tasks, but there is a configured
     // best batch size for each worker so that load among workers
     // are balanced,
@@ -67,8 +66,8 @@ public:
     virtual task*    dequeue(/*inout*/int& batch_size) = 0;
     
     int               count() const { return _queue_length.load(std::memory_order_relaxed); }
-    int               decrease_count(int count = 1) { _queue_length_counter->add((uint64_t)(-count));  return _queue_length.fetch_sub(1, std::memory_order_relaxed) - 1;}
-    int               increase_count(int count = 1) { _queue_length_counter->add(count);  return _queue_length.fetch_add(1, std::memory_order_relaxed) + 1;}
+    int               decrease_count(int count = 1) { _queue_length_counter->add((uint64_t)(-count));  return _queue_length.fetch_sub(count, std::memory_order_relaxed) - count;}
+    int               increase_count(int count = 1) { _queue_length_counter->add(count);  return _queue_length.fetch_add(count, std::memory_order_relaxed) + count;}
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }

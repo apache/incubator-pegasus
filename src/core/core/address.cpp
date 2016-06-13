@@ -61,6 +61,7 @@
 # include <dsn/cpp/address.h>
 # include <dsn/internal/task.h>
 # include "group_address.h"
+# include "uri_address.h"
 
 namespace dsn
 {
@@ -121,11 +122,13 @@ DSN_API uint32_t dsn_ipv4_from_host(const char* name)
     return (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
+// if network_interface is "", then return the first "eth" prefixed non-loopback ipv4 address.
 DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 {
     uint32_t ret = 0;
 
 # ifndef _WIN32
+    static const char loopback[4] = { 127, 0, 0, 1 };
     struct ifaddrs* ifa = nullptr;
     if (getifaddrs(&ifa) == 0)
     {
@@ -133,11 +136,15 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
         while (i != nullptr)
         {
             if (i->ifa_name != nullptr &&
-                strcmp(i->ifa_name, network_interface) == 0 &&
                 i->ifa_addr != nullptr && 
                 i->ifa_addr->sa_family == AF_INET
                 )
             {
+                if (strcmp(i->ifa_name, network_interface) == 0 ||
+                        (network_interface[0] == '\0'
+                         && strncmp(i->ifa_name, "eth", 3) == 0
+                         && strncmp((const char*)&((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr, loopback, 4) != 0)
+                   )
                 ret = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
                 break;
             }
@@ -234,20 +241,16 @@ DSN_API dsn_address_t dsn_address_build_uri(
     return addr.c_addr();
 }
 
-DSN_API dsn_uri_t dsn_uri_build(const char* url) // must be paired with destroy later
-{
-    return (dsn_uri_t)strdup(url);
-}
-
-DSN_API void dsn_uri_destroy(dsn_uri_t uri)
-{
-    free((void*)uri);
-}
-
 DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with release later
 {
     auto g = new ::dsn::rpc_group_address(name);
     return g;
+}
+
+DSN_API int dsn_group_count(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    return grp->count();
 }
 
 DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t ep)
@@ -276,16 +279,16 @@ DSN_API bool dsn_group_is_leader(dsn_group_t g, dsn_address_t ep)
     return grp->leader() == ep;
 }
 
-DSN_API bool dsn_group_is_update_leader_on_rpc_forward(dsn_group_t g)
+DSN_API bool dsn_group_is_update_leader_automatically(dsn_group_t g)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
-    return grp->is_update_leader_on_rpc_forward();
+    return grp->is_update_leader_automatically();
 }
 
-DSN_API void dsn_group_set_update_leader_on_rpc_forward(dsn_group_t g, bool v)
+DSN_API void dsn_group_set_update_leader_automatically(dsn_group_t g, bool v)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
-    grp->set_update_leader_on_rpc_forward(v);
+    grp->set_update_leader_automatically(v);
 }
 
 DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep)
@@ -313,4 +316,14 @@ DSN_API void dsn_group_destroy(dsn_group_t g)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
     delete grp;
+}
+
+DSN_API dsn_uri_t dsn_uri_build(const char* url) // must be paired with destroy later
+{
+    return (dsn_uri_t)new ::dsn::rpc_uri_address(url);
+}
+
+DSN_API void dsn_uri_destroy(dsn_uri_t uri)
+{
+    delete (::dsn::rpc_uri_address*)(uri);
 }

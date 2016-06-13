@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$_IDL_FORMAT = $argv[4];
 ?>
 # pragma once
 
@@ -20,28 +21,25 @@ public:
         : <?=$svc->name?>_client(server)
     {
     }
-
-    void start_test()
+    
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-<?php foreach ($svc->functions as $f) { ?>
-        s.name = "<?=$svc->name?>.<?=$f->name?>";
-        s.config_section = "task.<?=$f->get_rpc_code()?>";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_<?=$f->name?>(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-<?php } ?>
-        start(suits);
+        auto prob = (double)dsn_random32(0, 1000) / 1000.0;
+        if (0) {}
+<?php $i = 0; foreach ($svc->functions as $f) {?>
+        else if (prob <= ratios[<?=$i?>])
+        {
+            send_one_<?=$f->name?>(payload_bytes, key_space_size);
+        }
+<?php $i++; }?>
+        else { /* nothing to do */ }
     }
+    
 <?php foreach ($svc->functions as $f) { ?>
 
     void send_one_<?=$f->name?>(int payload_bytes, int key_space_size)
     {
-        <?=$f->get_first_param()->get_cpp_type()?> req;
+        <?=$f->get_cpp_request_type_name()?> req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000) % key_space_size;
         // std::stringstream ss;

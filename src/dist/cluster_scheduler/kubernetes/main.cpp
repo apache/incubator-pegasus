@@ -38,15 +38,17 @@
 class test_client : public ::dsn::service_app
 {
 public:
+    test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+
     ::dsn::error_code start(int argc, char** argv)
     {
         auto err = _k8s.initialize();
         return err;
     }
 
-    void stop(bool cleanup = false)
+    ::dsn::error_code stop(bool cleanup = false)
     {
-
+        return ::dsn::ERR_OK;
     }
 
     ::dsn::dist::kubernetes_cluster_scheduler _k8s;

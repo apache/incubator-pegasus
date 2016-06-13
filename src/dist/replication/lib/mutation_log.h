@@ -64,7 +64,7 @@ struct replica_log_info
     }
 };
 
-typedef std::unordered_map<global_partition_id, replica_log_info> replica_log_info_map;
+typedef std::unordered_map<gpid, replica_log_info> replica_log_info_map;
 
 // each block in log file has a log_block_header
 struct log_block_header
@@ -84,11 +84,12 @@ struct log_file_header
 };
 
 // a memory structure holding data which belongs to one block.
-class log_block
+class log_block/* : public ::dsn::transient_object*/
 {
     std::vector<blob> _data; // the first blob is log_block_header
     size_t            _size; // total data size of all blobs
 public:
+    log_block() : _size(0) {}
     log_block(blob &&init_blob) : _data({init_blob}), _size(init_blob.length()) {}
     // get all blobs in the block
     const std::vector<blob>& data() const
@@ -120,12 +121,34 @@ public:
 //
 // this class is thread safe
 //
-class mutation_log : public virtual clientlet, public ref_counter
+class mutation_log : public ref_counter, public virtual clientlet
 {
 public:
     // return true when the mutation's offset is not less than
     // the remembered (shared or private) valid_start_offset therefore valid for the replica
     typedef std::function<bool (mutation_ptr&)> replay_callback;
+    typedef std::function<void(dsn::error_code err)> io_failure_callback;
+
+public:
+    // append a log mutation
+    // return value: nullptr for error
+    // thread safe
+    virtual ::dsn::task_ptr append(mutation_ptr& mu,
+        dsn_task_code_t callback_code,
+        clientlet* callback_host,
+        aio_handler callback,
+        int hash = 0) = 0;
+
+    virtual bool get_learn_state_in_memory(
+        bool start_decree,
+        binary_writer& writer
+        ) const {
+        return true;
+    }
+    
+    // flush the pending buffer
+    // thread safe
+    virtual void flush() = 0;
 
 public:
     //
@@ -134,11 +157,9 @@ public:
     //
     mutation_log(
         const std::string& dir,
-        int32_t batch_buffer_size_kb,
         int32_t max_log_file_mb,
-        bool force_flush = false,
-        bool is_private = false,
-        global_partition_id private_gpid = {0, 0}
+        gpid gpid,
+        replica* r = nullptr
         );
     virtual ~mutation_log();
 
@@ -149,16 +170,12 @@ public:
     // open and replay
     // returns ERR_OK if succeed
     // not thread safe, but only be called when init
-    error_code open(replay_callback callback);
+    error_code open(replay_callback read_callback, io_failure_callback write_error_callback);
 
     // close the log
     // thread safe
     void close();
-
-    // flush the pending buffer
-    // thread safe
-    void flush();
-
+    
     //
     // replay
     //
@@ -167,41 +184,28 @@ public:
         replay_callback callback,
         /*out*/ int64_t& end_offset
         );
-
-    //
-    // append
-    //
-
-    // append a log mutation
-    // return value: nullptr for error
-    // thread safe
-    ::dsn::task_ptr append(mutation_ptr& mu,
-            dsn_task_code_t callback_code,
-            clientlet* callback_host,
-            aio_handler callback,
-            int hash = 0);
-
+    
     //
     // maintain max_decree & valid_start_offset
     //
 
     // when open a exist replica, need to set valid_start_offset on open
     // thread safe
-    void set_valid_start_offset_on_open(global_partition_id gpid, int64_t valid_start_offset);
+    void set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset);
 
     // when create a new replica, need to reset current max decree
     // returns current global end offset, needs to be remebered by caller for gc usage
     // thread safe
-    int64_t on_partition_reset(global_partition_id gpid, decree max_decree);
+    int64_t on_partition_reset(gpid gpid, decree max_decree);
 
     // remove entry from _previous_log_max_decrees when a partition is removed.
     // only used for private log.
     // thread safe
-    void on_partition_removed(global_partition_id gpid);
+    void on_partition_removed(gpid gpid);
 
     // update current max decree
     // thread safe
-    void update_max_decree(global_partition_id gpid, decree d);
+    void update_max_decree(gpid gpid, decree d);
 
     // update current max commit of private log
     // thread safe
@@ -217,7 +221,7 @@ public:
     //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
     //  - the current log file is excluded
     // thread safe
-    int garbage_collection(global_partition_id gpid, decree durable_decree, int64_t valid_start_offset);
+    int garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset);
 
     // garbage collection for shared log
     // remove log files if satisfy:
@@ -233,7 +237,7 @@ public:
     //  when this is a private log, log files are learned by remote replicas
     //
     void get_learn_state(
-        global_partition_id gpid,
+        gpid gpid,
         ::dsn::replication::decree start,
         /*out*/ ::dsn::replication::learn_state& state
         ) const;
@@ -245,11 +249,14 @@ public:
     // log dir
     // thread safe (because nerver changed)
     const std::string& dir() const { return _dir; }
+
+    // replica
+    replica* owner_replica() const { return _owner_replica; }
     
     // get current max decree for gpid
     // returns 0 if not found
     // thread safe
-    decree max_decree(global_partition_id gpid) const;
+    decree max_decree(gpid gpid) const;
 
     // get current max commit on disk of private log.
     // thread safe
@@ -257,11 +264,20 @@ public:
 
     // maximum decree that is garbage collected
     // thread safe
-    decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
+    decree max_gced_decree(gpid gpid, int64_t valid_start_offset) const;
 
     // check the consistence of valid_start_offset
     // thread safe
-    void check_valid_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
+    void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
+
+protected:
+    // thread-safe
+    std::pair<log_file_ptr, int64_t> mark_new_update(size_t size, gpid gpid, decree d, bool create_new_log_if_needed);
+    // thread-safe
+    int64_t get_global_offset() const { zauto_lock l(_lock); return _global_end_offset;  }
+
+    // init memory states
+    virtual void init_states();
 
 private:
     //
@@ -278,12 +294,9 @@ private:
         replay_callback callback,
         /*out*/ int64_t& end_offset
         );
-
-    // init memory states
-    void init_states();
-
+    
     // update max decree without lock
-    void update_max_decree_no_lock(global_partition_id gpid, decree d);
+    void update_max_decree_no_lock(gpid gpid, decree d);
 
     // update max commit on disk without lock
     void update_max_commit_on_disk_no_lock(decree d);
@@ -294,42 +307,24 @@ private:
     // - _pending_write == nullptr (because we need create new pending buffer to write file header)
     error_code create_new_log_file();
 
-    // create new pending buffer for new block, will reserve block header
-    // Preconditions:
-    // - _pending_write == nullptr
-    void create_new_pending_buffer();
-
-    // async write pending mutations into log file
-    // Preconditions:
-    // - _pending_write != nullptr
-    // - _issued_write.expired() == true (because only one async write is allowed at the same time)
-    error_code write_pending_mutations(bool create_new_log_when_necessary = true);
-
-    // callback of write_pending_mutations()
-    typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
-    void internal_write_callback(error_code err,
-                                 size_t size,
-                                 log_file_ptr file,
-                                 std::shared_ptr<log_block> block,
-                                 pending_callbacks_ptr callbacks,
-                                 decree max_commit);
-
-private:
+protected:
     std::string               _dir;
     bool                      _is_private;
-    global_partition_id       _private_gpid; // only used for private log
+    gpid                      _private_gpid; // only used for private log
+    replica                   *_owner_replica; // only used for private log
+    io_failure_callback       _io_error_callback;
 
     // options
     int64_t                   _max_log_file_size_in_bytes;    
-    uint32_t                  _batch_buffer_bytes;
     bool                      _force_flush;
 
+private:
     ///////////////////////////////////////////////
     //// memory states
     ///////////////////////////////////////////////
     mutable zlock                  _lock;
     bool                           _is_opened;
-
+    
     // logs
     int                            _last_file_index; // new log file index = _last_file_index + 1
     std::map<int, log_file_ptr>    _log_files; // index -> log_file_ptr
@@ -337,15 +332,6 @@ private:
     int64_t                        _global_start_offset; // global start offset of all files
     int64_t                        _global_end_offset; // global end offset currently
     
-    
-    // bufferring
-    volatile bool                  _is_writing;
-    std::weak_ptr<log_block>       _issued_write;
-    task_ptr                       _issued_write_task; // for debugging
-    std::shared_ptr<log_block>     _pending_write;
-    pending_callbacks_ptr          _pending_write_callbacks;
-    decree                         _pending_write_max_commit; // only used for private log
-
     // replica log info
     // - log_info.max_decree: the max decree of mutations up to now
     // - log_info.valid_start_offset: the same with replica_init_info::init_offset
@@ -356,6 +342,77 @@ private:
     // replica log info for private log
     replica_log_info               _private_log_info;
     decree                         _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
+};
+
+class mutation_log_shared : public mutation_log
+{
+public:
+    mutation_log_shared(
+        const std::string& dir,
+        int32_t max_log_file_mb
+        ) : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr)
+    {}
+
+    virtual ::dsn::task_ptr append(mutation_ptr& mu,
+        dsn_task_code_t callback_code,
+        clientlet* callback_host,
+        aio_handler callback,
+        int hash = 0) override;
+
+    virtual void flush() override;
+};
+
+class mutation_log_private : public mutation_log
+{
+public:
+    mutation_log_private(
+        const std::string& dir,
+        int32_t max_log_file_mb,
+        gpid gpid,
+        replica* r,
+        uint32_t batch_buffer_bytes
+        ) : mutation_log(dir, max_log_file_mb, gpid, r), _batch_buffer_bytes(batch_buffer_bytes)
+    {
+        mutation_log_private::init_states();
+    }
+
+    virtual ::dsn::task_ptr append(mutation_ptr& mu,
+        dsn_task_code_t callback_code,
+        clientlet* callback_host,
+        aio_handler callback,
+        int hash = 0) override;
+
+    virtual bool get_learn_state_in_memory(
+        bool start_decree,
+        binary_writer& writer
+        ) const override;
+
+
+    virtual void flush() override;
+
+private:
+    // async write pending mutations into log file
+    // Preconditions:
+    // - _pending_write != nullptr
+    // - _issued_write.expired() == true (because only one async write is allowed at the same time)
+    error_code write_pending_mutations();
+
+    virtual void init_states() override;
+
+private:
+    // bufferring - only one concurrent write is allowed
+    typedef std::vector<mutation_ptr> mutations;
+    std::weak_ptr<log_block>       _issued_write;
+    std::weak_ptr<mutations>       _issued_write_mutations;
+    task_ptr                       _issued_write_task; // for debugging
+    int64_t                        _pending_write_start_offset;
+    std::shared_ptr<log_block>     _pending_write;
+    std::shared_ptr<mutations>     _pending_write_mutations;
+    decree                         _pending_write_max_commit; 
+    decree                         _pending_write_max_decree;
+    mutable zlock                  _plock;
+
+    uint32_t                       _batch_buffer_bytes;
 };
 
 //
@@ -417,7 +474,7 @@ public:
 
     // prepare a log entry buffer, with block header reserved and inited
     // always returns non-nullptr
-    std::shared_ptr<log_block> prepare_log_block() const;
+    static log_block* prepare_log_block();
 
     // async write log entry into the file
     // 'block' is the date to be writen
@@ -429,7 +486,7 @@ public:
     // returns:
     //   - non-null if io task is in pending
     //   - null if error
-    ::dsn::task_ptr commit_log_block(
+    ::dsn::task_ptr commit_log_block(                    
                     log_block& block,
                     int64_t offset,
                     dsn_task_code_t evt,
@@ -444,7 +501,7 @@ public:
     // reset file_streamer to point to the start of this log file.
     void reset_stream();
     // end offset in the global space: end_offset = start_offset + file_size
-    int64_t end_offset() const { return _end_offset; }
+    int64_t end_offset() const { return _end_offset.load(); }
     // start offset in the global space
     int64_t start_offset() const  { return _start_offset; }
     // file index
@@ -472,7 +529,7 @@ private:
 private:        
     uint32_t         _crc32;
     int64_t          _start_offset; // start offset in the global space
-    int64_t          _end_offset; // end offset in the global space: end_offset = start_offset + file_size
+    std::atomic<int64_t> _end_offset; // end offset in the global space: end_offset = start_offset + file_size
     class file_streamer;
     std::unique_ptr  <file_streamer> _stream;
     dsn_handle_t     _handle; // file handle

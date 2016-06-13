@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 # pragma once
-# include "nfs_code_definition.h"
+# include <dsn/tool/nfs.h>
 # include <iostream>
 
 namespace dsn { namespace service { 

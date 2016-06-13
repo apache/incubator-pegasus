@@ -39,32 +39,24 @@
 
 namespace dsn { namespace replication { namespace test {
 
-class simple_kv_client_wrapper : public simple_kv_client
-{
-public:
-    simple_kv_client_wrapper(
-        const std::vector<rpc_address>& meta_servers,
-        const char* app_name)
-        : simple_kv_client(meta_servers, app_name) {}
-    virtual ~simple_kv_client_wrapper() {}
-};
-
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client_app();
+    simple_kv_client_app(dsn_gpid gpid);
     virtual ~simple_kv_client_app();
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
-    virtual void stop(bool cleanup = false) override;
+    virtual ::dsn::error_code stop(bool cleanup = false) override;
 
     void run();
 
     void begin_read(int id, const std::string& key, int timeout_ms);
     void begin_write(int id,const std::string& key,const std::string& value, int timeout_ms);
-    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node);
+    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node);
 private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
+    rpc_address _meta_server_group;
+    url_host_address _service_addr;
 };
 
 }}}

@@ -62,28 +62,7 @@ namespace dsn {
                     _node->start_io_engine_in_node_start_task(io);
                 }
                 
-                std::vector<std::string> args;
-                std::vector<char*> args_ptr;
-                utils::split_args(sp.arguments.c_str(), args);
-
-                int argc = static_cast<int>(args.size()) + 1;
-                args_ptr.resize(argc);
-                args.resize(argc);
-                for (int i = argc - 1; i >= 0; i--)
-                {
-                    if (0 == i)
-                    {
-                        args[0] = sp.name;
-                    }
-                    else
-                    {
-                        args[i] = args[i - 1];
-                    }
-
-                    args_ptr[i] = ((char*)args[i].c_str());
-                }
-
-                err = _node->start_app(argc, &args_ptr[0]);
+                err = _node->start_app();
                 dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
             }
             else

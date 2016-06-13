@@ -39,6 +39,7 @@
 # include <dsn/internal/network.h>
 # include <dsn/internal/singleton_store.h>
 # include "library_utils.h"
+# include "app_manager.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -435,7 +436,7 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
 
 #define mimic_app_role_name "dsn.app.mimic"
 
-static void* mimic_app_create(const char*)
+static void* mimic_app_create(const char*, dsn_gpid)
 {
     return nullptr;
 }
@@ -445,9 +446,9 @@ static dsn_error_t mimic_app_start(void* ctx, int argc, char** argv)
     return ::dsn::ERR_OK;
 }
 
-static void mimic_app_destroy(void* ctx, bool clean_up)
+static dsn_error_t mimic_app_destroy(void* ctx, bool clean_up)
 {
-    return;
+    return ::dsn::ERR_OK;
 }
 
 bool service_spec::init_app_specs()
@@ -455,7 +456,7 @@ bool service_spec::init_app_specs()
     // register mimic app
     dsn_app dapp;
     memset(&dapp, 0, sizeof(dapp));
-    dapp.mask = DSN_APP_MASK_DEFAULT;
+    dapp.mask = DSN_APP_MASK_APP;
     strcpy(dapp.type_name, mimic_app_role_name);
     dapp.layer1.create = mimic_app_create;
     dapp.layer1.destroy = mimic_app_destroy;

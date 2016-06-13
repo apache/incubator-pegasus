@@ -37,6 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -49,7 +50,9 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || _options->group_check_disabled)
+    ddebug("%s: init group check", name());
+
+    if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -66,10 +69,7 @@ void replica::broadcast_group_check()
 {
     dassert (nullptr != _primary_states.group_check_task, "");
 
-    ddebug(
-        "%s: start broadcast group check",
-        name()
-    );
+    ddebug("%s: start to broadcast group check", name());
 
     if (_primary_states.group_check_pending_replies.size() > 0)
     {
@@ -93,12 +93,12 @@ void replica::broadcast_group_check()
         ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
-        request->app_type = _primary_states.membership.app_type;
+        request->app = _app_info;
         request->node = addr;
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
 
-        if (request->config.status == PS_POTENTIAL_SECONDARY)
+        if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY)
         {
             auto it = _primary_states.learners.find(addr);
             dassert(it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
@@ -106,7 +106,7 @@ void replica::broadcast_group_check()
         }
 
         ddebug(
-            "%s: init_group_check for %s with state %s",
+            "%s: send group check to %s with state %s",
             name(),
             addr.to_string(),
             enum_to_string(it->second)
@@ -134,13 +134,16 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     check_hashed_access();
 
     ddebug(
-        "%s: on_group_check from %s",
-        name(), request.config.primary.to_string()
+        "%s: process group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+        name(), request.config.primary.to_string(),
+        request.config.ballot, enum_to_string(request.config.status),
+        request.last_committed_decree
         );
     
     if (request.config.ballot < get_ballot())
     {
         response.err = ERR_VERSION_OUTDATED;
+        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
         return;
     }
     else if (request.config.ballot > get_ballot())
@@ -148,6 +151,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
         if (!update_local_configuration(request.config))
         {
             response.err = ERR_INVALID_STATE;
+            dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
             return;
         }
     }
@@ -158,42 +162,43 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     
     switch (status())
     {
-    case PS_INACTIVE:
+    case partition_status::PS_INACTIVE:
         break;
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree())
         {
             _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         init_learn(request.config.learner_signature);
         break;
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         break;
     default:
         dassert (false, "");
     }
     
-    response.gpid = get_gpid();
+    response.pid = get_gpid();
     response.node = _stub->_primary_address;
     response.err = ERR_OK;
-    if (status() == PS_ERROR)
+    if (status() == partition_status::PS_ERROR)
     {
         response.err = ERR_INVALID_STATE;
+        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();
     response.last_committed_decree_in_prepare_list = last_committed_decree();
     response.learner_status_ = _potential_secondary_states.learning_status;
-    response.learner_signature = _potential_secondary_states.learning_signature;
+    response.learner_signature = _potential_secondary_states.learning_version;
 }
 
 void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_check_request>& req, const std::shared_ptr<group_check_response>& resp)
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
+    if (partition_status::PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {
         return;
     }
@@ -209,7 +214,7 @@ void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_c
     {
         if (resp->err == ERR_OK)
         {
-            if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
+            if (resp->learner_status_ == learner_status::LearningSucceeded && req->config.status == partition_status::PS_POTENTIAL_SECONDARY)
             {
                 handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }

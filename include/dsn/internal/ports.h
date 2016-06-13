@@ -121,3 +121,18 @@ namespace dsn
 # endif
 # endif
 
+# ifdef _WIN32
+
+# ifndef be16toh
+# define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
+# endif
+
+# ifndef be32toh
+# define be32toh(x) ( (be16toh((x)>>16)&65535) | (be16toh((x)&65535)<<16) )
+# endif
+
+# ifndef be64toh
+# define be64toh(x) ( (be32toh((x)>>32)&0xffffffff) | ( be32toh( (x)&0xffffffff ) << 32 ) )
+# endif
+
+# endif

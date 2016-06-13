@@ -36,7 +36,12 @@
 # pragma once
 
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/internal/callocator.h>
 # include <functional>
+
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+# include <thrift/protocol/TProtocol.h>
+#endif
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -228,6 +233,10 @@ namespace dsn {
             return false;
         }
 
+#ifdef DSN_USE_THRIFT_SERIALIZATION
+        uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+        uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+#endif
     private:
         friend class binary_writer;
         std::shared_ptr<char>  _holder;

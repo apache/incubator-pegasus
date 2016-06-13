@@ -45,7 +45,8 @@ namespace dsn {
 
         using namespace ::dsn::replication;
 
-        repli_app::repli_app()
+        repli_app::repli_app(dsn_gpid gpid)
+            : service_app(gpid)
         {
         }
 
@@ -99,17 +100,17 @@ namespace dsn {
                 std::cout << "start_offset=" << lf->start_offset() << std::endl;
                 std::cout << "end_offset=" << lf->end_offset() << std::endl;
                 std::cout << "previous_log_max_decrees={" << std::endl;
-                std::cout << "  /* app_id.pidx : previous_max_decree : valid_start_offset */" << std::endl;
+                std::cout << "  /* app_id.partition_index : previous_max_decree : valid_start_offset */" << std::endl;
                 const replica_log_info_map& previous = lf->previous_log_max_decrees();
                 int i = 0;
                 for (auto& kv : previous)
                 {
-                    std::cout << "  " << kv.first.app_id << "." << kv.first.pidx << " : " << kv.second.max_decree
+                    std::cout << "  " << kv.first.get_app_id() << "." << kv.first.get_partition_index() << " : " << kv.second.max_decree
                               << " : " << kv.second.valid_start_offset << std::endl;
                 }
                 std::cout << "}" << std::endl;
                 std::cout << "mutations={" << std::endl;
-                std::cout << "  /* app_id.pidx.ballot.decree : last_committed_decree : log_offset */" << std::endl;
+                std::cout << "  /* app_id.partition_index.ballot.decree : last_committed_decree : log_offset */" << std::endl;
                 lf->close();
                 lf = nullptr;
                 int64_t offset = 0;
@@ -158,9 +159,9 @@ namespace dsn {
             return ERR_OK;
         }
 
-        void repli_app::stop(bool cleanup)
+        error_code repli_app::stop(bool cleanup)
         {
-            
+            return ::dsn::ERR_OK;
         } 
 
         std::vector<std::string> repli_app::s_args;

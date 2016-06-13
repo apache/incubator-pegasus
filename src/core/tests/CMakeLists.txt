@@ -18,12 +18,14 @@ set(MY_PROJ_INC_PATH
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
+                 dsn.dist.providers.common
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
                  dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
+                 dsn.cli
 )
 
 set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
@@ -37,8 +39,9 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-no-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-null-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-sample.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-corrupt-message.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-2.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-fastrun.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test-posix-aio.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test-sim.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-unmatch-section.ini"
@@ -48,6 +51,7 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.cmd"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/gtest.filter"
 )
 
 dsn_add_executable()

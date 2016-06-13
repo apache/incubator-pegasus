@@ -51,50 +51,47 @@ namespace dsn
         // ---------- thread pool for scheduler -------------
         DEFINE_THREAD_POOL_CODE(THREAD_POOL_SCHEDULER_LONG)
 
-        // ---------- cluster_type -------------
-        enum class cluster_type
-        {
-            kubernetes = 0,
-            docker = 1,
-            bare_medal_linux = 2,
-            bare_medal_windows = 3,
-            yarn_on_linux = 4,
-            yarn_on_windows = 5,
-            mesos_on_linux = 6,
-            mesos_on_windows = 7,
-            invalid = 8
+        struct cluster_type {
+            enum type {
+                cstype_kubernetes = 0,
+                cstype_docker = 1,
+                cstype_bare_medal_linux = 2,
+                cstype_bare_medal_windows = 3,
+                cstype_yarn_on_linux = 4,
+                cstype_yarn_on_windows = 5,
+                cstype_mesos_on_linux = 6,
+                cstype_mesos_on_windows = 7,
+                cstype_count = 8,
+                cstype_invalid = 9
+            };
         };
 
-        DEFINE_POD_SERIALIZATION(cluster_type);
+        ENUM_BEGIN2(cluster_type::type, cluster_type, cluster_type::cstype_invalid)
+            ENUM_REG(cluster_type::cstype_kubernetes)
+            ENUM_REG(cluster_type::cstype_docker)
+            ENUM_REG(cluster_type::cstype_bare_medal_linux)
+            ENUM_REG(cluster_type::cstype_bare_medal_windows)
+            ENUM_REG(cluster_type::cstype_yarn_on_linux)
+            ENUM_REG(cluster_type::cstype_yarn_on_windows)
+            ENUM_REG(cluster_type::cstype_mesos_on_linux)
+            ENUM_REG(cluster_type::cstype_mesos_on_windows)
+        ENUM_END2(cluster_type::type, cluster_type)
 
-        ENUM_BEGIN(cluster_type, cluster_type::invalid)
-            ENUM_REG(cluster_type::kubernetes)
-            ENUM_REG(cluster_type::docker)
-            ENUM_REG(cluster_type::bare_medal_linux)
-            ENUM_REG(cluster_type::bare_medal_windows)
-            ENUM_REG(cluster_type::yarn_on_linux)
-            ENUM_REG(cluster_type::yarn_on_windows)
-            ENUM_REG(cluster_type::mesos_on_linux)
-            ENUM_REG(cluster_type::mesos_on_windows)
-        ENUM_END(cluster_type)
-
-        // ---------- service_status -------------
-        enum class service_status
-        {
-            SS_PREPARE_RESOURCE = 0,
-            SS_DEPLOYING = 1,
-            SS_RUNNING = 2,
-            SS_FAILOVER = 3,
-            SS_FAILED = 4,
-            SS_COUNT = 5,
-            SS_INVALID = 6,
-            SS_UNDEPLOYING = 7,
-            SS_UNDEPLOYED = 8
+        struct service_status {
+            enum type {
+                SS_PREPARE_RESOURCE = 0,
+                SS_DEPLOYING = 1,
+                SS_RUNNING = 2,
+                SS_FAILOVER = 3,
+                SS_FAILED = 4,
+                SS_UNDEPLOYING = 5,
+                SS_UNDEPLOYED = 6,
+                SS_COUNT = 7,
+                SS_INVALID = 8
+            };
         };
 
-        DEFINE_POD_SERIALIZATION(service_status);
-
-        ENUM_BEGIN(service_status, service_status::SS_INVALID)
+        ENUM_BEGIN2(service_status::type, service_status, service_status::SS_INVALID)
             ENUM_REG(service_status::SS_PREPARE_RESOURCE)
             ENUM_REG(service_status::SS_DEPLOYING)
             ENUM_REG(service_status::SS_RUNNING)
@@ -102,7 +99,7 @@ namespace dsn
             ENUM_REG(service_status::SS_FAILED)
             ENUM_REG(service_status::SS_UNDEPLOYING)
             ENUM_REG(service_status::SS_UNDEPLOYED)
-        ENUM_END(service_status)
+        ENUM_END2(service_status::type, service_status)
 
         struct deployment_unit
         {
@@ -113,8 +110,8 @@ namespace dsn
             std::string service_url;
             //std::string command_line;
             std::string cluster;
-            std::string package_id;
-            service_status status;
+            app_info info;
+            service_status::type status;
             //cluster_type package_type;
             std::function<void(error_code, rpc_address)> deployment_callback;
             std::function<void(error_code, const std::string&)> failure_notification;
@@ -141,10 +138,6 @@ namespace dsn
              */
             virtual error_code initialize() = 0;
 
-            /*
-             * option 1: combined deploy and failure notification service
-             *  failure_notification is specific for this deployment unit
-             */
             virtual void schedule(
                 std::shared_ptr<deployment_unit>& unit
                 ) = 0;
@@ -153,20 +146,7 @@ namespace dsn
                 std::shared_ptr<deployment_unit>& unit
                 ) = 0;
 
-            virtual cluster_type type() const = 0;
-
-            /*
-            * option 2: seperated deploy and failure notification service
-            */
-            virtual void deploy(
-                std::shared_ptr<deployment_unit>& unit,
-                std::function<void(error_code, rpc_address)> deployment_callback
-                ) = 0;
-
-            // *  failure_notification is general for all deployment units
-            virtual void register_failure_callback(
-                std::function<void(error_code, std::string)> failure_notification
-                ) = 0;
+            virtual cluster_type::type type() const = 0;
         };
     }
 }

@@ -37,7 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "replication_failure_detector.h"
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -51,7 +51,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s", 
+        "%s: process config proposal %s for %s",
         name(),
         enum_to_string(proposal.type),
         proposal.node.to_string()
@@ -60,7 +60,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     if (proposal.config.ballot < get_ballot())
     {
         dwarn(
-            "%s: on_config_proposal is out-dated, %" PRId64 " vs %" PRId64,
+            "%s: on_config_proposal out-dated, %" PRId64 " vs %" PRId64,
             name(),
             proposal.config.ballot,
             get_ballot()
@@ -88,21 +88,21 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     
     switch (proposal.type)
     {
-    case CT_ASSIGN_PRIMARY:
-    case CT_UPGRADE_TO_PRIMARY:
+    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_UPGRADE_TO_PRIMARY:
         assign_primary(proposal);
         break;
-    case CT_ADD_SECONDARY:
-    case CT_ADD_SECONDARY_FOR_LB:
+    case config_type::CT_ADD_SECONDARY:
+    case config_type::CT_ADD_SECONDARY_FOR_LB:
         add_potential_secondary(proposal);
         break;
-    case CT_DOWNGRADE_TO_SECONDARY:
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
         downgrade_to_secondary_on_primary(proposal);
         break;
-    case CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
         downgrade_to_inactive_on_primary(proposal);
         break;
-    case CT_REMOVE:
+    case config_type::CT_REMOVE:
         remove(proposal);
         break;
     default:
@@ -114,7 +114,7 @@ void replica::assign_primary(configuration_update_request& proposal)
 {
     dassert(proposal.node == _stub->_primary_address, "");
 
-    if (status() == PS_PRIMARY)
+    if (status() == partition_status::PS_PRIMARY)
     {
         dwarn(
             "%s: invalid assgin primary proposal as the node is in %s",
@@ -123,8 +123,8 @@ void replica::assign_primary(configuration_update_request& proposal)
         return;
     }
 
-    if (proposal.type == CT_UPGRADE_TO_PRIMARY 
-        && (status() != PS_SECONDARY || _secondary_states.checkpoint_is_running))
+    if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY
+        && (status() != partition_status::PS_SECONDARY || _secondary_states.checkpoint_is_running))
     {
         dwarn(
             "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
@@ -144,31 +144,33 @@ void replica::assign_primary(configuration_update_request& proposal)
 // run on primary to send ADD_LEARNER request to candidate replica server
 void replica::add_potential_secondary(configuration_update_request& proposal)
 {
-    if (status() != PS_PRIMARY)
+    if (status() != partition_status::PS_PRIMARY)
     {
         dwarn("ignore add secondary proposal for invalid state, state = %s", enum_to_string(status()));
         return;
     }
 
     dassert (proposal.config.ballot == get_ballot(), "");
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
-    dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
-    dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
+    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY), "");
+    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "");
 
     int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
     if (potential_secondaries_count == _primary_states.membership.max_replica_count - 1)
     {
-        if (proposal.type == CT_ADD_SECONDARY)
+        if (proposal.type == config_type::CT_ADD_SECONDARY)
         {
-            dinfo("name(%s): already have enough secondaries, ignore add secondary command", name());
-            return;
+            if (_primary_states.learners.find(proposal.node) == _primary_states.learners.end())
+            {
+                ddebug("%s: already have enough secondaries or potential secondaries, ignore new potential secondary proposal", name());
+                return;
+            }
         }
-        else if (proposal.type == CT_ADD_SECONDARY_FOR_LB)
+        else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB)
         {
-            dinfo("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            ddebug("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
         }
         else
         {
@@ -187,21 +189,22 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     }
     else
     {
-        state.signature = random64(0, (uint64_t)(-1LL));
+        state.signature = ++_primary_states.next_learning_version;
         _primary_states.learners[proposal.node] = state;
-        _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+        _primary_states.statuses[proposal.node] = partition_status::PS_POTENTIAL_SECONDARY;
     }
 
     group_check_request request;
-    request.app_type = _primary_states.membership.app_type;
+    request.app = _app_info;
     request.node = proposal.node;
-    _primary_states.get_replica_config(PS_POTENTIAL_SECONDARY, request.config, state.signature);
+    _primary_states.get_replica_config(partition_status::PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
 
     ddebug(
-        "%s: call one way %s to start learning",
+        "%s: call one way %s to start learning with signature [%" PRIx64"]",
         name(),
-        proposal.node.to_string()
+        proposal.node.to_string(),
+        state.signature
     );
 
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
@@ -220,16 +223,15 @@ void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
     // add secondary
     newConfig.secondaries.push_back(node);
 
-    update_configuration_on_meta_server(CT_UPGRADE_TO_SECONDARY, node, newConfig);
+    update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, newConfig);
 }
 
 void replica::downgrade_to_secondary_on_primary(configuration_update_request& proposal)
 {
-    if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
+    if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (proposal.node == proposal.config.primary, "");
@@ -237,17 +239,16 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     proposal.config.primary.set_invalid();
     proposal.config.secondaries.push_back(proposal.node);
 
-    update_configuration_on_meta_server(CT_DOWNGRADE_TO_SECONDARY, proposal.node, proposal.config);
+    update_configuration_on_meta_server(config_type::CT_DOWNGRADE_TO_SECONDARY, proposal.node, proposal.config);
 }
 
 
 void replica::downgrade_to_inactive_on_primary(configuration_update_request& proposal)
 {
-    if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
+    if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -261,16 +262,15 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
         dassert (rt, "");
     }
 
-    update_configuration_on_meta_server(CT_DOWNGRADE_TO_INACTIVE, proposal.node, proposal.config);
+    update_configuration_on_meta_server(config_type::CT_DOWNGRADE_TO_INACTIVE, proposal.node, proposal.config);
 }
 
 void replica::remove(configuration_update_request& proposal)
 {
-    if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
+    if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -278,23 +278,23 @@ void replica::remove(configuration_update_request& proposal)
 
     switch (st)
     {
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         dassert (proposal.config.primary == proposal.node, "");
         proposal.config.primary.set_invalid();
         break;
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         {
         auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
         dassert (rt, "");
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         break;
     default:
         break;
     }
 
-    update_configuration_on_meta_server(CT_REMOVE, proposal.node, proposal.config);
+    update_configuration_on_meta_server(config_type::CT_REMOVE, proposal.node, proposal.config);
 }
 
 // from primary
@@ -312,7 +312,7 @@ void replica::on_remove(const replica_configuration& request)
     // - when r2 is on learning, the remove request is arrived, with the same ballot
     // - here we ignore the lately arrived remove request, which is proper
     //
-    if (request.ballot == get_ballot() && PS_POTENTIAL_SECONDARY == status())
+    if (request.ballot == get_ballot() && partition_status::PS_POTENTIAL_SECONDARY == status())
     {
         dwarn("this implies that a config proposal request (e.g. add secondary) "
               "with the same ballot arrived before this remove request, "
@@ -320,41 +320,45 @@ void replica::on_remove(const replica_configuration& request)
         return;
     }
 
-    dassert (request.status == PS_INACTIVE, "");
+    dassert (request.status == partition_status::PS_INACTIVE, "");
     update_local_configuration(request);
 }
 
-void replica::update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig)
+void replica::update_configuration_on_meta_server(config_type::type type, ::dsn::rpc_address node, partition_configuration& newConfig)
 {
     newConfig.last_committed_decree = last_committed_decree();
 
-    if (type != CT_ASSIGN_PRIMARY && type != CT_UPGRADE_TO_PRIMARY)
+    if (type != config_type::CT_ASSIGN_PRIMARY && type != config_type::CT_UPGRADE_TO_PRIMARY)
     {
-        dassert (status() == PS_PRIMARY, "");
+        dassert (status() == partition_status::PS_PRIMARY, "");
         dassert (newConfig.ballot == _primary_states.membership.ballot, "");
     }
 
     // disable 2pc during reconfiguration
-    // it is possible to do this only for CT_DOWNGRADE_TO_SECONDARY,
+    // it is possible to do this only for config_type::CT_DOWNGRADE_TO_SECONDARY,
     // but we choose to disable 2pc during all reconfiguration types
     // for simplicity at the cost of certain write throughput
-    update_local_configuration_with_no_ballot_change(PS_INACTIVE);
+    update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
     set_inactive_state_transient(true);
 
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
     
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    request->info = _app_info;
     request->config = newConfig;
     request->config.ballot++;
     request->type = type;
     request->node = node;
 
-    ::marshall(msg, *request);
+    ::dsn::marshall(msg, *request);
 
     if (nullptr != _primary_states.reconfiguration_task)
     {
         _primary_states.reconfiguration_task->cancel(true);
     }
+
+    ddebug("%s: send update configuration request to meta server, ballot = %" PRId64 ", type = %s, node = %s",
+           name(), request->config.ballot, enum_to_string(request->type), request->node.to_string());
 
     rpc_address target(_stub->_failure_detector->get_servers());
     _primary_states.reconfiguration_task = rpc::call(
@@ -373,7 +377,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
 {
     check_hashed_access();
 
-    if (PS_INACTIVE != status() || _stub->is_connected() == false)
+    if (partition_status::PS_INACTIVE != status() || _stub->is_connected() == false)
     {
         _primary_states.reconfiguration_task = nullptr;
         err.end_tracking();
@@ -383,7 +387,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     configuration_update_response resp;
     if (err == ERR_OK)
     {
-        ::unmarshall(response, resp);
+        ::dsn::unmarshall(response, resp);
         err = resp.err;
     }
 
@@ -399,8 +403,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         if (err != ERR_INVALID_VERSION)
         {
             rpc_address target(_stub->_failure_detector->get_servers());
-            _primary_states.reconfiguration_task = rpc::call(
-                target,
+            _primary_states.reconfiguration_task = rpc::create_rpc_response_task(
                 request,
                 this,
                 [this, req](error_code err, dsn_message_t request, dsn_message_t response)
@@ -408,9 +411,12 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
                     on_update_configuration_on_meta_server_reply(err, request, response, std::move(req));
                 },
                 gpid_to_hash(get_gpid())
-                );
+            );
+            //when the rpc call timeout, we would delay to do the recall
+            _primary_states.reconfiguration_task->set_delay(1000);
+            dsn_rpc_call(target.c_addr(), _primary_states.reconfiguration_task->native_handle());
             return;
-        }        
+        }
     }
 
     ddebug(
@@ -430,24 +436,23 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     // post-update work items?
     if (resp.err == ERR_OK)
     {        
-        dassert (req->config.gpid == resp.config.gpid, "");
-        dassert (req->config.app_type == resp.config.app_type, "");
+        dassert (req->config.pid == resp.config.pid, "");
         dassert (req->config.primary == resp.config.primary, "");
         dassert (req->config.secondaries == resp.config.secondaries, "");
 
         switch (req->type)
         {        
-        case CT_UPGRADE_TO_PRIMARY:
+        case config_type::CT_UPGRADE_TO_PRIMARY:
             _primary_states.last_prepare_decree_on_new_primary = _prepare_list->max_decree();
             break;
-        case CT_ASSIGN_PRIMARY:
+        case config_type::CT_ASSIGN_PRIMARY:
             _primary_states.last_prepare_decree_on_new_primary = 0;
             break;
-        case CT_DOWNGRADE_TO_SECONDARY:
-        case CT_DOWNGRADE_TO_INACTIVE:
-        case CT_UPGRADE_TO_SECONDARY:
+        case config_type::CT_DOWNGRADE_TO_SECONDARY:
+        case config_type::CT_DOWNGRADE_TO_INACTIVE:
+        case config_type::CT_UPGRADE_TO_SECONDARY:
             break;
-        case CT_REMOVE:
+        case config_type::CT_REMOVE:
             if (req->node != _stub->_primary_address)
             {
                 replica_configuration rconfig;
@@ -471,8 +476,8 @@ bool replica::update_configuration(const partition_configuration& config)
     replica_configuration rconfig;
     replica_helper::get_replica_config(config, _stub->_primary_address, rconfig);
 
-    if (rconfig.status == PS_PRIMARY &&
-        (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)
+    if (rconfig.status == partition_status::PS_PRIMARY &&
+        (rconfig.ballot > get_ballot() || status() != partition_status::PS_PRIMARY)
         )
     {
         _primary_states.reset_membership(config, config.primary != _stub->_primary_address);
@@ -488,20 +493,20 @@ bool replica::update_configuration(const partition_configuration& config)
         return false;
 }
 
-bool replica::is_same_ballot_status_change_allowed(partition_status olds, partition_status news)
+bool replica::is_same_ballot_status_change_allowed(partition_status::type olds, partition_status::type news)
 {
     return
         // add learner
-        (olds == PS_INACTIVE && news == PS_POTENTIAL_SECONDARY)
+        (olds == partition_status::PS_INACTIVE && news == partition_status::PS_POTENTIAL_SECONDARY)
 
         // learner ready for secondary
-        || (olds == PS_POTENTIAL_SECONDARY && news == PS_SECONDARY)
+        || (olds == partition_status::PS_POTENTIAL_SECONDARY && news == partition_status::PS_SECONDARY)
 
         // meta server come back
-        || (olds == PS_INACTIVE && news == PS_SECONDARY && _inactive_is_transient)
+        || (olds == partition_status::PS_INACTIVE && news == partition_status::PS_SECONDARY && _inactive_is_transient)
 
         // meta server come back
-        || (olds == PS_INACTIVE && news == PS_PRIMARY && _inactive_is_transient)
+        || (olds == partition_status::PS_INACTIVE && news == partition_status::PS_PRIMARY && _inactive_is_transient)
 
         // no change
         || (olds == news)
@@ -512,9 +517,9 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 {
     dassert(config.ballot > get_ballot()
         || (same_ballot && config.ballot == get_ballot()), "");
-    dassert (config.gpid == get_gpid(), "");
+    dassert (config.pid == get_gpid(), "");
 
-    partition_status old_status = status();
+    partition_status::type old_status = status();
     ballot old_ballot = get_ballot();
 
     // skip unncessary configuration change
@@ -522,13 +527,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         return true;
 
     // skip invalid change
-    // but do not disable transitions to PS_ERROR as errors
+    // but do not disable transitions to partition_status::PS_ERROR as errors
     // must be handled immmediately
     switch (old_status)
     {
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         {
-            ddebug(
+            dwarn(
                 "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed",
                 name(),
                 enum_to_string(old_status),
@@ -539,11 +544,11 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             return false;
         }
         break;
-    case PS_INACTIVE:
-        if ((config.status == PS_PRIMARY || config.status == PS_SECONDARY)
+    case partition_status::PS_INACTIVE:
+        if ((config.status == partition_status::PS_PRIMARY || config.status == partition_status::PS_SECONDARY)
             && !_inactive_is_transient)
         {
-            ddebug(
+            dwarn(
                 "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed when inactive state is not transient",
                 name(),
                 enum_to_string(old_status),
@@ -554,8 +559,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             return false;
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
-        if (config.status == PS_INACTIVE)
+    case partition_status::PS_POTENTIAL_SECONDARY:
+        if (config.status == partition_status::PS_INACTIVE)
         {
             if (!_potential_secondary_states.cleanup(false))
             {
@@ -571,8 +576,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             }
         }
         break;
-    case PS_SECONDARY:
-        if (config.status != PS_SECONDARY && config.status != PS_ERROR)
+    case partition_status::PS_SECONDARY:
+        if (config.status != partition_status::PS_SECONDARY && config.status != partition_status::PS_ERROR)
         {
             if (!_secondary_states.cleanup(false))
             {
@@ -611,58 +616,58 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     
     switch (old_status)
     {
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         cleanup_preparing_mutations(false);
         switch (config.status)
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             replay_prepare_list();
             break;
-        case PS_INACTIVE:
+        case partition_status::PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
             break;
-        case PS_SECONDARY:
-        case PS_ERROR:
+        case partition_status::PS_SECONDARY:
+        case partition_status::PS_ERROR:
             _primary_states.cleanup(true);
             break;
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             dassert (false, "invalid execution path");
             break;
         default:
             dassert (false, "invalid execution path");
         }        
         break;
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         cleanup_preparing_mutations(false);
         switch (config.status)
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             init_group_check();            
             replay_prepare_list();
             break;
-        case PS_SECONDARY:
+        case partition_status::PS_SECONDARY:
             break;
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             // prevent further 2pc
             // wait next group check or explicit learn for real learning
-            _potential_secondary_states.learning_status = LearningWithoutPrepare;
+            _potential_secondary_states.learning_status = learner_status::LearningWithoutPrepare;
             break;
-        case PS_INACTIVE:
+        case partition_status::PS_INACTIVE:
             break;
-        case PS_ERROR:
+        case partition_status::PS_ERROR:
             // _secondary_states.cleanup(true); => do it in close as it may block
             break;
         default:
             dassert (false, "invalid execution path");
         }
         break;
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         switch (config.status)
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             dassert (false, "invalid execution path");
             break;
-        case PS_SECONDARY:
+        case partition_status::PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
 
             // using force cleanup now as all tasks must be done already
@@ -671,11 +676,11 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 
             check_state_completeness();
             break;
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             break;
-        case PS_INACTIVE:
+        case partition_status::PS_INACTIVE:
             break;
-        case PS_ERROR:
+        case partition_status::PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
             _potential_secondary_states.cleanup(false);
             // => do this in close as it may block
@@ -686,25 +691,25 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             dassert (false, "invalid execution path");
         }
         break;
-    case PS_INACTIVE:        
+    case partition_status::PS_INACTIVE:
         switch (config.status)
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             dassert (_inactive_is_transient, "must be in transient state for being primary next");
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
             break;
-        case PS_SECONDARY:
+        case partition_status::PS_SECONDARY:
             dassert(_inactive_is_transient, "must be in transient state for being secondary next");
             _inactive_is_transient = false;
             break;
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             _inactive_is_transient = false;
             break;
-        case PS_INACTIVE:
+        case partition_status::PS_INACTIVE:
             break;
-        case PS_ERROR:
+        case partition_status::PS_ERROR:
             // => do this in close as it may block
             // if (_inactive_is_transient)
             // {
@@ -722,22 +727,22 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             dassert (false, "invalid execution path");
         }
         break;
-    case PS_ERROR:
+    case partition_status::PS_ERROR:
         switch (config.status)
         {
-        case PS_PRIMARY:
+        case partition_status::PS_PRIMARY:
             dassert (false, "invalid execution path");
             break;
-        case PS_SECONDARY:
+        case partition_status::PS_SECONDARY:
             dassert (false, "invalid execution path");
             break;
-        case PS_POTENTIAL_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
             dassert(false, "invalid execution path");
             break;
-        case PS_INACTIVE:
+        case partition_status::PS_INACTIVE:
             dassert (false, "invalid execution path");
             break;
-        case PS_ERROR:
+        case partition_status::PS_ERROR:
             break;
         default:
             dassert (false, "invalid execution path");
@@ -763,7 +768,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 
     if (status() != old_status)
     {
-        bool is_closing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
+        bool is_closing = (status() == partition_status::PS_ERROR || (status() == partition_status::PS_INACTIVE && get_ballot() > old_ballot));
         _stub->notify_replica_state_update(config, is_closing);
 
         if (is_closing)
@@ -779,7 +784,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     // start pending mutations if necessary
-    if (status() == PS_PRIMARY)
+    if (status() == partition_status::PS_PRIMARY)
     {
         mutation_ptr next = _primary_states.write_queue.check_possible_work(
             static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
@@ -793,7 +798,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     return true;
 }
 
-bool replica::update_local_configuration_with_no_ballot_change(partition_status s)
+bool replica::update_local_configuration_with_no_ballot_change(partition_status::type s)
 {
     if (status() == s)
         return false;
@@ -805,13 +810,13 @@ bool replica::update_local_configuration_with_no_ballot_change(partition_status 
 
 void replica::on_config_sync(const partition_configuration& config)
 {
-    ddebug( "%s: configuration sync", name());
+    ddebug("%s: configuration sync", name());
 
     // no outdated update
     if (config.ballot < get_ballot())
         return;
 
-    if (status() == PS_PRIMARY || nullptr != _primary_states.reconfiguration_task)
+    if (status() == partition_status::PS_PRIMARY || nullptr != _primary_states.reconfiguration_task)
     {
         // nothing to do as primary always holds the truth
     }
@@ -819,13 +824,13 @@ void replica::on_config_sync(const partition_configuration& config)
     {
         update_configuration(config);
 
-        if (status() == PS_INACTIVE && !_inactive_is_transient)
+        if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient)
         {
             if (config.primary == _stub->_primary_address // dead primary
                 || config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 )
             {
-                _stub->remove_replica_on_meta_server(config);
+                _stub->remove_replica_on_meta_server(_app_info, config);
             }
         }
     }

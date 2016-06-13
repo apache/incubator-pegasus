@@ -49,9 +49,15 @@ namespace dsn {
         {
             bool            fault_injection_enabled;
 
-            // io failure 
+            // io failure
+            double          rpc_request_data_corrupted_ratio;
+            double          rpc_response_data_corrupted_ratio;
+            std::string     rpc_message_data_corrupted_type;
+
             double          rpc_request_drop_ratio;
             double          rpc_response_drop_ratio;
+            double          rpc_request_delay_ratio;
+            double          rpc_response_delay_ratio;
             double          disk_read_fail_ratio;
             double          disk_write_fail_ratio;
 
@@ -73,8 +79,14 @@ namespace dsn {
         CONFIG_BEGIN(fj_opt)
             CONFIG_FLD(bool, bool, fault_injection_enabled, true, "whether enable fault injection")
 
-            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0.0001, "drop ratio for rpc request messages")
-            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0.001, "drop ratio for rpc response messages")
+            CONFIG_FLD(double, double, rpc_request_data_corrupted_ratio, 0, "data corrupted ratio for rpc request message")
+            CONFIG_FLD(double, double, rpc_response_data_corrupted_ratio, 0, "data corrupted ratio for rpc response message")
+            CONFIG_FLD_STRING(rpc_message_data_corrupted_type, "random", "data corrupted type: random/header/body")
+
+            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0, "drop ratio for rpc request messages")
+            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0, "drop ratio for rpc response messages")
+            CONFIG_FLD(double, double, rpc_request_delay_ratio, 0, "delay ratio for rpc request messages")
+            CONFIG_FLD(double, double, rpc_response_delay_ratio, 0, "delay ratio for rpc response messages")
             CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001, "failure ratio for disk read operations")
             CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001, "failure ratio for disk write operations")
 
@@ -93,7 +105,7 @@ namespace dsn {
         
         static fj_opt* s_fj_opts = nullptr;
 
-        typedef uint64_extension_helper<task> task_ext_for_fj;
+        typedef uint64_extension_helper<fj_opt, task> task_ext_for_fj;
 
         static void fault_on_task_enqueue(task* caller, task* callee)
         {
@@ -105,6 +117,7 @@ namespace dsn {
             if (opt.execution_extra_delay_us_max > 0)
             {
                 auto d = dsn_random32(0, opt.execution_extra_delay_us_max);
+                ddebug("fault inject %s at %s with delay %u us", this_->spec().name.c_str(), __FUNCTION__, d);
                 std::this_thread::sleep_for(std::chrono::microseconds(d));
             }
         }
@@ -140,7 +153,7 @@ namespace dsn {
             case AIO_Read:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
                 {
-                    ddebug("fault inject %s", __FUNCTION__);
+                    ddebug("fault inject %s at %s", callee->spec().name.c_str(), __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -148,7 +161,7 @@ namespace dsn {
             case AIO_Write:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
                 {
-                    ddebug("fault inject %s", __FUNCTION__);
+                    ddebug("fault inject %s at %s", callee->spec().name.c_str(), __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -164,7 +177,39 @@ namespace dsn {
             if (this_->delay_milliseconds() == 0 && task_ext_for_fj::get(this_) == 0)
             {
                 this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+                ddebug("fault inject %s at %s with delay %u ms", this_->spec().name.c_str(), __FUNCTION__, this_->delay_milliseconds());
                 task_ext_for_fj::get(this_) = 1; // ensure only fd once
+            }
+        }
+
+        
+        static void replace_value(std::vector<blob>& buffer_list, int offset)
+        {
+            for (blob& bb: buffer_list)
+            {
+                if (offset < bb.length())
+                {
+                    (const_cast<char*>(bb.data()))[offset]++;
+                    offset = -1;
+                    break;
+                }
+                else
+                    offset -= bb.length();
+            }
+            dassert(offset == -1, "invalid offset when trying to corrupt data");
+        }
+
+        static void corrupt_data(message_ex* request, const std::string& corrupt_type)
+        {
+            if (corrupt_type == "header")
+                replace_value(request->buffers, dsn_random32(0, sizeof(message_header)-1));
+            else if (corrupt_type == "body")
+                replace_value(request->buffers, dsn_random32(0, request->body_size()-1) + sizeof(message_header));
+            else if (corrupt_type == "random")
+                replace_value(request->buffers, dsn_random32(0, request->body_size() + sizeof(message_header) - 1));
+            else
+            {
+                derror("try to inject an unknown data corrupt type: %s", corrupt_type.c_str());
             }
         }
 
@@ -174,11 +219,21 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[req->local_rpc_code];
             if (dsn_probability() < opt.rpc_request_drop_ratio)
             {
-                ddebug("fault inject %s", __FUNCTION__);
+                ddebug("fault inject %s at %s: %s => %s", 
+                    req->header->rpc_name, __FUNCTION__,
+                    req->header->from_address.to_string(),
+                    req->to_address.to_string()
+                    );
                 return false;
             }
             else
             {
+                if (dsn_probability() < opt.rpc_request_data_corrupted_ratio)
+                {
+                    ddebug("corrupt the rpc call message from: %s, type: %s",
+                           req->header->from_address.to_string(), opt.rpc_message_data_corrupted_type.c_str());
+                    corrupt_data(req, opt.rpc_message_data_corrupted_type);
+                }
                 return true;
             }
         }
@@ -188,8 +243,12 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[callee->spec().code];
             if (callee->delay_milliseconds() == 0 && task_ext_for_fj::get(callee) == 0)
             {
-                callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
-                task_ext_for_fj::get(callee) = 1; // ensure only fd once
+                if (dsn_probability() < opt.rpc_request_delay_ratio)
+                {
+                    callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    ddebug("fault inject %s at %s with delay %u ms", callee->spec().name.c_str(), __FUNCTION__, callee->delay_milliseconds());
+                    task_ext_for_fj::get(callee) = 1; // ensure only fd once
+                }
             }
         }
 
@@ -199,11 +258,21 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[msg->local_rpc_code];
             if (dsn_probability() < opt.rpc_response_drop_ratio)
             {
-                ddebug("fault inject %s", __FUNCTION__);
+                ddebug("fault inject %s at %s: %s => %s",
+                    msg->header->rpc_name, __FUNCTION__,
+                    msg->header->from_address.to_string(),
+                    msg->to_address.to_string()
+                    );
                 return false;
             }
             else
             {
+                if (dsn_probability() < opt.rpc_response_data_corrupted_ratio)
+                {
+                    ddebug("fault injector corrupt the rpc reply message from: %s, type: %s",
+                           msg->header->from_address.to_string(), opt.rpc_message_data_corrupted_type.c_str());
+                    corrupt_data(msg, opt.rpc_message_data_corrupted_type);
+                }
                 return true;
             }
         }
@@ -213,8 +282,12 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[resp->spec().code];
             if (resp->delay_milliseconds() == 0 && task_ext_for_fj::get(resp) == 0)
             {
-                resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
-                task_ext_for_fj::get(resp) = 1; // ensure only fd once
+                if (dsn_probability() < opt.rpc_response_delay_ratio)
+                {
+                    resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                    ddebug("fault inject %s at %s with delay %u ms", resp->spec().name.c_str(), __FUNCTION__, resp->delay_milliseconds());
+                    task_ext_for_fj::get(resp) = 1; // ensure only fd once
+                }
             }
         }
 

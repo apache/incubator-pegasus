@@ -14,6 +14,7 @@ function usage()
     echo "   test        test the system"
     echo "   start_zk    start the local single zookeeper server"
     echo "   stop_zk     stop the local single zookeeper server"
+    echo "   clear_zk    stop the local single zookeeper server and clear the data"
     echo "   format      check the code format"
     echo "   publish     publish the program"
     echo "   publish_docker"
@@ -40,6 +41,8 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
+    echo "   -s|--serialize    serialize type: dsn|thrift|gproto, default is thrift"
+    echo "   -g|--git          git source of ext module: github|git, default is github"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
     echo "                     the number of jobs to run simultaneously, default 8"
@@ -47,7 +50,7 @@ function usage_build()
     echo "                     specify customized boost directory,"
     echo "                     if not set, then use the system boost"
     echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
+    echo "   --enable_gcov     generate gcov code coverage report, default no"
     echo "   -v|--verbose      build in verbose mode, default no"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module  specify modules to test, split by ',',"
@@ -58,6 +61,8 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
+    SERIALIZE_TYPE="thrift"
+    GIT_SOURCE="github"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
@@ -76,6 +81,14 @@ function run_build()
                 BUILD_TYPE="$2"
                 shift
                 ;;
+            -s|--serialize)
+                SERIALIZE_TYPE="$2"
+                shift
+                ;;
+            -g|--git)
+                GIT_SOURCE="$2"
+                shift
+                ;;
             -c|--clear)
                 CLEAR=YES
                 ;;
@@ -90,7 +103,7 @@ function run_build()
             -w|--warning_all)
                 WARNING_ALL=YES
                 ;;
-            -g|--enable_gcov)
+            --enable_gcov)
                 ENABLE_GCOV=YES
                 ;;
             -v|--verbose)
@@ -121,7 +134,20 @@ function run_build()
         usage_build
         exit -1
     fi
-    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+    if [ "$SERIALIZE_TYPE" != "dsn" -a "$SERIALIZE_TYPE" != "thrift" -a "$SERIALIZE_TYPE" != "gproto" ]; then
+        echo "ERROR: invalid serialize type \"$SERIALIZE_TYPE\""
+        echo
+        usage_build
+        exit -1
+    fi
+    if [ "$GIT_SOURCE" != "github" -a "$GIT_SOURCE" != "xiaomi" ]; then
+        echo "ERROR: invalid git source \"$GIT_SOURCE\""
+        echo
+        usage_build
+        exit -1
+    fi
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" SERIALIZE_TYPE="$SERIALIZE_TYPE" \
+        GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }
@@ -244,6 +270,43 @@ function run_stop_zk()
 }
 
 #####################
+## clear_zk
+#####################
+function usage_clear_zk()
+{
+    echo "Options for subcommand 'clear_zk':"
+    echo "   -h|--help         print the help info"
+    echo "   -d|--install_dir <dir>"
+    echo "                     zookeeper install directory,"
+    echo "                     if not set, then default is './.zk_install'"
+}
+function run_clear_zk()
+{
+    INSTALL_DIR=`pwd`/.zk_install
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+            -h|--help)
+                usage_clear_zk
+                exit 0
+                ;;
+            -d|--install_dir)
+                INSTALL_DIR=$2
+                shift
+                ;;
+            *)
+                echo "ERROR: unknown option \"$key\""
+                echo
+                usage_clear__zk
+                exit -1
+                ;;
+        esac
+        shift
+    done
+    INSTALL_DIR="$INSTALL_DIR" $scripts_dir/clear_zk.sh
+}
+
+#####################
 ## format
 #####################
 function usage_format()
@@ -299,6 +362,9 @@ case $cmd in
     stop_zk)
         shift
         run_stop_zk $* ;;
+    clear_zk)
+        shift
+        run_clear_zk $* ;;
     format)
         shift
         run_format $* ;;

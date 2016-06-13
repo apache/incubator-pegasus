@@ -38,7 +38,7 @@
 
 # include <dsn/internal/singleton.h>
 # include <string>
-# include <map>
+# include <unordered_map>
 # include <vector>
 # include <dsn/internal/ports.h>
 
@@ -60,7 +60,7 @@ public:
     int max_value() const { return static_cast<int>(_names2.size()) - 1; }
 
 private:
-    std::map<std::string, int> _names;
+    std::unordered_map<std::string, int> _names;
     std::vector<std::string>   _names2;
 };
 

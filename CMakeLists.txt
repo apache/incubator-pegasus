@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 2.8.7)
+
+#set(DSN_DEBUG_CMAKE TRUE)
+
 include(bin/dsn.cmake)
 #cmake_policy(SET CMP0048 NEW)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
+set(GIT_SOURCE_FILE "ext/gitsource.cmake")
+
 if(DEFINED WARNING_ALL)
     #add_compile_options("-Wall")
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
@@ -19,10 +24,13 @@ endif()
 dsn_common_setup()
 dsn_add_pseudo_projects()
 
+include(${GIT_SOURCE_FILE})
+add_subdirectory(ext/thrift)
 add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)
 add_subdirectory(ext/rapidjson)
 add_subdirectory(ext/concurrentqueue)
+add_subdirectory(ext/protobuf)
 #
 # !!! gflags is currently not used, and when it is enabled, it causes failure on windows compilation
 # add_subdirectory(ext/gflags)

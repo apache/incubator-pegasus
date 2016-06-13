@@ -7,7 +7,7 @@ $idl_type = $argv[4];
 // apps
 # include "<?=$file_prefix?>.app.example.h"
 
-void dsn_app_registration()
+void dsn_app_registration_<?=$_PROG->name?>()
 {
     // register all possible service apps
     dsn::register_app< <?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("server");
@@ -21,7 +21,7 @@ void dsn_app_registration()
 
 int main(int argc, char** argv)
 {
-    dsn_app_registration();
+    dsn_app_registration_<?=$_PROG->name?>();
     
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);
@@ -30,10 +30,10 @@ int main(int argc, char** argv)
 
 # else
 
-# include <dsn/internal/module_int.cpp.h>
+# include <dsn/internal/module_init.cpp.h>
 
-MODULE_INIT_BEGIN
-    dsn_app_registration();
+MODULE_INIT_BEGIN(<?=$_PROG->name?>)
+    dsn_app_registration_<?=$_PROG->name?>();
 MODULE_INIT_END
 
 # endif

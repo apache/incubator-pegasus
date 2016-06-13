@@ -5,6 +5,8 @@
 #    CLEAR          YES|NO
 #    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
+#    SERIALIZE_TYPE dsn|thrift|protobuf
+#    GIT_SOURCE     github|xiaomi
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
 #    WARNING_ALL    YES|NO
@@ -16,6 +18,8 @@
 #    -DCMAKE_C_COMPILER=gcc
 #    -DCMAKE_CXX_COMPILER=g++
 #    [-DCMAKE_BUILD_TYPE=Debug]
+#    [-DDSN_SERIALIZATION_TYPE=dsn|thrift|protobuf]
+#    [-DDSN_GIT_SOURCE=github|xiaomi]
 #    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
 #    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
@@ -43,6 +47,18 @@ then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
 else
     echo "BUILD_TYPE=release"
+fi
+
+echo "SERIALIZE_TYPE=$SERIALIZE_TYPE"
+if [ -n "$SERIALIZE_TYPE" ]
+then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_SERIALIZATION_TYPE=$SERIALIZE_TYPE"
+fi
+
+echo "GIT_SOURCE=$GIT_SOURCE"
+if [ -n "$GIT_SOURCE" ]
+then
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_GIT_SOURCE=$GIT_SOURCE"
 fi
 
 if [ "$ONLY_BUILD" == "YES" ]
@@ -115,6 +131,19 @@ then
     rm -rf $BUILD_DIR
 fi
 
+if [ ! -f "$ROOT/bin/Linux/thrift" ]
+then
+    echo "Downloading thrift..."
+    if [ "$GIT_SOURCE" == "xiaomi" ]
+    then
+        wget http://git.n.xiaomi.com/pegasus/packages/raw/master/rdsn/thrift
+    else
+        wget --no-check-certificate https://github.com/imzhenyu/thrift/raw/master/pre-built/ubuntu14.04/thrift
+    fi
+    chmod u+x thrift
+    mv thrift $ROOT/bin/Linux
+fi
+
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."
@@ -158,7 +187,7 @@ echo "##########################################################################
 ##############################################
 if [ -z "$TEST_MODULE" ]
 then
-    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.idl.tests"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"

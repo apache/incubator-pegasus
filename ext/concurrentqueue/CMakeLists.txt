@@ -2,9 +2,12 @@
 #project(gtest_builder C CXX)
 include(ExternalProject)
 
+set(target_url ${CONQUEUE_GIT_SOURCE})
+set(git_tag ${CONQUEUE_GIT_TAG})
+
 ExternalProject_Add(concurrentqueue
-    GIT_REPOSITORY https://github.com/imzhenyu/concurrentqueue/
-    GIT_TAG master
+    GIT_REPOSITORY ${target_url}
+    GIT_TAG ${git_tag}
 # Disable install step
     INSTALL_COMMAND ""
 )

@@ -876,7 +876,7 @@ bool client_case_line::parse(const std::string& params)
         _config_receiver = node_to_address(kv_map["receiver"]);
         _config_type = parse_config_command(kv_map["type"]);
         _config_node = node_to_address(kv_map["node"]);
-        if (_config_receiver.is_invalid() || _config_type == CT_INVALID || _config_node.is_invalid())
+        if (_config_receiver.is_invalid() || _config_type == config_type::CT_INVALID || _config_node.is_invalid())
             parse_ok = false;
         break;
     }
@@ -934,19 +934,19 @@ static const char* s_replica_config_commands[] = {
     "downgrade_to_secondary", "downgrade_to_inactive", "remove", nullptr
 };
 
-dsn::replication::config_type client_case_line::parse_config_command(const std::string& command_name) const
+dsn::replication::config_type::type client_case_line::parse_config_command(const std::string& command_name) const
 {
     for (int i = 0; s_replica_config_commands[i] != nullptr; ++i)
     {
         if (boost::iequals(command_name.c_str(), s_replica_config_commands[i]))
         {
-            return (dsn::replication::config_type)i;
+            return (dsn::replication::config_type::type)i;
         }
     }
-    return CT_INVALID;
+    return config_type::CT_INVALID;
 }
 
-std::string client_case_line::config_command_to_string(dsn::replication::config_type cfg_command) const
+std::string client_case_line::config_command_to_string(dsn::replication::config_type::type cfg_command) const
 {
     return s_replica_config_commands[cfg_command];
 }
@@ -968,7 +968,7 @@ void client_case_line::get_read_params(int& id, std::string& key, int& timeout_m
     timeout_ms = _timeout;
 }
 
-void client_case_line::get_replica_config_params(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node) const
+void client_case_line::get_replica_config_params(rpc_address& receiver, dsn::replication::config_type::type& type, rpc_address& node) const
 {
     dassert(_type == replica_config, "");
     receiver = _config_receiver;
@@ -1252,7 +1252,7 @@ bool test_case::check_client_write(int& id, std::string& key, std::string& value
     return true;
 }
 
-bool test_case::check_replica_config(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node)
+bool test_case::check_replica_config(rpc_address& receiver, dsn::replication::config_type::type& type, rpc_address& node)
 {
     if ( !check_client_instruction(client_case_line::replica_config) )
         return false;

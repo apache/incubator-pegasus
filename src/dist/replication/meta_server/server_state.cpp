@@ -41,9 +41,7 @@
 # include <boost/lexical_cast.hpp>
 
 # include <rapidjson/document.h>
-# include <rapidjson/prettywriter.h>
 # include <rapidjson/writer.h>
-# include <rapidjson/stringbuffer.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -54,60 +52,10 @@
 
 int32_t server_state::_default_max_replica_count = 3;
 
-/// misc functions for server state
-void marshall(binary_writer& writer, const app_state& val)
-{
-    marshall(writer, val.status);
-    marshall(writer, val.app_type);
-    marshall(writer, val.app_name);
-    marshall(writer, val.app_id);
-    marshall(writer, val.partition_count);
-    marshall(writer, val.partitions);
-}
-
-void marshall_json(blob& output, const app_state& app, bool available_status)
-{
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-
-    writer.StartObject();
-    writer.String("app_type"); writer.String(app.app_type.c_str());
-    writer.String("app_name"); writer.String(app.app_name.c_str());
-    writer.String("app_id"); writer.Int(app.app_id);
-    writer.String("partition_count"); writer.Int(app.partition_count);
-    writer.String("status"); writer.String(available_status?"available":"dropped");
-    writer.EndObject();
-
-    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
-    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
-    output.assign(outptr, 0, buffer.GetSize());
-}
-
-void marshall_json(blob& output, const partition_configuration& pc)
-{
-    std::stringstream out;
-    json_encode(out, pc);
-    std::string buffer = out.str();
-    std::shared_ptr<char> outptr(new char[buffer.size()], std::default_delete<char[]>{});
-    memcpy(outptr.get(), buffer.c_str(), buffer.size());
-    output.assign(outptr, 0, buffer.size());
-}
-
-void unmarshall(binary_reader& reader, /*out*/ app_state& val)
-{
-    unmarshall(reader, val.status);
-    unmarshall(reader, val.app_type);
-    unmarshall(reader, val.app_name);
-    unmarshall(reader, val.app_id);
-    unmarshall(reader, val.partition_count);
-    unmarshall(reader, val.partitions);
-}
-
 void init_partition_configuration(/*out*/partition_configuration& pc, /*in*/const app_state& app, int32_t max_replica_count)
 {
-    pc.app_type = app.app_type;
     pc.ballot = 0;
-    pc.gpid.app_id = app.app_id;
+    pc.pid.set_app_id(app.info.app_id);
     pc.last_committed_decree = 0;
     pc.max_replica_count = max_replica_count;
     pc.primary.set_invalid();
@@ -115,56 +63,9 @@ void init_partition_configuration(/*out*/partition_configuration& pc, /*in*/cons
     pc.last_drops.clear();
 }
 
-void unmarshall_json(const blob& buf, app_state& app)
-{
-    rapidjson::Document doc;
-    std::string input(buf.data(), buf.length());
-    if (input.empty() || doc.Parse(input.c_str()).HasParseError() )
-        return;
-
-    app.app_type = doc["app_type"].GetString();
-    app.app_id = doc["app_id"].GetInt();
-    app.app_name = doc["app_name"].GetString();
-    app.partition_count = doc["partition_count"].GetInt();
-    app.status = strcmp(doc["status"].GetString(), "available")==0?AS_AVAILABLE:AS_DROPPED;
-    partition_configuration pc;
-    init_partition_configuration(pc, app, server_state::_default_max_replica_count);
-    app.partitions.assign(app.partition_count, pc);
-    for (unsigned int i=0; i!=app.partition_count; ++i)
-        app.partitions[i].gpid.pidx = i;
-}
-
-void unmarshall_json(const blob& buf, partition_configuration& pc)
-{
-    rapidjson::Document doc;
-    std::string input(buf.data(), buf.length());
-
-    dinfo("partition config json: %s", input.c_str());
-    if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
-        return;
-
-    pc.app_type = doc["app_type"].GetString();
-    pc.gpid.app_id = doc["gpid"]["app_id"].GetInt();
-    pc.gpid.pidx = doc["gpid"]["pidx"].GetInt();
-    pc.ballot = doc["ballot"].GetInt64();
-    pc.max_replica_count = doc["max_replica_count"].GetInt();
-    pc.last_committed_decree = doc["last_committed_decree"].GetInt();
-
-    pc.primary.set_invalid();
-    pc.primary.from_string_ipv4(doc["primary"].GetString());
-
-    pc.secondaries.resize( doc["secondaries"].Size() );
-    for (unsigned int i=0; i!=pc.secondaries.size(); ++i)
-        pc.secondaries[i].from_string_ipv4(doc["secondaries"][i].GetString());
-
-    pc.last_drops.resize( doc["last_drops"].Size() );
-    for (unsigned int i=0; i!=pc.last_drops.size(); ++i)
-        pc.last_drops[i].from_string_ipv4(doc["last_drops"][i].GetString());
-}
-
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
 {
-    auto it = std::find(drops.begin(), drops.end(), node);
+    auto it = find(drops.begin(), drops.end(), node);
     if (is_add)
     {
         if (it != drops.end())
@@ -185,6 +86,29 @@ void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address
     }
 }
 
+void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const configuration_update_request& req)
+{
+    switch (req.type)
+    {
+    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_ADD_SECONDARY:
+    case config_type::CT_UPGRADE_TO_SECONDARY:
+    case config_type::CT_ADD_SECONDARY_FOR_LB:
+        maintain_drops(drops, req.node, true);
+        break;
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_REMOVE:
+        if (req.config.primary.is_invalid())
+            maintain_drops(drops, req.node, false);
+        break;
+    case config_type::CT_UPGRADE_TO_PRIMARY:
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+        break;
+    default:
+        dassert(false, "unhandled request type for drops maintainance");
+    }
+}
+
 std::string join_path(const std::string& input1, const std::string& input2)
 {
     size_t pos1 = input1.size(); // last_valid_pos + 1
@@ -196,12 +120,12 @@ std::string join_path(const std::string& input1, const std::string& input2)
 
 /// server state member functions
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
+    : serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
     _freeze = true;
-    _storage = nullptr;
+    _storage = nullptr;    
 }
 
 server_state::~server_state()
@@ -249,27 +173,22 @@ error_code server_state::dump_from_remote_storage(const char *format, const char
             zauto_read_lock l(_lock);
             snapshot = _apps[i];
         }
-        if (snapshot.status != AS_AVAILABLE)
+        if (snapshot.info.status != app_status::AS_AVAILABLE)
         {
-            snapshot.partition_count = 0;
+            snapshot.info.partition_count = 0;
             snapshot.partitions.clear();
         }
 
         if (strcmp(format, "json") == 0)
         {
-            blob data;
-            marshall_json(data, snapshot, snapshot.status==AS_AVAILABLE);
-            file->append_buffer(data);
-            for (const partition_configuration& pc: snapshot.partitions)
-            {
-                marshall_json(data, pc);
-                file->append_buffer(data);
-            }
+            binary_writer writer;
+            marshall(writer, snapshot, DSF_THRIFT_JSON);
+            file->append_buffer(writer.get_buffer());
         }
         else if (strcmp(format, "binary") == 0)
         {
             binary_writer writer;
-            marshall(writer, snapshot);
+            marshall(writer, snapshot, DSF_THRIFT_BINARY);
             file->append_buffer(writer.get_buffer());
         }
         else
@@ -293,6 +212,7 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
     dassert(file->read_next_buffer(data)==1, "read format header fail");
     _apps.clear();
 
+    binary_reader reader(data);
     if ( memcmp(data.data(), "json", 4)==0 )
     {
         while ( true )
@@ -304,15 +224,19 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
 
             _apps.push_back( app_state() );
             app_state& app = _apps.back();
-            unmarshall_json(data, app);
 
-            app.partitions.resize(app.partition_count);
-            for (unsigned int i=0; i!=app.partition_count; ++i)
+            unmarshall(reader, app, DSF_THRIFT_JSON);
+
+            app.partitions.resize(app.info.partition_count);
+            for (unsigned int i=0; i!=app.info.partition_count; ++i)
             {
                 ans = file->read_next_buffer(data);
                 dassert(ans == 1, "unexpect read buffer, ret(%d)", ans);
-                unmarshall_json(data, app.partitions[i]);
-                dassert(app.partitions[i].gpid.pidx==i, "uncorrect partition data, gpid(%d.%d), appname(%s)", app.app_id, i, app.app_name.c_str());
+
+                binary_reader reader(data);
+                unmarshall(reader, app.partitions[i], DSF_THRIFT_JSON);
+
+                dassert(app.partitions[i].pid.get_partition_index()==i, "uncorrect partition data, gpid(%d.%d), appname(%s)", app.info.app_id, i, app.info.app_name.c_str());
             }
         }
     }
@@ -326,7 +250,7 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
 
             _apps.push_back( app_state() );
             binary_reader reader(data);
-            unmarshall(reader, _apps.back());
+            unmarshall(reader, _apps.back(), DSF_THRIFT_BINARY);
         }
     }
     else
@@ -339,9 +263,9 @@ error_code server_state::restore_from_local_storage(const char* local_path, bool
         ec = sync_apps_to_remote_storage();
     }
 
-    for (const app_state& app: _apps)
+    for (app_state& app: _apps)
     {
-        while (app.status!=AS_DROPPED && app.available_partitions.load() != app.partition_count)
+        while (app.info.status != app_status::AS_DROPPED && app.available_partitions.atom().load() != app.info.partition_count)
             std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     return ec;
@@ -356,6 +280,13 @@ error_code server_state::initialize()
         "default_max_replica_count",
         3,
         "the default value of max_replica_count for all apps");
+
+    _min_live_node_count_for_unfreeze = (int32_t)dsn_config_get_value_uint64(
+        "meta_server", 
+        "min_live_node_count_for_unfreeze",
+        3,
+        "minimum live node count without which the state is freezed"
+        );
 
     const char* cluster_root = dsn_config_get_value_string(
         "meta_server",
@@ -378,7 +309,7 @@ error_code server_state::initialize()
 
     // prepare parameters
     std::vector<std::string> args;
-    dsn::utils::split_args(meta_state_service_parameters, args);
+    utils::split_args(meta_state_service_parameters, args);
     int argc = static_cast<int>(args.size());
     std::vector<const char*> args_ptr;
     args_ptr.resize(argc);
@@ -388,7 +319,7 @@ error_code server_state::initialize()
     }
 
     // create storage
-    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
+    _storage = utils::factory_store< dist::meta_state_service>::create(
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
@@ -452,57 +383,80 @@ error_code server_state::on_become_leader()
 
 std::string server_state::get_app_path(const app_state &app) const
 {
-    return _apps_root + "/" + boost::lexical_cast<std::string>(app.app_id);
+    return _apps_root + "/" + boost::lexical_cast<std::string>(app.info.app_id);
 }
 
 std::string server_state::get_partition_path(const app_state &app, int partition_id) const
 {
     std::stringstream oss;
-    oss << _apps_root << "/" << app.app_id
+    oss << _apps_root << "/" << app.info.app_id
         << "/" << partition_id;
     return oss.str();
 }
 
-std::string server_state::get_partition_path(const global_partition_id& gpid) const
+std::string server_state::get_partition_path(const gpid& gpid) const
 {
     std::stringstream oss;
-    oss << _apps_root << "/" << gpid.app_id
-        << "/" << gpid.pidx;
+    oss << _apps_root << "/" << gpid.get_app_id()
+        << "/" << gpid.get_partition_index();
     return oss.str();
 }
 
 error_code server_state::initialize_apps()
 {
+    const char* sections[10240];
+    int scount, used_count = sizeof(sections)/sizeof(const char*);
+    scount = dsn_config_get_all_sections(sections, &used_count);
+    dassert(scount == used_count, "too many sections (>10240) defined in config files");
+
     ddebug("start to do initialize");
-    app_state app;
-    app.app_id = 1;
-    app.app_name = dsn_config_get_value_string("replication.app",
-        "app_name", "", "replication app name");
-    dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
-    app.app_type = dsn_config_get_value_string("replication.app",
-        "app_type", "", "replication app type-name");
-    dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
-    app.partition_count = (int)dsn_config_get_value_uint64("replication.app",
-        "partition_count", 1, "how many partitions the app should have");
-    app.status = AS_CREATING;
-    app.available_partitions.store(0);
-    _apps.push_back(app);
 
-    partition_configuration pc;
-    init_partition_configuration(pc, app,
-        dsn_config_get_value_uint64("replication.app", "max_replica_count", 3, "max replica count in app"));
+    for (int i = 0; i < used_count; i++)
+    {
+        if (strstr(sections[i], "meta_server.apps") == sections[i] 
+            // legacy hack
+            || strcmp(sections[i], "replication.app") == 0)
+        {
+            const char* s = sections[i];
 
-    std::vector<partition_configuration>& partitions = _apps.back().partitions;
-    partitions.resize(app.partition_count, pc);
-    for (unsigned int i=0; i!=partitions.size(); ++i)
-        partitions[i].gpid.pidx = i;
+            app_state app;
+            app.info.app_id = 1 + _apps.size();
+            app.info.app_name = dsn_config_get_value_string(s,
+                "app_name", "", "app name");
+            dassert(app.info.app_name.length() > 0, "'[%s] app_name' not specified", s);
+            app.info.app_type = dsn_config_get_value_string(s,
+                "app_type", "", "app type-name");
+            dassert(app.info.app_type.length() > 0, "'[%s] app_type' not specified", s);
+            app.info.partition_count = (int)dsn_config_get_value_uint64(s,
+                "partition_count", 1, "how many partitions the app should have");
+            app.info.status = app_status::AS_CREATING;
+            app.available_partitions.atom().store(0);
+
+            app.info.is_stateful = dsn_config_get_value_bool(s, "stateful",
+                true, "whether this is a stateful app");
+
+            // TODO: setup envs
+
+            _apps.push_back(app);
+
+            partition_configuration pc;
+            init_partition_configuration(pc, app,
+                dsn_config_get_value_uint64(s, "max_replica_count", 3, "max replica count in app"));
+
+            std::vector<partition_configuration>& partitions = _apps.back().partitions;
+            partitions.resize(app.info.partition_count, pc);
+            for (unsigned int i = 0; i != partitions.size(); ++i)
+                partitions[i].pid.set_partition_index(i);
+        }
+    }
 
     error_code err = sync_apps_to_remote_storage();
     if (err != ERR_OK)
     {
-        _apps.pop_back();
+        _apps.clear();
         return err;
     }
+
     return ERR_OK;
 }
 
@@ -531,8 +485,10 @@ error_code server_state::sync_apps_to_remote_storage()
     for (const app_state& app: _apps)
     {
         std::string path = get_app_path(app);
-        blob value;
-        marshall_json(value, app, true);
+        binary_writer writer;
+
+        marshall(writer, app, DSF_THRIFT_JSON);
+
         _storage->create_node(path,
             LPC_META_STATE_SVC_CALLBACK,
             [&err, path](error_code ec)
@@ -547,7 +503,7 @@ error_code server_state::sync_apps_to_remote_storage()
                     ddebug("create app node %s ok", path.c_str());
                 }
             },
-            value,
+            writer.get_buffer(),
             &tracker);
     }
 
@@ -557,10 +513,10 @@ error_code server_state::sync_apps_to_remote_storage()
 
     for (app_state& app: _apps)
     {
-        if (app.status == AS_DROPPED)
+        if (app.info.status == app_status::AS_DROPPED)
             continue;
-        for (unsigned int i=0; i!=app.partition_count; ++i)
-            init_app_partition_node(app.app_id, i);
+        for (unsigned int i=0; i!=app.info.partition_count; ++i)
+            init_app_partition_node(app.info.app_id, i);
     }
     return ERR_OK;
 }
@@ -590,8 +546,10 @@ error_code server_state::sync_apps_from_remote_storage()
                         if (ec == ERR_OK)
                         {
                             app_state state;
-                            unmarshall_json(value, state);
-                            int app_id = state.app_id;
+                            binary_reader reader(value);
+                            unmarshall(reader, state, DSF_THRIFT_JSON);
+
+                            int app_id = state.info.app_id;
                             dassert(app_id != 0, "invalid app id");
 
                             {
@@ -601,22 +559,22 @@ error_code server_state::sync_apps_from_remote_storage()
                                     _apps.resize(app_id);
                                 }
 
-                                if (state.status == AS_DROPPED)
+                                if (state.info.status == app_status::AS_DROPPED)
                                 {
-                                    _apps[app_id - 1].status = AS_DROPPED;
+                                    _apps[app_id - 1].info.status = app_status::AS_DROPPED;
                                     return;
                                 }
                                 else
                                 {
-                                    state.status = AS_CREATING;
-                                    state.available_partitions.store(0);
+                                    state.info.status = app_status::AS_CREATING;
+                                    state.available_partitions.atom().store(0);
                                     _apps[app_id - 1] = state;
-                                    _apps[app_id - 1].partitions.resize(state.partition_count);
+                                    _apps[app_id - 1].partitions.resize(state.info.partition_count);
                                 }
                             }
 
                             // get partition info
-                            for (int i = 0; i < state.partition_count; i++)
+                            for (int i = 0; i < state.info.partition_count; i++)
                             {
                                 auto par_path = join_path(app_path, boost::lexical_cast<std::string>(i));
                                 _storage->get_data(
@@ -627,12 +585,17 @@ error_code server_state::sync_apps_from_remote_storage()
                                         if (ec == ERR_OK)
                                         {
                                             partition_configuration pc;
-                                            unmarshall_json(value, pc);
+                                            binary_reader reader(value);
+                                            unmarshall(reader, pc, DSF_THRIFT_JSON);
+# ifndef NDEBUG
+                                            this->check_consistency(_apps[app_id - 1].info.is_stateful, pc);
+# endif
+
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
-                                            dassert(pc.gpid.app_id == app_id && pc.gpid.pidx == i, "invalid partition config");
-
-                                            _apps[app_id -1].available_partitions++;
+                                            dassert(pc.pid.get_app_id() == app_id && pc.pid.get_partition_index() == i, "invalid partition config");
+                                            
+                                            _apps[app_id -1].available_partitions.atom()++;
                                         }
                                         else if (ec == ERR_OBJECT_NOT_FOUND)
                                         {
@@ -640,7 +603,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                             init_partition_configuration(_apps[app_id - 1].partitions[i],
                                                 _apps[app_id - 1],
                                                 _default_max_replica_count);
-                                            _apps[app_id - 1].partitions[i].gpid.pidx = i;
+                                            _apps[app_id - 1].partitions[i].pid.set_partition_index(i);
                                             init_app_partition_node(app_id, i);
                                         }
                                         else
@@ -685,28 +648,28 @@ error_code server_state::sync_apps_from_remote_storage()
         //all the app is creating right now
         for (app_state& app: _apps)
         {
-            if (app.available_partitions == app.partition_count)
+            if (app.available_partitions.atom().load() == app.info.partition_count)
             {
-                app.status = AS_AVAILABLE;
+                app.info.status = app_status::AS_AVAILABLE;
             }
         }
 
         for (app_state& app: _apps) 
         {
-            for (int i = 0; i < app.partition_count; i++)
+            for (int i = 0; i < app.info.partition_count; i++)
             {
                 auto& ps = app.partitions[i];
 
                 if (ps.primary.is_invalid() == false)
                 {
-                    _nodes[ps.primary].primaries.insert(ps.gpid);
-                    _nodes[ps.primary].partitions.insert(ps.gpid);
+                    _nodes[ps.primary].primaries.insert(ps.pid);
+                    _nodes[ps.primary].partitions.insert(ps.pid);
                 }
 
                 for (auto& ep : ps.secondaries)
                 {
                     dassert(ep.is_invalid() == false, "");
-                    _nodes[ep].partitions.insert(ps.gpid);
+                    _nodes[ep].partitions.insert(ps.pid);
                 }
             }
         }
@@ -722,7 +685,7 @@ error_code server_state::sync_apps_from_remote_storage()
         {
             for (auto& par : app.partitions)
             {
-                check_consistency(par.gpid);
+                check_consistency(par.pid);
             }
         }
     }
@@ -765,19 +728,50 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
                 {
                     for (auto& pri : it->second.primaries)
                     {
-                        app_state& app = _apps[pri.app_id - 1];
-                        partition_configuration& old = app.partitions[pri.pidx];
+                        app_state& app = _apps[pri.get_app_id() - 1];
+                        partition_configuration& old = app.partitions[pri.get_partition_index()];
 
                         dassert(old.primary == it->first, "");
 
                         auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                        request->info = app.info;
                         request->node = old.primary;
-                        request->type = CT_DOWNGRADE_TO_INACTIVE;
+                        request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
                         request->config.ballot++;
                         request->config.primary.set_invalid();
 
                         (*pris)[pri] = request;
+                    }
+
+                    for (auto& pri : it->second.partitions)
+                    {
+                        app_state& app = _apps[pri.get_app_id() - 1];                        
+
+                        // skip primary
+                        if (!app.info.is_stateful)
+                        {
+                            partition_configuration& old = app.partitions[pri.get_partition_index()];
+                            auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+                            request->info = app.info;
+                            request->type = config_type::CT_REMOVE;
+                            request->host_node = it->first;
+
+                            for (int i = 0; i < (int)old.secondaries.size(); i++)
+                            {
+                                if (old.secondaries[i] == it->first)
+                                {
+                                    request->node = old.last_drops[i];
+                                    break;
+                                }
+                            }
+
+                            dassert(!request->node.is_invalid(), "");
+                            
+                            request->config = old;
+
+                            (*pris)[pri] = request;
+                        }
                     }
                 }
             }   
@@ -838,15 +832,18 @@ void server_state::query_configuration_by_node(const configuration_query_by_node
 
         for (auto& p : it->second.partitions)
         {
-            response.partitions.push_back(_apps[p.app_id - 1].partitions[p.pidx]);
+            configuration_update_request req;
+            req.config = _apps[p.get_app_id() - 1].partitions[p.get_partition_index()];
+            req.info = _apps[p.get_app_id() - 1].info;
+            response.partitions.push_back(req);
         }
     }
 }
 
-void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config)
+void server_state::query_configuration_by_gpid(gpid id, /*out*/ partition_configuration& config)
 {
     zauto_read_lock l(_lock);
-    config = _apps[id.app_id - 1].partitions[id.pidx];
+    config = _apps[id.get_app_id() - 1].partitions[id.get_partition_index()];
 }
 
 void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
@@ -859,14 +856,15 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
     }
 
     app_state& app = _apps[index];
-    if ( app.status != AS_AVAILABLE ) {
+    if ( app.info.status != app_status::AS_AVAILABLE ) {
         response.err = ERR_INVALID_STATE;
         return;
     }
 
     response.err = ERR_OK;
-    response.app_id = app.app_id;
-    response.partition_count = app.partition_count;
+    response.app_id = app.info.app_id;
+    response.partition_count = app.info.partition_count;
+    response.is_stateful = app.info.is_stateful;
 
     for (const int32_t& index: request.partition_indices) {
         if (index>=0 && index<app.partitions.size())
@@ -879,73 +877,75 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
 int32_t server_state::get_app_index(const char *app_name) const
 {
     for (const app_state& app: _apps)
-        if ( strcmp(app.app_name.c_str(), app_name) == 0 && app.status!=AS_DROPPED)
-            return app.app_id-1;
+        if ( strcmp(app.info.app_name.c_str(), app_name) == 0 && app.info.status != app_status::AS_DROPPED)
+            return app.info.app_id-1;
     return -1;
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
+DEFINE_TASK_CODE(LPC_CM_UPDATE_CONFIGURATION, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
 
-void server_state::init_app_partition_node(int app_id, int pidx)
+void server_state::init_app_partition_node(int app_id, int partition_index)
 {
-    auto on_create_app_partition = [this, app_id, pidx](error_code ec)
+    auto on_create_app_partition = [this, app_id, partition_index](error_code ec)
     {
         app_state& app = _apps[app_id - 1];
         if (ERR_OK==ec || ERR_NODE_ALREADY_EXIST==ec)
         {
-            int avail_count = ++app.available_partitions;
-            if (avail_count == app.partition_count)
+            int avail_count = ++app.available_partitions.atom();
+            if (avail_count == app.info.partition_count)
             {
-                ddebug("partition init finished, the app(name:%s, id:%d) is available", app.app_name.c_str(), app.app_id);
+                ddebug("partition init finished, the app(name:%s, id:%d) is available", app.info.app_name.c_str(), app.info.app_id);
                 zauto_write_lock l(_lock);
-                app.status = AS_AVAILABLE;
+                app.info.status = app_status::AS_AVAILABLE;
             }
             else
             {
-                dinfo("available partition are %d, add partition node gpid(%d.%d) ok", avail_count, app_id, pidx);
+                dinfo("available partition are %d, add partition node gpid(%d.%d) ok", avail_count, app_id, partition_index);
             }
         }
         else if (ERR_TIMEOUT == ec)
         {
-            dwarn("create partition node failed, gpid(%d.%d), retry later", app_id, pidx);
+            dwarn("create partition node failed, gpid(%d.%d), retry later", app_id, partition_index);
             //TODO: add parameter of the retry time interval in config file
             tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
                              this,
-                             std::bind(&server_state::init_app_partition_node, this, app_id, pidx),
+                             std::bind(&server_state::init_app_partition_node, this, app_id, partition_index),
                              0,
                              std::chrono::milliseconds(1000));
         }
         else
         {
-            dassert(false, "we can't handle this error in init app partition nodes err(%s), gpid(%d.%d)", ec.to_string(), app_id, pidx);
+            dassert(false, "we can't handle this error in init app partition nodes err(%s), gpid(%d.%d)", ec.to_string(), app_id, partition_index);
         }
     };
 
     app_state& app = _apps[app_id - 1];
-    std::string app_partition_path = get_partition_path(app, pidx);
-    blob value;
-    marshall_json(value, app.partitions[pidx]);
+    std::string app_partition_path = get_partition_path(app, partition_index);
+    binary_writer writer;
+    marshall(writer, app.partitions[partition_index], DSF_THRIFT_JSON);
     _storage->create_node(app_partition_path,
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
         on_create_app_partition,
-        value);
+        writer.get_buffer()
+        );
 }
 
 void server_state::initialize_app(app_state& app, dsn_message_t msg)
 {
-    dsn_msg_add_ref(msg);
+    if (msg) dsn_msg_add_ref(msg);
     auto on_create_app_root = [this, msg, &app](error_code ec)
     {
         configuration_create_app_response resp;
         if (ERR_OK==ec || ERR_NODE_ALREADY_EXIST==ec)
         {
-            dinfo("create app on storage service ok, name: %s, appid %" PRId32 "", app.app_name.c_str(), app.app_id);
-            resp.appid = app.app_id;
+            dinfo("create app on storage service ok, name: %s, appid %" PRId32 "", app.info.app_name.c_str(), app.info.app_id);
+            resp.appid = app.info.app_id;
             resp.err = ERR_OK;
-            reply(msg, resp);
-            for (unsigned int i=0; i!=app.partition_count; ++i)
+            if (msg) reply(msg, resp);
+            for (unsigned int i=0; i!=app.info.partition_count; ++i)
             {
-                init_app_partition_node(app.app_id, i);
+                init_app_partition_node(app.info.app_id, i);
             }
         }
         else if (ERR_TIMEOUT == ec)
@@ -953,174 +953,195 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
             dwarn("the storage service is not available currently, just ignore this request");
             {
                 zauto_write_lock l(_lock);
-                app.status = AS_CREATE_FAILED;
+                app.info.status = app_status::AS_CREATE_FAILED;
             }
         }
         else
         {
             dassert(false, "we can't handle this right now, err(%s)", ec.to_string());
         }
-        dsn_msg_release_ref(msg);
+        if (msg) dsn_msg_release_ref(msg);
     };
 
-    blob value;
+    binary_writer writer;
     std::string app_dir = get_app_path(app);
-    marshall_json(value, app, true);
+    marshall(writer, app, DSF_THRIFT_JSON);
     _storage->create_node(
         app_dir,
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
         on_create_app_root,
-        value);
+        writer.get_buffer()
+        );
 }
 
-void server_state::create_app(dsn_message_t msg)
+void server_state::create_app(configuration_create_app_request& request, /*out*/ configuration_create_app_response& response)
 {
-    configuration_create_app_request request;
-    configuration_create_app_response response;
-    bool will_create_app = false;
     int32_t index;
-    ::unmarshall(msg ,request);
-    
-    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d)",
+    bool will_create_app = false;
+
+    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d), stateful(%s), envs(%d kvs)",
            request.app_name.c_str(),
            request.options.app_type.c_str(),
            request.options.partition_count,
-           request.options.replica_count);
+           request.options.replica_count,
+           request.options.is_stateful ? "true" : "false",
+           (int)request.options.envs.size()
+        );
 
     auto option_match_check = [](const create_app_options& opt, const app_state& exist_app) {
-        return opt.partition_count==exist_app.partition_count &&
-               opt.app_type==exist_app.app_type;
+        return opt.partition_count==exist_app.info.partition_count &&
+               opt.app_type==exist_app.info.app_type;
     };
 
     {
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
         /* so we can't store the data on meta_state_service with app_name, but app_id */
-        if (index != -1 && _apps[index].status!=AS_DROPPED)
+        if (index != -1 && _apps[index].info.status!= app_status::AS_DROPPED)
         {
             app_state& exist_app = _apps[index];
-            switch (exist_app.status)
+            response.appid = exist_app.info.app_id;
+
+            switch (exist_app.info.status)
             {
-            case AS_AVAILABLE:
+            case app_status::AS_AVAILABLE:
                 if (!request.options.success_if_exist || !option_match_check(request.options, exist_app))
                     response.err = ERR_INVALID_PARAMETERS;
                 else {
-                    response.err = ERR_OK;
-                    response.appid = exist_app.app_id;
+                    response.err = ERR_OK;                    
                 }
                 break;
-            case AS_CREATING:
+            case app_status::AS_CREATING:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case AS_CREATE_FAILED:
-                exist_app.status = AS_CREATING;
+            case app_status::AS_CREATE_FAILED:
+                exist_app.info.status = app_status::AS_CREATING;
                 will_create_app = true;
+                response.err = ERR_IO_PENDING;
                 break;
-            case AS_DROPPING:
-            case AS_DROP_FAILED:
+            case app_status::AS_DROPPING:
+            case app_status::AS_DROP_FAILED:
                 response.err = ERR_BUSY_DROPPING;
             default:
                 break;
             }
         }
-        else {
-            will_create_app = true;
+        else 
+        {
+            will_create_app = true;            
             index = _apps.size();
+            response.err = ERR_IO_PENDING;
+            response.appid = index;
+
             _apps.push_back(app_state());
             app_state& app = _apps.back();
 
             //the app_id is started from 1!!!
-            app.app_id = index + 1;
-            app.app_name = request.app_name;
-            app.app_type = request.options.app_type;
-            app.partition_count = request.options.partition_count;
-            app.available_partitions.store(0);
+            app.info.app_id = index + 1;
+            app.info.app_name = request.app_name;
+            app.info.envs = request.options.envs;
+            app.info.is_stateful = request.options.is_stateful;
+            app.info.app_type = request.options.app_type;
+            app.info.partition_count = request.options.partition_count;
+            app.available_partitions.atom().store(0);
 
             partition_configuration pc;
             init_partition_configuration(pc, app, request.options.replica_count);
 
-            app.partitions.resize(app.partition_count, pc);
-            for (int i=0; i!=app.partitions.size(); ++i)
-                app.partitions[i].gpid.pidx = i;
+            app.partitions.resize(app.info.partition_count, pc);
+            for (int i = 0; i != app.partitions.size(); ++i)
+                app.partitions[i].pid.set_partition_index(i);
 
-            app.status = AS_CREATING;
+            app.info.status = app_status::AS_CREATING;
         }
     }
 
-    if ( will_create_app ) {
-        initialize_app(_apps[index], msg);
+    if ( will_create_app ) 
+    {
+        initialize_app(_apps[index], nullptr);
     }
-    else
-        reply(msg, response);
 }
 
 void server_state::do_app_drop(app_state& app, dsn_message_t msg)
 {
-    blob value;
-    marshall_json(value, app, false);
+    binary_writer writer;
+    marshall(writer, app, DSF_THRIFT_JSON);
 
     std::string app_path = get_app_path(app);
 
-    dsn_msg_add_ref(msg);
+    if (msg) dsn_msg_add_ref(msg);
     auto after_set_app_dropped = [this, &app, msg](error_code ec) {
         configuration_drop_app_response response;
         if (ERR_OK == ec || ERR_OBJECT_NOT_FOUND == ec)
         {
             {
                 zauto_write_lock l(_lock);
-                app.status = AS_DROPPED;
+                app.info.status = app_status::AS_DROPPED;
+                for (partition_configuration& pc: app.partitions) {
+                    if (!pc.primary.is_invalid() && _nodes.find(pc.primary)!=_nodes.end()) {
+                        _nodes[pc.primary].primaries.erase(pc.pid);
+                        pc.primary.set_invalid();
+                    }
+                    for (rpc_address& addr: pc.secondaries) {
+                        if (_nodes.find(addr) != _nodes.end()) {
+                            _nodes[addr].partitions.erase(pc.pid);
+                        }
+                    }
+                    pc.secondaries.clear();
+                    ++pc.ballot;
+                }
             }
             response.err = ERR_OK;
-            reply(msg, response);
-            dinfo("drop table(id:%d, name:%s) finished", app.app_id, app.app_name.c_str());
+            if (msg) reply(msg, response);
+            dinfo("drop table(id:%d, name:%s) finished", app.info.app_id, app.info.app_name.c_str());
         }
         else if (ERR_TIMEOUT == ec)
         {
-            dinfo("drop table(id:%d, name:%s) timeout, ignore request", app.app_id, app.app_name.c_str());
+            dinfo("drop table(id:%d, name:%s) timeout, ignore request", app.info.app_id, app.info.app_name.c_str());
             zauto_write_lock l(_lock);
-            app.status = AS_DROP_FAILED;
+            app.info.status = app_status::AS_DROP_FAILED;
         }
         else
         {
             dassert(false, "we can't handle this, error(%s)", ec.to_string());
         }
-        dsn_msg_release_ref(msg);
+        if (msg) dsn_msg_release_ref(msg);
     };    
     _storage->set_data(app_path,
-        value,
+        writer.get_buffer(),
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
         after_set_app_dropped);
 }
 
-void server_state::drop_app(dsn_message_t msg)
+void server_state::drop_app(configuration_drop_app_request& request, /*out*/ configuration_drop_app_response& response)
 {
-    configuration_drop_app_request request;
-    configuration_drop_app_response response;
     int32_t index;
     bool do_dropping = false;
-    ::unmarshall(msg, request);
 
     ddebug("drop app request, name(%s)", request.app_name.c_str());
 
     {
         zauto_write_lock l(_lock);
         index = get_app_index(request.app_name.c_str());
-        if (index == -1 || _apps[index].status == AS_DROPPED) {
+        if (index == -1 || _apps[index].info.status == app_status::AS_DROPPED)
+        {
             response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
         }
-        else {
-            switch (_apps[index].status)
+        else
+        {
+            switch (_apps[index].info.status)
             {
-            case AS_AVAILABLE:
-            case AS_DROP_FAILED:
-            case AS_CREATE_FAILED:
+            case app_status::AS_AVAILABLE:
+            case app_status::AS_DROP_FAILED:
+            case app_status::AS_CREATE_FAILED:
                 do_dropping = true;
-                _apps[index].status = AS_DROPPING;
+                response.err = ERR_IO_PENDING;
+                _apps[index].info.status = app_status::AS_DROPPING;
                 break;
-            case AS_CREATING:
+            case app_status::AS_CREATING:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case AS_DROPPING:
+            case app_status::AS_DROPPING:
                 response.err = ERR_BUSY_DROPPING;
                 break;
             default:
@@ -1128,98 +1149,94 @@ void server_state::drop_app(dsn_message_t msg)
             }
         }
     }
+
     if (do_dropping)
     {
-        do_app_drop(_apps[index], msg);
+        do_app_drop(_apps[index], nullptr);
     }
-    else
-        reply(msg, response);
 }
 
-void server_state::list_apps(dsn_message_t msg)
+void server_state::list_apps(configuration_list_apps_request& request, /*out*/ configuration_list_apps_response& response)
 {
-    configuration_list_apps_request request;
-    configuration_list_apps_response response;
-    ::unmarshall(msg, request);
-
     ddebug("list app request, status(%d)", request.status);
     {
         zauto_read_lock l(_lock);
         for (const app_state& app: _apps)
         {
-            if ( request.status == AS_INVALID || request.status == app.status)
+            if ( request.status == app_status::AS_INVALID || request.status == app.info.status)
             {
-                dsn::replication::app_info info;
-                info.app_id = app.app_id;
-                info.status = app.status;
-                info.app_type = app.app_type;
-                info.app_name = app.app_name;
-                info.partition_count = app.partition_count;
+                app_info info;
+                info.app_id = app.info.app_id;
+                info.status = app.info.status;
+                info.app_type = app.info.app_type;
+                info.app_name = app.info.app_name;
+                info.partition_count = app.info.partition_count;
+                info.is_stateful = app.info.is_stateful;
+                info.envs = app.info.envs;
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
-    reply(msg, response);
 }
 
-void server_state::list_nodes(dsn_message_t msg)
+void server_state::list_nodes(configuration_list_nodes_request& request, /*out*/ configuration_list_nodes_response& response)
 {
-    configuration_list_nodes_request request;
-    configuration_list_nodes_response response;
-    ::unmarshall(msg, request);
     {
         zauto_read_lock l(_lock);
         for (auto& node: _nodes)
         {
-            node_status status = node.second.is_alive ? NS_ALIVE : NS_UNALIVE;
-            if (request.status == NS_INVALID || request.status == status)
+            node_status::type status = node.second.is_alive ? node_status::NS_ALIVE : node_status::NS_UNALIVE;
+            if (request.status == node_status::NS_INVALID || request.status == status)
             {
-                dsn::replication::node_info info;
+                node_info info;
                 info.status = status;
                 info.address = node.first;
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
-    reply(msg, response);
 }
 
-void server_state::update_configuration_on_remote(std::shared_ptr<storage_work_item>& wi)
+void server_state::update_configuration_on_remote(const std::shared_ptr<configuration_update_request>& req,
+                                                  dsn_message_t request_msg)
 {
-    std::string partition_path = get_partition_path(wi->req->config.gpid);
-    blob config;
-    marshall_json(config, wi->req->config);
+# ifndef NDEBUG
+    check_consistency(req->info.is_stateful, req->config);
+# endif
+
+    std::string partition_path = get_partition_path(req->config.pid);
+    binary_writer writer;
+    marshall(writer, req->config, DSF_THRIFT_JSON);
+
     _storage->set_data(
         partition_path,
-        config,
+        writer.get_buffer(),
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-        [this, wi](error_code ec)
+        [this, req, request_msg](error_code ec)
         {
-            global_partition_id gpid = wi->req->config.gpid;
+            gpid gpid = req->config.pid;
             if (ec == ERR_OK)
             {
-                {
-                    zauto_lock l(_pending_requests_lock);
-                    _pending_requests[gpid][wi->ballot] = *wi;
-                }
-                exec_pending_requests(gpid);
+                exec_pending_request(req, request_msg);
             }
             else if (ec == ERR_TIMEOUT)
             {
                 // well, if we have message need to resposne,
                 // we just ignore it. After all, the sender will
                 // resend it
-                if (wi->msg)
+                if (request_msg)
                 {
-                    dsn_msg_release_ref(wi->msg);
+                    zauto_write_lock l(_lock);
+                    _pending_requests.erase(req->config.pid);
+                    dsn_msg_release_ref(request_msg);
                 }
                 else
                 {
                     tasking::enqueue(LPC_META_SERVER_STATE_UPDATE_CALLBACK,
                         this,
-                        std::bind(&server_state::update_configuration_on_remote, this, wi),
+                        std::bind(&server_state::update_configuration_on_remote, this, req, nullptr),
                         0,
                         std::chrono::milliseconds(1000));
                 }
@@ -1237,34 +1254,141 @@ void server_state::update_configuration(
     dsn_message_t request_msg, 
     std::function<void()> callback)
 {
-    bool write;
-    configuration_update_response response; 
+    bool write = false;
+    bool retry = false;
+    int delay_ms = 0;
 
-    {
-        zauto_read_lock l(_lock);
-        app_state& app = _apps[req->config.gpid.app_id - 1];
-        partition_configuration& old = app.partitions[req->config.gpid.pidx];
-        if (is_partition_config_equal(old, req->config))
+    configuration_update_response response;
+    
+    {        
+        zauto_write_lock l(_lock);
+        app_state& app = _apps[req->config.pid.get_app_id() - 1];
+        partition_configuration& old = app.partitions[req->config.pid.get_partition_index()];
+        
+        // update for stateful service (via replication framework)
+        if (app.info.is_stateful)
         {
-            // duplicate request
-            dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
-                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, old.ballot);
-            write = false;
-            response.err = ERR_OK;
-            response.config = old;
+            //For a dropped table on meta server, all the update configuration request is invalid
+            if (app.info.status == app_status::AS_DROPPED)
+            {
+                dwarn("app_id(%d) is dropped, update request(from:%s, cfg_type:%s, ballot:%s) is ignored",
+                    app.info.app_id, req->node.to_string(), enum_to_string(req->type), req->config.ballot);
+
+                response.err = ERR_INVALID_VERSION;
+                response.config = old;
+            }
+            else if (is_partition_config_equal(old, req->config))
+            {
+                // duplicate request
+                dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), old.ballot);
+
+                response.err = ERR_OK;
+                response.config = old;
+            }
+            else if (old.ballot + 1 != req->config.ballot)
+            {
+                dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot, old.ballot);
+
+                if (nullptr == request_msg)
+                {
+                    //for meta server's remove primary request, we must always try to execute it
+                    req->config.ballot = old.ballot + 1;
+                    retry = true;
+                }
+                response.err = ERR_INVALID_VERSION;
+                response.config = old;
+            }
+            else if (_pending_requests.find(req->config.pid) != _pending_requests.end())
+            {
+                dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot);
+                if (nullptr == request_msg)
+                {
+                    //for meta server's remove primary request, we must always try to execute it
+                    retry = true;
+                    delay_ms = 1000;
+                }
+                else
+                {
+                    //for request from replica server, we just adandon it.
+                    //because we asssume the replica server will resend this
+                    return;
+                }
+            }
+            else
+            {
+                write = true;
+            }
         }
-        else if (old.ballot + 1 != req->config.ballot)
-        {
-            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
-                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot, old.ballot);
-            write = false;   
-            response.err = ERR_INVALID_VERSION;
-            response.config = old;
-        }
+
+        // update for stateless services
         else
+        {            
+            if (req->config.ballot != old.ballot)
+            {
+                dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot, old.ballot);
+
+                response.err = ERR_INVALID_VERSION;
+                response.config = old;
+            }
+            else if (_pending_requests.find(req->config.pid) != _pending_requests.end())
+            {
+                dwarn("A pending request exists, ignore the request. configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                    req->node.to_string(), old.pid.get_app_id(), old.pid.get_partition_index(), req->config.ballot);
+                retry = true;
+                delay_ms = 1000;
+            }
+            else
+            {
+                partition_configuration_stateless pcs(old);
+
+                // remove
+                if (config_type::CT_REMOVE == req->type)
+                {
+                    // not found
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) == pcs.host_replicas().end() ||
+                        find(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), req->node) == pcs.worker_replicas().end())
+                    {
+                        response.err = ERR_OK;
+                        response.config = old;
+                    }
+                    else
+                    {
+                        write = true;
+                    }
+                }
+                
+                // add
+                else
+                {
+                    // added already
+                    if (find(pcs.host_replicas().begin(), pcs.host_replicas().end(), req->host_node) != pcs.host_replicas().end())
+                    {
+                        response.err = ERR_OK;
+                        response.config = old;
+                    }
+
+                    else
+                    {
+                        write = true;
+                    }
+                }
+
+            }
+        }
+
+        if (write)
         {
-            write = true;
-            req->config.last_drops = old.last_drops;
+            _pending_requests.emplace(req->config.pid, callback);
+
+            if (req->info.is_stateful)
+            {
+                req->config.last_drops = old.last_drops;
+                maintain_drops(req->config.last_drops, *req);
+            }
         }
     }
 
@@ -1273,6 +1397,18 @@ void server_state::update_configuration(
         if (request_msg)
         {
             reply(request_msg, response);
+        }
+        else if (retry)
+        {
+            tasking::enqueue(
+                LPC_CM_UPDATE_CONFIGURATION,
+                nullptr,
+                [this, cb = move(callback), req_ptr = move(req)]() mutable
+                {
+                    this->update_configuration(req_ptr, nullptr, cb);
+                },
+                0,
+                std::chrono::milliseconds(delay_ms));
         }
         else
         {
@@ -1286,167 +1422,119 @@ void server_state::update_configuration(
             dsn_msg_add_ref(request_msg);
         }
 
-        // maintain dropouts
-        switch (req->type)
-        {
-        case CT_ASSIGN_PRIMARY:
-        case CT_ADD_SECONDARY:
-        case CT_UPGRADE_TO_SECONDARY:
-            maintain_drops(req->config.last_drops, req->node, true);
-            break;
-        case CT_DOWNGRADE_TO_INACTIVE:
-        case CT_REMOVE:
-            //only maintain last drops for primary
-            if (req->config.primary.is_invalid())
-                maintain_drops(req->config.last_drops, req->node, false);
-            break;
-        }
-
-        std::shared_ptr<storage_work_item> wi(new storage_work_item());
-        wi->ballot = req->config.ballot;
-        wi->req = req;
-        wi->msg = request_msg;
-        wi->callback = callback;
-        update_configuration_on_remote(wi);
+        update_configuration_on_remote(req, request_msg);
     }
 }
 
-void server_state::exec_pending_requests(global_partition_id gpid)
+
+void server_state::exec_pending_request(const std::shared_ptr<configuration_update_request>& req, dsn_message_t request_msg)
 {
-    do
+    configuration_update_response resp;
+    std::function<void()> callback;
     {
-        storage_work_item wi;
-        {
-            zauto_lock l(_pending_requests_lock);
-            auto& part = _pending_requests[gpid];
-            if (part.size() == 0)
-                return;
-
-            storage_work_item& fwi = part.begin()->second;
-            {
-                zauto_read_lock l2(_lock);
-                app_state& app = _apps[gpid.app_id - 1];
-                partition_configuration& old = app.partitions[gpid.pidx];
-                if (old.ballot + 1 != fwi.ballot)
-                {
-                    return;
-                }
-            }
-
-            wi = fwi;
-            part.erase(part.begin());
-        }
-        
-        configuration_update_response resp;
-        {
-            zauto_write_lock l(_lock);
-            update_configuration_internal(*wi.req, resp);
-        }
-
-        if (wi.msg)
-        {
-            reply(wi.msg, resp);
-            dsn_msg_release_ref(wi.msg);
-        }
-
-        if (wi.callback)
-        {
-            wi.callback();
-        }
-    } while (true);
+        zauto_write_lock l(_lock);
+        auto iter = _pending_requests.find(req->config.pid);
+        callback = move(iter->second);
+        dassert(iter != _pending_requests.end(), "request for gpid(%d.%d) is removed unexpectedly", 
+            req->config.pid.get_app_id(), req->config.pid.get_partition_index()
+            );
+        update_configuration_internal(*req, resp);
+        _pending_requests.erase(iter);
+    }
+    if (request_msg)
+    {
+        reply(request_msg, resp);
+        dsn_msg_release_ref(request_msg);
+    }
+    if (callback)
+    {
+        callback();
+    }
 }
 
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
-    app_state& app = _apps[request.config.gpid.app_id - 1];
-    partition_configuration& old = app.partitions[request.config.gpid.pidx];
-    if (old.ballot + 1 != request.config.ballot)
+    app_state& app = _apps[request.config.pid.get_app_id() - 1];
+    partition_configuration& old = app.partitions[request.config.pid.get_partition_index()];
+
+    if (app.info.status == app_status::AS_DROPPED)
     {
         response.err = ERR_INVALID_VERSION;
         response.config = old;
+        dwarn("table is dropped when trying to update config(node: %s, config_type: %s, ballot: %" PRId64 ")",
+              request.node.to_string(), enum_to_string(request.type), request.config.ballot);
     }
-    else
+
+    else if (app.info.is_stateful)
     {
-        // TODO: update _storage first
+        dassert(old.ballot + 1 == request.config.ballot, "");
 
         response.err = ERR_OK;
         response.config = request.config;
-        
+
         auto it = _nodes.find(request.node);
         dassert(it != _nodes.end(), "");
         node_state& node = it->second;
 
         switch (request.type)
         {
-        case CT_ASSIGN_PRIMARY:
+        case config_type::CT_ASSIGN_PRIMARY:
 # ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
-            node.partitions.insert(old.gpid);
-            node.primaries.insert(old.gpid);
-            break; 
-        case CT_UPGRADE_TO_PRIMARY:
+            node.partitions.insert(old.pid);
+            node.primaries.insert(old.pid);
+            break;
+        case config_type::CT_UPGRADE_TO_PRIMARY:
 # ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
 # endif
-            node.partitions.insert(old.gpid);
-            node.primaries.insert(old.gpid);
+            node.partitions.insert(old.pid);
+            node.primaries.insert(old.pid);
             break;
-        case CT_ADD_SECONDARY:
+        case config_type::CT_ADD_SECONDARY:
             dassert(false, "invalid execution flow");
             break;
-        case CT_DOWNGRADE_TO_SECONDARY:
+        case config_type::CT_DOWNGRADE_TO_SECONDARY:
 # ifndef NDEBUG
             dassert(old.primary == request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
-            node.primaries.erase(old.gpid);
+            node.primaries.erase(old.pid);
             break;
-        case CT_DOWNGRADE_TO_INACTIVE:
-        case CT_REMOVE:
+        case config_type::CT_DOWNGRADE_TO_INACTIVE:
+        case config_type::CT_REMOVE:
 # ifndef NDEBUG
-            dassert(old.primary == request.node || 
+            dassert(old.primary == request.node ||
                 std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
 # endif
             if (request.node == old.primary)
             {
-                node.primaries.erase(old.gpid);
+                node.primaries.erase(old.pid);
             }
-            node.partitions.erase(old.gpid);            
+            node.partitions.erase(old.pid);
             break;
-        case CT_UPGRADE_TO_SECONDARY:
+        case config_type::CT_UPGRADE_TO_SECONDARY:
 # ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
-            node.partitions.insert(old.gpid);
+            node.partitions.insert(old.pid);
             break;
         default:
             dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
-        
+
         // maintain dropouts
-        auto drops = old.last_drops; 
-        switch (request.type)
-        {
-        case CT_ASSIGN_PRIMARY:
-        case CT_ADD_SECONDARY:
-        case CT_UPGRADE_TO_SECONDARY:
-            maintain_drops(drops, request.node, true);
-            break;
-        case CT_DOWNGRADE_TO_INACTIVE:
-        case CT_REMOVE:
-            if (request.config.primary.is_invalid())
-                maintain_drops(drops, request.node, false);
-            break;
-        }
-        
+        auto drops = old.last_drops;
+        maintain_drops(drops, request);
+
         // update to new config        
         old = request.config;
         old.last_drops = drops;
-        
+
         std::stringstream cf;
         cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
@@ -1461,17 +1549,75 @@ void server_state::update_configuration_internal(const configuration_update_requ
         cf << "]}";
 
         ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
-            request.config.gpid.app_id,
-            request.config.gpid.pidx,
+            request.config.pid.get_app_id(),
+            request.config.pid.get_partition_index(),
             request.config.ballot,
             enum_to_string(request.type),
             request.node.to_string(),
             cf.str().c_str()
             );
     }
-    
+    else
+    {
+        dassert(request.config.ballot == old.ballot, "");
+
+        partition_configuration_stateless pcs(old);
+
+        // remove
+        if (config_type::CT_REMOVE == request.type)
+        {
+            // remove working node address
+            auto it1 = std::remove(pcs.worker_replicas().begin(), pcs.worker_replicas().end(), request.node);
+            dassert(it1 != pcs.worker_replicas().end(), "node must exit in the given vector");
+            pcs.worker_replicas().erase(it1);
+
+            // remove host node address
+            it1 = std::remove(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node);
+            dassert(it1 != pcs.host_replicas().end(), "node must exit in the given vector");
+            pcs.host_replicas().erase(it1);
+
+            auto it = _nodes.find(request.host_node);
+            dassert(it != _nodes.end(), "");
+            it->second.partitions.erase(request.config.pid);
+        }
+
+        // add
+        else
+        {
+            // add
+            if (std::find(pcs.host_replicas().begin(), pcs.host_replicas().end(), request.host_node) == pcs.host_replicas().end())
+            {
+                pcs.worker_replicas().emplace_back(request.node);
+                pcs.host_replicas().emplace_back(request.host_node);
+
+                auto it = _nodes.find(request.host_node);
+                dassert(it != _nodes.end(), "");
+                it->second.partitions.insert(request.config.pid);
+            }
+        }
+        response.err = ERR_OK;
+        response.config = old;
+
+        std::stringstream cf;
+        cf << "{replicas = [";
+        for (size_t i = 0; i < pcs.host_replicas().size(); i++)
+        {
+            cf << pcs.host_replicas()[i].to_string() << " (work-port = " << pcs.worker_replicas()[i].port() << "),";
+        }
+        cf << "]}";
+
+        ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
+            response.config.pid.get_app_id(),
+            response.config.pid.get_partition_index(),
+            response.config.ballot,
+            enum_to_string(request.type),
+            request.node.to_string(),
+            cf.str().c_str()
+            );
+    }
+
 #ifndef NDEBUG
-    check_consistency(request.config.gpid);
+    check_consistency(request.config.pid);
 #endif
 
     if (_config_change_subscriber)
@@ -1480,30 +1626,71 @@ void server_state::update_configuration_internal(const configuration_update_requ
     }
 }
 
-void server_state::check_consistency(global_partition_id gpid)
+void server_state::check_consistency(bool is_stateful, const partition_configuration& config)
 {
-    app_state& app = _apps[gpid.app_id - 1];
-    partition_configuration& config = app.partitions[gpid.pidx];
-
-    if (config.primary.is_invalid() == false)
+    if (is_stateful)
     {
-        auto it = _nodes.find(config.primary);
-        dassert(it != _nodes.end(), "");
-        dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
-        dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+        if (config.primary.is_invalid() == false)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            dassert(it2 == config.last_drops.end(), "");
+        }
 
-        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
-        dassert(it2 == config.last_drops.end(), "");
+        for (auto& ep : config.secondaries)
+        {
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
+            dassert(it2 == config.last_drops.end(), "");
+        }
     }
-    
-    for (auto& ep : config.secondaries)
-    {
-        auto it = _nodes.find(ep);
-        dassert(it != _nodes.end(), "");
-        dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
 
-        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
-        dassert(it2 == config.last_drops.end(), "");
+    // stateless
+    else
+    {
+        partition_configuration_stateless pcs((partition_configuration&)config);
+        dassert(pcs.host_replicas().size() == pcs.worker_replicas().size(), "");
+    }
+}
+
+void server_state::check_consistency(gpid gpid)
+{
+    app_state& app = _apps[gpid.get_app_id() - 1];
+    partition_configuration& config = app.partitions[gpid.get_partition_index()];
+
+    if (app.info.is_stateful)
+    {
+        if (config.primary.is_invalid() == false)
+        {
+            auto it = _nodes.find(config.primary);
+            dassert(it != _nodes.end(), "");
+            dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
+            dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+
+        for (auto& ep : config.secondaries)
+        {
+            auto it = _nodes.find(ep);
+            dassert(it != _nodes.end(), "");
+            dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+            auto it2 = find(config.last_drops.begin(), config.last_drops.end(), ep);
+            dassert(it2 == config.last_drops.end(), "");
+        }
+    }
+
+    // stateless
+    else
+    {
+        partition_configuration_stateless pcs(config);
+        dassert(pcs.host_replicas().size() == pcs.worker_replicas().size(), "");
+        for (auto& ep : pcs.host_replicas())
+        {
+            auto it = _nodes.find(ep);
+            dassert(it != _nodes.end(), "");
+            dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+        }
     }
 
     int lc = 0;
@@ -1526,7 +1713,7 @@ void server_state::static_cli_json_state(void* context, int argc, const char** a
     auto _server_state = reinterpret_cast<server_state*>(context);
     std::stringstream out;
     _server_state->json_state(out);
-    auto danglingstring = new std::string(std::move(out.str()));
+    auto danglingstring = new std::string(move(out.str()));
     reply->message = danglingstring->c_str();
     reply->size = danglingstring->size();
     reply->context = danglingstring;

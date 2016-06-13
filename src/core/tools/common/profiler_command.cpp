@@ -41,6 +41,7 @@
 
 #include <dsn/toollet/profiler.h>
 #include "profiler_header.h"
+#include <dsn/cpp/json_helper.h>
 
 namespace dsn {
     namespace tools {
@@ -257,6 +258,35 @@ namespace dsn {
             return ss.str();
         }
 
+        struct call_link {
+            std::string name;
+            uint64_t num;
+            DEFINE_JSON_SERIALIZATION(name, num)
+        };
+
+        struct call_resp {
+            std::vector<std::string> task_list;
+            std::vector<std::vector<uint64_t>> call_matrix;
+            DEFINE_JSON_SERIALIZATION(task_list, call_matrix)
+        };
+
+        struct counter_sample_resp {
+            std::string  name;
+            std::vector<uint64_t> samples;
+            DEFINE_JSON_SERIALIZATION(name, samples)
+        };
+
+        struct nv_pair {
+            std::string  name;
+            uint64_t value;
+            DEFINE_JSON_SERIALIZATION(name, value)
+        };
+
+        struct counter_realtime_resp {
+            std::string  time;
+            std::vector<nv_pair> data;
+            DEFINE_JSON_SERIALIZATION(time, data)
+        };
         std::string query_data_handler(const std::vector<std::string>& args)
         {
             std::stringstream ss;
@@ -338,17 +368,17 @@ namespace dsn {
             {
                 int task_id;
 
-                ss << "[";
+                std::vector<std::string> task_list;
                 for (int i = 0; i <= dsn_task_code_max(); ++i)
                 {
                     task_id = i;
 
                     if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                         continue;
-                    ss << "\"" << dsn_task_code_to_string(task_id) << "\",";
+                    task_list.push_back(dsn_task_code_to_string(task_id));
 
                 }
-                ss << "]";
+                std::json_encode(ss,task_list);
                 return ss.str();
             }
             //return a list of 2 elements for a specific task:
@@ -373,8 +403,7 @@ namespace dsn {
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
-                std::stringstream counterList;
-                counterList << "[[";
+                std::vector<counter_sample_resp> total_resp;
                 do{
                     for (int k = 0; k < PREF_COUNTER_COUNT; k++)
                     {
@@ -382,6 +411,8 @@ namespace dsn {
 
                         if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
                         {
+                            counter_sample_resp resp;
+
                             if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
                                 continue;
 
@@ -402,8 +433,7 @@ namespace dsn {
                                 break;
                             }
 
-                            ss << "[\"" << name << name_suffix << "\"";
-                            counterList << "\"" << name << name_suffix << "\",";
+                            resp.name = std::string(name) + std::string(name_suffix);
 
                             // get samples
                             perf_counter::samples_t samples;
@@ -432,54 +462,20 @@ namespace dsn {
                             std::sort(sorted_samples.begin(), sorted_samples.end());
 
                             for (int l = 0; l < sorted_samples.size(); l++)
-                                ss << ", " << sorted_samples[l];
-
-                            ss << "],\n";
+                                resp.samples.push_back(sorted_samples[l]);
+                            
+                            total_resp.push_back(resp);
                         }
                     }
                     if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE || task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
-                counterList << "],[" << ss.str() << "]]";
-                return counterList.str();
-            }
-            //return raw counter values for a specific task
-            else if (args[0] == "counter_raw")
-            {
-                if (args.size() < 2)
-                {
-                    ss << "unenough arguments" << std::endl;
-                    return ss.str();
-                }
 
-                int task_id = find_task_id(args[1]);
-
-                if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
-                {
-                    ss << "no such task code or target task is not profiled" << std::endl;
-                    return ss.str();
-                }
-
-                double timeList[8] = { 0 };
-                for (int k = 0; k < PREF_COUNTER_COUNT; k++)
-                {
-                    perf_counter_ptr_type counter_type = static_cast<perf_counter_ptr_type>(k);
-
-                    if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
-                    {
-                        if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
-                            continue;
-
-                        timeList[k] = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
-                    }
-                }
-
-                for (auto i : timeList)
-                    ss << ((i < 0) ? 0 : i) << ",";
+                std::json_encode(ss, total_resp);
                 return ss.str();
             }
             //return 6 types of latency times for a specific task
-            else if (args[0] == "counter_calc")
+            else if (args[0] == "counter_breakdown")
             {
                 if (args.size() < 2)
                 {
@@ -499,7 +495,7 @@ namespace dsn {
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
-                double timeList[7] = { 0 };
+                std::vector<double> timeList {0,0,0,0,0,0,0};
                 do{
                     for (int k = 0; k < PREF_COUNTER_COUNT; k++)
                     {
@@ -530,6 +526,8 @@ namespace dsn {
                                     break;
                             }
 
+                            timeGet = ((timeGet < 0) ? 0 : timeGet);
+
                             if (strcmp(counter_info_ptr[counter_type]->title, "RPC.SERVER(ns)") == 0 && task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                                 timeList[0] = timeGet;
                             else if (strcmp(counter_info_ptr[counter_type]->title, "QUEUE(ns)") == 0 && task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
@@ -552,8 +550,8 @@ namespace dsn {
 
                 //timeList[0] = (timeList[3] - timeList[0]) / 2;
                 //timeList[3] = timeList[0];
-                for (auto i : timeList)
-                    ss << ((i < 0) ? 0 : i) << ",";
+
+                std::json_encode(ss, timeList);
                 return ss.str();
             }
             //return a list of current counter value for a specific task
@@ -575,12 +573,12 @@ namespace dsn {
 
                 char str[24];
                 ::dsn::utils::time_ms_to_string(dsn_now_ns() / 1000000, str);
-                ss << "{\"time\":\"" << str <<"\",";
-                ss << "\"data\":[";
+
+                std::vector<nv_pair> data;
+
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
-                bool first_flag = 0;
                 do{
                     for (int k = 0; k < PREF_COUNTER_COUNT; k++)
                     {
@@ -608,24 +606,16 @@ namespace dsn {
                                 break;
                             }
 
-                            if (!first_flag)
-                                first_flag = 1;
-                            else
-                                ss << ",";
-
-                            ss << "{\"name\":\"" << name << name_suffix << "\"";
-
                             uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_latest_sample();
-                            ss << ", \"value\":" << sample;
-
-                            ss << "}\n";
+    
+                            data.push_back(nv_pair{ std::string(name) + std::string(name_suffix),sample });
                         }
                     }
                     if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE || task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                ss << "]}";
+                counter_realtime_resp{ std::string(str), data }.json_state(ss);
                 return ss.str();
             }
             //return a list of 2 elements for a specific task
@@ -633,9 +623,35 @@ namespace dsn {
             //2. a list of callee names and call times
             else if (args[0] == "call")
             {
-                if (args.size() < 2)
+                if (args.size() < 1)
                 {
                     ss << "unenough arguments" << std::endl;
+                    return ss.str();
+                }
+                else if (args.size() == 1)
+                {
+                    std::vector<std::string> task_list;
+                    std::vector<std::vector<uint64_t>> call_matrix;
+                       
+                    for (int j = 0; j <= dsn_task_code_max(); j++)
+                    {
+                        if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile))
+                        {
+                            task_list.push_back(std::string(dsn_task_code_to_string(j)));
+                        
+                            std::vector<uint64_t> call_vector;
+                            for (int k = 0; k <= dsn_task_code_max(); k++)
+                            {
+                                if ((k != TASK_CODE_INVALID) && (s_spec_profilers[k].is_profile))
+                                {
+                                    call_vector.push_back(s_spec_profilers[j].call_counts[k]);
+                                }
+                            }
+                            call_matrix.push_back(call_vector);
+                        }
+                    }
+
+                    call_resp{ task_list, call_matrix }.json_state(ss);
                     return ss.str();
                 }
 
@@ -646,26 +662,37 @@ namespace dsn {
                     ss << "no such task code or target task is not profiled" << std::endl;
                     return ss.str();
                 }
-                ss << "[[";
+                std::vector<std::vector<call_link>> call_list;
+                std::vector<call_link> caller_list;
+                std::vector<call_link> callee_list;
+                
                 if (s_spec_profilers[task_id].collect_call_count)
                 {
                     for (int j = 0; j <= dsn_task_code_max(); j++)
                     {
                         if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[task_id].call_counts[j] > 0))
                         {
-                            ss << "{\"name\":\"" << std::string(dsn_task_code_to_string(j)) << "\",\"num\":" << s_spec_profilers[task_id].call_counts[j] << "},";
+                            call_link tmp_call_link;
+                            tmp_call_link.name = std::string(dsn_task_code_to_string(j));
+                            tmp_call_link.num = s_spec_profilers[task_id].call_counts[j];
+                            caller_list.push_back(tmp_call_link);
                         }
                     }
                 }
-                ss << "],[";
+
                 for (int j = 0; j <= dsn_task_code_max(); j++)
                 {
                     if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[j].collect_call_count) && (s_spec_profilers[j].call_counts[task_id] > 0))
                     {
-                        ss << "{\"name\":\"" << std::string(dsn_task_code_to_string(j)) << "\",\"num\":" << s_spec_profilers[j].call_counts[task_id] << "},";
+                        call_link tmp_call_link;
+                        tmp_call_link.name = std::string(dsn_task_code_to_string(j));
+                        tmp_call_link.num = s_spec_profilers[j].call_counts[task_id];
+                        callee_list.push_back(tmp_call_link);
                     }
                 }
-                ss << "]]";
+                call_list.push_back(caller_list);
+                call_list.push_back(callee_list);
+                std::json_encode(ss, call_list);
                 return ss.str();
             }
             //return a list of all sharer using the same pool with a specific task
@@ -687,11 +714,11 @@ namespace dsn {
 
                 auto pool = task_spec::get(task_id)->pool_code;
 
-                ss << "[";
+                std::vector<std::string> sharer_list;
                 for (int j = 0; j <= dsn_task_code_max(); j++)
                 if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool && task_spec::get(j)->type == TASK_TYPE_RPC_RESPONSE)
-                    ss << "\"" << std::string(dsn_task_code_to_string(j)) << "\",";
-                ss << "]";
+                    sharer_list.push_back(std::string(dsn_task_code_to_string(j)));
+                std::json_encode(ss, sharer_list);
                 return ss.str();
             }
             //query time

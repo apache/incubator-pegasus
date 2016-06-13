@@ -46,8 +46,10 @@
 
 # include <dsn/tool/providers.common.h>
 # include <dsn/tool/providers.hpc.h>
-# include <dsn/tool/nfs_node_simple.h>
+# include <dsn/tool/nfs.h>
 # include <dsn/internal/singleton.h>
+
+# include <dsn/dist/dist.providers.common.h>
 
 //# include <dsn/thrift_helper.h>
 
@@ -72,6 +74,9 @@ void dsn_core_init()
     dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
     dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+
+    // register useful distributed framework providers
+    dsn::dist::register_common_providers();
 }
 
 //

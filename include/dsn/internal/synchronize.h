@@ -121,9 +121,11 @@ namespace dsn {
 
             __inline void lock_read() { _lock.lockReader(); }
             __inline void unlock_read() { _lock.unlockReader(); }
+            __inline bool try_lock_read() { return _lock.tryLockReader(); }
 
             __inline void lock_write() { _lock.lockWriter(); }
             __inline void unlock_write() { _lock.unlockWriter(); }
+            __inline bool try_lock_write() { return _lock.tryLockWriter(); }
 
         private:
             NonRecursiveRWLock _lock;

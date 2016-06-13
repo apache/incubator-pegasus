@@ -35,7 +35,7 @@
 // apps
 # include "echo.app.example.h"
 
-static void dsn_app_registration()
+static void dsn_app_registration_echo()
 {
     // register all possible service apps
     dsn::register_app< ::dsn::example::echo_server_app>("server");
@@ -45,7 +45,7 @@ static void dsn_app_registration()
 
 int main(int argc, char** argv)
 {
-    dsn_app_registration();
+    dsn_app_registration_echo();
     
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);

@@ -2,9 +2,11 @@
 
 function usage()
 {
-    echo "dsn.cg %name%.thrift|.proto cpp|csharp %out_dir% [single|replication]".PHP_EOL;
+    echo "dsn.cg %name%.thrift|.proto cpp|csharp|js %out_dir%  [binary|json] [single|replication]".PHP_EOL;
+    echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
+    echo "\tnotice : currently for js we only support json format of thrift".PHP_EOL;
 }
 
 if (count($argv) < 4)
@@ -16,29 +18,65 @@ if (count($argv) < 4)
 global $g_idl;
 global $g_out_dir;
 global $g_cg_dir;
+global $g_php_path;
 global $g_cg_libs;
 global $g_idl_type;
 global $g_idl_post;
 global $g_program;
 global $g_idl_php;
 global $g_is_replicated;
+global $g_idl_format;
 
 $g_idl = $argv[1];
 $g_lang = $argv[2];
 $g_out_dir = $argv[3];
 $g_cg_dir = __DIR__;
 $g_templates = $g_cg_dir."/dsn.templates";
+$g_php_path = "php";
 $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
 $g_idl_php = "";
+$g_idl_format = "";
+
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') 
+{
+    $g_php_path = $g_cg_dir."/Windows/php.exe";
+}
 
 if (count($argv) >= 5)
-    $g_mode = $argv[4];
+{
+    $format_input = $argv[4];
+    if ($format_input == "json")
+    {
+        $g_idl_format = "json";
+    }
+    else if ($format_input == "binary")
+    {
+        $g_idl_format = "binary";
+    }
+    else
+    {
+        echo "invalid format '$format_input'".PHP_EOL;
+        usage();
+        exit(0);
+    }
+}
 else
+{
+    $g_idl_format = "binary";
+}
+
+if (count($argv) >= 6)
+{
+    $g_mode = $argv[5];
+}
+else
+{
     $g_mode = "single";
+}
     
-if ($g_mode != "single" && $g_mode != "replication")
+if ($g_mode != "single" && $g_mode != "replication" && $g_mode != "layer3")
 {
     echo "invalid mode '$g_mode'".PHP_EOL;
     usage();
@@ -69,6 +107,18 @@ else
         echo "unknown idl type for input file '".$g_idl."'".PHP_EOL;
         exit(0);
     }
+}
+
+if ($g_lang != "cpp" && $g_lang != "csharp" && $g_lang != "js")
+{
+    echo "unsupported language : ".$g_lang.PHP_EOL;
+    exit(0);
+}
+
+if ($g_lang == "js" && ($g_idl_type != "thrift" || $g_idl_format != "json"))
+{
+    echo "currently for js we only support json format of thrift, please check your arguments.".PHP_EOL;
+    exit(0);
 }
 
 $pos = strrpos($g_idl, "\\");
@@ -115,11 +165,19 @@ case "thrift":
             echo "failed invoke thrift tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
+        if (!file_exists($g_out_dir."/thrift"))
+        {
+            mkdir($g_out_dir."/thrift");
+        }
+        $command = $g_cg_dir."/".$os_name."/thrift --gen ".$g_lang." -out ".$g_out_dir."/thrift ".$g_idl;
+        echo "exec: ".$command.PHP_EOL;
+        system($command);
     }
     break;
 case "proto":
     {
-        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".$g_idl;
+        $g_idl_dir = dirname($g_idl);
+        $command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".$g_idl." -I=".$g_idl_dir;
         echo "exec: ".$command.PHP_EOL;
         system($command);
         if (!file_exists($g_idl_php))
@@ -127,6 +185,10 @@ case "proto":
             echo "failed invoke protoc tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
+
+        $command = $g_cg_dir."/".$os_name."/protoc --".$g_lang."_out=".$g_out_dir." ".$g_idl." -I=".$g_idl_dir;
+        echo "exec: ".$command.PHP_EOL;
+        system($command);
     }
     break;
 default:
@@ -168,6 +230,8 @@ function generate_files_from_dir($dr)
     global $g_program;
     global $g_out_dir;
     global $g_idl_type;
+    global $g_idl_format;
+    global $g_php_path;
     
     foreach (scandir($dr) as $template)
     {
@@ -180,20 +244,24 @@ function generate_files_from_dir($dr)
         if (is_dir($dr."/".$template))
             continue;
 
+        // special files with which prefix are not neded
         if ($template == "config.ini.php"
          || $template == "CMakeLists.txt.php"
          || $template == "App.config.php"
          || $template == "Dockerfile.php"
+         || $template == "run.cmd.php"
+         || $template == "config.appstore.ini.php"
            )
             $output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
         else
             $output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
-            
-        $command = "php -f ".$dr."/".$template
+
+        $command = $g_php_path." -f ".$dr."/".$template
                     ." ".$g_templates."/type.php"
                     ." ".$g_idl_php
                     ." ".$g_program
                     ." ".$g_idl_type
+                    ." ".$g_idl_format
                     ." >".$output_file
                     ;
         
@@ -221,4 +289,38 @@ if (!file_exists($g_templates."/".$g_lang))
 generate_files_from_dir($g_templates."/".$g_lang);
 generate_files_from_dir($g_templates."/".$g_lang."/".$g_mode);
 
+// copy additional files
+$add_idl_file_name= "";
+if ($g_idl_type == "proto" && $g_lang == "csharp")
+{
+    if ($g_idl_format == "json")
+    {
+        $add_idl_file_name = "GProtoJsonHelper.cs";
+    }
+    else
+    {
+        $add_idl_file_name = "GProtoBinaryHelper.cs";
+    }
+} else if ($g_idl_type == "thrift" && $g_lang == "csharp")
+{
+    if ($g_idl_format == "json")
+    {
+        $add_idl_file_name = "ThriftJsonHelper.cs";
+    }
+    else
+    {
+        $add_idl_file_name = "ThriftBinaryHelper.cs";
+    }
+}
+if ($add_idl_file_name != "")
+{
+    $dsn_root = getenv('DSN_ROOT');
+    $add_file = $dsn_root."/include/dsn/idl/".$add_idl_file_name;
+    $target = $g_out_dir."/".$add_idl_file_name;
+    if (!copy($add_file, $target))
+    {
+        echo "failed to copy ".$add_file;
+        exit(0);
+    }
+}
 ?>

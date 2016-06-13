@@ -51,6 +51,12 @@ using namespace ::dsn;
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH1, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH2, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH3, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH4, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
 DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
@@ -67,8 +73,8 @@ class test_client :
     public ::dsn::service_app    
 {
 public:
-    test_client()
-        : ::dsn::serverlet<test_client>("test-server", 7)
+    test_client(dsn_gpid gpid)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
     {
 
     }
@@ -81,7 +87,7 @@ public:
 
     void on_rpc_string_test(dsn_message_t message) {
         std::string command;
-        ::unmarshall(message, command);
+        ::dsn::unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
@@ -115,6 +121,12 @@ public:
         if (argc == 1)
         {
             register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
+            //used for corrupted message test
+            register_async_rpc_handler(RPC_TEST_HASH1, "rpc.test.hash1", &test_client::on_rpc_test);
+            register_async_rpc_handler(RPC_TEST_HASH2, "rpc.test.hash2", &test_client::on_rpc_test);
+            register_async_rpc_handler(RPC_TEST_HASH3, "rpc.test.hash3", &test_client::on_rpc_test);
+            register_async_rpc_handler(RPC_TEST_HASH4, "rpc.test.hash4", &test_client::on_rpc_test);
+
             register_rpc_handler(RPC_TEST_STRING_COMMAND, "rpc.test.string.command", &test_client::on_rpc_string_test);
         }
 
@@ -130,8 +142,8 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    void stop(bool cleanup = false)
+    ::dsn::error_code stop(bool cleanup = false)
     {
-
+        return ERR_OK;
     }
 };

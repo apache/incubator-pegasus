@@ -34,56 +34,37 @@
  */
 
 # pragma once
-# include "simple_kv.client.h"
+# include "simple_kv.client.2.h"
 
 namespace dsn { namespace replication { namespace application {  
 
  
 class simple_kv_perf_test_client 
-    : public simple_kv_client, 
+    : public simple_kv_client2, 
       public ::dsn::service::perf_client_helper 
 {
 public:
-    using simple_kv_client::simple_kv_client;
-
-    virtual uint64_t get_key_hash(const std::string& key) override
+    using simple_kv_client2::simple_kv_client2;
+    
+    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
     {
-        return dsn_crc64_compute(key.c_str(), key.size(), 0);
+        auto prob = (double)dsn_random32(0, 1000) / 1000.0;
+        if (0) {}
+        else if (prob <= ratios[0])
+        {
+            send_one_read(payload_bytes, key_space_size);
+        }
+        else if (prob <= ratios[1])
+        {
+            send_one_write(payload_bytes, key_space_size);
+        }
+        else if (prob <= ratios[2])
+        {
+            send_one_append(payload_bytes, key_space_size);
+        }
+        else { /* nothing to do */ }
     }
-
-    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
-    {
-        return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
-    }
-
-    void start_test()
-    {
-        perf_test_suite s;
-        std::vector<perf_test_suite> suits;
-
-        s.name = "simple_kv.write";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_write(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-        
-        s.name = "simple_kv.append";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
-        s.send_one = [this](int payload_bytes, int key_space_size){this->send_one_append(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-
-        s.name = "simple_kv.read";
-        s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-        s.send_one = [this](int payload_bytes, int key_space_size) {this->send_one_read(payload_bytes, key_space_size); };
-        s.cases.clear();
-        load_suite_config(s);
-        suits.push_back(s);
-        
-        start(suits);
-    }                
+    
 
     void send_one_read(int payload_bytes, int key_space_size)
     {
@@ -97,7 +78,7 @@ public:
             {
                 end_send_one(context, err);
             },
-            _timeout
+            _timeout, 0, rs
             );
     }
 
@@ -115,7 +96,7 @@ public:
             {
                 end_send_one(context, err);
             },
-            _timeout
+            _timeout, 0, rs
             );
     }
 
@@ -132,7 +113,7 @@ public:
             {
                 end_send_one(context, err);
             },
-            _timeout
+            _timeout, 0, rs
             );
     }
 

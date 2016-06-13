@@ -22,13 +22,6 @@ IF "%cmake_target%"=="" (
     GOTO error
 )
 
-IF NOT EXIST "%bin_dir%\7z.exe" (
-    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/7z.dll?raw=true
-    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/7z.exe?raw=true
-    @move 7z.dll %bin_dir%
-    @move 7z.exe %bin_dir%
-)
-
 IF NOT EXIST "%bin_dir%\sed.exe" (
     CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/sed.exe?raw=true
     @move sed.exe %bin_dir%
@@ -42,4 +35,28 @@ IF NOT EXIST "%TOP_DIR%\ext\%boost_dir_name%" (
 IF NOT EXIST "%TOP_DIR%\ext\cmake-3.2.2" (
     CALL %bin_dir%\wget.exe --no-check-certificate http://github.com/imzhenyu/packages/blob/master/windows/cmake-3.2.2.7z?raw=true
     CALL %bin_dir%\7z.exe x cmake-3.2.2.7z -y -o"%TOP_DIR%\ext\"
+)
+
+IF NOT EXIST "%TOP_DIR%\bin\Windows\thrift.exe" (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/thrift/raw/master/pre-built/windows8.1/thrift.exe
+    @move thrift.exe %TOP_DIR%\bin\Windows\
+)
+
+
+IF NOT EXIST "%TOP_DIR%\bin\Windows\7z.exe" (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/7z.dll?raw=true
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/7z.exe?raw=true
+    @copy /Y 7z.dll %TOP_DIR%\bin\Windows\
+    @copy /Y 7z.exe %TOP_DIR%\bin\Windows\
+    @move 7z.dll %bin_dir%
+    @move 7z.exe %bin_dir%
+)
+
+IF NOT EXIST "%TOP_DIR%\bin\Windows\php.exe" (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/php5.dll?raw=true
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/php.exe?raw=true
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/php.ini?raw=true
+    @move php5.dll %TOP_DIR%\bin\Windows\
+    @move php.exe %TOP_DIR%\bin\Windows\
+    @move php.ini %TOP_DIR%\bin\Windows\
 )

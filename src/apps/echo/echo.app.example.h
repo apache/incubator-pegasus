@@ -43,7 +43,7 @@ class echo_server_app :
     public ::dsn::service_app
 {
 public:
-    echo_server_app() {}
+    echo_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
@@ -51,9 +51,10 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _echo_svc.close_service();
+        return ::dsn::ERR_OK;
     }
 
 private:
@@ -66,7 +67,7 @@ class echo_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    echo_client_app() {}
+    echo_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
     
     ~echo_client_app() 
     {
@@ -84,11 +85,13 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
  
         _echo_client.reset();
+
+        return ::dsn::ERR_OK;
     }
 
     void on_test_timer()
@@ -116,7 +119,8 @@ class echo_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    echo_perf_test_client_app()
+    echo_perf_test_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _echo_client = nullptr;
     }
@@ -134,17 +138,19 @@ public:
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _echo_client = new echo_perf_test_client(_server);
-        _echo_client->start_test();
+        _echo_client->start_test("echo.perf-test.case", 1);
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         if (_echo_client != nullptr)
         {
             delete _echo_client;
             _echo_client = nullptr;
         }
+
+        return ::dsn::ERR_OK;
     }
     
 private:

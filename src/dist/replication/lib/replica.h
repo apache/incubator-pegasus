@@ -38,7 +38,7 @@
 //
 // a replica is a replication partition of a serivce,
 // which handles all replication related issues
-// and redirect the app messages to replication_app_base
+// and on_request the app messages to replication_app_base
 // which is binded to this replication partition
 //
 
@@ -68,12 +68,12 @@ public:
     //    routines for replica stub
     //
     static replica* load(replica_stub* stub, const char* dir);
-    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
+    static replica* newr(replica_stub* stub, gpid gpid, const app_info& app);    
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr& mu, bool is_private);
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
-    bool update_local_configuration_with_no_ballot_change(partition_status status);
+    bool update_local_configuration_with_no_ballot_change(partition_status::type status);
     void set_inactive_state_transient(bool t);
     void check_state_completeness();
     //error_code check_and_fix_private_log_completeness();
@@ -83,7 +83,7 @@ public:
     //    requests from clients
     // 
     void on_client_write(task_code code, dsn_message_t request);
-    void on_client_read(const read_request_header& meta, dsn_message_t request);
+    void on_client_read(task_code code, dsn_message_t request);
 
     //
     //    messages and tools from/for meta server
@@ -111,14 +111,17 @@ public:
     //  routine for testing purpose only
     //
     void send_group_check_once_for_test(int delay_milliseconds);
+    void inject_error(error_code err) { handle_local_failure(err); }
     
     //
     //  local information query
     //
     ballot get_ballot() const {return _config.ballot; }    
-    partition_status status() const { return _config.status; }
-    global_partition_id get_gpid() const { return _config.gpid; }    
+    partition_status::type status() const { return _config.status; }
+    gpid get_gpid() const { return _config.pid; }    
     replication_app_base* get_app() { return _app.get(); }
+    const app_info* get_app_info() const { return &_app_info; }
+    const dsn_app_callbacks& get_app_callbacks() const { return _app_callbacks; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
@@ -129,18 +132,18 @@ public:
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
 
-    void json_state(std::stringstream& out) const;
+    //void json_state(std::stringstream& out) const;
     void update_commit_statistics(int count);
         
 private:
     // common helpers
     void init_state();
-    void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
+    void response_client_message(dsn_message_t request, error_code error);    
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);    
         
     // initialization
-    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir);
+    replica(replica_stub* stub, gpid gpid, const app_info& app, const char* dir);
     error_code initialize_on_new();
     error_code initialize_on_load();
     error_code init_app_and_prepare_list(bool create_new);
@@ -148,9 +151,9 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds, int64_t learn_signature = invalid_signature);
+    void send_prepare_message(::dsn::rpc_address addr, partition_status::type status, mutation_ptr& mu, int timeout_milliseconds, int64_t learn_signature = invalid_signature);
     void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
-    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
+    void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
     void cleanup_preparing_mutations(bool wait);
@@ -161,7 +164,7 @@ private:
     void on_learn_reply(error_code err, learn_request&& req, learn_response&& resp);
     void on_copy_remote_state_completed(error_code err, size_t size, learn_request&& req, learn_response&& resp);
     void on_learn_remote_state_completed(error_code err);
-    void handle_learning_error(error_code err);
+    void handle_learning_error(error_code err, bool is_local_error);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state& state);
@@ -169,7 +172,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, ::dsn::rpc_address node, error_code error);
+    void handle_remote_failure(partition_status::type status, ::dsn::rpc_address node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
@@ -179,10 +182,10 @@ private:
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig);
+    void update_configuration_on_meta_server(config_type::type type, ::dsn::rpc_address node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
-    bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
+    bool is_same_ballot_status_change_allowed(partition_status::type olds, partition_status::type news);
 
     // return false when update fails or replica is going to be closed
     bool update_configuration(const partition_configuration& config);
@@ -200,7 +203,7 @@ private:
     void garbage_collection();
     void init_checkpoint();
     void background_checkpoint();
-    void catch_up_with_private_logs(partition_status s);
+    void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp);
     void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp, const std::string &chk_dir);
@@ -228,10 +231,11 @@ private:
 
     // constants
     replica_stub*           _stub;
-    std::string             _app_type;
     std::string             _dir;
     char                    _name[256]; // app.index @ host:port
     replication_options     *_options;
+    const app_info          _app_info;
+    dsn_app_callbacks       _app_callbacks;
     
     // replica status specific states
     primary_context             _primary_states;

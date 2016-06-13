@@ -316,7 +316,7 @@ bool failure_detector::remove_from_allow_list( ::dsn::rpc_address node)
 void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack)
 {
     ack.time = beacon.time;
-    ack.this_node = beacon.to;
+    ack.this_node = beacon.to_addr;
     ack.primary_node = primary_address();
     ack.is_master = true;
     ack.allowed = true;
@@ -324,7 +324,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon
     zauto_lock l(_lock);
 
     uint64_t now = now_ms();
-    auto node = beacon.from;
+    auto node = beacon.from_addr;
 
     worker_map::iterator itr = _workers.find(node);
     if (itr == _workers.end())
@@ -388,6 +388,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         dwarn("received beacon ack without corresponding master, ignore it, "
             "remote_master[%s], local_worker[%s]",
             node.to_string(), primary_address().to_string());
+        err.end_tracking();
         return false;
     }
 
@@ -399,6 +400,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
             node.to_string(), primary_address().to_string());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
+        err.end_tracking();
         return false;
     }
 
@@ -406,6 +408,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     {
         // out-dated beacon acks, do nothing
         dinfo("ignore out dated beacon acks");
+        err.end_tracking();
         return false;
     }
 
@@ -526,11 +529,11 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;
-    beacon.from = primary_address();
-    beacon.to = target;
+    beacon.from_addr= primary_address();
+    beacon.to_addr = target;
 
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-          beacon.from.to_string(), beacon.to.to_string(), time);
+          beacon.from_addr.to_string(), beacon.to_addr.to_string(), time);
 
     ::dsn::rpc::call(
         target,
@@ -543,7 +546,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
             {
                 beacon_ack ack;
                 ack.time = beacon.time;
-                ack.this_node = beacon.to;
+                ack.this_node = beacon.to_addr;
                 ack.primary_node.set_invalid();
                 ack.is_master = false;
                 ack.allowed = true;

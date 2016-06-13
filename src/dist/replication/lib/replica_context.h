@@ -51,17 +51,17 @@ typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_ma
 class primary_context
 {
 public:
-    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
-        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
+    primary_context(gpid gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
+        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled), next_learning_version(0)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
     bool is_cleaned();
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    void get_replica_config(partition_status status, /*out*/ replica_configuration& config, uint64_t learner_signature = invalid_signature);
-    bool check_exist(::dsn::rpc_address node, partition_status status);
-    partition_status get_node_status(::dsn::rpc_address addr) const;
+    void get_replica_config(partition_status::type status, /*out*/ replica_configuration& config, uint64_t learner_signature = invalid_signature);
+    bool check_exist(::dsn::rpc_address node, partition_status::type status);
+    partition_status::type get_node_status(::dsn::rpc_address addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
     
@@ -70,6 +70,7 @@ public:
     partition_configuration membership;
     node_statuses           statuses;
     learner_map             learners;
+    uint64_t                next_learning_version;
 
     // 2pc batching
     mutation_queue          write_queue;
@@ -110,7 +111,7 @@ class potential_secondary_context
 {
 public:
     potential_secondary_context() :
-        learning_signature(0),
+        learning_version(0),
         learning_start_ts_ns(0),
         learning_round_is_running(false),
         learning_status(learner_status::LearningInvalid),
@@ -122,9 +123,9 @@ public:
     uint64_t duration_ms() const { return (dsn_now_ns() - learning_start_ts_ns) / 1000000; }
 
 public:
-    uint64_t        learning_signature;
+    uint64_t        learning_version;
     uint64_t        learning_start_ts_ns;
-    learner_status  learning_status;
+    learner_status::type  learning_status;
     volatile bool   learning_round_is_running;
     decree          learning_start_prepare_decree;
 
@@ -137,10 +138,10 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status primary_context::get_node_status(::dsn::rpc_address addr) const
+inline partition_status::type primary_context::get_node_status(::dsn::rpc_address addr) const
 { 
     auto it = statuses.find(addr);
-    return it != statuses.end()  ? it->second : PS_INACTIVE;
+    return it != statuses.end()  ? it->second : partition_status::PS_INACTIVE;
 }
 
 }} // end namespace

@@ -283,13 +283,17 @@ struct counter_info
 struct value_resp {
     double val;
     uint64_t time;
-    DEFINE_JSON_SERIALIZATION(val, time)
+    std::string counter_name;
+    uint64_t counter_index;
+    DEFINE_JSON_SERIALIZATION(val, time, counter_name, counter_index)
 };
 
 struct sample_resp {
     uint64_t val;
     uint64_t time;
-    DEFINE_JSON_SERIALIZATION(time, val)
+    std::string counter_name;
+    uint64_t counter_index;
+    DEFINE_JSON_SERIALIZATION(val, time, counter_name, counter_index)
 };
 
 std::string perf_counters::list_counter_internal(const std::vector<std::string>& args)
@@ -335,20 +339,25 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
 
     uint64_t ts = dsn_now_ns();
     double value = 0;
+    uint64_t counter_index = 0;
 
     if (args.size() < 1)
     {
-        value_resp{ value, ts }.json_state(ss);
+        value_resp{ value, ts, std::string(), 0 }.json_state(ss);
         return ss.str();
     }
 
     perf_counters& c = perf_counters::instance();
     auto counter = c.get_counter(args[0].c_str());
 
-    if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
-        value =  counter->get_value();
-
-    value_resp{ value, ts }.json_state(ss);
+    if (counter)
+    {
+        counter_index = counter->index();
+        if(counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
+            value = counter->get_value();
+    }
+        
+    value_resp{ value, ts, args[0], counter_index }.json_state(ss);
     return ss.str();
 }
 
@@ -359,10 +368,11 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
 
     uint64_t ts = dsn_now_ns();
     uint64_t sample = 0;
+    uint64_t counter_index = 0;
 
     if (args.size() < 1)
     {
-        sample_resp{ sample, ts }.json_state(ss);
+        sample_resp{ sample, ts, std::string(), 0 }.json_state(ss);
         return ss.str();
     }
 
@@ -370,9 +380,11 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     auto counter = c.get_counter(args[0].c_str());
 
     if (counter)
+    {
         sample = counter->get_latest_sample();
-
-    sample_resp{ sample, ts }.json_state(ss);
+        counter_index = counter->index();
+    }
+    sample_resp{ sample, ts, args[0], counter_index }.json_state(ss);
     return ss.str();
 }
 
@@ -383,10 +395,11 @@ std::string perf_counters::get_counter_value_i(const std::vector<std::string>& a
 
     uint64_t ts = dsn_now_ns();
     double value = 0;
+    std::string counter_name = std::string();
 
     if (args.size() < 1)
     {
-        value_resp{ value, ts }.json_state(ss);
+        value_resp{ value, ts, std::string(), 0 }.json_state(ss);
         return ss.str();
     }
 
@@ -395,10 +408,14 @@ std::string perf_counters::get_counter_value_i(const std::vector<std::string>& a
     perf_counters& c = perf_counters::instance();
     auto counter = c.get_counter(idx);
 
-    if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
-        value = counter->get_value();
-
-    value_resp{ value, ts }.json_state(ss);
+    if (counter)
+    {
+        counter_name = std::string(counter->full_name());
+        if(counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
+            value = counter->get_value();
+    }
+    
+    value_resp{ value, ts, counter_name, idx }.json_state(ss);
     return ss.str();
 }
 
@@ -409,10 +426,11 @@ std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& 
 
     uint64_t ts = dsn_now_ns();
     uint64_t sample = 0;
+    std::string counter_name = std::string();
 
     if (args.size() < 1)
     {
-        sample_resp{ sample, ts }.json_state(ss);
+        sample_resp{ sample, ts, std::string(), 0 }.json_state(ss);
         return ss.str();
     }
 
@@ -422,9 +440,11 @@ std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& 
     auto counter = c.get_counter(idx);
 
     if (counter)
+    {
         sample = counter->get_latest_sample();
-
-    sample_resp{ sample, ts }.json_state(ss);
+        counter_name = std::string(counter->full_name());
+    }
+    sample_resp{ sample, ts, counter_name, idx }.json_state(ss);
     return ss.str();
 }
 

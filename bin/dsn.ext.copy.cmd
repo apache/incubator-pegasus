@@ -29,14 +29,14 @@ GOTO copy_latest
                 SET ltime=%%i %%j
             )
         )
-    )
-    IF "%max_time%" EQU "" (
-        SET max_time=%ltime%
-        SET max_config=%lconfig%
-    ) ELSE (
-        IF "%max_time%" lss "%ltime%" (
+        IF "%max_time%" EQU "" (
             SET max_time=%ltime%
             SET max_config=%lconfig%
+        ) ELSE (
+            IF "%max_time%" lss "%ltime%" (
+                SET max_time=%ltime%
+                SET max_config=%lconfig%
+            )
         )
     )
     REM ECHO max_time=%max_time%
@@ -44,9 +44,13 @@ GOTO copy_latest
     GOTO:EOF
     
 :copy_latest
+
+IF "%max_config%" EQU "" (
+    ECHO "cannot find latest build"
+    GOTO exit
+)
+
 ECHO latest build is in dir %PROJ_LIB_DIR%\%max_config%
-    
-IF "%max_config%" EQU "" GOTO exit
 
 @ECHO ON
 XCOPY /F /Y /S %PROJ_LIB_DIR%\%max_config% %DST_LIB_DIR%

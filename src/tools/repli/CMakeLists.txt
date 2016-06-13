@@ -18,16 +18,17 @@ set(MY_PROJ_INC_PATH
 
 set(MY_BOOST_PACKAGES system)
 
-#set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_LIB_PATH "")
 set(MY_PROJ_LIBS dsn.tools.nfs
+                 dsn.dist.providers.common
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
                  dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
                  dsn.replication
-                 dsn.replication.meta_server
                  dsn.replication.clientlib
+                 dsn.failure_detector.multimaster
                  dsn.failure_detector
 )
 

@@ -2,10 +2,13 @@
 #project(gtest_builder C CXX)
 include(ExternalProject)
 
+set(target_url ${GFLAGS_GIT_SOURCE})
+set(git_tag ${GFLAGS_GIT_TAG})
+
 if (WIN32)
 	ExternalProject_Add(gflags
-		GIT_REPOSITORY https://github.com/gflags/gflags.git
-		GIT_TAG master
+		GIT_REPOSITORY ${target_url}
+		GIT_TAG ${git_tag}
 	   #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
 	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
@@ -15,8 +18,8 @@ if (WIN32)
 		)
 else()
 	ExternalProject_Add(gflags
-		GIT_REPOSITORY https://github.com/gflags/gflags.git
-		GIT_TAG master
+		GIT_REPOSITORY ${target_url}
+		GIT_TAG ${git_tag}
 	   #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
 	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}

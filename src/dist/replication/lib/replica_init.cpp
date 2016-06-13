@@ -38,6 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/internal/factory_store.h>
+#include "replication_app_base.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -63,13 +64,23 @@ error_code replica::initialize_on_new()
         return ERR_FILE_OPERATION_FAILED;
     }
 
+    replica_app_info info((app_info*)&_app_info);
+    std::string path = utils::filesystem::path_combine(_dir, ".app-info");
+    auto err = info.store(path.c_str());
+    if (err != ERR_OK)
+    {
+        derror("save app-info to %s failed, err = %s", path.c_str(), err.to_string());
+        dsn::utils::filesystem::remove_path(_dir);
+        return err;
+    }
+
     return init_app_and_prepare_list(true);
 }
 
-/*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
+/*static*/ replica* replica::newr(replica_stub* stub, gpid gpid, const app_info& app)
 {
-    std::string dir = stub->get_replica_dir(app_type, gpid);
-    replica* rep = new replica(stub, gpid, app_type, dir.c_str());
+    std::string dir = stub->get_replica_dir(app.app_type.c_str(), gpid);
+    replica* rep = new replica(stub, gpid, app, dir.c_str());
     error_code err = rep->initialize_on_new();
     if (err == ERR_OK)
     {
@@ -112,15 +123,26 @@ error_code replica::initialize_on_load()
     }
 
     char app_type[128];
-    global_partition_id gpid;
-    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
+    gpid gpid;
+    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.raw().u.app_id, &gpid.raw().u.partition_index, app_type))
     {
         derror("invalid replica dir %s", dir);
         return nullptr;
     }
 
-    replica* rep = new replica(stub, gpid, app_type, dir);
-    error_code err = rep->initialize_on_load();
+    dsn::app_info info;
+    replica_app_info info2(&info);
+    std::string path = utils::filesystem::path_combine(dir, ".app-info");
+    auto err = info2.load(path.c_str());
+    if (ERR_OK != err)
+    {
+        derror("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
+        return nullptr;
+    }
+
+    replica* rep = new replica(stub, gpid, info, dir);
+    
+    err = rep->initialize_on_load();
     if (err == ERR_OK)
     {
         ddebug("%s: load replica @ %s succeed", dir, rep->name());
@@ -156,13 +178,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
 
-    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this));
-    if (nullptr == _app)
-    {
-        derror( "%s: app type %s not found", name(), _app_type.c_str());
-        return ERR_OBJECT_NOT_FOUND;
-    }
-
+    _app.reset(new replication_app_base(this));
     error_code err = _app->open_internal(
         this,
         create_new
@@ -173,21 +189,20 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (!_options->log_private_disabled
-            || !_app->is_delta_state_learning_supported())
+        if (!_options->log_private_disabled)
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
 
             std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
-            _private_log = new mutation_log(
-                log_dir,
-                _options->log_private_batch_buffer_kb,
+            _private_log = new mutation_log_private(
+                log_dir,                
                 _options->log_private_file_size_mb,
-                _options->log_private_force_flush,
-                true,
-                get_gpid()
+                get_gpid(),
+                this,
+                _options->log_private_batch_buffer_kb * 1024
                 );
+            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
         }
 
         // sync valid_start_offset between app and logs
@@ -212,8 +227,17 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 [this](mutation_ptr& mu)
                 {
                     return replay_mutation(mu, true);
+                },
+                [this](error_code err) 
+                {
+                    tasking::enqueue(
+                        LPC_REPLICATION_ERROR,
+                        this, 
+                        [this, err]() { handle_local_failure(err); },
+                        gpid_to_hash(get_gpid())
+                        );
                 }
-            );
+                );
 
             if (err == ERR_OK)
             {
@@ -318,13 +342,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this, mu](error_code err, size_t size)
-        {
-            if (err != ERR_OK)
-            {
-                handle_local_failure(err);
-            }
-        },
+            nullptr,
             gpid_to_hash(get_gpid())
             );
     }
@@ -375,7 +393,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         );
 
     // prepare
-    error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
+    error_code err = _prepare_list->prepare(mu, partition_status::PS_INACTIVE);
     dassert (err == ERR_OK, "");
 
     return true;
@@ -383,7 +401,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 
 void replica::set_inactive_state_transient(bool t)
 {
-    if (status() == PS_INACTIVE)
+    if (status() == partition_status::PS_INACTIVE)
     {
         _inactive_is_transient = t;
     }

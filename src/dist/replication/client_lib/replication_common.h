@@ -43,22 +43,8 @@ using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
 
-inline bool operator < (const global_partition_id& l, const global_partition_id& r)
-{
-    return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
-}
 
-inline bool operator == (const global_partition_id& l, const global_partition_id& r)
-{
-    return l.app_id == r.app_id && l.pidx == r.pidx;
-}
-
-inline int gpid_to_hash(global_partition_id gpid)
-{
-    return static_cast<int>(gpid.app_id ^ gpid.pidx);
-}
-
-typedef std::unordered_map< ::dsn::rpc_address, partition_status> node_statuses;
+typedef std::unordered_map< ::dsn::rpc_address, partition_status::type> node_statuses;
 typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
 class replication_options
@@ -122,11 +108,5 @@ private:
     void sanity_check();
 };
 
-class replica_helper
-{
-public:
-    static bool remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList);
-    static bool get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config);
-};
 
 }} // namespace

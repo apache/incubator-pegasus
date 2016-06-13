@@ -40,6 +40,12 @@
 #include <sys/stat.h>
 #include <dsn/internal/factory_store.h>
 
+# include <dsn/cpp/json_helper.h>
+
+# include <rapidjson/document.h> 
+# include <rapidjson/writer.h>
+# include <rapidjson/stringbuffer.h>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -105,7 +111,7 @@ error_code meta_service::start()
     const char* server_load_balancer = dsn_config_get_value_string(
         "meta_server",
         "server_load_balancer_type",
-        "simple_stateful_load_balancer",
+        "simple_load_balancer",
         "server_load_balancer provider type"
         );
     
@@ -179,6 +185,7 @@ void meta_service::register_rpc_handlers()
         RPC_CM_BALANCER_PROPOSAL,
         "RPC_CM_BALANCER_PROPOSAL",
         &meta_service::on_balancer_proposal);
+
 }
 
 void meta_service::stop()
@@ -263,28 +270,42 @@ void meta_service::on_create_app(dsn_message_t req)
 {
     configuration_create_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->create_app(req);
+
+    configuration_create_app_request request;
+    ::dsn::unmarshall(req, request);
+    _state->create_app(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_drop_app(dsn_message_t req)
 {
     configuration_drop_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->drop_app(req);
+
+    configuration_drop_app_request request;
+    ::dsn::unmarshall(req, request);
+    _state->drop_app(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_list_apps(dsn_message_t req)
 {
     configuration_list_apps_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->list_apps(req);
+
+    configuration_list_apps_request request;
+    _state->list_apps(request, response);
+    reply(req, response);
 }
 
 void meta_service::on_list_nodes(dsn_message_t req)
 {
     configuration_list_nodes_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->list_nodes(req);
+
+    configuration_list_nodes_request request;
+    _state->list_nodes(request, response);
+    reply(req, response);
 }
 
 // partition server & client => meta server
@@ -294,7 +315,7 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
     configuration_query_by_node_response response;
     META_STATUS_CHECK_ON_RPC(msg, response);
 
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
     _state->query_configuration_by_node(request, response);
     reply(msg, response);    
 }
@@ -305,7 +326,7 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
     configuration_query_by_index_response response;
     META_STATUS_CHECK_ON_RPC(msg, response);
 
-    ::unmarshall(msg, request);
+    ::dsn::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
 }
@@ -315,17 +336,18 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
     if (!check_primary(req))
         return;
 
-    global_partition_id gpid;
+    gpid gpid;
     rpc_address receiver;
-    config_type type;
+    int type;
     rpc_address node;
 
-    ::unmarshall(req, gpid);
-    ::unmarshall(req, receiver);
-    ::unmarshall(req, type);
-    ::unmarshall(req, node);
 
-    _balancer->explictly_send_proposal(gpid, receiver, type, node);
+    ::dsn::unmarshall(req, gpid);
+    ::dsn::unmarshall(req, receiver);
+    ::dsn::unmarshall(req, type);
+    ::dsn::unmarshall(req, node);
+
+    _balancer->explictly_send_proposal(gpid, receiver, static_cast<config_type::type>(type), node);
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)
@@ -334,18 +356,19 @@ void meta_service::on_update_configuration(dsn_message_t req)
     META_STATUS_CHECK_ON_RPC(req, response);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-    ::unmarshall(req, *request);
+    ::dsn::unmarshall(req, *request);
 
-    if (_state->freezed())
+    if (_state->freezed() && request->info.is_stateful)
     {
         response.err = ERR_STATE_FREEZED;
-        _state->query_configuration_by_gpid(request->config.gpid, response.config);
+        _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
         return;
     }
   
-    global_partition_id gpid = request->config.gpid;
-    _state->update_configuration(request, req, [this, gpid, request](){
+    gpid gpid = request->config.pid;
+    _state->update_configuration(request, req, [this, gpid, request]() mutable
+    {
         if (_started)
         {
             _balancer->on_config_changed(request);
@@ -356,8 +379,9 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
-    global_partition_id gpid = update->config.gpid;
-    _state->update_configuration(update, nullptr, [this, gpid, update](){
+    gpid gpid = update->config.pid;
+    _state->update_configuration(update, nullptr, [this, gpid, update]() mutable
+    {
         if (_started)
         {
             _balancer->on_config_changed(update);
@@ -372,7 +396,7 @@ void meta_service::on_control_balancer_migration(dsn_message_t req)
     control_balancer_migration_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    ::unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     _balancer->on_control_migration(request, response);
     reply(req, response);
 }
@@ -383,12 +407,12 @@ void meta_service::on_balancer_proposal(dsn_message_t req)
     balancer_proposal_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    ::unmarshall(req, request);
+    ::dsn::unmarshall(req, request);
     dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
-          request.gpid.app_id, request.gpid.pidx,
+          request.pid.get_app_id(), request.pid.get_partition_index(),
           enum_to_string(request.type),
-          request.from.to_string(),
-          request.to.to_string());
+          request.from_addr.to_string(),
+          request.to_addr.to_string());
     _balancer->on_balancer_proposal(request, response);
     reply(req, response);
 }
@@ -399,16 +423,13 @@ void meta_service::on_load_balance_timer()
     if (!_started)
         return;
 
-    if (_state->freezed())
-        return;
-
     if (_failure_detector->is_primary())
     {
         _balancer->run();
     }
 }
 
-void meta_service::on_config_changed(global_partition_id gpid)
+void meta_service::on_config_changed(gpid gpid)
 {
     if (_failure_detector->is_primary())
     {

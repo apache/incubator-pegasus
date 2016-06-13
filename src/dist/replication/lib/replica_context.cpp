@@ -88,6 +88,8 @@ void primary_context::cleanup(bool clean_pending_mutations)
 
     // clean up checkpoint
     CLEANUP_TASK_ALWAYS(checkpoint_task)
+
+    membership.ballot = 0;
 }
 
 bool primary_context::is_cleaned()
@@ -116,43 +118,48 @@ void primary_context::reset_membership(const partition_configuration& config, bo
         learners.clear();
     }
 
+    if (config.ballot > membership.ballot)
+        next_learning_version = ((uint64_t)config.ballot) << 32 + 1;
+    else
+        ++next_learning_version;
+
     membership = config;
 
     if (membership.primary.is_invalid() == false)
     {
-        statuses[membership.primary] = PS_PRIMARY;
+        statuses[membership.primary] = partition_status::PS_PRIMARY;
     }
 
     for (auto it = config.secondaries.begin(); it != config.secondaries.end(); ++it)
     {
-        statuses[*it] = PS_SECONDARY;
+        statuses[*it] = partition_status::PS_SECONDARY;
         learners.erase(*it);
     }
 
     for (auto it = learners.begin(); it != learners.end(); ++it)
     {
-        statuses[it->first] = PS_POTENTIAL_SECONDARY;
+        statuses[it->first] = partition_status::PS_POTENTIAL_SECONDARY;
     }
 }
 
-void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config, uint64_t learner_signature /*= invalid_signature*/)
+void primary_context::get_replica_config(partition_status::type st, /*out*/ replica_configuration& config, uint64_t learner_signature /*= invalid_signature*/)
 {
-    config.gpid = membership.gpid;
+    config.pid = membership.pid;
     config.primary = membership.primary;  
     config.ballot = membership.ballot;
     config.status = st;
     config.learner_signature = learner_signature;
 }
 
-bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
+bool primary_context::check_exist(::dsn::rpc_address node, partition_status::type st)
 {
     switch (st)
     {
-    case PS_PRIMARY:
+    case partition_status::PS_PRIMARY:
         return membership.primary == node;
-    case PS_SECONDARY:
+    case partition_status::PS_SECONDARY:
         return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) != membership.secondaries.end();
-    case PS_POTENTIAL_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
         dassert (false, "");
@@ -209,11 +216,11 @@ bool potential_secondary_context::cleanup(bool force)
 
     CLEANUP_TASK(catchup_with_private_log_task, force)
     
-    learning_signature = 0;
+    learning_version = 0;
     learning_start_ts_ns = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
-    learning_status = LearningInvalid;
+    learning_status = learner_status::LearningInvalid;
     return true;
 }
 

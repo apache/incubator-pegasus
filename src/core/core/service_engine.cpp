@@ -37,6 +37,7 @@
 # include "task_engine.h"
 # include "disk_engine.h"
 # include "rpc_engine.h"
+# include "uri_address.h"
 # include <dsn/internal/env_provider.h>
 # include <dsn/internal/memory_provider.h>
 # include <dsn/internal/nfs.h>
@@ -45,6 +46,8 @@
 # include <dsn/internal/command.h>
 # include <dsn/tool_api.h>
 # include <dsn/tool/node_scoper.h>
+
+# include <dsn/dist/layer2_handler.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -56,45 +59,70 @@ using namespace dsn::utils;
 namespace dsn {
 
 service_node::service_node(service_app_spec& app_spec)
+    : _layer2_handler(this)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _app_context_ptr = nullptr;
+
+    memset(&_app_info, 0, sizeof(_app_info));
+    _app_info.app.app_context_ptr = nullptr;
+    _app_info.app_id = id();
+    _app_info.index = spec().index;
+    strncpy(_app_info.role, spec().role_name.c_str(), sizeof(_app_info.role));
+    strncpy(_app_info.type, spec().type.c_str(), sizeof(_app_info.type));
+    strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
+    strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
 }
 
-bool service_node::rpc_register_handler(rpc_handler_info* handler, uint64_t vnid)
+bool service_node::rpc_register_handler(rpc_handler_info* handler, dsn_gpid gpid)
 {
-    for (auto& io : _ios)
+    if (gpid.value == 0)
     {
-        if (io.rpc)
+        for (auto& io : _ios)
         {
-            bool r = io.rpc->register_rpc_handler(handler, vnid);
-            if (!r)
-                return false;
+            if (io.rpc)
+            {
+                bool r = io.rpc->register_rpc_handler(handler);
+                if (!r)
+                    return false;
+            }
         }
+    }
+    else
+    {
+        _layer2_handler.rpc_register_handler(gpid, handler);
     }
     return true;
 }
 
-rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
+rpc_handler_info* service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid)
 {
-    rpc_handler_info* ret = nullptr;
-    for (auto& io : _ios)
+    if (gpid.value == 0)
     {
-        if (io.rpc)
+        rpc_handler_info* ret = nullptr;
+
+        for (auto& io : _ios)
         {
-            auto r = io.rpc->unregister_rpc_handler(rpc_code, vnid);
-            if (ret != nullptr)
+            if (io.rpc)
             {
-                dassert(ret == r, "registered context must be the same");
-            }
-            else
-            {
-                ret = r;
+                auto r = io.rpc->unregister_rpc_handler(rpc_code);
+                if (ret != nullptr)
+                {
+                    dassert(ret == r, "registered context must be the same");
+                }
+                else
+                {
+                    ret = r;
+                }
             }
         }
+
+        return ret;
     }
-    return ret;
+    else
+    {
+        return _layer2_handler.rpc_unregister_handler(gpid, rpc_code);
+    }
 }
 
 error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
@@ -242,9 +270,36 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
     return err;
 }
 
-dsn_error_t service_node::start_app(int argc, char** argv)
-{    
-    return _app_spec.role->layer1.start(_app_context_ptr, argc, argv);
+dsn_error_t service_node::start_app()
+{
+    return start_app(_app_info.app.app_context_ptr, spec().arguments, _app_spec.role->layer1.start, spec().name);
+}
+
+dsn_error_t service_node::start_app(void* app_context, const std::string& sargs, dsn_app_start start, const std::string& app_name)
+{
+    std::vector<std::string> args;
+    std::vector<char*> args_ptr;
+
+    utils::split_args(sargs.c_str(), args);
+
+    int argc = static_cast<int>(args.size()) + 1;
+    args_ptr.resize(argc);
+    args.resize(argc);
+    for (int i = argc - 1; i >= 0; i--)
+    {
+        if (0 == i)
+        {
+            args[0] = app_name;
+        }
+        else
+        {
+            args[i] = args[i - 1];
+        }
+
+        args_ptr[i] = ((char*)args[i].c_str());
+    }
+
+    return start(app_context, argc, &args_ptr[0]);
 }
 
 error_code service_node::start()
@@ -300,9 +355,8 @@ error_code service_node::start()
     // create app
     {
         ::dsn::tools::node_scoper scoper(this);
-        _app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name);
+        _app_info.app.app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name, dsn_gpid{ 0 });
     }
-
     return err;
 }
 
@@ -381,6 +435,24 @@ void service_node::get_queue_info(
     _computation->get_queue_info(ss);
     ss << "]}";
 }
+
+
+bool service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
+{
+    auto msg = (message_ex*)(req);
+    auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
+
+    if (nullptr != cb)
+    {
+        cb(_app_info.app.app_context_ptr, gpid, is_write, req, delay);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 service_engine::service_engine(void)
@@ -465,7 +537,7 @@ void service_engine::register_system_rpc_handler(
                 if (io.rpc)
                 {
                     h->add_ref();
-                    io.rpc->register_rpc_handler(h, 0);
+                    io.rpc->register_rpc_handler(h);
                 }   
             }
         }
@@ -480,7 +552,7 @@ void service_engine::register_system_rpc_handler(
                 if (io.rpc)
                 {
                     h->add_ref();
-                    io.rpc->register_rpc_handler(h, 0);
+                    io.rpc->register_rpc_handler(h);
                 }   
             }
         }

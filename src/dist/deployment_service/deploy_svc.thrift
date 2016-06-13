@@ -1,17 +1,20 @@
 include "../../dsn.thrift"
+include "../../dsn.layer2.thrift"
 
 namespace cpp dsn.dist
 
 enum cluster_type
 {
-    kubernetes,
-    docker,
-    bare_medal_linux,
-    bare_medal_windows,
-    yarn_on_linux,
-    yarn_on_windows,
-    mesos_on_linux,
-    mesos_on_windows
+    cstype_kubernetes,
+    cstype_docker,
+    cstype_bare_medal_linux,
+    cstype_bare_medal_windows,
+    cstype_yarn_on_linux,
+    cstype_yarn_on_windows,
+    cstype_mesos_on_linux,
+    cstype_mesos_on_windows,
+    cstype_count,
+    cstype_invalid
 }
 
 enum service_status
@@ -21,14 +24,15 @@ enum service_status
     SS_RUNNING,
     SS_FAILOVER,
     SS_FAILED,
-
+    SS_UNDEPLOYING,
+    SS_UNDEPLOYED,
     SS_COUNT,
     SS_INVALID
 }
 
 struct deploy_request
 {
-    1:string package_id;
+    1:dsn.layer2.app_info info;
     2:string package_full_path;
     3:dsn.rpc_address package_server;
     4:string cluster_name;
@@ -38,7 +42,7 @@ struct deploy_request
 
 struct deploy_info
 {
-    1:string package_id;
+    1:dsn.layer2.app_info info;
     2:string name;
     3:string service_url;
     4:dsn.error_code error;
@@ -71,7 +75,7 @@ service deploy_svc
     deploy_info deploy(1:deploy_request req);    
     // return error code
     dsn.error_code undeploy(1:string service_url);    
-    deploy_info_list get_service_list(1:string package_id);
+    deploy_info_list get_service_list(1:string app_type);
     deploy_info get_service_info(1:string service_url);    
     
     //

@@ -52,7 +52,6 @@
 # include <dsn/internal/logging_provider.h>
 # include <dsn/internal/memory_provider.h>
 # include <dsn/internal/timer_service.h>
-# include <dsn/internal/perf_counters.h>
 # include <dsn/internal/configuration.h>
 
 namespace dsn { namespace tools {
@@ -60,7 +59,11 @@ namespace dsn { namespace tools {
 class tool_base
 {
 public:
-    tool_base(const char* name);
+    virtual ~tool_base()
+    {
+    }
+
+    explicit tool_base(const char* name);
 
     const std::string& name() const { return _name; }
     

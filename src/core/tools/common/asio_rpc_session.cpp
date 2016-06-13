@@ -107,8 +107,14 @@ namespace dsn {
                         this->on_message_read(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
-                     
-                    start_read_next(read_next);
+
+                    if (read_next == -1)
+                    {
+                        derror("asio read from %s failed: %s", _remote_addr.to_string(), "checksum not correct");
+                        on_failure();
+                    }
+                    else
+                        start_read_next(read_next);
                 }
 
                 release_ref();
@@ -164,18 +170,23 @@ namespace dsn {
         {
             if (on_disconnected(is_write))
             {
-                try {
-                    _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
-                    _socket->close();
-                }
-                catch (std::exception& /*ex*/)
-                {
-                    /*dwarn("network session %s exits failed, err = %s",
-                    remote_address().to_ip_string().c_str(),
-                    static_cast<int>remote_address().port(),
-                    ex.what()
-                    );*/
-                }
+                safe_close();
+            }
+        }
+
+        void asio_rpc_session::safe_close()
+        {
+            try {
+                _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+                _socket->close();
+            }
+            catch (std::exception& /*ex*/)
+            {
+                /*dwarn("network session %s exits failed, err = %s",
+                remote_address().to_ip_string().c_str(),
+                static_cast<int>remote_address().port(),
+                ex.what()
+                );*/
             }
         }
 

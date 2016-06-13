@@ -49,8 +49,8 @@ namespace dsn
         public:
             hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task* task) override;
-            virtual task*    dequeue(/*inout*/int& batch_size) override;
+            void     enqueue(task* task) override;
+            task*    dequeue(/*inout*/int& batch_size) override;
 
         private:            
             utils::ex_lock_nr_spin        _lock;
@@ -63,8 +63,8 @@ namespace dsn
         public:
             hpc_task_priority_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task* task) override;
-            virtual task*    dequeue(/*inout*/int& batch_size) override;
+            void     enqueue(task* task) override;
+            task*    dequeue(/*inout*/int& batch_size) override;
 
         private:
             utils::ex_lock_nr_spin        _lock[TASK_PRIORITY_COUNT];
@@ -74,16 +74,13 @@ namespace dsn
 
         class hpc_concurrent_task_queue : public task_queue
         {
-            using sema_t = moodycamel::details::mpmc_sema::LightweightSemaphore;
-            using queue_t = moodycamel::ConcurrentQueue<task*>;
-
-            queue_t _queue[TASK_PRIORITY_COUNT];
-            sema_t _sema;
-        public:
-            hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-                : task_queue(pool, index, inner_provider)
+            moodycamel::details::mpmc_sema::LightweightSemaphore _sema;
+            struct queue_t
             {
-            }
+                moodycamel::ConcurrentQueue<task*> q;
+            }_queues[TASK_PRIORITY_COUNT];
+        public:
+            hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
             void enqueue(task* task) override;
 

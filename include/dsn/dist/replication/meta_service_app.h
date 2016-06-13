@@ -52,12 +52,12 @@ namespace dsn {
         class meta_service_app : public service_app
         {
         public:
-            meta_service_app();
+            meta_service_app(dsn_gpid gpid);
             ~meta_service_app();
 
             virtual ::dsn::error_code start(int argc, char** argv) override;
 
-            virtual void stop(bool cleanup = false) override;
+            virtual ::dsn::error_code stop(bool cleanup = false) override;
 
         private:
             friend class ::dsn::replication::replication_checker;

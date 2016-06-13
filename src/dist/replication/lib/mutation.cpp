@@ -108,24 +108,25 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 {
     data.updates.push_back(mutation_update());
     mutation_update& update = data.updates.back();
-    update.code = code;
     _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr)
     {
+        update.code = code;
         dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;
         size_t size;
         bool r = dsn_msg_read_next(request, &ptr, &size);
         dassert(r, "payload is not present");
-        dsn_msg_read_commit(request, size);
+        dsn_msg_read_commit(request, 0); // so we can re-read the request buffer in replicated app
         update.data.assign((char*)ptr, 0, (int)size);
 
         _appro_data_bytes += sizeof(int) + (int)size; // data size
     }   
     else
     {
+        update.code = RPC_REPLICATION_WRITE_EMPTY;
         _appro_data_bytes += sizeof(int); // empty data size
     }
 
@@ -136,13 +137,13 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 
 void mutation::write_to(binary_writer& writer) const
 {
-    marshall(writer, data);
+    marshall(writer, data, DSF_THRIFT_BINARY);
 }
 
 /*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data);
+    unmarshall(reader, mu->data, DSF_THRIFT_BINARY);
 
     for (const mutation_update& update : mu->data.updates)
     {
@@ -159,25 +160,27 @@ void mutation::write_to(binary_writer& writer) const
     
     snprintf_p(mu->_name, sizeof(mu->_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        mu->data.header.gpid.app_id,
-        mu->data.header.gpid.pidx,
+        mu->data.header.pid.get_app_id(),
+        mu->data.header.pid.get_partition_index(),
         mu->data.header.ballot,
         mu->data.header.decree);
 
     return mu;
 }
 
-void mutation::write_to_log_file(std::function<void(blob)> inserter) const
+void mutation::write_to_log_file(std::function<void(const blob&)> inserter) const
 {
     {
         binary_writer temp_writer;
-        marshall(temp_writer, data.header);
-        marshall(temp_writer, static_cast<int>(data.updates.size()));
+        temp_writer.write_pod(data.header);        
+        temp_writer.write_pod(static_cast<int>(data.updates.size()));
+
         for (const mutation_update& update : data.updates)
         {
-            marshall(temp_writer, update.code);
-            marshall(temp_writer, static_cast<int>(update.data.length()));
+            temp_writer.write_pod(static_cast<int>(update.code));
+            temp_writer.write_pod(static_cast<int>(update.data.length()));
         }
+
         inserter(temp_writer.get_buffer());
     }
 
@@ -187,23 +190,42 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
     }
 }
 
+void mutation::write_to_log_file(binary_writer& writer) const
+{
+    writer.write_pod(data.header);
+    writer.write_pod(static_cast<int>(data.updates.size()));
+
+    for (const mutation_update& update : data.updates)
+    {
+        writer.write_pod(static_cast<int>(update.code));
+        writer.write_pod(static_cast<int>(update.data.length()));
+    }
+
+    for (const mutation_update& update : data.updates)
+    {
+        writer.write(update.data.data(), update.data.length());
+    }
+}
+
 /*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data.header);
+    reader.read_pod(mu->data.header);
     int size;
-    unmarshall(reader, size);
+    reader.read_pod(size);
     mu->data.updates.resize(size);
     std::vector<int> lengths(size, 0);
     for (int i = 0; i < size; ++i)
     {
-        unmarshall(reader, mu->data.updates[i].code);
-        unmarshall(reader, lengths[i]);
+        int code;
+        reader.read_pod(code);
+        mu->data.updates[i].code = ::dsn::task_code(code);
+        reader.read_pod(lengths[i]);
     }
     for (int i = 0; i < size; ++i)
     {
         int len = lengths[i];
-        std::shared_ptr<char> holder(new char[len], [](char* ptr){ delete []ptr; });
+        std::shared_ptr<char> holder((char*)dsn_transient_malloc(len), [](char* ptr){ dsn_transient_free((void*)ptr); });
         reader.read(holder.get(), len);
         mu->data.updates[i].data.assign(holder, 0, len);
     }
@@ -218,8 +240,8 @@ void mutation::write_to_log_file(std::function<void(blob)> inserter) const
 
     snprintf_p(mu->_name, sizeof(mu->_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        mu->data.header.gpid.app_id,
-        mu->data.header.gpid.pidx,
+        mu->data.header.pid.get_app_id(),
+        mu->data.header.pid.get_partition_index(),
         mu->data.header.ballot,
         mu->data.header.decree);
 
@@ -249,18 +271,18 @@ void mutation::wait_log_task() const
     }
 }
 
-mutation_queue::mutation_queue(global_partition_id gpid, int max_concurrent_op /*= 2*/, bool batch_write_disabled /*= false*/)
+mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool batch_write_disabled /*= false*/)
     : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
     std::stringstream ss;
-    ss << gpid.app_id << "." << gpid.pidx << "." << "2pc#";
+    ss << gpid.get_app_id() << "." << gpid.get_partition_index() << "." << "2pc#";
 
     _current_op_counter.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
     _current_op_counter.set(0);
     
     _current_op_count = 0;
     _pending_mutation = nullptr;
-    dassert(gpid.app_id != 0, "invalid gpid");
+    dassert(gpid.get_app_id() != 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(
         RPC_PREPARE,
         gpid_to_hash(gpid)

@@ -39,7 +39,6 @@
 
 # include "hpc_aio_provider_for_test.h"
 
-extern void dsn_core_init();
 extern void task_engine_module_init();
 extern void command_manager_module_init();
 
@@ -53,7 +52,6 @@ GTEST_API_ int main(int argc, char **argv)
     dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>("dsn::test::hpc_aio_provider_for_test");
 
     // register all tools
-    dsn_core_init();
     task_engine_module_init();
     command_manager_module_init();
 

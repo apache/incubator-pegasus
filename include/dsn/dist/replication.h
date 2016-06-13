@@ -35,9 +35,28 @@
 
 #pragma once
 
-# include <dsn/dist/replication/replication_app_base.h>
-# include <dsn/dist/replication/replication_app_client_base.h>
-# include <dsn/dist/replication/meta_service_app.h>
-# include <dsn/dist/replication/replication_service_app.h>
+# include <dsn/service_api_cpp.h>
+# include <dsn/dist/replication/replication.types.h>
+# include <dsn/dist/replication/replication_other_types.h>
+# include <dsn/dist/replication/replication.codes.h>
 
+namespace dsn
+{
+    namespace replication 
+    {
+        inline uint64_t gpid_to_hash(gpid gpid)
+        {
+            return dsn_gpid_to_hash(gpid.raw());
+        }
+    }
+}
 
+namespace std
+{
+    template<>
+    struct hash< ::dsn::gpid> {
+        size_t operator()(const ::dsn::gpid &gpid) const {
+            return std::hash<int>()(gpid.get_app_id()) ^ std::hash<int>()(gpid.get_partition_index());
+        }
+    };
+}

@@ -9,18 +9,20 @@ class deploy_svc_server_app :
     public ::dsn::service_app
 {
 public:
-    deploy_svc_server_app()
+    deploy_svc_server_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {}
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
-        _deploy_svc_svc.open_service();
+        _deploy_svc_svc.open_service(gpid());
         return _deploy_svc_svc.start();
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
-        _deploy_svc_svc.close_service();
+        _deploy_svc_svc.close_service(gpid());
+        return ERR_OK;
     }
 
 private:
@@ -33,7 +35,8 @@ class deploy_svc_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    deploy_svc_client_app() 
+    deploy_svc_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _deploy_svc_client = nullptr;
     }
@@ -54,7 +57,7 @@ public:
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
  
@@ -63,6 +66,7 @@ public:
             delete _deploy_svc_client;
             _deploy_svc_client = nullptr;
         }
+        return ERR_OK;
     }
 
     void on_test_timer()
@@ -122,7 +126,8 @@ class deploy_svc_perf_test_client_app :
     public virtual ::dsn::clientlet
 {
 public:
-    deploy_svc_perf_test_client_app()
+    deploy_svc_perf_test_client_app(dsn_gpid gpid)
+        : ::dsn::service_app(gpid)
     {
         _deploy_svc_client = nullptr;
     }
@@ -140,17 +145,18 @@ public:
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _deploy_svc_client = new deploy_svc_perf_test_client(_server);
-        _deploy_svc_client->start_test();
+        _deploy_svc_client->start_test("deploy_svc.perf-test.case", 0);
         return ::dsn::ERR_OK;
     }
 
-    virtual void stop(bool cleanup = false)
+    virtual ::dsn::error_code stop(bool cleanup = false)
     {
         if (_deploy_svc_client != nullptr)
         {
             delete _deploy_svc_client;
             _deploy_svc_client = nullptr;
         }
+        return ERR_OK;
     }
     
 private:
