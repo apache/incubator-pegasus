@@ -484,7 +484,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     if (_callbacks.calls.on_batched_rpc_requests)
     {
         _callbacks.calls.on_batched_rpc_requests(_app_context_callbacks,
-                                                 mu->data.header.decree, _replica->get_ballot(),
+                                                 _replica->get_ballot(), mu->data.header.decree,
                                                  batched_requests, batched_count);
     }   
     else
