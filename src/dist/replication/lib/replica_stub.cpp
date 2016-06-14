@@ -1169,7 +1169,7 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
     std::shared_ptr<configuration_update_request> req2)
 {
     std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
-    ddebug("%u.%u@%s: start to open replica %s group_check, dir = %s",
+    ddebug("%u.%u@%s: start to open replica %s group check, dir = %s",
            gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(), req ? "with" : "without", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());

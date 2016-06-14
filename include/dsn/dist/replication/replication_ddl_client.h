@@ -42,6 +42,7 @@ namespace dsn{ namespace replication{
 class replication_ddl_client : public clientlet
 {
 public:
+    replication_ddl_client(const dsn::rpc_address& meta_server);
     replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless);
@@ -78,7 +79,7 @@ private:
         task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); }, reply_thread_hash);
         ::dsn::marshall(msg, *req);
         rpc::call(
-            _meta_servers,
+            _meta_server,
             msg,
             this,
             [this, task] (error_code err, dsn_message_t request, dsn_message_t response)
@@ -91,8 +92,7 @@ private:
     }
 
 private:
-    dsn::rpc_address _meta_servers;
-    int _meta_servers_count;
+    dsn::rpc_address _meta_server;
 };
 
 }} //namespace

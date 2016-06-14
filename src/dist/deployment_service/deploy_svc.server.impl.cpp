@@ -45,7 +45,7 @@ namespace dsn
 
         void deploy_svc_service_impl::stop()
         {
-            close_service(gpid());
+            close_service(get_gpid());
         }
 
         error_code deploy_svc_service_impl::start()
@@ -104,7 +104,7 @@ namespace dsn
                 _clusters[cluster_name] = ce;
             }
 
-            open_service(gpid());
+            open_service(get_gpid());
             return ERR_OK;
         }
 

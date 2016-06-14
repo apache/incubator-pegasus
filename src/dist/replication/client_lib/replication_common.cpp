@@ -379,10 +379,10 @@ void replication_options::sanity_check()
     }
 }
 
-void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& servers)
+void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& servers, const char* section, const char* key)
 {
     servers.clear();
-    std::string server_list = dsn_config_get_value_string("meta_server", "server_list", "", "meta server list");
+    std::string server_list = dsn_config_get_value_string(section, key, "", "");
     std::vector<std::string> lv;
     ::dsn::utils::split_args(server_list.c_str(), lv, ',');
     for (auto& s : lv)
@@ -395,7 +395,7 @@ void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& se
             servers.push_back(ep);
         }
     }
-    dassert(servers.size() > 0, "no meta server specified in config [meta_servers].server_list");
+    dassert(servers.size() > 0, "no meta server specified in config [%s].%s", section, key);
 }
 
 }} // end namespace

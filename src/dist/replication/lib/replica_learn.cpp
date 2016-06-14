@@ -717,12 +717,12 @@ void replica::on_copy_remote_state_completed(
         if (resp.type == learn_type::LT_APP)
         {
             auto start_ts = dsn_now_ns();
-            err = _app->apply_checkpoint(lstate, DSN_CHKPT_LEARN);
+            err = _app->apply_checkpoint(DSN_CHKPT_LEARN, lstate);
             if (err == ERR_OK)
             {
                 _app->reset_counters_after_learning();
 
-                dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
+                dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
                 // because if the original _app->last_committed_decree > resp.last_committed_decree,
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
                 dassert(_app->last_committed_decree() <= resp.last_committed_decree, "");
@@ -800,7 +800,7 @@ void replica::on_copy_remote_state_completed(
         && _app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree
         && _app->last_committed_decree() > _app->last_durable_decree())
     {        
-        err = _app->checkpoint();
+        err = _app->sync_checkpoint();
         ddebug(
             "%s: on_copy_remote_state_completed[%016llx]: learnee = %s, learn_duration = %" PRIu64 " ms, flush done, err = %s, "
             "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 "",

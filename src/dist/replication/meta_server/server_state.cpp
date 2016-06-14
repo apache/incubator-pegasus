@@ -1270,7 +1270,7 @@ void server_state::cluster_info(dsn_message_t msg)
         for (size_t i = 0; i < _meta_svc->get_opts().meta_servers.size(); ++i)
         {
             if (i != 0)
-                oss << ", ";
+                oss << ",";
             oss << _meta_svc->get_opts().meta_servers[i].to_string();
         }
         response.values.push_back(oss.str());

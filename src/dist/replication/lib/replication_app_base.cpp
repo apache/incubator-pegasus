@@ -44,7 +44,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.app_base"
+# define __TITLE__ "replica.app.base"
 
 namespace dsn { namespace replication {
 
@@ -106,13 +106,6 @@ error_code replica_init_info::store(const char* file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    ddebug("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
-        ffile.c_str(),
-        init_ballot,
-        init_decree,
-        init_offset_in_shared_log,
-        init_offset_in_private_log
-        );
     return ERR_OK;
 }
 
@@ -195,14 +188,8 @@ replication_app_base::replication_app_base(replica* replica)
 {
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
-    _last_committed_decree = 0;
     _replica = replica;
     _callbacks = replica->get_app_callbacks();
-
-    _is_delta_state_learning_supported = false;
-    _batch_state = BS_NOT_BATCH;
-    _batch_ballot = -1;
-    _batch_decree = -1;
 
     install_perf_counters();
 }
@@ -244,25 +231,35 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     if (create_new)
     {
-        auto& dir = data_dir();
-        dsn::utils::filesystem::remove_path(dir);
-        dsn::utils::filesystem::create_directory(dir);
+        auto dir = r->dir();
+        if (!dsn::utils::filesystem::remove_path(dir))
+        {
+            derror("%s: remove replica dir %s failed", r->name(), dir.c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
+        if (!dsn::utils::filesystem::create_directory(dir))
+        {
+            derror("%s: create replica dir %s failed", r->name(), dir.c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
     }
     
     if (!dsn::utils::filesystem::create_directory(_dir_data))
     {
-        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+        derror("%s: create data dir %s failed", r->name(), _dir_data.c_str());
+        return ERR_FILE_OPERATION_FAILED;
     }
 
     if (!dsn::utils::filesystem::create_directory(_dir_learn))
     {
-        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+        derror("%s: create learn dir %s failed", r->name(), _dir_learn.c_str());
+        return ERR_FILE_OPERATION_FAILED;
     }
 
     auto err = open();
     if (err == ERR_OK)
     {
-        _last_committed_decree = last_durable_decree();
+        _last_committed_decree.store(last_durable_decree());
         if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
@@ -283,7 +280,9 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     auto gd = _replica->get_gpid();
     auto info = _replica->get_app_info();
-    ::dsn::error_code err = dsn_hosted_app_create(info->app_type.c_str(), gd, _dir_data.c_str(), &_app_context, &_app_context_callbacks);
+    auto err = dsn_hosted_app_create(
+            info->app_type.c_str(), gd, _dir_data.c_str(),
+            &_app_context, &_app_context_callbacks);
     if (err == ERR_OK)
     {
         // TODO: setup info->envs
@@ -294,70 +293,99 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     return err;
 }
 
-void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req)
+::dsn::error_code replication_app_base::close(bool clear_state)
 {
-    int size = 4096;
-    void* buffer = dsn_transient_malloc(size);
-    int sz2 = _callbacks.calls.chkpt_prepare_get(_app_context_callbacks, buffer, size);
-
-    while (sz2 > size)
+    if (_app_context)
     {
-        dsn_transient_free(buffer);
+        auto err = dsn_hosted_app_destroy(_app_context, clear_state);
+        if (err == ERR_OK)
+        {
+            _last_committed_decree.store(0);
+            _app_context = nullptr;
+            _app_context_callbacks = nullptr;
+        }
 
-        size = sz2;
-        buffer = dsn_transient_malloc(size);
-        sz2 = _callbacks.calls.chkpt_prepare_get(_app_context_callbacks, buffer, size);
-    }
-
-    if (sz2 == 0)
-    {
-        dsn_transient_free(buffer);
+        return err;
     }
     else
+    {
+        return ERR_SERVICE_NOT_ACTIVE;
+    }
+}
+
+::dsn::error_code replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req)
+{
+    int capacity = 4096;
+    void* buffer = dsn_transient_malloc(capacity);
+    int occupied = 0;
+
+    error_code err = _callbacks.calls.prepare_get_checkpoint(_app_context_callbacks, buffer, capacity, &occupied);
+    while (err != ERR_OK)
+    {
+        dsn_transient_free(buffer);
+        buffer = nullptr;
+
+        if (err != ERR_CAPACITY_EXCEEDED)
+        {
+            derror("%s: call app.prepare_get_checkpoint() failed, err = %s", _replica->name(), err.to_string());
+            break;
+        }
+        else
+        {
+            dwarn("%s: call app.prepare_get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %s, need = %d",
+                  _replica->name(), capacity, occupied);
+            dassert(occupied > capacity, "");
+            capacity = occupied;
+            buffer = dsn_transient_malloc(capacity);
+            err = _callbacks.calls.prepare_get_checkpoint(_app_context_callbacks, buffer, capacity, &occupied);
+        }
+    }
+
+    if (err == ERR_OK)
     {
         learn_req = ::dsn::blob(
             std::shared_ptr<char>(
                 (char*)buffer,
                 [](char* buf) { dsn_transient_free((void*)buf); }),
-            sz2
+            occupied
             );
     }
+
+    return err;
 }
 
-::dsn::error_code replication_app_base::get_checkpoint(
-    int64_t start,
-    const ::dsn::blob& learn_request,
-    learn_state& state
-    )
+::dsn::error_code replication_app_base::get_checkpoint(int64_t learn_start, const ::dsn::blob& learn_request, learn_state& state)
 {
-    dsn_app_learn_state* lstate;
-    int size = 4096;
-    void* buffer = dsn_transient_malloc(size);
-    lstate = (dsn_app_learn_state*)buffer;
+    int capacity = 4096;
+    void* buffer = dsn_transient_malloc(capacity);
+    dsn_app_learn_state* lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
 
-    error_code err = _callbacks.calls.chkpt_get(_app_context_callbacks, start,
-        _last_committed_decree.load(),
-        (void*)learn_request.data(),
-        learn_request.length(),
-        (dsn_app_learn_state*)buffer,
-        size
-        );
-
-    while (err == ERR_CAPACITY_EXCEEDED)
+    error_code err = _callbacks.calls.get_checkpoint(
+        _app_context_callbacks, learn_start, last_committed_decree(),
+        (void*)learn_request.data(), learn_request.length(), lstate, capacity);
+    while (err != ERR_OK)
     {
+        int need_size = lstate->total_learn_state_size;
         dsn_transient_free(buffer);
+        buffer = nullptr;
 
-        size = lstate->total_learn_state_size;
-        buffer = dsn_transient_malloc(size);
-        lstate = (dsn_app_learn_state*)buffer;
-
-        err = _callbacks.calls.chkpt_get(_app_context_callbacks, start,
-            _last_committed_decree.load(),
-            (void*)learn_request.data(),
-            learn_request.length(),
-            (dsn_app_learn_state*)buffer,
-            size
-            );
+        if (err != ERR_CAPACITY_EXCEEDED)
+        {
+            derror("%s: call app.get_checkpoint() failed, err = %s", _replica->name(), err.to_string());
+            break;
+        }
+        else
+        {
+            dwarn("%s: call app.get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %s, need = %d",
+                  _replica->name(), capacity, need_size);
+            dassert(need_size > capacity, "");
+            capacity = need_size;
+            buffer = dsn_transient_malloc(capacity);
+            dsn_app_learn_state* lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
+            err = _callbacks.calls.get_checkpoint(
+                _app_context_callbacks, learn_start, last_committed_decree(),
+                (void*)learn_request.data(), learn_request.length(), lstate, capacity);
+        }
     }
 
     if (err == ERR_OK)
@@ -375,14 +403,11 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
             state.files.push_back(std::string(*lstate->files++));
         }
     }
-    else
-    {
-        dsn_transient_free(buffer);
-    }
+
     return err;
 }
 
-::dsn::error_code replication_app_base::apply_checkpoint(const learn_state& state, dsn_chkpt_apply_mode mode)
+::dsn::error_code replication_app_base::apply_checkpoint(dsn_chkpt_apply_mode mode, const learn_state& state)
 {
     dsn_app_learn_state lstate;
     std::vector<const char*> files;
@@ -403,42 +428,42 @@ void replication_app_base::prepare_get_checkpoint(/*out*/ ::dsn::blob& learn_req
         lstate.files = &files[0];
     }
 
-    auto lcd = last_committed_decree();
-    auto err = _callbacks.calls.chkpt_apply(_app_context_callbacks, _last_committed_decree.load(), &lstate, mode);
+    error_code err = _callbacks.calls.apply_checkpoint(_app_context_callbacks, mode, last_committed_decree(), &lstate);
     if (err == ERR_OK)
     {
-        if (lstate.to_decree_included > lcd)
-        {
-            _last_committed_decree.store(lstate.to_decree_included);
-        }
+        dassert(lstate.to_decree_included == last_durable_decree(), "");
+        _last_committed_decree.store(lstate.to_decree_included);
     }
+    else
+    {
+        derror("%s: call app.apply_checkpoint() failed, err = %s", _replica->name(), err.to_string());
+    }
+
     return err;
 }
 
-error_code replication_app_base::write_internal(mutation_ptr& mu)
+::dsn::error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert(mu->data.header.decree == last_committed_decree() + 1, "");
     dassert(mu->data.updates.size() == mu->client_requests.size(), "");
     dassert(mu->data.updates.size() > 0, "");
 
+    error_code err = _callbacks.calls.begin_write(_app_context_callbacks, _replica->get_ballot(), last_committed_decree());
+    if (err != ERR_OK)
+    {
+        derror("%s: mutation %s: call app.begin_write() failed, err = %s",
+                _replica->name(), mu->name(), err.to_string());
+        return err;
+    }
     int count = static_cast<int>(mu->client_requests.size());
-    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
-    _batch_ballot = mu->data.header.ballot;
-    _batch_decree = mu->data.header.decree;
-
     for (int i = 0; i < count; i++)
     {
-        /*if (bs == BS_BATCH && i + 1 == count)
-        {
-            bs = BS_BATCH_LAST;
-        }*/
-
         const mutation_update& update = mu->data.updates[i];
         dsn_message_t req = mu->client_requests[i];
         if (update.code != RPC_REPLICATION_WRITE_EMPTY)
         {
-            dinfo("%s: mutation %s dispatch rpc call: %s",
-                  _replica->name(), mu->name(), update.code.to_string());
+            dinfo("%s: mutation %s #%d: dispatch rpc call %s",
+                    _replica->name(), mu->name(), i, update.code.to_string());
          
             if (req == nullptr)
             {                
@@ -451,36 +476,34 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
             {
                 dsn_hosted_app_commit_rpc_request(_app_context, req, true);
             }
-
-            //binary_reader reader(update.data);
-            //dsn_message_t resp = (req ? dsn_msg_create_response(req) : nullptr);
-
-            ////uint64_t now = dsn_now_ns();
-            //dispatch_rpc_call(update.code, reader, resp);
-            ////now = dsn_now_ns() - now;
-
-            ////_app_commit_latency.set(now);
         }
         else
         {
             // empty mutation write
-            dwarn("%s: mutation %s dispatch rpc call: %s",
-                  _replica->name(), mu->name(), update.code.to_string());
+            dwarn("%s: mutation %s #%d: dispatch rpc call %s",
+                    _replica->name(), mu->name(), i, update.code.to_string());
         }
 
-        int perr = _callbacks.calls.physical_error_get(_app_context_callbacks);
+        int perr = _callbacks.calls.get_internal_error(_app_context_callbacks);
         if (perr != 0)
         {
-            derror("%s: physical error %d occurs in replication local app %s",
-                   _replica->name(), perr, data_dir().c_str());
+            derror("%s: mutation %s #%d: dispatch rpc call %s failed, get internal error %d",
+                   _replica->name(), mu->name(), i, update.code.to_string(), perr);
             return ERR_LOCAL_APP_FAILURE;
         }
     }
 
-    ++_last_committed_decree;
-    //++_app_info->info.type1.last_committed_decree;
+    err = _callbacks.calls.end_write(_app_context_callbacks);
+    if (err != ERR_OK)
+    {
+        derror("%s: mutation %s: call app.end_write() failed, err = %s",
+                _replica->name(), mu->name(), err.to_string());
+        return err;
+    }
 
-    ddebug("%s: mutation %s committed into app", _replica->name(), mu->name());
+    ++_last_committed_decree;
+
+    ddebug("%s: mutation %s: committed", _replica->name(), mu->name());
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
@@ -490,7 +513,7 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     return ERR_OK;
 }
 
-error_code replication_app_base::update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
+::dsn::error_code replication_app_base::update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
 {
     _info.crc = 0;
     _info.magic = 0xdeadbeef;

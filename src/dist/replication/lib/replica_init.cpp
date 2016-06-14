@@ -56,7 +56,7 @@ error_code replica::initialize_on_new()
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
-        derror("%s: cannot allocate new replica, because dir %s is already exists", name(), _dir.c_str());
+        derror("%s: cannot allocate new replica, because remove old dir %s failed", name(), _dir.c_str());
         return ERR_PATH_ALREADY_EXIST;
     }
 
@@ -131,6 +131,12 @@ error_code replica::initialize_on_load()
     if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.raw().u.app_id, &gpid.raw().u.partition_index, app_type))
     {
         derror("invalid replica dir %s", dir);
+        return nullptr;
+    }
+
+    if (!utils::filesystem::directory_exists(dir))
+    {
+        derror("replica dir %s not exist", dir);
         return nullptr;
     }
 

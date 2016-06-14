@@ -40,12 +40,16 @@
 
 namespace dsn{ namespace replication{
 
+replication_ddl_client::replication_ddl_client(const dsn::rpc_address& meta_server)
+    : _meta_server(meta_server)
+{
+}
+
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers)
 {
-    _meta_servers.assign_group(dsn_group_build("meta.servers"));
+    _meta_server.assign_group(dsn_group_build("meta-server"));
     for (auto& m : meta_servers)
-        dsn_group_add(_meta_servers.group_handle(), m.c_addr());
-    _meta_servers_count = dsn_group_count(_meta_servers.group_handle());
+        dsn_group_add(_meta_server.group_handle(), m.c_addr());
 }
 
 dsn::error_code replication_ddl_client::create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless)
@@ -223,20 +227,20 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(20) << std::left << "status"
         << std::setw(20) << std::left << "app_name"
         << std::setw(20) << std::left << "app_type"
-        << std::setw(10) << std::left << "partition_count"
-        << std::setw(10) << std::left << "is_stateful"
-        << std::setw(10) << std::left << "envs#"
+        << std::setw(20) << std::left << "partition_count"
+        << std::setw(20) << std::left << "is_stateful"
         << std::endl;
     for(int i = 0; i < resp.infos.size(); i++)
     {
         dsn::app_info info = resp.infos[i];
+        std::string status_str = enum_to_string(info.status);
+        status_str = status_str.substr(status_str.find("AS_") + 3);
         out << std::setw(10) << std::left << info.app_id
-            << std::setw(20) << std::left << enum_to_string(info.status)
+            << std::setw(20) << std::left << status_str
             << std::setw(20) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
-            << std::setw(10) << std::left << info.partition_count
-            << std::setw(10) << std::left << info.is_stateful
-            << std::setw(10) << std::left << info.envs.size()
+            << std::setw(20) << std::left << info.partition_count
+            << std::setw(20) << std::left << (info.is_stateful ? "true" : "false")
             << std::endl;
     }
     out << std::endl << std::flush;
@@ -283,8 +287,10 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     for(int i = 0; i < resp.infos.size(); i++)
     {
         dsn::replication::node_info info = resp.infos[i];
+        std::string status_str = enum_to_string(info.status);
+        status_str = status_str.substr(status_str.find("NS_") + 3);
         out << std::setw(25) << std::left << info.address.to_string()
-            << std::setw(20) << std::left << enum_to_string(info.status)
+            << std::setw(20) << std::left << status_str
             << std::endl;
     }
     out << std::endl << std::flush;
@@ -495,10 +501,10 @@ bool replication_ddl_client::valid_app_char(int c)
 
 void replication_ddl_client::end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
 {
-    if(err != dsn::ERR_OK && retry_times + 1 < _meta_servers_count)
+    if(err != dsn::ERR_OK && retry_times < 2)
     {
         rpc::call(
-            _meta_servers,
+            _meta_server,
             request,
             this,
             [=, callback_capture = std::move(callback)](error_code err, dsn_message_t request, dsn_message_t response)

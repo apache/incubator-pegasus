@@ -82,17 +82,18 @@ namespace dsn {
             //if (_app->is_delta_state_learning_supported())
             //    return;
 
-            auto err = _app->checkpoint_async();
+            auto err = _app->async_checkpoint();
             if (err != ERR_NOT_IMPLEMENTED)
             {
                 if (err == ERR_OK)
                 {
-                    ddebug("%s: checkpoint_async succeed, app_last_committed_decree=%" PRId64 ", app_last_durable_decree=%" PRId64,
+                    ddebug("%s: call app.async_checkpoint() succeed, "
+                           "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
                            name(), _app->last_committed_decree(), _app->last_durable_decree());
                 }
                 if (err != ERR_OK && err != ERR_WRONG_TIMING && err != ERR_NO_NEED_OPERATE && err != ERR_TRY_AGAIN)
                 {
-                    derror("%s: checkpoint_async failed, err = %s", name(), err.to_string());
+                    derror("%s: call app.async_checkpoint() failed, err = %s", name(), err.to_string());
                 }
                 return;
             }
@@ -279,7 +280,7 @@ namespace dsn {
                     dassert(filename.find_last_of("/\\")==std::string::npos, "invalid file name");
                     filename = utils::filesystem::path_combine(chk_dir, filename);
                 }
-                _app->apply_checkpoint(resp->state, DSN_CHKPT_COPY);
+                _app->apply_checkpoint(DSN_CHKPT_COPY, resp->state);
                 _app->reset_counters_after_learning();
             }
 
@@ -289,7 +290,17 @@ namespace dsn {
         // run in background thread
         void replica::background_checkpoint()
         {
-            auto err = _app->checkpoint();
+            auto err = _app->sync_checkpoint();
+            if (err == ERR_OK)
+            {
+                ddebug("%s: call app.sync_checkpoint() succeed, "
+                       "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
+                       name(), _app->last_committed_decree(), _app->last_durable_decree());
+            }
+            else
+            {
+                derror("%s: call app.sync_checkpoint() failed, err = %s", name(), err.to_string());
+            }
             _secondary_states.checkpoint_completed_task = tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,

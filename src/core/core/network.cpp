@@ -590,8 +590,8 @@ namespace dsn
         // init connection if necessary
         if (new_client) 
         {
-            ddebug("client session created, remote_server = %s, current_count = %d",
-                   client->remote_address().to_string(), scount);
+            //ddebug("client session created, remote_server = %s, current_count = %d",
+            //       client->remote_address().to_string(), scount);
             client->connect();
         }
 

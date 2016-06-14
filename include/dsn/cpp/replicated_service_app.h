@@ -47,30 +47,35 @@ namespace dsn
     class replicated_service_app_type_1 : public service_app
     {
     public:
-        replicated_service_app_type_1(dsn_gpid gpid) 
-            : service_app(gpid) { _physical_error = 0; }
+        replicated_service_app_type_1(dsn_gpid gpid) : service_app(gpid) {}
 
         virtual ~replicated_service_app_type_1(void) {}
 
         //
         // for stateful apps with layer 2 support
         //
-        virtual ::dsn::error_code checkpoint(int64_t version) { return ERR_NOT_IMPLEMENTED; }
 
-        virtual ::dsn::error_code checkpoint_async(int64_t version) { return ERR_NOT_IMPLEMENTED; }
+        virtual int get_internal_error() { return 0; }
 
-        virtual int64_t get_last_checkpoint_version() const { return 0; }
+        virtual ::dsn::error_code begin_write(int64_t ballot, int64_t decree) { return ERR_OK; }
+
+        virtual ::dsn::error_code end_write() { return ERR_OK; }
+
+        virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) { return ERR_NOT_IMPLEMENTED; }
+
+        virtual ::dsn::error_code async_checkpoint(int64_t last_commit) { return ERR_NOT_IMPLEMENTED; }
+
+        virtual int64_t get_last_checkpoint_decree() { return 0; }
 
         //
         // prepare an app-specific learning request (on learner, to be sent to learneee
         // and used by method get_checkpoint), so that the learning process is more efficient
         //
         // return value:
-        //   0 - it is unnecessary to prepare a earn request
-        //   <= capacity - learn request is prepared ready
-        //   > capacity - buffer is not enough, caller should allocate a bigger buffer and try again
+        //   ERR_OK: get succeed, and actually used buffer size is stored in "occupied"
+        //   ERR_CAPACITY_EXCEEDED: buffer capacity is not enough, and actually neede size is stored in "occupied".
         //
-        virtual int prepare_get_checkpoint(void* buffer, int capacity) { return 0; }
+        virtual ::dsn::error_code prepare_get_checkpoint(void* buffer, int capacity, int* occupied) { *occupied = 0; return ERR_OK; }
 
         // 
         // Learn [start, infinite) from remote replicas (learner)
@@ -165,11 +170,11 @@ namespace dsn
         };
 
         virtual ::dsn::error_code get_checkpoint(
-            int64_t start,
+            int64_t learn_start,
             int64_t local_commit,
             void*   learn_request,
             int     learn_request_size,
-            /* inout */ app_learn_state& state
+            app_learn_state& state
             ) = 0;
 
         //
@@ -184,80 +189,72 @@ namespace dsn
         // doing checkpointing by itself, in order to not stall the normal
         // write operations.
         //
-        // Postconditions:
-        // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
-        // 
         virtual ::dsn::error_code apply_checkpoint(
+            dsn_chkpt_apply_mode mode,
             int64_t local_commit,
-            const dsn_app_learn_state& state,
-            dsn_chkpt_apply_mode mode
+            const dsn_app_learn_state& state
             ) = 0;
 
-        int get_last_physical_error() const { return _physical_error; }
-
-        void set_physical_error(int err) { _physical_error = err; }
-
-    private:
-        int _physical_error;
-
     public:
-        static dsn_error_t app_checkpoint(void* app, int64_t version)
+        static dsn_error_t app_get_internal_error(void* app)
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->checkpoint(version);
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->get_internal_error();
         }
 
-        static dsn_error_t app_checkpoint_async(void* app, int64_t version)
+        static dsn_error_t app_begin_write(void* app, int64_t ballot, int64_t decree)
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->checkpoint_async(version);
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->begin_write(ballot, decree);
         }
 
-        static int64_t app_checkpoint_get_version(void* app)
+        static dsn_error_t app_end_write(void* app)
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->get_last_checkpoint_version();
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->end_write();
         }
 
-        static int app_prepare_get_checkpoint(void* app, void* buffer, int capacity)
+        static dsn_error_t app_sync_checkpoint(void* app, int64_t last_commit)
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->prepare_get_checkpoint(buffer, capacity);
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->sync_checkpoint(last_commit);
+        }
+
+        static dsn_error_t app_async_checkpoint(void* app, int64_t last_commit)
+        {
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->async_checkpoint(last_commit);
+        }
+
+        static int64_t app_get_last_checkpoint_decree(void* app)
+        {
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->get_last_checkpoint_decree();
+        }
+
+        static dsn_error_t app_prepare_get_checkpoint(void* app, void* buffer, int capacity, int* occupied)
+        {
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->prepare_get_checkpoint(buffer, capacity, occupied);
         }
         
         static dsn_error_t app_get_checkpoint(
-            void*   app,
-            int64_t start_decree,
+            void* app,
+            int64_t learn_start,
             int64_t local_commit,
-            void*   learn_request,
-            int     learn_request_size,
-            /* inout */ dsn_app_learn_state* state,
+            void* learn_request,
+            int learn_request_size,
+            dsn_app_learn_state* state,
             int state_capacity
             )
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
             app_learn_state cpp_state;
-            auto err = sapp->get_checkpoint(start_decree, local_commit, learn_request, learn_request_size, cpp_state);
-            if (err == ERR_OK)
-            {
-                return cpp_state.to_c_state(*state, state_capacity);
-            }
-            else
-            {
-                return err;
-            }
+            auto err = reinterpret_cast<replicated_service_app_type_1*>(app)->get_checkpoint(
+                    learn_start, local_commit, learn_request, learn_request_size, cpp_state);
+            return err == ERR_OK ? err : cpp_state.to_c_state(*state, state_capacity);
         }
         
-        static dsn_error_t app_apply_checkpoint(void* app, int64_t local_commit, const dsn_app_learn_state* state, dsn_chkpt_apply_mode mode)
+        static dsn_error_t app_apply_checkpoint(
+            void* app,
+            dsn_chkpt_apply_mode mode,
+            int64_t local_commit,
+            const dsn_app_learn_state* state
+            )
         {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->apply_checkpoint(local_commit, *state, mode);
-        }
-
-        static int app_get_physical_error(void* app)
-        {
-            auto sapp = (replicated_service_app_type_1*)(app);
-            return sapp->get_last_physical_error();
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->apply_checkpoint(mode, local_commit, *state);
         }
     };
 
@@ -273,13 +270,15 @@ namespace dsn
         app.layer1.start = service_app::app_start;
         app.layer1.destroy = service_app::app_destroy;
 
-        app.layer2.apps.calls.chkpt = replicated_service_app_type_1::app_checkpoint;
-        app.layer2.apps.calls.chkpt_async = replicated_service_app_type_1::app_checkpoint_async;
-        app.layer2.apps.calls.chkpt_get_version = replicated_service_app_type_1::app_checkpoint_get_version;
-        app.layer2.apps.calls.chkpt_prepare_get = replicated_service_app_type_1::app_prepare_get_checkpoint;
-        app.layer2.apps.calls.chkpt_get = replicated_service_app_type_1::app_get_checkpoint;
-        app.layer2.apps.calls.chkpt_apply = replicated_service_app_type_1::app_apply_checkpoint;
-        app.layer2.apps.calls.physical_error_get = replicated_service_app_type_1::app_get_physical_error;
+        app.layer2.apps.calls.get_internal_error = replicated_service_app_type_1::app_get_internal_error;
+        app.layer2.apps.calls.begin_write = replicated_service_app_type_1::app_begin_write;
+        app.layer2.apps.calls.end_write = replicated_service_app_type_1::app_end_write;
+        app.layer2.apps.calls.sync_checkpoint = replicated_service_app_type_1::app_sync_checkpoint;
+        app.layer2.apps.calls.async_checkpoint = replicated_service_app_type_1::app_async_checkpoint;
+        app.layer2.apps.calls.get_last_checkpoint_decree = replicated_service_app_type_1::app_get_last_checkpoint_decree;
+        app.layer2.apps.calls.prepare_get_checkpoint = replicated_service_app_type_1::app_prepare_get_checkpoint;
+        app.layer2.apps.calls.get_checkpoint = replicated_service_app_type_1::app_get_checkpoint;
+        app.layer2.apps.calls.apply_checkpoint = replicated_service_app_type_1::app_apply_checkpoint;
 
         dsn_register_app(&app);
     }

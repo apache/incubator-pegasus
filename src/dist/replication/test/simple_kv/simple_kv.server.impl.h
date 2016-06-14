@@ -56,30 +56,32 @@ namespace dsn {
 
                 virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-                virtual ::dsn::error_code checkpoint(int64_t version) override;
+                virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) override;
 
-                virtual ::dsn::error_code checkpoint_async(int64_t version) override;
+                virtual ::dsn::error_code async_checkpoint(int64_t last_commit) override;
 
-                virtual int64_t get_last_checkpoint_version() const override { return last_durable_decree(); }
-
-                virtual int prepare_get_checkpoint(void* buffer, int capacity) override { return 0; }
+                virtual int64_t get_last_checkpoint_decree() override { return last_durable_decree(); }
 
                 virtual ::dsn::error_code get_checkpoint(
-                    int64_t start,
-                    int64_t commit,
+                    int64_t learn_start,
+                    int64_t local_commit,
                     void*   learn_request,
                     int     learn_request_size,
-                    /* inout */ app_learn_state& state
+                    app_learn_state& state
                     ) override;
 
-                virtual ::dsn::error_code apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode) override;
+                virtual ::dsn::error_code apply_checkpoint(
+                    dsn_chkpt_apply_mode mode,
+                    int64_t local_commit,
+                    const dsn_app_learn_state& state
+                    ) override;
 
             private:
                 void recover();
                 void recover(const std::string& name, int64_t version);
                 const char* data_dir() const { return _data_dir.c_str(); }
-                int64_t last_durable_decree() const { return _checkpoint_version; }
-                void    set_last_durable_decree(int64_t d) { _checkpoint_version = d; }
+                int64_t last_durable_decree() const { return _last_durable_decree; }
+                void    set_last_durable_decree(int64_t d) { _last_durable_decree = d; }
 
             private:
                 typedef std::map<std::string, std::string> simple_kv;
@@ -88,7 +90,7 @@ namespace dsn {
                 bool _test_file_learning;
 
                 std::string _data_dir;
-                int64_t     _checkpoint_version;
+                int64_t     _last_durable_decree;
             };
 
         }
