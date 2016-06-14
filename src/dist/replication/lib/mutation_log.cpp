@@ -56,42 +56,34 @@ using namespace ::dsn::service;
     int hash
     )
 {
-    auto hdr = (log_block_header*)dsn_transient_malloc(sizeof(log_block_header));
-    hdr->magic = 0xdeadbeef;
-    hdr->length = 0;
-    hdr->body_crc = 0;
-    hdr->local_offset = 0;
+    auto blk = log_file::prepare_log_block();
 
-    blob bb((const char*)hdr, 0, sizeof(log_block_header));
-    log_block blk;
-
-    blk.add(bb);
-    mu->write_to_log_file([&](const blob& bb) 
+    mu->write_to_log_file([=](const blob& bb) 
     {
-        blk.add(bb);
+        blk->add(bb);
     });
 
-    auto pr = mark_new_update(blk.size(), mu->data.header.pid, mu->data.header.decree, true);
+    auto pr = mark_new_update(blk->size(), mu->data.header.pid, mu->data.header.decree, true);
     uint64_t offset = pr.second + sizeof(log_block_header);
     mu->data.header.log_offset = offset;
 
     dinfo("start append shared log for mutation %s, offset = %" PRIu64, mu->name(), offset);
 
     // patch, fix marshalled data
-    ((mutation_header*)blk.data()[1].data())->log_offset = offset;
+    auto mhdr = ((mutation_header*)blk->data()[1].data());
+    mhdr->log_offset = offset;
 
-    return pr.first->commit_log_block(blk, pr.second,
+    return pr.first->commit_log_block(*blk, pr.second,
         LPC_WRITE_REPLICATION_LOG_SHARED, this,
-        [bb_cap = std::move(bb), cb_cap = std::move(callback), offset](error_code err, size_t sz)
+        [blk, cb_cap = std::move(callback), offset](error_code err, size_t sz)
         {
             cb_cap(err, sz); 
 
-            auto hdr = (log_block_header*)bb_cap.data();
+            auto hdr = (log_block_header*)(blk->data()[0].data());
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
-            dsn_transient_free((void*)bb_cap.data()); 
-
             dinfo("end append shared log for offset = %" PRIu64, offset);
+            delete blk;
         },
         gpid_to_hash(mu->data.header.pid)
         );
@@ -143,7 +135,9 @@ void mutation_log_shared::flush()
 
     // start to write if possible
     if (_issued_write.expired() 
-        && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+        && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes 
+            || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
+        )
     {
         err = write_pending_mutations();
         dassert(
@@ -302,8 +296,10 @@ error_code mutation_log_private::write_pending_mutations()
                 // start to write if possible
                 zauto_lock l(_plock);
                 block = nullptr;
-                if (_pending_write
-                    && static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+                if (_pending_write && 
+                    (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
+                    || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
+                    )
                 {
                     err = write_pending_mutations();
                     dassert(
