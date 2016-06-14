@@ -41,7 +41,6 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
-    echo "   -s|--serialize    serialize type: dsn|thrift|gproto, default is thrift"
     echo "   -g|--git          git source of ext module: github|xiaomi, default is github"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
@@ -61,7 +60,6 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    SERIALIZE_TYPE="thrift"
     GIT_SOURCE="github"
     CLEAR=NO
     JOB_NUM=8
@@ -79,10 +77,6 @@ function run_build()
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
-                shift
-                ;;
-            -s|--serialize)
-                SERIALIZE_TYPE="$2"
                 shift
                 ;;
             -g|--git)
@@ -134,19 +128,13 @@ function run_build()
         usage_build
         exit -1
     fi
-    if [ "$SERIALIZE_TYPE" != "dsn" -a "$SERIALIZE_TYPE" != "thrift" -a "$SERIALIZE_TYPE" != "gproto" ]; then
-        echo "ERROR: invalid serialize type \"$SERIALIZE_TYPE\""
-        echo
-        usage_build
-        exit -1
-    fi
     if [ "$GIT_SOURCE" != "github" -a "$GIT_SOURCE" != "xiaomi" ]; then
         echo "ERROR: invalid git source \"$GIT_SOURCE\""
         echo
         usage_build
         exit -1
     fi
-    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" SERIALIZE_TYPE="$SERIALIZE_TYPE" \
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" \
         GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh

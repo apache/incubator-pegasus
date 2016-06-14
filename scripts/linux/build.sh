@@ -5,7 +5,6 @@
 #    CLEAR          YES|NO
 #    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
-#    SERIALIZE_TYPE dsn|thrift|protobuf
 #    GIT_SOURCE     github|xiaomi
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
@@ -18,7 +17,6 @@
 #    -DCMAKE_C_COMPILER=gcc
 #    -DCMAKE_CXX_COMPILER=g++
 #    [-DCMAKE_BUILD_TYPE=Debug]
-#    [-DDSN_SERIALIZATION_TYPE=dsn|thrift|protobuf]
 #    [-DDSN_GIT_SOURCE=github|xiaomi]
 #    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
@@ -129,19 +127,6 @@ if [ "$CLEAR" == "YES" -a -d "$BUILD_DIR" ]
 then
     echo "Clear builder..."
     rm -rf $BUILD_DIR
-fi
-
-if [ ! -f "$ROOT/bin/Linux/thrift" ]
-then
-    echo "Downloading thrift..."
-    if [ "$GIT_SOURCE" == "xiaomi" ]
-    then
-        wget http://git.n.xiaomi.com/pegasus/packages/raw/master/rdsn/thrift
-    else
-        wget --no-check-certificate https://github.com/ykwd/packages/raw/rdsn/rdsn/thrift
-    fi
-    chmod u+x thrift
-    mv thrift $ROOT/bin/Linux
 fi
 
 if [ ! -d "$BUILD_DIR" ]

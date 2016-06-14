@@ -503,7 +503,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 
     ++_last_committed_decree;
 
-    ddebug("%s: mutation %s: committed", _replica->name(), mu->name());
+    ddebug("%s: mutation %s committed", _replica->name(), mu->name());
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add(1);
