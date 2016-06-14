@@ -281,16 +281,22 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
     std::ostream out(buf);
 
-    out << std::setw(25) << std::left << "address"
-        << std::setw(20) << std::left << "status"
-        << std::endl;
+    std::map<std::string, std::string> tmp_map;
     for(int i = 0; i < resp.infos.size(); i++)
     {
         dsn::replication::node_info info = resp.infos[i];
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        out << std::setw(25) << std::left << info.address.to_string()
-            << std::setw(20) << std::left << status_str
+        tmp_map[info.address.to_std_string()] = status_str;
+    }
+
+    out << std::setw(25) << std::left << "address"
+        << std::setw(20) << std::left << "status"
+        << std::endl;
+    for (auto& kv : tmp_map)
+    {
+        out << std::setw(25) << std::left << kv.first
+            << std::setw(20) << std::left << kv.second
             << std::endl;
     }
     out << std::endl << std::flush;

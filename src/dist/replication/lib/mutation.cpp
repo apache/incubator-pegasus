@@ -179,6 +179,7 @@ void mutation::write_to_log_file(std::function<void(const blob&)> inserter) cons
         for (const mutation_update& update : data.updates)
         {
             temp_writer.write_pod(static_cast<int>(update.code));
+            temp_writer.write_pod(static_cast<int>(update.serialization_type));
             temp_writer.write_pod(static_cast<int>(update.data.length()));
         }
 
@@ -199,6 +200,7 @@ void mutation::write_to_log_file(binary_writer& writer) const
     for (const mutation_update& update : data.updates)
     {
         writer.write_pod(static_cast<int>(update.code));
+        writer.write_pod(static_cast<int>(update.serialization_type));
         writer.write_pod(static_cast<int>(update.data.length()));
     }
 
@@ -221,6 +223,9 @@ void mutation::write_to_log_file(binary_writer& writer) const
         int code;
         reader.read_pod(code);
         mu->data.updates[i].code = ::dsn::task_code(code);
+        int type;
+        reader.read_pod(type);
+        mu->data.updates[i].serialization_type = type;
         reader.read_pod(lengths[i]);
     }
     for (int i = 0; i < size; ++i)
