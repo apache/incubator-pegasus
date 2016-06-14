@@ -47,7 +47,7 @@ public:
     virtual ~distributed_lock_service_zookeeper() override;
 
     // lock_root = argv[0]
-    virtual error_code initialize(int argc, const char** argv) override;
+    virtual error_code initialize(const std::vector<std::string>& args) override;
     virtual error_code finalize() override;
 
     virtual std::pair<task_ptr, task_ptr> lock(

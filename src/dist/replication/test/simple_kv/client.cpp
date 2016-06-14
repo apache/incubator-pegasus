@@ -149,14 +149,16 @@ void simple_kv_client_app::begin_write(int id, const std::string& key, const std
 
 void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node)
 {
-    dsn_message_t request = dsn_msg_create_request(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND, 30000);
+    dsn_message_t req = dsn_msg_create_request(RPC_CM_PROPOSE_BALANCER, 30000);
 
-    ::dsn::marshall(request, g_default_gpid);
-    ::dsn::marshall(request, receiver);
-    ::dsn::marshall(request, static_cast<int>(type));
-    ::dsn::marshall(request, node);
+    configuration_balancer_request request;
+    request.gpid = g_default_gpid;
+    request.action_list.emplace_back( configuration_proposal_action{receiver, node, type} );
+    request.__set_force(true);
 
-    dsn_rpc_call_one_way(_meta_server_group.c_addr(), request);
+    dsn::marshall(req, request);
+
+    dsn_rpc_call_one_way(_meta_server_group.c_addr(), req);
 }
 
 struct read_context

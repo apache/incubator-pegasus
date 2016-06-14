@@ -50,4 +50,5 @@ struct app_info
     5:i32           partition_count;
     6:map<string, string> envs;
     7:bool          is_stateful;
+    8:i32           max_replica_count;
 }

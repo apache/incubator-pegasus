@@ -30,44 +30,202 @@
  *
  * Revision history:
  *     Dec., 2015, @Tianyi Wang, first version
+ *     Jun., 2016, @Weijie Sun, add support for json decode
  */
 
 #pragma once
 
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <cctype>
 #include <dsn/cpp/autoref_ptr.h>
+#include <dsn/cpp/auto_codes.h>
+#include <dsn/cpp/utils.h>
+#include <dsn/dist/replication/replication_types.h>
+#include <dsn/dist/replication/replication_other_types.h>
 
-#define JSON_DICT_ENTRY(out, prefix, T) out << "\""#T"\":"; ::std::json_forwarder<std::decay<decltype((prefix).T)>::type>::call(out, (prefix).T)
-#define JSON_DICT_ENTRIES2(out, prefix, T1, T2) JSON_DICT_ENTRY(out, prefix, T1); out << ","; JSON_DICT_ENTRY(out, prefix, T2)
-#define JSON_DICT_ENTRIES3(out, prefix, T1, T2, T3) JSON_DICT_ENTRIES2(out, prefix, T1, T2); out << ","; JSON_DICT_ENTRY(out, prefix, T3)
-#define JSON_DICT_ENTRIES4(out, prefix, T1, T2, T3, T4) JSON_DICT_ENTRIES3(out, prefix, T1, T2, T3); out << ","; JSON_DICT_ENTRY(out, prefix, T4)
-#define JSON_DICT_ENTRIES5(out, prefix, T1, T2, T3, T4, T5) JSON_DICT_ENTRIES4(out, prefix, T1, T2, T3, T4); out << ","; JSON_DICT_ENTRY(out, prefix, T5)
-#define JSON_DICT_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6) JSON_DICT_ENTRIES5(out, prefix, T1, T2, T3, T4, T5); out << ","; JSON_DICT_ENTRY(out, prefix, T6)
-#define JSON_DICT_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_DICT_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6); out << ","; JSON_DICT_ENTRY(out, prefix, T7)
-#define JSON_DICT_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_DICT_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7); out << ","; JSON_DICT_ENTRY(out, prefix, T8)
-#define JSON_DICT_ENTRIES9(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9) JSON_DICT_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8); out << ","; JSON_DICT_ENTRY(out, prefix, T9)
+#define JsonSplitter "{}[]:,\""
 
-#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8,ph9, NAME, ...) NAME
+#define JSON_ENCODE_ENTRY(out, prefix, T) out << "\""#T"\":"; ::dsn::json::json_forwarder<std::decay<decltype((prefix).T)>::type>::encode(out, (prefix).T)
+#define JSON_ENCODE_ENTRIES2(out, prefix, T1, T2) JSON_ENCODE_ENTRY(out, prefix, T1); out << ","; JSON_ENCODE_ENTRY(out, prefix, T2)
+#define JSON_ENCODE_ENTRIES3(out, prefix, T1, T2, T3) JSON_ENCODE_ENTRIES2(out, prefix, T1, T2); out << ","; JSON_ENCODE_ENTRY(out, prefix, T3)
+#define JSON_ENCODE_ENTRIES4(out, prefix, T1, T2, T3, T4) JSON_ENCODE_ENTRIES3(out, prefix, T1, T2, T3); out << ","; JSON_ENCODE_ENTRY(out, prefix, T4)
+#define JSON_ENCODE_ENTRIES5(out, prefix, T1, T2, T3, T4, T5) JSON_ENCODE_ENTRIES4(out, prefix, T1, T2, T3, T4); out << ","; JSON_ENCODE_ENTRY(out, prefix, T5)
+#define JSON_ENCODE_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6) JSON_ENCODE_ENTRIES5(out, prefix, T1, T2, T3, T4, T5); out << ","; JSON_ENCODE_ENTRY(out, prefix, T6)
+#define JSON_ENCODE_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_ENCODE_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6); out << ","; JSON_ENCODE_ENTRY(out, prefix, T7)
+#define JSON_ENCODE_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_ENCODE_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7); out << ","; JSON_ENCODE_ENTRY(out, prefix, T8)
+
+#define JSON_DECODE_ENTRY(in, prefix, T) do {\
+    in.expect_token("\""#T"\""); \
+    in.expect_token(':'); \
+    ::dsn::json::json_forwarder<std::decay<decltype((prefix).T)>::type>::decode(in, (prefix).T); \
+} while (0)
+#define JSON_DECODE_ENTRIES2(in, prefix, T1, T2) JSON_DECODE_ENTRY(in, prefix, T1); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T2)
+#define JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3) JSON_DECODE_ENTRIES2(in, prefix, T1, T2); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T3)
+#define JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4) JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T4)
+#define JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5) JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T5)
+#define JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6) JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T6)
+#define JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T7)
+#define JSON_DECODE_ENTRIES8(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T8)
+
+#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8, NAME, ...) NAME
 //workaround due to the way VC handles "..."
 #define JSON_ENTRIES_GET_MACRO_(tuple) JSON_ENTRIES_GET_MACRO tuple
-#define JSON_DICT_ENTRIES(out, prefix, ...) out<<"{";JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, JSON_DICT_ENTRIES9, JSON_DICT_ENTRIES8, JSON_DICT_ENTRIES7, JSON_DICT_ENTRIES6, JSON_DICT_ENTRIES5, JSON_DICT_ENTRIES4, JSON_DICT_ENTRIES3, JSON_DICT_ENTRIES2, JSON_DICT_ENTRY)) (out, prefix, __VA_ARGS__); out<<"}"
 
-//parameters: fields to be serialized
-#define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}
-    
-namespace std {
+#define JSON_ENCODE_ENTRIES(out, prefix, ...)\
+    out<<"{";\
+    JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, \
+        JSON_ENCODE_ENTRIES8, \
+        JSON_ENCODE_ENTRIES7, \
+        JSON_ENCODE_ENTRIES6, \
+        JSON_ENCODE_ENTRIES5, \
+        JSON_ENCODE_ENTRIES4, \
+        JSON_ENCODE_ENTRIES3, \
+        JSON_ENCODE_ENTRIES2, \
+        JSON_ENCODE_ENTRY)) (out, prefix, __VA_ARGS__); \
+    out<<"}"
+
+#define JSON_DECODE_ENTRIES(in, prefix, ...)\
+    in.expect_token('{');\
+    JSON_ENTRIES_GET_MACRO_((__VA_ARGS__,\
+        JSON_DECODE_ENTRIES8, \
+        JSON_DECODE_ENTRIES7, \
+        JSON_DECODE_ENTRIES6, \
+        JSON_DECODE_ENTRIES5, \
+        JSON_DECODE_ENTRIES4, \
+        JSON_DECODE_ENTRIES3, \
+        JSON_DECODE_ENTRIES2, \
+        JSON_DECODE_ENTRY)) (in, prefix, __VA_ARGS__);\
+    in.expect_token('}')
+
+#define DEFINE_JSON_SERIALIZATION(...) \
+void encode_json_state(std::stringstream& out) const \
+{\
+    JSON_ENCODE_ENTRIES(out, *this, __VA_ARGS__);\
+}\
+void decode_json_state(dsn::json::string_tokenizer& in) \
+{\
+    JSON_DECODE_ENTRIES(in, *this, __VA_ARGS__);\
+}\
+bool decode_json_state(const dsn::blob& data)\
+{\
+    dsn::json::string_tokenizer tokenizer(data);\
+    try\
+    {\
+        decode_json_state(tokenizer);\
+    }\
+    catch (unsigned int corrupt_pos)\
+    {\
+        derror("invalid json string(%s) at pos(%d)", data.data(), corrupt_pos);\
+        return false;\
+    }\
+    catch (...) \
+    {\
+        derror("invalid json string(%s)", data.data());\
+        return false;\
+    }\
+    return true;\
+}
+
+namespace dsn { namespace json {
+
+class string_tokenizer
+{
+private:
+    const char* buffer;
+    unsigned pos;
+    unsigned length;
+public:
+    static bool is_json_splitter(char token)
+    {
+        const char* s = JsonSplitter;
+        for (int i=0; s[i]; ++i)
+            if (s[i]==token)
+                return true;
+        return false;
+    }
+public:
+    string_tokenizer(const char* b, unsigned offset, unsigned len): buffer(b), pos(offset), length(len)
+    {
+        dassert(pos<length, "");
+    }
+    string_tokenizer(const dsn::blob& source, unsigned from): string_tokenizer(source.data(), from, source.length()) {}
+    string_tokenizer(const dsn::blob& source): string_tokenizer(source.data(), 0, source.length()) {}
+    string_tokenizer(const std::string& source, unsigned from): string_tokenizer(source.c_str(), from, source.size()) {}
+    string_tokenizer(const std::string& source): string_tokenizer(source.c_str(), 0, source.size()) {}
+
+    void expect_token(const char* token)
+    {
+        while (pos<length && isblank(buffer[pos])) ++pos;
+        int j=0;
+        while (pos<length && token[j]!=0 && buffer[pos]==token[j])
+            ++pos, ++j;
+        if (token[j]!=0)
+        {
+            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+        }
+    }
+    void expect_token(char token)
+    {
+        while (pos<length && isblank(buffer[pos])) ++pos;
+        if (pos<length && buffer[pos] == token)
+            ++pos;
+        else
+        {
+            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+        }
+    }
+    char peek_next() const
+    {
+        int i = pos;
+        while (i<length && isblank(buffer[i])) ++i;
+        return buffer[i];
+    }
+    void walk_until(char token)
+    {
+        while (pos<length && buffer[pos]!=token) ++pos;
+        if (pos<length && buffer[pos]==token)
+            return;
+        else
+        {
+            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+        }
+    }
+    void walk_until_json_splitter()
+    {
+        while (pos<length && !is_json_splitter(buffer[pos])) ++pos;
+        return;
+    }
+    unsigned tell() const { return pos; }
+    void forward() { ++pos; }
+    //assign substring [from, to) in buffer to output
+    void assign(unsigned from, unsigned to, std::string& output)
+    {
+        output.assign(buffer+from, to-from);
+    }
+};
 
 template<typename> class json_forwarder;
-
 
 template<typename T> inline void json_encode(std::stringstream& out, const T& t)
 {
     out << t;
+}
+
+template<typename T> inline void json_decode(string_tokenizer& in, T& t)
+{
+    int start_pos = in.tell();
+    in.walk_until_json_splitter();
+    //TODO: optimize this
+    std::string string_data;
+    in.assign(start_pos, in.tell(), string_data);
+    std::istringstream is(string_data);
+    is >> t;
 }
 
 template<typename T> inline void json_encode_iterable(std::stringstream& out, const T& t)
@@ -75,7 +233,7 @@ template<typename T> inline void json_encode_iterable(std::stringstream& out, co
     out << "[";
     for (auto it = t.begin(); it != t.end(); ++it)
     {
-        json_forwarder<typename std::decay < decltype(*it) > ::type>::call(out, *it);
+        json_forwarder<typename std::decay < decltype(*it) > ::type>::encode(out, *it);
         if (std::next(it) != t.end())
         {
             out << ",";
@@ -89,9 +247,9 @@ template<typename T> inline void json_encode_map(std::stringstream& out, const T
     out << "{";
     for (auto it = t.begin(); it != t.end(); ++it)
     {
-        json_forwarder<typename std::decay < decltype(it->first) > :: type>::call(out, it->first);
+        json_forwarder<typename std::decay < decltype(it->first) > :: type>::encode(out, it->first);
         out << ":";
-        json_forwarder<typename std::decay < decltype(it->second) > ::type>::call(out, it->second);
+        json_forwarder<typename std::decay < decltype(it->second) > ::type>::encode(out, it->second);
         if (std::next(it) != t.end())
         {
             out << ",";
@@ -100,9 +258,50 @@ template<typename T> inline void json_encode_map(std::stringstream& out, const T
     out << "}";
 }
 
+template<typename TMap> inline void json_decode_map(string_tokenizer& in, TMap& t)
+{
+    t.clear();
+    in.expect_token('{');
+    while (in.peek_next() != '}')
+    {
+        if (!t.empty())
+        {
+            in.expect_token(',');
+        }
+        typename TMap::key_type key;
+        typename TMap::mapped_type value;
+        json_forwarder< decltype(key) >::decode(in, key);
+        in.expect_token(':');
+        json_forwarder< decltype(value) >::decode(in, value);
+
+        if (!t.emplace(key, value).second)
+        {
+            throw in.tell();
+        }
+    }
+    in.expect_token('}');
+}
+
 template<typename T> inline void json_encode(std::stringstream& out, const std::vector<T>& t)
 {
     json_encode_iterable(out, t);
+}
+
+template<typename T> inline void json_decode(string_tokenizer& in, std::vector<T>& t)
+{
+    t.clear();
+    in.expect_token('[');
+    while (in.peek_next() != ']')
+    {
+        if (!t.empty())
+        {
+            in.expect_token(',');
+        }
+        T result;
+        json_forwarder<T>::decode(in, result);
+        t.emplace_back(std::move(result));
+    }
+    in.expect_token(']');
 }
 
 template<typename T> inline void json_encode(std::stringstream& out, const std::set<T>& t)
@@ -110,14 +309,44 @@ template<typename T> inline void json_encode(std::stringstream& out, const std::
     json_encode_iterable(out, t);
 }
 
+template <typename T> inline void json_decode(string_tokenizer& in, std::set<T>& t)
+{
+    t.clear();
+    in.expect_token('[');
+    while (in.peek_next() != ']')
+    {
+        if (!t.empty())
+        {
+            in.expect_token(',');
+        }
+        T result;
+        json_forwarder<T>::decode(in, result);
+        if (!t.emplace(std::move(result)).second)
+        {
+            throw in.tell();
+        }
+    }
+    in.expect_token(']');
+}
+
 template<typename T1, typename T2> inline void json_encode(std::stringstream& out, const std::unordered_map<T1, T2>& t)
 {
     json_encode_map(out, t);
 }
 
+template<typename T1, typename T2> inline void json_decode(string_tokenizer& in, std::unordered_map<T1, T2>& t)
+{
+    json_decode_map(in, t);
+}
+
 template<typename T1, typename T2> inline void json_encode(std::stringstream& out, const std::map<T1, T2>& t)
 {
     json_encode_map(out, t);
+}
+
+template<typename T1, typename T2> inline void json_decode(string_tokenizer& in, std::map<T1, T2>& t)
+{
+    json_decode_map(in, t);
 }
 
 template<typename T> inline void json_encode(std::stringstream& out, const dsn::ref_ptr<T>& t)
@@ -129,18 +358,70 @@ inline void json_encode(std::stringstream& out, const std::string& t)
 {
     out << "\"" << t << "\"";
 }
+
 inline void json_encode(std::stringstream& out, const char* t)
 {
     out << "\"" << t << "\"";
 }
 
+inline void json_decode(string_tokenizer& in, std::string& t)
+{
+    in.expect_token('\"');
+    unsigned start_pos = in.tell();
+    in.walk_until('\"');
+    in.assign(start_pos, in.tell(), t);
+    in.forward();
+}
+
+#define ENUM_TYPE_SERIALIZATION(EnumType, InvalidEnum) \
+inline void json_encode(std::stringstream& out, const EnumType& enum_variable)\
+{\
+    out << "\"" << enum_to_string(enum_variable) << "\"";\
+}\
+inline void json_decode(dsn::json::string_tokenizer& in, EnumType& enum_variable)\
+{\
+    std::string status_message;\
+    dsn::json::json_decode(in, status_message);\
+    enum_variable = enum_from_string(status_message.c_str(), InvalidEnum);\
+}
+
+ENUM_TYPE_SERIALIZATION(dsn::replication::partition_status::type, dsn::replication::partition_status::PS_INVALID)
+ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
+
+inline void json_encode(std::stringstream& out, const dsn::gpid& pid)
+{
+    out << "\"" << pid.get_app_id() << "." << pid.get_partition_index() << "\"";
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::gpid& pid)
+{
+    std::string gpid_message;
+    json_decode(in, gpid_message);
+    dsn_global_partition_id c_gpid;
+    sscanf(gpid_message.c_str(), "%d.%d", &c_gpid.u.app_id, &c_gpid.u.partition_index);
+    pid = dsn::gpid(c_gpid);
+}
+
+inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
+{
+    out << "\"" << address.to_string() << "\"";
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::rpc_address& address)
+{
+    std::string rpc_address_string;
+    json_decode(in, rpc_address_string);
+    address.from_string_ipv4(rpc_address_string.c_str());
+}
+
+inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config);
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::partition_configuration& config);
+
 template<typename T>
 class json_forwarder {
 private:
-    //check if C has C.json_state(sstream&) function
+    //check if C has C.encode_json_state(sstream&) function
     template<typename C>
     static auto check_json_state(C*)
-        -> typename std::is_same<decltype(std::declval<C>().json_state(std::declval<std::stringstream&>())), void>::type; 
+        -> typename std::is_same<decltype(std::declval<C>().encode_json_state(std::declval<std::stringstream&>())), void>::type;
 
     template<typename>
     static std::false_type check_json_state(...);
@@ -148,7 +429,7 @@ private:
     //check if C has C->json_state(sstream&) function
     template<typename C>
     static auto p_check_json_state(C*)
-        -> typename std::is_same<decltype(std::declval<C>()->json_state(std::declval<std::stringstream&>())),void>::type;
+        -> typename std::is_same<decltype(std::declval<C>()->encode_json_state(std::declval<std::stringstream&>())),void>::type;
 
     template<typename>
     static std::false_type p_check_json_state(...);
@@ -157,30 +438,65 @@ private:
     typedef decltype(p_check_json_state<T>(0)) p_has_json_state;
 
     //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::false_type)
+    static void encode_inner(std::stringstream&out, const T& t, std::true_type, std::false_type)
     {
-        t.json_state(out);
+        t.encode_json_state(out);
     }
-    //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::true_type)
+    static void encode_inner(std::stringstream&out, const T& t, std::false_type, std::true_type)
     {
-        t->json_state(out);
+        t->encode_json_state(out);
     }
-    //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::true_type)
+    static void encode_inner(std::stringstream&out, const T& t, std::true_type, std::true_type)
     {
-        t->json_state(out);
+        t->encode_json_state(out);
     }
-    //external serialization
-    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::false_type)
+    static void encode_inner(std::stringstream&out, const T& t, std::false_type, std::false_type)
     {
         json_encode(out, t);
     }
-public:
-    static void call(std::stringstream&out, const T& t)
+
+    //internal deserialization
+    static void decode_inner(string_tokenizer& in, T& t, std::true_type, std::false_type)
     {
-        call_inner(out, t, has_json_state{}, p_has_json_state{});
+        t.decode_json_state(in);
+    }
+    static void decode_inner(string_tokenizer& in, T& t, std::false_type, std::true_type)
+    {
+        t->decode_json_state(in);
+    }
+    static void decode_inner(string_tokenizer& in, T& t, std::true_type, std::true_type)
+    {
+        t->decode_json_state(in);
+    }
+    static void decode_inner(string_tokenizer& in, T& t, std::false_type, std::false_type)
+    {
+        json_decode(in, t);
+    }
+public:
+    static void encode(std::stringstream& out, const T& t)
+    {
+        encode_inner(out, t, has_json_state{}, p_has_json_state{});
+    }
+    static dsn::blob encode(const T& t)
+    {
+        std::stringstream out;
+        encode_inner(out, t, has_json_state{}, p_has_json_state{});
+        std::string* result = new std::string(out.str());
+        return dsn::blob( std::shared_ptr<char>( const_cast<char*>(result->c_str()), [result](char*){delete result;} ), result->length() );
+    }
+    static void decode(string_tokenizer& in, T& t)
+    {
+        decode_inner(in, t, has_json_state{}, p_has_json_state{});
     }
 };
 
+inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config)
+{
+    JSON_ENCODE_ENTRIES(out, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
 }
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::partition_configuration& config)
+{
+    JSON_DECODE_ENTRIES(in, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+}
+
+}}

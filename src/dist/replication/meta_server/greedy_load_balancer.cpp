@@ -32,160 +32,44 @@
  *     2016-02-3, Weijie Sun(sunweijie@xiaomi.com), first version
  */
 
-#include "greedy_load_balancer.h"
 #include <algorithm>
+#include "greedy_load_balancer.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "greedy.load.balancer"
+# define __TITLE__ "lb.greedy"
 
-greedy_load_balancer::greedy_load_balancer(server_state* state):
-    dsn::dist::server_load_balancer(state),
-    serverlet<greedy_load_balancer>("greedy_load_balancer")
+namespace dsn { namespace replication {
+
+std::shared_ptr<configuration_balancer_request> greedy_load_balancer::generate_balancer_request(
+    const partition_configuration &pc,
+    const balance_type &type,
+    const rpc_address &from,
+    const rpc_address &to)
 {
-    _is_migration_enabled = dsn_config_get_value_bool(
-            "meta_server",
-            "enable_greedy_load_balancer_migration",
-            true,
-            "if enable greedy load balance migration, default is true");
-}
+    configuration_balancer_request result;
+    result.gpid = pc.pid;
 
-greedy_load_balancer::~greedy_load_balancer()
-{
-}
-
-/* utils function for walk through */
-bool greedy_load_balancer::walk_through_primary(const rpc_address &addr, const std::function<bool (partition_configuration &)>& func)
-{
-    auto iter = _state->_nodes.find(addr);
-    if (iter == _state->_nodes.end() )
-        return false;
-    node_state& ns = iter->second;
-    for (const gpid& gpid: ns.primaries)
-    {
-        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
-        if ( !func(pc) )
-            return false;
-    }
-    return true;
-}
-
-/* utils function for walk through */
-bool greedy_load_balancer::walk_through_partitions(const rpc_address &addr, const std::function<bool (partition_configuration &)>& func)
-{
-    auto iter = _state->_nodes.find(addr);
-    if (iter == _state->_nodes.end() )
-        return false;
-    node_state& ns = iter->second;
-    for (const gpid& gpid: ns.partitions)
-    {
-        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
-        if ( !func(pc) )
-            return false;
-    }
-    return true;
-}
-
-bool greedy_load_balancer::balancer_proposal_check(const balancer_proposal_request &balancer_proposal)
-{
-    auto is_node_alive = [&, this](const dsn::rpc_address& addr) {
-        auto iter = _state->_nodes.find(addr);
-        if (iter == _state->_nodes.end())
-            return false;
-        return iter->second.is_alive;
-    };
-
-    auto is_primary = [&, this](const dsn::rpc_address& addr, const gpid& gpid)
-    {
-        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
-        return pc.primary == addr;
-    };
-
-    auto is_secondary = [&, this](const dsn::rpc_address& addr, const gpid& gpid)
-    {
-        partition_configuration& pc = _state->_apps[gpid.get_app_id() - 1].partitions[gpid.get_partition_index()];
-        return std::find(pc.secondaries.begin(), pc.secondaries.end(), addr)!=pc.secondaries.end();
-    };
-
-    const gpid& gpid = balancer_proposal.pid;
-    if (gpid.get_app_id() < 0 ||
-        gpid.get_partition_index() < 0 ||
-        gpid.get_app_id() > _state->_apps.size() ||
-        gpid.get_partition_index() >= _state->_apps[gpid.get_app_id() - 1].partitions.size() )
-        return false;
-
-    if ( !is_node_alive(balancer_proposal.from_addr) || !is_node_alive(balancer_proposal.to_addr) )
-        return false;
-
-    if (balancer_proposal.from_addr== balancer_proposal.to_addr)
-        return false;
-
-    switch (balancer_proposal.type)
-    {
-    case balancer_type::BT_MOVE_PRIMARY:
-        return is_primary(balancer_proposal.from_addr, gpid) && is_secondary(balancer_proposal.to_addr, gpid);
-    case balancer_type::BT_COPY_PRIMARY:
-        return is_primary(balancer_proposal.from_addr, gpid) && !is_secondary(balancer_proposal.to_addr, gpid);
-    case balancer_type::BT_COPY_SECONDARY:
-        return is_secondary(balancer_proposal.from_addr, gpid) &&
-               !is_primary(balancer_proposal.to_addr, gpid) &&
-               !is_secondary(balancer_proposal.to_addr, gpid);
+    switch (type) {
+    case balance_type::move_primary:
+        result.action_list.emplace_back( configuration_proposal_action{ from, from, config_type::CT_DOWNGRADE_TO_SECONDARY} );
+        result.action_list.emplace_back( configuration_proposal_action{ to, to, config_type::CT_UPGRADE_TO_PRIMARY } );
+        break;
+    case balance_type::copy_primary:
+        result.action_list.emplace_back( configuration_proposal_action{ from, to, config_type::CT_ADD_SECONDARY_FOR_LB } );
+        result.action_list.emplace_back( configuration_proposal_action{ from, from, config_type::CT_DOWNGRADE_TO_SECONDARY } );
+        result.action_list.emplace_back( configuration_proposal_action{ to, to, config_type::CT_UPGRADE_TO_PRIMARY } );
+        result.action_list.emplace_back( configuration_proposal_action{ to, from, config_type::CT_REMOVE} );
+        break;
+    case balance_type::copy_secondary:
+        result.action_list.emplace_back( configuration_proposal_action{ pc.primary, to, config_type::CT_ADD_SECONDARY_FOR_LB} );
+        result.action_list.emplace_back( configuration_proposal_action{ pc.primary, from, config_type::CT_REMOVE } );
+        break;
     default:
-        return false;
+        dassert(false, "");
     }
-}
-void greedy_load_balancer::execute_balancer_proposal()
-{
-    dinfo("execute balancer proposal, proposals count(%u)", _balancer_proposals_map.size());
-    std::vector<gpid> staled_balancer_proposal;
-    for (auto iter=_balancer_proposals_map.begin(); iter!=_balancer_proposals_map.end(); ++iter)
-    {
-        balancer_proposal_request& p = iter->second;
-        const gpid& gpid = iter->first;
-        partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
-        configuration_update_request proposal;
-
-        if ( !balancer_proposal_check(p) )
-        {
-            staled_balancer_proposal.push_back(gpid);
-            continue;
-        }
-
-        switch (p.type)
-        {
-        case balancer_type::BT_MOVE_PRIMARY:
-            dassert(pc.primary==p.from_addr, "invalid balancer proposal");
-
-            proposal.config = pc;
-            proposal.type = config_type::CT_DOWNGRADE_TO_SECONDARY;
-            proposal.node = pc.primary;
-            break;
-
-        case balancer_type::BT_COPY_PRIMARY:
-            dassert(pc.primary==p.from_addr, "invalid balancer proposal");
-
-            proposal.config = pc;
-            proposal.type = config_type::CT_ADD_SECONDARY_FOR_LB;
-            proposal.node = p.to_addr;
-            break;
-
-        case balancer_type::BT_COPY_SECONDARY:
-            proposal.config = pc;
-            proposal.type = config_type::CT_ADD_SECONDARY_FOR_LB;
-            proposal.node = p.to_addr;
-            break;
-
-        default:
-            break;
-        }
-
-        send_proposal(pc.primary, proposal);
-    }
-
-    dinfo("%u proposals are staled as they don't match the partition config", staled_balancer_proposal.size());
-    for (const gpid& gpid: staled_balancer_proposal)
-        _balancer_proposals_map.erase(gpid);
+    return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
 void greedy_load_balancer::greedy_move_primary(const std::vector<rpc_address> &node_list, const std::vector<int> &prev, int flows)
@@ -194,20 +78,21 @@ void greedy_load_balancer::greedy_move_primary(const std::vector<rpc_address> &n
     int current = prev[node_list.size() - 1];
     while (prev[current] != 0)
     {
-        dsn::rpc_address from = node_list[prev[current]];
-        dsn::rpc_address to = node_list[current];
-
-        int primaries_need_to_remove = flows;
-        walk_through_primary(from, [&, this](partition_configuration &pc)
+        rpc_address from = node_list[prev[current]];
+        rpc_address to = node_list[current];
+        int primaries_need_to_move = flows;
+        walk_through_primary(*_view, from, [&, this](const partition_configuration &pc)
         {
-            if (0 == primaries_need_to_remove)
+            if (0 == primaries_need_to_move)
                 return false;
-            for (dsn::rpc_address& addr: pc.secondaries)
+            for (const rpc_address& addr: pc.secondaries)
             {
                 if (addr == to)
                 {
-                    insert_balancer_proposal_request(pc.pid, balancer_type::BT_MOVE_PRIMARY, from, to);
-                    --primaries_need_to_remove;
+                    dinfo("plan to move primary, gpid(%d.%d), from(%s), to(%s)", pc.pid.get_app_id(), pc.pid.get_partition_index(),
+                          from.to_string(), to.to_string());
+                    _migration->emplace_back( generate_balancer_request(pc, balance_type::move_primary, from, to) );
+                    --primaries_need_to_move;
                     break;
                 }
             }
@@ -215,23 +100,16 @@ void greedy_load_balancer::greedy_move_primary(const std::vector<rpc_address> &n
         });
         current = prev[current];
     }
-    execute_balancer_proposal();
 }
 
-void greedy_load_balancer::greedy_copy_primary(int total_replicas)
+//assume all nodes are alive
+void greedy_load_balancer::greedy_copy_primary()
 {
-    if (_state->_node_live_count <= 0)
-        return;
-
     std::unordered_map<dsn::rpc_address, int> changing_primaries;
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
-    {
-        if ( iter->second.is_alive )
-            changing_primaries[iter->first] = iter->second.primaries.size();
-    }
+    for (auto iter=_view->nodes->begin(); iter!=_view->nodes->end(); ++iter)
+        changing_primaries[iter->first] = iter->second.primaries.size();
 
-    typedef std::function<bool (const dsn::rpc_address&, const dsn::rpc_address&)> comparator;
-    std::set<dsn::rpc_address, comparator> pri_queue([&changing_primaries](const dsn::rpc_address& r1, const dsn::rpc_address& r2)
+    std::set<dsn::rpc_address, node_comparator> pri_queue([&changing_primaries](const dsn::rpc_address& r1, const dsn::rpc_address& r2)
     {
         int c1 = changing_primaries[r1], c2 = changing_primaries[r2];
         if (c1 != c2)
@@ -239,22 +117,21 @@ void greedy_load_balancer::greedy_copy_primary(int total_replicas)
         return r1<r2;
     });
 
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter) {
-        if (iter->second.is_alive)
-            pri_queue.insert(iter->first);
+    for (auto iter=_view->nodes->begin(); iter!=_view->nodes->end(); ++iter) {
+        pri_queue.insert(iter->first);
     }
 
-    int replicas_low = total_replicas/_state->_node_live_count;
-    int replicas_high = (total_replicas+_state->_node_live_count-1)/_state->_node_live_count;
+    int replicas_low = total_partitions/alive_nodes;
+    int replicas_high = (total_partitions+alive_nodes-1)/alive_nodes;
 
-    while ( changing_primaries[*pri_queue.begin()]<replicas_low ||
-            changing_primaries[*pri_queue.rbegin()]>replicas_high )
+    node_mapper& nodes = *(_view->nodes);
+    while ( changing_primaries[*pri_queue.begin()]<replicas_low || changing_primaries[*pri_queue.rbegin()]>replicas_high )
     {
         dsn::rpc_address min_load = *pri_queue.begin();
         dsn::rpc_address max_load = *pri_queue.rbegin();
 
-        dinfo("server with min/max load: %s:%d/%s:%d",
-              min_load.to_string(), changing_primaries[min_load], max_load.to_string(), changing_primaries[max_load]);
+        dinfo("server with min/max load: %s have %d/%s have %d",
+            min_load.to_string(), changing_primaries[min_load], max_load.to_string(), changing_primaries[max_load]);
 
         pri_queue.erase(pri_queue.begin());
         pri_queue.erase(--pri_queue.end());
@@ -263,47 +140,43 @@ void greedy_load_balancer::greedy_copy_primary(int total_replicas)
 
         //currently we simply random copy one primary from one machine to another
         //TODO: a better policy is necessary if considering the copying cost
-        const gpid& gpid = *(_state->_nodes[max_load].primaries.begin());
-        partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
+        const dsn::gpid& gpid = *(nodes[max_load].primaries.begin());
+        const partition_configuration& pc = *get_config(*(_view->apps), gpid);
 
         //we run greedy_copy_primary after we run the greedy_move_primary. If a secondary exist on min_load,
         //we are able to do the move_primary in greedy_move_primary
         dassert( std::find(pc.secondaries.begin(), pc.secondaries.end(), min_load)==pc.secondaries.end(), "");
 
-        insert_balancer_proposal_request(gpid, balancer_type::BT_COPY_PRIMARY, max_load, min_load);
+        _migration->emplace_back( generate_balancer_request(pc, balance_type::copy_primary, max_load, min_load) );
         dinfo("copy gpid(%d:%d) primary from %s to %s", gpid.get_app_id(), gpid.get_partition_index(), max_load.to_string(), min_load.to_string());
+
         //adjust the priority queue
         ++changing_primaries[min_load];
-        --changing_primaries[max_load];
-
         pri_queue.insert(min_load);
-        pri_queue.insert(max_load);
     }
-
-    dinfo("start to execute proposal");
-    execute_balancer_proposal();
 }
 
 //TODO: a better secondary balancer policy
 void greedy_load_balancer::greedy_copy_secondary()
 {
     int total_replicas = 0;
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
+    for (auto iter=_view->nodes->begin(); iter!=_view->nodes->end(); ++iter)
     {
-        node_state& state = iter->second;
+        const node_state& state = iter->second;
         if ( state.is_alive )
             total_replicas += state.partitions.size();
     }
 
-    int replicas_low = total_replicas/_state->_node_live_count;
-    int replicas_high = (total_replicas+_state->_node_live_count-1)/_state->_node_live_count;
+    int replicas_low = total_replicas/alive_nodes;
+    int replicas_high = (total_replicas+alive_nodes-1)/alive_nodes;
 
     std::unordered_map<dsn::rpc_address, int> changing_secondaries;
     int maximum_secondaries = 0;
     dsn::rpc_address output_server;
     std::vector<node_state*> input_server;
 
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
+    node_mapper& nodes = *(_view->nodes);
+    for (auto iter=nodes.begin(); iter!=nodes.end(); ++iter)
     {
         if ( iter->second.is_alive ) {
             int l = iter->second.partitions.size();
@@ -323,7 +196,7 @@ void greedy_load_balancer::greedy_copy_secondary()
         return;
     }
 
-    walk_through_partitions(output_server, [&, this](partition_configuration& pc)
+    walk_through_partitions(*_view, output_server, [&, this](const partition_configuration& pc)
     {
         if (pc.primary == output_server)
             return true;
@@ -336,71 +209,55 @@ void greedy_load_balancer::greedy_copy_secondary()
             {
                 ++changing_secondaries[ns->address];
                 --maximum_secondaries;
-
-                insert_balancer_proposal_request(pc.pid, balancer_type::BT_COPY_SECONDARY, output_server, ns->address);
+                dinfo("plan to cp secondary: gpid(%d.%d), from(%s), to(%s)", pc.pid.get_app_id(), pc.pid.get_partition_index(),
+                      output_server.to_string(), ns->address.to_string());
+                _migration->emplace_back( generate_balancer_request(pc, balance_type::copy_secondary, output_server, ns->address) );
                 break;
             }
         }
         return true;
     });
-
-    if (_balancer_proposals_map.empty())
-    {
-        dwarn("can't copy secondaries");
-    }
-    else
-    {
-        execute_balancer_proposal();
-    }
 }
 
 // load balancer based on ford-fulkerson
-void greedy_load_balancer::greedy_balancer(int total_replicas)
+void greedy_load_balancer::greedy_balancer()
 {
-    if ( !_balancer_proposals_map.empty() )
-    {
-        ddebug("won't start new round of rebalance migration because old proposals(%d) exist", _balancer_proposals_map.size());
-        execute_balancer_proposal();
-        return;
-    }
+    dassert(alive_nodes>2, "too few alive nodes will lead to freeze");
 
-    if ( !_is_migration_enabled )
-    {
-        ddebug("won't start rebalance migration because it is disabled");
-        return;
-    }
-
-    size_t graph_nodes = _state->_node_live_count + 2;
+    const node_mapper& nodes = *(_view->nodes);
+    size_t graph_nodes = alive_nodes + 2;
     std::vector< std::vector<int> > network(graph_nodes, std::vector<int>(graph_nodes, 0));
     std::unordered_map<dsn::rpc_address, int> node_id;
     std::vector<dsn::rpc_address> node_list(graph_nodes);
 
     // assign id for nodes
     int current_id = 1;
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
+    for (auto iter=nodes.begin(); iter!=nodes.end(); ++iter)
     {
-        if ( !iter->second.is_alive )
-            continue;
+        dassert(!iter->first.is_invalid() &&
+            !iter->second.address.is_invalid() &&
+            iter->second.is_alive, "nodes(%s) not alive shouldn't here", iter->second.address.to_string());
         node_id[ iter->first ] = current_id;
         node_list[ current_id ] = iter->first;
         ++current_id;
     }
 
-    int replicas_low = total_replicas/_state->_node_live_count;
-    int replicas_high = (total_replicas+_state->_node_live_count - 1)/_state->_node_live_count;
+    int replicas_low = total_partitions/alive_nodes;
+    int replicas_high = (total_partitions+alive_nodes-1)/alive_nodes;
     int lower_count = 0, higher_count = 0;
+
     // make graph
-    for (auto iter=_state->_nodes.begin(); iter!=_state->_nodes.end(); ++iter)
+    for (auto iter=nodes.begin(); iter!=nodes.end(); ++iter)
     {
-        if ( !iter->second.is_alive )
-            continue;
+        dassert(iter->second.is_alive, "");
+        dassert(node_id.find(iter->first) != node_id.end(), "");
         int from = node_id[iter->first];
-        walk_through_primary(iter->first, [&, this](partition_configuration& replica_in_primary){
+        walk_through_primary(*_view, iter->first, [&, this](const partition_configuration& replica_in_primary){
             for (auto& target: replica_in_primary.secondaries)
             {
                 auto i = node_id.find(target);
-                if ( i != node_id.end() )
-                    network[from][ i->second ]++;
+                dassert(i != node_id.end(), "");
+                network[from][ i->second ]++;
             }
             return true;
         } );
@@ -467,314 +324,22 @@ void greedy_load_balancer::greedy_balancer(int total_replicas)
 
     //we can't make the server load more balanced by moving primaries to secondaries
     if (!visit[graph_nodes - 1] || flow[graph_nodes - 1]==0)
-        greedy_copy_primary(total_replicas);
+        greedy_copy_primary();
     else
         greedy_move_primary(node_list, prev, flow[graph_nodes-1]);
 }
 
-void greedy_load_balancer::on_control_migration(/*in*/const control_balancer_migration_request& request,
-                                                /*out*/control_balancer_migration_response& response)
+bool greedy_load_balancer::balance(const meta_view &view, migration_list &list)
 {
-    zauto_write_lock l(_state->_lock);
-    ddebug("greedy load balancer: migration ", request.enable_migration ? "enabled" : "disabled");
+    list.clear();
 
-    _is_migration_enabled = request.enable_migration;
-    if ( !_is_migration_enabled )
-    {
-        _balancer_proposals_map.clear();
-    }
-    response.err = ERR_OK;
+    total_partitions = count_partitions(*(view.apps));
+    alive_nodes = view.nodes->size();
+    _view = &view;
+    _migration = &list;
+    _migration->clear();
+    greedy_balancer();
+    return !_migration->empty();
 }
 
-void greedy_load_balancer::on_balancer_proposal(/*in*/const balancer_proposal_request& request,
-                                                /*out*/balancer_proposal_response& response)
-{
-    zauto_write_lock l(_state->_lock);
-    if ( !balancer_proposal_check(request) )
-    {
-        derror("greedy load balancer: invalid balancer proposal, gpid=%u.%u, type=%s, from=%s, to=%s",
-               request.pid.get_app_id(), request.pid.get_partition_index(), enum_to_string(request.type),
-               request.from_addr.to_string(), request.to_addr.to_string());
-        response.err = ERR_INVALID_PARAMETERS;
-    }
-    else
-    {
-        ddebug("greedy load balancer: add balancer proposal, gpid=%u.%u, type=%s, from=%s, to=%s",
-               request.pid.get_app_id(), request.pid.get_partition_index(), enum_to_string(request.type),
-               request.from_addr.to_string(), request.to_addr.to_string());
-        _balancer_proposals_map[request.pid] = request;
-        response.err = ERR_OK;
-    }
-}
-
-void greedy_load_balancer::run()
-{
-    zauto_write_lock l(_state->_lock);
-
-    ddebug("start to run global balancer");
-    bool is_system_healthy = !_state->freezed();
-    int total_replicas = 0;
-
-    for (size_t i = 0; i < _state->_apps.size(); i++)
-    {
-        app_state& app = _state->_apps[i];
-        if (_state->freezed() && app.info.is_stateful)
-            continue;
-
-        if (app.info.status != app_status::AS_AVAILABLE)
-        {
-            dinfo("ignore app(%s)", app.info.app_name.c_str());
-            if (app.info.status != app_status::AS_DROPPED)
-                is_system_healthy = false;
-            dinfo("ignore app(%s), status(%s)", app.info.app_name.c_str(), enum_to_string(app.info.status));
-            continue;
-        }
-        for (int j = 0; j < app.info.partition_count; j++)
-        {
-            partition_configuration& pc = app.partitions[j];
-            is_system_healthy = (run_lb(app.info, pc, app.info.is_stateful) && is_system_healthy);
-        }
-        total_replicas += app.info.partition_count;
-    }
-
-    if (is_system_healthy)
-    {
-        ddebug("system is healthy, trying to do balancer");
-        greedy_balancer(total_replicas);
-    }
-}
-
-void greedy_load_balancer::on_config_changed(std::shared_ptr<configuration_update_request>& request)
-{
-    dassert(request->info.is_stateful, "only stateful services are supported right now");
-
-    std::unordered_map<gpid, balancer_proposal_request>::iterator it;
-    gpid& gpid = request->config.pid;
-    switch (request->type)
-    {
-    case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        it = _balancer_proposals_map.find(gpid);
-        //it is possible that we can't find gpid, coz the meta server may switch
-        if (it != _balancer_proposals_map.end())
-        {
-            _primary_recommender[gpid] = it->second.to_addr;
-            _balancer_proposals_map.erase(it);
-        }
-        break;
-
-    case config_type::CT_UPGRADE_TO_SECONDARY:
-        it = _balancer_proposals_map.find(gpid);
-        if (it != _balancer_proposals_map.end())
-        {
-            balancer_proposal_request& p = it->second;
-            //this secondary is what we add
-            if (p.to_addr == request->node)
-            {
-                if (p.type == balancer_type::BT_COPY_PRIMARY)
-                    p.type = balancer_type::BT_MOVE_PRIMARY;
-                else if (p.type == balancer_type::BT_COPY_SECONDARY)
-                    _balancer_proposals_map.erase(it);
-                else
-                {
-                    //do nothing
-                }
-            }
-        }
-        break;
-
-    case config_type::CT_DOWNGRADE_TO_INACTIVE:
-        //which means that the primary has been died
-        if ( request->config.primary.is_invalid() )
-        {
-            _balancer_proposals_map.erase(gpid);
-            _primary_recommender.erase(gpid);
-        }
-        else if (_balancer_proposals_map.find(gpid) != _balancer_proposals_map.end())
-        {
-            balancer_proposal_request& p = _balancer_proposals_map[gpid];
-            if ((p.type == balancer_type::BT_COPY_SECONDARY && request->node==p.from_addr) ||
-                (p.type == balancer_type::BT_MOVE_PRIMARY && request->node==p.to_addr))
-                _balancer_proposals_map.erase(gpid);
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void greedy_load_balancer::run(gpid gpid)
-{
-    zauto_read_lock l(_state->_lock);
-    if (_state->_apps[gpid.get_app_id() - 1].info.status != app_status::AS_AVAILABLE)
-        return;
-    partition_configuration& pc = _state->_apps[gpid.get_app_id()-1].partitions[gpid.get_partition_index()];
-    run_lb(_state->_apps[gpid.get_app_id()-1].info, pc, _state->_apps[gpid.get_app_id() -1].info.is_stateful);
-}
-
-dsn::rpc_address greedy_load_balancer::recommend_primary(partition_configuration& pc)
-{
-    auto find_machine_from_secondaries = [&pc, this](const std::vector<dsn::rpc_address>& addr_list)
-    {
-        if ( addr_list.empty() )
-            return find_minimal_load_machine(pc, true);
-        int target = -1;
-        int load = -1;
-        for (int i=0; i!=addr_list.size(); ++i)
-        {
-            if (_state->_nodes[addr_list[i]].is_alive)
-            {
-                int l = _state->_nodes[addr_list[i]].primaries.size();
-                if (target == -1 || load>l)
-                {
-                    target = i;
-                    load = l;
-                }
-            }
-        }
-        if (target == -1)
-            return dsn::rpc_address();
-        return addr_list[target];
-    };
-
-    auto iter = _primary_recommender.find(pc.pid);
-    if (iter != _primary_recommender.end())
-    {
-        if ( _state->_nodes[iter->second].is_alive )
-            return iter->second;
-        _primary_recommender.erase(iter);
-    }
-
-    dsn::rpc_address result = find_machine_from_secondaries(pc.secondaries);
-    if ( !result.is_invalid() )
-        _primary_recommender.emplace(pc.pid, result);
-    return result;
-}
-
-bool greedy_load_balancer::run_lb(app_info& info, partition_configuration &pc, bool is_stateful)
-{
-    if (_state->freezed() && is_stateful)
-    {
-        dinfo("state is freezed, node_alive count: %d, total: %d", _state->_node_live_count, _state->_nodes.size());
-        return false;
-    }
-    dinfo("lb for gpid(%d.%d)", pc.pid.get_app_id(), pc.pid.get_partition_index());
-
-    configuration_update_request proposal;
-    proposal.config = pc;
-    proposal.node.set_invalid();
-
-    if (is_stateful)
-    {
-        if (pc.primary.is_invalid())
-        {
-            if (pc.secondaries.size() > 0)
-            {
-                proposal.node = recommend_primary(pc);
-                proposal.type = config_type::CT_UPGRADE_TO_PRIMARY;
-
-                if (proposal.node.is_invalid())
-                {
-                    derror("all replicas has been died");
-                }
-            }
-            else if (pc.last_drops.size() == 0)
-            {
-                proposal.node = recommend_primary(pc);
-                proposal.type = config_type::CT_ASSIGN_PRIMARY;
-            }
-            // DDD
-            else
-            {
-                proposal.node = *pc.last_drops.rbegin();
-                proposal.type = config_type::CT_ASSIGN_PRIMARY;
-
-                derror("partition %d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                    pc.pid.get_app_id(),
-                    pc.pid.get_partition_index(),
-                    proposal.node.to_string()
-                    );
-            }
-
-            if (proposal.node.is_invalid() == false)
-            {
-                send_proposal(proposal.node, proposal);
-            }
-
-            return false;
-        }
-        else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
-        {
-            proposal.type = config_type::CT_ADD_SECONDARY;
-            proposal.node = find_minimal_load_machine(pc, false);
-            if (proposal.node.is_invalid() == false &&
-                proposal.node != pc.primary &&
-                std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
-            {
-                send_proposal(pc.primary, proposal);
-            }
-            return false;
-        }
-        //we have too many secondaries, let's do remove
-        else if (!pc.secondaries.empty() && static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
-        {
-            auto iter = _balancer_proposals_map.find(pc.pid);
-            if (iter != _balancer_proposals_map.end() && iter->second.type == balancer_type::BT_MOVE_PRIMARY)
-                return true;
-            int target = 0;
-            int load = _state->_nodes[pc.secondaries.front()].partitions.size();
-            for (int i = 1; i<pc.secondaries.size(); ++i)
-            {
-                int l = _state->_nodes[pc.secondaries[i]].partitions.size();
-                if (l > load)
-                {
-                    load = l;
-                    target = i;
-                }
-            }
-
-            proposal.type = config_type::CT_REMOVE;
-            proposal.node = pc.secondaries[target];
-            send_proposal(pc.primary, proposal);
-            return false;
-        }
-        else
-            return true;
-    }
-
-    // stateless
-    else
-    {
-        partition_configuration_stateless pcs(pc);
-
-        if (static_cast<int>(pcs.worker_replicas().size()) < pc.max_replica_count)
-        {
-            proposal.type = config_type::CT_ADD_SECONDARY;
-            proposal.node = find_minimal_load_machine(pc, false);
-            if (proposal.node.is_invalid() == false)
-            {
-                bool send = true;
-
-                //for (auto& s : pc.secondaries)
-                //{
-                //    // not on the same machine
-                //    if (s.ip() == proposal.node.ip())
-                //    {
-                //        send = false;
-                //        break;
-                //    }
-                //}
-
-                if (send)
-                {
-                    send_proposal(proposal.node, proposal);
-                }
-            }
-            return false;
-        }
-        else
-        {
-            // it is healthy, nothing to do
-            return true;
-        }
-    }
-}
+}}

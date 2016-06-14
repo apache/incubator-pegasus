@@ -121,6 +121,45 @@ namespace dsn {
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
     template<typename T>
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const T& value)
+    {
+        switch (sizeof(value))
+        {
+        case 4:
+            return write_base(proto, (int32_t)value);
+        case 8:
+            return write_base(proto, (int64_t)value);
+        default:
+            assert(false);
+            return 0;
+        }
+    }
+
+    template <typename T>
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value)
+    {
+        uint32_t res = 0;
+        switch (sizeof(value))
+        {
+        case 4: {
+            int32_t val;
+            res = read_base(proto, val);
+            value = T(val);
+            return res;
+        }
+        case 8: {
+            int64_t val;
+            res = read_base(proto, val);
+            value = T(val);
+            return res;
+        }
+        default:
+            assert(false);
+            return 0;
+        }
+    }
+
+    template<typename T>
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
     template<typename T>
     uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, T& val);
@@ -193,102 +232,6 @@ namespace dsn {
         return xfer;
     }
 
-    inline const char* to_string(const rpc_address& addr) { return addr.to_string(); }
-    inline const char* to_string(const blob& blob) { return ""; }
-    inline const char* to_string(const task_code& code) { return code.to_string(); }
-    inline const char* to_string(const error_code& ec) { return ec.to_string(); }
-    inline const char* to_string(const gpid& id) { return "x"; } // not implemented
-    inline const char* to_string(const atom_int& id) { return "x"; } // not implemented
-
-    template<typename T>
-    class serialization_forwarder
-    {
-    private:
-        template<typename C>
-        static constexpr auto check_method(C*) ->
-            typename std::is_same< decltype(std::declval<C>().write(std::declval< ::apache::thrift::protocol::TProtocol* >())), uint32_t >::type;
-
-        template<typename>
-        static constexpr std::false_type check_method(...);
-
-        typedef decltype(check_method<T>(nullptr)) has_read_write_method;
-
-        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::false_type)
-        {
-            return write_base(oproto, value);
-        }
-
-        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::true_type)
-        {
-            return value.write(oproto);
-        }
-
-        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::false_type)
-        {
-            return read_base(iproto, value);
-        }
-
-        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::true_type)
-        {
-            return value.read(iproto);
-        }
-
-    public:
-        static uint32_t marshall(::apache::thrift::protocol::TProtocol* oproto, const T& value)
-        {
-            return marshall_internal(oproto, value, has_read_write_method());
-        }
-
-        static uint32_t unmarshall(::apache::thrift::protocol::TProtocol* iproto, T& value)
-        {
-            return unmarshall_internal(iproto, value, has_read_write_method());
-        }
-
-    };
-
-    template<typename TName>
-    inline uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const TName& val)
-    {
-        return serialization_forwarder<TName>::marshall(oproto, val);
-    }
-
-    template<typename TName>
-    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
-    {
-        //well, we assume read/write are in coupled
-        return serialization_forwarder<TName>::unmarshall(iproto, val);
-    }
-
-#define GET_THRIFT_TYPE_MACRO(cpp_type, thrift_type) \
-    inline ::apache::thrift::protocol::TType get_thrift_type(const cpp_type&)\
-    {\
-        return ::apache::thrift::protocol::thrift_type;\
-    }\
-
-    GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
-    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
-    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
-    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
-    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
-    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
-    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
-    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
-    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
-    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
-    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
-
-    template<typename T>
-    inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
-    {
-        return ::apache::thrift::protocol::T_LIST;
-    }
-
-    template<typename T>
-    inline ::apache::thrift::protocol::TType get_thrift_type(const T&)
-    {
-        return ::apache::thrift::protocol::T_STRUCT;
-    }
-
     class char_ptr
     {
     private:
@@ -346,19 +289,6 @@ namespace dsn {
     {
         return oprot->writeI64((int64_t)_addr.u.value);
     }
-    
-    inline uint32_t atom_int::read(apache::thrift::protocol::TProtocol *iprot)
-    {
-        int v;
-        auto r = iprot->readI32(v);
-        _value.store(v);
-        return r;
-    }
-
-    inline uint32_t atom_int::write(apache::thrift::protocol::TProtocol *oprot) const
-    {
-        return oprot->writeI32(_value.load());
-    }
 
     inline uint32_t gpid::read(apache::thrift::protocol::TProtocol *iprot)
     {
@@ -369,7 +299,7 @@ namespace dsn {
     {
         return oprot->writeI64((int64_t)_value.value);
     }
-    
+
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string task_code_string;
@@ -428,6 +358,105 @@ namespace dsn {
         {
             return oprot->writeString(std::string(name));
         }
+    }
+
+    inline const char* to_string(const rpc_address& addr) { return addr.to_string(); }
+    inline const char* to_string(const blob& blob) { return ""; }
+    inline const char* to_string(const task_code& code) { return code.to_string(); }
+    inline const char* to_string(const error_code& ec) { return ec.to_string(); }
+    inline const char* to_string(const gpid& id)
+    {
+        static char str[64];
+        snprintf(str, 64, "%d.%d", id.get_app_id(), id.get_partition_index());
+        return str;
+    }
+
+    template<typename T>
+    class serialization_forwarder
+    {
+    private:
+        template<typename C>
+        static constexpr auto check_method(C*) ->
+            typename std::is_same< decltype(std::declval<C>().write(std::declval< ::apache::thrift::protocol::TProtocol* >())), uint32_t >::type;
+
+        template<typename>
+        static constexpr std::false_type check_method(...);
+
+        typedef decltype(check_method<T>(nullptr)) has_read_write_method;
+
+        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::false_type)
+        {
+            return write_base(oproto, value);
+        }
+
+        static uint32_t marshall_internal(::apache::thrift::protocol::TProtocol* oproto, const T& value, std::true_type)
+        {
+            return value.write(oproto);
+        }
+
+        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::false_type)
+        {
+            return read_base(iproto, value);
+        }
+
+        static uint32_t unmarshall_internal(::apache::thrift::protocol::TProtocol* iproto, T& value, std::true_type)
+        {
+            return value.read(iproto);
+        }
+
+    public:
+        static uint32_t marshall(::apache::thrift::protocol::TProtocol* oproto, const T& value)
+        {
+            return marshall_internal(oproto, value, has_read_write_method());
+        }
+
+        static uint32_t unmarshall(::apache::thrift::protocol::TProtocol* iproto, T& value)
+        {
+            return unmarshall_internal(iproto, value, has_read_write_method());
+        }
+    };
+
+    template<typename TName>
+    inline uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const TName& val)
+    {
+        return serialization_forwarder<TName>::marshall(oproto, val);
+    }
+
+    template<typename TName>
+    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
+    {
+        //well, we assume read/write are in coupled
+        return serialization_forwarder<TName>::unmarshall(iproto, val);
+    }
+
+#define GET_THRIFT_TYPE_MACRO(cpp_type, thrift_type) \
+    inline ::apache::thrift::protocol::TType get_thrift_type(const cpp_type&)\
+    {\
+        return ::apache::thrift::protocol::thrift_type;\
+    }\
+
+    GET_THRIFT_TYPE_MACRO(bool, T_BOOL)
+    GET_THRIFT_TYPE_MACRO(int8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(uint8_t, T_BYTE)
+    GET_THRIFT_TYPE_MACRO(int16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(uint16_t, T_I16)
+    GET_THRIFT_TYPE_MACRO(int32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(uint32_t, T_I32)
+    GET_THRIFT_TYPE_MACRO(int64_t, T_I64)
+    GET_THRIFT_TYPE_MACRO(uint64_t, T_U64)
+    GET_THRIFT_TYPE_MACRO(double, T_DOUBLE)
+    GET_THRIFT_TYPE_MACRO(std::string, T_STRING)
+
+    template<typename T>
+    inline ::apache::thrift::protocol::TType get_thrift_type(const std::vector<T>&)
+    {
+        return ::apache::thrift::protocol::T_LIST;
+    }
+
+    template<typename T>
+    inline ::apache::thrift::protocol::TType get_thrift_type(const T&)
+    {
+        return ::apache::thrift::protocol::T_STRUCT;
     }
 
     template<typename T>

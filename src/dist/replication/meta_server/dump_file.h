@@ -5,6 +5,7 @@
 #include <dsn/service_api_cpp.h>
 #include <cstdio>
 #include <cerrno>
+#include <iostream>
 
 inline void error_msg(int err_number, /*out*/char* buffer, int buflen)
 {
@@ -59,7 +60,6 @@ public:
         block_header hdr = {data_length, 0};
         hdr.crc32 = dsn_crc32_compute(data, data_length, _crc);
         _crc = hdr.crc32;
-
         size_t len = fwrite(&hdr, sizeof(hdr), 1, _file_handle);
         if (len < 1)
         {
@@ -81,6 +81,10 @@ public:
     int append_buffer(const dsn::blob& data)
     {
         return append_buffer(data.data(), data.length());
+    }
+    int append_buffer(const std::string& data)
+    {
+        return append_buffer(data.c_str(), data.size());
     }
     int read_next_buffer(/*out*/dsn::blob& output)
     {

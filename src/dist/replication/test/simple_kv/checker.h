@@ -63,6 +63,8 @@ public:
 
     meta_service_app* meta_leader();
 
+    void control_balancer(bool disable_it);
+
     bool is_server_normal();
 
     bool check_replica_state(int primary_count, int secondary_count, int inactive_count);
@@ -71,7 +73,7 @@ public:
     rpc_address node_name_to_address(const std::string& name);
 
     void on_replica_state_change(::dsn::rpc_address from, const replica_configuration& new_config, bool is_closing);
-    void on_config_change(const std::vector<app_state>& new_config);
+    void on_config_change(const app_mapper &new_config);
 
     void get_current_states(state_snapshot& states);
     bool get_current_config(parti_config& config);

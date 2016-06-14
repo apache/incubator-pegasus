@@ -22,14 +22,16 @@ wait:on_rpc_call:rpc_name=RPC_LEARN,from=r2,to=r1
 # inject learn ack
 inject:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r2
 
-# r2 changes to inactive
-state:{{r1,pri,1,0},{r2,ina,1,0}}
+# r2 changes to error
+state:{{r1,pri,1,0},{r2,err,1,0}}
+
+# r2 removed
+state:{{r1,pri,1,0}}
 
 set:disable_load_balance=0
 
 ###
-# after some time, primary will send group check to r2
-# which will add learner again
+# no matter rebalance or group_check, r2 will be learner again
 ###
 wait:on_rpc_call:rpc_name=RPC_LEARN,from=r2,to=r1
 

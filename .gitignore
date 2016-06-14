@@ -12,7 +12,7 @@ include/thrift/
 
 rDSN.github.config
 rDSN.github.creator
-rDSN.github.creator.user
+rDSN.github.creator.user*
 rDSN.github.files
 rDSN.github.includes
 update_qt_config.sh
