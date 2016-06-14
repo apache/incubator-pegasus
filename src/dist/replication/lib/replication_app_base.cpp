@@ -448,15 +448,12 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     dassert(mu->data.updates.size() == mu->client_requests.size(), "");
     dassert(mu->data.updates.size() > 0, "");
 
-    error_code err = _callbacks.calls.begin_write(_app_context_callbacks, _replica->get_ballot(), last_committed_decree());
-    if (err != ERR_OK)
-    {
-        derror("%s: mutation %s: call app.begin_write() failed, err = %s",
-                _replica->name(), mu->name(), err.to_string());
-        return err;
-    }
-    int count = static_cast<int>(mu->client_requests.size());
-    for (int i = 0; i < count; i++)
+    int request_count = static_cast<int>(mu->client_requests.size());
+    dsn_message_t* batched_requests = (dsn_message_t*)alloca(sizeof(dsn_message_t) * request_count);
+    dsn_message_t* faked_requests = (dsn_message_t*)alloca(sizeof(dsn_message_t) * request_count);
+    int batched_count = 0;
+    int faked_count = 0;
+    for (int i = 0; i < request_count; i++)
     {
         const mutation_update& update = mu->data.updates[i];
         dsn_message_t req = mu->client_requests[i];
@@ -466,16 +463,13 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
                     _replica->name(), mu->name(), i, update.code.to_string());
          
             if (req == nullptr)
-            {                
-                req = dsn_msg_create_received_request(update.code, update.serialization_type, (void*)update.data.data(), update.data.length());
-                dsn_hosted_app_commit_rpc_request(_app_context, req, true);
-                dsn_msg_release_ref(req);
-                req = nullptr;
-            }
-            else
             {
-                dsn_hosted_app_commit_rpc_request(_app_context, req, true);
+                req = dsn_msg_create_received_request(update.code, update.serialization_type,
+                                                      (void*)update.data.data(), update.data.length());
+                faked_requests[faked_count++] = req;
             }
+
+            batched_requests[batched_count++] = req;
         }
         else
         {
@@ -483,32 +477,50 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
             dwarn("%s: mutation %s #%d: dispatch rpc call %s",
                     _replica->name(), mu->name(), i, update.code.to_string());
         }
-
-        int perr = _callbacks.calls.get_internal_error(_app_context_callbacks);
-        if (perr != 0)
-        {
-            derror("%s: mutation %s #%d: dispatch rpc call %s failed, get internal error %d",
-                   _replica->name(), mu->name(), i, update.code.to_string(), perr);
-            return ERR_LOCAL_APP_FAILURE;
-        }
     }
 
-    err = _callbacks.calls.end_write(_app_context_callbacks);
-    if (err != ERR_OK)
+    // batch processing
+    uint64_t start = dsn_now_ns();
+    if (_callbacks.calls.on_batched_rpc_requests)
     {
-        derror("%s: mutation %s: call app.end_write() failed, err = %s",
-                _replica->name(), mu->name(), err.to_string());
-        return err;
+        _callbacks.calls.on_batched_rpc_requests(_app_context_callbacks,
+                                                 mu->data.header.decree, _replica->get_ballot(),
+                                                 batched_requests, batched_count);
+    }   
+    else
+    {
+        for (int i = 0; i < batched_count; i++)
+        {
+            dsn_hosted_app_commit_rpc_request(_app_context, batched_requests[i], true);
+        }
+    }
+    uint64_t latency = dsn_now_ns() - start;
+
+    // release faked requests
+    for (int i = 0; i < faked_count; i++)
+    {
+        dsn_msg_release_ref(faked_requests[i]);
+    }
+
+    int internal_error = _callbacks.calls.get_internal_error(_app_context_callbacks);
+    if (internal_error != 0)
+    {
+        derror("%s: mutation %s: get internal error %d",
+               _replica->name(), mu->name(), internal_error);
+        return ERR_LOCAL_APP_FAILURE;
     }
 
     ++_last_committed_decree;
 
-    ddebug("%s: mutation %s committed", _replica->name(), mu->name());
+    ddebug("%s: mutation %s committed, batched_count = %d",
+           _replica->name(), mu->name(), batched_count);
 
-    _replica->update_commit_statistics(count);
-    _app_commit_throughput.add(1);
-    _app_req_throughput.add((uint64_t)count);
+    // TODO(qinzuoyan): check correction of statistics usage
+    _replica->update_commit_statistics(1);
     _app_commit_decree.increment();
+    _app_commit_throughput.add(1);
+    _app_commit_latency.set(latency);
+    _app_req_throughput.add(request_count);
 
     return ERR_OK;
 }

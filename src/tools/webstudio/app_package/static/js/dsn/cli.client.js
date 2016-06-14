@@ -4,20 +4,12 @@ cliApp = function(website) {
 
 cliApp.prototype = {};
 
-cliApp.prototype.marshall_generated_type = function(value) {
-    return marshall_thrift_json_generated_type(value);
+cliApp.prototype.marshall = function(value, type) {
+    return marshall_thrift_json(value, type);
 }
 
-cliApp.prototype.marshall_basic_type = function(value, type) {
-    return marshall_thrift_json_basic_type(value, type);
-}
-
-cliApp.prototype.unmarshall_generated_type = function(buf, ret) {
-    unmarshall_thrift_json_generated_type(buf, ret);
-}
-
-cliApp.prototype.unmarshall_basic_type = function(buf, type) {
-    return unmarshall_thrift_json_basic_type(buf, type);
+cliApp.prototype.unmarshall = function(buf, value, type) {
+    return unmarshall_thrift_json(buf, value, type);
 }
 
 cliApp.prototype.get_address = function(url, hash) {
@@ -33,11 +25,11 @@ cliApp.prototype.internal_call = function(args,  hash) {
     dsn_call(
         this.get_call_address(hash),
         "POST",
-        this.marshall_generated_type(args),
+        this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
         false,
         function(result) {
-            ret = self.unmarshall_basic_type(result, "string");
+            ret = self.unmarshall(result, null, "string");
         },
         function(xhr, textStatus, errorThrown) {
             ret = null;
@@ -52,11 +44,11 @@ cliApp.prototype.internal_async_call = function(args, on_success, on_fail, hash)
     dsn_call(
         this.get_call_address(hash),
         "POST",
-        this.marshall_generated_type(args),
+        this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
         true,
         function(result) {
-            ret = self.unmarshall_basic_type(result, "string");
+            ret = self.unmarshall(result, null, "string");
             on_success(ret);
         },
         function(xhr, textStatus, errorThrown) {

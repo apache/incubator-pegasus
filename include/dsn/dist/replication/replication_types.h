@@ -15,9 +15,7 @@
 #include <thrift/transport/TTransport.h>
 
 #include <thrift/cxxfunctional.h>
-#include "dsn_types.h"
-#include "dsn.layer2_types.h"
-
+#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
 namespace dsn { namespace replication {
 

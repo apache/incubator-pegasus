@@ -69,13 +69,13 @@ th, td {
                         <td rowspan={{partitionList[$index].partitions.length}}>{{app.app_id}}</td>
                         <td rowspan={{partitionList[$index].partitions.length}}>{{app.status}}</td>
                         <td rowspan={{partitionList[$index].partitions.length}}><span class="glyphicon glyphicon-remove" @click="del(app.app_name)"></td>
-                        <td>{{partitionList[$index].partitions[0].gpid.pidx}}</td>
+                        <td>{{partitionList[$index].partitions[0].pid.id}}</td>
                         <td>{{partitionList[$index].partitions[0].ballot}}</td>
                         <td>{{partitionList[$index].partitions[0].membership}}</td>
                     </tr>
                     <tbody v-if="partitionList[$index].partitions.length>0">
                         <tr v-for="index in (partitionList[$index].partitions.length-1)">
-                            <td>{{partitionList[$parent.$index].partitions[index+1].gpid.pidx}}</td>
+                            <td>{{partitionList[$parent.$index].partitions[index+1].pid.id}}</td>
                             <td>{{partitionList[$parent.$index].partitions[index+1].ballot}}</td>
                             <td>{{partitionList[$parent.$index].partitions[index+1].membership}}</td>
                         </tr>

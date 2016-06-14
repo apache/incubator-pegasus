@@ -1,10 +1,7 @@
 include(ExternalProject)
 
-if(DSN_GIT_SOURCE STREQUAL "xiaomi")
-    set(target_url "http://git.n.xiaomi.com/pegasus/thrift.git")
-else()
-    set(target_url "https://github.com/ykwd/thrift.git")
-endif()
+set(target_url ${THRIFT_GIT_SOURCE})
+set(git_tag ${THRIFT_GIT_TAG})
 
 set(THRIFT_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/ext/thrift")
 
@@ -41,6 +38,7 @@ endif()
 
 ExternalProject_Add(thrift
     GIT_REPOSITORY ${target_url}
+    GIT_TAG ${git_tag}
     CMAKE_ARGS ${THRIFT_CMAKE_ARGS}
 )
 

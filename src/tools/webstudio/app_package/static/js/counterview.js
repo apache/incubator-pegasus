@@ -36,6 +36,8 @@ function nstostr(ns){
     return mstostr(Math.floor(ns/1000000));
 }
 
+var viewinfo = JSON.parse(localStorage[getParameterByName('id')]);
+
 //c3js chart
 var chart;
 
@@ -248,9 +250,9 @@ var viewChart = Vue.extend({
       },
   },
   ready: function () {
-      this.counterlist = JSON.parse(localStorage[getParameterByName('id')+'counterList']);
-      this.graphtype = localStorage[getParameterByName('id')+'graphtype'];
-      this.interval = localStorage[getParameterByName('id')+'interval'];
+      this.counterlist = viewinfo.counterList;
+      this.graphtype = viewinfo.graphtype;
+      this.interval = viewinfo.interval;
   }
 })
 
@@ -284,17 +286,17 @@ var vm = new Vue({
         stopFlag: 0,
         info: '',
         updateSlotFunc: [],
-        colorlist: []
+        colorlist: [],
     },
     components: {
         'view-chart': viewChart,
         'op-button': opButton,
     },
     ready: function () {
-        this.viewname = localStorage[getParameterByName('id')+'viewname'];
-        if (localStorage[getParameterByName('id')+'graphtype']=='sample' || localStorage[getParameterByName('id')+'graphtype']=='value')
+        this.viewname = viewinfo.viewname;
+        if (viewinfo.graphtype=='sample' || viewinfo.graphtype=='value')
             this.$refs.viewChart.realtime_init();   
-        else if (this.graphtype=='bar')
+        else if (viewinfo.graphtype=='bar')
             this.$refs.viewChart.bar_init();   
     },
 });

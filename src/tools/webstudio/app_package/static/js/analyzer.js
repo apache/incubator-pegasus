@@ -164,11 +164,14 @@ var vm = new Vue({
                 $('#infomodal').modal('show');
                 return;
             }
-                
-            localStorage.setItem(uuid+'graphtype', this.graphtype)
-            localStorage.setItem(uuid+'viewname', this.viewName)
-            localStorage.setItem(uuid+'interval', this.interval)
-            localStorage.setItem(uuid+'counterList', JSON.stringify(this.counterPool))
+            
+            var viewData = {
+                'graphtype': this.graphtype,
+                'viewname': this.viewName,
+                'interval': this.interval,
+                'counterList': this.counterPool,
+            };
+            localStorage.setItem(uuid, JSON.stringify(viewData));
 
             window.open(url);
         },
@@ -221,11 +224,14 @@ var vm = new Vue({
                 $('#infomodal').modal('show');
                 return;
             }
-                
-            localStorage.setItem(uuid+'graphtype', view.graphtype)
-            localStorage.setItem(uuid+'viewname', view.viewname)
-            localStorage.setItem(uuid+'interval', view.interval)
-            localStorage.setItem(uuid+'counterList', view.counterList)
+            
+            var viewData = {
+                'graphtype': view.graphtype,
+                'viewname': view.name,
+                'interval': view.interval,
+                'counterList': JSON.parse(view.counterList),
+            };
+            localStorage.setItem(uuid, JSON.stringify(viewData));
 
             window.open(url);
             

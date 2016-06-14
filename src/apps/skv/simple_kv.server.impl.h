@@ -77,6 +77,8 @@ namespace dsn {
                     const dsn_app_learn_state& state
                     ) override;
 
+                //virtual void on_batched_rpc_requests(dsn_message_t* requests, int count) override { std::cout << "hi...";  }
+
             private:
                 void recover();
                 void recover(const std::string& name, int64_t version);

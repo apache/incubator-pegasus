@@ -266,7 +266,6 @@ typedef dsn_error_t(*dsn_app_destroy)(
     bool            ///< cleanup app state or not
     );
 
-
 /*! callback for layer2 app & framework to handle incoming rpc request */
 typedef void(*dsn_framework_rpc_request_handler)(
     void*,          ///< context from dsn_app_create
@@ -275,7 +274,6 @@ typedef void(*dsn_framework_rpc_request_handler)(
     dsn_message_t,  ///< incoming rpc request
     int             ///< delay (imposed by tools)
     );
-
 
 struct dsn_app_learn_state
 {
@@ -294,17 +292,15 @@ enum dsn_chkpt_apply_mode
     DSN_CHKPT_LEARN
 };
 
+typedef void(*dsn_app_on_batched_rpc_requests)(
+    void*,           ///< context from dsn_app_create
+    int64_t,         ///< ballot
+    int64_t,         ///< decree
+    dsn_message_t*,  ///< request array ptr
+    int              ///< request count
+    );
+
 typedef int(*dsn_app_get_internal_error)(
-    void*     ///< context from dsn_app_create
-    );
-
-typedef dsn_error_t(*dsn_app_begin_write)(
-    void*,    ///< context from dsn_app_create
-    int64_t,  ///< ballot
-    int64_t   ///< decree
-    );
-
-typedef dsn_error_t(*dsn_app_end_write)(
     void*     ///< context from dsn_app_create
     );
 
@@ -346,8 +342,8 @@ typedef dsn_error_t(*dsn_app_apply_checkpoint)(
     const dsn_app_learn_state* ///< learn state
     );
 
-# define DSN_APP_MASK_APP        0x00 ///< app mask
-# define DSN_APP_MASK_FRAMEWORK  0x01 ///< framework mask
+# define DSN_APP_MASK_APP        0x01 ///< app mask
+# define DSN_APP_MASK_FRAMEWORK  0x02 ///< framework mask
 
 # pragma pack(push, 4)
 
@@ -361,9 +357,8 @@ typedef union dsn_app_callbacks
     dsn_app_create placeholder[DSN_MAX_CALLBAC_COUNT];
     struct app_callbacks
     {
+        dsn_app_on_batched_rpc_requests     on_batched_rpc_requests;
         dsn_app_get_internal_error          get_internal_error;
-        dsn_app_begin_write                 begin_write;
-        dsn_app_end_write                   end_write;
         dsn_app_sync_checkpoint             sync_checkpoint;
         dsn_app_sync_checkpoint             async_checkpoint;
         dsn_app_get_last_checkpoint_decree  get_last_checkpoint_decree;
