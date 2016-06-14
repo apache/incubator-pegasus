@@ -47,7 +47,7 @@ void aio_testcase(uint64_t block_size, size_t concurrency, bool is_write, bool r
 {
     std::chrono::steady_clock clock;
     std::unique_ptr<char[]> buffer(new char[block_size]);
-    std::atomic_int remain_concurrency;
+    std::atomic_uint remain_concurrency;
     remain_concurrency = concurrency;
     if (is_write && utils::filesystem::file_exists("temp"))
     {
@@ -74,7 +74,7 @@ void aio_testcase(uint64_t block_size, size_t concurrency, bool is_write, bool r
         }
         auto cb = [&](error_code ec, int sz)
         {
-            dassert(ec == ERR_OK && sz == block_size, 
+            dassert(ec == ERR_OK && uint64_t(sz) == block_size,
                 "ec = %s, sz = %d, block_size = %" PRId64 "",
                 ec.to_string(), sz, block_size
                 );

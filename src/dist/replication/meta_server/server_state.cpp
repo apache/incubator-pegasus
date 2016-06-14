@@ -39,7 +39,6 @@
 # include <sstream>
 # include <cinttypes>
 # include <boost/lexical_cast.hpp>
-
 # include <rapidjson/document.h>
 # include <rapidjson/writer.h>
 
@@ -1226,7 +1225,6 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
         [this, req, request_msg](error_code ec)
         {
-            gpid gpid = req->config.pid;
             if (ec == ERR_OK)
             {
                 exec_pending_request(req, request_msg);

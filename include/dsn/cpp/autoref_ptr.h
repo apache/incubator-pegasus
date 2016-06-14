@@ -43,7 +43,7 @@ namespace dsn
     class ref_counter
     {
     public:
-        ref_counter() : _counter(0) , _magic(0xdeadbeef)
+        ref_counter() : _magic(0xdeadbeef), _counter(0)
         {
         }
 
@@ -88,7 +88,7 @@ namespace dsn
         }
 
     private:
-        int _magic;
+        unsigned int _magic;
         std::atomic<long> _counter;   
 
     public:

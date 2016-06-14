@@ -1544,7 +1544,7 @@ private:
         bool _have_ongoing_task;
         task_ptr _task;
 
-        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _have_ongoing_task(false), _file_offset_of_buffer(0) {}
+        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _file_offset_of_buffer(0), _have_ongoing_task(false) {}
         size_t length() const
         {
             return _end - _begin;

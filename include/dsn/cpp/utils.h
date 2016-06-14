@@ -117,23 +117,23 @@ namespace dsn {
     public:
         blob() : _buffer(nullptr), _data(nullptr), _length(0) {}
 
-        blob(const std::shared_ptr<char>& buffer, int length)
+        blob(const std::shared_ptr<char>& buffer, unsigned int length)
             : _holder(buffer), _buffer(_holder.get()), _data(_holder.get()), _length(length)
         {}
 
-        blob(std::shared_ptr<char>&& buffer, int length)
+        blob(std::shared_ptr<char>&& buffer, unsigned int length)
             : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get()), _length(length)
         {}
 
-        blob(const std::shared_ptr<char>& buffer, int offset, int length)
+        blob(const std::shared_ptr<char>& buffer, int offset, unsigned int length)
             : _holder(buffer), _buffer(_holder.get()), _data(_holder.get() + offset), _length(length)
         {}
 
-        blob(std::shared_ptr<char>&& buffer, int offset, int length)
+        blob(std::shared_ptr<char>&& buffer, int offset, unsigned int length)
             : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get() + offset), _length(length)
         {}
 
-        blob(const char* buffer, int offset, int length)
+        blob(const char* buffer, int offset, unsigned int length)
             : _buffer(buffer), _data(buffer + offset), _length(length)
         {}
 
@@ -170,7 +170,7 @@ namespace dsn {
             return *this;
         }
 
-        void assign(const std::shared_ptr<char>& buffer, int offset, int length)
+        void assign(const std::shared_ptr<char>& buffer, int offset, unsigned int length)
         {
             _holder = buffer;
             _buffer = _holder.get();
@@ -178,7 +178,7 @@ namespace dsn {
             _length = length;
         }
 
-        void assign(std::shared_ptr<char>&& buffer, int offset, int length)
+        void assign(std::shared_ptr<char>&& buffer, int offset, unsigned int length)
         {
             _holder = std::move(buffer);
             _buffer = (_holder.get());
@@ -186,7 +186,7 @@ namespace dsn {
             _length = length;
         }
 
-        void assign(const char* buffer, int offset, int length)
+        void assign(const char* buffer, int offset, unsigned int length)
         {
             _holder = nullptr;
             _buffer = buffer;
@@ -196,7 +196,7 @@ namespace dsn {
 
         const char* data() const { return _data; }
 
-        int   length() const { return _length; }
+        unsigned int length() const { return _length; }
 
         std::shared_ptr<char> buffer() const { return _holder; }
 
@@ -207,7 +207,7 @@ namespace dsn {
         // offset can be negative for buffer dereference
         blob range(int offset) const
         {
-            dassert(offset <= _length, "offset cannot exceed the current length value");
+            dassert(offset <= static_cast<int>(_length), "offset cannot exceed the current length value");
 
             blob temp = *this;
             temp._data += offset;
@@ -215,9 +215,9 @@ namespace dsn {
             return temp;
         }
 
-        blob range(int offset, int len) const
+        blob range(int offset, unsigned int len) const
         {
-            dassert(offset <= _length, "offset cannot exceed the current length value");
+            dassert(offset <= static_cast<int>(_length), "offset cannot exceed the current length value");
 
             blob temp = *this;
             temp._data += offset;
@@ -242,7 +242,7 @@ namespace dsn {
         std::shared_ptr<char>  _holder;
         const char*            _buffer;
         const char*            _data;
-        int                    _length; // data length
+        unsigned int           _length; // data length
     };
 
     class binary_reader
@@ -424,7 +424,7 @@ namespace dsn {
 
         typedef struct _tls_tid
         {
-            int magic;
+            unsigned int magic;
             int local_tid;
         } tls_tid;
         extern __thread tls_tid s_tid;

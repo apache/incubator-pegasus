@@ -428,7 +428,7 @@ void replica::on_learn_reply(
     check_hashed_access();
 
     dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
-    dassert(req.signature == _potential_secondary_states.learning_version, "");
+    dassert(req.signature == (int64_t)_potential_secondary_states.learning_version, "");
 
     if (err != ERR_OK)
     {
@@ -888,7 +888,7 @@ void replica::handle_learning_succeeded_on_primary(
 {
     auto it = _primary_states.learners.find(node);
     if (it != _primary_states.learners.end()
-        && it->second.signature == learn_signature
+        && it->second.signature == (int64_t)learn_signature
         )
     {
         upgrade_to_secondary_on_primary(node);

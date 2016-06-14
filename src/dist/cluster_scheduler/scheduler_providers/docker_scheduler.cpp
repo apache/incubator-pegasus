@@ -170,7 +170,6 @@ void docker_scheduler::write_machine_list(std::string& name, std::string& ldir)
         std::vector<std::string> machine_list;
         std::vector<std::string> f_list;
         std::vector<std::string> a_list;
-        int count = 1;
         //TODO: handle error if machine not enough
         machine_pool_mgr::alloca_options opt;
         opt.allow_partial_allocation = false;
@@ -202,7 +201,6 @@ void docker_scheduler::schedule(
                 std::shared_ptr<deployment_unit>& unit
                 )
 {
-    int ret = -1;
     bool found = false;
     {
         zauto_lock l(_lock);

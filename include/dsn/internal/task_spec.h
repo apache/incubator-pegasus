@@ -311,7 +311,7 @@ struct threadpool_spec
     std::string             admission_controller_factory_name;
     std::string             admission_controller_arguments;
 
-    threadpool_spec(const dsn_threadpool_code_t& code) : pool_code(code), name(dsn_threadpool_code_to_string(code)) {}
+    threadpool_spec(const dsn_threadpool_code_t& code) : name(dsn_threadpool_code_to_string(code)), pool_code(code) {}
     threadpool_spec(const threadpool_spec& source) = default;
     threadpool_spec& operator=(const threadpool_spec& source) = default;
 

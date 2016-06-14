@@ -63,6 +63,7 @@ DSN_API dsn_message_t dsn_msg_create_request(
 
 DSN_API dsn_message_t dsn_msg_create_received_request(
     dsn_task_code_t rpc_code,
+    int32_t serialization_type,
     void* buffer,
     int size,
     uint64_t hash
@@ -72,7 +73,7 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
     msg->header->client.hash = hash;
-
+    msg->header->context.u.serialize_format = serialization_type;
     msg->add_ref(); // released by callers explicitly using dsn_msg_release
     return msg;
 }
@@ -146,7 +147,7 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
 DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
 {
     auto msg2 = ((::dsn::message_ex*)msg);
-    if (msg2->local_rpc_code != (uint32_t)(-1))
+    if (msg2->local_rpc_code != -1)
     {
         return msg2->local_rpc_code;
     }
@@ -338,13 +339,13 @@ bool message_ex::is_right_header() const
 
 /*static*/ bool message_ex::is_right_header(char* hdr)
 {
-    int32_t* pcrc = (reinterpret_cast<int32_t*>(hdr))+1;
-    int32_t crc32 = *pcrc;
+    uint32_t* pcrc = (reinterpret_cast<uint32_t*>(hdr))+1;
+    uint32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID)
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *pcrc = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
+        bool r = (crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
         *pcrc = crc32;
         return r;
     }
@@ -640,7 +641,7 @@ bool message_ex::read_next(void** ptr, size_t* size)
 
     int idx = this->_rw_index;
     if (-1 == idx ||
-        this->_rw_offset == this->buffers[idx].length())
+        this->_rw_offset == static_cast<int>(this->buffers[idx].length()))
     {
         idx = ++this->_rw_index;
         this->_rw_offset = 0;

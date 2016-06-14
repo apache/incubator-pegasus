@@ -337,7 +337,7 @@ namespace dsn {
                 ctx->tmp[index] = mid;
 
                 now = index - left + 1;
-                for (i = qleft; (i <= qright) && (ctx->ask[i] < now); i++);
+                for (i = qleft; (i <= qright) && (ctx->ask[i] < (uint64_t)now); i++);
                 for (j = i; j <= qright; j++) ctx->ask[j] -= now;
                 for (j = i; (j <= qright) && (ctx->ask[j] == 0); j++) ctx->ask[j]++;
                 insert_calc_queue(ctx, left, index - 1, qleft, i - 1, calc_tail);

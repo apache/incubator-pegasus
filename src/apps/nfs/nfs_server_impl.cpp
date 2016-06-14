@@ -209,7 +209,7 @@ namespace dsn {
 
                 // not used and expired
                 if (fptr->file_access_count == 0 
-                    && dsn_now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms)
+                    && dsn_now_ms() - fptr->last_access_time > (uint64_t)_opts.file_close_expire_time_ms)
                 {
                     dinfo("nfs: close file handle %s", it->first.c_str());
                     it = _handles_map.erase(it);

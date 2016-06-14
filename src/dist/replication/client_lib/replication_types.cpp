@@ -302,6 +302,10 @@ void mutation_update::__set_code(const  ::dsn::task_code& val) {
   this->code = val;
 }
 
+void mutation_update::__set_serialization_type(const int32_t val) {
+  this->serialization_type = val;
+}
+
 void mutation_update::__set_data(const  ::dsn::blob& val) {
   this->data = val;
 }
@@ -336,6 +340,14 @@ uint32_t mutation_update::read(::apache::thrift::protocol::TProtocol* iprot) {
         }
         break;
       case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->serialization_type);
+          this->__isset.serialization_type = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->data.read(iprot);
           this->__isset.data = true;
@@ -364,7 +376,11 @@ uint32_t mutation_update::write(::apache::thrift::protocol::TProtocol* oprot) co
   xfer += this->code.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("data", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += oprot->writeFieldBegin("serialization_type", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->serialization_type);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("data", ::apache::thrift::protocol::T_STRUCT, 3);
   xfer += this->data.write(oprot);
   xfer += oprot->writeFieldEnd();
 
@@ -376,17 +392,20 @@ uint32_t mutation_update::write(::apache::thrift::protocol::TProtocol* oprot) co
 void swap(mutation_update &a, mutation_update &b) {
   using ::std::swap;
   swap(a.code, b.code);
+  swap(a.serialization_type, b.serialization_type);
   swap(a.data, b.data);
   swap(a.__isset, b.__isset);
 }
 
 mutation_update::mutation_update(const mutation_update& other2) {
   code = other2.code;
+  serialization_type = other2.serialization_type;
   data = other2.data;
   __isset = other2.__isset;
 }
 mutation_update& mutation_update::operator=(const mutation_update& other3) {
   code = other3.code;
+  serialization_type = other3.serialization_type;
   data = other3.data;
   __isset = other3.__isset;
   return *this;
@@ -395,6 +414,7 @@ void mutation_update::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "mutation_update(";
   out << "code=" << to_string(code);
+  out << ", " << "serialization_type=" << to_string(serialization_type);
   out << ", " << "data=" << to_string(data);
   out << ")";
 }

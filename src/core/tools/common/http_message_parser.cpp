@@ -48,7 +48,7 @@
 namespace dsn{
 template <typename T, size_t N>
 char(&ArraySizeHelper(T(&array)[N]))[N];
-http_message_parser::http_message_parser(int buffer_block_size, bool is_write_only)
+http_message_parser::http_message_parser(unsigned int buffer_block_size, bool is_write_only)
     : message_parser(buffer_block_size, is_write_only)
 {
     memset(&_parser_setting, 0, sizeof(_parser_setting));
@@ -169,7 +169,7 @@ http_message_parser::http_message_parser(int buffer_block_size, bool is_write_on
     http_parser_init(&_parser, HTTP_BOTH);
 }
 
-message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
+message_ex* http_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
 {
     read_next = 4096;
     auto nparsed = http_parser_execute(&_parser, &_parser_setting, _read_buffer.data(), read_length);
@@ -191,7 +191,7 @@ message_ex* http_message_parser::get_message_on_receive(int read_length, /*out*/
     }
 }
 
-int http_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, send_buf* buffers)
+int http_message_parser::prepare_buffers_on_send(message_ex* msg, unsigned int offset, send_buf* buffers)
 {
     int buffer_iter = 0;
     if (msg->header->context.u.is_request)

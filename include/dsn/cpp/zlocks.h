@@ -107,7 +107,7 @@ public:
 
     virtual bool wait(int timeout_milliseconds = TIME_MS_MAX) 
     {
-        if (timeout_milliseconds == TIME_MS_MAX)
+        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX)
         {
             dsn_semaphore_wait(_h);
             return true;

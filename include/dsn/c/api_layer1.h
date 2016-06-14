@@ -530,6 +530,7 @@ extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 /*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
 extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_task_code_t rpc_code,
+                            int32_t serialization_type,
                             void* buffer,
                             int size,
                             uint64_t hash DEFAULT(0)

@@ -467,7 +467,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
          
             if (req == nullptr)
             {                
-                req = dsn_msg_create_received_request(update.code, (void*)update.data.data(), update.data.length());
+                req = dsn_msg_create_received_request(update.code, update.serialization_type, (void*)update.data.data(), update.data.length());
                 dsn_hosted_app_commit_rpc_request(_app_context, req, true);
                 dsn_msg_release_ref(req);
                 req = nullptr;

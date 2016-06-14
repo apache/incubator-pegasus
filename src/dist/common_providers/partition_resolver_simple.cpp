@@ -135,7 +135,6 @@ namespace dsn
             
         void partition_resolver_simple::on_timeout(request_context_ptr&& rc) const
         {
-            dsn_message_t nil(nullptr);
             end_request(std::move(rc), ERR_TIMEOUT, rpc_address());
         }
 
@@ -181,7 +180,6 @@ namespace dsn
             // timeout will happen very soon, no way to get the rpc call done
             if (nts + 100 >= request->timeout_ts_us) // within 100 us
             {
-                dsn_message_t nil(nullptr);
                 end_request(std::move(request), ERR_TIMEOUT, rpc_address());
                 return;
             }

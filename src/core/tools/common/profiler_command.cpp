@@ -199,7 +199,7 @@ namespace dsn {
         }
         std::string profiler_data_handler(const std::vector<std::string>& args)
         {
-            size_t k = args.size();
+            int k = static_cast<int>(args.size());
             int task_id;
             perf_counter_ptr_type counter_type;
             dsn_perf_counter_percentile_type_t percentile_type;
@@ -461,7 +461,7 @@ namespace dsn {
 
                             std::sort(sorted_samples.begin(), sorted_samples.end());
 
-                            for (int l = 0; l < sorted_samples.size(); l++)
+                            for (unsigned int l = 0; l < sorted_samples.size(); l++)
                                 resp.samples.push_back(sorted_samples[l]);
                             
                             total_resp.push_back(resp);
