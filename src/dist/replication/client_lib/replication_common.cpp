@@ -54,7 +54,7 @@ replication_options::replication_options()
     mutation_2pc_min_replica_count = 1;    
 
     group_check_disabled = false;
-    group_check_interval_ms = 100000;
+    group_check_interval_ms = 10000;
 
     checkpoint_disabled = false;
     checkpoint_interval_seconds = 100;

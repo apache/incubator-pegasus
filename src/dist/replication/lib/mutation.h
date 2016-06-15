@@ -75,6 +75,7 @@ public:
     void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
     void wait_log_task() const;
+    uint64_t prepare_ts_ms() const { return _prepare_ts_ms; }
     void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
 
     // >= 1 MB
