@@ -370,8 +370,12 @@ public:
         int32_t max_log_file_mb,
         gpid gpid,
         replica* r,
-        uint32_t batch_buffer_bytes
-        ) : mutation_log(dir, max_log_file_mb, gpid, r), _batch_buffer_bytes(batch_buffer_bytes)
+        uint32_t batch_buffer_bytes,
+        uint32_t batch_buffer_max_count = 512
+        ) : 
+        mutation_log(dir, max_log_file_mb, gpid, r), 
+        _batch_buffer_bytes(batch_buffer_bytes), 
+        _batch_buffer_max_count(batch_buffer_max_count)
     {
         mutation_log_private::init_states();
     }
@@ -413,6 +417,7 @@ private:
     mutable zlock                  _plock;
 
     uint32_t                       _batch_buffer_bytes;
+    uint32_t                       _batch_buffer_max_count;
 };
 
 //

@@ -586,7 +586,7 @@ namespace dsn {
         if (binary_proto != nullptr)
         {
             //the protocol is binary protocol
-            return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
+            return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
         }
         else
         {
@@ -678,7 +678,7 @@ namespace dsn {
         if (binary_proto != nullptr)
         {
             //the protocol is binary protocol
-            return binary_proto->writeString<char_ptr>(char_ptr(name, strlen(name)));
+            return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
         }
         else
         {
