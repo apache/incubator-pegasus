@@ -97,6 +97,7 @@ public:
     int32_t config_sync_interval_ms;
 
     int32_t lb_interval_ms;
+    bool    write_empty_enabled;
 
 public:
     replication_options();

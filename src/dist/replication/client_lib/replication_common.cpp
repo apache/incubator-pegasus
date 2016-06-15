@@ -85,6 +85,7 @@ replication_options::replication_options()
     config_sync_interval_ms = 30000;
 
     lb_interval_ms = 10000;
+    write_empty_enabled = true;
 }
 
 replication_options::~replication_options()
@@ -357,6 +358,13 @@ void replication_options::initialize()
         "every this period(ms) the meta server will do load balance"
         );
 
+    write_empty_enabled =
+        dsn_config_get_value_bool("replication",
+            "write_empty_enabled",
+            write_empty_enabled,
+            "whether to enable empty write when no write requests are processed for more than group_check_period, default is true"
+            );
+    
     read_meta_servers();
 
     sanity_check();
