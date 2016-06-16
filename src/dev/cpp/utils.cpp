@@ -191,12 +191,11 @@ namespace dsn {
 
         void time_ms_to_string(uint64_t ts_ms, char* str)
         {
-            auto hr = static_cast<uint32_t>(ts_ms / (60ULL * 60ULL * 1000ULL) % 24);
-            auto min = static_cast<uint32_t>(ts_ms / (60ULL * 1000ULL) % 60);
-            auto sc = static_cast<uint32_t>(ts_ms / (1000ULL) % 60);
+            auto t = (time_t)(ts_ms / 1000);
+            auto ret = gmtime(&t);
             auto ms = static_cast<uint32_t>(ts_ms % 1000);
 
-            sprintf(str, "%02u:%02u:%02u.%03u", hr, min, sc, ms);
+            sprintf(str, "%02d:%02d:%02d.%03u", ret->tm_hour, ret->tm_min, ret->tm_sec, ms);
         }
     }
 }
