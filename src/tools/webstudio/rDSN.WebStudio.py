@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import inspect
 sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/app_package')
@@ -6,17 +6,15 @@ sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentf
 from WebStudioApp import *
 
 if __name__ == '__main__':
-    #rDSN.WebStudio run as a simple HTTP server 
-    print "rDSN.WebStudio running in light mode."
-    if len(sys.argv) < 2:
-        print '''Wrong parameters. 
-        Usage:
-            For light mode, run:
-                python rDSN.WebStudio.py 8088(portnum)
-
-        '''
+    
+    port = "8088"    
+    if len(sys.argv) >= 2:
+        port = sys.argv[1];
     else:
-        start_http_server(sys.argv[1])
+        print "using default listen port " + port + ", run 'python rDSN.WebStudio.py %port%' to use another port instead"
+
+    print "rDSN WebStudio running at port " + port
+    start_http_server(port)
 
     
 

@@ -21,7 +21,7 @@ var vm = new Vue({
         update: function()
         {
             var self = this;
-            var client = new meta_sApp("http://"+localStorage['meta_server_address']);
+            var client = new meta_sApp("http://"+localStorage['target_meta_server']);
             result = client.list_apps({
                 args: new configuration_list_apps_request(),
                 async: true,
@@ -51,10 +51,12 @@ var vm = new Vue({
                                 }),
                                 async: true,
                                 on_success: function (servicedata){
+                                    var is_stateful = false;
                                     try {
                                         servicedata = new configuration_query_by_index_response(servicedata);
                                         console.log(JSON.stringify(servicedata))
                                         self.partitionList.$set(app, servicedata)
+                                        is_stateful = servicedata.is_stateful;
                                     }
                                     catch(err) {
                                         return;
@@ -65,9 +67,9 @@ var vm = new Vue({
                                         var par = self.partitionList[app].partitions[partition];
                                         par.membership = '';
 
-                                        if(par.packageid=='')
+                                        if(is_stateful)
                                         {
-                                            if(par.primary!='invalid address')
+                                            if(par.primary != 'invalid address')
                                             {
                                                 par.membership += 'P: ("' + par.primary.host + ':'+ par.primary.port  + '"), ';
                                                 
@@ -114,7 +116,7 @@ var vm = new Vue({
         {
             var self = this;
 
-            var client = new meta_sApp("http://"+localStorage['meta_server_address']);
+            var client = new meta_sApp("http://"+localStorage['target_meta_server']);
             result = client.drop_app({
                 args: new configuration_drop_app_request({
                     'app_name': app_name,
@@ -138,7 +140,7 @@ var vm = new Vue({
         //query each machine their service state
         self.updateTimer = setInterval(function () {
             self.update(); 
-        }, 1000);
+        }, 3000);
     }
 });
 
