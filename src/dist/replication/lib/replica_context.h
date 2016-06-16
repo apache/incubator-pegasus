@@ -52,7 +52,9 @@ class primary_context
 {
 public:
     primary_context(gpid gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
-        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled), next_learning_version(0)
+        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled), 
+        next_learning_version(0), 
+        last_prepare_ts_ms(0)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
@@ -91,6 +93,8 @@ public:
 
     // copy checkpoint from secondaries ptr
     dsn::task_ptr   checkpoint_task;
+
+    uint64_t last_prepare_ts_ms;
 };
 
 class secondary_context
