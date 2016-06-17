@@ -43,7 +43,7 @@ var vm = new Vue({
             $( "#chart_dep" ).remove();
             $( "#linkgraph" ).append( "<div id='chart_dep'></div>" );
 
-            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            var client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: "pq",
@@ -142,7 +142,7 @@ var vm = new Vue({
                 on_fail: function (xhr, textStatus, errorThrown) {}
             });
 
-            client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: "pq",
@@ -172,7 +172,7 @@ var vm = new Vue({
         updateDrawTypeAsDistribution: function ()
         {
             var self = this;
-            client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: "pq",
@@ -213,7 +213,7 @@ var vm = new Vue({
 
                     if(self.remoteMachine != '')
                     {
-                        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                        var client = new cliApp("http://"+localStorage['target_server']);
                         result = client.call({
                                 args: new command({
                                 cmd: "pq",
@@ -292,7 +292,7 @@ var vm = new Vue({
             function updateData(task, a)
             {
                 if(self.drawType != 'Realtime' || task != self.currentTask) return;
-                var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                var client = new cliApp("http://"+localStorage['target_server']);
                 result = client.call({
                         args: new command({
                         cmd: "pq",
@@ -322,7 +322,7 @@ var vm = new Vue({
             }
 
             var self = this;
-            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            var client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: "pq",
@@ -371,7 +371,7 @@ var vm = new Vue({
         updateDrawTypeAsBreakdown: function ()
         {
             var self = this;
-            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            var client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: "pq",
@@ -383,7 +383,7 @@ var vm = new Vue({
                     
                     if(self.remoteMachine != '')
                     {
-                        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+                        var client = new cliApp("http://"+localStorage['target_server']);
                         result = client.call({
                                 args: new command({
                                 cmd: "pq",
@@ -475,7 +475,7 @@ var vm = new Vue({
     {
         var self = this;
         
-        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+        var client = new cliApp("http://"+localStorage['target_server']);
         result = client.call({
                 args: new command({
                 cmd: "pq",

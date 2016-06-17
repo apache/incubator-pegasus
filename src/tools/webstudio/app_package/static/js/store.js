@@ -130,7 +130,7 @@ var vm = new Vue({
         {
             var self = this;
 
-            var client = new meta_sApp("http://"+localStorage['meta_server_address']);
+            var client = new meta_sApp("http://"+localStorage['target_meta_server']);
             result = client.create_app({
                 args: new configuration_create_app_request({
                     'app_name': self.app_name,

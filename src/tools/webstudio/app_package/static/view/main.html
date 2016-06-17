@@ -22,6 +22,7 @@
 	</div>
 </div>
 
+<!--
 <script src="js/liquidFillGauge.js" language="JavaScript"></script>
 <div class="container-fluid bg-3 text-center bg-grey"> 
   <h2>Node Utility Overview</h2>
@@ -111,9 +112,9 @@ $.get("/api/psutil", function(data, status){
     });
     }
 
-if(localStorage['meta_server_address']==undefined && localStorage['dsn_rpc_address']==undefined)
+if(localStorage['target_meta_server']==undefined && localStorage['target_server']==undefined)
 {
-    alert('Please set dsn_rpc_address and meta_server_address in the setting!')
+    alert('Please set target_server and target_meta_server in the setting!')
 }
 </script>
 
@@ -188,4 +189,5 @@ if(localStorage['meta_server_address']==undefined && localStorage['dsn_rpc_addre
     </div>
   </div>
 </div>
+-->
 {% endblock %}
