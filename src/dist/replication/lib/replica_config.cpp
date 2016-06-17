@@ -158,7 +158,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "");
 
     int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
-    if (potential_secondaries_count == _primary_states.membership.max_replica_count - 1)
+    if (potential_secondaries_count >= _primary_states.membership.max_replica_count - 1)
     {
         if (proposal.type == config_type::CT_ADD_SECONDARY)
         {
@@ -170,7 +170,15 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         }
         else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB)
         {
-            ddebug("%s: add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            if (potential_secondaries_count >= _primary_states.membership.max_replica_count)
+            {
+                ddebug("%s: only allow one extra (potential) secondary, ingnore new potential secondary proposal", name());
+                return;
+            }
+            else
+            {
+                ddebug("%s: add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            }
         }
         else
         {
