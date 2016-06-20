@@ -6,8 +6,8 @@
 	</div>
 
 	<div class="page-header">
-        <h1> <font color= #333333><center>Command Line Interface</center></font>
-			<small><center><font color= #778899>type 'command-list' to see profiling commands</font></center></small>
+        <h1> <font color= #333333><center>rDSN Common Line Interface</center></font>
+			<small><center><font color= #778899>type 'help' to start</font></center></small>
 		</h1>
 	</div>
 
@@ -25,7 +25,7 @@
             query_arguments = input_cmd.split(" ");
             query_cmd = query_arguments.shift();
 
-            var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+            var client = new cliApp("http://"+localStorage['target_server']);
             result = client.call({
                     args: new command({
                     cmd: query_cmd,

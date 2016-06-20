@@ -239,8 +239,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     {
         derror(
             "replay shared log failed, err = %s, time_used = %" PRIu64 " ms, clear all logs ...",
-            finish_time - start_time,
-            err.to_string()
+            err.to_string(),
+            finish_time - start_time
             );
 
         // we must delete or update meta server the error for all replicas

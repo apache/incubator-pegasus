@@ -144,6 +144,8 @@ void replica::init_prepare(mutation_ptr& mu)
 
         dassert(nullptr != mu->log_task(), "");
     }
+
+    _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();
     return;
 
 ErrOut:
