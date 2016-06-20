@@ -612,7 +612,10 @@ void replica::on_learn_reply(
         dassert(_app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree,
             "state is incomplete");       
 
+        // TODO: this breaks the completeness of the current state, to be fixed
         // invalidate existing mutations in current logs
+        // however, later 2pc messages are coming, and they are going to be written
+        // into the private log ...
         err = _app->update_init_info(
             this,
             _stub->_log->on_partition_reset(get_gpid(), resp.prepare_start_decree - 1),
@@ -727,9 +730,9 @@ void replica::on_copy_remote_state_completed(
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
                 dassert(_app->last_committed_decree() <= resp.last_committed_decree, "");
                 ddebug(
-                    "%s: on_copy_remote_state_completed[%016llx]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                    "apply_checkpoint_duration = %" PRIu64 " ns, apply checkpoint succeed, app_last_committed_decree = %" PRId64,
-                    name(), req.signature, resp.config.primary.to_string(),
+                    "%s: on_copy_remote_state_completed[%016llx]: learner = %s, learn duration = %" PRIu64 " ms, "
+                    "checkpoint duration = %" PRIu64 " ns, apply checkpoint succeed, app_last_committed_decree = %" PRId64,
+                    name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
                     dsn_now_ns() - start_ts,
                     _app->last_committed_decree()
@@ -738,9 +741,9 @@ void replica::on_copy_remote_state_completed(
             else
             {
                 derror(
-                    "%s: on_copy_remote_state_completed[%016llx]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                    "apply_checkpoint_duration = %" PRIu64 " ns, apply checkpoint failed, err = %s",
-                    name(), req.signature, resp.config.primary.to_string(),
+                    "%s: on_copy_remote_state_completed[%016llx]: learner = %s, learn duration = %" PRIu64 " ms, "
+                    "checkpoint duration = %" PRIu64 " ns, apply checkpoint failed, err = %s",
+                    name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
                     dsn_now_ns() - start_ts,
                     err.to_string()

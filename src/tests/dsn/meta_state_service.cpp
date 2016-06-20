@@ -213,7 +213,7 @@ TEST(meta_state_service, simple)
     auto simple_service_creator = []
     {
         meta_state_service_simple* svc = new meta_state_service_simple();
-        svc->initialize(0, nullptr);
+        svc->initialize({});
         return svc;
     };
     auto simple_service_deleter = [](meta_state_service* simple_svc)
@@ -230,7 +230,7 @@ TEST(meta_state_service, zookeeper)
     auto zookeeper_service_creator = []
     {
         meta_state_service_zookeeper* svc = new meta_state_service_zookeeper();
-        svc->initialize(0, nullptr);
+        svc->initialize({});
         return svc;
     };
     auto zookeeper_service_deleter = [](meta_state_service* zookeeper_svc)

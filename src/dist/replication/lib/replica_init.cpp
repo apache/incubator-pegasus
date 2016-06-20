@@ -60,23 +60,20 @@ error_code replica::initialize_on_new()
         return ERR_PATH_ALREADY_EXIST;
     }
 
-    if (!dsn::utils::filesystem::create_directory(_dir))
-    {
-        derror("%s: cannot allocate new replica, because create dir %s failed", name(), _dir.c_str());
-        return ERR_FILE_OPERATION_FAILED;
-    }
+    error_code err = init_app_and_prepare_list(true);
+    if (err != ERR_OK)
+        return err;
 
     replica_app_info info((app_info*)&_app_info);
     std::string path = utils::filesystem::path_combine(_dir, ".app-info");
-    auto err = info.store(path.c_str());
+    err = info.store(path.c_str());
     if (err != ERR_OK)
     {
         derror("save app-info to %s failed, err = %s", path.c_str(), err.to_string());
         dsn::utils::filesystem::remove_path(_dir);
-        return err;
     }
 
-    return init_app_and_prepare_list(true);
+    return err;
 }
 
 /*static*/ replica* replica::newr(replica_stub* stub, gpid gpid, const app_info& app)

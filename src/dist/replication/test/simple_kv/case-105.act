@@ -16,14 +16,16 @@ set:disable_load_balance=1
 # wait add learner r2 
 wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r2
 
-# r2 becomes pot
-state:{{r1,pri,1,0,0},{r2,pot,1,0,0}}
-
 # inject start learn
 inject:on_rpc_call:rpc_name=RPC_LEARN,from=r2,to=r1
 
-# r2 becomes inactive again
-state:{{r1,pri,1,0,0},{r2,ina,1,0,0}}
+# r2 changes to inactive due to rpc_learn timeout
+state:{{r1,pri,1,0},{r2,ina,1,0}}
+
+###
+# with group_check, r2 will be learner again
+###
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r2,to=r1
 
 # wait until server ready
 config:{2,r1,[r2]}

@@ -131,7 +131,7 @@ namespace dsn
             }
         }
 
-        error_code distributed_lock_service_simple::initialize(int /*argc*/, const char** /*argv*/)
+        error_code distributed_lock_service_simple::initialize(const std::vector<std::string> &/*argc*/)
         {
             return ERR_OK;
         }

@@ -156,7 +156,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
     }
 }
 
-error_code meta_state_service_zookeeper::initialize(int /*argc*/, const char** /*argv*/)
+error_code meta_state_service_zookeeper::initialize(const std::vector<std::string> &)
 {
     dsn_app_info node;
     if (!dsn_get_current_app_info(&node))

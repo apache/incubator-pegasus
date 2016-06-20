@@ -33,130 +33,61 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/internal/factory_store.h>
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
-#include <dsn/internal/factory_store.h>
+#include "meta_options.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "meta.server.FD"
 
-meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
+namespace dsn { namespace replication {
+
+meta_server_failure_detector::meta_server_failure_detector(meta_service* svc)
 {
     _is_primary = false;
-    _state = state;
     _svc = svc;
 
-    const char* distributed_lock_service_type = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_type",
-        "distributed_lock_service_simple",
-        "distributed_lock_service provider type"
-        );
-    const char* distributed_lock_service_parameters = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_parameters",
-        "",
-        "distributed_lock_service provider parameters"
-        );
-
-    // prepare parameters
-    std::vector<std::string> args;
-    dsn::utils::split_args(distributed_lock_service_parameters, args);
-    int argc = static_cast<int>(args.size());
-    std::vector<const char*> args_ptr;
-    args_ptr.resize(argc);
-    for (int i = argc - 1; i >= 0; i--)
-    {
-        args_ptr[i] = args[i].c_str();
-    }
+    const meta_options& opt = _svc->get_meta_options();
 
     // create lock service
-    ddebug("create distributed_lock_service: %s", distributed_lock_service_type);
-    _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
-        distributed_lock_service_type,
+    _lock_svc = dsn::utils::factory_store<dist::distributed_lock_service>::create(
+        opt.distributed_lock_service_type.c_str(),
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _lock_svc->initialize(argc, argc > 0 ? &args_ptr[0] : nullptr);
+    error_code err = _lock_svc->initialize(opt.distributed_lock_service_args);
     dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
-    _primary_lock_id = "dsn.meta.server.leader";
 
-    ddebug("init meta_server_failure_detector succeed");
+    _primary_lock_id = "dsn.meta.server.leader";
 }
 
 meta_server_failure_detector::~meta_server_failure_detector()
 {
-    auto t = _lock_grant_task;
-    if (t) t->cancel(true);
-    t = _lock_expire_task;
-    if (t) t->cancel(true);
-
+    if (_lock_grant_task)
+        _lock_grant_task->cancel(true);
+    if (_lock_expire_task)
+        _lock_expire_task->cancel(true);
     if ( _lock_svc )
+    {
+        _lock_svc->finalize();
         delete _lock_svc;
+    }
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector<rpc_address>& nodes)
 {
-    if (!is_primary())
-    {
-        return;
-    }
-
-    if (!_svc->_started)
-    {
-        for (auto& node: nodes)
-            _state->remove_dead_node_from_cache(node);
-        return;
-    }
-
-    node_states states;
-    for (auto& n : nodes)
-    {
-        states.push_back(std::make_pair(n, false));
-        dwarn("client expired: %s", n.to_string());
-    }
-    
-    machine_fail_updates pris;
-    _state->set_node_state(states, &pris);
-    
-    for (auto& pri : pris)
-    {
-        dinfo("%d.%d node for %s is gone, update configuration on meta server", 
-            pri.first.get_app_id(),
-            pri.first.get_partition_index(),
-            pri.second->node.to_string()
-            );
-        _svc->update_configuration_on_machine_failure(pri.second);
-    }
+    _svc->set_node_state(nodes, false);
 }
 
-void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
+void meta_server_failure_detector::on_worker_connected(rpc_address node)
 {
-    if (!is_primary())
-    {
-        return;
-    }
-
-    if (!_svc->_started)
-    {
-        _state->add_alive_node_to_cache(node);
-        return;
-    }
-    node_states states;
-    states.push_back(std::make_pair(node, true));
-
-    dwarn("Client reconnected",
-        "Client %s", node.to_string());
-
-    _state->set_node_state(states, nullptr);
-
-    _svc->on_node_changed(node);
+    _svc->set_node_state( std::vector<rpc_address>{ node }, true);
 }
 
-DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
-
+DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, fd::THREAD_POOL_FD)
 void meta_server_failure_detector::acquire_leader_lock()
 {
     //
@@ -167,8 +98,7 @@ void meta_server_failure_detector::acquire_leader_lock()
     while (true)
     {
         error_code err;
-        auto tasks =
-            _lock_svc->lock(
+        auto tasks = _lock_svc->lock(
             _primary_lock_id,
             primary_address().to_std_string(), 
             // lock granted
@@ -211,27 +141,21 @@ void meta_server_failure_detector::sync_node_state_and_start_service()
     /*
      * we do need the failure_detector::_lock to protect,
      * because we want to keep the states of server_state::_nodes
-     * and _cache_alive_nodes consistent
+     * and meta_service::{alive_set,dead_set} consistent
      */
     zauto_lock l(failure_detector::_lock);
 
-    //first add new nodes to the server_state
-    _state->apply_cache_nodes();
-
-    //then we register all workers from server_state
-    node_states alive_list;
-    _state->get_node_state(alive_list);
-
-    for(auto& node_pair: alive_list) {
-        dassert(node_pair.second, "in initializing we don't add dead nodes to server_state");
-
+    std::set<rpc_address> nodes;
+    _svc->prepare_service_starting();
+    _svc->get_node_state(nodes, true);
+    for(auto& node: nodes) {
         // a worker may have been dead in the fd, so we must reactive it
-        unregister_worker(node_pair.first);
-        register_worker(node_pair.first, true);
+        unregister_worker(node);
+        register_worker(node, true);
     }
 
     //now nodes in server_state and in fd are in consistent state
-    _svc->start_load_balance();
+    _svc->service_starting();
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)
@@ -259,7 +183,7 @@ void meta_server_failure_detector::set_primary(rpc_address primary)
 }
 
 
-void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
+void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, rpc_replier<fd::beacon_ack>& reply)
 {
     fd::beacon_ack ack;
     ack.time = beacon.time;
@@ -289,7 +213,6 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
     _lock_svc = nullptr;
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state(nullptr);
 }
 
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address, bool is_myself_leader)
@@ -297,6 +220,6 @@ void meta_server_failure_detector::set_leader_for_test(rpc_address leader_addres
     utils::auto_lock<zlock> l(_primary_address_lock);
     _primary_address = leader_address;
     _is_primary = is_myself_leader;
-    _state = new server_state(nullptr);
 }
 
+}}

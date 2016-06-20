@@ -35,26 +35,21 @@
 
 # pragma once
 
-# include "replication_common.h"
-# include "server_load_balancer.h"
+#include <memory>
 
-using namespace dsn;
-using namespace dsn::service;
-using namespace dsn::replication;
+#include <dsn/cpp/serverlet.h>
+#include <dsn/dist/meta_state_service.h>
+#include "replication_common.h"
+#include "meta_options.h"
+
+class meta_service_test_app;
+namespace dsn { namespace replication {
 
 class server_state;
 class meta_server_failure_detector;
+class server_load_balancer;
 class replication_checker;
-namespace test {
-    class test_checker;
-}
-
-namespace dsn {
-    namespace replication {
-        class replication_checker;
-        class test_checker;
-    }
-}
+namespace test { class test_checker; }
 
 class meta_service : public serverlet<meta_service>
 {
@@ -63,7 +58,24 @@ public:
     virtual ~meta_service();
 
     error_code start();
-    void stop();
+
+    const replication_options& get_options() const { return _opts; }
+    const meta_options& get_meta_options() const { return _meta_opts; }
+    dist::meta_state_service* get_remote_storage() { return _storage.get(); }
+    server_load_balancer* get_balancer() { return _balancer.get(); }
+    int64_t get_control_flags() const { return _meta_ctrl_flags; }
+    bool is_service_freezed() const { return (_meta_ctrl_flags&meta_ctrl_flags::ctrl_meta_freeze) || check_freeze(); }
+
+    virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
+    virtual void send_message(const rpc_address& target, dsn_message_t request) { dsn_rpc_call_one_way(target.c_addr(), request); }
+
+    // these two callbacks are running in fd's thread_pool, and in fd's lock
+    void set_node_state(const std::vector<rpc_address>& nodes_list, bool is_alive);
+    void get_node_state(/*out*/std::set<rpc_address>&, bool is_alive);
+
+    void prepare_service_starting();
+    void service_starting();
+    void balancer_run();
 
 private:
     void register_rpc_handlers();
@@ -74,9 +86,8 @@ private:
     void on_query_configuration_by_index(dsn_message_t req);
 
     // update configuration
-    void on_modify_replica_config_explictly(dsn_message_t req); // for testing
+    void on_propose_balancer(dsn_message_t req);
     void on_update_configuration(dsn_message_t req);
-    void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
 
     // table operations
     void on_create_app(dsn_message_t req);
@@ -85,33 +96,43 @@ private:
     void on_list_nodes(dsn_message_t req);
 
     // cluster info
-    void on_cluster_info(dsn_message_t req);
+    void on_query_cluster_info(dsn_message_t req);
 
-    // balacer rpc
-    void on_control_balancer_migration(dsn_message_t req);
-    void on_balancer_proposal(dsn_message_t req);
-
-    // load balance actions
-    void start_load_balance();
-    void on_load_balance_timer();
-    void on_config_changed(gpid gpid);
-    void on_node_changed(rpc_address node);
+    // meta control
+    void on_control_meta(dsn_message_t req);
 
     // common routines
     int check_primary(dsn_message_t req);
-    rpc_address get_primary();
-    const replication_options& get_opts() const { return _opts; }
+
+    error_code remote_storage_initialize();
+    bool check_freeze() const
+    {
+        int total = _alive_set.size() + _dead_set.size();
+        return (_alive_set.size()<_meta_opts.min_live_node_count_for_unfreeze) ||
+                (_alive_set.size()*100<=_node_live_percentage_threshold_for_update*total);
+    }
 private:
-    friend class server_state;
-    friend class meta_server_failure_detector;
-    friend class ::dsn::replication::replication_checker;
-    friend class ::dsn::replication::test::test_checker;
+    friend class replication_checker;
+    friend class test::test_checker;
+    friend class ::meta_service_test_app;
 
-    server_state                    *_state;
-    meta_server_failure_detector    *_failure_detector;
-    dsn::dist::server_load_balancer *_balancer;
-    dsn::task_ptr                   _balancer_timer;
-    replication_options             _opts;
-    bool                            _started;
-}; 
+    replication_options _opts;
+    meta_options _meta_opts;
 
+    std::shared_ptr<server_state> _state;
+    std::shared_ptr<meta_server_failure_detector> _failure_detector;
+    std::shared_ptr<dist::meta_state_service> _storage;
+    std::shared_ptr<server_load_balancer> _balancer;
+
+    mutable zrwlock_nr _meta_lock;
+    std::set<rpc_address> _alive_set;
+    std::set<rpc_address> _dead_set;
+
+    int  _node_live_percentage_threshold_for_update;
+    volatile bool _started;
+    volatile int64_t _meta_ctrl_flags;
+
+    std::string _cluster_root;
+};
+
+}}

@@ -24,8 +24,3 @@ struct task_code
 struct gpid
 {
 }
-
-// placeholder
-struct atom_int
-{
-}

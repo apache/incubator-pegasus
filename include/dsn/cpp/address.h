@@ -172,6 +172,7 @@ namespace dsn
 
     inline rpc_address::rpc_address()
     {
+        _addr.u.value = 0;
         _addr.u.v4.type = HOST_TYPE_INVALID;
     }
 

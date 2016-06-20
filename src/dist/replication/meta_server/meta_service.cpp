@@ -32,52 +32,176 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+#include <sys/stat.h>
+
+#include <boost/lexical_cast.hpp>
+
+#include <dsn/internal/factory_store.h>
+#include <dsn/dist/meta_state_service.h>
 
 #include "meta_service.h"
 #include "server_state.h"
 #include "meta_server_failure_detector.h"
-#include "greedy_load_balancer.h"
-#include <sys/stat.h>
-#include <dsn/internal/factory_store.h>
+#include "server_load_balancer.h"
+#include "../zookeeper/zookeeper_session_mgr.h"
 
-# include <dsn/cpp/json_helper.h>
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "meta.service"
 
-# include <rapidjson/document.h> 
-# include <rapidjson/writer.h>
-# include <rapidjson/stringbuffer.h>
+namespace dsn { namespace replication {
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "meta.service"
-
-meta_service::meta_service()
-    : serverlet("meta_service"), _failure_detector(nullptr), _balancer(nullptr), _started(false)
+meta_service::meta_service():
+    serverlet("meta_service"),
+    _failure_detector(nullptr),
+    _started(false)
 {
+    _node_live_percentage_threshold_for_update = 65;
     _opts.initialize();
-    // create in constructor because it may be used in checker before started
-    _state = new server_state(this);
+    _meta_opts.initialize();
+    _state.reset(new server_state());
 }
 
 meta_service::~meta_service()
 {
 }
 
+error_code meta_service::remote_storage_initialize()
+{
+    // create storage
+    dsn::dist::meta_state_service* storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
+        _meta_opts.meta_state_service_type.c_str(),
+        PROVIDER_TYPE_MAIN
+        );
+    error_code err = storage->initialize(_meta_opts.meta_state_service_args);
+    if (err != ERR_OK)
+    {
+        derror("init meta_state_service failed, err = %s", err.to_string());
+        return err;
+    }
+    _storage.reset(storage);
+
+    std::vector<std::string> slices;
+    utils::split_args(_meta_opts.cluster_root.c_str(), slices, '/');
+    std::string current = "";
+    for (unsigned int i = 0; i != slices.size(); ++i)
+    {
+        current = meta_options::concat_path_unix_style(current, slices[i]);
+        task_ptr tsk = _storage->create_node(current, LPC_META_CALLBACK,
+            [&err](error_code ec)
+            {
+                err = ec;
+            }
+        );
+        tsk->wait();
+        if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST)
+        {
+            derror("create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());
+            return err;
+        }
+    }
+    _cluster_root = current.empty() ? "/" : current;
+    return ERR_OK;
+}
+
+void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is_alive)
+{
+    zauto_write_lock l(_meta_lock);
+    for (auto& node: nodes)
+    {
+        if (is_alive) {
+            _alive_set.insert(node);
+            _dead_set.erase(node);
+        }
+        else {
+            _alive_set.erase(node);
+            _dead_set.insert(node);
+        }
+    }
+    if (!_started)
+        return;
+    for (const rpc_address& address: nodes) {
+        tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            nullptr,
+            std::bind(&server_state::on_change_node_state, _state.get(), address, is_alive),
+            server_state::s_state_write_hash
+        );
+    }
+}
+
+void meta_service::get_node_state(std::set<rpc_address> &node_set, bool is_alive)
+{
+    zauto_read_lock l(_meta_lock);
+    if (is_alive)
+        node_set = _alive_set;
+    else
+        node_set = _dead_set;
+}
+
+void meta_service::balancer_run()
+{
+    _state->check_all_partitions();
+}
+
+void meta_service::prepare_service_starting()
+{
+    zauto_write_lock l(_meta_lock);
+    const meta_view view = _state->get_meta_view();
+    for (auto& kv : *view.nodes)
+    {
+        if (_dead_set.find(kv.first) == _dead_set.end())
+            _alive_set.insert(kv.first);
+    }
+}
+
+void meta_service::service_starting()
+{
+    zauto_read_lock l(_meta_lock);
+
+    _started = true;
+    std::list< std::pair<rpc_address, bool> > nodes;
+    for (const rpc_address& node: _alive_set) {
+        nodes.push_back( std::make_pair(node, true) );
+    }
+    for (const rpc_address& node: _dead_set) {
+        nodes.push_back( std::make_pair(node, false) );
+    }
+    for (auto& node_pair: nodes) {
+        tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            nullptr,
+            std::bind(&server_state::on_change_node_state, _state.get(), node_pair.first, node_pair.second),
+            server_state::s_state_write_hash
+        );
+    }
+
+    tasking::enqueue_timer(
+        LPC_META_STATE_NORMAL,
+        nullptr,
+        std::bind(&meta_service::balancer_run, this),
+        std::chrono::milliseconds(_opts.lb_interval_ms),
+        server_state::s_state_write_hash,
+        std::chrono::milliseconds(_opts.lb_interval_ms)
+    );
+}
+
 error_code meta_service::start()
 {
     dassert(!_started, "meta service is already started");
+    error_code err;
 
-    // init server state
-    error_code err = _state->initialize();
+    err = remote_storage_initialize();
     if (err != ERR_OK)
     {
-        derror("init server_state failed, err = %s", err.to_string());
+        derror("init remote storage failed, err = %s", err.to_string());
         return err;
     }
-    ddebug("init server state succeed");
+    ddebug("remote storage is successfully initialized");
 
     // we should start the FD service to response to the workers fd request
-    _failure_detector = new meta_server_failure_detector(_state, this);
+    _failure_detector.reset(new meta_server_failure_detector(this));
     err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
         _opts.fd_beacon_interval_seconds,
@@ -85,42 +209,34 @@ error_code meta_service::start()
         _opts.fd_grace_seconds,
         false
     );
+
     if (err != ERR_OK)
     {
         derror("start failure_detector failed, err = %s", err.to_string());
         return err;
     }
-    
-    // should register rpc handlers before acquiring leader lock, so that this meta service
-    // can tell others who is the current leader
+    ddebug("meta service failure detector is successfully started");
+
+    //should register rpc handlers before acquiring leader lock, so that this meta service
+    //can tell others who is the current leader
     register_rpc_handlers();
     
-    // become leader
     _failure_detector->acquire_leader_lock();
     dassert(_failure_detector->is_primary(), "must be primary at this point");
-    ddebug("hahaha, I got the primary lock! now start to recover server state");
+    ddebug("%s got the primary lock, start to recover server state from remote storage", primary_address().to_string());
 
-    // recover server state
-    while ((err = _state->on_become_leader()) != ERR_OK)
+    _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
+    while ((err = _state->initialize_data_structure()) != ERR_OK)
     {
         derror("recover server state failed, err = %s, retry ...", err.to_string());
     }
+    _state->register_cli_commands();
 
-    // create server load balancer
-    // TODO: create per app server load balancer
-    const char* server_load_balancer = dsn_config_get_value_string(
-        "meta_server",
-        "server_load_balancer_type",
-        "simple_load_balancer",
-        "server_load_balancer provider type"
-        );
-
-    ddebug("create server_load_balancer: %s", server_load_balancer);
-    _balancer = dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::create(
-        server_load_balancer,
+    server_load_balancer* balancer = utils::factory_store<server_load_balancer>::create(
+        _meta_opts.server_load_balancer_type.c_str(),
         PROVIDER_TYPE_MAIN,
-        _state
-        );
+        this);
+    _balancer.reset(balancer);
 
     _failure_detector->sync_node_state_and_start_service();
     ddebug("start meta_service succeed");
@@ -131,118 +247,54 @@ void meta_service::register_rpc_handlers()
 {
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
-        "RPC_CM_QUERY_NODE_PARTITIONS",
+        "query_configuration_by_node",
         &meta_service::on_query_configuration_by_node
         );
-
     register_rpc_handler(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
-        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+        "query_configuration_by_index",
         &meta_service::on_query_configuration_by_index
         );
-
     register_rpc_handler(
         RPC_CM_UPDATE_PARTITION_CONFIGURATION,
-        "RPC_CM_UPDATE_PARTITION_CONFIGURATION",
+        "update_configuration",
         &meta_service::on_update_configuration
         );
-
-    register_rpc_handler(
-        RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND,
-        "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
-        &meta_service::on_modify_replica_config_explictly
-        );
-
     register_rpc_handler(
         RPC_CM_CREATE_APP,
-        "RPC_CM_CREATE_APP",
+        "create_app",
         &meta_service::on_create_app
         );
-
     register_rpc_handler(
         RPC_CM_DROP_APP,
-        "RPC_CM_DROP_APP",
+        "drop_app",
         &meta_service::on_drop_app
         );
-
     register_rpc_handler(
         RPC_CM_LIST_APPS,
-        "RPC_CM_LIST_APPS",
+        "list_apps",
         &meta_service::on_list_apps
         );
-
     register_rpc_handler(
         RPC_CM_LIST_NODES,
-        "RPC_CM_LIST_NODES",
+        "list_nodes",
         &meta_service::on_list_nodes
         );
-
     register_rpc_handler(
         RPC_CM_CLUSTER_INFO,
-        "RPC_CM_CLUSTER_INFO",
-        &meta_service::on_cluster_info
+        "cluster_info",
+        &meta_service::on_query_cluster_info
         );
-
     register_rpc_handler(
-        RPC_CM_CONTROL_BALANCER_MIGRATION,
-        "RPC_CM_CONTROL_BALANCER_MIGRATION",
-        &meta_service::on_control_balancer_migration);
-
-    register_rpc_handler(
-        RPC_CM_BALANCER_PROPOSAL,
-        "RPC_CM_BALANCER_PROPOSAL",
-        &meta_service::on_balancer_proposal);
-
-}
-
-void meta_service::stop()
-{
-    _started = false;
-
-    unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);
-    unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-    unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
-    unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
-    unregister_rpc_handler(RPC_CM_CREATE_APP);
-    unregister_rpc_handler(RPC_CM_DROP_APP);
-    unregister_rpc_handler(RPC_CM_CONTROL_BALANCER_MIGRATION);
-    unregister_rpc_handler(RPC_CM_BALANCER_PROPOSAL);
-
-    if (_balancer_timer != nullptr)
-    {
-        _balancer_timer->cancel(true);
-    }
-
-    if (_balancer != nullptr)
-    {
-        delete _balancer;
-        _balancer = nullptr;
-    }
-
-    if (_failure_detector != nullptr)
-    {
-        _failure_detector->stop();
-        delete _failure_detector;
-        _failure_detector = nullptr;
-    }
-
-    if (_state != nullptr)
-    {
-        delete _state;
-        _state = nullptr;
-    }
-}
-
-void meta_service::start_load_balance()
-{
-    dassert(_balancer_timer == nullptr, "");
-
-    _state->unfree_if_possible_on_start();
-    _balancer_timer = tasking::enqueue_timer(LPC_LBM_RUN, this, [this] {on_load_balance_timer();},
-        std::chrono::milliseconds(_opts.lb_interval_ms)
+        RPC_CM_PROPOSE_BALANCER,
+        "propose_balancer",
+        &meta_service::on_propose_balancer
         );
-
-    _started = true;
+    register_rpc_handler(
+        RPC_CM_CONTROL_META,
+        "control_meta",
+        &meta_service::on_control_meta
+        );
 }
 
 int meta_service::check_primary(dsn_message_t req)
@@ -266,12 +318,7 @@ int meta_service::check_primary(dsn_message_t req)
     return 1;
 }
 
-rpc_address meta_service::get_primary()
-{
-    return _failure_detector->get_primary();
-}
-
-#define META_STATUS_CHECK_ON_RPC(dsn_msg, response_struct)\
+#define RPC_CHECK_STATUS(dsn_msg, response_struct)\
     dinfo("rpc %s called", __FUNCTION__);\
     int result = check_primary(dsn_msg);\
     if (result == 0) return;\
@@ -284,32 +331,28 @@ rpc_address meta_service::get_primary()
 // table operations
 void meta_service::on_create_app(dsn_message_t req)
 {
-    configuration_create_app_request request;
     configuration_create_app_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
-    ::dsn::unmarshall(req, request);
-    _state->create_app(request, response);
-    reply(req, response);
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::create_app, _state.get(), req), server_state::s_state_write_hash);
 }
 
 void meta_service::on_drop_app(dsn_message_t req)
 {
-    configuration_drop_app_request request;
     configuration_drop_app_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
-    ::dsn::unmarshall(req, request);
-    _state->drop_app(request, response);
-    reply(req, response);
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::drop_app, _state.get(), req), server_state::s_state_write_hash);
 }
 
 void meta_service::on_list_apps(dsn_message_t req)
 {
-    configuration_list_apps_request request;
     configuration_list_apps_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
+    configuration_list_apps_request request;
     ::dsn::unmarshall(req, request);
     _state->list_apps(request, response);
     reply(req, response);
@@ -317,167 +360,159 @@ void meta_service::on_list_apps(dsn_message_t req)
 
 void meta_service::on_list_nodes(dsn_message_t req)
 {
-    configuration_list_nodes_request request;
     configuration_list_nodes_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
-    ::dsn::unmarshall(req, request);
-    _state->list_nodes(request, response);
+    configuration_list_nodes_request request;
+    dsn::unmarshall(req, request);
+
+    {
+        zauto_read_lock l(_meta_lock);
+        dsn::replication::node_info info;
+        if (request.status == node_status::NS_INVALID || request.status == node_status::NS_ALIVE)
+        {
+            info.status = node_status::NS_ALIVE;
+            for (auto& node: _alive_set) {
+                info.address = node;
+                response.infos.push_back(info);
+            }
+        }
+        if (request.status == node_status::NS_INVALID || request.status == node_status::NS_UNALIVE)
+        {
+            info.status = node_status::NS_UNALIVE;
+            for (auto& node: _dead_set) {
+                info.address = node;
+                response.infos.push_back(info);
+            }
+        }
+        response.err = dsn::ERR_OK;
+    }
+
     reply(req, response);
 }
 
-void meta_service::on_cluster_info(dsn_message_t req)
+void meta_service::on_query_cluster_info(dsn_message_t req)
 {
-    configuration_cluster_info_request request;
     configuration_cluster_info_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
-    ::dsn::unmarshall(req, request);
-    _state->cluster_info(request, response);
+    configuration_cluster_info_request request;
+    dsn::unmarshall(req, request);
+
+    std::stringstream oss;
+    response.keys.push_back("meta_servers");
+    for (size_t i = 0; i < _opts.meta_servers.size(); ++i)
+    {
+        if (i != 0)
+            oss << ", ";
+        oss << _opts.meta_servers[i].to_string();
+    }
+    response.values.push_back(oss.str());
+    response.keys.push_back("primary_meta_server");
+    response.values.push_back(_failure_detector->get_primary().to_string());
+    response.keys.push_back("zookeeper_servers");
+    response.values.push_back(dist::zookeeper_session_mgr::instance().zoo_hosts());
+    response.keys.push_back("zookeeper_cluster_root");
+    response.values.push_back(_cluster_root);
+    response.err = dsn::ERR_OK;
+
     reply(req, response);
 }
 
 // partition server & client => meta server
 void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 {
-    configuration_query_by_node_request request;
     configuration_query_by_node_response response;
-    META_STATUS_CHECK_ON_RPC(msg, response);
+    RPC_CHECK_STATUS(msg, response);
 
-    ::dsn::unmarshall(msg, request);
+    configuration_query_by_node_request request;
+    dsn::unmarshall(msg, request);
     _state->query_configuration_by_node(request, response);
     reply(msg, response);    
 }
 
 void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 {
-    configuration_query_by_index_request request;
     configuration_query_by_index_response response;
-    META_STATUS_CHECK_ON_RPC(msg, response);
+    RPC_CHECK_STATUS(msg, response);
 
-    ::dsn::unmarshall(msg, request);
+    configuration_query_by_index_request request;
+    dsn::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
-}
-
-void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
-{
-    if (!check_primary(req))
-        return;
-
-    gpid gpid;
-    rpc_address receiver;
-    int type;
-    rpc_address node;
-
-
-    ::dsn::unmarshall(req, gpid);
-    ::dsn::unmarshall(req, receiver);
-    ::dsn::unmarshall(req, type);
-    ::dsn::unmarshall(req, node);
-
-    _balancer->explictly_send_proposal(gpid, receiver, static_cast<config_type::type>(type), node);
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)
 {
     configuration_update_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    RPC_CHECK_STATUS(req, response);
 
-    std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-    ::dsn::unmarshall(req, *request);
+    std::shared_ptr<configuration_update_request> request = std::make_shared<configuration_update_request>();
+    dsn::unmarshall(req, *request);
 
-    if (_state->freezed() && request->info.is_stateful)
+    if (is_service_freezed())
     {
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
         return;
     }
-  
-    gpid gpid = request->config.pid;
-    _state->update_configuration(request, req, [this, gpid, request]() mutable
-    {
-        if (_started)
-        {
-            _balancer->on_config_changed(request);
-            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
-        }
-    });
+
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_HIGH,
+        nullptr,
+        std::bind(&server_state::on_update_configuration, _state.get(), request, req),
+        server_state::s_state_write_hash
+    );
 }
 
-void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
+void meta_service::on_control_meta(dsn_message_t req)
 {
-    gpid gpid = update->config.pid;
-    _state->update_configuration(update, nullptr, [this, gpid, update]() mutable
+    configuration_meta_control_request request;
+    configuration_balancer_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    dsn::unmarshall(req, request);
+    ddebug("get control meta rpc, flags(%d), type(%d), current flags(%d)", request.ctrl_flags, request.ctrl_type, _meta_ctrl_flags);
     {
-        if (_started)
+        zauto_write_lock l(_meta_lock);
+        switch (request.ctrl_type)
         {
-            _balancer->on_config_changed(update);
-            tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
+        case meta_ctrl_type::meta_flags_and:
+            _meta_ctrl_flags &= request.ctrl_flags;
+            break;
+        case meta_ctrl_type::meta_flags_or:
+            _meta_ctrl_flags |= request.ctrl_flags;
+            break;
+        case meta_ctrl_type::meta_flags_overwrite:
+            _meta_ctrl_flags = request.ctrl_flags;
+            break;
+        default:
+            ddebug("invalid requst ctrl type: %d", request.ctrl_type);
+            break;
         }
-    });
-}
-
-void meta_service::on_control_balancer_migration(dsn_message_t req)
-{
-    control_balancer_migration_request request;
-    control_balancer_migration_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
-
-    ::dsn::unmarshall(req, request);
-    _balancer->on_control_migration(request, response);
+    }
+    if (request.ctrl_flags&meta_ctrl_flags::ctrl_disable_replica_migration) {
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+            nullptr,
+            std::bind(&server_state::clear_proposals, _state.get()),
+            server_state::s_state_write_hash
+        );
+    }
+    response.err = ERR_OK;
     reply(req, response);
 }
 
-void meta_service::on_balancer_proposal(dsn_message_t req)
+void meta_service::on_propose_balancer(dsn_message_t req)
 {
-    balancer_proposal_request request;
-    balancer_proposal_response response;
-    META_STATUS_CHECK_ON_RPC(req, response);
+    configuration_balancer_request request;
+    configuration_balancer_response response;
+    RPC_CHECK_STATUS(req, response);
 
-    ::dsn::unmarshall(req, request);
-    dinfo("balancer proposal, gpid(%d.%d), type(%s), from(%s), to(%s)",
-          request.pid.get_app_id(), request.pid.get_partition_index(),
-          enum_to_string(request.type),
-          request.from_addr.to_string(),
-          request.to_addr.to_string());
-    _balancer->on_balancer_proposal(request, response);
+    dsn::unmarshall(req, request);
+    ddebug("get proposal balancer request, gpid(%d.%d)", request.gpid.get_app_id(), request.gpid.get_partition_index());
+    _state->on_propose_balancer(request, response);
     reply(req, response);
 }
 
-// local timers
-void meta_service::on_load_balance_timer()
-{
-    if (!_started)
-        return;
-
-    if (_failure_detector->is_primary())
-    {
-        _balancer->run();
-    }
-}
-
-void meta_service::on_config_changed(gpid gpid)
-{
-    if (_state->freezed())
-        return;
-
-    if (_failure_detector->is_primary())
-    {
-        _balancer->run(gpid);
-    }
-}
-
-void meta_service::on_node_changed(rpc_address node)
-{
-    tasking::enqueue(LPC_LBM_RUN, this, [this](){
-        if (_state->freezed())
-            return;
-
-        if (_failure_detector->is_primary())
-        {
-            _balancer->run();
-        }
-    });
-}
+}}

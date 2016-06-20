@@ -37,34 +37,30 @@
 
 # include <dsn/cpp/service_app.h>
 
+namespace dsn { namespace replication {
 class server_state;
 class meta_service;
+class replication_checker;
+namespace test { class test_checker; }
+}}
 
-namespace dsn {
-    namespace replication {
-        class replication_checker;
-        namespace test {
-            class test_checker;
-        }
-    }
-    namespace service {
+namespace dsn { namespace service {
 
-        class meta_service_app : public service_app
-        {
-        public:
-            meta_service_app(dsn_gpid gpid);
-            virtual ~meta_service_app();
+class meta_service_app : public service_app
+{
+public:
+    meta_service_app(dsn_gpid gpid);
+    virtual ~meta_service_app();
 
-            virtual ::dsn::error_code start(int argc, char** argv) override;
+    virtual ::dsn::error_code start(int argc, char** argv) override;
 
-            virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-        private:
-            friend class ::dsn::replication::replication_checker;
-            friend class ::dsn::replication::test::test_checker;
-            meta_service*        _service;
-        };
+private:
+    friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
+    std::unique_ptr<dsn::replication::meta_service> _service;
+};
 
-    }
-}
+}}
 

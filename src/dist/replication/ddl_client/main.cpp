@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+using namespace dsn;
 using namespace dsn::replication;
 
 void usage(char* exe)
@@ -30,6 +31,31 @@ int init_environment(char* exe, char* config_file)
     dsn_run(2, argv, false);
     return 0;
 }
+
+void move_primary(dsn::rpc_address from, dsn::rpc_address to, std::vector<configuration_proposal_action>& actions)
+{
+    actions.reserve(2);
+    actions.emplace_back( configuration_proposal_action{ from, from, config_type::CT_DOWNGRADE_TO_SECONDARY} );
+    actions.emplace_back( configuration_proposal_action{ to, to, config_type::CT_UPGRADE_TO_PRIMARY } );
+}
+
+void copy_primary(dsn::rpc_address from, dsn::rpc_address to, std::vector<configuration_proposal_action>& actions)
+{
+    actions.reserve(3);
+    actions.emplace_back( configuration_proposal_action{ from, to, config_type::CT_ADD_SECONDARY_FOR_LB } );
+    actions.emplace_back( configuration_proposal_action{ from, from, config_type::CT_DOWNGRADE_TO_SECONDARY } );
+    actions.emplace_back( configuration_proposal_action{ to, to, config_type::CT_UPGRADE_TO_PRIMARY } );
+}
+
+void copy_seconary(dsn::rpc_address from, dsn::rpc_address to, std::vector<configuration_proposal_action>& actions)
+{
+    actions.reserve(2);
+    dsn::rpc_address primary;
+    actions.emplace_back( configuration_proposal_action{ primary, to, config_type::CT_ADD_SECONDARY_FOR_LB} );
+    actions.emplace_back( configuration_proposal_action{ primary, from, config_type::CT_DOWNGRADE_TO_INACTIVE} );
+}
+
+typedef void proposal_action(dsn::rpc_address from, dsn::rpc_address to, std::vector<configuration_proposal_action>& actions);
 
 int main(int argc, char** argv)
 {
@@ -182,29 +208,35 @@ int main(int argc, char** argv)
         std::cout << "start migration result: " << err.to_string() << std::endl;
     }
     else if (command == "balancer") {
-        dsn::replication::balancer_proposal_request request;
+        dsn::replication::configuration_balancer_request request;
+        proposal_action* action_func = nullptr;
+        dsn::rpc_address from, to;
+
+        std::map<std::string, proposal_action*> action_map {
+            {"move_pri", &move_primary},
+            {"copy_pri", &copy_primary},
+            {"move_sec", &copy_seconary}
+        };
+
         for (int i=3; i<argc-1; i+=2) {
             if (strcmp(argv[i], "-gpid") == 0){
-                sscanf(argv[i + 1], "%d.%d", &request.pid.raw().u.app_id, &request.pid.raw().u.partition_index);
+                sscanf(argv[i + 1], "%d.%d", &request.gpid.raw().u.app_id, &request.gpid.raw().u.partition_index);
             }
             else if (strcmp(argv[i], "-type") == 0){
-                std::map<std::string, dsn::replication::balancer_type::type> mapper = {
-                    {"move_pri", balancer_type::BT_MOVE_PRIMARY},
-                    {"copy_pri", balancer_type::BT_COPY_PRIMARY},
-                    {"copy_sec", balancer_type::BT_COPY_SECONDARY}
-                };
-                if (mapper.find(argv[i+1]) == mapper.end()) {
+                auto iter = action_map.find(argv[i+1]);
+                if (iter == action_map.end())
                     usage(argv[0]);
-                }
-                request.type = mapper[argv[i+1]];
+                action_func = action_map[argv[i+1]];
             }
             else if (strcmp(argv[i], "-from") == 0) {
-                request.from_addr.from_string_ipv4(argv[i+1]);
+                from.from_string_ipv4(argv[i+1]);
             }
             else if (strcmp(argv[i], "-to") == 0) {
-                request.to_addr.from_string_ipv4(argv[i+1]);
+                to.from_string_ipv4(argv[i+1]);
             }
         }
+
+        action_func(from, to, request.action_list);
         dsn::error_code err = client.send_balancer_proposal(request);
         std::cout << "send balancer proposal result: " << err.to_string() << std::endl;
     }

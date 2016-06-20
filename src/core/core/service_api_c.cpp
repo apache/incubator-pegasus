@@ -55,6 +55,7 @@
 # include "task_engine.h"
 # include "coredump.h"
 # include "crc.h"
+# include "transient_memory.h"
 # include <fstream>
 
 # ifndef _WIN32
@@ -1256,6 +1257,12 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     // init tool memory
+    auto tls_trans_memory_KB = (size_t)dsn_all.config->get_value<int>(
+        "core", "tls_trans_memory_KB",
+        1024, // 1 MB
+        "thread local transient memory buffer size (KB), default is 1024"
+        );
+    ::dsn::tls_trans_mem_init(tls_trans_memory_KB * 1024);
     dsn_all.memory = ::dsn::utils::factory_store< ::dsn::memory_provider>::create(
         spec.tools_memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN);
 

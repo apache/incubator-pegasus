@@ -34,57 +34,39 @@
 
 # pragma once
 
-# include "server_load_balancer.h"
 # include <functional>
-# include <atomic>
+# include "server_load_balancer.h"
 
-using namespace dsn;
-using namespace dsn::service;
-using namespace dsn::replication;
+namespace dsn { namespace replication {
 
-class greedy_load_balancer
-    : public dsn::dist::server_load_balancer,
-      public serverlet<greedy_load_balancer>
+class greedy_load_balancer: public simple_load_balancer
 {
 public:
-    greedy_load_balancer(server_state* state);
-    ~greedy_load_balancer();
+    greedy_load_balancer(meta_service* svc): simple_load_balancer(svc) {}
+    bool balance(const meta_view &view, migration_list &list) override;
 
-    virtual void run() override;
-    virtual void run(gpid gpid) override;
-    virtual void on_config_changed(std::shared_ptr<configuration_update_request>& request) override;
-    virtual void on_balancer_proposal(/*in*/const balancer_proposal_request& request, /*out*/balancer_proposal_response& response) override;
-    virtual void on_control_migration(/*in*/const control_balancer_migration_request& request,
-                                      /*out*/control_balancer_migration_response& response) override;
 private:
-    bool run_lb(app_info& info, partition_configuration& pc, bool is_stateful);
-
-    bool balancer_proposal_check(const balancer_proposal_request& balancer_proposal);
-
-    void execute_balancer_proposal();
-    void greedy_copy_secondary();
-    void greedy_copy_primary(int total_replicas);
-    void greedy_move_primary(const std::vector<dsn::rpc_address>& node_list,
-                             const std::vector<int>& prev,
-                             int flows);
-    void greedy_balancer(int total_replicas);
-
-    bool walk_through_primary(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
-    bool walk_through_partitions(const dsn::rpc_address& addr, const std::function<bool (partition_configuration& pc)>& func);
-
-    dsn::rpc_address recommend_primary(partition_configuration& pc);
-
-    void insert_balancer_proposal_request(const gpid& gpid, balancer_type::type type, dsn::rpc_address from, dsn::rpc_address to)
+    enum class balance_type
     {
-        balancer_proposal_request& request = _balancer_proposals_map[gpid];
-        request.pid = gpid;
-        request.type = type;
-        request.from_addr= from;
-        request.to_addr = to;
-    }
-private:
-    volatile bool _is_migration_enabled;
+        move_primary,
+        copy_primary,
+        copy_secondary
+    };
+    const meta_view* _view;
+    migration_list* _migration;
+    int total_partitions;
+    int alive_nodes;
 
-    std::unordered_map<gpid, dsn::rpc_address> _primary_recommender;
-    std::unordered_map<gpid, balancer_proposal_request> _balancer_proposals_map;
+private:
+    void greedy_balancer();
+    void greedy_move_primary(const std::vector<dsn::rpc_address>& node_list, const std::vector<int>& prev, int flows);
+    void greedy_copy_secondary();
+    void greedy_copy_primary();
+    std::shared_ptr<configuration_balancer_request> generate_balancer_request(
+        const partition_configuration& pc,
+        const balance_type& type,
+        const rpc_address& from,
+        const rpc_address& to);
 };
+
+}}

@@ -127,6 +127,15 @@ void replica::broadcast_group_check()
 
         _primary_states.group_check_pending_replies[addr] = callback_task;
     }
+
+    // send empty prepare when necessary
+    if (_options->write_empty_enabled && 
+        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms)
+    {
+        mutation_ptr mu = new_mutation(invalid_decree);
+        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        init_prepare(mu);
+    }
 }
 
 void replica::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)

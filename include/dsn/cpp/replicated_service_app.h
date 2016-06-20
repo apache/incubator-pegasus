@@ -236,7 +236,7 @@ namespace dsn
             app_learn_state cpp_state;
             auto err = reinterpret_cast<replicated_service_app_type_1*>(app)->get_checkpoint(
                     learn_start, local_commit, learn_request, learn_request_size, cpp_state);
-            return err == ERR_OK ? err : cpp_state.to_c_state(*state, state_capacity);
+            return err == ERR_OK ? cpp_state.to_c_state(*state, state_capacity) : err;
         }
         
         static dsn_error_t app_apply_checkpoint(
