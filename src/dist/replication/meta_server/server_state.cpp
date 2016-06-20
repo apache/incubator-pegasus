@@ -1237,7 +1237,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state>& app, int p
             downgrade_primary_to_inactive(app, pidx);
         else if (is_secondary(pc, address))
         {
-            if (pc.primary.is_invalid())
+            if (!pc.primary.is_invalid())
                 downgrade_secondary_to_inactive(app, pidx, address);
             else if(is_secondary(pc, address))
             {
