@@ -292,15 +292,14 @@ enum dsn_chkpt_apply_mode
     DSN_CHKPT_LEARN
 };
 
-typedef void(*dsn_app_on_batched_rpc_requests)(
+typedef void(*dsn_app_on_batched_write_requests)(
     void*,           ///< context from dsn_app_create
-    int64_t,         ///< ballot
     int64_t,         ///< decree
     dsn_message_t*,  ///< request array ptr
     int              ///< request count
     );
 
-typedef int(*dsn_app_get_internal_error)(
+typedef int(*dsn_app_get_physical_error)(
     void*     ///< context from dsn_app_create
     );
 
@@ -357,8 +356,8 @@ typedef union dsn_app_callbacks
     dsn_app_create placeholder[DSN_MAX_CALLBAC_COUNT];
     struct app_callbacks
     {
-        dsn_app_on_batched_rpc_requests     on_batched_rpc_requests;
-        dsn_app_get_internal_error          get_internal_error;
+        dsn_app_on_batched_write_requests   on_batched_write_requests;
+        dsn_app_get_physical_error          get_physical_error;
         dsn_app_sync_checkpoint             sync_checkpoint;
         dsn_app_sync_checkpoint             async_checkpoint;
         dsn_app_get_last_checkpoint_decree  get_last_checkpoint_decree;

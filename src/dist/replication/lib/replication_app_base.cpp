@@ -464,7 +464,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
          
             if (req == nullptr)
             {
-                req = dsn_msg_create_received_request(update.code, update.serialization_type,
+                req = dsn_msg_create_received_request(update.code, (dsn_msg_serialize_format)update.serialization_type,
                                                       (void*)update.data.data(), update.data.length());
                 faked_requests[faked_count++] = req;
             }
@@ -481,11 +481,11 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 
     // batch processing
     uint64_t start = dsn_now_ns();
-    if (_callbacks.calls.on_batched_rpc_requests)
+    if (_callbacks.calls.on_batched_write_requests)
     {
-        _callbacks.calls.on_batched_rpc_requests(_app_context_callbacks,
-                                                 _replica->get_ballot(), mu->data.header.decree,
-                                                 batched_requests, batched_count);
+        _callbacks.calls.on_batched_write_requests(_app_context_callbacks,
+                                                   mu->data.header.decree,
+                                                   batched_requests, batched_count);
     }   
     else
     {
@@ -502,11 +502,11 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         dsn_msg_release_ref(faked_requests[i]);
     }
 
-    int internal_error = _callbacks.calls.get_internal_error(_app_context_callbacks);
-    if (internal_error != 0)
+    int perror = _callbacks.calls.get_physical_error(_app_context_callbacks);
+    if (perror != 0)
     {
         derror("%s: mutation %s: get internal error %d",
-               _replica->name(), mu->name(), internal_error);
+               _replica->name(), mu->name(), perror);
         return ERR_LOCAL_APP_FAILURE;
     }
 

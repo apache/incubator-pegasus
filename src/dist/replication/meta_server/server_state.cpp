@@ -1257,30 +1257,24 @@ void server_state::update_configuration_on_remote(const std::shared_ptr<configur
         );
 }
 
-void server_state::cluster_info(dsn_message_t msg)
+void server_state::cluster_info(configuration_cluster_info_request& request, /*out*/ configuration_cluster_info_response& response)
 {
-    configuration_cluster_info_request request;
-    configuration_cluster_info_response response;
-    ::unmarshall(msg, request);
+    response.keys.push_back("meta_servers");
+    std::ostringstream oss;
+    for (size_t i = 0; i < _meta_svc->get_opts().meta_servers.size(); ++i)
     {
-        response.keys.push_back("meta_servers");
-        std::ostringstream oss;
-        for (size_t i = 0; i < _meta_svc->get_opts().meta_servers.size(); ++i)
-        {
-            if (i != 0)
-                oss << ",";
-            oss << _meta_svc->get_opts().meta_servers[i].to_string();
-        }
-        response.values.push_back(oss.str());
-        response.keys.push_back("primary_meta_server");
-        response.values.push_back(_meta_svc->get_primary().to_string());
-        response.keys.push_back("zookeeper_servers");
-        response.values.push_back(::dsn::dist::zookeeper_session_mgr::instance().zoo_hosts());
-        response.keys.push_back("zookeeper_cluster_root");
-        response.values.push_back(_cluster_root);
-        response.err = dsn::ERR_OK;
+        if (i != 0)
+            oss << ",";
+        oss << _meta_svc->get_opts().meta_servers[i].to_string();
     }
-    reply(msg, response);
+    response.values.push_back(oss.str());
+    response.keys.push_back("primary_meta_server");
+    response.values.push_back(_meta_svc->get_primary().to_string());
+    response.keys.push_back("zookeeper_servers");
+    response.values.push_back(::dsn::dist::zookeeper_session_mgr::instance().zoo_hosts());
+    response.keys.push_back("zookeeper_cluster_root");
+    response.values.push_back(_cluster_root);
+    response.err = dsn::ERR_OK;
 }
 
 void server_state::update_configuration(

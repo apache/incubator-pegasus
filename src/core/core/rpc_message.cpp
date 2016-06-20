@@ -63,7 +63,7 @@ DSN_API dsn_message_t dsn_msg_create_request(
 
 DSN_API dsn_message_t dsn_msg_create_received_request(
     dsn_task_code_t rpc_code,
-    int32_t serialization_type,
+    dsn_msg_serialize_format serialization_type,
     void* buffer,
     int size,
     uint64_t hash

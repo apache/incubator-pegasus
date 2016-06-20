@@ -354,7 +354,6 @@ typedef enum dsn_host_type_t
     HOST_TYPE_URI = 3,   ///< universal resource identifier as a string
 } dsn_host_type_t;
 
-
 /*! rpc address, which is always encoded into a 64-bit integer */
 typedef struct dsn_address_t
 {
@@ -508,7 +507,6 @@ rpc message read/write
    the request should be sent to
  \return RPC message handle
  */
-
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
@@ -527,10 +525,20 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 
+typedef enum dsn_msg_serialize_format
+{
+    DSF_INVALID = 0,
+    DSF_THRIFT_BINARY = 1,
+    DSF_THRIFT_COMPACT = 2,
+    DSF_THRIFT_JSON = 3,
+    DSF_PROTOC_BINARY = 4,
+    DSF_PROTOC_JSON = 5,
+} dsn_msg_serialize_format;
+
 /*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
 extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_task_code_t rpc_code,
-                            int32_t serialization_type,
+                            dsn_msg_serialize_format serialization_type,
                             void* buffer,
                             int size,
                             uint64_t hash DEFAULT(0)
@@ -541,16 +549,6 @@ typedef enum dsn_msg_parameter_type_t
 {
     MSG_PARAM_NONE = 0,           ///< nothing  
 } dsn_msg_parameter_type_t;
-
-typedef enum dsn_msg_serialize_format
-{
-    DSF_INVALID = 0,
-    DSF_THRIFT_BINARY = 1,
-    DSF_THRIFT_COMPACT = 2,
-    DSF_THRIFT_JSON = 3,
-    DSF_PROTOC_BINARY = 4,
-    DSF_PROTOC_JSON = 5,
-} dsn_msg_serialize_format;
 
 /*! RPC message context */
 typedef union dsn_msg_context_t
@@ -575,7 +573,6 @@ typedef union dsn_global_partition_id
     } u;
     uint64_t value;
 } dsn_gpid;
-
 
 inline uint64_t dsn_gpid_to_hash(dsn_gpid gpid)
 {

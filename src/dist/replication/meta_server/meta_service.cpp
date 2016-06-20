@@ -284,10 +284,10 @@ rpc_address meta_service::get_primary()
 // table operations
 void meta_service::on_create_app(dsn_message_t req)
 {
+    configuration_create_app_request request;
     configuration_create_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    configuration_create_app_request request;
     ::dsn::unmarshall(req, request);
     _state->create_app(request, response);
     reply(req, response);
@@ -295,10 +295,10 @@ void meta_service::on_create_app(dsn_message_t req)
 
 void meta_service::on_drop_app(dsn_message_t req)
 {
+    configuration_drop_app_request request;
     configuration_drop_app_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    configuration_drop_app_request request;
     ::dsn::unmarshall(req, request);
     _state->drop_app(request, response);
     reply(req, response);
@@ -306,29 +306,35 @@ void meta_service::on_drop_app(dsn_message_t req)
 
 void meta_service::on_list_apps(dsn_message_t req)
 {
+    configuration_list_apps_request request;
     configuration_list_apps_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    configuration_list_apps_request request;
+    ::dsn::unmarshall(req, request);
     _state->list_apps(request, response);
     reply(req, response);
 }
 
 void meta_service::on_list_nodes(dsn_message_t req)
 {
+    configuration_list_nodes_request request;
     configuration_list_nodes_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
 
-    configuration_list_nodes_request request;
+    ::dsn::unmarshall(req, request);
     _state->list_nodes(request, response);
     reply(req, response);
 }
 
 void meta_service::on_cluster_info(dsn_message_t req)
 {
+    configuration_cluster_info_request request;
     configuration_cluster_info_response response;
     META_STATUS_CHECK_ON_RPC(req, response);
-    _state->cluster_info(req);
+
+    ::dsn::unmarshall(req, request);
+    _state->cluster_info(request, response);
+    reply(req, response);
 }
 
 // partition server & client => meta server

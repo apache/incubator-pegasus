@@ -8,13 +8,12 @@ include(bin/dsn.cmake)
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
 
-if(DSN_GIT_SOURCE STREQUAL "xiaomi")
-    message(STATUS "use xiaomi git source")
-    set(GIT_SOURCE_FILE "ext/gitsource.xiaomi")
-else()
-    message(STATUS "use github git source")
-    set(GIT_SOURCE_FILE "ext/gitsource.github")
+if((NOT DEFINED DSN_GIT_SOURCE) OR (DSN_GIT_SOURCE STREQUAL ""))
+    set(DSN_GIT_SOURCE "github")
 endif()
+
+message(STATUS "use git source ${DSN_GIT_SOURCE}")
+set(GIT_SOURCE_FILE "ext/gitsource.${DSN_GIT_SOURCE}")
 
 if(DEFINED WARNING_ALL)
     #add_compile_options("-Wall")

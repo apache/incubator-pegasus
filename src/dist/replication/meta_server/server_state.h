@@ -136,7 +136,7 @@ public:
     void list_apps(configuration_list_apps_request& request, /*out*/ configuration_list_apps_response& response);
     void list_nodes(configuration_list_nodes_request& request, /*out*/ configuration_list_nodes_response& response);
 
-    void cluster_info(dsn_message_t msg);
+    void cluster_info(configuration_cluster_info_request& request, /*out*/ configuration_cluster_info_response& response);
 
     void unfree_if_possible_on_start();
 

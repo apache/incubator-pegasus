@@ -55,9 +55,9 @@ namespace dsn
         // for stateful apps with layer 2 support
         //
 
-        virtual void on_batched_rpc_requests(int64_t ballot, int64_t decree, dsn_message_t* requests, int count) { }
+        virtual void on_batched_write_requests(int64_t decree, dsn_message_t* requests, int count) { }
 
-        virtual int get_internal_error() { return 0; }
+        virtual int get_physical_error() { return 0; }
 
         virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) { return ERR_NOT_IMPLEMENTED; }
 
@@ -193,14 +193,14 @@ namespace dsn
             ) = 0;
 
     public:
-        static void app_on_batched_rpc_requests(void* app, int64_t ballot, int64_t decree, dsn_message_t* requests, int count)
+        static void app_on_batched_write_requests(void* app, int64_t decree, dsn_message_t* requests, int count)
         {
-            reinterpret_cast<replicated_service_app_type_1*>(app)->on_batched_rpc_requests(ballot, decree, requests, count);
+            reinterpret_cast<replicated_service_app_type_1*>(app)->on_batched_write_requests(decree, requests, count);
         }
 
-        static int app_get_internal_error(void* app)
+        static int app_get_physical_error(void* app)
         {
-            return reinterpret_cast<replicated_service_app_type_1*>(app)->get_internal_error();
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->get_physical_error();
         }
 
         static dsn_error_t app_sync_checkpoint(void* app, int64_t last_commit)
@@ -262,7 +262,7 @@ namespace dsn
         app.layer1.start = service_app::app_start;
         app.layer1.destroy = service_app::app_destroy;
 
-        app.layer2.apps.calls.get_internal_error = replicated_service_app_type_1::app_get_internal_error;
+        app.layer2.apps.calls.get_physical_error = replicated_service_app_type_1::app_get_physical_error;
         app.layer2.apps.calls.sync_checkpoint = replicated_service_app_type_1::app_sync_checkpoint;
         app.layer2.apps.calls.async_checkpoint = replicated_service_app_type_1::app_async_checkpoint;
         app.layer2.apps.calls.get_last_checkpoint_decree = replicated_service_app_type_1::app_get_last_checkpoint_decree;
@@ -270,11 +270,11 @@ namespace dsn
         app.layer2.apps.calls.get_checkpoint = replicated_service_app_type_1::app_get_checkpoint;
         app.layer2.apps.calls.apply_checkpoint = replicated_service_app_type_1::app_apply_checkpoint;
 
-        if (std::is_same<decltype(&TServiceApp::on_batched_rpc_requests),
-                         decltype(&replicated_service_app_type_1::on_batched_rpc_requests)>())
-            app.layer2.apps.calls.on_batched_rpc_requests = nullptr;
+        if (std::is_same<decltype(&TServiceApp::on_batched_write_requests),
+                         decltype(&replicated_service_app_type_1::on_batched_write_requests)>())
+            app.layer2.apps.calls.on_batched_write_requests = nullptr;
         else
-            app.layer2.apps.calls.on_batched_rpc_requests = replicated_service_app_type_1::app_on_batched_rpc_requests;
+            app.layer2.apps.calls.on_batched_write_requests = replicated_service_app_type_1::app_on_batched_write_requests;
 
         dsn_register_app(&app);
     }
