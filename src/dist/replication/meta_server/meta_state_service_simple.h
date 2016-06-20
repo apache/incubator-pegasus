@@ -53,7 +53,7 @@ namespace dsn
             explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log_lock(true), _log(nullptr), _offset(0){}
 
             // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
-            virtual error_code initialize(int argc, const char** argv) override;
+            virtual error_code initialize(const std::vector<std::string>& args) override;
             virtual error_code finalize() override { return ERR_OK; }
 
             virtual std::shared_ptr<meta_state_service::transaction_entries> new_transaction_entries(unsigned int capacity) override;

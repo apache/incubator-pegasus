@@ -471,32 +471,41 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name,
 
 dsn::error_code replication_ddl_client::control_meta_balancer_migration(bool start)
 {
-    std::shared_ptr<control_balancer_migration_request> req(new control_balancer_migration_request());
-    req->enable_migration = start;
+    std::shared_ptr<configuration_meta_control_request> req = std::make_shared<configuration_meta_control_request>();
+    if (start)
+    {
+        req->ctrl_flags = ~(meta_ctrl_flags::ctrl_disable_replica_migration);
+        req->ctrl_type = meta_ctrl_type::meta_flags_and;
+    }
+    else
+    {
+        req->ctrl_flags = meta_ctrl_flags::ctrl_disable_replica_migration;
+        req->ctrl_type = meta_ctrl_type::meta_flags_or;
+    }
 
-    auto response_task = request_meta<control_balancer_migration_request>(
-        RPC_CM_CONTROL_BALANCER_MIGRATION,
+    auto response_task = request_meta<configuration_meta_control_request>(
+        RPC_CM_CONTROL_META,
         req);
     response_task->wait();
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
-    dsn::replication::control_balancer_migration_response resp;
-    ::dsn::unmarshall(response_task->response(), resp);
+    configuration_meta_control_response resp;
+    dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 
-dsn::error_code replication_ddl_client::send_balancer_proposal(const balancer_proposal_request &request)
+dsn::error_code replication_ddl_client::send_balancer_proposal(const configuration_balancer_request &request)
 {
-    std::shared_ptr<balancer_proposal_request> req(new balancer_proposal_request(request));
+    std::shared_ptr<configuration_balancer_request> req = std::make_shared<configuration_balancer_request>(request);
 
-    auto response_task = request_meta<balancer_proposal_request>(
-        RPC_CM_BALANCER_PROPOSAL,
+    auto response_task = request_meta<configuration_balancer_request>(
+        RPC_CM_PROPOSE_BALANCER,
         req);
     response_task->wait();
     if ( response_task->error() != dsn::ERR_OK)
         return response_task->error();
-    dsn::replication::balancer_proposal_response resp;
-    ::dsn::unmarshall(response_task->response(), resp);
+    dsn::replication::configuration_balancer_response resp;
+    dsn::unmarshall(response_task->response(), resp);
     return resp.err;
 }
 

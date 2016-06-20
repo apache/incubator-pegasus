@@ -60,7 +60,8 @@ set:simple_kv_get_checkpoint_fail=1
 state:{{r1,pri,2,15},{r2,sec,2,15},{r3,pot,2,0}}
 wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
 wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
-state:{{r1,pri,2,15},{r2,sec,2,15},{r3,ina,2,0}}
+state:{{r1,pri,2,15},{r2,sec,2,15},{r3,err,2,0}}
+state:{{r1,pri,2,15},{r2,sec,2,15}}
 set:simple_kv_get_checkpoint_fail=0
 
 # the following group_check will trigger init_learn again
@@ -69,7 +70,8 @@ wait:on_task_begin:node=r3,task_code=RPC_GROUP_CHECK
 state:{{r1,pri,2,15},{r2,sec,2,15},{r3,pot,2,0}}
 wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
 inject:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
-state:{{r1,pri,2,15},{r2,sec,2,15},{r3,ina,2,0}}
+state:{{r1,pri,2,15},{r2,sec,2,15},{r3,err,2,0}}
+state:{{r1,pri,2,15},{r2,sec,2,15}}
 
 # the following group_check will trigger init_learn again
 # set simple_kv_apply_checkpoint_fail=1
@@ -79,7 +81,7 @@ state:{{r1,pri,2,15},{r2,sec,2,15},{r3,pot,2,0}}
 wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
 wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
 state:{{r1,pri,2,15},{r2,sec,2,15},{r3,err,2,0}}
-state:{{r1,pri,2,15,5},{r2,sec,2,15,5}}
+state:{{r1,pri,2,15},{r2,sec,2,15}}
 set:simple_kv_apply_checkpoint_fail=0
 
 # the following group_check will trigger init_learn again

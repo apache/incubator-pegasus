@@ -378,7 +378,7 @@ namespace dsn {
                     task_list.push_back(dsn_task_code_to_string(task_id));
 
                 }
-                std::json_encode(ss,task_list);
+                dsn::json::json_encode(ss,task_list);
                 return ss.str();
             }
             //return a list of 2 elements for a specific task:
@@ -471,7 +471,7 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                std::json_encode(ss, total_resp);
+                dsn::json::json_encode(ss, total_resp);
                 return ss.str();
             }
             //return 6 types of latency times for a specific task
@@ -551,7 +551,7 @@ namespace dsn {
                 //timeList[0] = (timeList[3] - timeList[0]) / 2;
                 //timeList[3] = timeList[0];
 
-                std::json_encode(ss, timeList);
+                dsn::json::json_encode(ss, timeList);
                 return ss.str();
             }
             //return a list of current counter value for a specific task
@@ -615,7 +615,7 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                counter_realtime_resp{ std::string(str), data }.json_state(ss);
+                counter_realtime_resp{ std::string(str), data }.encode_json_state(ss);
                 return ss.str();
             }
             //return a list of 2 elements for a specific task
@@ -651,7 +651,7 @@ namespace dsn {
                         }
                     }
 
-                    call_resp{ task_list, call_matrix }.json_state(ss);
+                    call_resp{ task_list, call_matrix }.encode_json_state(ss);
                     return ss.str();
                 }
 
@@ -692,7 +692,7 @@ namespace dsn {
                 }
                 call_list.push_back(caller_list);
                 call_list.push_back(callee_list);
-                std::json_encode(ss, call_list);
+                dsn::json::json_encode(ss, call_list);
                 return ss.str();
             }
             //return a list of all sharer using the same pool with a specific task
@@ -718,7 +718,7 @@ namespace dsn {
                 for (int j = 0; j <= dsn_task_code_max(); j++)
                 if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool && task_spec::get(j)->type == TASK_TYPE_RPC_RESPONSE)
                     sharer_list.push_back(std::string(dsn_task_code_to_string(j)));
-                std::json_encode(ss, sharer_list);
+                dsn::json::json_encode(ss, sharer_list);
                 return ss.str();
             }
             //query time

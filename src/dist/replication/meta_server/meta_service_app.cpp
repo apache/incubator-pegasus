@@ -34,16 +34,19 @@
  */
 
 # include <dsn/dist/replication.h>
+# include <dsn/internal/factory_store.h>
 # include <dsn/dist/replication/meta_service_app.h>
-# include "server_state.h"
-# include "meta_service.h"
+
 # include "distributed_lock_service_simple.h"
 # include "meta_state_service_simple.h"
-# include "../zookeeper/meta_state_service_zookeeper.h"
+
 # include "../zookeeper/distributed_lock_service_zookeeper.h"
-# include <dsn/internal/factory_store.h>
-# include "simple_load_balancer.h"
+# include "../zookeeper/meta_state_service_zookeeper.h"
+
+# include "server_load_balancer.h"
 # include "greedy_load_balancer.h"
+
+# include "meta_service.h"
 
 # ifdef DSN_META_SERVER_DYNAMIC_LIB
 
@@ -55,24 +58,13 @@ MODULE_INIT_END
 
 # endif
 
-
 namespace dsn {
     namespace service {
         static bool register_component_provider(
             const char* name,
-            ::dsn::dist::distributed_lock_service::factory f)
+            dist::distributed_lock_service::factory f)
         {
-            return dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::register_factory(
-                name, 
-                f,
-                PROVIDER_TYPE_MAIN);
-        }
-
-        static bool register_component_provider(
-            const char* name,
-            ::dsn::dist::meta_state_service::factory f)
-        {
-            return dsn::utils::factory_store< ::dsn::dist::meta_state_service>::register_factory(
+            return utils::factory_store<dist::distributed_lock_service>::register_factory(
                 name,
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -80,49 +72,37 @@ namespace dsn {
 
         static bool register_component_provider(
             const char* name,
-            ::dsn::dist::server_load_balancer::factory f)
+            dist::meta_state_service::factory f)
         {
-            return dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::register_factory(
+            return utils::factory_store<dist::meta_state_service>::register_factory(
                 name,
                 f,
                 PROVIDER_TYPE_MAIN);
         }
 
-        meta_service_app::meta_service_app(dsn_gpid gpid)
-            : service_app(gpid)
+        static bool register_component_provider(
+            const char* name,
+            replication::server_load_balancer::factory f)
+        {
+            return utils::factory_store<replication::server_load_balancer>::register_factory(
+                name,
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
+
+        meta_service_app::meta_service_app(dsn_gpid gpid): service_app(gpid)
         {
             // create in constructor because it may be used in checker before started
-            _service = new meta_service();
+            _service.reset(new replication::meta_service());
 
-            register_component_provider(
-                "distributed_lock_service_simple",
-                ::dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>
-                );
+            register_component_provider("distributed_lock_service_simple", dist::distributed_lock_service::create<dist::distributed_lock_service_simple>);
+            register_component_provider("meta_state_service_simple", dist::meta_state_service::create<dist::meta_state_service_simple>);
 
-            register_component_provider(
-                "meta_state_service_simple",
-                ::dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_simple>
-                );
+            register_component_provider("distributed_lock_service_zookeeper", dist::distributed_lock_service::create<dist::distributed_lock_service_zookeeper>);
+            register_component_provider("meta_state_service_zookeeper", dist::meta_state_service::create<dist::meta_state_service_zookeeper>);
 
-            register_component_provider(
-                "distributed_lock_service_zookeeper",
-                dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_zookeeper>
-                );
-
-            register_component_provider(
-                "meta_state_service_zookeeper",
-                dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>
-                );
-
-            register_component_provider(
-                "simple_load_balancer",
-                dsn::dist::server_load_balancer::create<simple_load_balancer>
-                );
-
-            register_component_provider(
-                "greedy_load_balancer",
-                dsn::dist::server_load_balancer::create<greedy_load_balancer>);
-
+            register_component_provider("simple_load_balancer", replication::server_load_balancer::create<replication::simple_load_balancer>);
+            register_component_provider("greedy_load_balancer", replication::server_load_balancer::create<replication::greedy_load_balancer>);
             /////////////////////////////////////////////////////
             //// register more provides here used by meta servers
             /////////////////////////////////////////////////////
@@ -132,54 +112,15 @@ namespace dsn {
         {
         }
 
-        ::dsn::error_code meta_service_app::start(int argc, char** argv)
+        error_code meta_service_app::start(int argc, char** argv)
         {
-            if (argc == 4)
-            {
-                //for dump and restore
-                server_state *state = new server_state(nullptr);
-                error_code ec = state->initialize();
-                if (ec != ERR_OK)
-                {
-                    derror("initialize failed, err=%s", ec.to_string());
-                    dsn_exit(0);
-                }
-
-                if (strcmp(argv[1], "dump") == 0)
-                {
-                    ec = state->dump_from_remote_storage(argv[2], argv[3], true);
-                }
-                else if (strcmp(argv[1], "restore") == 0)
-                {
-                    bool write_back_to_remote = false;
-                    if (strcmp(argv[3], "write_back") == 0)
-                        write_back_to_remote = true;
-                    ec = state->restore_from_local_storage(argv[2], write_back_to_remote);
-                }
-                else
-                {
-                    dassert(false, "unsupported command arguments");
-                }
-
-                if (ec != ERR_OK)
-                {
-                    derror("%s failed, err=%s", argv[1], ec.to_string());
-                }
-                dsn_exit(0);
-            }
-            else
-                return _service->start();
+            //TODO: handle the load & restore
+            return _service->start();
         }
 
         error_code meta_service_app::stop(bool /*cleanup*/)
         {
-            if (_service != nullptr)
-            {
-                _service->stop();
-                delete _service;
-                _service = nullptr;
-            }
-
+            _service.reset(nullptr);
             return ERR_OK;
         }
     }

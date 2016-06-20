@@ -248,9 +248,9 @@ namespace dsn
             return ERR_OK;
         }
 
-        error_code meta_state_service_simple::initialize(int argc, const char** argv)
+        error_code meta_state_service_simple::initialize(const std::vector<std::string>& args)
         {
-            const char* work_dir = argc > 0 ? argv[0] : dsn_get_app_data_dir();
+            const char* work_dir = args.empty()?dsn_get_app_data_dir():args[0].c_str();
 
             _offset = 0;
             std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
