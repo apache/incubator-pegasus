@@ -42,9 +42,9 @@ namespace dsn
 typedef union
 {
     struct {
-        uint64_t is_forward_msg_disabled: 1;
-        uint64_t is_replication_needed: 1;
-        uint64_t unused: 63;
+        uint64_t is_forward_not_supported : 1;
+        uint64_t is_replication_needed : 1;
+        uint64_t unused : 63;
     }u;
     uint64_t o;
 }dsn_thrift_header_options;

@@ -72,7 +72,7 @@ namespace dsn
         //   ERR_OK: get succeed, and actually used buffer size is stored in "occupied"
         //   ERR_CAPACITY_EXCEEDED: buffer capacity is not enough, and actually neede size is stored in "occupied".
         //
-        virtual ::dsn::error_code prepare_get_checkpoint(void* buffer, int capacity, int* occupied) { *occupied = 0; return ERR_OK; }
+        virtual ::dsn::error_code prepare_get_checkpoint(void* buffer, int capacity, /*out*/ int* occupied) { *occupied = 0; return ERR_OK; }
 
         // 
         // Learn [start, infinite) from remote replicas (learner)
@@ -171,7 +171,7 @@ namespace dsn
             int64_t local_commit,
             void*   learn_request,
             int     learn_request_size,
-            app_learn_state& state
+            /*out*/ app_learn_state& state
             ) = 0;
 
         //

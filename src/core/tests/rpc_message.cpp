@@ -59,10 +59,11 @@ TEST(core, message_ex)
         ASSERT_EQ(0, m->get_count());
 
         message_header& h = *m->header;
+        ASSERT_EQ(0, h.hdr_version);
+        ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
-        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(0, h.body_length);
-        ASSERT_EQ(0, h.version);
+        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
@@ -94,10 +95,11 @@ TEST(core, message_ex)
         message_ex* response = request->create_response();
 
         message_header& h = *response->header;
+        ASSERT_EQ(0, h.hdr_version);
+        ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
-        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(0, h.body_length);
-        ASSERT_EQ(0, h.version);
+        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->rpc_id, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);

@@ -100,10 +100,11 @@ namespace dsn
     typedef struct message_header
     {
         header_type    hdr_type;
+        uint32_t       hdr_version;
+        uint32_t       hdr_length;
         uint32_t       hdr_crc32;
-        uint32_t       body_crc32;
         uint32_t       body_length;
-        int32_t        version;
+        uint32_t       body_crc32;
         uint64_t       id;      // sequence id, can be used to track source
         uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];

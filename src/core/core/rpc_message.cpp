@@ -491,6 +491,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
     hdr.hdr_type = header_type::hdr_dsn_default;
+    hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
     hdr.client.hash = hash;

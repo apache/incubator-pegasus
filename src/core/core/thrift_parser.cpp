@@ -89,7 +89,7 @@ dsn::message_ex* thrift_header_parser::parse_dsn_message(dsn_thrift_header* head
 
     dsn_hdr->id = seqid;
     dsn_hdr->gpid.value = header->gpid.value;
-    dsn_hdr->context.u.is_forward_disabled = header->opt.u.is_forward_msg_disabled;
+    dsn_hdr->context.u.is_forward_not_supported = header->opt.u.is_forward_not_supported;
     dsn_hdr->client.hash = header->request_hash;
     dsn_hdr->client.timeout_ms = header->client_timeout;
 
