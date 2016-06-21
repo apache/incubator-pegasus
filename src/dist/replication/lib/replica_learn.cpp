@@ -760,7 +760,7 @@ void replica::on_copy_remote_state_completed(
             {
                 ddebug(
                     "%s: on_copy_remote_state_completed[%016llx]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                    "apply_log_duration = %" PRIu64 " ns, apply learned state from private log succeed, app_last_committed_decree = %" PRId64,
+                    "apply_log_duration = %" PRIu64 " ns, apply learned state from private log succeed, app_committed_decree = %" PRId64,
                     name(), req.signature, resp.config.primary.to_string(),
                     _potential_secondary_states.duration_ms(),
                     dsn_now_ns() - start_ts,
