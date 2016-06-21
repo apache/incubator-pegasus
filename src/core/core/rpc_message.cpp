@@ -339,7 +339,7 @@ bool message_ex::is_right_header() const
 
 /*static*/ bool message_ex::is_right_header(char* hdr)
 {
-    uint32_t* pcrc = (reinterpret_cast<uint32_t*>(hdr))+1;
+    uint32_t* pcrc = reinterpret_cast<uint32_t*>(hdr + FIELD_OFFSET(message_header, hdr_crc32));
     uint32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID)
     {
