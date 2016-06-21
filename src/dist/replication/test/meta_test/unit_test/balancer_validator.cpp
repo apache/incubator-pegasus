@@ -31,9 +31,18 @@ using namespace dsn::replication;
 static void generate_apps(/*out*/app_mapper& mapper, const std::vector<dsn::rpc_address>& node_list)
 {
     mapper.clear();
-    std::shared_ptr<app_state> the_app = app_state::create("test_app", "test", 1);
-    the_app->status = dsn::app_status::AS_AVAILABLE;
-    generate_app(the_app, node_list, random32(5, 20));
+
+    dsn::app_info info;
+    info.status = dsn::app_status::AS_AVAILABLE;
+    info.app_id = 1;
+    info.is_stateful = true;
+    info.app_name = "test_app";
+    info.app_type = "test";
+    info.max_replica_count = 3;
+    info.partition_count = random32(5, 20);
+
+    std::shared_ptr<app_state> the_app = app_state::create(info);
+    generate_app(the_app, node_list);
     mapper.emplace(the_app->app_id, the_app);
 }
 

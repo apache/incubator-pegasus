@@ -123,8 +123,13 @@ void meta_service_test_app::update_configuration_test()
 
     server_state* ss = svc->_state.get();
     ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
-    std::shared_ptr<app_state> app = app_state::create("simple_kv.instance0", "simple_kv", 1);
-    app->init_partitions(2, 3);
+    dsn::app_info info;
+    info.is_stateful = true;
+    info.status = dsn::app_status::AS_CREATING;
+    info.app_id = 1; info.app_name = "simple_kv.instance0"; info.app_type = "simple_kv";
+    info.max_replica_count = 3; info.partition_count = 2;
+    std::shared_ptr<app_state> app = app_state::create(info);
+
     ss->_all_apps.emplace(1, app);
 
     std::vector<dsn::rpc_address> nodes;
@@ -186,8 +191,17 @@ static void generate_apps(app_mapper& mapper, const std::vector<dsn::rpc_address
     mapper.clear();
     for (int i=1; i<=5; ++i)
     {
-        std::shared_ptr<app_state> app = app_state::create("test_app" + boost::lexical_cast<std::string>(i), "simple_kv", i);
-        generate_app(app, node_list, random32(2, 5));
+        dsn::app_info info;
+        info.status = dsn::app_status::AS_CREATING;
+        info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
+        info.app_type = "simple_kv";
+        info.app_id = i;
+        info.max_replica_count = 3;
+        info.is_stateful = true;
+        info.partition_count = random32(2, 5);
+
+        std::shared_ptr<app_state> app = app_state::create(info);
+        generate_app(app, node_list);
         mapper.emplace(app->app_id, app);
     }
 }
@@ -198,11 +212,11 @@ static void clone_app_mapper(app_mapper& output, const app_mapper& input)
     for (auto& iter: input)
     {
         const std::shared_ptr<app_state>& old_app = iter.second;
-        std::shared_ptr<app_state> new_app = app_state::create(old_app->app_name, old_app->app_type, old_app->app_id);
-        new_app->init_partitions(old_app->partition_count, old_app->partitions[0].max_replica_count);
+        dsn::app_info info = *old_app;
+        info.status = dsn::app_status::AS_AVAILABLE;
+        std::shared_ptr<app_state> new_app = app_state::create(info);
         for (unsigned int i=0; i!=old_app->partition_count; ++i)
             new_app->partitions[i] = old_app->partitions[i];
-        new_app->status = dsn::app_status::AS_AVAILABLE;
         output.emplace(new_app->app_id, new_app);
     }
 }

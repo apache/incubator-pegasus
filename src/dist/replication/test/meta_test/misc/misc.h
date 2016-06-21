@@ -13,8 +13,7 @@ void generate_node_list(/*out*/std::vector<dsn::rpc_address> &output_list, int m
 
 void generate_app(
     /*out*/std::shared_ptr<dsn::replication::app_state>& app,
-    const std::vector<dsn::rpc_address>& node_list,
-    int partitions_per_node);
+    const std::vector<dsn::rpc_address>& node_list);
 
 void generate_node_mapper(
     /*out*/dsn::replication::node_mapper& output_nodes,
