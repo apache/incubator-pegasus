@@ -740,7 +740,8 @@ void replica::on_copy_remote_state_completed(
             if (err == ERR_OK)
             {
                 ddebug(
-                    "%s: on_copy_remote_state_completed[%016llx]: learner = %s, learn duration = %" PRIu64 " ms, apply learned state from private log succeed, duration = %" PRIu64 " ns",
+                    "%s: on_copy_remote_state_completed[%" PRIx64 "]: learner = %s, "
+                    "learn duration = %" PRIu64 " ms, apply learned state from private log succeed, duration = %" PRIu64 " ns",
                     name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
                     dsn_now_ns() - start_ts
@@ -749,10 +750,11 @@ void replica::on_copy_remote_state_completed(
             else
             {
                 derror(
-                    "%s: on_copy_remote_state_completed[%016llx]: learner = %s, learn duration = %" PRIu64 " ms, apply learned state from private log failed, err = %s, duration = %" PRIu64 " ns",
-                    name(), req.signature, req.learner.to_string(),
-                    err.to_string(),
+                    "%s: on_copy_remote_state_completed[%" PRIx64 "]: learner = %s, "
+                    "learn duration = %" PRIu64 " ms, apply learned state from private log failed, err = %s, duration = %" PRIu64 " ns",
+                    name(), req.signature, req.learner.to_string(),                    
                     _potential_secondary_states.duration_ms(),
+                    err.to_string(),
                     dsn_now_ns() - start_ts
                     );
             }
