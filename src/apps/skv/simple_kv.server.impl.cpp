@@ -289,31 +289,36 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::apply_checkpoint(
                 dsn_chkpt_apply_mode mode,
-                int64_t local_commit,
+                int64_t commit,
                 const dsn_app_learn_state& state)
             {
                 if (mode == DSN_CHKPT_LEARN)
                 {
-                    recover(state.files[0], state.to_decree_included);                    
+                    recover(state.files[0], state.to_decree_included);
                     return ERR_OK;
                 }
                 else
                 {
                     dassert(DSN_CHKPT_COPY == mode, "invalid mode %d", (int)mode);
                     dassert(state.to_decree_included > last_durable_decree(), "checkpoint's decree is smaller than current");
-                }
-                char name[256];
-                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), state.to_decree_included);
-                std::string lname(name);
 
-                if (!utils::filesystem::rename_path(state.files[0], lname))
-                    return ERR_CHECKPOINT_FAILED;
-                else
-                {
-                    set_last_durable_decree(state.to_decree_included);
-                    return ERR_OK;
+                    char name[256];
+                    sprintf(name, "%s/checkpoint.%" PRId64,
+                        data_dir(),
+                        state.to_decree_included
+                        );
+                    std::string lname(name);
+
+                    if (!utils::filesystem::rename_path(state.files[0], lname))
+                        return ERR_CHECKPOINT_FAILED;
+                    else
+                    {
+                        set_last_durable_decree(state.to_decree_included);
+                        return ERR_OK;
+                    }
                 }
             }
+
         }
     }
 } // namespace

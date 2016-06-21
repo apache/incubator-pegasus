@@ -51,29 +51,30 @@ using namespace dsn::service;
 
 error_code replica::initialize_on_new()
 {
-    ddebug("%s: initialize replica on new, dir = %s", name(), _dir.c_str());
-
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
-        derror("%s: cannot allocate new replica, because remove old dir %s failed", name(), _dir.c_str());
+        derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
         return ERR_PATH_ALREADY_EXIST;
     }
 
-    error_code err = init_app_and_prepare_list(true);
-    if (err != ERR_OK)
-        return err;
+    if (!dsn::utils::filesystem::create_directory(_dir))
+    {
+        derror("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
 
     replica_app_info info((app_info*)&_app_info);
     std::string path = utils::filesystem::path_combine(_dir, ".app-info");
-    err = info.store(path.c_str());
+    auto err = info.store(path.c_str());
     if (err != ERR_OK)
     {
         derror("save app-info to %s failed, err = %s", path.c_str(), err.to_string());
         dsn::utils::filesystem::remove_path(_dir);
+        return err;
     }
 
-    return err;
+    return init_app_and_prepare_list(true);
 }
 
 /*static*/ replica* replica::newr(replica_stub* stub, gpid gpid, const app_info& app)

@@ -264,7 +264,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     case partition_status::PS_PRIMARY:
         {
             check_state_completeness();
-            dassert(_app->last_committed_decree() + 1 == d, "");
+            dassert(_app->last_committed_decree() + 1 == d, "app commit: %" PRId64 ", mutation decree: %" PRId64 "", _app->last_committed_decree(), d);
             err = _app->write_internal(mu);
         }
         break;
