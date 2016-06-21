@@ -20,7 +20,7 @@ var vm = new Vue({
     ready: function ()
     {
         var self = this;
-        var client = new cliApp("http://"+localStorage['dsn_rpc_address']);
+        var client = new cliApp("http://"+localStorage['target_server']);
         result = client.call({
                 args: new command({
                 cmd: "pq",

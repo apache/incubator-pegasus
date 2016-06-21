@@ -2,11 +2,12 @@ var vm = new Vue({
     el: '#app',
     data:{
         setting_list: [
-            {'name':'dsn_rpc_address','label':'DSN RPC Address','description':'the machine address you use when do single-node profiling','value':''},
-            {'name':'meta_server_address','label':'Meta Server Address','description':'the meta server address for app store','value':''}
+            {'name':'target_server','label':'Server','description':'address of target machine which we care about its runtime information','value':'srgx-02:34802'},
+            {'name':'target_meta_server','label':'Meta Server','description':'address of meta server','value':'srgx-02:34602'},
+            {'name':'target_app_store','label':'App Store Server','description':'address of app store','value':'srgx-02:34602'},
         ],
         state: ''
-    },
+    }, 
     watch: {
         'setting_list': {
             handler: function (lst, oldLst) {
@@ -16,7 +17,7 @@ var vm = new Vue({
                 {
                     localStorage.setItem(lst[item].name, lst[item].value);
                 }
-                setTimeout(function(){ self.state = ''; }, 700);
+                setTimeout(function(){ self.state = ''; }, 1000);
             },
             deep: true
         },

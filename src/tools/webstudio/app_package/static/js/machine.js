@@ -12,7 +12,7 @@ var vm = new Vue({
         update: function()
         {
             var self = this;
-            var client = new meta_sApp("http://"+localStorage['meta_server_address']);
+            var client = new meta_sApp("http://"+localStorage['target_meta_server']);
             result = client.list_nodes({
                 args: new configuration_list_nodes_request({
                     'node_status': 'NS_INVALID'
@@ -113,7 +113,7 @@ var vm = new Vue({
             /*
             var self = this;
             console.log(((role!='')?'replica.':'daemon.') + "kill_partition " + gpid.app_id + " " + gpid.pidx);
-            var client = new cliApp("http://"+localStorage['meta_server_address']);
+            var client = new cliApp("http://"+localStorage['target_meta_server']);
             result = client.call({
                     args: new command({
                     cmd: ((role!='')?'replica.':'daemon.') + "kill_partition",
@@ -136,7 +136,7 @@ var vm = new Vue({
         //query each machine their service state
         self.updateTimer = setInterval(function () {
             self.update(); 
-        }, 1000);
+        }, 3000);
     }
 });
 
