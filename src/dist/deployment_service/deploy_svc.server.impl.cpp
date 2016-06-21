@@ -43,12 +43,12 @@ namespace dsn
         {
         }
 
-        void deploy_svc_service_impl::stop()
+        void deploy_svc_service_impl::stop(dsn_gpid gd)
         {
-            close_service(get_gpid());
+            close_service(gd);
         }
 
-        error_code deploy_svc_service_impl::start()
+        error_code deploy_svc_service_impl::start(dsn_gpid gd)
         {
             std::string pdir = utils::filesystem::path_combine(dsn_get_app_data_dir(), "services");
             _service_dir = dsn_config_get_value_string("deploy.service",
@@ -104,7 +104,7 @@ namespace dsn
                 _clusters[cluster_name] = ce;
             }
 
-            open_service(get_gpid());
+            open_service(gd);
             return ERR_OK;
         }
 

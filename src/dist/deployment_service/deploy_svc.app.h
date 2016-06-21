@@ -15,13 +15,12 @@ public:
 
     virtual ::dsn::error_code start(int argc, char** argv)
     {
-        _deploy_svc_svc.open_service(get_gpid());
-        return _deploy_svc_svc.start();
+        return _deploy_svc_svc.start(gpid());
     }
 
     virtual ::dsn::error_code stop(bool cleanup = false)
     {
-        _deploy_svc_svc.close_service(get_gpid());
+        _deploy_svc_svc.stop(gpid());
         return ERR_OK;
     }
 
