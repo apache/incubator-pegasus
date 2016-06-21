@@ -57,47 +57,30 @@ void app_state_helper::on_init_partitions()
     contexts.assign(owner->partition_count, context);
 }
 
-std::shared_ptr<app_state> app_state::create(const std::string &name, const std::string &type, int32_t id)
+app_state::app_state(const app_info &info): app_info(info), helpers(new app_state_helper())
 {
-    std::shared_ptr<app_state> result = std::make_shared<app_state>();
-
-    result->is_stateful = true;
-    result->max_replica_count = 3;
-
-    result->app_name = name;
-    result->app_type = type;
-    result->app_id = id;
-    result->status = app_status::AS_CREATING;
-    result->helpers->owner = result.get();
-    return result;
-}
-
-std::shared_ptr<app_state> app_state::create(const app_info& app_info)
-{
-    std::shared_ptr<app_state> result = std::make_shared<app_state>(app_info);
-    result->helpers->owner = result.get();
-    result->init_partitions(app_info.partition_count, app_info.max_replica_count);
-    return result;
-}
-
-void app_state::init_partitions(int32_t pc, int32_t rc)
-{
-    partition_count = pc;
-    max_replica_count = rc;
+    helpers->owner = this;
 
     partition_configuration config;
     config.ballot = 0;
     config.pid.set_app_id(app_id);
     config.last_committed_decree = 0;
     config.last_drops.clear();
-    config.max_replica_count = rc;
+    config.max_replica_count = app_info::max_replica_count;
     config.primary.set_invalid();
     config.secondaries.clear();
-    partitions.assign(pc, config);
-    for (int i=0; i!=pc; ++i)
+    partitions.assign(app_info::partition_count, config);
+    for (int i=0; i!=app_info::partition_count; ++i)
         partitions[i].pid.set_partition_index(i);
 
     helpers->on_init_partitions();
+}
+
+std::shared_ptr<app_state> app_state::create(const app_info& info)
+{
+    std::shared_ptr<app_state> result = std::make_shared<app_state>(info);
+    result->helpers->owner = result.get();
+    return result;
 }
 
 }}

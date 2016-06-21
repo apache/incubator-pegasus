@@ -21,7 +21,7 @@ set(MY_PROJ_LIBS dsn.replication.meta_server
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
-set(MY_BINPLACES run.sh config-test.ini)
+set(MY_BINPLACES clear.sh run.sh config-test.ini)
 
 dsn_add_executable()
 add_dependencies(${MY_PROJ_NAME} googletest)

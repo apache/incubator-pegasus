@@ -56,10 +56,8 @@ void generate_node_mapper(
     }
 }
 
-void generate_app(/*out*/std::shared_ptr<app_state>& app, const std::vector<dsn::rpc_address>& node_list, int partitions_per_node)
+void generate_app(/*out*/std::shared_ptr<app_state>& app, const std::vector<dsn::rpc_address>& node_list)
 {
-    app->init_partitions(node_list.size()*partitions_per_node, 3);
-
     for (dsn::partition_configuration& pc: app->partitions)
     {
         pc.ballot = random32(1, 10000);

@@ -222,14 +222,14 @@ error_code server_state::restore_from_local_storage(const char* local_path)
         if (ans == 0) //file end
             break;
 
-        std::shared_ptr<app_state> app = app_state::create("", "", -1);
+        app_info info;
         binary_reader reader(data);
-        unmarshall(reader, *app, DSF_THRIFT_BINARY);
+        unmarshall(reader, info, DSF_THRIFT_BINARY);
+        std::shared_ptr<app_state> app = app_state::create(info);
         _all_apps.emplace(app->app_id, app);
 
         if (app->status == app_status::AS_AVAILABLE)
         {
-            app->init_partitions(app->partition_count, app->max_replica_count);
             for (unsigned int i=0; i!=app->partition_count; ++i)
             {
                 ans = file->read_next_buffer(data);
@@ -414,9 +414,10 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
             {
                 if (ec == ERR_OK)
                 {
-                    std::shared_ptr<app_state> app = app_state::create("", "", -1);
-                    dassert(app->decode_json_state(value), "invalid app data");
-                    dassert(app->status==app_status::AS_AVAILABLE || app->status==app_status::AS_DROPPED, "invalid app status in remote storage");
+                    app_info info;
+                    dassert(dsn::json::json_forwarder<app_info>::decode(value, info), "invalid json data");
+                    dassert(info.status==app_status::AS_AVAILABLE || info.status==app_status::AS_DROPPED, "invalid app status in remote storage");
+                    std::shared_ptr<app_state> app = app_state::create(info);
                     {
                         zauto_write_lock l(_lock);
                         _all_apps.emplace(app->app_id, app);
@@ -427,7 +428,6 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                             return;
                     }
 
-                    app->init_partitions(app->partition_count, app->max_replica_count);
                     app->status = app_status::AS_CREATING;
                     ++_creating_apps_count;
                     for (int i = 0; i < app->partition_count; i++)
@@ -672,8 +672,8 @@ void server_state::create_app(dsn_message_t msg)
 {
     configuration_create_app_request request;
     configuration_create_app_response response;
-    bool will_create_app = false;
     std::shared_ptr<app_state> app;
+    bool will_create_app = false;
     dsn::unmarshall(msg ,request);
     
     ddebug("create app request, name(%s), type(%s)", request.app_name.c_str(), request.options.app_type.c_str());
@@ -711,10 +711,18 @@ void server_state::create_app(dsn_message_t msg)
         }
         else {
             will_create_app = true;
-            app = app_state::create(request.app_name, request.options.app_type, next_app_id());
-            app->envs = std::move(request.options.envs);
-            app->is_stateful = request.options.is_stateful;
-            app->init_partitions(request.options.partition_count, request.options.replica_count);
+
+            app_info info;
+            info.app_id = next_app_id();
+            info.app_name = request.app_name;
+            info.app_type = request.options.app_type;
+            info.envs = std::move(request.options.envs);
+            info.is_stateful = request.options.is_stateful;
+            info.max_replica_count = request.options.replica_count;
+            info.partition_count = request.options.partition_count;
+            info.status = app_status::AS_CREATING;
+
+            app = app_state::create(info);
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(request.app_name, app);
             ++_creating_apps_count;

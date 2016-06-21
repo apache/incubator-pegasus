@@ -120,43 +120,16 @@ namespace dsn {
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
     DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
 
-    template<typename T>
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const T& value)
+    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const unsigned long& val)\
     {
-        switch (sizeof(value))
-        {
-        case 4:
-            return write_base(proto, (int32_t)value);
-        case 8:
-            return write_base(proto, (int64_t)value);
-        default:
-            assert(false);
-            return 0;
-        }
+        return proto->writeI64(static_cast<int64_t>(val));\
     }
-
-    template <typename T>
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value)
+    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/unsigned long& val)\
     {
-        uint32_t res = 0;
-        switch (sizeof(value))
-        {
-        case 4: {
-            int32_t val;
-            res = read_base(proto, val);
-            value = T(val);
-            return res;
-        }
-        case 8: {
-            int64_t val;
-            res = read_base(proto, val);
-            value = T(val);
-            return res;
-        }
-        default:
-            assert(false);
-            return 0;
-        }
+        int64_t result;
+        uint32_t ans = proto->readI64(result);
+        val = static_cast<unsigned long>(result);
+        return ans;
     }
 
     template<typename T>

@@ -111,25 +111,6 @@ void encode_json_state(std::stringstream& out) const \
 void decode_json_state(dsn::json::string_tokenizer& in) \
 {\
     JSON_DECODE_ENTRIES(in, *this, __VA_ARGS__);\
-}\
-bool decode_json_state(const dsn::blob& data)\
-{\
-    dsn::json::string_tokenizer tokenizer(data);\
-    try\
-    {\
-        decode_json_state(tokenizer);\
-    }\
-    catch (unsigned int corrupt_pos)\
-    {\
-        derror("invalid json string(%s) at pos(%d)", data.data(), corrupt_pos);\
-        return false;\
-    }\
-    catch (...) \
-    {\
-        derror("invalid json string(%s)", data.data());\
-        return false;\
-    }\
-    return true;\
 }
 
 namespace dsn { namespace json {
@@ -212,21 +193,97 @@ public:
 
 template<typename> class json_forwarder;
 
-template<typename T> inline void json_encode(std::stringstream& out, const T& t)
-{
-    out << t;
+#define DSN_BASE_TYPE_JSON_STATE(TName) \
+inline void json_encode(std::stringstream& out, const TName& t) \
+{\
+    out << t;\
+}\
+inline void json_decode(string_tokenizer& in, TName& t)\
+{\
+    int start_pos = in.tell();\
+    in.walk_until_json_splitter();\
+    std::string string_data;\
+    in.assign(start_pos, in.tell(), string_data);\
+    std::istringstream is(string_data);\
+    is >> t;\
 }
 
-template<typename T> inline void json_decode(string_tokenizer& in, T& t)
+DSN_BASE_TYPE_JSON_STATE(bool)
+DSN_BASE_TYPE_JSON_STATE(char)
+DSN_BASE_TYPE_JSON_STATE(short)
+DSN_BASE_TYPE_JSON_STATE(int)
+DSN_BASE_TYPE_JSON_STATE(long)
+DSN_BASE_TYPE_JSON_STATE(float)
+DSN_BASE_TYPE_JSON_STATE(double)
+DSN_BASE_TYPE_JSON_STATE(uint8_t)
+DSN_BASE_TYPE_JSON_STATE(uint16_t)
+DSN_BASE_TYPE_JSON_STATE(uint32_t)
+DSN_BASE_TYPE_JSON_STATE(uint64_t)
+
+inline void json_encode(std::stringstream& out, const std::string& t)
 {
-    int start_pos = in.tell();
-    in.walk_until_json_splitter();
-    //TODO: optimize this
-    std::string string_data;
-    in.assign(start_pos, in.tell(), string_data);
-    std::istringstream is(string_data);
-    is >> t;
+    out << "\"" << t << "\"";
 }
+
+inline void json_encode(std::stringstream& out, const char* t)
+{
+    out << "\"" << t << "\"";
+}
+
+inline void json_decode(string_tokenizer& in, std::string& t)
+{
+    in.expect_token('\"');
+    unsigned start_pos = in.tell();
+    in.walk_until('\"');
+    in.assign(start_pos, in.tell(), t);
+    in.forward();
+}
+
+#define ENUM_TYPE_SERIALIZATION(EnumType, InvalidEnum) \
+inline void json_encode(std::stringstream& out, const EnumType& enum_variable)\
+{\
+    out << "\"" << enum_to_string(enum_variable) << "\"";\
+}\
+inline void json_decode(dsn::json::string_tokenizer& in, EnumType& enum_variable)\
+{\
+    std::string status_message;\
+    dsn::json::json_decode(in, status_message);\
+    enum_variable = enum_from_string(status_message.c_str(), InvalidEnum);\
+}
+
+ENUM_TYPE_SERIALIZATION(dsn::replication::partition_status::type, dsn::replication::partition_status::PS_INVALID)
+ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
+
+inline void json_encode(std::stringstream& out, const dsn::gpid& pid)
+{
+    out << "\"" << pid.get_app_id() << "." << pid.get_partition_index() << "\"";
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::gpid& pid)
+{
+    std::string gpid_message;
+    json_decode(in, gpid_message);
+    dsn_global_partition_id c_gpid;
+    sscanf(gpid_message.c_str(), "%d.%d", &c_gpid.u.app_id, &c_gpid.u.partition_index);
+    pid = dsn::gpid(c_gpid);
+}
+
+inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
+{
+    out << "\"" << address.to_string() << "\"";
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::rpc_address& address)
+{
+    std::string rpc_address_string;
+    json_decode(in, rpc_address_string);
+    address.from_string_ipv4(rpc_address_string.c_str());
+}
+
+inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config);
+inline void json_decode(string_tokenizer& in, dsn::partition_configuration& config);
+inline void json_encode(std::stringstream& out, const dsn::app_info& info);
+inline void json_decode(string_tokenizer& in, dsn::app_info& info);
+inline void json_encode(std::stringstream& out, const dsn::replication::node_state& ns);
+inline void json_decode(string_tokenizer& in, dsn::replication::node_state& ns);
 
 template<typename T> inline void json_encode_iterable(std::stringstream& out, const T& t)
 {
@@ -354,66 +411,20 @@ template<typename T> inline void json_encode(std::stringstream& out, const dsn::
     json_encode(out, *t);
 }
 
-inline void json_encode(std::stringstream& out, const std::string& t)
+template<typename T> inline void json_decode(string_tokenizer& in, dsn::ref_ptr<T>& t)
 {
-    out << "\"" << t << "\"";
+    json_decode(in, *t);
 }
 
-inline void json_encode(std::stringstream& out, const char* t)
+template<typename T> inline void json_encode(std::stringstream& out, const std::shared_ptr<T>& t)
 {
-    out << "\"" << t << "\"";
+    json_encode(out, *t);
 }
 
-inline void json_decode(string_tokenizer& in, std::string& t)
+template<typename T> inline void json_decode(string_tokenizer& in, std::shared_ptr<T>& t)
 {
-    in.expect_token('\"');
-    unsigned start_pos = in.tell();
-    in.walk_until('\"');
-    in.assign(start_pos, in.tell(), t);
-    in.forward();
+    json_decode(in, *t);
 }
-
-#define ENUM_TYPE_SERIALIZATION(EnumType, InvalidEnum) \
-inline void json_encode(std::stringstream& out, const EnumType& enum_variable)\
-{\
-    out << "\"" << enum_to_string(enum_variable) << "\"";\
-}\
-inline void json_decode(dsn::json::string_tokenizer& in, EnumType& enum_variable)\
-{\
-    std::string status_message;\
-    dsn::json::json_decode(in, status_message);\
-    enum_variable = enum_from_string(status_message.c_str(), InvalidEnum);\
-}
-
-ENUM_TYPE_SERIALIZATION(dsn::replication::partition_status::type, dsn::replication::partition_status::PS_INVALID)
-ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
-
-inline void json_encode(std::stringstream& out, const dsn::gpid& pid)
-{
-    out << "\"" << pid.get_app_id() << "." << pid.get_partition_index() << "\"";
-}
-inline void json_decode(dsn::json::string_tokenizer& in, dsn::gpid& pid)
-{
-    std::string gpid_message;
-    json_decode(in, gpid_message);
-    dsn_global_partition_id c_gpid;
-    sscanf(gpid_message.c_str(), "%d.%d", &c_gpid.u.app_id, &c_gpid.u.partition_index);
-    pid = dsn::gpid(c_gpid);
-}
-
-inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
-{
-    out << "\"" << address.to_string() << "\"";
-}
-inline void json_decode(dsn::json::string_tokenizer& in, dsn::rpc_address& address)
-{
-    std::string rpc_address_string;
-    json_decode(in, rpc_address_string);
-    address.from_string_ipv4(rpc_address_string.c_str());
-}
-
-inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config);
-inline void json_decode(dsn::json::string_tokenizer& in, dsn::partition_configuration& config);
 
 template<typename T>
 class json_forwarder {
@@ -488,6 +499,20 @@ public:
     {
         decode_inner(in, t, has_json_state{}, p_has_json_state{});
     }
+    static bool decode(const dsn::blob& bb, T& t)
+    {
+        dsn::json::string_tokenizer tokenizer(bb);
+        try
+        {
+            decode(tokenizer, t);
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return true;
+    }
 };
 
 inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config)
@@ -497,6 +522,22 @@ inline void json_encode(std::stringstream& out, const dsn::partition_configurati
 inline void json_decode(dsn::json::string_tokenizer& in, dsn::partition_configuration& config)
 {
     JSON_DECODE_ENTRIES(in, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+}
+inline void json_encode(std::stringstream& out, const dsn::app_info& info)
+{
+    JSON_ENCODE_ENTRIES(out, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count);
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::app_info& info)
+{
+    JSON_DECODE_ENTRIES(in, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count);
+}
+inline void json_encode(std::stringstream& out, const dsn::replication::node_state& ns)
+{
+    JSON_ENCODE_ENTRIES(out, ns, is_alive, address, primaries, partitions);
+}
+inline void json_decode(dsn::json::string_tokenizer& in, dsn::replication::node_state& ns)
+{
+    JSON_DECODE_ENTRIES(in, ns, is_alive, address, primaries, partitions);
 }
 
 }}
