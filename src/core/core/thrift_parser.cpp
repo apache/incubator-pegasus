@@ -144,11 +144,19 @@ int thrift_header_parser::prepare_buffers_on_send(message_ex* msg, unsigned int 
     buffers[0].sz = length + sizeof(int32_t)*2;
     //then the response error code string length
     ptr -= sizeof(int32_t);
+# ifdef _WIN32
+    *((int*)ptr) = htonl(length);
+# else
     *((int*)ptr) = htobe32(length);
+# endif
     //then the total length of all message: error_code_string's memory + msg_body
     ptr -= sizeof(int32_t);
     length = length + sizeof(int32_t) + msg->header->body_length;
+# ifdef _WIN32
+    *((int*)ptr) = htonl(length);
+# else
     *((int*)ptr) = htobe32(length);
+# endif
 
     // we ignore the message header when response thrift
     offset += sizeof(message_header);

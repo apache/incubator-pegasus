@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include <dsn/internal/task_spec.h>
+#include <dsn/cpp/auto_codes.h>
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_SERVER)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_STATE)

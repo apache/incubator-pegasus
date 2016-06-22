@@ -32,7 +32,6 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <dsn/internal/task.h>
 #include <zookeeper.h>
 
 #include "zookeeper_session.h"

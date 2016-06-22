@@ -1,5 +1,4 @@
 #include "machine_pool_mgr.h"
-#include <dsn/internal/task.h>
 #include <fstream>
 
 #ifdef __TITLE__

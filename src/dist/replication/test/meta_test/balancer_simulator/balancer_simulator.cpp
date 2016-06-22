@@ -163,15 +163,9 @@ void greedy_balancer_perfect_move_primary()
     }
 }
 
-extern void dsn_core_init();
-void dsn_init()
-{
-    dsn_core_init();
-    dsn_run_config("config.ini", false);
-}
-
 int main(int, char**)
 {
-    dsn_init();
+    dsn_run_config("config.ini", false);
     greedy_balancer_perfect_move_primary();
+    return 0;
 }
