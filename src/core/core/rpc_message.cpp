@@ -147,7 +147,7 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
 DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
 {
     auto msg2 = ((::dsn::message_ex*)msg);
-    if (msg2->local_rpc_code != -1)
+    if (msg2->local_rpc_code != (uint32_t)(::dsn::TASK_CODE_INVALID))
     {
         return msg2->local_rpc_code;
     }

@@ -271,8 +271,7 @@ typedef void(*dsn_framework_rpc_request_handler)(
     void*,          ///< context from dsn_app_create
     dsn_gpid,       ///< global partition id
     bool,           ///< is_write_operation or not
-    dsn_message_t,  ///< incoming rpc request
-    int             ///< delay (imposed by tools)
+    dsn_message_t   ///< incoming rpc request
     );
 
 struct dsn_app_learn_state
@@ -414,6 +413,7 @@ typedef struct dsn_app_info
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app type name
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app full name
     char  data_dir[DSN_MAX_PATH];             ///< app data directory
+    dsn_address_t primary_address;            ///< primary address
 } dsn_app_info;
 # pragma pack(pop)
 
