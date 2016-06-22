@@ -324,20 +324,25 @@ bool service_app_spec::init(
     return true;
 }
 
-network_server_config::network_server_config(const network_server_config& r)
-: channel(r.channel), hdr_format(r.hdr_format)
+network_server_config::network_server_config()
+    : port(0), channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_GENERAL)
 {
-    port = r.port;
-    factory_name = r.factory_name;
-    message_buffer_block_size = r.message_buffer_block_size;
+    factory_name = "dsn::tools::asio_network_provider";
+    message_buffer_block_size = 65536;
 }
 
 network_server_config::network_server_config(int p, rpc_channel c)
-    : channel(c), hdr_format(NET_HDR_DSN)
+    : port(p), channel(c), hdr_format(NET_HDR_GENERAL)
 {
-    port = p;
     factory_name = "dsn::tools::asio_network_provider";
     message_buffer_block_size = 65536;
+}
+
+network_server_config::network_server_config(const network_server_config& r)
+    : port(r.port), channel(r.channel), hdr_format(r.hdr_format)
+{
+    factory_name = r.factory_name;
+    message_buffer_block_size = r.message_buffer_block_size;
 }
 
 bool network_server_config::operator < (const network_server_config& r) const

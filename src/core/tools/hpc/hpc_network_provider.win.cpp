@@ -249,7 +249,8 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-            auto client = new hpc_rpc_session(sock, new_message_parser(), *this, server_addr, true);
+            auto parser = new_message_parser();
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper);
             return c;
@@ -290,7 +291,8 @@ namespace dsn
 
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
-                    auto s = new hpc_rpc_session(_accept_sock, new_message_parser(), *this, client_addr, false);
+                    auto parser = new_message_parser();
+                    auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr, false);
                     rpc_session_ptr s1(s);
                     s->bind_looper(_looper);
 
@@ -504,12 +506,12 @@ namespace dsn
 
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
-            std::unique_ptr<message_parser>&& parser,
+            message_parser_ptr& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
             bool is_client
             )
-            : rpc_session(net, remote_addr, std::move(parser), is_client),
+            : rpc_session(net, remote_addr, parser, is_client),
             _socket(sock)
         {
             _sending_signature = 0;

@@ -1,0 +1,252 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     Jun. 2016, Zuoyan Qin, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+# include "thrift_message_parser.h"
+# include <dsn/service_api_c.h>
+# include <dsn/cpp/serialization_helper/thrift_helper.h>
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "thrift.message.parser"
+
+namespace dsn
+{
+    thrift_message_parser::thrift_message_parser(int buffer_block_size, bool is_write_only)
+        : message_parser(buffer_block_size, is_write_only),
+          _header_parsed(false)
+    {
+    }
+
+    message_ex* thrift_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
+    {
+        mark_read(read_length);
+
+        if (_read_buffer_occupied >= sizeof(thrift_message_header))
+        {
+            if (!_header_parsed)
+            {
+                read_thrift_header(_read_buffer.data(), _thrift_header);
+
+                if (!check_thrift_header(_thrift_header))
+                {
+                    derror("check thrift header of version 0 failed");
+
+                    truncate_read();
+                    read_next = -1;
+                    return nullptr;
+                }
+                else
+                {
+                    _header_parsed = true;
+                }
+            }
+
+            unsigned int msg_sz = _thrift_header.hdr_length + _thrift_header.body_length;
+
+            // msg done
+            if (_read_buffer_occupied >= msg_sz)
+            {
+                dsn::blob msg_bb = _read_buffer.range(0, msg_sz);
+                message_ex* msg = parse_message(_thrift_header, msg_bb);
+
+                _read_buffer = _read_buffer.range(msg_sz);
+                _read_buffer_occupied -= msg_sz;
+                _header_parsed = false;
+
+                read_next = sizeof(header_type);
+                return msg;
+            }
+            else
+            {
+                read_next = msg_sz - _read_buffer_occupied;
+                return nullptr;
+            }
+        }
+        else
+        {
+            read_next = sizeof(thrift_message_header) - _read_buffer_occupied;
+            return nullptr;
+        }
+    }
+
+    void thrift_message_parser::truncate_read()
+    {
+        message_parser::truncate_read();
+        _header_parsed = false;
+    }
+
+    void thrift_message_parser::on_create_response(message_ex* request_msg, message_ex* response_msg)
+    {
+        dsn::rpc_write_stream write_stream(response_msg);
+        ::dsn::binary_writer_transport trans(write_stream);
+        boost::shared_ptr< ::dsn::binary_writer_transport > trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
+
+        //add message begin for each thrift response, corresponding with thrift_parser::add_post_fix's writeMessageEnd
+        msg_proto.writeMessageBegin(request_msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, request_msg->header->id);
+    }
+
+    int thrift_message_parser::prepare_on_send(message_ex* msg)
+    {
+        dassert(!msg->header->context.u.is_request, "only support send response");
+
+        dsn::rpc_write_stream write_stream(msg);
+        ::dsn::binary_writer_transport trans(write_stream);
+        boost::shared_ptr< ::dsn::binary_writer_transport > trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
+
+        //write message end, which indicate the end of a thrift message
+        msg_proto.writeMessageEnd();
+        return (int)msg->buffers.size();
+    }
+
+    int thrift_message_parser::get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers)
+    {
+        dassert(!msg->header->context.u.is_request, "only support send response");
+        dassert(msg->header->server.error_name[0], "error name should be set");
+        dassert(!msg->buffers.empty(), "buffers can not be empty");
+
+        // response format:
+        //     <total_len(int32)> <error_len(int32)> <error_str(bytes)> <body_data(bytes)>
+        //    |-----------response header------------------------------|
+
+        int32_t err_len = strlen(msg->header->server.error_name);
+        int32_t header_len = sizeof(int32_t) * 2 + err_len;
+        int32_t total_len = header_len + msg->header->body_length;
+
+        // construct thrift header blob
+        std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_len)), [](char* c) {dsn_transient_free(c);});
+        char* ptr = header_holder.get();
+        *((int32_t*)ptr) = htobe32(total_len);
+        ptr += sizeof(int32_t);
+        *((int32_t*)ptr) = htobe32(err_len);
+        ptr += sizeof(int32_t);
+        memcpy(ptr, msg->header->server.error_name, err_len);
+
+        // fill buffers
+        int i = 0;
+        for (auto& buf : msg->buffers)
+        {
+            if (i == 0)
+            {
+                // the first buffer in message is 'message_header', we use thrift header instead
+                dassert(buf.length() == sizeof(message_header), "");
+                buffers[i].buf = header_holder.get();;
+                buffers[i].sz = header_len;
+            }
+            else
+            {
+                buffers[i].buf = (void*)buf.data();
+                buffers[i].sz = (size_t)buf.length();
+            }
+            ++i;
+        }
+
+        // put thrift header blob at the back of message buffer
+        msg->buffers.emplace_back(blob(std::move(header_holder), header_len));
+
+        return i;
+    }
+
+    void thrift_message_parser::read_thrift_header(const char* buffer, /*out*/ thrift_message_header& header)
+    {
+        header.hdr_type = header_type(buffer);
+        buffer += sizeof(int32_t);
+        header.hdr_version = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.hdr_length = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.body_length = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.app_id = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.partition_index = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.client_hash = be64toh( *(int64_t*)(buffer) );
+        buffer += sizeof(int64_t);
+        header.client_timeout = be64toh( *(int64_t*)(buffer) );
+        buffer += sizeof(int64_t);
+    }
+
+    bool thrift_message_parser::check_thrift_header(const thrift_message_header& header)
+    {
+        if (header.hdr_type != header_type::hdr_dsn_thrift)
+            return false;
+        if (header.hdr_version != 0)
+            return false;
+        if (header.hdr_length != sizeof(thrift_message_header))
+            return false;
+        return true;
+    }
+
+    dsn::message_ex* thrift_message_parser::parse_message(const thrift_message_header& thrift_header, dsn::blob& message_data)
+    {
+        dsn::blob body_data = message_data.range(thrift_header.hdr_length);
+        dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(body_data);
+        dsn::message_header* dsn_hdr = msg->header;
+
+        dsn::rpc_read_stream stream(msg);
+        ::dsn::binary_reader_transport binary_transport(stream);
+        boost::shared_ptr< ::dsn::binary_reader_transport > trans_ptr(&binary_transport, [](::dsn::binary_reader_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol iprot(trans_ptr);
+
+        std::string fname;
+        ::apache::thrift::protocol::TMessageType mtype;
+        int32_t seqid;
+        iprot.readMessageBegin(fname, mtype, seqid);
+        dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
+
+        dsn_hdr->hdr_type = header_type::hdr_dsn_thrift;
+        dsn_hdr->hdr_length = sizeof(message_header);
+        dsn_hdr->body_length = thrift_header.body_length;
+        dsn_hdr->hdr_crc32 = dsn_hdr->body_crc32 = CRC_INVALID;
+
+        dsn_hdr->id = seqid;
+        strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
+        dsn_hdr->gpid.u.app_id = thrift_header.app_id;
+        dsn_hdr->gpid.u.partition_index = thrift_header.partition_index;
+        dsn_hdr->client.hash = thrift_header.client_hash;
+        dsn_hdr->client.timeout_ms = thrift_header.client_timeout;
+
+        if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
+            dsn_hdr->context.u.is_request = 1;
+        dassert(dsn_hdr->context.u.is_request == 1, "only support receive request");
+        dsn_hdr->context.u.serialize_format = DSF_THRIFT_BINARY; // always serialize in thrift binary
+        dsn_hdr->context.u.is_forward_not_supported = 1; // thrift always not support forwarding
+
+        return msg;
+    }
+}

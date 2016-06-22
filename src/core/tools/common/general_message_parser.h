@@ -29,44 +29,42 @@
 *     message parser for browser-generated http request
 *
 * Revision history:
-*     Feb. 2016, Tianyi Wang, first version
+*     Jun. 2016, Zuoyan Qin, first version
 *     xxxx-xx-xx, author, fix bug about xxx
 */
 
 #pragma once
 
-# include <dsn/internal/ports.h>
-# include <dsn/internal/rpc_message.h>
-# include <dsn/internal/singleton.h>
 # include <dsn/internal/message_parser.h>
-# include <vector>
-# include <queue>
-# include "http_parser.h"
+# include <dsn/internal/rpc_message.h>
+# include <dsn/internal/ports.h>
+
+# include "thrift_message_parser.h"
+# include "dsn_message_parser.h"
 
 namespace dsn
 {
-    class http_message_parser : public message_parser
+    class general_message_parser : public message_parser
     {
     public:
-        http_message_parser(unsigned int buffer_block_size, bool is_write_only);
-        message_ex* get_message_on_receive(unsigned int read_length, /*out*/ int& read_next) override;
+        general_message_parser(int buffer_block_size, bool is_write_only);
 
-        int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) override;
 
-        int prepare_on_send(message_ex* msg) override;
+        virtual void truncate_read() override;
+
+        virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) override;
+
+        virtual int prepare_on_send(message_ex* msg) override;
+
+        virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+
     private:
-        http_parser _parser;
-        http_parser_settings _parser_setting;
-        std::unique_ptr<message_ex> _current_message;
-        std::queue<std::unique_ptr<message_ex>> _received_messages;
-        enum
-        {
-            parsing_id,
-            parsing_rpc_id,
-            parsing_rpc_name,
-            parsing_payload_format,
-            parsing_nothing
-        } response_parse_state;
-        std::string request_header_send_buffer, response_header_send_buffer;
-};
+        // for thrift
+        thrift_message_header _thrift_header;
+        bool _header_parsed;
+
+        // for dsn
+        bool _header_checked;
+    };
 }

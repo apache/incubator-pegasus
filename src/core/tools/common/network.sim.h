@@ -46,7 +46,7 @@ namespace dsn { namespace tools {
         sim_client_session(
             sim_network_provider& net, 
             ::dsn::rpc_address remote_addr, 
-            std::unique_ptr<message_parser>&& parser
+            message_parser_ptr& parser
             );
 
         virtual void connect();
@@ -65,7 +65,7 @@ namespace dsn { namespace tools {
             sim_network_provider& net, 
             ::dsn::rpc_address remote_addr, 
             rpc_session_ptr& client, 
-            std::unique_ptr<message_parser>&& parser
+            message_parser_ptr& parser
             );
 
         virtual void send(uint64_t signature) override;
@@ -92,7 +92,8 @@ namespace dsn { namespace tools {
 
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
         {
-            return rpc_session_ptr(new sim_client_session(*this, server_addr, new_message_parser()));
+            auto parser = new_message_parser();
+            return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
         }
 
         uint32_t net_delay_milliseconds() const;

@@ -66,9 +66,9 @@ struct network_server_config
     std::string           factory_name;
     int                   message_buffer_block_size;
 
-    network_server_config(const network_server_config& r);
-    network_server_config() : channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_DSN) {}
+    network_server_config();
     network_server_config(int p, rpc_channel c);
+    network_server_config(const network_server_config& r);
     bool operator < (const network_server_config& r) const;
 };
 

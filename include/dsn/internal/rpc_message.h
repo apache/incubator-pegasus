@@ -55,9 +55,9 @@ namespace dsn
         char          *buffer;
     } dsn_buffer_t;
 
-    struct fast_rpc_name
+    struct fast_code
     {
-        uint32_t local_rpc_id;
+        uint32_t local_code;
         uint32_t local_hash; // same hash from two processes indicates that
                              // the mapping of rpc string and id are consistent, which
                              // we leverage for optimization (fast rpc handler lookup)
@@ -90,7 +90,11 @@ namespace dsn
         }
         bool operator==(const header_type& other) const
         {
-            return type.itype==other.type.itype;
+            return type.itype == other.type.itype;
+        }
+        bool operator!=(const header_type& other) const
+        {
+            return type.itype != other.type.itype;
         }
     public:
         static header_type hdr_dsn_default;
@@ -105,10 +109,10 @@ namespace dsn
         uint32_t       hdr_crc32;
         uint32_t       body_length;
         uint32_t       body_crc32;
-        uint64_t       id;      // sequence id, can be used to track source
-        uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
+        uint64_t       id;      // sequence id
+        uint64_t       rpc_id;  // used for tracking source
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
-        fast_rpc_name  rpc_name_fast;
+        fast_code      rpc_code;
         dsn_gpid       gpid;    // global partition id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
@@ -116,16 +120,16 @@ namespace dsn
                                         // case described in message_ex::create_response()'s ATTENTION comment.
                                         // the from_address is always the orignal client's address, it will
                                         // not be changed in forwarding request.
-
         struct
         {
             uint64_t hash; // for both partition hash and thread hash for the exact location of this request
-            int32_t  timeout_ms;            
+            int64_t  timeout_ms;
         } client;
 
         struct
         {
-            int32_t  error;
+            char      error_name[DSN_MAX_ERROR_CODE_NAME_LENGTH];
+            fast_code error_code;
         } server;
     } message_header;
 
@@ -158,7 +162,7 @@ namespace dsn
         //
         bool is_right_header() const;
         bool is_right_body(bool is_write_msg) const;
-        error_code error() const { return header->server.error; }
+        error_code error();
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
         static unsigned int get_body_length(char* hdr)

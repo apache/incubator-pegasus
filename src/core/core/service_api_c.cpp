@@ -112,6 +112,11 @@ public:
 
 DSN_API dsn_error_t dsn_error_register(const char* name)
 {
+    dassert(strlen(name) < DSN_MAX_ERROR_CODE_NAME_LENGTH,
+        "error code '%s' is too long - length must be smaller than %d",
+        name,
+        DSN_MAX_ERROR_CODE_NAME_LENGTH
+        );
     return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
 }
 

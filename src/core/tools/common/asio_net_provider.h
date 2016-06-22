@@ -69,7 +69,7 @@ namespace dsn {
             asio_udp_provider(rpc_engine* srv, network* inner_provider)
                 : network(srv, inner_provider)
             {
-                _recv_parser = std::move(new_message_parser());
+                _recv_parser = new_message_parser();
             }
 
             void send_message(message_ex* request) override;
@@ -94,7 +94,7 @@ namespace dsn {
             std::shared_ptr<boost::asio::ip::udp::socket>   _socket;
             std::vector<std::shared_ptr<std::thread>>       _workers;
             ::dsn::rpc_address                              _address;
-            std::unique_ptr<message_parser>                 _recv_parser;
+            message_parser_ptr                              _recv_parser;
 
             static const size_t max_udp_packet_size = 450;
         };

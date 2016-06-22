@@ -191,8 +191,9 @@ message_ex* http_message_parser::get_message_on_receive(unsigned int read_length
     }
 }
 
-int http_message_parser::prepare_buffers_on_send(message_ex* msg, unsigned int offset, send_buf* buffers)
+int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
 {
+    int offset = 0;
     int buffer_iter = 0;
     if (msg->header->context.u.is_request)
     {
@@ -267,7 +268,7 @@ int http_message_parser::prepare_buffers_on_send(message_ex* msg, unsigned int o
     return buffer_iter;
 }
 
-int http_message_parser::get_send_buffers_count(message_ex* msg)
+int http_message_parser::prepare_on_send(message_ex* msg)
 {
     return msg->buffers.size() + 2;
 }

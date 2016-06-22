@@ -105,7 +105,7 @@ TEST(core, message_ex)
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx1.context, h.context.context);
-        ASSERT_EQ(0, h.server.error);
+        ASSERT_EQ(0, h.server.error_code.local_code);
 
         ASSERT_EQ(1u, response->buffers.size());
         ASSERT_EQ((int)RPC_CODE_FOR_TEST_ACK, response->local_rpc_code);

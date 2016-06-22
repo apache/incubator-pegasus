@@ -102,7 +102,8 @@ namespace dsn {
         rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
             auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
-            return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, new_message_parser(), true));
+            auto parser = new_message_parser();
+            return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
         }
 
         void asio_network_provider::do_accept()
@@ -118,10 +119,11 @@ namespace dsn {
                     auto ip = socket->remote_endpoint().address().to_v4().to_ulong();
                     auto port = socket->remote_endpoint().port();
                     ::dsn::rpc_address client_addr(ip, port);
+                    auto parser = new_message_parser();
 
                     rpc_session_ptr s = new asio_rpc_session(*this, client_addr, 
                         (std::shared_ptr<boost::asio::ip::tcp::socket>&)socket,
-                        new_message_parser(), false);
+                        parser, false);
                     this->on_server_session_accepted(s);
                 }
 
@@ -136,19 +138,20 @@ namespace dsn {
             auto parser_place = alloca(pr.second);
             auto parser = pr.first(parser_place, _message_buffer_block_size, true);
 
-            auto count = parser->get_send_buffers_count(request);
-            std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[count]);
-            parser->prepare_buffers_on_send(request, 0, bufs.get());
+            auto lcount = parser->prepare_on_send(request);
+            std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
+            auto rcount = parser->get_buffers_on_send(request, bufs.get());
+            dassert(lcount == rcount, "");
             // end using parser
             parser->~message_parser();
             size_t tlen = 0, offset = 0;
-            for (int i = 0; i < count; i ++)
+            for (int i = 0; i < lcount; i ++)
             {
                 tlen += bufs[i].sz;
             }
             dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
             std::unique_ptr<char[]> packet_buffer(new char[tlen]);
-            for (int i = 0; i < count; i ++)
+            for (int i = 0; i < lcount; i ++)
             {
                 memcpy(&packet_buffer[offset], bufs[i].buf, bufs[i].sz);
                 offset += bufs[i].sz;

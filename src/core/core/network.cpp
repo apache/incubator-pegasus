@@ -188,14 +188,15 @@ namespace dsn
         while (n != &_messages)
         {
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-            auto lcount = _parser->get_send_buffers_count(lmsg);
+            auto lcount = _parser->prepare_on_send(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
                 break;
             }
 
             _sending_buffers.resize(bcount + lcount);
-            _parser->prepare_buffers_on_send(lmsg, 0, &_sending_buffers[bcount]);
+            auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
+            dassert(lcount == rcount, "");
             bcount += lcount;
             _sending_msgs.push_back(lmsg);
 
@@ -351,13 +352,13 @@ namespace dsn
     rpc_session::rpc_session(
         connection_oriented_network& net, 
         ::dsn::rpc_address remote_addr,
-        std::unique_ptr<message_parser>&& parser,
+        message_parser_ptr& parser,
         bool is_client
         )
         : _net(net),
         _remote_addr(remote_addr),
         _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
-        _parser(std::move(parser)),
+        _parser(parser),
         _is_client(is_client),
         _matcher(_net.engine()->matcher()),
         _is_sending_next(false),
@@ -400,6 +401,8 @@ namespace dsn
 
     bool rpc_session::on_recv_message(message_ex* msg, int delay_ms)
     {
+        if (msg->header->from_address.is_invalid())
+            msg->header->from_address = _remote_addr;
         msg->to_address = _net.address();
         msg->io_session = this;
 
@@ -470,7 +473,7 @@ namespace dsn
         _engine->matcher()->on_recv_reply(this, id, msg, delay_ms);
     }
 
-    std::unique_ptr<message_parser> network::new_message_parser()
+    message_parser_ptr network::new_message_parser()
     {
         message_parser * parser = message_parser_manager::instance().create_parser(
             _parser_type,
@@ -479,7 +482,7 @@ namespace dsn
             );
         dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.to_string());
 
-        return std::unique_ptr<message_parser>(parser);
+        return parser;
     }
 
     std::pair<message_parser::factory2, size_t>  network::get_message_parser_info()

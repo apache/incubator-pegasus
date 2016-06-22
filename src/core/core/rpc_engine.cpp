@@ -716,10 +716,10 @@ namespace dsn {
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
         int32_t code = 0;
-        auto binary_hash = msg->header->rpc_name_fast.local_hash;
+        auto binary_hash = msg->header->rpc_code.local_hash;
         if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
         {
-            code = msg->header->rpc_name_fast.local_rpc_id;
+            code = msg->header->rpc_code.local_code;
         }
         else
         {
@@ -1012,7 +1012,9 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        response->header->server.error = err;
+        strncpy(response->header->server.error_name, err.to_string(), sizeof(response->header->server.error_name));
+        response->header->server.error_code.local_code = err;
+        response->header->server.error_code.local_hash = message_ex::s_local_hash;
         auto sp = task_spec::get(response->local_rpc_code);
         response->seal(sp->rpc_message_crc_required);
 

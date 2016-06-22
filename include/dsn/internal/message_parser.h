@@ -37,13 +37,17 @@
 #pragma once
 
 # include <dsn/internal/ports.h>
-# include <dsn/internal/rpc_message.h>
 # include <dsn/internal/singleton.h>
+# include <dsn/internal/rpc_message.h>
+# include <dsn/cpp/autoref_ptr.h>
 # include <vector>
 
 namespace dsn 
 {
-    class message_parser
+    class message_parser;
+    typedef ref_ptr<message_parser> message_parser_ptr;
+
+    class message_parser : public ref_counter
     {
     public:
         template <typename T> static message_parser* create(int buffer_block_size, bool is_write_only)
@@ -71,6 +75,12 @@ namespace dsn
         // if read_next returns -1, indicated the the message is corrupted
         virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) = 0;
 
+        // all current read-ed content are discarded
+        virtual void truncate_read() { _read_buffer_occupied = 0; }
+
+        // invoked when create response
+        virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) { }
+
         // before send, prepare buffer
         // be compatible with WSABUF on windows and iovec on linux
 # ifdef _WIN32
@@ -87,14 +97,13 @@ namespace dsn
         };
 # endif
 
-        // caller must ensure buffers length is correct as get_send_buffers_count(...);
-        // return buffer count used
-        virtual int prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers) = 0;
+        // this method will be called before fill_buffers_on_send() to do some prepare operation.
+        // return buffer count needed by get_buffers_on_send().
+        virtual int prepare_on_send(message_ex* msg) = 0;
 
-        virtual int get_send_buffers_count(message_ex* msg) = 0;
-
-        // all current read-ed content are discarded
-        virtual void truncate_read() { _read_buffer_occupied = 0; }
+        // get buffers from message to 'buffers'.
+        // return buffer count used, which must equals the return value of prepare_on_send().
+        virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
         
     protected:
         void create_new_buffer(unsigned int sz);
@@ -130,25 +139,5 @@ namespace dsn
 
     private:
         std::vector<parser_factory_info> _factory_vec;
-    };
-
-    class dsn_message_parser : public message_parser
-    {
-    private:
-        bool _header_checked;
-    public:
-        dsn_message_parser(int buffer_block_size, bool is_write_only);
-        message_ex* receive_message_with_thrift_header(unsigned int read_length, /*out*/int& read_next);
-        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) override;
-
-        virtual int prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers) override;
-
-        virtual int get_send_buffers_count(message_ex* msg) override;
-
-        virtual void truncate_read() override
-        {
-            _header_checked = false;
-            _read_buffer_occupied = 0;
-        }
     };
 }

@@ -104,8 +104,6 @@ namespace dsn {
 
                     while (msg != nullptr)
                     {
-                        if (msg->header->from_address.is_invalid())
-                            msg->header->from_address = _remote_addr;
                         this->on_message_read(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
@@ -157,11 +155,11 @@ namespace dsn {
             asio_network_provider& net,
             ::dsn::rpc_address remote_addr,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            std::unique_ptr<message_parser>&& parser,
+            message_parser_ptr& parser,
             bool is_client
             )
             :
-            rpc_session(net, remote_addr, std::move(parser), is_client),
+            rpc_session(net, remote_addr, parser, is_client),
             _socket(socket)
         {
             set_options();
