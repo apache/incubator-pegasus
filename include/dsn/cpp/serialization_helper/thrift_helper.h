@@ -433,7 +433,50 @@ namespace dsn {
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string task_code_string;
-        uint32_t xfer = iprot->readString(task_code_string);
+        uint32_t xfer = 0;
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            xfer += iprot->readString(task_code_string);
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRING) {
+                        xfer += iprot->readString(task_code_string);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+        }
         _internal_code = dsn_task_code_from_string(task_code_string.c_str(), TASK_CODE_INVALID);
         return xfer;
     }
@@ -449,7 +492,17 @@ namespace dsn {
         }
         else
         {
-            return oprot->writeString(std::string(name));
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+            xfer += oprot->writeStructBegin("task_code");
+
+            xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);
+            xfer += oprot->writeString(std::string(name));
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
         }
     }
 
@@ -470,7 +523,50 @@ namespace dsn {
     inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string ec_string;
-        uint32_t xfer = iprot->readString(ec_string);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        uint32_t xfer = 0;
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            xfer += iprot->readString(ec_string);
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRING) {
+                        xfer += iprot->readString(ec_string);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+        }
         _internal_code = dsn_error_from_string(ec_string.c_str(), ERR_UNKNOWN);
         return xfer;
     }
@@ -486,7 +582,17 @@ namespace dsn {
         }
         else
         {
-            return oprot->writeString(std::string(name));
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+            xfer += oprot->writeStructBegin("error_code");
+
+            xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);
+            xfer += oprot->writeString(std::string(name));
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
         }
     }
 

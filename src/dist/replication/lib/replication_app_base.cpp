@@ -415,17 +415,15 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         lstate.files = &files[0];
     }
 
+    auto lcd = last_committed_decree();
     error_code err = _callbacks.calls.apply_checkpoint(_app_context_callbacks, mode, last_committed_decree(), &lstate);
     if (err == ERR_OK)
     {
-        dassert(lstate.to_decree_included == last_durable_decree(), "");
-        _last_committed_decree.store(lstate.to_decree_included);
+        if (lstate.to_decree_included > lcd)
+        {
+            _last_committed_decree.store(lstate.to_decree_included);
+        }
     }
-    else
-    {
-        derror("%s: call app.apply_checkpoint() failed, err = %s", _replica->name(), err.to_string());
-    }
-
     return err;
 }
 
