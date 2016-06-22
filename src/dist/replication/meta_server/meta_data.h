@@ -202,3 +202,17 @@ inline int count_partitions(const app_mapper& apps)
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
 
 }}
+
+namespace dsn { namespace json {
+
+inline void json_encode(std::stringstream &out, const replication::app_state& state)
+{
+    json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info&)state);
+}
+
+inline void json_decode(dsn::json::string_tokenizer &in, replication::app_state& state)
+{
+    json_forwarder<dsn::app_info>::decode(in, (dsn::app_info&)state);
+}
+
+}}
