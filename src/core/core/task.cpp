@@ -58,6 +58,11 @@ namespace dsn
 __thread struct __tls_dsn__ tls_dsn;
 __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
+/*static*/ int task::get_current_node_id()
+{
+    return tls_dsn.magic == 0xdeadbeef ? (tls_dsn.node ? tls_dsn.node->id() : 0) : 0;
+}
+
 /*static*/ void task::set_tls_dsn_context(
     service_node* node,  // cannot be null
     task_worker* worker, // null for io or timer threads if they are not worker threads
@@ -523,7 +528,8 @@ void timer_task::exec()
 }
 
 rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node)
-    : task(dsn_task_code_t(request->local_rpc_code), nullptr, 
+    : task(dsn_task_code_t(h->code),  // it is possible that request->local_rpc_code != h->code when it is handled in frameworks
+        nullptr, 
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
         static_cast<int>(request->header->client.hash), node),
     _request(request),
@@ -590,7 +596,7 @@ rpc_response_task::~rpc_response_task()
         _response->release_ref(); // added in enqueue
 }
 
-void rpc_response_task::enqueue(error_code err, message_ex* reply)
+bool rpc_response_task::enqueue(error_code err, message_ex* reply)
 {
     set_error_code(err);
     _response = reply;
@@ -600,7 +606,11 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
         reply->add_ref(); // released in dctor
     }
 
+    if (!spec().on_rpc_response_enqueue.execute(this, true))
+        return false;
+
     rpc_response_task::enqueue();
+    return true;
 }
 
 void rpc_response_task::enqueue()

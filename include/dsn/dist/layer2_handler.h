@@ -58,13 +58,13 @@ namespace dsn
     {
     public:
         layer2_handler(dsn_gpid gpid) : service_app(gpid) {}
-        virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) = 0;
+        virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg) = 0;
 
     public:
-        static void on_layer2_rpc_request(void* app, dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay)
+        static void on_layer2_rpc_request(void* app, dsn_gpid gpid, bool is_write, dsn_message_t msg)
         {
             auto sapp = (layer2_handler*)app;
-            return sapp->on_request(gpid, is_write, msg, delay);
+            return sapp->on_request(gpid, is_write, msg);
         }
     };
 
