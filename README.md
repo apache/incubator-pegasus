@@ -83,4 +83,6 @@ I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-
 
 rDSN is provided in C++ on Windows, Linux, and Mac, with the MIT open source license. You can use the "issues" tab in github to report bugs. For non-bug issues, please send email to rdsn-support@googlegroups.com.
 
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
 ![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-QR.png)
