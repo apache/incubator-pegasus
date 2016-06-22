@@ -2,7 +2,6 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
-#include <dsn/internal/rpc_message.h>
 
 #include "meta_service.h"
 #include "server_state.h"
@@ -10,7 +9,9 @@
 
 dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
 {
-    dsn::message_ex* rpc_message = reinterpret_cast<dsn::message_ex*>(request_msg);
+    return dsn_msg_copy(request_msg);
+
+    /*dsn::message_ex* rpc_message = reinterpret_cast<dsn::message_ex*>(request_msg);
     std::vector<dsn::blob>& buffers = rpc_message->buffers;
 
     int total_length = rpc_message->body_size() + sizeof(dsn::message_header);
@@ -25,7 +26,7 @@ dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
     dassert(i==total_length, "");
 
     dsn::message_ex* result = dsn::message_ex::create_receive_message( dsn::blob(recv_buffer, total_length) );
-    return result;
+    return result;*/
 }
 
 class fake_receiver_meta_service: public dsn::replication::meta_service
