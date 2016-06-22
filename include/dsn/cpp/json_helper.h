@@ -219,6 +219,10 @@ DSN_BASE_TYPE_JSON_STATE(uint8_t)
 DSN_BASE_TYPE_JSON_STATE(uint16_t)
 DSN_BASE_TYPE_JSON_STATE(uint32_t)
 DSN_BASE_TYPE_JSON_STATE(uint64_t)
+typedef long long llint;
+DSN_BASE_TYPE_JSON_STATE(llint)
+typedef unsigned long long lluint;
+DSN_BASE_TYPE_JSON_STATE(lluint)
 
 inline void json_encode(std::stringstream& out, const std::string& t)
 {

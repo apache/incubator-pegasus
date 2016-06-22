@@ -10,23 +10,6 @@
 dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
 {
     return dsn_msg_copy(request_msg, true);
-
-    /*dsn::message_ex* rpc_message = reinterpret_cast<dsn::message_ex*>(request_msg);
-    std::vector<dsn::blob>& buffers = rpc_message->buffers;
-
-    int total_length = rpc_message->body_size() + sizeof(dsn::message_header);
-    std::shared_ptr<char> recv_buffer(new char[total_length], std::default_delete<char[]>() );
-    char* ptr = recv_buffer.get();
-    int i=0;
-    for (dsn::blob& bb: buffers) {
-        memcpy(ptr, bb.data(), bb.length());
-        i+=bb.length();
-        ptr+=bb.length();
-    }
-    dassert(i==total_length, "");
-
-    dsn::message_ex* result = dsn::message_ex::create_receive_message( dsn::blob(recv_buffer, total_length) );
-    return result;*/
 }
 
 class fake_receiver_meta_service: public dsn::replication::meta_service

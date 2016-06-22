@@ -436,33 +436,49 @@ message_ex* message_ex::copy(bool copy_for_receive)
     //   can continue to append data to the copied message.
     // - if this message is a received message, set copied message's read pointer to the beginning,
     //   then you can read data from the beginning.
+    // - if copy_for_receive is set, it means that we want to make a receiving message from a sending message.
+    //   which is usually useful when you want to write mock for modules which use rpc.
 
-    message_ex* msg = new message_ex();
-    msg->header = header; // header is within the buffer
-    msg->buffers = buffers;
-    // TODO(qinzuoyan): should io_session also be copied ?
-    msg->to_address = to_address;
-    msg->local_rpc_code = local_rpc_code;
-
-    if (copy_for_receive)
-        msg->_is_read = true;
-    else
+    message_ex* msg;
+    if (!copy_for_receive)
+    {
+        msg = new message_ex();
+        msg->header = header; // header is within the buffer
+        msg->buffers = buffers;
+        // TODO(qinzuoyan): should io_session also be copied ?
+        msg->to_address = to_address;
+        msg->local_rpc_code = local_rpc_code;
         msg->_is_read = _is_read;
 
-    // received message
-    if (msg->_is_read)
-    {
-        // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
+        // received message
+        if (msg->_is_read)
+        {
+            // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
+        }
+        // send message
+        else
+        {
+            msg->server_address = server_address;
+            // copy the orignal value, pointing to the end of the buffer
+            msg->_rw_index = _rw_index;
+            msg->_rw_offset = _rw_offset;
+        }
     }
-    // send message
     else
     {
-        msg->server_address = server_address;
-        // copy the orignal value, pointing to the end of the buffer
-        msg->_rw_index = _rw_index;
-        msg->_rw_offset = _rw_offset;
+        int total_length = body_size() + sizeof(dsn::message_header);
+        std::shared_ptr<char> recv_buffer(new char[total_length], std::default_delete<char[]>());
+        char* ptr = recv_buffer.get();
+        int i=0;
+        for (dsn::blob& bb: buffers)
+        {
+            memcpy(ptr, bb.data(), bb.length());
+            i+=bb.length();
+            ptr+=bb.length();
+        }
+        dassert(i==total_length, "");
+        msg = create_receive_message( dsn::blob(recv_buffer, total_length) );
     }
-
     return msg;
 }
 

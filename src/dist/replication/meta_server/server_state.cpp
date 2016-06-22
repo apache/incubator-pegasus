@@ -1045,6 +1045,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state>& app
 
     std::shared_ptr<configuration_update_request> req = std::make_shared<configuration_update_request>();
     configuration_update_request& request = *req;
+    request.info = *app;
     request.config = pc;
     request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
     request.node = pc.primary;
@@ -1073,6 +1074,7 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state>& a
     if (config_status::pending_remote_sync != cc.stage)
     {
         configuration_update_request request;
+        request.info = *app;
         request.config = pc;
         request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
         request.node = node;
