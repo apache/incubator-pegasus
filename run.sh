@@ -41,8 +41,7 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
-    echo "   -s|--serialize    serialize type: dsn|thrift|gproto, default is thrift"
-    echo "   -g|--git          git source of ext module: github|git, default is github"
+    echo "   -g|--git          git source of ext module: github|xiaomi, default is github"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
     echo "                     the number of jobs to run simultaneously, default 8"
@@ -61,7 +60,6 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    SERIALIZE_TYPE="thrift"
     GIT_SOURCE="github"
     CLEAR=NO
     JOB_NUM=8
@@ -79,10 +77,6 @@ function run_build()
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
-                shift
-                ;;
-            -s|--serialize)
-                SERIALIZE_TYPE="$2"
                 shift
                 ;;
             -g|--git)
@@ -134,19 +128,13 @@ function run_build()
         usage_build
         exit -1
     fi
-    if [ "$SERIALIZE_TYPE" != "dsn" -a "$SERIALIZE_TYPE" != "thrift" -a "$SERIALIZE_TYPE" != "gproto" ]; then
-        echo "ERROR: invalid serialize type \"$SERIALIZE_TYPE\""
-        echo
-        usage_build
-        exit -1
-    fi
     if [ "$GIT_SOURCE" != "github" -a "$GIT_SOURCE" != "xiaomi" ]; then
         echo "ERROR: invalid git source \"$GIT_SOURCE\""
         echo
         usage_build
         exit -1
     fi
-    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" SERIALIZE_TYPE="$SERIALIZE_TYPE" \
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" \
         GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
@@ -200,11 +188,13 @@ function usage_start_zk()
     echo "                     zookeeper install directory,"
     echo "                     if not set, then default is './.zk_install'"
     echo "   -p|--port <port>  listen port of zookeeper, default is 12181"
+    echo "   -g|--git          git source to download zookeeper: github|xiaomi, default is github"
 }
 function run_start_zk()
 {
     INSTALL_DIR=`pwd`/.zk_install
     PORT=12181
+    GIT_SOURCE="github"
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -220,6 +210,10 @@ function run_start_zk()
                 PORT=$2
                 shift
                 ;;
+            -g|--git)
+                GIT_SOURCE=$2
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -229,7 +223,7 @@ function run_start_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $scripts_dir/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" GIT_SOURCE="$GIT_SOURCE" $scripts_dir/start_zk.sh
 }
 
 #####################

@@ -75,7 +75,7 @@
 //
 static struct _all_info_
 {
-    int                                                       magic;
+    unsigned int                                              magic;
     bool                                                      engine_ready;
     bool                                                      config_completed;
     ::dsn::tools::tool_app                                    *tool;

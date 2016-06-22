@@ -12,4 +12,4 @@ namespace dsn {
     GENERATED_TYPE_SERIALIZATION(configuration_query_by_index_response, THRIFT)
     GENERATED_TYPE_SERIALIZATION(app_info, THRIFT)
 
-} 
+}

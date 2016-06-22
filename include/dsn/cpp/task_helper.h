@@ -253,7 +253,7 @@ namespace dsn
     {
     public:
         safe_late_task(THandler& h)
-            : _handler(h), _bound_handler(nullptr)
+            : _bound_handler(nullptr), _handler(h)
         {
         }
 

@@ -128,7 +128,7 @@ namespace dsn
     // ------------- inline implementation ----------------
     template<typename T>
     inline serverlet<T>::serverlet(const char* nm, int task_bucket_count)
-        : _name(nm), clientlet(task_bucket_count)
+        : clientlet(task_bucket_count), _name(nm)
     {
     }
 
@@ -236,7 +236,6 @@ namespace dsn
         ::dsn::marshall(msg, resp);
         dsn_rpc_reply(msg);
     }
-
     /*@}*/
 } // end namespace
 

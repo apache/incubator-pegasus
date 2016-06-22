@@ -146,7 +146,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 {
     if (status() != partition_status::PS_PRIMARY)
     {
-        dwarn("ignore add secondary proposal for invalid state, state = %s", enum_to_string(status()));
+        dwarn("%s: ignore add secondary proposal for invalid state, state = %s", name(), enum_to_string(status()));
         return;
     }
 
@@ -158,7 +158,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "");
 
     int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
-    if (potential_secondaries_count == _primary_states.membership.max_replica_count - 1)
+    if (potential_secondaries_count >= _primary_states.membership.max_replica_count - 1)
     {
         if (proposal.type == config_type::CT_ADD_SECONDARY)
         {
@@ -170,7 +170,15 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         }
         else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB)
         {
-            ddebug("name(%s): add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            if (potential_secondaries_count >= _primary_states.membership.max_replica_count)
+            {
+                ddebug("%s: only allow one extra (potential) secondary, ingnore new potential secondary proposal", name());
+                return;
+            }
+            else
+            {
+                ddebug("%s: add a new secondary(%s) for future load balancer", name(), proposal.node.to_string());
+            }
         }
         else
         {
@@ -420,11 +428,13 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     }
 
     ddebug(
-        "%s: update configuration reply with err %s, ballot %" PRId64 ", local %" PRId64,
+        "%s: update configuration %s, reply with err %s, ballot %" PRId64 ", local ballot %" PRId64 ", local status %s",
         name(),
+        enum_to_string(req->type),
         resp.err.to_string(),
         resp.config.ballot,
-        get_ballot()
+        get_ballot(),
+        enum_to_string(status())
         );
     
     if (resp.config.ballot < get_ballot())
@@ -753,7 +763,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     ddebug(
-        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration=%" PRIu64 " ms",
+        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration = %" PRIu64 " ms",
         name(),
         enum_to_string(old_status),
         old_ballot,

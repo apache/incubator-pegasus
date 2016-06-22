@@ -48,10 +48,10 @@ namespace dsn
     class http_message_parser : public message_parser
     {
     public:
-        http_message_parser(int buffer_block_size, bool is_write_only);
-        message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
+        http_message_parser(unsigned int buffer_block_size, bool is_write_only);
+        message_ex* get_message_on_receive(unsigned int read_length, /*out*/ int& read_next) override;
 
-        int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
+        int prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers) override;
 
         int get_send_buffers_count(message_ex* msg) override;
     private:

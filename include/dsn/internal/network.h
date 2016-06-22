@@ -206,7 +206,7 @@ namespace dsn {
         void send_message(message_ex* msg);
         bool cancel(message_ex* request);
         void delay_recv(int delay_ms);
-        void on_recv_message(message_ex* msg, int delay_ms);
+        bool on_recv_message(message_ex* msg, int delay_ms);
 
     // for client session
     public:

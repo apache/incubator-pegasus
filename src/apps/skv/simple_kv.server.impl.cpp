@@ -49,10 +49,10 @@ namespace dsn {
         namespace application {
             
             simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
-                : _lock(true), ::dsn::replicated_service_app_type_1(gpid)
+                : ::dsn::replicated_service_app_type_1(gpid), _lock(true)
             {
                 _test_file_learning = false;
-                _checkpoint_version = 0;
+                _last_durable_decree = 0;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -103,7 +103,7 @@ namespace dsn {
             
             ::dsn::error_code simple_kv_service_impl::start(int argc, char** argv)
             {
-                _data_dir = dsn_get_app_data_dir(gpid());
+                _data_dir = dsn_get_app_data_dir(get_gpid());
 
                 {
                     zauto_lock l(_lock);
@@ -111,19 +111,19 @@ namespace dsn {
                     recover();
                 }
 
-                open_service(gpid());
+                open_service(get_gpid());
                 return ERR_OK;
             }
 
             ::dsn::error_code simple_kv_service_impl::stop(bool clear_state)
             {
-                close_service(gpid());
+                close_service(get_gpid());
 
                 {
                     zauto_lock l(_lock);
                     if (clear_state)
                     {
-                        dsn_get_app_data_dir(gpid());
+                        dsn_get_app_data_dir(get_gpid());
 
                         if (!dsn::utils::filesystem::remove_path(data_dir()))
                         {
@@ -211,16 +211,14 @@ namespace dsn {
                 is.close();
             }
 
-            ::dsn::error_code simple_kv_service_impl::checkpoint(int64_t version)
+            ::dsn::error_code simple_kv_service_impl::sync_checkpoint(int64_t last_commit)
             {
                 char name[256];
-                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(),
-                    version
-                    );
+                sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_commit);
 
                 zauto_lock l(_lock);
 
-                if (version == last_durable_decree())
+                if (last_commit == last_durable_decree())
                 {
                     dassert(utils::filesystem::file_exists(name), 
                         "checkpoint file %s is missing!",
@@ -256,18 +254,17 @@ namespace dsn {
                 os.close();
 
                 // TODO: gc checkpoints
-                set_last_durable_decree(version);
+                set_last_durable_decree(last_commit);
                 return ERR_OK;
             }
 
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(
-                int64_t start,
-                int64_t commit,
+                int64_t learn_start,
+                int64_t local_commit,
                 void*   learn_request,
                 int     learn_request_size,
-                /* inout */ app_learn_state& state
-                )
+                app_learn_state& state)
             {
                 if (last_durable_decree() > 0)
                 {
@@ -280,7 +277,6 @@ namespace dsn {
                     state.from_decree_excluded = 0;
                     state.to_decree_included = last_durable_decree();
                     state.files.push_back(std::string(name));
-
                     return ERR_OK;
                 }
                 else
@@ -291,7 +287,10 @@ namespace dsn {
                 }
             }
 
-            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(int64_t commit, const dsn_app_learn_state& state, dsn_chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(
+                dsn_chkpt_apply_mode mode,
+                int64_t commit,
+                const dsn_app_learn_state& state)
             {
                 if (mode == DSN_CHKPT_LEARN)
                 {
@@ -316,7 +315,7 @@ namespace dsn {
                     {
                         set_last_durable_decree(state.to_decree_included);
                         return ERR_OK;
-                    }                        
+                    }
                 }
             }
 

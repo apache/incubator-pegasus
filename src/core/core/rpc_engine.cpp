@@ -174,12 +174,11 @@ namespace dsn {
                         req->server_address.group_address()->set_leader(addr);
                     }
                     break;
-                case GRPC_TO_ANY:
-                case GRPC_TO_ALL:
+                default:
                     break;
                 }
                 break;
-            case HOST_TYPE_URI:
+            default:
                 dassert(false, "not implemented");
                 break;
             }
@@ -208,12 +207,11 @@ namespace dsn {
                             req->server_address.group_address()->set_leader(reply->header->from_address);
                         }
                         break;
-                    case GRPC_TO_ANY:
-                    case GRPC_TO_ALL:
+                    default:
                         break;
                     }
                     break;
-                case HOST_TYPE_URI:
+                default:
                     dassert(false, "not implemented");
                     break;
                 }
@@ -222,7 +220,8 @@ namespace dsn {
             // failure injection not applied
             if (spec->on_rpc_response_enqueue.execute(call, true))
             {
-                call->set_delay(delay_ms);
+                if (call->delay_milliseconds() == 0)
+                    call->set_delay(delay_ms);
                 call->enqueue(err, reply);
             }
 
@@ -716,7 +715,7 @@ namespace dsn {
 
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
-        uint32_t code = 0;
+        int32_t code = 0;
         auto binary_hash = msg->header->rpc_name_fast.local_hash;
         if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
         {
@@ -1115,7 +1114,7 @@ namespace dsn {
         // TODO(qinzuoyan): reply to client if forwarding failed for non-timeout reason (such as connection denied).
         else
         {
-            auto copied_request = request->copy_and_prepare_send();
+            auto copied_request = request->copy_and_prepare_send(false);
             call_ip(address, copied_request, nullptr, false, true);
         }
     }

@@ -51,7 +51,7 @@ replication_options::replication_options()
     batch_write_disabled = false;
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
-    mutation_2pc_min_replica_count = 1;    
+    mutation_2pc_min_replica_count = 2;
 
     group_check_disabled = false;
     group_check_interval_ms = 10000;
@@ -90,32 +90,6 @@ replication_options::replication_options()
 
 replication_options::~replication_options()
 {
-}
-
-void replication_options::read_meta_servers()
-{
-    // read meta_servers from machine list file
-    meta_servers.clear();
-
-    const char* server_ss[10];
-    int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys("meta_servers", server_ss, &capacity);
-    dassert(need_count <= capacity, "too many meta servers specified");
-
-    std::ostringstream oss;
-    for (int i = 0; i < capacity; i++)
-    {
-        std::string s(server_ss[i]);
-        // name:port
-        auto pos1 = s.find_first_of(':');
-        if (pos1 != std::string::npos)
-        {
-            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
-            meta_servers.push_back(ep);
-            oss << "[" << ep.to_string() << "] ";
-        }
-    }
-    ddebug("read meta servers from config: %s", oss.str().c_str());
 }
 
 void replication_options::initialize()
@@ -365,7 +339,7 @@ void replication_options::initialize()
             "whether to enable empty write when no write requests are processed for more than group_check_period, default is true"
             );
     
-    read_meta_servers();
+    replica_helper::load_meta_servers(meta_servers);
 
     sanity_check();
 }
@@ -413,22 +387,14 @@ void replication_options::sanity_check()
     }
 }
 
-void replica_helper::load_meta_servers(
-    /*out*/ std::vector<dsn::rpc_address>& servers,
-    const char* section)
+void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& servers, const char* section, const char* key)
 {
-    // read meta_servers from machine list file
     servers.clear();
-
-    const char* server_ss[10];
-    int capacity = 10, need_count;
-    need_count = dsn_config_get_all_keys(section, server_ss, &capacity);
-    dassert(need_count <= capacity, "too many meta servers specified in config [%s]", section);
-
-    for (int i = 0; i < capacity; i++)
+    std::string server_list = dsn_config_get_value_string(section, key, "", "");
+    std::vector<std::string> lv;
+    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
+    for (auto& s : lv)
     {
-        std::string s(server_ss[i]);
-
         // name:port
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
@@ -437,7 +403,7 @@ void replica_helper::load_meta_servers(
             servers.push_back(ep);
         }
     }
-    dassert(servers.size() > 0, "no meta server specified in config [%s]", section);
+    dassert(servers.size() > 0, "no meta server specified in config [%s].%s", section, key);
 }
 
 }} // end namespace

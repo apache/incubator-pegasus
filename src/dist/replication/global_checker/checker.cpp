@@ -143,9 +143,10 @@ namespace dsn {
                 std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_meta_server;
                 std::unordered_map<gpid, ::dsn::rpc_address> primaries_from_replica_servers;
 
-                for (auto& app : meta_app->_service->_state->_apps)
+                for (auto& kv : meta_app->_service->_state->_exist_apps)
                 {
-                    for (int i = 0; i < app.info.partition_count; i++)
+                    app_state& app = *(kv.second);
+                    for (int i = 0; i < app.partition_count; i++)
                     {
                         auto& par = app.partitions[i];
                         primaries_from_meta_server[par.pid] = par.primary;

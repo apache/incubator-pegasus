@@ -106,7 +106,7 @@ TEST(core, group_address_talk_to_others)
         EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
         EXPECT_EQ(TEST_PORT_END, addr_got.port());
     };
-
+/*
     std::vector<task_ptr> resp_tasks;
     for (unsigned int i=0; i<10; ++i) {
          ::dsn::task_ptr resp_task = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
@@ -116,6 +116,10 @@ TEST(core, group_address_talk_to_others)
 
     for (unsigned int i=0; i<10; ++i)
         resp_tasks[i]->wait();
+*/
+    ::dsn::task_ptr resp = ::dsn::rpc::call(addr, dsn_task_code_t(RPC_TEST_STRING_COMMAND), std::string("expect_talk_to_others"),
+                                              nullptr, typed_callback);
+    resp->wait();
     destroy_group(addr);
 }
 
@@ -179,7 +183,7 @@ static void rpc_group_callback(
         dsn::rpc_address group_addr = ((dsn::message_ex*)req)->server_address;
         dsn_group_forward_leader(group_addr.group_handle());
 
-        auto req_again = dsn_msg_copy(req);
+        auto req_again = dsn_msg_copy(req, false, false);
         auto call_again = ::dsn::rpc::call(
             group_addr,
             req_again,

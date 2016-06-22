@@ -439,7 +439,6 @@ void service_node::get_queue_info(
 
 bool service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
 {
-    auto msg = (message_ex*)(req);
     auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
 
     if (nullptr != cb)

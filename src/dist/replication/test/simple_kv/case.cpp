@@ -35,6 +35,7 @@
 
 # include "case.h"
 # include "simple_kv.server.impl.h"
+# include "checker.h"
 
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
@@ -230,11 +231,11 @@ void set_case_line::apply_set() const
     }
     if (_lb_for_test_set)
     {
-        ::dsn::dist::server_load_balancer::s_lb_for_test = _lb_for_test;
+        //pass
     }
     if (_disable_lb_set)
     {
-        ::dsn::dist::server_load_balancer::s_disable_lb = _disable_lb;
+        test_checker::instance().control_balancer(_disable_lb);
     }
     if (_close_replica_stub_set)
     {

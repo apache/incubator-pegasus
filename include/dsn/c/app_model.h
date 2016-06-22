@@ -292,51 +292,53 @@ enum dsn_chkpt_apply_mode
     DSN_CHKPT_LEARN
 };
 
-typedef dsn_error_t (*dsn_app_checkpoint)(
-    void*,  ///< context from dsn_app_create
-    int64_t ///< checkpoint version
+typedef void(*dsn_app_on_batched_write_requests)(
+    void*,           ///< context from dsn_app_create
+    int64_t,         ///< decree
+    dsn_message_t*,  ///< request array ptr
+    int              ///< request count
     );
 
-typedef dsn_error_t(*dsn_app_checkpoint_async)(
-    void*,  ///< context from dsn_app_create
-    int64_t ///< checkpoint version
+typedef int(*dsn_app_get_physical_error)(
+    void*     ///< context from dsn_app_create
     );
 
-typedef int64_t(*dsn_app_checkpoint_get_version)(
-    void*  ///< context from dsn_app_create
+typedef dsn_error_t(*dsn_app_sync_checkpoint)(
+    void*,    ///< context from dsn_app_create
+    int64_t   ///< current last committed decree
     );
 
-typedef int(*dsn_app_checkpoint_get_prepare)(
+typedef dsn_error_t(*dsn_app_async_checkpoint)(
+    void*,    ///< context from dsn_app_create
+    int64_t   ///< current last committed decree
+    );
+
+typedef int64_t(*dsn_app_get_last_checkpoint_decree)(
+    void*     ///< context from dsn_app_create
+    );
+
+typedef dsn_error_t(*dsn_app_prepare_get_checkpoint)(
     void*,    ///< context from dsn_app_create
     void*,    ///< buffer for filling in learn request
-    int       ///< buffer capacity
+    int,      ///< buffer capacity
+    int*      ///< occupied size
     );
 
-typedef int(*dsn_app_checkpoint_get)(
+typedef dsn_error_t(*dsn_app_get_checkpoint)(
     void*,    ///< context from dsn_app_create
-    int64_t,  ///< start decree
-    int64_t,  ///< local commit decree
+    int64_t,  ///< learn start decree
+    int64_t,  ///< local last committed decree
     void*,    ///< learn request from prepare_get_checkpoint
     int,      ///< learn request size
     dsn_app_learn_state*, ///< learn state buffer to be filled in
-    int       ///< learn state buffer capacity
+    int                   ///< learn state buffer capacity
     );
 
-typedef int(*dsn_app_checkpoint_apply)(
-    void*,                      ///< context from dsn_app_create
-    int64_t,                    ///< local commit decree
-    const dsn_app_learn_state*, ///< learn state
-    dsn_chkpt_apply_mode        ///< checkpoint apply mode
-    );
-
-typedef int(*dsn_app_physical_error_get)(
-    void*                       ///< context from dsn_app_create
-    );
-
-typedef void(*dsn_app_batched_request_handler)(
-    void*,           ///< context from dsn_app_create
-    dsn_message_t*,  ///< request array ptr
-    int              ///< request count
+typedef dsn_error_t(*dsn_app_apply_checkpoint)(
+    void*,                     ///< context from dsn_app_create
+    dsn_chkpt_apply_mode,      ///< checkpoint apply mode
+    int64_t,                   ///< local last committed decree
+    const dsn_app_learn_state* ///< learn state
     );
 
 # define DSN_APP_MASK_APP        0x01 ///< app mask
@@ -354,14 +356,14 @@ typedef union dsn_app_callbacks
     dsn_app_create placeholder[DSN_MAX_CALLBAC_COUNT];
     struct app_callbacks
     {
-        dsn_app_batched_request_handler batch_handler;
-        dsn_app_checkpoint              chkpt;
-        dsn_app_checkpoint_async        chkpt_async;
-        dsn_app_checkpoint_get_version  chkpt_get_version;
-        dsn_app_checkpoint_get_prepare  checkpoint_get_prepare;
-        dsn_app_checkpoint_get          chkpt_get;
-        dsn_app_checkpoint_apply        chkpt_apply;
-        dsn_app_physical_error_get      physical_error_get;
+        dsn_app_on_batched_write_requests   on_batched_write_requests;
+        dsn_app_get_physical_error          get_physical_error;
+        dsn_app_sync_checkpoint             sync_checkpoint;
+        dsn_app_sync_checkpoint             async_checkpoint;
+        dsn_app_get_last_checkpoint_decree  get_last_checkpoint_decree;
+        dsn_app_prepare_get_checkpoint      prepare_get_checkpoint;
+        dsn_app_get_checkpoint              get_checkpoint;
+        dsn_app_apply_checkpoint            apply_checkpoint;
     } calls;    
 } dsn_app_callbacks;
 

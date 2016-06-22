@@ -224,11 +224,11 @@ def compile_thrift_file(thrift_info):
     os.system("rm -rf output")
     os.system("mkdir output")
     #### first generate .types.h
-    os.system("%s %s.thrift cpp build replication"%(env_tools["dsn_gentool"], thrift_name))
+    os.system("%s %s.thrift cpp build binary replication"%(env_tools["dsn_gentool"], thrift_name))
     os.system("cp build/%s.types.h output"%(thrift_name))
 
     #### then generate _types.h _types.cpp
-    thrift_gen = "%s -r --gen cpp:pure_enums,moveable_types -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
+    thrift_gen = "%s -r --gen cpp:moveable_types -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
     print "exec " + thrift_gen
     os.system(thrift_gen)
     os.system("cp build/%s_types.h output"%(thrift_name))

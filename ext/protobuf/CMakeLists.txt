@@ -29,7 +29,7 @@ install(DIRECTORY ${PROTOBUF_INSTALL_PREFIX}/include/google
 )
 
 install(DIRECTORY ${PROTOBUF_INSTALL_PREFIX}/lib
-        DESTINATION ./
+        DESTINATION .
     FILES_MATCHING PATTERN "*.lib" PATTERN "*.dll" PATTERN "*.so" PATTERN "*.a" PATTERN "cmake" EXCLUDE
 )
 

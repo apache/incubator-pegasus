@@ -43,7 +43,7 @@ namespace dsn
 {
     typedef struct tls_transient_memory_t
     {
-        int                   magic;
+        unsigned int          magic;
         size_t                remain_bytes;
         char                  block_ptr_buffer[sizeof(std::shared_ptr<char>)];
         std::shared_ptr<char> *block;

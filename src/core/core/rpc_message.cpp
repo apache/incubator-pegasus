@@ -36,6 +36,11 @@
 # include <dsn/internal/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
+
+# ifdef DSN_ENABLE_THRIFT_RPC
+# include <dsn/internal/thrift_parser.h>
+# endif
+
 # include "task_engine.h"
 # include "transient_memory.h"
 
@@ -58,6 +63,7 @@ DSN_API dsn_message_t dsn_msg_create_request(
 
 DSN_API dsn_message_t dsn_msg_create_received_request(
     dsn_task_code_t rpc_code,
+    dsn_msg_serialize_format serialization_type,
     void* buffer,
     int size,
     uint64_t hash
@@ -67,14 +73,14 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
     msg->header->client.hash = hash;
-
+    msg->header->context.u.serialize_format = serialization_type;
     msg->add_ref(); // released by callers explicitly using dsn_msg_release
     return msg;
 }
 
-DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg, bool clone_content, bool copy_for_receive)
 {
-    return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
+    return msg ? ((::dsn::message_ex*)msg)->copy(clone_content, copy_for_receive) : nullptr;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -141,7 +147,7 @@ DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
 DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
 {
     auto msg2 = ((::dsn::message_ex*)msg);
-    if (msg2->local_rpc_code != (uint32_t)(-1))
+    if (msg2->local_rpc_code != -1)
     {
         return msg2->local_rpc_code;
     }
@@ -216,10 +222,25 @@ DSN_API void dsn_msg_get_options(
     opts->gpid = hdr->gpid;
 }
 
+DSN_API dsn_msg_header_type dsn_msg_get_header_type(
+    dsn_message_t msg
+    )
+{
+    dsn::header_type& type = ((::dsn::message_ex*)msg)->header->hdr_type;
+    if (type == dsn::header_type::hdr_dsn_default)
+        return DHT_DEFAULT;
+    else if (type == dsn::header_type::hdr_dsn_thrift)
+        return DHT_THRIFT;
+    return DHT_INVALID;
+}
+
 namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);
 uint32_t message_ex::s_local_hash = 0;
+
+header_type header_type::hdr_dsn_default("rdsn");
+header_type header_type::hdr_dsn_thrift("thft");
 
 message_ex::message_ex()
 {
@@ -318,13 +339,14 @@ bool message_ex::is_right_header() const
 
 /*static*/ bool message_ex::is_right_header(char* hdr)
 {
-    int32_t crc32 = *(int32_t*)hdr;
+    uint32_t* pcrc = reinterpret_cast<uint32_t*>(hdr + FIELD_OFFSET(message_header, hdr_crc32));
+    uint32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID)
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
-        *(int32_t*)hdr = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
-        *(int32_t*)hdr = crc32;
+        *pcrc = CRC_INVALID;
+        bool r = (crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
+        *pcrc = crc32;
         return r;
     }
 
@@ -405,26 +427,29 @@ message_ex* message_ex::create_receive_message_with_standalone_header(const blob
     return msg;
 }
 
-message_ex* message_ex::copy()
+message_ex* message_ex::copy(bool clone_content, bool copy_for_receive)
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
-    // - if this message is a send message, set copied message's write pointer to the end, then you
+    // - if this message is a written message, set copied message's write pointer to the end, then you
     //   can continue to append data to the copied message.
-    // - if this message is a received message, set copied message's read pointer to the beginning,
+    // - if this message is a read message, set copied message's read pointer to the beginning,
     //   then you can read data from the beginning.
+    // - if copy_for_receive is set, it means that we want to make a receiving message from a sending message.
+    //   which is usually useful when you want to write mock for modules which use rpc.
 
     message_ex* msg = new message_ex();
-    msg->header = header; // header is within the buffer
-    msg->buffers = buffers;
-    // TODO(qinzuoyan): should io_session also be copied ?
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
-    msg->_is_read = _is_read;
+
+    if (!copy_for_receive)
+        msg->_is_read = _is_read;
+    else
+        msg->_is_read = true;
 
     // received message
-    if (this->_is_read)
+    if (msg->_is_read)
     {
         // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
     }
@@ -437,12 +462,46 @@ message_ex* message_ex::copy()
         msg->_rw_offset = _rw_offset;
     }
 
+    if (!clone_content)
+    {
+        msg->header = header; // header is within the buffer
+        msg->buffers = buffers;
+    }
+    else
+    {
+        int total_length = body_size() + sizeof(dsn::message_header);
+        std::shared_ptr<char> recv_buffer(new char[total_length], std::default_delete<char[]>());
+        char* ptr = recv_buffer.get();
+        int i=0;
+
+        if ((const char*)header != buffers[0].data())
+        {
+            memcpy(ptr, (const void*)header, sizeof(message_header));
+            ptr += sizeof(message_header);
+        }
+
+        for (dsn::blob& bb: buffers)
+        {
+            memcpy(ptr, bb.data(), bb.length());
+            i+=bb.length();
+            ptr+=bb.length();
+        }
+        dassert(i==total_length, "");
+
+        auto data = dsn::blob(recv_buffer, total_length);
+        
+        msg->header = (message_header*)data.data();
+        if (msg->_is_read)
+            msg->buffers.push_back(data.range((int)sizeof(message_header)));
+        else
+            msg->buffers.push_back(data);
+    }
     return msg;
 }
 
-message_ex* message_ex::copy_and_prepare_send()
+message_ex* message_ex::copy_and_prepare_send(bool clone_content)
 {
-    auto copy = this->copy();
+    auto copy = this->copy(clone_content, false);
 
     if (_is_read)
     {
@@ -468,6 +527,8 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
+    hdr.hdr_type = header_type::hdr_dsn_default;
+    hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
     hdr.client.hash = hash;
@@ -520,7 +581,17 @@ message_ex* message_ex::create_response()
     msg->to_address = header->from_address;
     msg->io_session = io_session;
 
-    // join point 
+    if (hdr.hdr_type == header_type::hdr_dsn_thrift)
+    {
+#ifdef DSN_ENABLE_THRIFT_RPC
+        thrift_header_parser::add_prefix_for_thrift_response(msg);
+        msg->is_response_adjusted_for_custom_rpc = false;
+#else
+        dassert(false, "get request with thrift header type but thrift rpc is disabled");
+#endif
+    }
+
+    // join point
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);
 
     return msg;
@@ -608,7 +679,7 @@ bool message_ex::read_next(void** ptr, size_t* size)
 
     int idx = this->_rw_index;
     if (-1 == idx ||
-        this->_rw_offset == this->buffers[idx].length())
+        this->_rw_offset == static_cast<int>(this->buffers[idx].length()))
     {
         idx = ++this->_rw_index;
         this->_rw_offset = 0;

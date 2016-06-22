@@ -95,6 +95,12 @@ namespace dsn
         
         dist::partition_resolver_ptr get_app_resolver(const char* app);
 
+        std::map<std::string, dist::partition_resolver_ptr> get_all_app_resolvers();
+
+        const char* get_factory() const { return _factory.c_str(); }
+
+        const char* get_arguments() const { return _arguments.c_str(); }
+
     private:
         std::unordered_map<std::string, dist::partition_resolver_ptr > _apps; ///< app-path to app-resolver map
         service::zrwlock_nr _apps_lock;
@@ -102,6 +108,7 @@ namespace dsn
         rpc_address _meta_server;
         std::string _name;
         std::string _factory;
+        std::string _arguments;
     };
 
     class uri_resolver_manager
@@ -110,6 +117,8 @@ namespace dsn
         uri_resolver_manager(configuration* config);        
 
         std::shared_ptr<uri_resolver> get(rpc_uri_address* uri) const;
+
+        std::map<std::string, std::shared_ptr<uri_resolver> > get_all() const;
 
     private:
         void setup_resolvers(configuration* config);

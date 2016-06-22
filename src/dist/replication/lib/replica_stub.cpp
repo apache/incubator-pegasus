@@ -78,6 +78,10 @@ void replica_stub::install_perf_counters()
     _counter_replicas_learning_failed_latency.init("eon.replication", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
     _counter_replicas_learning_success_latency.init("eon.replication", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
     _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
+
+    std::stringstream ss;
+    ss << primary_address().to_std_string() << ".replica_stub.shared_log_size";
+    _counter_shared_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)
@@ -89,9 +93,18 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
-    //zauto_lock l(_replicas_lock);
-    set_options(opts);
     _primary_address = primary_address();
+    ddebug("primary_address = %s", _primary_address.to_string());
+
+    set_options(opts);
+    std::ostringstream oss;
+    for (int i = 0; i < _options.meta_servers.size(); ++i)
+    {
+        if (i != 0)
+            oss << ",";
+        oss << _options.meta_servers[i].to_string();
+    }
+    ddebug("meta_servers = %s", oss.str().c_str());
 
     // clear dirs if need
     if (clear)
@@ -188,6 +201,15 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     dir_list.clear();
 
     // init shared prepare log
+    ddebug("start to replay shared log");
+
+    std::map<gpid, decree> replay_condition;
+    for (auto it = rps.begin(); it != rps.end(); ++it)
+    {
+        replay_condition[it->first] = it->second->last_committed_decree();
+    }
+
+    uint64_t start_time = dsn_now_ms();
     error_code err = _log->open(
         [&rps](mutation_ptr& mu)
         {
@@ -201,15 +223,24 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 return false;
             }
         },
-        [this](error_code err) { this->handle_log_failure(err); }
-        );
+        [this](error_code err) { this->handle_log_failure(err); },
+        replay_condition
+    );
+    uint64_t finish_time = dsn_now_ms();
 
-    if (err != ERR_OK)
+    if (err == ERR_OK)
+    {
+        ddebug(
+            "replay shared log succeed, time_used = %" PRIu64 " ms",
+            finish_time - start_time
+            );
+    }
+    else
     {
         derror(
-            "%s: replication log replay failed, err %s, clear all logs ...",
-            primary_address().to_string(),
-            err.to_string()
+            "replay shared log failed, err = %s, time_used = %" PRIu64 " ms, clear all logs ...",
+            err.to_string(),
+            finish_time - start_time
             );
 
         // we must delete or update meta server the error for all replicas
@@ -251,9 +282,11 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 
         decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
+        decree pmax_commit = invalid_decree;
         if (it->second->private_log())
         {
             pmax = it->second->private_log()->max_decree(it->first);
+            pmax_commit = it->second->private_log()->max_commit_on_disk();
 
             // possible when shared log is restarted
             if (smax == 0)
@@ -269,20 +302,22 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             }
         }
 
-        dwarn(
-            "%u.%u @ %s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-            "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
-            it->first.get_app_id(), it->first.get_partition_index(),
-            primary_address().to_string(),
+        ddebug(
+            "%s: load replica done, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "prepared = %" PRId64 ", ballot = %" PRId64 ", "
+            "valid_offset_in_plog = %" PRId64 ", max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64 ", "
+            "valid_offset_in_slog = %" PRId64 ", max_decree_in_slog = %" PRId64 "",
+            it->second->name(),
             err.to_string(),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
             it->second->get_ballot(),
-            smax,
+            it->second->get_app()->init_info().init_offset_in_private_log,
             pmax,
+            pmax_commit,
             it->second->get_app()->init_info().init_offset_in_shared_log,
-            it->second->get_app()->init_info().init_offset_in_private_log
+            smax
             );
 
         if (err == ERR_OK)
@@ -320,6 +355,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             LPC_QUERY_CONFIGURATION_ALL,
             this,
             [this] {query_configuration_by_node();},
+            std::chrono::milliseconds(_options.config_sync_interval_ms),
+            0,
             std::chrono::milliseconds(_options.config_sync_interval_ms)
             );
     }
@@ -457,9 +494,12 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
     }
 
     ddebug("%u.%u@%s: received config proposal %s for %s",
-        proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(), _primary_address.to_string(),
+           proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(), _primary_address.to_string(),
            enum_to_string(proposal.type), proposal.node.to_string());
 
+    // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
+    // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
+    //replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     replica_ptr rep = get_replica(proposal.config.pid, false, &proposal.info);
     if (rep == nullptr)
     {
@@ -555,10 +595,12 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
     }
 
     ddebug("%u.%u@%s: received group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
-        request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
+           request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
            request.config.primary.to_string(), request.config.ballot,
            enum_to_string(request.config.status), request.last_committed_decree);
 
+    // TODO(qinzuoyan): if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
+    //replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     replica_ptr rep = get_replica(request.config.pid, false, &request.app);
     if (rep != nullptr)
     {
@@ -631,7 +673,7 @@ void replica_stub::on_add_learner(const group_check_request& request)
     if (!is_connected())
     {
         dwarn("%u.%u@%s: received add learner: not connected, ignore",
-            request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
+              request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
               request.config.primary.to_string());
         return;
     }
@@ -715,6 +757,8 @@ void replica_stub::query_configuration_by_node()
 
     ddebug("send query node partitions request to meta server");
 
+    ddebug("send query node partitions request to meta server");
+
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
         target,
@@ -729,10 +773,7 @@ void replica_stub::query_configuration_by_node()
 
 void replica_stub::on_meta_server_connected()
 {
-    ddebug(
-        "%s: meta server connected",
-        primary_address().to_string()
-        );
+    ddebug("meta server connected");
 
     zauto_lock l(_replicas_lock);
     if (_state == NS_Disconnected)
@@ -853,20 +894,14 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
     replica_ptr replica = get_replica(gpid);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY)
     {
-        if ((replica->status() == partition_status::PS_INACTIVE ||
-            replica->status() == partition_status::PS_SECONDARY)
-            && now_ms() - replica->last_config_change_time_milliseconds()
-            < _options.gc_memory_replica_interval_ms)
+        if (replica->status() == partition_status::PS_INACTIVE
+            && now_ms() - replica->create_time_milliseconds() < _options.gc_memory_replica_interval_ms)
         {
             ddebug("%s: replica not exists on meta server, wait to close", replica->name());
             return;
         }
 
-        ddebug(
-            "%u.%u @ %s: replica not exists on meta server, removed",
-            gpid.get_app_id(), gpid.get_partition_index(),
-            primary_address().to_string()
-            );
+        ddebug("%s: replica not exists on meta server, remove", replica->name());
 
         // TODO: set PS_INACTIVE instead for further state reuse
         replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
@@ -909,10 +944,8 @@ void replica_stub::remove_replica_on_meta_server(const app_info& info, const par
 
 void replica_stub::on_meta_server_disconnected()
 {
-    ddebug(
-        "%s: meta server disconnected",
-        primary_address().to_string()
-        );
+    ddebug("meta server disconnected");
+
     zauto_lock l(_replicas_lock);
     if (NS_Disconnected == _state)
         return;
@@ -973,6 +1006,8 @@ void replica_stub::init_gc_for_test()
 
 void replica_stub::on_gc()
 {
+    ddebug("start to garbage collection");
+
     replicas rs;
     {
         zauto_lock l(_replicas_lock);
@@ -982,8 +1017,6 @@ void replica_stub::on_gc()
     // gc shared prepare log
     if (_log != nullptr)
     {
-        // gc condition is:
-        //   d <= last_durable_decree && d <= private_log.max_commit_decree
         replica_log_info_map gc_condition;
         for (auto it = rs.begin(); it != rs.end(); ++it)
         {
@@ -1002,6 +1035,7 @@ void replica_stub::on_gc()
             gc_condition[it->first] = ri;
         }
         _log->garbage_collection(gc_condition);
+        _counter_shared_log_size.set(_log->size() / 1000000);
     }
     
     // gc on-disk rps
@@ -1011,7 +1045,7 @@ void replica_stub::on_gc()
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
         {
-            dwarn("on_gc(): failed to get subdirectories in %s", dir.c_str());
+            dwarn("gc: failed to get subdirectories in %s", dir.c_str());
             return;
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -1027,7 +1061,7 @@ void replica_stub::on_gc()
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt))
             {
-                dwarn("on_gc(): failed to get last write time of %s", fpath.c_str());
+                dwarn("gc: failed to get last write time of %s", fpath.c_str());
                 continue;
             }
 
@@ -1035,7 +1069,11 @@ void replica_stub::on_gc()
             {
                 if (!dsn::utils::filesystem::remove_path(fpath))
                 {
-                    dwarn("on_gc(): failed to delete directory %s", fpath.c_str());
+                    dwarn("gc: failed to delete directory %s", fpath.c_str());
+                }
+                else
+                {
+                    ddebug("gc: deleted directory %s", fpath.c_str());
                 }
             }
         }
@@ -1059,6 +1097,8 @@ void replica_stub::on_gc()
         }
     }
 #endif
+
+    ddebug("finish to garbage collection");
 }
 
 ::dsn::task_ptr replica_stub::begin_open_replica(const app_info& app, gpid gpid, 
@@ -1129,7 +1169,7 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
     std::shared_ptr<configuration_update_request> req2)
 {
     std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
-    ddebug("%u.%u@%s: start to open replica %s group_check, dir = %s",
+    ddebug("%u.%u@%s: start to open replica %s group check, dir = %s",
            gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(), req ? "with" : "without", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());
@@ -1184,13 +1224,20 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
 
     if (remove_replica(r))
     {
+        int delay_ms = 0;
+        if (r->status() == partition_status::PS_INACTIVE)
+        {
+            delay_ms = _options.gc_memory_replica_interval_ms;
+            ddebug("%s: delay %d milliseconds to close replica, status = PS_INACTIVE", r->name(), delay_ms);
+        }
+
         task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA, this,
             [=]()
             {
                 close_replica(r);
             }, 
             0, 
-            std::chrono::milliseconds(r->status() == partition_status::PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms)
+            std::chrono::milliseconds(delay_ms)
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         _counter_replicas_closing_count.increment();
@@ -1204,7 +1251,7 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
 
 void replica_stub::close_replica(replica_ptr r)
 {
-    dwarn( "close replica '%s'", r->dir().c_str());
+    ddebug("%s: start to close replica", r->name());
 
     r->close();
 

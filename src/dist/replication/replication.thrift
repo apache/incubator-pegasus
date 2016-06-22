@@ -15,7 +15,10 @@ struct mutation_header
 struct mutation_update
 {
     1:dsn.task_code  code;
-    2:dsn.blob       data;
+
+    //the serialization type of data, this need to store in log and replicate to secondaries by primary
+    2:i32            serialization_type;
+    3:dsn.blob       data;
 }
 
 struct mutation_data
@@ -253,6 +256,10 @@ struct configuration_list_nodes_request
     1:node_status              status = node_status.NS_INVALID;
 }
 
+struct configuration_cluster_info_request
+{
+}
+
 // meta server => client
 struct configuration_create_app_response
 {
@@ -260,36 +267,48 @@ struct configuration_create_app_response
     2:i32              appid;
 }
 
-// load balancer control
-struct control_balancer_migration_request
+enum meta_ctrl_flags
 {
-    1:bool             enable_migration;
+    ctrl_meta_freeze = 1,
+    ctrl_disable_replica_migration = 2
 }
 
-struct control_balancer_migration_response
+enum meta_ctrl_type
 {
-    1:dsn.error_code   err;
+    meta_flags_invalid,
+    meta_flags_and,
+    meta_flags_or,
+    meta_flags_overwrite
 }
 
-enum balancer_type
+struct configuration_meta_control_request
 {
-    BT_INVALID,
-    BT_MOVE_PRIMARY,
-    BT_COPY_PRIMARY,
-    BT_COPY_SECONDARY
+    1:i64 ctrl_flags;
+    2:meta_ctrl_type ctrl_type;
 }
 
-struct balancer_proposal_request
+struct configuration_meta_control_response
 {
-    1:dsn.gpid pid;
-    2:balancer_type       type;
-    3:dsn.rpc_address     from_addr;
-    4:dsn.rpc_address     to_addr;
+    1:dsn.error_code err;
 }
 
-struct balancer_proposal_response
+struct configuration_proposal_action
 {
-    1:dsn.error_code   err;
+    1:dsn.rpc_address target;
+    2:dsn.rpc_address node;
+    3:config_type type;
+}
+
+struct configuration_balancer_request
+{
+    1:dsn.gpid gpid;
+    2:list<configuration_proposal_action> action_list;
+    3:optional bool force = false;
+}
+
+struct configuration_balancer_response
+{
+    1:dsn.error_code err;
 }
 
 struct configuration_drop_app_response
@@ -307,6 +326,13 @@ struct configuration_list_nodes_response
 {
     1:dsn.error_code   err;
     2:list<node_info>  infos;
+}
+
+struct configuration_cluster_info_response
+{
+    1:dsn.error_code   err;
+    2:list<string>     keys;
+    3:list<string>     values;
 }
 
 struct query_replica_decree_request
@@ -340,13 +366,6 @@ struct query_replica_info_response
 {
     1:dsn.error_code      err;
     2:list<replica_info>  replicas;
-}
-
-struct app_state
-{
-    1:dsn.layer2.app_info info;
-    2:dsn.atom_int available_partitions;
-    3:list< dsn.layer2.partition_configuration> partitions;
 }
 
 struct node_state

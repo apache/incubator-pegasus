@@ -935,7 +935,6 @@ out_error:
             std::string path_combine(const std::string& path1, const std::string& path2)
             {
                 int err;
-                char c;
                 std::string path3;
                 std::string npath;
 
@@ -950,9 +949,8 @@ out_error:
                 else
                 {
                     path3 = path1;
-                    c = path1[path1.length() - 1];
 #ifdef _WIN32
-                    if (c != _FS_COLON)
+                    if (path1[path1.length() - 1] != _FS_COLON)
                     {
 #endif
                         path3.append(1,

@@ -109,10 +109,11 @@ namespace dsn { namespace tools {
                 {
                     node_scoper ns(rnet->node());
 
-                    server_session->on_recv_message(recv_msg,
+                    bool ret = server_session->on_recv_message(recv_msg,
                         recv_msg->to_address == recv_msg->header->from_address ?
                         0 : rnet->net_delay_milliseconds()
                         );
+                    dassert(ret, "");
                 }
             }
         }
@@ -140,10 +141,11 @@ namespace dsn { namespace tools {
             {
                 node_scoper ns(_client->net().node());
 
-                _client->on_recv_message(recv_msg,
+                bool ret = _client->on_recv_message(recv_msg,
                     recv_msg->to_address == recv_msg->header->from_address ?
                     0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
                     );
+                dassert(ret, "");
             }
         }        
 

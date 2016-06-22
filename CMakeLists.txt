@@ -7,7 +7,13 @@ include(bin/dsn.cmake)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
-set(GIT_SOURCE_FILE "ext/gitsource.cmake")
+
+if((NOT DEFINED DSN_GIT_SOURCE) OR (DSN_GIT_SOURCE STREQUAL ""))
+    set(DSN_GIT_SOURCE "github")
+endif()
+
+message(STATUS "use git source ${DSN_GIT_SOURCE}")
+set(GIT_SOURCE_FILE "ext/gitsource.${DSN_GIT_SOURCE}")
 
 if(DEFINED WARNING_ALL)
     #add_compile_options("-Wall")

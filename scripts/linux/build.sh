@@ -5,7 +5,6 @@
 #    CLEAR          YES|NO
 #    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
-#    SERIALIZE_TYPE dsn|thrift|protobuf
 #    GIT_SOURCE     github|xiaomi
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
@@ -18,7 +17,6 @@
 #    -DCMAKE_C_COMPILER=gcc
 #    -DCMAKE_CXX_COMPILER=g++
 #    [-DCMAKE_BUILD_TYPE=Debug]
-#    [-DDSN_SERIALIZATION_TYPE=dsn|thrift|protobuf]
 #    [-DDSN_GIT_SOURCE=github|xiaomi]
 #    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
@@ -187,7 +185,7 @@ echo "##########################################################################
 ##############################################
 if [ -z "$TEST_MODULE" ]
 then
-    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.idl.tests"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.idl.tests,dsn.meta.test"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"

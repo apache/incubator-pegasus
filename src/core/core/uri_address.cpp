@@ -112,6 +112,18 @@ namespace dsn
         return ret;
     }
 
+    std::map<std::string, std::shared_ptr<uri_resolver> > uri_resolver_manager::get_all() const
+    {
+        std::map<std::string, std::shared_ptr<uri_resolver> > result;
+
+        {
+            utils::auto_read_lock l(_lock);
+            result.insert(_resolvers.begin(), _resolvers.end());
+        }
+
+        return result;
+    }
+
     //---------------------------------------------------------------
 
     rpc_uri_address::rpc_uri_address(const char * uri)
@@ -146,8 +158,8 @@ namespace dsn
 
     //---------------------------------------------------------------
 
-    uri_resolver::uri_resolver(const char * name, const char* factory, const char * arguments)
-        : _name(name), _factory(factory)
+    uri_resolver::uri_resolver(const char* name, const char* factory, const char* arguments)
+        : _name(name), _factory(factory), _arguments(arguments)
     {
         _meta_server.assign_group(dsn_group_build(name));
 
@@ -203,5 +215,17 @@ namespace dsn
         }
 
         return rv;
+    }
+
+    std::map<std::string, dist::partition_resolver_ptr> uri_resolver::get_all_app_resolvers()
+    {
+        std::map<std::string, dist::partition_resolver_ptr> result;
+
+        {
+            service::zauto_read_lock l(_apps_lock);
+            result.insert(_apps.begin(), _apps.end());
+        }
+
+        return result;
     }
 }

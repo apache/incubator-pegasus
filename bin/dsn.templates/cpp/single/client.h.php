@@ -16,8 +16,8 @@ class <?=$svc->name?>_client
     : public virtual ::dsn::clientlet
 {
 public:
-    <?=$svc->name?>_client(::dsn::rpc_address server) { _server = server; }
     <?=$svc->name?>_client() { }
+    explicit <?=$svc->name?>_client(::dsn::rpc_address server) { _server = server; }
     virtual ~<?=$svc->name?>_client() {}
     
 <?php foreach ($svc->functions as $f) { ?>

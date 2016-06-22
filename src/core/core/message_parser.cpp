@@ -36,6 +36,10 @@
 # include <dsn/internal/message_parser.h>
 # include <dsn/service_api_c.h>
 
+#ifdef DSN_ENABLE_THRIFT_RPC
+# include <dsn/internal/thrift_parser.h>
+#endif
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -52,13 +56,13 @@ namespace dsn {
         }
     }
 
-    void message_parser::create_new_buffer(int sz)
+    void message_parser::create_new_buffer(unsigned int sz)
     {
         _read_buffer.assign(std::shared_ptr<char>(new char[sz], std::default_delete<char[]>{}), 0, sz);
         _read_buffer_occupied = 0;
     }
 
-    void message_parser::mark_read(int read_length)
+    void message_parser::mark_read(unsigned int read_length)
     {
         dassert(read_length + _read_buffer_occupied <= _read_buffer.length(), "");
         _read_buffer_occupied += read_length;
@@ -67,7 +71,7 @@ namespace dsn {
     // before read
     void* message_parser::read_buffer_ptr(int read_next)
     {
-        if (read_next + _read_buffer_occupied >  _read_buffer.length())
+        if (read_next + _read_buffer_occupied > _read_buffer.length())
         {
             // remember currently read content
             auto rb = _read_buffer.range(0, _read_buffer_occupied);
@@ -91,7 +95,7 @@ namespace dsn {
         return (void*)(_read_buffer.data() + _read_buffer_occupied);
     }
 
-    int message_parser::read_buffer_capacity() const
+    unsigned int message_parser::read_buffer_capacity() const
     {
         return _read_buffer.length() - _read_buffer_occupied;
     }
@@ -103,7 +107,7 @@ namespace dsn {
 
     void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
     {
-        if (fmt >= _factory_vec.size())
+        if (static_cast<unsigned int>(fmt) >= _factory_vec.size())
         {
             _factory_vec.resize(fmt + 1);
         }
@@ -127,10 +131,59 @@ namespace dsn {
         : message_parser(buffer_block_size, is_write_only), _header_checked(false)
     {
     }
-    
-    message_ex* dsn_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
+
+    message_ex* dsn_message_parser::receive_message_with_thrift_header(unsigned int, /*out*/int& read_next)
+    {
+#ifdef DSN_ENABLE_THRIFT_RPC
+        if (_read_buffer_occupied >= sizeof(dsn_thrift_header))
+        {
+            dsn_thrift_header header;
+            thrift_header_parser::read_thrift_header_from_buffer(header, _read_buffer.data());
+            unsigned int total_length = header.body_offset + header.body_length;
+            // msg done
+            if ( _read_buffer_occupied >= total_length)
+            {
+                dsn::blob message_data = _read_buffer.range(0, total_length);
+                message_ex* msg = thrift_header_parser::parse_dsn_message(&header, message_data);
+
+                _read_buffer = _read_buffer.range(total_length);
+                _read_buffer_occupied -= total_length;
+                read_next = sizeof(int32_t);
+
+                return msg;
+            }
+            else
+            {
+                read_next = total_length - _read_buffer_occupied;
+                return nullptr;
+            }
+        }
+        else
+        {
+            read_next = sizeof(dsn_thrift_header) - _read_buffer_occupied;
+            return nullptr;
+        }
+#else
+        dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+        (int) read_length;
+        return nullptr;
+#endif
+    }
+
+    message_ex* dsn_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
     {
         mark_read(read_length);
+
+        if (_read_buffer_occupied < sizeof(int32_t) )
+        {
+            read_next = sizeof(int32_t);
+            return nullptr;
+        }
+
+        if (header_type(_read_buffer.data()) == header_type::hdr_dsn_thrift)
+        {
+            return receive_message_with_thrift_header(read_length, read_next);
+        }
 
         if (_read_buffer_occupied >= sizeof(message_header))
         {
@@ -150,8 +203,7 @@ namespace dsn {
                 }
             }
 
-            int msg_sz = sizeof(message_header) +
-                message_ex::get_body_length((char*)_read_buffer.data());
+            unsigned int msg_sz = sizeof(message_header) + message_ex::get_body_length((char*)_read_buffer.data());
 
             // msg done
             if (_read_buffer_occupied >= msg_sz)
@@ -192,8 +244,18 @@ namespace dsn {
         }
     }
 
-    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers)
+    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, unsigned int offset, /*out*/ send_buf* buffers)
     {
+        if (msg->header->hdr_type == header_type::hdr_dsn_thrift)
+        {
+#ifdef DSN_ENABLE_THRIFT_RPC
+            return thrift_header_parser::prepare_buffers_on_send(msg, offset, buffers);
+#else
+            dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+            return -1;
+#endif
+        }
+
         int i = 0;        
         for (auto& buf : msg->buffers)
         {
@@ -214,6 +276,15 @@ namespace dsn {
 
     int dsn_message_parser::get_send_buffers_count(message_ex* msg)
     {
+        if (msg->header->hdr_type == header_type::hdr_dsn_thrift)
+        {
+#ifdef DSN_ENABLE_THRIFT_RPC
+            return thrift_header_parser::get_send_buffers_count(msg);
+#else
+            dassert(false, "thrift serialization is not enabled, we can't handler message with thrift header");
+            return -1;
+#endif
+        }
         return (int)msg->buffers.size();
     }
 

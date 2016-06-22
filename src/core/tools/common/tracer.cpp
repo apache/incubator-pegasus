@@ -253,28 +253,24 @@ namespace dsn {
                 return tracer_log_flow_error("not enough arguments");
             }
 
-            bool is_forward;
+            //TODO: implement this
             if (args[0] == "forward" || args[0] == "f")
             {
-                is_forward = true;
             }
             else if (args[0] == "backward" || args[0] == "b")
             {
-                is_forward = false;
             }
             else
             {
                 return tracer_log_flow_error("invalid direction argument - must be forward|f|backward|b");
             }
 
-            bool is_rpc;
+            //TODO: implement this
             if (args[1] == "rpc" || args[1] == "r")
             {
-                is_rpc = true;
             }
             else if (args[1] == "task" || args[1] == "t")
             {
-                is_rpc = false;
             }
             else
             {

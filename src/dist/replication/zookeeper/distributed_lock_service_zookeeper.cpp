@@ -91,14 +91,14 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
     _zookeeper_locks.erase(key);
 }
 
-error_code distributed_lock_service_zookeeper::initialize(int argc, const char** argv)
+error_code distributed_lock_service_zookeeper::initialize(const std::vector<std::string>& args)
 {
-    if (argc == 0)
+    if (args.empty())
     {
         derror("need parameters: <lock_root>");
         return ERR_INVALID_PARAMETERS;
     }
-    const char* lock_root = argv[0];
+    const char* lock_root = args[0].c_str();
 
     dsn_app_info node;
     if (!dsn_get_current_app_info(&node))

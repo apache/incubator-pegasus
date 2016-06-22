@@ -11,13 +11,13 @@
 #define __TITLE__ "fd.test"
 
 using namespace dsn;
+using namespace dsn::fd;
 
 #define MPORT_START 30001
 #define WPORT 40001
 #define MCOUNT 3
 
 DEFINE_TASK_CODE_RPC(RPC_MASTER_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
-
 
 volatile int started_apps = 0;
 class worker_fd_test: public ::dsn::dist::slave_failure_detector_with_multimaster
@@ -53,7 +53,7 @@ protected:
     }
 
 public:
-    worker_fd_test(replica_stub* stub, std::vector< dsn::rpc_address>& meta_servers):
+    worker_fd_test(replication::replica_stub* stub, std::vector< dsn::rpc_address>& meta_servers):
         slave_failure_detector_with_multimaster(
             meta_servers, 
             [=]() {stub->on_meta_server_disconnected(); },
@@ -81,7 +81,7 @@ public:
     }
 };
 
-class master_fd_test: public meta_server_failure_detector
+class master_fd_test: public replication::meta_server_failure_detector
 {
 private:
     std::function<void (rpc_address addr)> _connected_cb;
