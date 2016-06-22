@@ -102,35 +102,27 @@ namespace dsn {
         binary_writer& _writer;
     };
 
-#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
+#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TRealName, TTag, TMethod) \
     inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
     {\
-        return proto->write##TMethod(val); \
+        return proto->write##TMethod((const TRealName&)val); \
     }\
     inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val)\
     {\
-        return proto->read##TMethod(val); \
+        return proto->read##TMethod((TRealName&)val); \
     }
 
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
-
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const unsigned long& val)\
-    {
-        return proto->writeI64(static_cast<int64_t>(val));\
-    }
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/unsigned long& val)\
-    {
-        int64_t result;
-        uint32_t ans = proto->readI64(result);
-        val = static_cast<unsigned long>(result);
-        return ans;
-    }
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, bool, BOOL, Bool)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, int8_t, I08, Byte)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, int16_t, I16, I16)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, int32_t, I32, I32)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, int64_t, I64, I64)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint8_t, int8_t, I08, Byte)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint16_t, int16_t, I16, I16)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint32_t, int32_t, I32, I32)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint64_t, int64_t, I64, I64)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, double, DOUBLE, Double)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, std::string, STRING, String)
 
     template<typename T>
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
