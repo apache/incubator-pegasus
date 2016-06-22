@@ -177,8 +177,8 @@ namespace dsn
             );
         static message_ex* create_receive_message_with_standalone_header(const blob& data);
         message_ex* create_response();
-        message_ex* copy(bool copy_for_receive = false);
-        message_ex* copy_and_prepare_send();
+        message_ex* copy(bool clone_content, bool copy_for_receive);
+        message_ex* copy_and_prepare_send(bool clone_content);
 
         //
         // routines for buffer management

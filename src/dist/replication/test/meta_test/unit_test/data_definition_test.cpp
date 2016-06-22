@@ -9,7 +9,7 @@
 
 dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
 {
-    return dsn_msg_copy(request_msg, true);
+    return dsn_msg_copy(request_msg, true, true);
 }
 
 class fake_receiver_meta_service: public dsn::replication::meta_service

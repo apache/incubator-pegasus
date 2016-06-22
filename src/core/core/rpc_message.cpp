@@ -78,9 +78,9 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     return msg;
 }
 
-DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg, bool copy_for_receive)
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg, bool clone_content, bool copy_for_receive)
 {
-    return msg ? ((::dsn::message_ex*)msg)->copy(copy_for_receive) : nullptr;
+    return msg ? ((::dsn::message_ex*)msg)->copy(clone_content, copy_for_receive) : nullptr;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -427,42 +427,45 @@ message_ex* message_ex::create_receive_message_with_standalone_header(const blob
     return msg;
 }
 
-message_ex* message_ex::copy(bool copy_for_receive)
+message_ex* message_ex::copy(bool clone_content, bool copy_for_receive)
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
-    // - if this message is a send message, set copied message's write pointer to the end, then you
+    // - if this message is a written message, set copied message's write pointer to the end, then you
     //   can continue to append data to the copied message.
-    // - if this message is a received message, set copied message's read pointer to the beginning,
+    // - if this message is a read message, set copied message's read pointer to the beginning,
     //   then you can read data from the beginning.
     // - if copy_for_receive is set, it means that we want to make a receiving message from a sending message.
     //   which is usually useful when you want to write mock for modules which use rpc.
 
-    message_ex* msg;
+    message_ex* msg = new message_ex();
+    msg->to_address = to_address;
+    msg->local_rpc_code = local_rpc_code;
+
     if (!copy_for_receive)
+        msg->_is_read = _is_read;
+    else
+        msg->_is_read = true;
+
+    // received message
+    if (msg->_is_read)
     {
-        msg = new message_ex();
+        // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
+    }
+    // send message
+    else
+    {
+        msg->server_address = server_address;
+        // copy the orignal value, pointing to the end of the buffer
+        msg->_rw_index = _rw_index;
+        msg->_rw_offset = _rw_offset;
+    }
+
+    if (!clone_content)
+    {
         msg->header = header; // header is within the buffer
         msg->buffers = buffers;
-        // TODO(qinzuoyan): should io_session also be copied ?
-        msg->to_address = to_address;
-        msg->local_rpc_code = local_rpc_code;
-        msg->_is_read = _is_read;
-
-        // received message
-        if (msg->_is_read)
-        {
-            // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
-        }
-        // send message
-        else
-        {
-            msg->server_address = server_address;
-            // copy the orignal value, pointing to the end of the buffer
-            msg->_rw_index = _rw_index;
-            msg->_rw_offset = _rw_offset;
-        }
     }
     else
     {
@@ -470,6 +473,13 @@ message_ex* message_ex::copy(bool copy_for_receive)
         std::shared_ptr<char> recv_buffer(new char[total_length], std::default_delete<char[]>());
         char* ptr = recv_buffer.get();
         int i=0;
+
+        if ((const char*)header != buffers[0].data())
+        {
+            memcpy(ptr, (const void*)header, sizeof(message_header));
+            ptr += sizeof(message_header);
+        }
+
         for (dsn::blob& bb: buffers)
         {
             memcpy(ptr, bb.data(), bb.length());
@@ -477,14 +487,21 @@ message_ex* message_ex::copy(bool copy_for_receive)
             ptr+=bb.length();
         }
         dassert(i==total_length, "");
-        msg = create_receive_message( dsn::blob(recv_buffer, total_length) );
+
+        auto data = dsn::blob(recv_buffer, total_length);
+        
+        msg->header = (message_header*)data.data();
+        if (msg->_is_read)
+            msg->buffers.push_back(data.range((int)sizeof(message_header)));
+        else
+            msg->buffers.push_back(data);
     }
     return msg;
 }
 
-message_ex* message_ex::copy_and_prepare_send()
+message_ex* message_ex::copy_and_prepare_send(bool clone_content)
 {
-    auto copy = this->copy();
+    auto copy = this->copy(clone_content, false);
 
     if (_is_read)
     {

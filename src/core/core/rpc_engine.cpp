@@ -1114,7 +1114,7 @@ namespace dsn {
         // TODO(qinzuoyan): reply to client if forwarding failed for non-timeout reason (such as connection denied).
         else
         {
-            auto copied_request = request->copy_and_prepare_send();
+            auto copied_request = request->copy_and_prepare_send(false);
             call_ip(address, copied_request, nullptr, false, true);
         }
     }
