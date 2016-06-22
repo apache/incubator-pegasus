@@ -183,7 +183,7 @@ static void rpc_group_callback(
         dsn::rpc_address group_addr = ((dsn::message_ex*)req)->server_address;
         dsn_group_forward_leader(group_addr.group_handle());
 
-        auto req_again = dsn_msg_copy(req);
+        auto req_again = dsn_msg_copy(req, false);
         auto call_again = ::dsn::rpc::call(
             group_addr,
             req_again,

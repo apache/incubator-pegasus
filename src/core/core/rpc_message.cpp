@@ -78,9 +78,9 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     return msg;
 }
 
-DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg, bool copy_for_receive)
 {
-    return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
+    return msg ? ((::dsn::message_ex*)msg)->copy(copy_for_receive) : nullptr;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -427,7 +427,7 @@ message_ex* message_ex::create_receive_message_with_standalone_header(const blob
     return msg;
 }
 
-message_ex* message_ex::copy()
+message_ex* message_ex::copy(bool copy_for_receive)
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
 
@@ -443,10 +443,14 @@ message_ex* message_ex::copy()
     // TODO(qinzuoyan): should io_session also be copied ?
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
-    msg->_is_read = _is_read;
+
+    if (copy_for_receive)
+        msg->_is_read = true;
+    else
+        msg->_is_read = _is_read;
 
     // received message
-    if (this->_is_read)
+    if (msg->_is_read)
     {
         // leave _rw_index and _rw_offset as initial state, pointing to the beginning of the buffer
     }

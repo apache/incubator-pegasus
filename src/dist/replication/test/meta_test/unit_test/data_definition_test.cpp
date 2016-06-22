@@ -9,7 +9,7 @@
 
 dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
 {
-    return dsn_msg_copy(request_msg);
+    return dsn_msg_copy(request_msg, true);
 
     /*dsn::message_ex* rpc_message = reinterpret_cast<dsn::message_ex*>(request_msg);
     std::vector<dsn::blob>& buffers = rpc_message->buffers;
