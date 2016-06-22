@@ -43,7 +43,6 @@
 #include "server_state.h"
 #include "meta_server_failure_detector.h"
 #include "server_load_balancer.h"
-#include "../zookeeper/zookeeper_session_mgr.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -410,9 +409,7 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
     response.values.push_back(_failure_detector->get_primary().to_string());
-    response.keys.push_back("zookeeper_servers");
-    response.values.push_back(dist::zookeeper_session_mgr::instance().zoo_hosts());
-    response.keys.push_back("zookeeper_cluster_root");
+    response.keys.push_back("remote_storage_cluster_root");
     response.values.push_back(_cluster_root);
     response.err = dsn::ERR_OK;
 
