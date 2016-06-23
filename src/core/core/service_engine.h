@@ -113,7 +113,8 @@ public:
 
     dsn_app_info* get_l1_info() { return &_app_info; }
     app_manager& get_l2_handler() { return _layer2_handler; }
-    bool handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay);
+    void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
+    rpc_request_task* generate_l2_rpc_request_task(message_ex* req);
 
     static dsn_error_t start_app(void* app_context, const std::string& args, dsn_app_start start, const std::string& app_name);
 
@@ -129,6 +130,8 @@ private:
 
     // when this app is hosted by a layer2 handler app
     app_manager                                 _layer2_handler;
+    rpc_handler_info                            _layer2_rpc_read_handler;
+    rpc_handler_info                            _layer2_rpc_write_handler;
 
 private:
     error_code init_io_engine(io_engine& io, ioe_mode mode);

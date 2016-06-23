@@ -188,6 +188,7 @@ replication_app_base::replication_app_base(replica* replica)
 {
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
+    _last_committed_decree = 0;
     _replica = replica;
     _callbacks = replica->get_app_callbacks();
 
@@ -231,43 +232,29 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     if (create_new)
     {
-        auto dir = r->dir();
-        if (!dsn::utils::filesystem::remove_path(dir))
-        {
-            derror("%s: remove replica dir %s failed", r->name(), dir.c_str());
-            return ERR_FILE_OPERATION_FAILED;
-        }
-        if (!dsn::utils::filesystem::create_directory(dir))
-        {
-            derror("%s: create replica dir %s failed", r->name(), dir.c_str());
-            return ERR_FILE_OPERATION_FAILED;
-        }
+        auto& dir = data_dir();
+        dsn::utils::filesystem::remove_path(dir);
+        dsn::utils::filesystem::create_directory(dir);
     }
     
     if (!dsn::utils::filesystem::create_directory(_dir_data))
     {
-        derror("%s: create data dir %s failed", r->name(), _dir_data.c_str());
-        return ERR_FILE_OPERATION_FAILED;
+        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
     }
 
     if (!dsn::utils::filesystem::create_directory(_dir_learn))
     {
-        derror("%s: create learn dir %s failed", r->name(), _dir_learn.c_str());
-        return ERR_FILE_OPERATION_FAILED;
+        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
     }
 
     auto err = open();
     if (err == ERR_OK)
     {
-        _last_committed_decree.store(last_durable_decree());
+        _last_committed_decree = last_durable_decree();
         if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
-            if (err == ERR_OK)
-            {
-                ddebug("%s: load replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
-            }
         }
 
         _app_commit_decree.add(last_committed_decree());
@@ -428,17 +415,15 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         lstate.files = &files[0];
     }
 
+    auto lcd = last_committed_decree();
     error_code err = _callbacks.calls.apply_checkpoint(_app_context_callbacks, mode, last_committed_decree(), &lstate);
     if (err == ERR_OK)
     {
-        dassert(lstate.to_decree_included == last_durable_decree(), "");
-        _last_committed_decree.store(lstate.to_decree_included);
+        if (lstate.to_decree_included > lcd)
+        {
+            _last_committed_decree.store(lstate.to_decree_included);
+        }
     }
-    else
-    {
-        derror("%s: call app.apply_checkpoint() failed, err = %s", _replica->name(), err.to_string());
-    }
-
     return err;
 }
 

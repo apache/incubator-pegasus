@@ -102,62 +102,27 @@ namespace dsn {
         binary_writer& _writer;
     };
 
-#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
+#define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TRealName, TTag, TMethod) \
     inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
     {\
-        return proto->write##TMethod(val); \
+        return proto->write##TMethod((const TRealName&)val); \
     }\
     inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val)\
     {\
-        return proto->read##TMethod(val); \
+        return proto->read##TMethod((TRealName&)val); \
     }
 
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, I08, Byte)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
-    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
-
-    template<typename T>
-    inline uint32_t write_base(::apache::thrift::protocol::TProtocol* proto, const T& value)
-    {
-        switch (sizeof(value))
-        {
-        case 4:
-            return write_base(proto, (int32_t)value);
-        case 8:
-            return write_base(proto, (int64_t)value);
-        default:
-            assert(false);
-            return 0;
-        }
-    }
-
-    template <typename T>
-    inline uint32_t read_base(::apache::thrift::protocol::TProtocol* proto, T& value)
-    {
-        uint32_t res = 0;
-        switch (sizeof(value))
-        {
-        case 4: {
-            int32_t val;
-            res = read_base(proto, val);
-            value = T(val);
-            return res;
-        }
-        case 8: {
-            int64_t val;
-            res = read_base(proto, val);
-            value = T(val);
-            return res;
-        }
-        default:
-            assert(false);
-            return 0;
-        }
-    }
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, bool, BOOL, Bool)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, int8_t, I08, Byte)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, int16_t, I16, I16)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, int32_t, I32, I32)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, int64_t, I64, I64)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint8_t, int8_t, I08, Byte)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint16_t, int16_t, I16, I16)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint32_t, int32_t, I32, I32)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(uint64_t, int64_t, I64, I64)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, double, DOUBLE, Double)
+    DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, std::string, STRING, String)
 
     template<typename T>
     uint32_t marshall_base(::apache::thrift::protocol::TProtocol* oproto, const T& val);
@@ -460,7 +425,50 @@ namespace dsn {
     inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string task_code_string;
-        uint32_t xfer = iprot->readString(task_code_string);
+        uint32_t xfer = 0;
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            xfer += iprot->readString(task_code_string);
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRING) {
+                        xfer += iprot->readString(task_code_string);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+        }
         _internal_code = dsn_task_code_from_string(task_code_string.c_str(), TASK_CODE_INVALID);
         return xfer;
     }
@@ -476,7 +484,17 @@ namespace dsn {
         }
         else
         {
-            return oprot->writeString(std::string(name));
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+            xfer += oprot->writeStructBegin("task_code");
+
+            xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);
+            xfer += oprot->writeString(std::string(name));
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
         }
     }
 
@@ -497,7 +515,50 @@ namespace dsn {
     inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
     {
         std::string ec_string;
-        uint32_t xfer = iprot->readString(ec_string);
+        apache::thrift::protocol::TBinaryProtocol* binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol*>(iprot);
+        uint32_t xfer = 0;
+        if (binary_proto != nullptr)
+        {
+            //the protocol is binary protocol
+            xfer += iprot->readString(ec_string);
+        }
+        else
+        {
+            //the protocol is json protocol
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRING) {
+                        xfer += iprot->readString(ec_string);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+        }
         _internal_code = dsn_error_from_string(ec_string.c_str(), ERR_UNKNOWN);
         return xfer;
     }
@@ -513,7 +574,17 @@ namespace dsn {
         }
         else
         {
-            return oprot->writeString(std::string(name));
+            //the protocol is json protocol
+            uint32_t xfer = 0;
+            xfer += oprot->writeStructBegin("error_code");
+
+            xfer += oprot->writeFieldBegin("code", ::apache::thrift::protocol::T_STRING, 1);
+            xfer += oprot->writeString(std::string(name));
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            return xfer;
         }
     }
 

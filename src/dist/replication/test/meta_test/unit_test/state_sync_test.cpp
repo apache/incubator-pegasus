@@ -94,12 +94,14 @@ void meta_service_test_app::state_sync_test()
         drop_set.clear();
         for (int i=1; i<=apps_count; ++i)
         {
-            std::shared_ptr<app_state> app = app_state::create(
-                "test_app" + boost::lexical_cast<std::string>(i),
-                "simple_kv",
-                i
-            );
-            app->init_partitions(random32(100, 10000), 3);
+            dsn::app_info info;
+            info.is_stateful = true;
+            info.app_id = i; info.app_type = "simple_kv";
+            info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
+            info.max_replica_count = 3; info.partition_count = random32(100, 10000);
+            info.status = dsn::app_status::AS_CREATING;
+            std::shared_ptr<app_state> app = app_state::create(info);
+
             ss->_all_apps.emplace(app->app_id, app);
             if (i<apps_count && random32(1, apps_count)<=drop_ratio) {
                 app->status = dsn::app_status::AS_DROPPED;

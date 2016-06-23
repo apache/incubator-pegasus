@@ -78,6 +78,9 @@ namespace dsn { namespace tools {
         blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
         message_ex* recv_msg = message_ex::create_receive_message(bb);
         recv_msg->to_address = msg->to_address;
+
+        msg->copy_to(*recv_msg); // extensible object state move
+
         return recv_msg;
     }
 
@@ -177,15 +180,12 @@ namespace dsn { namespace tools {
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        _address = ::dsn::rpc_address(boost::asio::ip::host_name().c_str(), port);
-
-        ::dsn::rpc_address ep2;
-        ep2 = ::dsn::rpc_address("localhost", port);
-      
+        _address = ::dsn::rpc_address("localhost", port); 
         if (!client_only)
         {
             if (s_switch[channel].put(_address, this))
             {
+                auto ep2 = ::dsn::rpc_address(boost::asio::ip::host_name().c_str(), port);
                 s_switch[channel].put(ep2, this);
                 return ERR_OK;
             }   

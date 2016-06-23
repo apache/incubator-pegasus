@@ -59,10 +59,16 @@ void generate_balanced_apps(/*out*/app_mapper& apps, node_mapper& nodes, const s
     nodes.clear();
     for (const auto& node: node_list)
         nodes[node].is_alive = true;
-    std::shared_ptr<app_state> the_app = app_state::create("test", "test", 1);
+
     int partitions_per_node = random32(20, 100);
-    the_app->init_partitions(partitions_per_node*node_list.size(), 3);
-    the_app->status = dsn::app_status::AS_AVAILABLE;
+    dsn::app_info info;
+    info.status = dsn::app_status::AS_AVAILABLE;
+    info.is_stateful = true;
+    info.app_id = 1; info.app_name = "test"; info.app_type = "test";
+    info.partition_count = partitions_per_node*node_list.size();
+    info.max_replica_count = 3;
+
+    std::shared_ptr<app_state> the_app = app_state::create(info);
 
     simple_priority_queue pq1(node_list, server_load_balancer::primary_comparator(nodes));
     //generate balanced primary
@@ -157,15 +163,9 @@ void greedy_balancer_perfect_move_primary()
     }
 }
 
-extern void dsn_core_init();
-void dsn_init()
-{
-    dsn_core_init();
-    dsn_run_config("config.ini", false);
-}
-
 int main(int, char**)
 {
-    dsn_init();
+    dsn_run_config("config.ini", false);
     greedy_balancer_perfect_move_primary();
+    return 0;
 }

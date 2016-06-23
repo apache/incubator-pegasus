@@ -271,8 +271,7 @@ typedef void(*dsn_framework_rpc_request_handler)(
     void*,          ///< context from dsn_app_create
     dsn_gpid,       ///< global partition id
     bool,           ///< is_write_operation or not
-    dsn_message_t,  ///< incoming rpc request
-    int             ///< delay (imposed by tools)
+    dsn_message_t   ///< incoming rpc request
     );
 
 struct dsn_app_learn_state
@@ -359,7 +358,7 @@ typedef union dsn_app_callbacks
         dsn_app_on_batched_write_requests   on_batched_write_requests;
         dsn_app_get_physical_error          get_physical_error;
         dsn_app_sync_checkpoint             sync_checkpoint;
-        dsn_app_sync_checkpoint             async_checkpoint;
+        dsn_app_async_checkpoint            async_checkpoint;
         dsn_app_get_last_checkpoint_decree  get_last_checkpoint_decree;
         dsn_app_prepare_get_checkpoint      prepare_get_checkpoint;
         dsn_app_get_checkpoint              get_checkpoint;
@@ -414,6 +413,7 @@ typedef struct dsn_app_info
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app type name
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< app full name
     char  data_dir[DSN_MAX_PATH];             ///< app data directory
+    dsn_address_t primary_address;            ///< primary address
 } dsn_app_info;
 # pragma pack(pop)
 

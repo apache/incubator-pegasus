@@ -97,16 +97,15 @@ public:
         }
     }
 
-    void move_to(extensible_object<T, MAX_EXTENSION_COUNT>& r)
+    void copy_to(extensible_object<T, MAX_EXTENSION_COUNT>& r)
     {
         int maxId = static_cast<int>(get_extension_count());
 
         for (int i = 0; i < maxId; i++)
         {
-            r._extensions[i] = _extensions[i];
-            if (s_extensionDeletors[i] != nullptr)
+            if (s_extensionDeletors[i] == nullptr)
             {
-                _extensions[i] = extensible_object::INVALID_VALUE;
+                r._extensions[i] = _extensions[i];
             }
         }
     }

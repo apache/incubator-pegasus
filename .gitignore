@@ -10,11 +10,11 @@ test_reports/
 Dockerfile
 include/thrift/
 
-rDSN.github.config
-rDSN.github.creator
-rDSN.github.creator.user*
-rDSN.github.files
-rDSN.github.includes
+rdsn.github.config
+rdsn.github.creator
+rdsn.github.creator.user*
+rdsn.github.files
+rdsn.github.includes
 update_qt_config.sh
 zookeeper-3.4.6.tar.gz
 zookeeper-3.4.6/

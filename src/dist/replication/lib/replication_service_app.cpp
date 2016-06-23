@@ -48,6 +48,8 @@
 # include <dsn/internal/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(replication_type1)
+    dsn_task_code_register("RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
+    dsn_task_code_register("RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
     dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_APP_MASK_FRAMEWORK);
 MODULE_INIT_END
 
@@ -88,25 +90,15 @@ error_code replication_service_app::stop(bool cleanup)
     return ERR_OK;
 }
 
-void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg, int delay_ms)
+void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg)
 {
     if (is_write)
     {
-        tasking::enqueue(
-            LPC_REPLICATION_CLIENT_WRITE,
-            nullptr,
-            [=]() {_stub->on_client_write(dpid, msg); },
-            gpid_to_hash(dpid)
-            );
+        _stub->on_client_write(dpid, msg);
     }
     else
     {
-        tasking::enqueue(
-            LPC_REPLICATION_CLIENT_READ,
-            nullptr,
-            [=]() {_stub->on_client_read(dpid, msg); },
-            gpid_to_hash(dpid)
-            );
+        _stub->on_client_read(dpid, msg);
     }
 }
 

@@ -145,29 +145,19 @@ public:
 class app_state: public app_info
 {
 public:
+    app_state(const app_info& info);
+public:
     std::shared_ptr<app_state_helper>    helpers;
     std::vector<partition_configuration> partitions;
-public:
-    app_state(): app_info(), helpers(new app_state_helper())
-    {
-        helpers->owner = this;
-    }
-    app_state(const app_info& info): app_info(info), helpers(new app_state_helper())
-    {
-        helpers->owner = this;
-    }
-    static std::shared_ptr<app_state> create(const std::string& name, const std::string& type, int32_t id);
     static std::shared_ptr<app_state> create(const app_info& info);
-    void init_partitions(int32_t pc, int32_t rc);
-
     dsn::blob encode_json_with_status(app_status::type temp_status)
     {
         std::swap(status, temp_status);
+        //we use the app_info's encode
         dsn::blob result = dsn::json::json_forwarder<app_state>::encode(*this);
         std::swap(status, temp_status);
         return result;
     }
-    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count)
 };
 
 typedef std::map<int32_t, std::shared_ptr<app_state>> app_mapper;
@@ -191,7 +181,7 @@ inline bool is_node_alive(const node_mapper& nodes, rpc_address addr)
 inline const partition_configuration* get_config(const app_mapper& apps, const dsn::gpid& gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end())
+    if (iter==apps.end() || iter->second->status==app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->partitions[gpid.get_partition_index()]);
 }
@@ -199,7 +189,7 @@ inline const partition_configuration* get_config(const app_mapper& apps, const d
 inline const config_context* get_config_context(const app_mapper& apps, const dsn::gpid& gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end())
+    if (iter == apps.end() || iter->second->status==app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
 }
@@ -244,5 +234,19 @@ inline int count_partitions(const app_mapper& apps)
 }
 
 void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
+
+}}
+
+namespace dsn { namespace json {
+
+inline void json_encode(std::stringstream &out, const replication::app_state& state)
+{
+    json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info&)state);
+}
+
+inline void json_decode(dsn::json::string_tokenizer &in, replication::app_state& state)
+{
+    json_forwarder<dsn::app_info>::decode(in, (dsn::app_info&)state);
+}
 
 }}

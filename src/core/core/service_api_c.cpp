@@ -350,6 +350,7 @@ DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, 
 {
     auto t = new ::dsn::task_c(code, cb, context, nullptr, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -358,6 +359,7 @@ DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_
 {
     auto t = new ::dsn::timer_task(code, cb, context, nullptr, interval_milliseconds, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -366,6 +368,7 @@ DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code, dsn_task_handler_t c
 {
     auto t = new ::dsn::task_c(code, cb, context, on_cancel, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -375,6 +378,7 @@ DSN_API dsn_task_t dsn_task_create_timer_ex(dsn_task_code_t code, dsn_task_handl
 {
     auto t = new ::dsn::timer_task(code, cb, context, on_cancel, interval_milliseconds, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -675,6 +679,7 @@ DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_r
     auto msg = ((::dsn::message_ex*)request);
     auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -685,6 +690,7 @@ DSN_API dsn_task_t dsn_rpc_create_response_task_ex(dsn_message_t request, dsn_rp
     auto msg = ((::dsn::message_ex*)request);
     auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_thread_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -797,6 +803,7 @@ DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handle
 {
     auto t = new ::dsn::aio_task(code, cb, context, nullptr, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -806,6 +813,7 @@ DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn_task_code_t code, dsn_aio_han
 {
     auto t = new ::dsn::aio_task(code, cb, context, on_cancel, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
+    t->spec().on_task_create.execute(::dsn::task::get_current_task(), t);
     return t;
 }
 
@@ -1412,6 +1420,7 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         info.app.app_context_ptr = node->get_app_context_ptr();
         info.app_id = node->id();
         info.index = node->spec().index;
+        info.primary_address = node->rpc(nullptr)->primary_address().c_addr();
         strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));
         strncpy(info.type, node->spec().type.c_str(), sizeof(info.type));
         strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));

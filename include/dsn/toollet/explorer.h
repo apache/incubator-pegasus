@@ -30,7 +30,7 @@
  *     in the system through the join-point mechanism
  *
  * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     May, 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -41,11 +41,11 @@
 namespace dsn {
     namespace tools {
 
-        class tracer : public toollet
+        class explorer : public toollet
         {
         public:
-            tracer(const char* name);
-            virtual void install(service_spec& spec);
+            explorer(const char* name);
+            void install(service_spec& spec) override;
         };
     }
 }

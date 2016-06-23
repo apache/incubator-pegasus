@@ -233,6 +233,7 @@ public:
     task_rejection_handler rejection_handler;
     
     // COMPUTE
+    join_point<void, task*, task*>               on_task_create;
     join_point<void, task*, task*>               on_task_enqueue;    
     join_point<void, task*>                      on_task_begin; // TODO: parent task
     join_point<void, task*>                      on_task_end;

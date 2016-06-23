@@ -412,29 +412,5 @@ namespace dsn {
             return "repeat command completed";
         }
         );
-
-        register_command(
-            { "command-list" },
-            "command-list - query command list",
-            "",
-            [this](const std::vector<std::string>& args)
-            {
-                std::set<std::string> cmds;
-                {
-                    utils::auto_read_lock l(_lock);
-                    for (auto& h : _handlers)
-                    {
-                        cmds.insert(h.second->help_short);
-                    }
-                }
-
-                std::stringstream ss;
-                for (auto& c : cmds)
-                {
-                    ss << "    " << c << std::endl;
-                }
-                return ss.str();
-            }
-        );
     }
 }

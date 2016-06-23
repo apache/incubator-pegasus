@@ -207,11 +207,8 @@ void mutation_log_private::flush()
                         );
                 }
             }
-            else if (_issued_write.expired())
-            {
-                // no pending and writing now
+            else
                 break;
-            }
         }
     }
 }
