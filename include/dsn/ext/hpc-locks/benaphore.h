@@ -109,8 +109,10 @@ public:
 
     void unlock()
     {
+#ifndef NDEBUG
         auto tid = ::dsn::utils::get_current_tid();
         assert(tid == m_owner.load(std::memory_order_relaxed));
+#endif
         int recur = --m_recursion;
         if (recur == 0)
             m_owner.store(::dsn::utils::get_invalid_tid(), std::memory_order_relaxed);
