@@ -225,9 +225,10 @@ namespace dsn
             boost::shared_ptr< ::dsn::binary_writer_transport > trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
             ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
 
-            //write message end, which indicate the end of a thrift message
             msg_proto.writeMessageEnd();
-            return (int)msg->buffers.size();
+            // as we must add a thrift header for the response, so we'd better reserve one more buffer
+            // refer to the get_buffers_on_send
+            return (int)msg->buffers.size() + 1;
         }
         else
         {
@@ -272,22 +273,25 @@ namespace dsn
             ptr += sizeof(int32_t);
             memcpy(ptr, msg->header->server.error_name, err_len);
 
+            // first fill the header blob
+            buffers[0].buf = header_holder.get();
+            buffers[0].sz = header_len;
+
             // fill buffers
-            int i = 0;
-            for (auto& buf : msg->buffers)
+            int i = 1;
+            // we must skip the standard message_header
+            unsigned int offset = sizeof(message_header);
+            for (blob& buf : msg->buffers)
             {
-                if (i == 0)
+                if (offset >= buf.length())
                 {
-                    // the first buffer in message is 'message_header', we use thrift header instead
-                    dassert(buf.length() == sizeof(message_header), "");
-                    buffers[i].buf = header_holder.get();;
-                    buffers[i].sz = header_len;
+                    offset -= buf.length();
+                    continue;
                 }
-                else
-                {
-                    buffers[i].buf = (void*)buf.data();
-                    buffers[i].sz = (size_t)buf.length();
-                }
+
+                buffers[i].buf = (void*)(buf.data() + offset);
+                buffers[i].sz = (uint32_t)(buf.length() - offset);
+                offset = 0;
                 ++i;
             }
 

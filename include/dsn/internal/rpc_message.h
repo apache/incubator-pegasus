@@ -179,7 +179,14 @@ namespace dsn
             int timeout_milliseconds = 0,
             uint64_t hash = 0
             );
-        static message_ex* create_receive_message_with_standalone_header(const blob& data);
+
+        //
+        // A receive message is likely to used in "unmarshall". If header is included
+        // the message data will be "message_header + data". In this case, the unmarshalling
+        // will firstly encounter the "header" and should decode it first.
+        // If not this case, the unmarshalling will firstly encounter the payload data refered by the param "data"
+        //
+        static message_ex* create_receive_message_with_standalone_header(const blob& data, bool header_included = true);
         message_ex* create_response();
         message_ex* copy();
         message_ex* copy_and_prepare_send();
