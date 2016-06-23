@@ -85,11 +85,12 @@ Thrift.DSNTransport.prototype = {
 
 var DSN = {
     payload_format : {
-        'DSF_THRIFT_BINARY' : 0,
-        'DSF_THRIFT_COMPACT' : 1,
-        'DSF_THRIFT_JSON' : 2,
-        'DSF_PROTOC_BINARY' : 3,
-        'DSF_PROTOC_JSON' : 4,
+        'DSF_THRIFT_BINARY' : 1,
+        'DSF_THRIFT_COMPACT' : 2,
+        'DSF_THRIFT_JSON' : 3,
+        'DSF_PROTOC_BINARY' : 4,
+        'DSF_PROTOC_JSON' : 5,
+        'DSF_JSON' : 6,
     },
     
     thrift_type : {
