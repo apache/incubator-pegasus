@@ -358,7 +358,7 @@ typedef union dsn_app_callbacks
         dsn_app_on_batched_write_requests   on_batched_write_requests;
         dsn_app_get_physical_error          get_physical_error;
         dsn_app_sync_checkpoint             sync_checkpoint;
-        dsn_app_sync_checkpoint             async_checkpoint;
+        dsn_app_async_checkpoint            async_checkpoint;
         dsn_app_get_last_checkpoint_decree  get_last_checkpoint_decree;
         dsn_app_prepare_get_checkpoint      prepare_get_checkpoint;
         dsn_app_get_checkpoint              get_checkpoint;
