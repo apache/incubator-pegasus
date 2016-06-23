@@ -525,6 +525,7 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 /*! release reference to the message, paired with /ref dsn_msg_add_ref */
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 
+/*! define various serialization format supported by rDSN, note any changes here must also be reflected in src/tools/.../dsn_transport.js */
 typedef enum dsn_msg_serialize_format
 {
     DSF_INVALID = 0,
@@ -533,6 +534,7 @@ typedef enum dsn_msg_serialize_format
     DSF_THRIFT_JSON = 3,
     DSF_PROTOC_BINARY = 4,
     DSF_PROTOC_JSON = 5,
+    DSF_JSON = 6
 } dsn_msg_serialize_format;
 
 /*! explicitly create a received RPC request, MUST released mannually later using dsn_msg_release_ref */
