@@ -96,9 +96,12 @@ namespace dsn
         {
             return type.itype != other.type.itype;
         }
+        std::string debug_string() const;
     public:
         static header_type hdr_dsn_default;
         static header_type hdr_dsn_thrift;
+        static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
+        static bool header_format_to_type(const network_header_format& hdr_format, /*out*/ header_type& hdr_type);
     };
 
     typedef struct message_header
@@ -110,7 +113,7 @@ namespace dsn
         uint32_t       body_length;
         uint32_t       body_crc32;
         uint64_t       id;      // sequence id
-        uint64_t       rpc_id;  // used for tracking source
+        uint64_t       trace_id;  // used for tracking source
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
         fast_code      rpc_code;
         dsn_gpid       gpid;    // global partition id
@@ -152,7 +155,6 @@ namespace dsn
         // by message queuing
         dlink                  dl;
 
-        bool                   is_response_adjusted_for_custom_rpc;
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
         ~message_ex();

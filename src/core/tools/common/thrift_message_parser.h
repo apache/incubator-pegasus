@@ -61,11 +61,12 @@ namespace dsn
     class thrift_message_parser : public message_parser
     {
     public:
-        thrift_message_parser(int buffer_block_size, bool is_write_only);
+        thrift_message_parser() : _header_parsed(false) {}
+        virtual ~thrift_message_parser() {}
 
-        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) override;
+        virtual void reset() override;
 
-        virtual void truncate_read() override;
+        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
 
         virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) override;
 

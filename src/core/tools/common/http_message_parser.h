@@ -48,25 +48,30 @@ namespace dsn
     class http_message_parser : public message_parser
     {
     public:
-        http_message_parser(unsigned int buffer_block_size, bool is_write_only);
-        message_ex* get_message_on_receive(unsigned int read_length, /*out*/ int& read_next) override;
+        http_message_parser();
+        virtual ~http_message_parser() {}
 
-        int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+        virtual void reset() override;
 
-        int prepare_on_send(message_ex* msg) override;
+        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
+
+        virtual int prepare_on_send(message_ex* msg) override;
+
+        virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+
     private:
         http_parser _parser;
         http_parser_settings _parser_setting;
+        dsn::blob _current_buffer;
         std::unique_ptr<message_ex> _current_message;
         std::queue<std::unique_ptr<message_ex>> _received_messages;
         enum
         {
             parsing_id,
-            parsing_rpc_id,
+            parsing_trace_id,
             parsing_rpc_name,
             parsing_payload_format,
             parsing_nothing
         } response_parse_state;
-        std::string request_header_send_buffer, response_header_send_buffer;
 };
 }

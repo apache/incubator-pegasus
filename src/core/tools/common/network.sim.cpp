@@ -99,7 +99,7 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    auto parser = _net.new_message_parser();
+                    message_parser_ptr parser; // null parser
                     server_session = new sim_server_session(*rnet, _net.address(), 
                         cptr, parser);
                     rnet->on_server_session_accepted(server_session);

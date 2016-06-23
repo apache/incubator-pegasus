@@ -185,38 +185,29 @@ static bool build_server_network_confs(
         {
             /*            
             port = 0 for default setting in [apps..default]
-            port.channel = header_format, network_provider_name,buffer_block_size
-            network.server.port().RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
-            network.server.port().RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            port.channel = network_provider_name,buffer_block_size
+            network.server.port().RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
             */
 
             rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);
-            network_server_config ns(port, ch);
 
-            // NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            // dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
-            std::string v = dsn_config_get_value_string(section, k.c_str(), "", 
-                "network channel configuration, e.g., NET_HDR_DSN, dsn::tools::asio_network_provider,65536");
+            std::string v = dsn_config_get_value_string(section, k.c_str(), "",
+                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
 
-            if (vs.size() != 3)
+            if (vs.size() != 2)
             {
-                printf("invalid network specification '%s', should be '$message-format, $network-factory,$msg-buffer-size'\n",
+                printf("invalid server network specification '%s', should be '$network-factory,$msg-buffer-size'\n",
                     v.c_str()
                     );
                 return false;
             }
 
-            if (!network_header_format::is_exist(vs.begin()->c_str()))
-            {
-                printf("invalid network specification, unkown message header format '%s'\n",
-                    vs.begin()->c_str()
-                    );
-                return false;
-            }
-
-            ns.hdr_format = network_header_format(vs.begin()->c_str());
-            ns.factory_name = *(++vs.begin());
+            network_server_config ns(port, ch);
+            ns.factory_name = vs.begin()->c_str();
             ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
 
             if (ns.message_buffer_block_size == 0)
@@ -324,22 +315,28 @@ bool service_app_spec::init(
     return true;
 }
 
+network_client_config::network_client_config()
+{
+    factory_name = "dsn::tools::asio_network_provider";
+    message_buffer_block_size = 65536;
+}
+
 network_server_config::network_server_config()
-    : port(0), channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_GENERAL)
+    : port(0), channel(RPC_CHANNEL_TCP)
 {
     factory_name = "dsn::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
 
 network_server_config::network_server_config(int p, rpc_channel c)
-    : port(p), channel(c), hdr_format(NET_HDR_GENERAL)
+    : port(p), channel(c)
 {
     factory_name = "dsn::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
 
 network_server_config::network_server_config(const network_server_config& r)
-    : port(r.port), channel(r.channel), hdr_format(r.hdr_format)
+    : port(r.port), channel(r.channel)
 {
     factory_name = r.factory_name;
     message_buffer_block_size = r.message_buffer_block_size;

@@ -44,11 +44,12 @@ namespace dsn
     class dsn_message_parser : public message_parser
     {
     public:
-        dsn_message_parser(int buffer_block_size, bool is_write_only);
+        dsn_message_parser() : _header_checked(false) {}
+        virtual ~dsn_message_parser() {}
 
-        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) override;
+        virtual void reset() override;
 
-        virtual void truncate_read() override;
+        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
 
         virtual int prepare_on_send(message_ex* msg) override;
 

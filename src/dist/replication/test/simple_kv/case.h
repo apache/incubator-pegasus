@@ -241,7 +241,7 @@ public:
     // connect related events to event sequence.
     void init(message_ex* msg, task* tsk);
 public:
-    std::string _rpc_id;
+    std::string _trace_id;
     std::string _rpc_name;
     std::string _from;
     std::string _to;

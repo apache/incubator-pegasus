@@ -249,7 +249,7 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-            auto parser = new_message_parser();
+            auto parser = new_message_parser(_client_hdr_format);
             auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper);
@@ -291,8 +291,7 @@ namespace dsn
 
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
-                    auto parser = new_message_parser();
-                    auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr, false);
+                    auto s = new hpc_rpc_session(_accept_sock, nullptr, *this, client_addr, false);
                     rpc_session_ptr s1(s);
                     s->bind_looper(_looper);
 
@@ -381,7 +380,7 @@ namespace dsn
 
             WSABUF buf[1];
 
-            void* ptr = _parser->read_buffer_ptr((int)sz);
+            void* ptr = _parser->read_buffer_ptr(sz);
             int remaining = _parser->read_buffer_capacity();
             buf[0].buf = (char*)ptr;
             buf[0].len = remaining;

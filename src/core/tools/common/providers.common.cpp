@@ -47,7 +47,6 @@
 # include "network.sim.h"
 # include "simple_logger.h"
 # include "empty_aio_provider.h"
-# include "general_message_parser.h"
 # include "dsn_message_parser.h"
 # include "thrift_message_parser.h"
 # include "http_message_parser.h"
@@ -70,8 +69,7 @@ namespace dsn {
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
             register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
-            
-            register_message_header_parser<general_message_parser>(NET_HDR_GENERAL);
+
             register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);
             register_message_header_parser<thrift_message_parser>(NET_HDR_THRIFT);
             register_message_header_parser<http_message_parser>(NET_HDR_HTTP);

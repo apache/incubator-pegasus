@@ -65,7 +65,7 @@ TEST(core, message_ex)
         ASSERT_EQ(0, h.body_length);
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(next_id, h.id);
-        ASSERT_EQ(0, h.rpc_id); ///////////////////
+        ASSERT_EQ(0, h.trace_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx0.context, h.context.context);
@@ -90,7 +90,7 @@ TEST(core, message_ex)
         message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
         request->header->from_address = rpc_address("127.0.0.1", 8080);
         request->to_address = rpc_address("127.0.0.1", 9090);
-        request->header->rpc_id = 123456;
+        request->header->trace_id = 123456;
 
         message_ex* response = request->create_response();
 
@@ -101,7 +101,7 @@ TEST(core, message_ex)
         ASSERT_EQ(0, h.body_length);
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(request->header->id, h.id);
-        ASSERT_EQ(request->header->rpc_id, h.rpc_id); ///////////////////
+        ASSERT_EQ(request->header->trace_id, h.trace_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx1.context, h.context.context);

@@ -102,7 +102,7 @@ namespace dsn {
         rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
             auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
-            auto parser = new_message_parser();
+            auto parser = new_message_parser(_client_hdr_format);
             return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
         }
 
@@ -119,11 +119,11 @@ namespace dsn {
                     auto ip = socket->remote_endpoint().address().to_v4().to_ulong();
                     auto port = socket->remote_endpoint().port();
                     ::dsn::rpc_address client_addr(ip, port);
-                    auto parser = new_message_parser();
 
+                    message_parser_ptr null_parser;
                     rpc_session_ptr s = new asio_rpc_session(*this, client_addr, 
                         (std::shared_ptr<boost::asio::ip::tcp::socket>&)socket,
-                        parser, false);
+                        null_parser, false);
                     this->on_server_session_accepted(s);
                 }
 
@@ -134,9 +134,13 @@ namespace dsn {
         void asio_udp_provider::send_message(message_ex* request)
         {
             // prepare parser as there will be concurrent send-message-s
-            auto pr = get_message_parser_info();
+            network_header_format hdr_format(NET_HDR_DSN);
+            bool r = header_type::header_type_to_format(request->header->hdr_type, hdr_format);
+            dassert(r, "header_type_to_format(%s) failed", request->header->hdr_type.debug_string().c_str());
+
+            auto pr = get_message_parser_info(hdr_format);
             auto parser_place = alloca(pr.second);
-            auto parser = pr.first(parser_place, _message_buffer_block_size, true);
+            auto parser = pr.first(parser_place);
 
             auto lcount = parser->prepare_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
@@ -171,9 +175,9 @@ namespace dsn {
         {
             std::shared_ptr< ::boost::asio::ip::udp::endpoint> send_endpoint(new ::boost::asio::ip::udp::endpoint);
 
-            _recv_parser->truncate_read();
-            auto buffer_ptr = _recv_parser->read_buffer_ptr(max_udp_packet_size);
-            dassert(_recv_parser->read_buffer_capacity() >= max_udp_packet_size, "failed to load enough buffer in parser");
+            _recv_reader.truncate_read();
+            auto buffer_ptr = _recv_reader.read_buffer_ptr(max_udp_packet_size);
+            dassert(_recv_reader.read_buffer_capacity() >= max_udp_packet_size, "failed to load enough buffer in parser");
 
             _socket->async_receive_from(
                 ::boost::asio::buffer(buffer_ptr, max_udp_packet_size),
@@ -182,23 +186,40 @@ namespace dsn {
                 {
                     if (!error) 
                     {
-                        int read_next;
-                        auto message = _recv_parser->get_message_on_receive(bytes_transferred, read_next);
+                        _recv_reader.mark_read(bytes_transferred);
 
-                        if (message == nullptr)
+                        header_type hdr_type(_recv_reader._buffer.data());
+                        network_header_format hdr_format(NET_HDR_DSN);
+                        if (!header_type::header_type_to_format(hdr_type, hdr_format))
                         {
-                            derror("invalid udp packet");
+                            derror("invalid header type '%s'", hdr_type.debug_string().c_str());
                         }
                         else
                         {
-                            message->to_address = address();
-                            if (message->header->context.u.is_request)
+                            auto pr = get_message_parser_info(hdr_format);
+                            auto parser_place = alloca(pr.second);
+                            auto parser = pr.first(parser_place);
+
+                            int read_next;
+                            message_ex* msg = parser->get_message_on_receive(&_recv_reader, read_next);
+                            // end using parser
+                            parser->~message_parser();
+
+                            if (msg == nullptr)
                             {
-                                on_recv_request(message, 0);
+                                derror("invalid udp packet");
                             }
                             else
                             {
-                                on_recv_reply(message->header->id, message, 0);
+                                msg->to_address = address();
+                                if (msg->header->context.u.is_request)
+                                {
+                                    on_recv_request(msg, 0);
+                                }
+                                else
+                                {
+                                    on_recv_reply(msg->header->id, msg, 0);
+                                }
                             }
                         }
                     }

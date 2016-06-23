@@ -60,16 +60,17 @@ namespace dsn {
             std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;            
             boost::asio::io_service                         _io_service;
             std::vector<std::shared_ptr<std::thread>>       _workers;
-            ::dsn::rpc_address                                   _address;
+            ::dsn::rpc_address                              _address;
         };
 
         class asio_udp_provider : public network
         {
         public:
             asio_udp_provider(rpc_engine* srv, network* inner_provider)
-                : network(srv, inner_provider)
+                : network(srv, inner_provider),
+                  _is_client(false),
+                  _recv_reader(_message_buffer_block_size)
             {
-                _recv_parser = new_message_parser();
             }
 
             void send_message(message_ex* request) override;
@@ -94,9 +95,9 @@ namespace dsn {
             std::shared_ptr<boost::asio::ip::udp::socket>   _socket;
             std::vector<std::shared_ptr<std::thread>>       _workers;
             ::dsn::rpc_address                              _address;
-            message_parser_ptr                              _recv_parser;
+            message_reader                                  _recv_reader;
 
-            static const size_t max_udp_packet_size = 450;
+            static const size_t max_udp_packet_size = 1000;
         };
 
     }

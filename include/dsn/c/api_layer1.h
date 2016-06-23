@@ -662,8 +662,8 @@ extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
 /*! get to-address where the message is sent to */
 extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
-/*! get rpc id of the message */
-extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
+/*! get trace id of the message */
+extern DSN_API uint64_t      dsn_msg_trace_id(dsn_message_t msg);
 
 /*! get task code of the message */
 extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);

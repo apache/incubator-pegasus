@@ -30,6 +30,7 @@
 *
 * Revision history:
 *     Feb. 2016, Tianyi Wang, first version
+*     Jun. 2016, Zuoyan Qin, second version
 *     xxxx-xx-xx, author, fix bug about xxx
 */
 
@@ -43,13 +44,12 @@
 # include <boost/xpressive/xpressive_static.hpp>
 # include <boost/lexical_cast.hpp>
 
-
-
 namespace dsn{
+
 template <typename T, size_t N>
 char(&ArraySizeHelper(T(&array)[N]))[N];
-http_message_parser::http_message_parser(unsigned int buffer_block_size, bool is_write_only)
-    : message_parser(buffer_block_size, is_write_only)
+
+http_message_parser::http_message_parser()
 {
     memset(&_parser_setting, 0, sizeof(_parser_setting));
     _parser.data = this;
@@ -64,9 +64,9 @@ http_message_parser::http_message_parser(unsigned int buffer_block_size, bool is
 #define StrLiteralLen(str) (sizeof(ArraySizeHelper(str)) - 1)
 #define MATCH(pat) (length >= StrLiteralLen(pat) && strncmp(at, pat, StrLiteralLen(pat)) == 0)
         auto owner = static_cast<http_message_parser*>(parser->data);
-        if (MATCH("rpc_id"))
+        if (MATCH("trace_id"))
         {
-            owner->response_parse_state = parsing_rpc_id;
+            owner->response_parse_state = parsing_trace_id;
         }
         else if (MATCH("id"))
         {
@@ -89,8 +89,8 @@ http_message_parser::http_message_parser(unsigned int buffer_block_size, bool is
         auto owner = static_cast<http_message_parser*>(parser->data);
         switch(owner->response_parse_state)
         {
-        case parsing_rpc_id:
-            owner->_current_message->header->rpc_id = std::atoi(std::string(at, length).c_str());
+        case parsing_trace_id:
+            owner->_current_message->header->trace_id = std::atoi(std::string(at, length).c_str());
             break;
         case parsing_id:
             owner->_current_message->header->id = std::atoi(std::string(at, length).c_str());
@@ -161,19 +161,28 @@ http_message_parser::http_message_parser(unsigned int buffer_block_size, bool is
     {
         derror("%s\n", std::string(at, length).c_str());
         auto owner = static_cast<http_message_parser*>(parser->data);
-        dassert(owner->_read_buffer.buffer() != nullptr, "the read buffer is not owning");
-        owner->_current_message->buffers[0].assign(owner->_read_buffer.buffer(), at - owner->_read_buffer.buffer_ptr(), length);
+        dassert(owner->_current_buffer.buffer() != nullptr, "the read buffer is not owning");
+        owner->_current_message->buffers[0].assign(owner->_current_buffer.buffer(), at - owner->_current_buffer.buffer_ptr(), length);
         owner->_received_messages.emplace(std::move(owner->_current_message));
         return 0;
     };
     http_parser_init(&_parser, HTTP_BOTH);
 }
 
-message_ex* http_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
+void http_message_parser::reset()
+{
+    _current_buffer = blob();
+    _current_message.reset();
+    _received_messages = std::queue<std::unique_ptr<message_ex>>();
+}
+
+message_ex* http_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
 {
     read_next = 4096;
-    auto nparsed = http_parser_execute(&_parser, &_parser_setting, _read_buffer.data(), read_length);
-    _read_buffer = _read_buffer.range(nparsed);
+    _current_buffer = reader->_buffer;
+    auto nparsed = http_parser_execute(&_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
+    reader->_buffer = reader->_buffer.range(nparsed);
+    reader->_buffer_occupied -= nparsed;
     if (_parser.upgrade)
     {
         derror("unsupported protocol");
@@ -191,86 +200,69 @@ message_ex* http_message_parser::get_message_on_receive(unsigned int read_length
     }
 }
 
+int http_message_parser::prepare_on_send(message_ex* msg)
+{
+    return (int)msg->buffers.size();
+}
+
 int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
 {
-    int offset = 0;
-    int buffer_iter = 0;
+    // construct http header blob
+    std::string header_str;
     if (msg->header->context.u.is_request)
     {
-        if (offset == 0)
-        {
-            std::stringstream ss;
-            ss << "POST /" << msg->header->rpc_name << "/" << msg->header->client.hash << " HTTP/1.1\r\n";
-            ss << "Content-Type: text/plain\r\n";
-            ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
-            ss << "id: " << msg->header->id << "\r\n";
-            ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
-            ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
-            ss << "Content-Length: " << msg->body_size() << "\r\n";
-            ss << "\r\n";
-            request_header_send_buffer = ss.str();
-        }
-        if (offset < request_header_send_buffer.size())
-        {
-            buffers[0].buf = const_cast<char*>(request_header_send_buffer.c_str()) + offset;
-            buffers[0].sz = request_header_send_buffer.size() - offset;
-            buffer_iter = 1;
-            offset = 0;
-        }
-        else
-        {
-            offset -= request_header_send_buffer.size();
-        }
+        std::stringstream ss;
+        ss << "POST /" << msg->header->rpc_name << "/" << msg->header->client.hash << " HTTP/1.1\r\n";
+        ss << "Content-Type: text/plain\r\n";
+        ss << "trace_id: " << msg->header->trace_id << "\r\n";
+        ss << "id: " << msg->header->id << "\r\n";
+        ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+        ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
+        ss << "Content-Length: " << msg->body_size() << "\r\n";
+        ss << "\r\n";
+        header_str = ss.str();
     }
     else
     {
-        if (offset == 0)
+        std::stringstream ss;
+        ss << "HTTP/1.1 200 OK\r\n";
+        ss << "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin\r\n";
+        ss << "Content-Type: text/plain\r\n";
+        ss << "Access-Control-Allow-Origin: *\r\n";
+        ss << "trace_id: " << msg->header->trace_id << "\r\n";
+        ss << "id: " << msg->header->id << "\r\n";
+        ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
+        ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
+        ss << "Content-Length: " << msg->body_size() << "\r\n";
+        ss << "\r\n";
+        header_str = ss.str();
+    }
+    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_str.size())), [](char* c) {dsn_transient_free(c);});
+    memcpy(header_holder.get(), header_str.data(), header_str.size());
+
+    // fill buffers
+    int i = 0;
+    for (auto& buf : msg->buffers)
+    {
+        if (i == 0)
         {
-            std::stringstream ss;
-            ss << "HTTP/1.1 200 OK\r\n";
-            ss << "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin\r\n";
-            ss << "Content-Type: text/plain\r\n";
-            ss << "Access-Control-Allow-Origin: *\r\n";
-            ss << "rpc_id: " << msg->header->rpc_id << "\r\n";
-            ss << "id: " << msg->header->id << "\r\n";
-            ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
-            ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
-            ss << "Content-Length: " << msg->body_size() << "\r\n";
-            ss << "\r\n";
-            response_header_send_buffer = ss.str();
-        }
-        if (offset < response_header_send_buffer.size())
-        {
-            buffers[0].buf = const_cast<char*>(response_header_send_buffer.c_str()) + offset;
-            buffers[0].sz = response_header_send_buffer.size() - offset;
-            buffer_iter = 1;
-            offset = 0;
+            // the first buffer in message is 'message_header', we use http header instead
+            dassert(buf.length() == sizeof(message_header), "");
+            buffers[i].buf = header_holder.get();;
+            buffers[i].sz = header_str.size();
         }
         else
         {
-            offset -= response_header_send_buffer.size();
+            buffers[i].buf = (void*)buf.data();
+            buffers[i].sz = (size_t)buf.length();
         }
+        ++i;
     }
-    //skip message header
-    offset += sizeof(message_header);
-    for (auto& buf : msg->buffers)
-    {
-        if (offset >= buf.length())
-        {
-            offset -= buf.length();
-            continue;
-        }
-        buffers[buffer_iter].buf = const_cast<char*>(buf.data() + offset);
-        buffers[buffer_iter].sz = buf.length() - offset;
-        offset = 0;
-        buffer_iter += 1;
-    }
-    return buffer_iter;
-}
 
-int http_message_parser::prepare_on_send(message_ex* msg)
-{
-    return msg->buffers.size() + 2;
+    // put http header blob at the back of message buffer
+    msg->buffers.emplace_back(blob(std::move(header_holder), header_str.size()));
+
+    return i;
 }
 
 }

@@ -135,9 +135,9 @@ DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
-DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
+DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg)
 {
-    return ((::dsn::message_ex*)msg)->header->rpc_id;
+    return ((::dsn::message_ex*)msg)->header->trace_id;
 }
 
 DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
@@ -238,6 +238,60 @@ uint32_t message_ex::s_local_hash = 0;
 header_type header_type::hdr_dsn_default("RDSN");
 header_type header_type::hdr_dsn_thrift("THFT");
 
+std::string header_type::debug_string() const
+{
+    char buf[20];
+    char* ptr = buf;
+    for (int i = 0; i < 4; ++i) {
+        auto& c = type.stype[i];
+        if (std::isprint(c)) {
+            *ptr++ = c;
+        }
+        else {
+            sprintf(ptr, "\\%02X", c);
+            ptr += 3;
+        }
+    }
+    *ptr = '\0';
+    return std::string(buf);
+}
+
+bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format)
+{
+    if (hdr_type == hdr_dsn_default)
+    {
+        hdr_format = NET_HDR_DSN;
+        return true;
+    }
+    else if (hdr_type == hdr_dsn_thrift)
+    {
+        hdr_format = NET_HDR_THRIFT;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool header_type::header_format_to_type(const network_header_format& hdr_format, /*out*/ header_type& hdr_type)
+{
+    if (hdr_format == NET_HDR_DSN)
+    {
+        hdr_type = hdr_dsn_default;
+        return true;
+    }
+    else if (hdr_format == NET_HDR_THRIFT)
+    {
+        hdr_type = hdr_dsn_thrift;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 message_ex::message_ex()
 {
     buffers.reserve(2);
@@ -335,10 +389,6 @@ bool message_ex::is_right_header() const
 
 /*static*/ bool message_ex::is_right_header(char* hdr)
 {
-    header_type hdr_type(hdr);
-    if (hdr_type != header_type::hdr_dsn_default)
-        return false;
-
     uint32_t* pcrc = reinterpret_cast<uint32_t*>(hdr + FIELD_OFFSET(message_header, hdr_crc32));
     uint32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID)
@@ -347,6 +397,10 @@ bool message_ex::is_right_header() const
         *pcrc = CRC_INVALID;
         bool r = (crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
         *pcrc = crc32;
+        if (!r)
+        {
+            derror("header crc check failed");
+        }
         return r;
     }
 
@@ -392,7 +446,13 @@ bool message_ex::is_right_body(bool is_write_msg) const
         }
 
         dassert(len == (size_t)header->body_length, "data length is wrong");
-        return header->body_crc32 == crc32;
+
+        bool r = (header->body_crc32 == crc32);
+        if (!r)
+        {
+            derror("body crc check failed");
+        }
+        return r;
     }
 
     // crc is not enabled

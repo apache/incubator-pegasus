@@ -51,6 +51,8 @@ struct network_client_config
 {
     std::string factory_name;
     int         message_buffer_block_size;
+
+    network_client_config();
 };
 
 typedef std::map<rpc_channel, network_client_config> network_client_configs;
@@ -62,7 +64,6 @@ struct network_server_config
     rpc_channel channel;
     // ]
 
-    network_header_format hdr_format;
     std::string           factory_name;
     int                   message_buffer_block_size;
 

@@ -64,7 +64,7 @@ namespace dsn {
             virtual void connect() override;            
             
         private:
-            virtual void do_read(int sz) override;
+            virtual void do_read(int read_next) override;
             void write(uint64_t signature);
             void on_failure(bool is_write = false);
             void set_options();  

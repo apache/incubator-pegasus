@@ -121,27 +121,29 @@ namespace dsn {
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        message_parser_ptr new_message_parser();
+        message_parser_ptr new_message_parser(network_header_format hdr_format);
 
         // for in-place new message parser
-        std::pair<message_parser::factory2, size_t> get_message_parser_info();
+        std::pair<message_parser::factory2, size_t> get_message_parser_info(network_header_format hdr_format);
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
+        network_header_format client_hdr_format() const { return _client_hdr_format; }
+        int message_buffer_block_size() const { return _message_buffer_block_size; }
 
     protected:
         static uint32_t get_local_ipv4();
 
     protected:
         rpc_engine                    *_engine;
-        network_header_format         _parser_type;
+        network_header_format         _client_hdr_format;
         int                           _message_buffer_block_size;
         int                           _max_buffer_block_count_per_send;
         int                           _send_queue_threshold;
 
     private:
         friend class rpc_engine;
-        void reset_parser(network_header_format name, int message_buffer_block_size);
+        void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
     };
 
     //
@@ -220,6 +222,13 @@ namespace dsn {
     public:
         void start_read_next(int read_next = 256);
 
+        // should be called in do_read() before using _parser when it is nullptr.
+        // returns:
+        //   -1 : prepare failed, maybe because of invalid message header type
+        //    0 : prepare succeed, _parser is not nullptr now.
+        //   >0 : need read more data, returns read_next.
+        int prepare_parser();
+
     // shared
     protected:        
         //
@@ -248,7 +257,8 @@ namespace dsn {
         // constant info
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
-        int                                _max_buffer_block_count_per_send;        
+        int                                _max_buffer_block_count_per_send;
+        message_reader                     _reader;
         message_parser_ptr                 _parser;
 
         // messages are currently being sent

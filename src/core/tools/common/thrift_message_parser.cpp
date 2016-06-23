@@ -44,27 +44,26 @@
 
 namespace dsn
 {
-    thrift_message_parser::thrift_message_parser(int buffer_block_size, bool is_write_only)
-        : message_parser(buffer_block_size, is_write_only),
-          _header_parsed(false)
+    void thrift_message_parser::reset()
     {
+        _header_parsed = false;
     }
 
-    message_ex* thrift_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
+    message_ex* thrift_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
     {
-        mark_read(read_length);
+        dsn::blob& buf = reader->_buffer;
+        char* buf_ptr = (char*)buf.data();
+        unsigned int buf_len = reader->_buffer_occupied;
 
-        if (_read_buffer_occupied >= sizeof(thrift_message_header))
+        if (buf_len >= sizeof(thrift_message_header))
         {
             if (!_header_parsed)
             {
-                read_thrift_header(_read_buffer.data(), _thrift_header);
+                read_thrift_header(buf_ptr, _thrift_header);
 
                 if (!check_thrift_header(_thrift_header))
                 {
-                    derror("check thrift header of version 0 failed");
-
-                    truncate_read();
+                    derror("header check failed");
                     read_next = -1;
                     return nullptr;
                 }
@@ -74,38 +73,32 @@ namespace dsn
                 }
             }
 
-            unsigned int msg_sz = _thrift_header.hdr_length + _thrift_header.body_length;
+            unsigned int msg_sz = sizeof(thrift_message_header) + _thrift_header.body_length;
 
             // msg done
-            if (_read_buffer_occupied >= msg_sz)
+            if (buf_len >= msg_sz)
             {
-                dsn::blob msg_bb = _read_buffer.range(0, msg_sz);
+                dsn::blob msg_bb = buf.range(0, msg_sz);
                 message_ex* msg = parse_message(_thrift_header, msg_bb);
 
-                _read_buffer = _read_buffer.range(msg_sz);
-                _read_buffer_occupied -= msg_sz;
+                reader->_buffer = buf.range(msg_sz);
+                reader->_buffer_occupied -= msg_sz;
                 _header_parsed = false;
-
-                read_next = sizeof(header_type);
+                read_next = (reader->_buffer_occupied >= sizeof(thrift_message_header) ?
+                                 0 : sizeof(thrift_message_header) - reader->_buffer_occupied);
                 return msg;
             }
-            else
+            else // buf_len < msg_sz
             {
-                read_next = msg_sz - _read_buffer_occupied;
+                read_next = msg_sz - buf_len;
                 return nullptr;
             }
         }
-        else
+        else // buf_len < sizeof(thrift_message_header)
         {
-            read_next = sizeof(thrift_message_header) - _read_buffer_occupied;
+            read_next = sizeof(thrift_message_header) - buf_len;
             return nullptr;
         }
-    }
-
-    void thrift_message_parser::truncate_read()
-    {
-        message_parser::truncate_read();
-        _header_parsed = false;
     }
 
     void thrift_message_parser::on_create_response(message_ex* request_msg, message_ex* response_msg)
@@ -203,12 +196,16 @@ namespace dsn
 
     bool thrift_message_parser::check_thrift_header(const thrift_message_header& header)
     {
-        if (header.hdr_type != header_type::hdr_dsn_thrift)
-            return false;
         if (header.hdr_version != 0)
+        {
+            derror("hdr_version should be 0");
             return false;
+        }
         if (header.hdr_length != sizeof(thrift_message_header))
+        {
+            derror("hdr_length should be %u", sizeof(thrift_message_header));
             return false;
+        }
         return true;
     }
 

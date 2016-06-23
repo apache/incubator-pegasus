@@ -43,25 +43,24 @@
 
 namespace dsn
 {
-    dsn_message_parser::dsn_message_parser(int buffer_block_size, bool is_write_only)
-        : message_parser(buffer_block_size, is_write_only),
-          _header_checked(false)
+    void dsn_message_parser::reset()
     {
+        _header_checked = false;
     }
 
-    message_ex* dsn_message_parser::get_message_on_receive(unsigned int read_length, /*out*/ int& read_next)
+    message_ex* dsn_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
     {
-        mark_read(read_length);
+        dsn::blob& buf = reader->_buffer;
+        char* buf_ptr = (char*)buf.data();
+        unsigned int buf_len = reader->_buffer_occupied;
 
-        if (_read_buffer_occupied >= sizeof(message_header))
+        if (buf_len >= sizeof(message_header))
         {
             if (!_header_checked)
             {
-                if (!message_ex::is_right_header((char*)_read_buffer.data()))
+                if (!message_ex::is_right_header(buf_ptr))
                 {
-                    derror("receive message header check failed for message");
-
-                    truncate_read();
+                    derror("header check failed");
                     read_next = -1;
                     return nullptr;
                 }
@@ -71,51 +70,42 @@ namespace dsn
                 }
             }
 
-            unsigned int msg_sz = sizeof(message_header) + message_ex::get_body_length((char*)_read_buffer.data());
+            unsigned int msg_sz = sizeof(message_header) + message_ex::get_body_length(buf_ptr);
 
             // msg done
-            if (_read_buffer_occupied >= msg_sz)
+            if (buf_len >= msg_sz)
             {
-                auto msg_bb = _read_buffer.range(0, msg_sz);
+                dsn::blob msg_bb = buf.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
                 if (!msg->is_right_body(false))
                 {
-                    message_header* header = (message_header*)_read_buffer.data();
-                    derror("body check failed for message, id: %d, rpc_name: %s, from: %s",
-                          header->id, header->rpc_name, header->from_address.to_string());
-
-                    truncate_read();
+                    message_header* header = (message_header*)buf_ptr;
+                    derror("body check failed for message, id = %" PRIu64 ", trace_id = %" PRIu64 ", rpc_name = %s, from_addr = %s",
+                           header->id, header->trace_id, header->rpc_name, header->from_address.to_string());
                     read_next = -1;
                     return nullptr;
                 }
                 else
                 {
-                    _read_buffer = _read_buffer.range(msg_sz);
-                    _read_buffer_occupied -= msg_sz;
+                    reader->_buffer = buf.range(msg_sz);
+                    reader->_buffer_occupied -= msg_sz;
                     _header_checked = false;
-
-                    read_next = sizeof(message_header);
+                    read_next = (reader->_buffer_occupied >= sizeof(message_header) ?
+                                     0 : sizeof(message_header) - reader->_buffer_occupied);
                     return msg;
                 }
             }
-            else
+            else // buf_len < msg_sz
             {
-                read_next = msg_sz - _read_buffer_occupied;
+                read_next = msg_sz - buf_len;
                 return nullptr;
             }
         }
-
-        else
+        else // buf_len < sizeof(message_header)
         {
-            read_next = sizeof(message_header) - _read_buffer_occupied;
+            read_next = sizeof(message_header) - buf_len;
             return nullptr;
         }
-    }
-
-    void dsn_message_parser::truncate_read()
-    {
-        message_parser::truncate_read();
-        _header_checked = false;
     }
 
     int dsn_message_parser::prepare_on_send(message_ex* msg)

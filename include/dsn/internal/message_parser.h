@@ -44,50 +44,74 @@
 
 namespace dsn 
 {
+    class message_reader
+    {
+    public:
+        explicit message_reader(int buffer_block_size)
+            : _buffer_occupied(0), _buffer_block_size(buffer_block_size) {}
+        ~message_reader() {}
+
+        // called before read to extend read buffer
+        char* read_buffer_ptr(unsigned int read_next);
+
+        // get remaining buffer capacity
+        unsigned int read_buffer_capacity() const { return _buffer.length() - _buffer_occupied; }
+
+        // called after read to mark data occupied
+        void mark_read(unsigned int read_length) { _buffer_occupied += read_length; }
+
+        // discard read data
+        void truncate_read() { _buffer_occupied = 0; }
+
+    public:
+        blob            _buffer;
+        unsigned int    _buffer_occupied;
+        unsigned int    _buffer_block_size;
+    };
+
     class message_parser;
     typedef ref_ptr<message_parser> message_parser_ptr;
 
     class message_parser : public ref_counter
     {
     public:
-        template <typename T> static message_parser* create(int buffer_block_size, bool is_write_only)
+        template <typename T> static message_parser* create()
         {
-            return new T(buffer_block_size, is_write_only);
+            return new T();
         }
 
-        template <typename T> static message_parser* create2(void* place, int buffer_block_size, bool is_write_only)
+        template <typename T> static message_parser* create2(void* place)
         {
-            return new(place) T(buffer_block_size, is_write_only);
+            return new(place) T();
         }
 
-        typedef message_parser*  (*factory)(int, bool);
-        typedef message_parser*  (*factory2)(void*, int, bool);
+        typedef message_parser*  (*factory)();
+        typedef message_parser*  (*factory2)(void*);
         
     public:
-        message_parser(int buffer_block_size, bool is_write_only);
         virtual ~message_parser() {}
 
-        // before read
-        void* read_buffer_ptr(int read_next);
-        unsigned int read_buffer_capacity() const;
+        // reset the parser
+        virtual void reset() {}
 
         // after read, see if we can compose a message
         // if read_next returns -1, indicated the the message is corrupted
-        virtual message_ex* get_message_on_receive(unsigned int read_length, /*out*/int& read_next) = 0;
-
-        // all current read-ed content are discarded
-        virtual void truncate_read() { _read_buffer_occupied = 0; }
+        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) = 0;
 
         // invoked when create response
-        virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) { }
+        virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) {}
 
-        // before send, prepare buffer
+        // prepare buffer before send.
+        // this method will be called before fill_buffers_on_send() to do some prepare operation.
+        // return buffer count needed by get_buffers_on_send().
+        virtual int prepare_on_send(message_ex* msg) = 0;
+
         // be compatible with WSABUF on windows and iovec on linux
 # ifdef _WIN32
         struct send_buf
         {
             uint32_t sz;
-            void*    buf;            
+            void*    buf;
         };
 # else
         struct send_buf
@@ -97,22 +121,9 @@ namespace dsn
         };
 # endif
 
-        // this method will be called before fill_buffers_on_send() to do some prepare operation.
-        // return buffer count needed by get_buffers_on_send().
-        virtual int prepare_on_send(message_ex* msg) = 0;
-
         // get buffers from message to 'buffers'.
         // return buffer count used, which must equals the return value of prepare_on_send().
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
-        
-    protected:
-        void create_new_buffer(unsigned int sz);
-        void mark_read(unsigned int read_length);
-
-    protected:        
-        blob            _read_buffer;
-        unsigned int    _read_buffer_occupied;
-        unsigned int    _buffer_block_size;
     };
 
     class message_parser_manager : public utils::singleton<message_parser_manager>
@@ -120,7 +131,7 @@ namespace dsn
     public:
         struct parser_factory_info
         {
-            parser_factory_info() : fmt(NET_HDR_DSN) {}
+            parser_factory_info() : fmt(NET_HDR_DSN), factory(nullptr), factory2(nullptr), parser_size(0) {}
 
             network_header_format fmt;
             message_parser::factory factory;
@@ -134,7 +145,7 @@ namespace dsn
         // called only during system init, thread-unsafe
         void register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz);
 
-        message_parser* create_parser(network_header_format fmt, int buffer_blk_size, bool is_write_only);
+        message_parser* create_parser(network_header_format fmt);
         const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
 
     private:
