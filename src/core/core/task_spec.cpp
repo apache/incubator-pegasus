@@ -49,6 +49,12 @@ namespace dsn {
 
 void task_spec::register_task_code(dsn_task_code_t code, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool)
 {
+    dassert(pool != THREAD_POOL_INVALID, 
+        "registered pool cannot be THREAD_POOL_INVALID for task %s, "
+        "make sure it is registered AFTER the pool is registered",
+        dsn_task_code_to_string(code)
+        );
+
     if (!dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().contains(code))
     {
         task_spec* spec = new task_spec(code, dsn_task_code_to_string(code), type, pri, pool);
@@ -62,6 +68,39 @@ void task_spec::register_task_code(dsn_task_code_t code, dsn_task_type_t type, d
             task_spec::get(ack_code)->rpc_paired_code = code;
         }
     }
+    else
+    {
+        auto spec = task_spec::get(code);
+        if (spec->type != type)
+        {
+            dassert(false, "task code %s registerd for %s, which does not match with previously registered %s",
+                dsn_task_code_to_string(code),
+                enum_to_string(type),
+                enum_to_string(spec->type)
+                );
+            return;
+        }
+        
+        if (spec->priority != pri)
+        {
+            dwarn("overwrite priority for task %s from %s to %s",
+                dsn_task_code_to_string(code),
+                enum_to_string(spec->priority),
+                enum_to_string(pri)
+                );
+            spec->priority = pri;
+        }
+
+        if (spec->pool_code != pool)
+        {
+            dwarn("overwrite default thread pool for task %s from %s to %s",
+                dsn_task_code_to_string(code),
+                dsn_threadpool_code_to_string(spec->pool_code),
+                dsn_threadpool_code_to_string(pool)
+            );
+            spec->pool_code = pool;
+        }
+    }
 }
 
 task_spec* task_spec::get(int code)
@@ -70,25 +109,29 @@ task_spec* task_spec::get(int code)
 }
 
 task_spec::task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool)
-    : code(code), name(name), type(type), pool_code(pool), rpc_paired_code(TASK_CODE_INVALID), priority(pri),
-    on_task_enqueue((std::string(name) + std::string(".enqueue")).c_str()), 
+    : code(code), type(type), name(name), rpc_paired_code(TASK_CODE_INVALID), priority(pri), pool_code(pool),
+    rpc_call_header_format(NET_HDR_DSN),
+    rpc_call_channel(RPC_CHANNEL_TCP),
+    rpc_message_crc_required(false),
+    on_task_create((std::string(name) + std::string(".create")).c_str()),
+    on_task_enqueue((std::string(name) + std::string(".enqueue")).c_str()),
     on_task_begin((std::string(name) + std::string(".begin")).c_str()), 
     on_task_end((std::string(name) + std::string(".end")).c_str()), 
-    on_task_wait_pre((std::string(name) + std::string(".wait.pre")).c_str()), 
+    on_task_cancelled((std::string(name) + std::string(".cancelled")).c_str()),
+
+    on_task_wait_pre((std::string(name) + std::string(".wait.pre")).c_str()),
     on_task_wait_notified((std::string(name) + std::string(".wait.notified")).c_str()),
     on_task_wait_post((std::string(name) + std::string(".wait.post")).c_str()), 
     on_task_cancel_post((std::string(name) + std::string(".cancel.post")).c_str()), 
-    on_task_cancelled((std::string(name) + std::string(".cancelled")).c_str()),
-    on_aio_call((std::string(name) + std::string(".aio.call")).c_str()), 
-    on_aio_enqueue((std::string(name) + std::string(".aio.enqueue")).c_str()), 
+
+    on_aio_call((std::string(name) + std::string(".aio.call")).c_str()),
+    on_aio_enqueue((std::string(name) + std::string(".aio.enqueue")).c_str()),
+
     on_rpc_call((std::string(name) + std::string(".rpc.call")).c_str()), 
     on_rpc_request_enqueue((std::string(name) + std::string(".rpc.request.enqueue")).c_str()),
     on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()), 
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
-    on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str()),
-    rpc_call_channel(RPC_CHANNEL_TCP),
-    rpc_call_header_format(NET_HDR_DSN),
-    rpc_message_crc_required(false)
+    on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str())
 {
     dassert (
         strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 

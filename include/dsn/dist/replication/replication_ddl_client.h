@@ -42,6 +42,7 @@ namespace dsn{ namespace replication{
 class replication_ddl_client : public clientlet
 {
 public:
+    replication_ddl_client(const dsn::rpc_address& meta_server);
     replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless);
@@ -50,13 +51,17 @@ public:
 
     dsn::error_code list_apps(const dsn::app_status::type status, const std::string& file_name);
 
+    dsn::error_code cluster_info(const std::string& file_name);
+
     dsn::error_code list_nodes(const dsn::replication::node_status::type status, const std::string& file_name);
 
     dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
 
+    dsn::error_code list_app(const std::string& app_name, int32_t& app_id, int32_t& partition_count, std::vector<partition_configuration>& partitions);
+
     dsn::error_code control_meta_balancer_migration(bool start);
 
-    dsn::error_code send_balancer_proposal(const dsn::replication::balancer_proposal_request& request);
+    dsn::error_code send_balancer_proposal(const configuration_balancer_request& request);
 private:
     bool static valid_app_char(int c);
 
@@ -74,7 +79,7 @@ private:
         task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); }, reply_thread_hash);
         ::dsn::marshall(msg, *req);
         rpc::call(
-            _meta_servers,
+            _meta_server,
             msg,
             this,
             [this, task] (error_code err, dsn_message_t request, dsn_message_t response)
@@ -87,8 +92,7 @@ private:
     }
 
 private:
-    dsn::rpc_address _meta_servers;
-    int _meta_servers_count;
+    dsn::rpc_address _meta_server;
 };
 
 }} //namespace

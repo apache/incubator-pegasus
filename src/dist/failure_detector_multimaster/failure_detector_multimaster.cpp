@@ -49,7 +49,7 @@ namespace dsn {
             std::function<void()>&& master_connected_callback
             )
         {
-            _meta_servers.assign_group(dsn_group_build("meta_servers"));
+            _meta_servers.assign_group(dsn_group_build("meta-servers"));
             for (auto& s : meta_servers)
             {
                 dsn_group_add(_meta_servers.group_handle(), s.c_addr());

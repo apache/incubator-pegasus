@@ -41,7 +41,9 @@
 # include <dsn/internal/link.h>
 # include <dsn/cpp/perf_counter_.h>
 
+#ifndef __linux__
 #pragma warning(disable: 4201)
+#endif
 
 namespace dsn { namespace replication {
 
@@ -86,6 +88,12 @@ public:
     static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
 
     // write-to/read-from mutation log file, for better performance
+    //
+    // TODO(qinzuoyan): the optimization is to marshall code as int but not string,
+    // but this may cause problem, because log may be used by different program and
+    // the code map may change:
+    //   - the private log may be transfered to other node with different program
+    //   - the private/shared log may be replayed by different program when server restart
     void write_to_log_file(std::function<void(const blob&)> inserter) const;
     void write_to_log_file(binary_writer& writer) const;
     static mutation_ptr read_from_log_file(binary_reader& reader, dsn_message_t from);
@@ -189,4 +197,6 @@ inline void mutation::set_id(ballot b, decree c)
 
 }} // namespace
 
+#ifndef __linux__
 #pragma warning(default: 4201)
+#endif

@@ -138,10 +138,9 @@ namespace dsn {
                     *this = r;
                 }
 
-                perf_test_case() : id(0), seconds(0), payload_bytes(0), concurrency(0),
-                    timeout_ms(0), timeout_rounds(0), error_rounds(0), succ_rounds(0),
-                    succ_latency_avg_ns(0), succ_qps(0), succ_throughput_MB_s(0),
-                    key_space_size(1000)
+                perf_test_case() : id(0), seconds(0), payload_bytes(0), key_space_size(1000),
+                    concurrency(0), timeout_ms(0), timeout_rounds(0), error_rounds(0), succ_rounds(0),
+                    succ_latency_avg_ns(0), succ_qps(0), succ_throughput_MB_s(0)
                 {}
             };
 

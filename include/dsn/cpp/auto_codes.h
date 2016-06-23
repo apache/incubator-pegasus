@@ -167,56 +167,6 @@ namespace dsn
 #endif
     };
 
-    class atom_int
-    {
-    private:
-        std::atomic<int> _value;
-
-    public:
-        atom_int(int gd)
-        {
-            _value = gd;
-        }
-
-        atom_int(const atom_int& gd)
-        {
-            _value.store(gd._value.load());
-        }
-
-        atom_int()
-        {
-            _value.store(0);
-        }
-
-        std::atomic<int>& atom() { return _value; }
-
-        atom_int& operator = (const atom_int& r)
-        {
-            _value.store(((atom_int&)r).atom().load());
-            return *this;
-        }
-
-        bool operator < (const atom_int & r) const
-        {
-            return _value.load() < r._value.load();
-        }
-
-        bool operator == (const atom_int & r) const
-        {
-            return _value.load() == r._value.load();
-        }
-
-        bool operator != (const atom_int & r) const
-        {
-            return _value.load() != r._value.load();
-        }
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-        uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-        uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-#endif
-    };
-
     /*! 
       @addtogroup exec-model 
       @{
@@ -530,7 +480,6 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_BUSY_CREATING)
     DEFINE_ERR_CODE(ERR_BUSY_DROPPING)
     DEFINE_ERR_CODE(ERR_NETWORK_FAILURE)
-
 /*@}*/
 } // end namespace
 

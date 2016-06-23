@@ -71,7 +71,7 @@ namespace dsn
             void* ptr;
             size_t size;
             bool r = dsn_msg_read_next(msg, &ptr, &size);
-            dbg_dassert(r, "read msg must have one segment of buffer ready");
+            dassert(r, "read msg must have one segment of buffer ready");
 
             blob bb((const char*)ptr, 0, (int)size);
             init(bb);

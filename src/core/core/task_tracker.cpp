@@ -64,7 +64,7 @@ namespace dsn
     // hack for wait/cancel inside spin locks
     struct tls_tracker_hack
     {
-        int  magic;
+        unsigned int  magic;
         bool is_simulator;
 
         bool under_simulation()

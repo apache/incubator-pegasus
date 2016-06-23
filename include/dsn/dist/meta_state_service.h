@@ -83,7 +83,7 @@ namespace dsn
             /*
              * initialization work
              */
-            virtual error_code initialize(int argc, const char** argv) = 0;
+            virtual error_code initialize(const std::vector<std::string>& args) = 0;
 
             /*
              * finalize work

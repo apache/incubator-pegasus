@@ -35,6 +35,7 @@
 
 # include "checker.h"
 # include "case.h"
+# include "dsn/internal/factory_store.h"
 
 # include "../../lib/replica.h"
 # include "../../lib/replica_stub.h"
@@ -42,6 +43,7 @@
 # include "../../meta_server/meta_service.h"
 # include "../../meta_server/meta_server_failure_detector.h"
 # include "../../meta_server/server_state.h"
+# include "../../meta_server/server_load_balancer.h"
 # include "../../client_lib/replication_ds.h"
 # include "../../../../core/core/service_engine.h"
 # include "../../../../core/core/rpc_engine.h"
@@ -58,10 +60,96 @@
 
 namespace dsn { namespace replication { namespace test {
 
+class checker_load_balancer: public simple_load_balancer
+{
+public:
+    static bool s_disable_balancer;
+public:
+    checker_load_balancer(meta_service* svc): simple_load_balancer(svc) {}
+    pc_status cure(const meta_view &view, const dsn::gpid& gpid, configuration_proposal_action &action) override
+    {
+        const partition_configuration& pc = *get_config(*view.apps, gpid);
+        action.type = config_type::CT_INVALID;
+        if (s_disable_balancer)
+            return pc_status::healthy;
+
+        pc_status result;
+        if (pc.primary.is_invalid())
+        {
+            if (pc.secondaries.size() > 0)
+            {
+                action.node = pc.secondaries[0];
+                for (unsigned int i=1; i<pc.secondaries.size(); ++i)
+                    if (pc.secondaries[i] < action.node)
+                        action.node = pc.secondaries[i];
+                action.type = config_type::CT_UPGRADE_TO_PRIMARY;
+                result = pc_status::ill;
+            }
+
+            else if (pc.last_drops.size() == 0)
+            {
+                std::vector<rpc_address> sort_result;
+                sort_alive_nodes(*view.nodes, primary_comparator(*view.nodes), sort_result);
+                action.node = sort_result[0];
+                action.type = config_type::CT_ASSIGN_PRIMARY;
+                result = pc_status::ill;
+            }
+
+            // DDD
+            else
+            {
+                action.node = *pc.last_drops.rbegin();
+                action.type = config_type::CT_ASSIGN_PRIMARY;
+                derror("%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                    pc.pid.get_app_id(),
+                    pc.pid.get_partition_index(),
+                    action.node.to_string()
+                    );
+                result = pc_status::dead;
+            }
+            action.target = action.node;
+        }
+
+        else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
+        {
+            std::vector<rpc_address> sort_result;
+            sort_alive_nodes(*view.nodes, partition_comparator(*view.nodes), sort_result);
+
+            for (auto& node: sort_result) {
+                if (!is_member(pc, node)) {
+                    action.node = node;
+                    break;
+                }
+            }
+            action.target = pc.primary;
+            action.type = config_type::CT_ADD_SECONDARY;
+            result = pc_status::ill;
+        }
+        else
+        {
+            result = pc_status::healthy;
+        }
+        return result;
+    }
+};
+
 bool test_checker::s_inited = false;
+bool checker_load_balancer::s_disable_balancer = false;
 
 test_checker::test_checker()
 {
+}
+
+void test_checker::control_balancer(bool disable_it)
+{
+    checker_load_balancer::s_disable_balancer = disable_it;
+    if (disable_it && meta_leader()) {
+        server_state* ss = meta_leader()->_service->_state.get();
+        for (auto& kv: ss->_exist_apps) {
+            std::shared_ptr<app_state>& app = kv.second;
+            app->helpers->clear_proposals();
+        }
+    }
 }
 
 bool test_checker::init(const char* name, dsn_app_info* info, int count)
@@ -75,6 +163,11 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
         _apps[i] = info[i];
     }
 
+    utils::factory_store<replication::server_load_balancer>::register_factory(
+        "checker_load_balancer",
+        replication::server_load_balancer::create<checker_load_balancer>,
+        PROVIDER_TYPE_MAIN);
+
     for (auto& app : _apps)
     {
         if (0 == strcmp(app.type, "meta"))
@@ -82,6 +175,7 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
             meta_service_app* meta_app = (meta_service_app*)app.app.app_context_ptr;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                         std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
+            meta_app->_service->_meta_opts.server_load_balancer_type = "checker_load_balancer";
             _meta_servers.push_back(meta_app);
         }
         else if (0 == strcmp(app.type, "replica"))
@@ -153,7 +247,6 @@ void test_checker::check()
     parti_config cur_config;
     if (get_current_config(cur_config) && cur_config != _last_config)
     {
-
         test_case::instance().on_config_change(_last_config, cur_config);
         _last_config = cur_config;
     }
@@ -178,11 +271,13 @@ void test_checker::on_replica_state_change(::dsn::rpc_address from, const replic
     }
 }
 
-void test_checker::on_config_change(const std::vector<app_state>& new_config)
+void test_checker::on_config_change(const app_mapper& new_config)
 {
-    partition_configuration c = new_config[g_default_gpid.get_app_id() - 1].partitions[g_default_gpid.get_partition_index()];
+    const partition_configuration* pc = get_config(new_config, g_default_gpid);
+    dassert(pc != nullptr, "drop table is not allowed in test");
+
     parti_config cur_config;
-    cur_config.convert_from(c);
+    cur_config.convert_from(*pc);
     if (cur_config != _last_config)
     {
         test_case::instance().on_config_change(_last_config, cur_config);
@@ -219,7 +314,17 @@ bool test_checker::get_current_config(parti_config& config)
     if (meta == nullptr)
         return false;
     partition_configuration c;
-    meta->_service->_state->query_configuration_by_gpid(g_default_gpid, c);
+
+    //we should never try to acquire lock when we are in checker. Because we are the only
+    //thread that is running.
+    //The app and simulator have lots in common with the OS's userspace and kernel space.
+    //In normal case, "apps" runs in "userspace". You can "trap into kernel(i.e. the simulator)" by the rDSN's
+    //"enqueue,dequeue and lock..."
+
+    //meta->_service->_state->query_configuration_by_gpid(g_default_gpid, c);
+    const meta_view view = meta->_service->_state->get_meta_view();
+    const partition_configuration* pc = get_config(*(view.apps), g_default_gpid);
+    c = *pc;
     config.convert_from(c);
     return true;
 }

@@ -70,8 +70,6 @@ namespace dsn
 
         static __thread struct __tail_log_info__ s_tail_log_info;
         
-        static void hpc_tail_logs_dumpper();
-
         hpc_tail_logger::hpc_tail_logger(const char* log_dir) 
             : logging_provider(log_dir)
         {
@@ -322,7 +320,7 @@ namespace dsn
             {
                 wn = snprintf_p(ptr, capacity, "-- cannot printf due to that log entry has error ---");
             }
-            else if (wn > capacity)
+            else if (static_cast<unsigned>(wn) > capacity)
             {
                 // log truncated
                 wn = capacity;

@@ -141,6 +141,7 @@ public:
     static task_worker*     get_current_worker2();
     static service_node*    get_current_node();
     static service_node*    get_current_node2();
+    static int              get_current_node_id();
     static int              get_current_worker_index();
     static const char*      get_current_node_name();
     static rpc_engine*      get_current_rpc();
@@ -330,8 +331,9 @@ public:
         );
     ~rpc_response_task();
 
-    void             enqueue(error_code err, message_ex* reply);
-    void     enqueue() override; // re-enqueue after above enqueue, e.g., after delay
+    // return true for normal case, false for fault injection applied
+    bool             enqueue(error_code err, message_ex* reply);
+    void             enqueue() override; // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() const
     { return _request; }
     message_ex*      get_response() const

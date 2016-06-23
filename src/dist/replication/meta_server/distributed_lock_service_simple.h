@@ -48,7 +48,7 @@ namespace dsn
         {
         public:
             // no parameter need
-            virtual error_code initialize(int argc, const char** argv) override;
+            virtual error_code initialize(const std::vector<std::string>& args) override;
             virtual error_code finalize() override { return ERR_OK; }
 
             virtual std::pair<task_ptr, task_ptr> lock(

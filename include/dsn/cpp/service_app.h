@@ -69,7 +69,7 @@ namespace dsn
 
         const std::string& name() const { return _name; }
 
-        dsn_gpid gpid() const { return _gpid; }
+        dsn_gpid get_gpid() const { return _gpid; }
         
     private:
         bool               _started;

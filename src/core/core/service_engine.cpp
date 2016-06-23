@@ -58,8 +58,13 @@ using namespace dsn::utils;
 
 namespace dsn {
 
+DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
 service_node::service_node(service_app_spec& app_spec)
-    : _layer2_handler(this)
+    : _layer2_handler(this), 
+    _layer2_rpc_read_handler(RPC_L2_CLIENT_READ),
+    _layer2_rpc_write_handler(RPC_L2_CLIENT_WRITE)
 {
     _computation = nullptr;
     _app_spec = app_spec;
@@ -71,7 +76,33 @@ service_node::service_node(service_app_spec& app_spec)
     strncpy(_app_info.role, spec().role_name.c_str(), sizeof(_app_info.role));
     strncpy(_app_info.type, spec().type.c_str(), sizeof(_app_info.type));
     strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
-    strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
+    strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir)); 
+    
+    _layer2_rpc_read_handler.name = "RPC_L2_CLIENT_READ";
+    _layer2_rpc_read_handler.c_handler = [](dsn_message_t req, void* this_) 
+    {
+        auto req2 = (message_ex*)req;
+        ((service_node*)this_)->handle_l2_rpc_request(
+            req2->header->gpid,
+            false,
+            req
+            );
+    };
+    _layer2_rpc_read_handler.parameter = this;
+    _layer2_rpc_read_handler.add_ref(); // release in handler::run
+
+    _layer2_rpc_write_handler.name = "RPC_L2_CLIENT_WRITE";
+    _layer2_rpc_write_handler.c_handler = [](dsn_message_t req, void* this_)
+    {
+        auto req2 = (message_ex*)req;
+        ((service_node*)this_)->handle_l2_rpc_request(
+            req2->header->gpid,
+            true,
+            req
+        );
+    };
+    _layer2_rpc_write_handler.parameter = this;
+    _layer2_rpc_write_handler.add_ref(); // release in handler::run
 }
 
 bool service_node::rpc_register_handler(rpc_handler_info* handler, dsn_gpid gpid)
@@ -436,20 +467,34 @@ void service_node::get_queue_info(
     ss << "]}";
 }
 
-
-bool service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req, int delay)
+void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req)
 {
-    auto msg = (message_ex*)(req);
     auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
+    cb(_app_info.app.app_context_ptr, gpid, is_write, req);
+}
 
+rpc_request_task* service_node::generate_l2_rpc_request_task(message_ex* req)
+{
+    auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
     if (nullptr != cb)
     {
-        cb(_app_info.app.app_context_ptr, gpid, is_write, req, delay);
-        return true;
+        rpc_request_task* t;
+        if (task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation)
+        {
+            _layer2_rpc_write_handler.add_ref(); // release in handler::run
+            t = new rpc_request_task(req, &_layer2_rpc_write_handler, this);
+        }
+        else
+        {
+            _layer2_rpc_read_handler.add_ref(); // release in handler::run
+            t = new rpc_request_task(req, &_layer2_rpc_read_handler, this);
+        }
+        t->spec().on_task_create.execute(nullptr, t);
+        return t;
     }
     else
     {
-        return false;
+        return nullptr;
     }
 }
 

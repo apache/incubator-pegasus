@@ -174,12 +174,11 @@ namespace dsn {
                         req->server_address.group_address()->set_leader(addr);
                     }
                     break;
-                case GRPC_TO_ANY:
-                case GRPC_TO_ALL:
+                default:
                     break;
                 }
                 break;
-            case HOST_TYPE_URI:
+            default:
                 dassert(false, "not implemented");
                 break;
             }
@@ -208,26 +207,21 @@ namespace dsn {
                             req->server_address.group_address()->set_leader(reply->header->from_address);
                         }
                         break;
-                    case GRPC_TO_ANY:
-                    case GRPC_TO_ALL:
+                    default:
                         break;
                     }
                     break;
-                case HOST_TYPE_URI:
+                default:
                     dassert(false, "not implemented");
                     break;
                 }
             }
 
-            // failure injection not applied
-            if (spec->on_rpc_response_enqueue.execute(call, true))
-            {
+            if (call->delay_milliseconds() == 0)
                 call->set_delay(delay_ms);
-                call->enqueue(err, reply);
-            }
-
+            
             // failure injection applied
-            else
+            if (!call->enqueue(err, reply))
             {
                 ddebug("rpc reply %s is dropped (fault inject), rpc_id = %016llx",
                     reply->header->rpc_name,
@@ -486,7 +480,14 @@ namespace dsn {
             }
         }
 
-        return handler ? new rpc_request_task(msg, handler, node) : nullptr;
+        if (handler)
+        {
+            auto r = new rpc_request_task(msg, handler, node);
+            r->spec().on_task_create.execute(task::get_current_task(), r);
+            return r;
+        }
+        else
+            return nullptr;
     }
 
     void rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
@@ -716,7 +717,7 @@ namespace dsn {
 
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
-        uint32_t code = 0;
+        int32_t code = 0;
         auto binary_hash = msg->header->rpc_name_fast.local_hash;
         if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
         {
@@ -730,22 +731,18 @@ namespace dsn {
         if (code != ::dsn::TASK_CODE_INVALID)
         {
             msg->local_rpc_code = code;
+            rpc_request_task* tsk = nullptr;
 
             // handle replication
-            auto sp = task_spec::get(code);
             if (msg->header->gpid.value != 0)
             {
-                // if framework handles this request, then end of processing
-                if (_node->handle_l2_rpc_request(
-                    msg->header->gpid, 
-                    sp->rpc_request_is_write_operation,
-                    (dsn_message_t)(msg), 
-                    delay_ms)
-                    )
-                    return;
+                tsk = _node->generate_l2_rpc_request_task(msg);
             }
 
-            rpc_request_task* tsk = _rpc_dispatcher.on_request(msg, _node);
+            if (tsk == nullptr)
+            {
+                tsk = _rpc_dispatcher.on_request(msg, _node);
+            }
 
             if (tsk != nullptr)
             {
@@ -1115,7 +1112,7 @@ namespace dsn {
         // TODO(qinzuoyan): reply to client if forwarding failed for non-timeout reason (such as connection denied).
         else
         {
-            auto copied_request = request->copy_and_prepare_send();
+            auto copied_request = request->copy_and_prepare_send(false);
             call_ip(address, copied_request, nullptr, false, true);
         }
     }

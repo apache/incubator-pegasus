@@ -52,9 +52,8 @@ class primary_context
 {
 public:
     primary_context(gpid gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
-        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled), 
-        next_learning_version(0), 
-        last_prepare_ts_ms(0)
+        : next_learning_version(0), write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
+        , last_prepare_ts_ms(0)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
@@ -117,8 +116,8 @@ public:
     potential_secondary_context() :
         learning_version(0),
         learning_start_ts_ns(0),
-        learning_round_is_running(false),
         learning_status(learner_status::LearningInvalid),
+        learning_round_is_running(false),
         learning_start_prepare_decree(invalid_decree)
     {}
 

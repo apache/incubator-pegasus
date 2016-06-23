@@ -398,15 +398,31 @@ namespace dsn
         return ret;
     }
 
-    void rpc_session::on_recv_message(message_ex* msg, int delay_ms)
+    bool rpc_session::on_recv_message(message_ex* msg, int delay_ms)
     {
         msg->to_address = _net.address();
         msg->io_session = this;
 
         if (msg->header->context.u.is_request)
         {
-            dbg_dassert(!is_client(), 
-                "only rpc server session can recv rpc requests");
+            // ATTENTION: need to check if self connection occurred.
+            //
+            // When we try to connect some socket in the same host, if we don't bind the client to a specific port,
+            // operating system will provide ephemeral port for us. If it's happened to be the one we want to connect to,
+            // it causes self connection.
+            //
+            // The case is:
+            // - this session is a client session
+            // - the remote address is in the same host
+            // - the remote address is not listened, which means the remote port is not occupied
+            // - operating system chooses the remote port as client's ephemeral port
+            if (is_client() && msg->header->from_address == _net.engine()->primary_address())
+            {
+                derror("self connection detected, address = %s", msg->header->from_address.to_string());
+                return false;
+            }
+
+            dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
             _net.on_recv_request(msg, delay_ms);
         }
 
@@ -417,6 +433,8 @@ namespace dsn
         {
             _matcher->on_recv_reply(&_net, msg->header->id, msg, delay_ms);
         }
+
+        return true;
     }
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -572,8 +590,8 @@ namespace dsn
         // init connection if necessary
         if (new_client) 
         {
-            ddebug("client session created, remote_server = %s, current_count = %d",
-                   client->remote_address().to_string(), scount);
+            dinfo("client session created, remote_server = %s, current_count = %d",
+                  client->remote_address().to_string(), scount);
             client->connect();
         }
 

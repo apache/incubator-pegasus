@@ -50,13 +50,13 @@ class replication_service_app :
 public:
     replication_service_app(dsn_gpid gpid);
 
-    ~replication_service_app(void);
+    virtual ~replication_service_app(void);
 
     virtual ::dsn::error_code start(int argc, char** argv) override;
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-    virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg, int delay_ms) override;
+    virtual void on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg) override;
 
 private:
     friend class ::dsn::replication::replication_checker;

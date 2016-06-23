@@ -18,9 +18,9 @@ namespace dsn
             deploy_svc_service_impl();
             ~deploy_svc_service_impl();
 
-            error_code start();
+            error_code start(dsn_gpid gd);
 
-            void stop();
+            void stop(dsn_gpid gd);
 
             virtual void on_deploy(const deploy_request& req, /*out*/ ::dsn::rpc_replier<deploy_info>& reply) override;
 

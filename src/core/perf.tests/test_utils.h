@@ -54,10 +54,11 @@ DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_
 
 extern int g_test_count;
 
-inline void exec_tests()
+inline int exec_tests()
 {    
     auto ret = RUN_ALL_TESTS();
     g_test_count++;
+    return ret;
 }
 
 class test_client :

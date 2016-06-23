@@ -47,9 +47,11 @@ TEST(core, message_ex)
     dsn_msg_context_t ctx0, ctx1;
     ctx0.context = 0;
     ctx0.u.is_request = true;
+    ctx0.u.serialize_format = DSF_THRIFT_BINARY;
 
     ctx1.context = 0;
     ctx1.u.is_request = false;
+    ctx1.u.serialize_format = DSF_THRIFT_BINARY;
 
     { // create_request
         uint64_t next_id = message_ex::new_id() + 1;
@@ -57,10 +59,11 @@ TEST(core, message_ex)
         ASSERT_EQ(0, m->get_count());
 
         message_header& h = *m->header;
+        ASSERT_EQ(0, h.hdr_version);
+        ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
-        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(0, h.body_length);
-        ASSERT_EQ(0, h.version);
+        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
@@ -92,10 +95,11 @@ TEST(core, message_ex)
         message_ex* response = request->create_response();
 
         message_header& h = *response->header;
+        ASSERT_EQ(0, h.hdr_version);
+        ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
-        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(0, h.body_length);
-        ASSERT_EQ(0, h.version);
+        ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->rpc_id, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);

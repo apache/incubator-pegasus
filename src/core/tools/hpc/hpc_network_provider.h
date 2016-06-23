@@ -134,7 +134,10 @@ namespace dsn {
             void on_failure(bool is_write = false);
             void on_read_completed(message_ex* msg)
             {
-                on_recv_message(msg, 0);
+                if (!on_recv_message(msg, 0))
+                {
+                    on_failure(false);
+                }
             }
             
         protected:

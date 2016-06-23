@@ -119,7 +119,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     }
 
     if (config.ballot > membership.ballot)
-        next_learning_version = ((uint64_t)config.ballot) << 32 + 1;
+        next_learning_version = (((uint64_t)config.ballot) << 32) + 1;
     else
         ++next_learning_version;
 

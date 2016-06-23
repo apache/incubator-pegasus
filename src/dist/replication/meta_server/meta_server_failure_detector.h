@@ -35,36 +35,18 @@
 
 #pragma once
 
-# include <dsn/dist/failure_detector.h>
-# include <dsn/dist/distributed_lock_service.h>
-# include "replication_common.h"
+#include <dsn/dist/failure_detector.h>
+#include <dsn/dist/distributed_lock_service.h>
+#include "replication_common.h"
 
-using namespace dsn;
-using namespace dsn::service;
-using namespace dsn::replication;
-using namespace dsn::fd;
+namespace dsn { namespace replication {
 
-class server_state;
 class meta_service;
-
-namespace dsn {
-    namespace replication{
-        class replication_checker;
-        namespace test {
-            class test_checker;
-        }
-    }
-}
-
-class meta_server_failure_detector : public failure_detector
+namespace test { class test_checker; }
+class meta_server_failure_detector : public fd::failure_detector
 {
 public:
-    meta_server_failure_detector(server_state* state, meta_service* svc);
-
-    /* these two functions are for test */
-    meta_server_failure_detector(rpc_address leader_address, bool is_myself_leader);
-    void set_leader_for_test(rpc_address leader_address, bool is_myself_leader);
-
+    meta_server_failure_detector(meta_service* svc);
     virtual ~meta_server_failure_detector();
 
     bool is_primary() const { return _is_primary; }
@@ -88,19 +70,19 @@ public:
     void sync_node_state_and_start_service();
 
     // client side
-    virtual void on_master_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
+    virtual void on_master_disconnected(const std::vector<rpc_address>&)
     {
-        dassert (false, "unsupported method");
+        dassert(false, "unsupported method");
     }
 
-    virtual void on_master_connected(::dsn::rpc_address node)
+    virtual void on_master_connected(rpc_address)
     {
-        dassert (false, "unsupported method");
+        dassert(false, "unsupported method");
     }
 
     // server side
-    virtual void on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes);
-    virtual void on_worker_connected(::dsn::rpc_address node);
+    virtual void on_worker_disconnected(const std::vector< rpc_address>& nodes);
+    virtual void on_worker_connected(rpc_address node);
 
     virtual bool is_worker_connected(rpc_address node) const
     {
@@ -113,28 +95,33 @@ public:
         return failure_detector::is_worker_connected(node);
     }
 
-    virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
+    virtual void on_ping(const fd::beacon_msg& beacon, rpc_replier<fd::beacon_ack>& reply);
 
 private:
     void set_primary(rpc_address primary);
 
 private:
-    friend class ::dsn::replication::replication_checker;
-    friend class ::dsn::replication::test::test_checker;
+    friend class replication_checker;
+    friend class test::test_checker;
 
-    volatile bool _is_primary;
-
-    zlock         _primary_address_lock;
-    rpc_address   _primary_address;
-
-    server_state  *_state;
     meta_service  *_svc;
 
-    ::dsn::dist::distributed_lock_service *_lock_svc;
+    zlock         _primary_address_lock;
+    volatile bool _is_primary;
+    rpc_address   _primary_address;
+
+    dist::distributed_lock_service *_lock_svc;
     task_ptr    _lock_grant_task;
     task_ptr    _lock_expire_task;
     std::string _primary_lock_id;
     std::string _lock_owner_id;
     volatile uint64_t    _election_moment;
+
+public:
+    /* these two functions are for test */
+    meta_server_failure_detector(rpc_address leader_address, bool is_myself_leader);
+    void set_leader_for_test(rpc_address leader_address, bool is_myself_leader);
 };
+
+}}
 
