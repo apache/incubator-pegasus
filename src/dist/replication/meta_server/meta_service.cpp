@@ -54,7 +54,8 @@ namespace dsn { namespace replication {
 meta_service::meta_service():
     serverlet("meta_service"),
     _failure_detector(nullptr),
-    _started(false)
+    _started(false),
+    _meta_ctrl_flags(0)
 {
     _node_live_percentage_threshold_for_update = 65;
     _opts.initialize();
