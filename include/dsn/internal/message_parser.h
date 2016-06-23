@@ -38,8 +38,9 @@
 
 # include <dsn/internal/ports.h>
 # include <dsn/internal/singleton.h>
-# include <dsn/internal/rpc_message.h>
+# include <dsn/internal/task_spec.h>
 # include <dsn/cpp/autoref_ptr.h>
+# include <dsn/cpp/utils.h>
 # include <vector>
 
 namespace dsn 
@@ -64,13 +65,15 @@ namespace dsn
         void truncate_read() { _buffer_occupied = 0; }
 
     public:
-        blob            _buffer;
+        dsn::blob       _buffer;
         unsigned int    _buffer_occupied;
         unsigned int    _buffer_block_size;
     };
 
     class message_parser;
     typedef ref_ptr<message_parser> message_parser_ptr;
+
+    class message_ex;
 
     class message_parser : public ref_counter
     {
@@ -122,7 +125,7 @@ namespace dsn
 # endif
 
         // get buffers from message to 'buffers'.
-        // return buffer count used, which must equals the return value of prepare_on_send().
+        // return buffer count used, which must be no more than the return value of prepare_on_send().
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
     };
 

@@ -145,17 +145,17 @@ namespace dsn {
             auto lcount = parser->prepare_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());
-            dassert(lcount == rcount, "");
+            dassert(lcount >= rcount, "");
             // end using parser
             parser->~message_parser();
             size_t tlen = 0, offset = 0;
-            for (int i = 0; i < lcount; i ++)
+            for (int i = 0; i < rcount; i ++)
             {
                 tlen += bufs[i].sz;
             }
             dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
             std::unique_ptr<char[]> packet_buffer(new char[tlen]);
-            for (int i = 0; i < lcount; i ++)
+            for (int i = 0; i < rcount; i ++)
             {
                 memcpy(&packet_buffer[offset], bufs[i].buf, bufs[i].sz);
                 offset += bufs[i].sz;

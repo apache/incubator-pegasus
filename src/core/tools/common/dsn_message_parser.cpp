@@ -92,6 +92,7 @@ namespace dsn
                     _header_checked = false;
                     read_next = (reader->_buffer_occupied >= sizeof(message_header) ?
                                      0 : sizeof(message_header) - reader->_buffer_occupied);
+                    msg->parser = this;
                     return msg;
                 }
             }
@@ -119,7 +120,7 @@ namespace dsn
         for (auto& buf : msg->buffers)
         {
             buffers[i].buf = (void*)buf.data();
-            buffers[i].sz = (size_t)buf.length();
+            buffers[i].sz = buf.length();
             ++i;
         }
         return i;

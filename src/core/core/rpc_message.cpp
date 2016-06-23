@@ -66,7 +66,7 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     )
 {
     ::dsn::blob bb((const char*)buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb, false);
     msg->local_rpc_code = rpc_code;
     msg->header->client.hash = hash;
     msg->header->context.u.serialize_format = serialization_type;
@@ -223,9 +223,9 @@ DSN_API dsn_msg_header_type dsn_msg_get_header_type(
     )
 {
     dsn::header_type& type = ((::dsn::message_ex*)msg)->header->hdr_type;
-    if (type == dsn::header_type::hdr_dsn_default)
+    if (type == dsn::header_type::hdr_type_dsn)
         return DHT_DEFAULT;
-    else if (type == dsn::header_type::hdr_dsn_thrift)
+    else if (type == dsn::header_type::hdr_type_thrift)
         return DHT_THRIFT;
     return DHT_INVALID;
 }
@@ -235,8 +235,10 @@ namespace dsn {
 std::atomic<uint64_t> message_ex::_id(0);
 uint32_t message_ex::s_local_hash = 0;
 
-header_type header_type::hdr_dsn_default("RDSN");
-header_type header_type::hdr_dsn_thrift("THFT");
+header_type header_type::hdr_type_dsn("RDSN");
+header_type header_type::hdr_type_thrift("THFT");
+header_type header_type::hdr_type_http_get("GET ");
+header_type header_type::hdr_type_http_post("POST");
 
 std::string header_type::debug_string() const
 {
@@ -258,32 +260,19 @@ std::string header_type::debug_string() const
 
 bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format)
 {
-    if (hdr_type == hdr_dsn_default)
+    if (hdr_type == hdr_type_dsn)
     {
         hdr_format = NET_HDR_DSN;
         return true;
     }
-    else if (hdr_type == hdr_dsn_thrift)
+    else if (hdr_type == hdr_type_thrift)
     {
         hdr_format = NET_HDR_THRIFT;
         return true;
     }
-    else
+    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post)
     {
-        return false;
-    }
-}
-
-bool header_type::header_format_to_type(const network_header_format& hdr_format, /*out*/ header_type& hdr_type)
-{
-    if (hdr_format == NET_HDR_DSN)
-    {
-        hdr_type = hdr_dsn_default;
-        return true;
-    }
-    else if (hdr_format == NET_HDR_THRIFT)
-    {
-        hdr_type = hdr_dsn_thrift;
+        hdr_format = NET_HDR_HTTP;
         return true;
     }
     else
@@ -492,14 +481,24 @@ message_ex* message_ex::create_receive_message(const blob& data)
     return msg;
 }
 
-message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data)
+message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data, bool header_included)
 {
     message_ex* msg = new message_ex();
     std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(sizeof(message_header))), [](char* c) {dsn_transient_free(c);});
     msg->header = reinterpret_cast<message_header*>(header_holder.get());
     memset(msg->header, 0, sizeof(message_header));
-    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
-    msg->buffers.push_back(data);
+
+    // if header included, we push firstly header, then the data. Or-else the order is reversed.
+    if (header_included)
+    {
+        msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+        msg->buffers.push_back(data);
+    }
+    else
+    {
+        msg->buffers.push_back(data);
+        msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    }
     msg->_is_read = true;
     return msg;
 }
@@ -567,7 +566,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
-    hdr.hdr_type = header_type::hdr_dsn_default;
+    hdr.hdr_type = header_type::hdr_type_dsn;
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
@@ -591,6 +590,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
 
     hdr.context.u.is_request = true;
     hdr.context.u.serialize_format = sp->rpc_msg_payload_serialize_default_format;
+    hdr.context.u.is_forward_supported = true;
 
     msg->local_rpc_code = (uint32_t)rpc_code;
     return msg;
@@ -619,10 +619,16 @@ message_ex* message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
+    msg->parser = parser;
     msg->io_session = io_session;
 
     // parser callback
-    io_session->parser()->on_create_response(this, msg);
+    // for fake message created by the layer2 framework, the parser may not be set.
+    // And message like this may not need to be reply
+    if (parser)
+    {
+        parser->on_create_response(this, msg);
+    }
 
     // join point
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);

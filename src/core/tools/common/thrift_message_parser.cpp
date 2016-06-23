@@ -86,6 +86,7 @@ namespace dsn
                 _header_parsed = false;
                 read_next = (reader->_buffer_occupied >= sizeof(thrift_message_header) ?
                                  0 : sizeof(thrift_message_header) - reader->_buffer_occupied);
+                msg->parser = this;
                 return msg;
             }
             else // buf_len < msg_sz
@@ -123,7 +124,9 @@ namespace dsn
 
         //write message end, which indicate the end of a thrift message
         msg_proto.writeMessageEnd();
-        return (int)msg->buffers.size();
+        // as we must add a thrift header for the response, so we'd better reserve one more buffer
+        // refer to the get_buffers_on_send
+        return (int)msg->buffers.size() + 1;
     }
 
     int thrift_message_parser::get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers)
@@ -149,22 +152,25 @@ namespace dsn
         ptr += sizeof(int32_t);
         memcpy(ptr, msg->header->server.error_name, err_len);
 
+        // first fill the header blob
+        buffers[0].buf = header_holder.get();
+        buffers[0].sz = header_len;
+
         // fill buffers
-        int i = 0;
-        for (auto& buf : msg->buffers)
+        int i = 1;
+        // we must skip the standard message_header
+        unsigned int offset = sizeof(message_header);
+        for (blob& buf : msg->buffers)
         {
-            if (i == 0)
+            if (offset >= buf.length())
             {
-                // the first buffer in message is 'message_header', we use thrift header instead
-                dassert(buf.length() == sizeof(message_header), "");
-                buffers[i].buf = header_holder.get();;
-                buffers[i].sz = header_len;
+                offset -= buf.length();
+                continue;
             }
-            else
-            {
-                buffers[i].buf = (void*)buf.data();
-                buffers[i].sz = (size_t)buf.length();
-            }
+
+            buffers[i].buf = (void*)(buf.data() + offset);
+            buffers[i].sz = buf.length() - offset;
+            offset = 0;
             ++i;
         }
 
@@ -212,7 +218,7 @@ namespace dsn
     dsn::message_ex* thrift_message_parser::parse_message(const thrift_message_header& thrift_header, dsn::blob& message_data)
     {
         dsn::blob body_data = message_data.range(thrift_header.hdr_length);
-        dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(body_data);
+        dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(body_data, false);
         dsn::message_header* dsn_hdr = msg->header;
 
         dsn::rpc_read_stream stream(msg);
@@ -226,7 +232,7 @@ namespace dsn
         iprot.readMessageBegin(fname, mtype, seqid);
         dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
 
-        dsn_hdr->hdr_type = header_type::hdr_dsn_thrift;
+        dsn_hdr->hdr_type = header_type::hdr_type_thrift;
         dsn_hdr->hdr_length = sizeof(message_header);
         dsn_hdr->body_length = thrift_header.body_length;
         dsn_hdr->hdr_crc32 = dsn_hdr->body_crc32 = CRC_INVALID;
@@ -242,7 +248,6 @@ namespace dsn
             dsn_hdr->context.u.is_request = 1;
         dassert(dsn_hdr->context.u.is_request == 1, "only support receive request");
         dsn_hdr->context.u.serialize_format = DSF_THRIFT_BINARY; // always serialize in thrift binary
-        dsn_hdr->context.u.is_forward_not_supported = 1; // thrift always not support forwarding
 
         return msg;
     }

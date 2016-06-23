@@ -192,6 +192,7 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
     {
         auto message = std::move(_received_messages.front());
         _received_messages.pop();
+        message->parser = this;
         return message.release();
     }
     else
@@ -202,7 +203,7 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
 
 int http_message_parser::prepare_on_send(message_ex* msg)
 {
-    return (int)msg->buffers.size();
+    return (int)msg->buffers.size() + 1;
 }
 
 int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
@@ -214,8 +215,8 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         std::stringstream ss;
         ss << "POST /" << msg->header->rpc_name << "/" << msg->header->client.hash << " HTTP/1.1\r\n";
         ss << "Content-Type: text/plain\r\n";
-        ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "id: " << msg->header->id << "\r\n";
+        ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
         ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
@@ -229,38 +230,42 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         ss << "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin\r\n";
         ss << "Content-Type: text/plain\r\n";
         ss << "Access-Control-Allow-Origin: *\r\n";
-        ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "id: " << msg->header->id << "\r\n";
+        ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
         ss << "payload_format: " << msg->header->context.u.serialize_format << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
         ss << "\r\n";
         header_str = ss.str();
     }
-    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_str.size())), [](char* c) {dsn_transient_free(c);});
-    memcpy(header_holder.get(), header_str.data(), header_str.size());
+    unsigned int header_len = header_str.size();
+    std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_len)), [](char* c) {dsn_transient_free(c);});
+    memcpy(header_holder.get(), header_str.data(), header_len);
+
+    // first fill the header blob
+    buffers[0].buf = header_holder.get();
+    buffers[0].sz = header_len;
 
     // fill buffers
-    int i = 0;
-    for (auto& buf : msg->buffers)
+    int i = 1;
+    // we must skip the standard message_header
+    unsigned int offset = sizeof(message_header);
+    for (blob& buf : msg->buffers)
     {
-        if (i == 0)
+        if (offset >= buf.length())
         {
-            // the first buffer in message is 'message_header', we use http header instead
-            dassert(buf.length() == sizeof(message_header), "");
-            buffers[i].buf = header_holder.get();;
-            buffers[i].sz = header_str.size();
+            offset -= buf.length();
+            continue;
         }
-        else
-        {
-            buffers[i].buf = (void*)buf.data();
-            buffers[i].sz = (size_t)buf.length();
-        }
+
+        buffers[i].buf = (void*)(buf.data() + offset);
+        buffers[i].sz = buf.length() - offset;
+        offset = 0;
         ++i;
     }
 
     // put http header blob at the back of message buffer
-    msg->buffers.emplace_back(blob(std::move(header_holder), header_str.size()));
+    msg->buffers.emplace_back(blob(std::move(header_holder), header_len));
 
     return i;
 }

@@ -30,6 +30,7 @@
  *
  * Revision history:
  *     2016-02-3, Weijie Sun(sunweijie@xiaomi.com), first version
+ *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor, now the balancer only have strategy
  */
 
 #include <algorithm>

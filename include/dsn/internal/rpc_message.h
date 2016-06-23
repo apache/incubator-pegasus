@@ -40,6 +40,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/callocator.h>
+# include <dsn/internal/message_parser.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/address.h>
 # include <dsn/internal/link.h>
@@ -98,10 +99,11 @@ namespace dsn
         }
         std::string debug_string() const;
     public:
-        static header_type hdr_dsn_default;
-        static header_type hdr_dsn_thrift;
+        static header_type hdr_type_dsn;
+        static header_type hdr_type_thrift;
+        static header_type hdr_type_http_get;
+        static header_type hdr_type_http_post;
         static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
-        static bool header_format_to_type(const network_header_format& hdr_format, /*out*/ header_type& hdr_type);
     };
 
     typedef struct message_header
@@ -147,6 +149,7 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
+        message_parser_ptr     parser;
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
@@ -181,7 +184,14 @@ namespace dsn
             int timeout_milliseconds = 0,
             uint64_t hash = 0
             );
-        static message_ex* create_receive_message_with_standalone_header(const blob& data);
+
+        //
+        // A receive message is likely to used in "unmarshall". If header is included
+        // the message data will be "message_header + data". In this case, the unmarshalling
+        // will firstly encounter the "header" and should decode it first.
+        // If not this case, the unmarshalling will firstly encounter the payload data refered by the param "data"
+        //
+        static message_ex* create_receive_message_with_standalone_header(const blob& data, bool header_included = true);
         message_ex* create_response();
         message_ex* copy();
         message_ex* copy_and_prepare_send();

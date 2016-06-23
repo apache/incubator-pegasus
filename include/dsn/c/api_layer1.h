@@ -558,7 +558,7 @@ typedef union dsn_msg_context_t
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
         uint64_t unused : 4;               ///< not used yet
         uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
-        uint64_t is_forward_not_supported : 1;  ///< whether support forwarding a message to real leader
+        uint64_t is_forward_supported : 1; ///< whether support forwarding a message to real leader
         uint64_t parameter_type : 3;       ///< type of the parameter next, see \ref dsn_msg_parameter_type_t
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;

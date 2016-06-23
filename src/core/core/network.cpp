@@ -197,8 +197,10 @@ namespace dsn
 
             _sending_buffers.resize(bcount + lcount);
             auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
-            dassert(lcount == rcount, "");
-            bcount += lcount;
+            dassert(lcount >= rcount, "");
+            if (lcount != rcount)
+                _sending_buffers.resize(bcount + rcount);
+            bcount += rcount;
             _sending_msgs.push_back(lmsg);
 
             n = n->next();
@@ -263,12 +265,15 @@ namespace dsn
         network_header_format hdr_format(NET_HDR_DSN);
         if (!header_type::header_type_to_format(hdr_type, hdr_format))
         {
-            derror("invalid header type, remote_client = %s, header_type = %s",
+            derror("invalid header type, remote_client = %s, header_type = '%s'",
                    _remote_addr.to_string(), hdr_type.debug_string().c_str());
             return -1;
         }
 
         _parser = _net.new_message_parser(hdr_format);
+        dinfo("message parser created, remote_client = %s, header_format = %s",
+              _remote_addr.to_string(), hdr_format.to_string());
+
         return 0;
     }
     
