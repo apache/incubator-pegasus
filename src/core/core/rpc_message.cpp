@@ -212,12 +212,8 @@ DSN_API dsn_msg_header_type dsn_msg_get_header_type(
     dsn_message_t msg
     )
 {
-    dsn::header_type& type = ((::dsn::message_ex*)msg)->header->hdr_type;
-    if (type == dsn::header_type::hdr_type_dsn)
-        return DHT_DEFAULT;
-    else if (type == dsn::header_type::hdr_type_thrift)
-        return DHT_THRIFT;
-    return DHT_INVALID;
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    return dsn::header_type::header_type_to_c_type(hdr->hdr_type);
 }
 
 namespace dsn {
@@ -272,15 +268,22 @@ bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ net
     }
 }
 
-message_ex::message_ex()
+dsn_msg_header_type header_type::header_type_to_c_type(const header_type& hdr_type)
 {
-    buffers.reserve(2);
-    _rw_committed = true;
-    _rw_index = -1;
-    _rw_offset = 0;
-    header = nullptr;
-    _is_read = false;
-    local_rpc_code = ::dsn::TASK_CODE_INVALID;
+    if (hdr_type == hdr_type_dsn)
+        return DHT_DEFAULT;
+    else if (hdr_type == hdr_type_thrift)
+        return DHT_THRIFT;
+    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post || hdr_type == hdr_type_http_response)
+        return DHT_HTTP;
+    else
+        return DHT_INVALID;
+}
+
+message_ex::message_ex()
+    : header(nullptr), hdr_format(NET_HDR_DSN), local_rpc_code(::dsn::TASK_CODE_INVALID),
+      _rw_index(-1), _rw_offset(0), _rw_committed(true), _is_read(false)
+{
 }
 
 message_ex::~message_ex()
@@ -295,6 +298,9 @@ void message_ex::seal(bool fill_crc)
 {
     dassert  (!_is_read && _rw_committed, "seal can only be applied to write mode messages");
     //dbg_dassert(header->body_length > 0, "message %s is empty!", header->rpc_name);
+
+    if (hdr_format != NET_HDR_DSN)
+        return;
 
     if (fill_crc)
     {
@@ -355,6 +361,8 @@ void message_ex::seal(bool fill_crc)
 
 bool message_ex::is_right_header() const
 {
+    dassert(hdr_format == NET_HDR_DSN, "only valid for dsn mssage header");
+
     if (header->hdr_crc32 != CRC_INVALID)
     {
         return is_right_header((char*)header);
@@ -393,6 +401,8 @@ bool message_ex::is_right_header() const
 
 bool message_ex::is_right_body(bool is_write_msg) const
 {
+    dassert(hdr_format == NET_HDR_DSN, "only valid for dsn mssage header");
+
     if (header->body_crc32 != CRC_INVALID)
     {
         int i_max = (int)buffers.size() - 1;
@@ -664,15 +674,16 @@ message_ex* message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
-    msg->parser = parser;
+    msg->hdr_format = hdr_format;
+    msg->msg_parser = msg_parser;
     msg->io_session = io_session;
 
     // parser callback
     // for fake message created by the layer2 framework, the parser may not be set.
     // And message like this may not need to be reply
-    if (parser)
+    if (msg_parser)
     {
-        parser->on_create_response(this, msg);
+        msg_parser->on_create_response(this, msg);
     }
 
     // join point

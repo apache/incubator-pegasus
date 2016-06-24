@@ -73,6 +73,7 @@ namespace dsn
             parsing_app_id,
             parsing_partition_index,
             parsing_serialize_format,
+            parsing_from_address,
             parsing_client_hash,
             parsing_client_timeout,
             parsing_server_error,

@@ -156,7 +156,7 @@ namespace dsn
                 --_message_count;
             }
                         
-            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
+            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
             rmsg->io_session = nullptr;
 
             if (resend_msgs)
@@ -280,8 +280,6 @@ namespace dsn
     
     void rpc_session::send_message(message_ex* msg)
     {
-        //dinfo("%s: trace_id = %016llx, code = %s", __FUNCTION__, msg->header->trace_id, msg->header->rpc_name);
-
         msg->add_ref(); // released in on_send_completed
 
         uint64_t sig;

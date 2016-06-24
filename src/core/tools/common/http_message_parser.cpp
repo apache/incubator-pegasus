@@ -129,6 +129,10 @@ http_message_parser::http_message_parser()
         {
             owner->_response_parse_state = parsing_serialize_format;
         }
+        else if (MATCH("from_address"))
+        {
+            owner->_response_parse_state = parsing_from_address;
+        }
         else if (MATCH("client_hash"))
         {
             owner->_response_parse_state = parsing_client_hash;
@@ -217,6 +221,38 @@ http_message_parser::http_message_parser()
             header->context.u.serialize_format = fmt;
             break;
         }
+        case parsing_from_address:
+        {
+            int pos = -1;
+            int dot_count = 0;
+            for (int i = 0; i < length; ++i)
+            {
+                if (at[i] == ':')
+                {
+                    pos = i;
+                    break;
+                }
+                else if (at[i] == '.')
+                {
+                    dot_count++;
+                }
+            }
+            if (pos == -1 || pos == (length - 1) || dot_count != 3)
+            {
+                derror("invalid header.from_address '%.*s'", length, at);
+                return 1;
+            }
+            char *end;
+            unsigned long port = std::strtol(at + pos + 1, &end, 10);
+            if (end != at + length)
+            {
+                derror("invalid header.from_address '%.*s'", length, at);
+                return 1;
+            }
+            std::string host(at, pos);
+            header->from_address.assign_ipv4(host.c_str(), port);
+            break;
+        }
         case parsing_client_hash:
         {
             char *end;
@@ -281,7 +317,6 @@ http_message_parser::http_message_parser()
             derror("invalid http type %d and method %d", parser->type, parser->method);
             return 1;
         }
-        dinfo("rpc name: %s, id: %" PRIu64 ", trace id: %" PRIu64, header->rpc_name, header->id, header->trace_id);
         return 0;
     };
     _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
@@ -319,9 +354,13 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
     }
     if (_current_message)
     {
-        auto msg = std::move(_current_message);
-        msg->parser = this;
-        return msg.release();
+        message_ex* msg = _current_message.release();
+        dinfo("rpc_name: %s, from_address: %s, seq_id: %" PRIu64 ", trace_id: %" PRIu64,
+              msg->header->rpc_name, msg->header->from_address.to_string(),
+              msg->header->id, msg->header->trace_id);
+        msg->hdr_format = NET_HDR_HTTP;
+        msg->msg_parser = this;
+        return msg;
     }
     else
     {
@@ -350,6 +389,7 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         ss << "app_id: " << msg->header->gpid.u.app_id << "\r\n";
         ss << "partition_index: " << msg->header->gpid.u.partition_index << "\r\n";
         ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)msg->header->context.u.serialize_format) << "\r\n";
+        ss << "from_address: " << msg->header->from_address.to_string() << "\r\n";
         ss << "client_hash: " << msg->header->client.hash << "\r\n";
         ss << "client_timeout: " << msg->header->client.timeout_ms << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
@@ -367,6 +407,7 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
         ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)msg->header->context.u.serialize_format) << "\r\n";
+        ss << "from_address: " << msg->header->from_address.to_string() << "\r\n";
         ss << "server_error: " << msg->header->server.error_name << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
         ss << "\r\n";

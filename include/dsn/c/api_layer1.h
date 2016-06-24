@@ -632,11 +632,12 @@ extern DSN_API void         dsn_msg_get_options(
                                 /*out*/ dsn_msg_options_t* opts
                                 );
 
-/*! rpc_message header type */
-typedef enum dsn_msg_header_type{
+/*! rpc message header type */
+typedef enum dsn_msg_header_type {
     DHT_INVALID = 0,
     DHT_DEFAULT = 1,
     DHT_THRIFT = 2,
+    DHT_HTTP = 3,
 } dsn_msg_header_type;
 
 /*!

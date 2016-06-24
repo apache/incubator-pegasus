@@ -86,7 +86,8 @@ namespace dsn
                 _header_parsed = false;
                 read_next = (reader->_buffer_occupied >= sizeof(thrift_message_header) ?
                                  0 : sizeof(thrift_message_header) - reader->_buffer_occupied);
-                msg->parser = this;
+                msg->hdr_format = NET_HDR_THRIFT;
+                msg->msg_parser = this;
                 return msg;
             }
             else // buf_len < msg_sz

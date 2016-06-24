@@ -223,7 +223,7 @@ namespace dsn {
             // failure injection applied
             if (!call->enqueue(err, reply))
             {
-                ddebug("rpc reply %s is dropped (fault inject), trace_id = %016llx",
+                ddebug("rpc reply %s is dropped (fault inject), trace_id = %" PRIu64,
                     reply->header->rpc_name,
                     reply->header->trace_id
                     );
@@ -747,7 +747,7 @@ namespace dsn {
                 // release the task when necessary
                 else
                 {
-                    ddebug("rpc request %s is dropped (fault inject), trace_id = %016llx",
+                    ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
                         msg->header->rpc_name,
                         msg->header->trace_id
                         );
@@ -765,7 +765,7 @@ namespace dsn {
         }
 
         dwarn(
-            "recv message with unknown rpc name %s from %s, trace_id = %016llx",
+            "recv message with unknown rpc name %s from %s, trace_id = %" PRIu64,
             msg->header->rpc_name,
             msg->header->from_address.to_string(),
             msg->header->trace_id
@@ -935,18 +935,22 @@ namespace dsn {
             }
         }
 
-        request->to_address = addr;
-
         auto sp = task_spec::get(request->local_rpc_code);
-        auto& hdr = *request->header; 
-        auto& named_nets = _client_nets[sp->rpc_call_header_format];
-        network* net = named_nets[sp->rpc_call_channel];
-        
+        auto& hdr = *request->header;
+
+        request->to_address = addr;
+        request->hdr_format = sp->rpc_call_header_format;
+
+        network* net = _client_nets[request->hdr_format][sp->rpc_call_channel];
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
             sp->rpc_call_header_format.to_string(),
             hdr.rpc_name
             );
+
+        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, trace_id = %" PRIu64,
+              hdr.rpc_name, addr.to_string(), request->hdr_format.to_string(),
+              sp->rpc_call_channel.to_string(), hdr.trace_id);
 
         bool need_seal = false;
         if (reset_request_id)
@@ -967,7 +971,7 @@ namespace dsn {
         // join point and possible fault injection
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
-            ddebug("rpc request %s is dropped (fault inject), trace_id = %016llx",
+            ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
                 request->header->rpc_name,
                 request->header->trace_id
                 );
@@ -1033,16 +1037,11 @@ namespace dsn {
                 dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT, 
                     "target address must have named port in this case");
 
-                // use the header type recorded in the message header
-                network_header_format hdr_format(NET_HDR_DSN);
-                bool r = header_type::header_type_to_format(response->header->hdr_type, hdr_format);
-                dassert(r, "header_type_to_format(%s) failed", response->header->hdr_type.debug_string().c_str());
-                auto& named_nets = _client_nets[hdr_format];
-                network* net = named_nets[RPC_CHANNEL_TCP];
-
+                // use the header format recorded in the message
+                network* net = _client_nets[response->hdr_format][RPC_CHANNEL_TCP];
                 dassert(nullptr != net, "client network not present for rpc channel '%s' with format '%s' used by rpc %s",
                     RPC_CHANNEL_TCP.to_string(),
-                    hdr_format.to_string(),
+                    response->hdr_format.to_string(),
                     response->header->rpc_name
                     );
 
@@ -1084,6 +1083,11 @@ namespace dsn {
         // response->io_session == nullptr && response->to_address.is_invalid()
         else
         {
+            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %" PRIu64,
+                  response->header->rpc_name,
+                  response->header->trace_id
+                  );
+
             no_fail = false;
         }
 

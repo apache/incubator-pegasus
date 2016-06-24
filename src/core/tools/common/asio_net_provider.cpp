@@ -134,11 +134,7 @@ namespace dsn {
         void asio_udp_provider::send_message(message_ex* request)
         {
             // prepare parser as there will be concurrent send-message-s
-            network_header_format hdr_format(NET_HDR_DSN);
-            bool r = header_type::header_type_to_format(request->header->hdr_type, hdr_format);
-            dassert(r, "header_type_to_format(%s) failed", request->header->hdr_type.debug_string().c_str());
-
-            auto parser = new_message_parser(hdr_format);
+            auto parser = new_message_parser(request->hdr_format);
             auto lcount = parser->prepare_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());

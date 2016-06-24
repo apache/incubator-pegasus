@@ -105,6 +105,7 @@ namespace dsn
         static header_type hdr_type_http_post;
         static header_type hdr_type_http_response;
         static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
+        static dsn_msg_header_type header_type_to_c_type(const header_type& hdr_type);
     };
 
     typedef struct message_header
@@ -150,7 +151,8 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        message_parser_ptr     parser;
+        network_header_format  hdr_format;
+        message_parser_ptr     msg_parser;
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
