@@ -149,17 +149,7 @@ DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
     }
     else
     {
-        uint32_t code = 0;
-        auto binary_hash = msg2->header->rpc_code.local_hash;
-        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
-        {
-            code = msg2->header->rpc_code.local_code;
-        }
-        else
-        {
-            code = dsn_task_code_from_string(msg2->header->rpc_name, ::dsn::TASK_CODE_INVALID);
-        }
-
+        auto code = msg2->rpc_code();
         msg2->local_rpc_code = code;
         return code;
     }
@@ -454,9 +444,9 @@ bool message_ex::is_right_body(bool is_write_msg) const
 
 error_code message_ex::error()
 {
-    int32_t code = 0;
+    dsn_error_t code;
     auto binary_hash = header->server.error_code.local_hash;
-    if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
+    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash)
     {
         code = header->server.error_code.local_code;
     }
@@ -467,6 +457,23 @@ error_code message_ex::error()
         header->server.error_code.local_code = code;
     }
     return code;
+}
+
+task_code message_ex::rpc_code()
+{
+    dsn_task_code_t code;
+    auto binary_hash = header->rpc_code.local_hash;
+    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash)
+    {
+        code = header->rpc_code.local_code;
+    }
+    else
+    {
+        code = dsn_task_code_from_string(header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        header->rpc_code.local_hash = ::dsn::message_ex::s_local_hash;
+        header->rpc_code.local_code = code;
+    }
+    return task_code(code);
 }
 
 message_ex* message_ex::create_receive_message(const blob& data)

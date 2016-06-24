@@ -118,7 +118,7 @@ namespace dsn
         uint64_t       id;      // sequence id
         uint64_t       trace_id;  // used for tracking source
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
-        fast_code      rpc_code;
+        fast_code      rpc_code; // dsn::task_code
         dsn_gpid       gpid;    // global partition id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
@@ -135,7 +135,7 @@ namespace dsn
         struct
         {
             char      error_name[DSN_MAX_ERROR_CODE_NAME_LENGTH];
-            fast_code error_code;
+            fast_code error_code;  // dsn::error_code
         } server;
     } message_header;
 
@@ -169,6 +169,7 @@ namespace dsn
         bool is_right_header() const;
         bool is_right_body(bool is_write_msg) const;
         error_code error();
+        task_code rpc_code();
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
         static unsigned int get_body_length(char* hdr)

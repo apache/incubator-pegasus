@@ -716,16 +716,7 @@ namespace dsn {
 
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
-        int32_t code = 0;
-        auto binary_hash = msg->header->rpc_code.local_hash;
-        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
-        {
-            code = msg->header->rpc_code.local_code;
-        }
-        else
-        {
-            code = dsn_task_code_from_string(msg->header->rpc_name, ::dsn::TASK_CODE_INVALID);
-        }
+        auto code = msg->rpc_code();
 
         if (code != ::dsn::TASK_CODE_INVALID)
         {
