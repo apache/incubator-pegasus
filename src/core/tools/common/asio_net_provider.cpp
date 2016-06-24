@@ -138,28 +138,26 @@ namespace dsn {
             bool r = header_type::header_type_to_format(request->header->hdr_type, hdr_format);
             dassert(r, "header_type_to_format(%s) failed", request->header->hdr_type.debug_string().c_str());
 
-            auto pr = get_message_parser_info(hdr_format);
-            auto parser_place = alloca(pr.second);
-            auto parser = pr.first(parser_place);
-
+            auto parser = new_message_parser(hdr_format);
             auto lcount = parser->prepare_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());
             dassert(lcount >= rcount, "");
-            // end using parser
-            parser->~message_parser();
+
             size_t tlen = 0, offset = 0;
             for (int i = 0; i < rcount; i ++)
             {
                 tlen += bufs[i].sz;
             }
-            dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
+            dassert(tlen <= max_udp_packet_size, "the message is too large to send via a udp channel");
+
             std::unique_ptr<char[]> packet_buffer(new char[tlen]);
             for (int i = 0; i < rcount; i ++)
             {
                 memcpy(&packet_buffer[offset], bufs[i].buf, bufs[i].sz);
                 offset += bufs[i].sz;
             };
+
             ::boost::asio::ip::udp::endpoint ep(::boost::asio::ip::address_v4(request->to_address.ip()), request->to_address.port());
             _socket->async_send_to(::boost::asio::buffer(packet_buffer.get(), tlen), ep,
                 [=](const boost::system::error_code& error, std::size_t bytes_transferred)
@@ -196,14 +194,10 @@ namespace dsn {
                         }
                         else
                         {
-                            auto pr = get_message_parser_info(hdr_format);
-                            auto parser_place = alloca(pr.second);
-                            auto parser = pr.first(parser_place);
+                            auto parser = new_message_parser(hdr_format);
 
                             int read_next;
                             message_ex* msg = parser->get_message_on_receive(&_recv_reader, read_next);
-                            // end using parser
-                            parser->~message_parser();
 
                             if (msg == nullptr)
                             {

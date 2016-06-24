@@ -63,6 +63,7 @@ http_message_parser::http_message_parser()
         owner->_current_message.reset(message_ex::create_receive_message_with_standalone_header(blob(), false));
         message_header* header = owner->_current_message->header;
         header->hdr_length = sizeof(message_header);
+        header->hdr_crc32 = header->body_crc32 = CRC_INVALID;
         return 0;
     };
     _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
@@ -280,6 +281,7 @@ http_message_parser::http_message_parser()
             derror("invalid http type %d and method %d", parser->type, parser->method);
             return 1;
         }
+        dinfo("rpc name: %s, id: %" PRIu64 ", trace id: %" PRIu64, header->rpc_name, header->id, header->trace_id);
         return 0;
     };
     _parser_setting.on_body = [](http_parser* parser, const char *at, size_t length)->int
@@ -288,7 +290,6 @@ http_message_parser::http_message_parser()
         dassert(owner->_current_buffer.buffer() != nullptr, "the read buffer is not owning");
         owner->_current_message->buffers[0].assign(owner->_current_buffer.buffer(), at - owner->_current_buffer.buffer_ptr(), length);
         owner->_current_message->header->body_length = length;
-        owner->_received_messages.emplace(std::move(owner->_current_message));
         return 0;
     };
     _parser.data = this;
@@ -299,9 +300,6 @@ void http_message_parser::reset()
 {
     _current_buffer = blob();
     _current_message.reset();
-    _received_messages = std::queue<std::unique_ptr<message_ex>>();
-    _response_parse_state = parsing_nothing;
-    http_parser_init(&_parser, HTTP_BOTH);
 }
 
 message_ex* http_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
@@ -316,17 +314,18 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
     if (_parser.upgrade)
     {
         derror("unsupported http protocol");
+        reset();
         return nullptr;
     }
-    if (!_received_messages.empty())
+    if (_current_message)
     {
-        auto msg = std::move(_received_messages.front());
-        _received_messages.pop();
+        auto msg = std::move(_current_message);
         msg->parser = this;
         return msg.release();
     }
     else
     {
+        reset();
         return nullptr;
     }
 }
