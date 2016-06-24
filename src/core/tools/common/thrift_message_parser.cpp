@@ -124,6 +124,7 @@ namespace dsn
 
         //write message end, which indicate the end of a thrift message
         msg_proto.writeMessageEnd();
+
         // as we must add a thrift header for the response, so we'd better reserve one more buffer
         // refer to the get_buffers_on_send
         return (int)msg->buffers.size() + 1;
@@ -188,7 +189,11 @@ namespace dsn
         buffer += sizeof(int32_t);
         header.hdr_length = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
+        header.hdr_crc32 = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
         header.body_length = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.body_crc32 = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
         header.app_id = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
@@ -197,19 +202,25 @@ namespace dsn
         header.client_hash = be64toh( *(int64_t*)(buffer) );
         buffer += sizeof(int64_t);
         header.client_timeout = be64toh( *(int64_t*)(buffer) );
-        buffer += sizeof(int64_t);
     }
 
     bool thrift_message_parser::check_thrift_header(const thrift_message_header& header)
     {
+        if (header.hdr_type != header_type::hdr_type_thrift)
+        {
+            derror("hdr_type should be %s, but %s",
+                   header_type::hdr_type_thrift.debug_string().c_str(),
+                   header.hdr_type.debug_string().c_str());
+            return false;
+        }
         if (header.hdr_version != 0)
         {
-            derror("hdr_version should be 0");
+            derror("hdr_version should be 0, but %u", header.hdr_version);
             return false;
         }
         if (header.hdr_length != sizeof(thrift_message_header))
         {
-            derror("hdr_length should be %u", sizeof(thrift_message_header));
+            derror("hdr_length should be %u, but %u", sizeof(thrift_message_header), header.hdr_length);
             return false;
         }
         return true;

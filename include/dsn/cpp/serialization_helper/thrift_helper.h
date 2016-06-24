@@ -251,7 +251,9 @@ namespace dsn {
         if (binary_proto != nullptr)
         {
             //the protocol is binary protocol
-            return iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
+            auto r = iprot->readI64(reinterpret_cast<int64_t&>(_addr.u.value));
+            dassert(type() == HOST_TYPE_IPV4, "only ipv4 can be deserialized from binary");
+            return r;
         }
         else
         {
@@ -315,6 +317,7 @@ namespace dsn {
         if (binary_proto != nullptr)
         {
             //the protocol is binary protocol
+            dassert(type() == HOST_TYPE_IPV4, "only ipv4 can be serialized to binary");
             return oprot->writeI64((int64_t)_addr.u.value);
         }
         else

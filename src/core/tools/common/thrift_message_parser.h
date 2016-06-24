@@ -46,12 +46,15 @@ namespace dsn
     {
         header_type    hdr_type; ///< must be "THFT"
         uint32_t       hdr_version; ///< must be 0
-        uint32_t       hdr_length; ///< must be sizeof(thrift_message_header) = 40 bytes
+        uint32_t       hdr_length; ///< must be sizeof(thrift_message_header)
+        uint32_t       hdr_crc32;
         uint32_t       body_length;
+        uint32_t       body_crc32;
         int32_t        app_id;
         int32_t        partition_index;
         uint64_t       client_hash;
         int64_t        client_timeout;
+        //------------- sizeof(thrift_message_header) = 48 ----------//
     };
 
     // response format (in big endian):

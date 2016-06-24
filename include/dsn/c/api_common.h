@@ -75,7 +75,7 @@ extern "C" {
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 # define DSN_MAX_PATH                      1024
 # define TIME_MS_MAX                       0xffffffff
-# define CRC_INVALID                       0xdead0c2c
+# define CRC_INVALID                       0x0
 
 struct dsn_app_info;
 typedef struct      dsn_app_info dsn_app_info; ///< rDSN app information

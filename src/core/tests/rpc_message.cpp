@@ -39,7 +39,6 @@
 
 using namespace ::dsn;
 
-#define CRC_INVALID 0xdead0c2c
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 TEST(core, message_ex)
