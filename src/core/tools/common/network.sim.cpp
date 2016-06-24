@@ -47,8 +47,11 @@
 
 namespace dsn { namespace tools {
 
-    // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::safe_singleton_store< ::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
+    // switch[channel][header_format]
+    // multiple machines connect to the same switch
+    // 10 should be >= than rpc_channel::max_value() + 1
+    // 10 should be >= than network_header_format::max_value() + 1
+    static utils::safe_singleton_store< ::dsn::rpc_address, sim_network_provider*> s_switch[10][10];
 
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
@@ -88,8 +91,12 @@ namespace dsn { namespace tools {
     {
         for (auto& msg : _sending_msgs)
         {
+            network_header_format hdr_format(NET_HDR_DSN);
+            bool r = header_type::header_type_to_format(msg->header->hdr_type, hdr_format);
+            dassert(r, "header_type_to_format(%s) failed", msg->header->hdr_type.debug_string().c_str());
+
             sim_network_provider* rnet = nullptr;
-            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
+            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel][hdr_format].get(remote_address(), rnet))
             {
                 derror("cannot find destination node %s in simulator",
                     remote_address().to_string()
@@ -102,7 +109,7 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    message_parser_ptr parser; // null parser
+                    message_parser_ptr parser = _net.new_message_parser(hdr_format);
                     server_session = new sim_server_session(*rnet, _net.address(), 
                         cptr, parser);
                     rnet->on_server_session_accepted(server_session);
@@ -180,17 +187,24 @@ namespace dsn { namespace tools {
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        _address = ::dsn::rpc_address("localhost", port); 
+        _address = ::dsn::rpc_address("localhost", port);
+        auto hostname = boost::asio::ip::host_name();
         if (!client_only)
         {
-            if (s_switch[channel].put(_address, this))
+            for (int i = 0; i <= network_header_format::max_value(); i++)
             {
-                auto ep2 = ::dsn::rpc_address(boost::asio::ip::host_name().c_str(), port);
-                s_switch[channel].put(ep2, this);
-                return ERR_OK;
-            }   
-            else
-                return ERR_ADDRESS_ALREADY_USED;
+                auto hdr_format = network_header_format(network_header_format::to_string(i));
+                if (s_switch[channel][hdr_format].put(_address, this))
+                {
+                    auto ep2 = ::dsn::rpc_address(hostname.c_str(), port);
+                    s_switch[channel][hdr_format].put(ep2, this);
+                }
+                else
+                {
+                    return ERR_ADDRESS_ALREADY_USED;
+                }
+            }
+            return ERR_OK;
         }
         else
         {

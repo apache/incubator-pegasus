@@ -184,10 +184,11 @@ namespace dsn
 
         dbg_dassert(0 == _sending_buffers.size(), "");
         dbg_dassert(0 == _sending_msgs.size(), "");
-        dbg_dassert(_parser, "");
 
         while (n != &_messages)
         {
+            dbg_dassert(_parser, "parser should not be null when send");
+
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
             auto lcount = _parser->prepare_on_send(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
