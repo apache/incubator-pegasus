@@ -774,7 +774,7 @@ namespace dsn {
         }
 
         dwarn(
-            "recv unknown message with type %s from %s, trace_id = %016llx",
+            "recv message with unknown rpc name %s from %s, trace_id = %016llx",
             msg->header->rpc_name,
             msg->header->from_address.to_string(),
             msg->header->trace_id

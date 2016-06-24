@@ -60,18 +60,23 @@ namespace dsn
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
 
     private:
-        http_parser _parser;
         http_parser_settings _parser_setting;
+        http_parser _parser;
         dsn::blob _current_buffer;
         std::unique_ptr<message_ex> _current_message;
         std::queue<std::unique_ptr<message_ex>> _received_messages;
         enum
         {
+            parsing_nothing,
             parsing_id,
             parsing_trace_id,
             parsing_rpc_name,
-            parsing_payload_format,
-            parsing_nothing
-        } response_parse_state;
+            parsing_app_id,
+            parsing_partition_index,
+            parsing_serialize_format,
+            parsing_client_hash,
+            parsing_client_timeout,
+            parsing_server_error,
+        } _response_parse_state;
 };
 }

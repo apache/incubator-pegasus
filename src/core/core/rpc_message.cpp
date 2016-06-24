@@ -239,6 +239,7 @@ header_type header_type::hdr_type_dsn("RDSN");
 header_type header_type::hdr_type_thrift("THFT");
 header_type header_type::hdr_type_http_get("GET ");
 header_type header_type::hdr_type_http_post("POST");
+header_type header_type::hdr_type_http_response("HTTP");
 
 std::string header_type::debug_string() const
 {
@@ -270,7 +271,7 @@ bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ net
         hdr_format = NET_HDR_THRIFT;
         return true;
     }
-    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post)
+    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post || hdr_type == hdr_type_http_response)
     {
         hdr_format = NET_HDR_HTTP;
         return true;

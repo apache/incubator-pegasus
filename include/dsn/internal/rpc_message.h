@@ -103,6 +103,7 @@ namespace dsn
         static header_type hdr_type_thrift;
         static header_type hdr_type_http_get;
         static header_type hdr_type_http_post;
+        static header_type hdr_type_http_response;
         static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
     };
 
@@ -191,7 +192,7 @@ namespace dsn
         // will firstly encounter the "header" and should decode it first.
         // If not this case, the unmarshalling will firstly encounter the payload data refered by the param "data"
         //
-        static message_ex* create_receive_message_with_standalone_header(const blob& data, bool header_included = true);
+        static message_ex* create_receive_message_with_standalone_header(const blob& data, bool header_included);
         message_ex* create_response();
         message_ex* copy(bool clone_content, bool copy_for_receive);
         message_ex* copy_and_prepare_send(bool clone_content);
