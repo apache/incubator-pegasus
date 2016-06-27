@@ -197,39 +197,34 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (!_options->log_private_disabled)
-        {
-            dassert(nullptr == _private_log, "private log must not be initialized yet");
+        dassert(nullptr == _private_log, "private log must not be initialized yet");
 
-            std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
+        std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
-            _private_log = new mutation_log_private(
-                log_dir,                
-                _options->log_private_file_size_mb,
-                get_gpid(),
-                this,
-                _options->log_private_batch_buffer_kb * 1024
-                );
-            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
-        }
-
+        _private_log = new mutation_log_private(
+            log_dir,                
+            _options->log_private_file_size_mb,
+            get_gpid(),
+            this,
+            _options->log_private_batch_buffer_kb * 1024
+            );
+        ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
+        
         // sync valid_start_offset between app and logs
         if (create_new)
         {
             dassert(_app->last_committed_decree() == 0, "");
             int64_t shared_log_offset = _stub->_log->on_partition_reset(get_gpid(), 0);
-            int64_t private_log_offset = _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0;
+            int64_t private_log_offset = _private_log->on_partition_reset(get_gpid(), 0);
             err = _app->update_init_info(this, shared_log_offset, private_log_offset);
         }
         else
         {
             _stub->_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_shared_log);
-            if (_private_log)
-                _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
+            _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
         }
 
         // replay the logs
-        if (nullptr != _private_log)
         {
             ddebug("%s: start to replay private log", name());
 
@@ -357,7 +352,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     }
 
     // fix private log completeness when it is from shared
-    if (!is_private && _private_log && d > _private_log->max_commit_on_disk())
+    if (!is_private && d > _private_log->max_commit_on_disk())
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,

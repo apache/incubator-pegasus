@@ -57,17 +57,15 @@ namespace dsn {
         // run in replica thread
         void replica::garbage_collection()
         {
-            if (_private_log)
+            _private_log->garbage_collection(
+                get_gpid(),
+                _app->last_durable_decree(),
+                _app->init_info().init_offset_in_private_log
+            );
+
+            if (partition_status::PS_PRIMARY == status())
             {
-                _private_log->garbage_collection(
-                    get_gpid(),
-                    _app->last_durable_decree(),
-                    _app->init_info().init_offset_in_private_log
-                    );
-                if(partition_status::PS_PRIMARY == status())
-                {
-                    _counter_private_log_size.set(_private_log->size() / 1000000);
-                }
+                _counter_private_log_size.set(_private_log->size() / 1000000);
             }
         }
 
@@ -100,8 +98,6 @@ namespace dsn {
 
             // private log must be enabled to make sure commits
             // are not lost during checkpinting
-            dassert(nullptr != _private_log, "log_enable_private_prepare must be true for checkpointing");
-
             if (last_committed_decree() - last_durable_decree() < _options->checkpoint_min_decree_gap)
                 return;
 
@@ -309,6 +305,7 @@ namespace dsn {
                 );
         }
 
+        // in non-replication thread
         void replica::catch_up_with_private_logs(partition_status::type s)
         {
             learn_state state;
