@@ -606,11 +606,15 @@ bool rpc_response_task::enqueue(error_code err, message_ex* reply)
         reply->add_ref(); // released in dctor
     }
 
+    bool ret = true;
     if (!spec().on_rpc_response_enqueue.execute(this, true))
-        return false;
-
+    {
+        set_error_code(ERR_NETWORK_FAILURE);        
+        ret = false;
+    }
+    
     rpc_response_task::enqueue();
-    return true;
+    return ret;
 }
 
 void rpc_response_task::enqueue()
