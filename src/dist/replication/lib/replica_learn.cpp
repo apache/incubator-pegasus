@@ -389,12 +389,6 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     // in this case, the state on the PS is still incomplete
     else
     {
-        dassert(_private_log != nullptr, 
-            "log_enable_private_prepare must be enabled for %s when the replicated app "
-            "does not support delta state learning",
-            name()
-            );
-
         _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
         response.type = learn_type::LT_LOG;
         response.base_local_dir = _private_log->dir();
@@ -540,7 +534,7 @@ void replica::on_learn_reply(
             err = _app->update_init_info(
                 this,
                 _stub->_log->on_partition_reset(get_gpid(), 0),
-                _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
+                _private_log->on_partition_reset(get_gpid(), 0)
                 );
             if (err != ERR_OK)
             {
@@ -584,43 +578,36 @@ void replica::on_learn_reply(
             enum_to_string(_potential_secondary_states.learning_status)
             );
         
-        // apply incoming prepare-list
+        // persist incoming mutations into private log and apply them to prepare-list
         binary_reader reader(resp.state.meta);
         while (!reader.is_eof())
         {
-            auto mu = mutation::read_from(reader, nullptr);
-            mu->set_logged();
-            dinfo(
-                "%s: on_learn_reply[%016llx]: learnee = %s, apply learned mutation %s",
-                name(), req.signature, resp.config.primary.to_string(),
-                mu->name()
-                );
+            auto mu = mutation::read_from(reader, nullptr);            
             if (mu->data.header.decree > last_committed_decree())
             {
                 dinfo("%s: on_learn_reply[%016llx]: apply learned mutation %s", name(), req.signature, mu->name());
+                // write to shared log with no callback, the later 2pc ensures that logs
+                // are written to the disk
+                _stub->_log->append(mu, LPC_WRITE_REPLICATION_LOG, this, nullptr);
+
+                // because shared log are written without callback, need to manully
+                // set flag and write mutations to private log
+                mu->set_logged();
+                _private_log->append(mu, LPC_WRITE_REPLICATION_LOG, this, nullptr);                
+
+                // then we prepare
                 _prepare_list->prepare(mu, partition_status::PS_POTENTIAL_SECONDARY);
-            }   
+            }
         }
 
-        // further states are synced using 2pc
+        // further states are synced using 2pc, and we must commit now as those later 2pc messages thinks they should
         _prepare_list->commit(resp.prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);        
         dassert(_prepare_list->last_committed_decree() == _app->last_committed_decree(), "");
         dassert(resp.state.files.size() == 0, "");
 
-        // in-memory state is complete
-        // still need on-disk state completion next with flush(true)
+        // all state is complete
         dassert(_app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree,
             "state is incomplete");       
-
-        // TODO: this breaks the completeness of the current state, to be fixed
-        // invalidate existing mutations in current logs
-        // however, later 2pc messages are coming, and they are going to be written
-        // into the private log ...
-        err = _app->update_init_info(
-            this,
-            _stub->_log->on_partition_reset(get_gpid(), resp.prepare_start_decree - 1),
-            _private_log ? _private_log->on_partition_reset(get_gpid(), resp.prepare_start_decree - 1) : 0
-            );
 
         // go to next stage
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepare;
@@ -801,9 +788,11 @@ void replica::on_copy_remote_state_completed(
     if (err == ERR_OK
         && resp.prepare_start_decree != invalid_decree
         && _app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree
-        && _app->last_committed_decree() > _app->last_durable_decree())
+        && _app->last_committed_decree() > _app->last_durable_decree()
+        )
     {        
         err = _app->sync_checkpoint();
+
         ddebug(
             "%s: on_copy_remote_state_completed[%016llx]: learnee = %s, learn_duration = %" PRIu64 " ms, flush done, err = %s, "
             "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 "",
@@ -813,10 +802,21 @@ void replica::on_copy_remote_state_completed(
             _app->last_committed_decree(),
             _app->last_durable_decree()
             );
+        
         if (err == ERR_OK)
         {
             dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
+
+            // update log positions after checkpoint
+            err = _app->update_init_info(
+                this,
+                _stub->_log->on_partition_reset(get_gpid(), 0),
+                _private_log->on_partition_reset(get_gpid(), 0)
+            );
         }
+
+        if (err == ERR_NO_NEED_OPERATE)
+            err = ERR_OK;
     }
 
     // it is possible that the _potential_secondary_states.learn_remote_files_task is still running
@@ -961,6 +961,7 @@ void replica::on_add_learner(const group_check_request& request)
     }
 }
 
+// in non-replication thread
 error_code replica::apply_learned_state_from_private_log(learn_state& state)
 {
     int64_t offset;

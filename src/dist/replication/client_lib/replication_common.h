@@ -84,7 +84,6 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_private_disabled;
     int32_t log_private_file_size_mb;
     int32_t log_private_batch_buffer_kb;
     bool    log_private_force_flush;

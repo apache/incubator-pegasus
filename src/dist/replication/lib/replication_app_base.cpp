@@ -256,7 +256,6 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
         }
-
         _app_commit_decree.add(last_committed_decree());
     }
     

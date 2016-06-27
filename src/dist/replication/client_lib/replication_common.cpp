@@ -72,7 +72,6 @@ replication_options::replication_options()
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
 
-    log_private_disabled = false;
     log_private_file_size_mb = 32;
     log_private_batch_buffer_kb = 512;
     log_private_force_flush = true;
@@ -268,12 +267,6 @@ void replication_options::initialize()
         "grace (seconds) assigned to remote FD slaves (grace > lease)"
         );
 
-    log_private_disabled =
-        dsn_config_get_value_bool("replication",
-        "log_private_disabled",
-        log_private_disabled,
-        "whether to disable logging committed mutations for each app, which is used for easier learning"
-        );
     log_private_file_size_mb =
         (int)dsn_config_get_value_uint64("replication",
         "log_private_file_size_mb",
