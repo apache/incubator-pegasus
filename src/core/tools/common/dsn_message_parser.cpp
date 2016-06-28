@@ -93,7 +93,6 @@ namespace dsn
                     read_next = (reader->_buffer_occupied >= sizeof(message_header) ?
                                      0 : sizeof(message_header) - reader->_buffer_occupied);
                     msg->hdr_format = NET_HDR_DSN;
-                    msg->msg_parser = this;
                     return msg;
                 }
             }

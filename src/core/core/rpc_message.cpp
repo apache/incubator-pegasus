@@ -281,7 +281,7 @@ dsn_msg_header_type header_type::header_type_to_c_type(const header_type& hdr_ty
 }
 
 message_ex::message_ex()
-    : header(nullptr), hdr_format(NET_HDR_DSN), local_rpc_code(::dsn::TASK_CODE_INVALID),
+    : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_DSN),
       _rw_index(-1), _rw_offset(0), _rw_committed(true), _is_read(false)
 {
 }
@@ -627,16 +627,16 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
 
     hdr.client.hash = hash;
 
+    task_spec* sp = task_spec::get(rpc_code);
     if (0 == timeout_milliseconds)
     {
-        hdr.client.timeout_ms = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
+        hdr.client.timeout_ms = sp->rpc_timeout_milliseconds;
     }
     else
     {
         hdr.client.timeout_ms = timeout_milliseconds;
     }
 
-    task_spec* sp = task_spec::get(rpc_code);
     strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name));
     hdr.rpc_code.local_code = (uint32_t)rpc_code;
     hdr.rpc_code.local_hash = s_local_hash;
@@ -675,16 +675,7 @@ message_ex* message_ex::create_response()
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
     msg->hdr_format = hdr_format;
-    msg->msg_parser = msg_parser;
     msg->io_session = io_session;
-
-    // parser callback
-    // for fake message created by the layer2 framework, the parser may not be set.
-    // And message like this may not need to be reply
-    if (msg_parser)
-    {
-        msg_parser->on_create_response(this, msg);
-    }
 
     // join point
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);

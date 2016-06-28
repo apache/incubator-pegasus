@@ -333,23 +333,22 @@ http_message_parser::http_message_parser()
 
 void http_message_parser::reset()
 {
-    _current_buffer = blob();
-    _current_message.reset();
 }
 
 message_ex* http_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
 {
-    read_next = 4096;
     _current_buffer = reader->_buffer;
+    _current_message.reset();
     _response_parse_state = parsing_nothing;
     http_parser_init(&_parser, HTTP_BOTH);
     auto nparsed = http_parser_execute(&_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
+    _current_buffer = blob();
     reader->_buffer = reader->_buffer.range(nparsed);
     reader->_buffer_occupied -= nparsed;
     if (_parser.upgrade)
     {
         derror("unsupported http protocol");
-        reset();
+        read_next = -1;
         return nullptr;
     }
     if (_current_message)
@@ -358,13 +357,14 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
         dinfo("rpc_name: %s, from_address: %s, seq_id: %" PRIu64 ", trace_id: %" PRIu64,
               msg->header->rpc_name, msg->header->from_address.to_string(),
               msg->header->id, msg->header->trace_id);
+        read_next = 4096;
         msg->hdr_format = NET_HDR_HTTP;
-        msg->msg_parser = this;
         return msg;
     }
     else
     {
-        reset();
+        derror("invalid http message");
+        read_next = -1;
         return nullptr;
     }
 }

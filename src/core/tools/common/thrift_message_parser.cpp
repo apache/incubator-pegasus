@@ -87,7 +87,6 @@ namespace dsn
                 read_next = (reader->_buffer_occupied >= sizeof(thrift_message_header) ?
                                  0 : sizeof(thrift_message_header) - reader->_buffer_occupied);
                 msg->hdr_format = NET_HDR_THRIFT;
-                msg->msg_parser = this;
                 return msg;
             }
             else // buf_len < msg_sz
@@ -101,17 +100,6 @@ namespace dsn
             read_next = sizeof(thrift_message_header) - buf_len;
             return nullptr;
         }
-    }
-
-    void thrift_message_parser::on_create_response(message_ex* request_msg, message_ex* response_msg)
-    {
-        dsn::rpc_write_stream write_stream(response_msg);
-        ::dsn::binary_writer_transport trans(write_stream);
-        boost::shared_ptr< ::dsn::binary_writer_transport > trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
-        ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
-
-        //add message begin for each thrift response, corresponding with thrift_parser::add_post_fix's writeMessageEnd
-        msg_proto.writeMessageBegin(request_msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, request_msg->header->id);
     }
 
     int thrift_message_parser::prepare_on_send(message_ex* msg)

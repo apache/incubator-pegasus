@@ -101,9 +101,6 @@ namespace dsn
         // if read_next returns -1, indicated the the message is corrupted
         virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) = 0;
 
-        // invoked when create response
-        virtual void on_create_response(message_ex* request_msg, message_ex* response_msg) {}
-
         // prepare buffer before send.
         // this method will be called before fill_buffers_on_send() to do some prepare operation.
         // return buffer count needed by get_buffers_on_send().
