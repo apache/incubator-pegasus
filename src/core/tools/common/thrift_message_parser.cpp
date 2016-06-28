@@ -127,7 +127,7 @@ namespace dsn
 
         // response format:
         //     <total_len(int32)> <thrift_string> <body_data(bytes)>
-        //    |-----------response header------------------------------|
+        //    |-----------response header--------|
         binary_writer header_writer;
         binary_writer_transport trans(header_writer);
         boost::shared_ptr<binary_writer_transport> trans_ptr(&trans, [](binary_writer_transport*) {});

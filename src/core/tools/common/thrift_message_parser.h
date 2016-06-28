@@ -57,9 +57,9 @@ namespace dsn
         //------------- sizeof(thrift_message_header) = 48 ----------//
     };
 
-    // response format (in big endian):
-    //     <total_len(int32)> <error_len(int32)> <error_str(bytes)> <body_data(bytes)>
-    //    |-----------response header------------------------------|
+    // response format:
+    //     <total_len(int32)> <thrift_string> <body_data(bytes)>
+    //    |-----------response header--------|
 
     class thrift_message_parser : public message_parser
     {

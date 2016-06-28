@@ -130,7 +130,8 @@ namespace dsn
         struct
         {
             uint64_t hash; // for both partition hash and thread hash for the exact location of this request
-            int64_t  timeout_ms;
+            int32_t  timeout_ms;
+            int32_t  padding;
         } client;
 
         struct
@@ -154,7 +155,7 @@ namespace dsn
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
-        int32_t                local_rpc_code;
+        dsn_task_code_t        local_rpc_code;
         network_header_format  hdr_format;
 
         // by message queuing

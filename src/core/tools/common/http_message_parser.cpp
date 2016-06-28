@@ -267,7 +267,7 @@ http_message_parser::http_message_parser()
         case parsing_client_timeout:
         {
             char *end;
-            header->client.timeout_ms = std::strtoll(at, &end, 10);
+            header->client.timeout_ms = std::strtol(at, &end, 10);
             if (end != at + length)
             {
                 derror("invalid header.client_timeout '%.*s'", length, at);

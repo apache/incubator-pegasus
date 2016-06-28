@@ -716,7 +716,6 @@ namespace dsn {
 
         if (code != ::dsn::TASK_CODE_INVALID)
         {
-            msg->local_rpc_code = code;
             rpc_request_task* tsk = nullptr;
 
             // handle replication
@@ -931,11 +930,10 @@ namespace dsn {
             }
         }
 
+        request->to_address = addr;
+
         auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header;
-
-        request->to_address = addr;
-        request->hdr_format = sp->rpc_call_header_format;
 
         network* net = _client_nets[request->hdr_format][sp->rpc_call_channel];
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",

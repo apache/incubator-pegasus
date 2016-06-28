@@ -142,17 +142,7 @@ DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg)
 
 DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
 {
-    auto msg2 = ((::dsn::message_ex*)msg);
-    if (msg2->local_rpc_code != (uint32_t)(::dsn::TASK_CODE_INVALID))
-    {
-        return msg2->local_rpc_code;
-    }
-    else
-    {
-        auto code = msg2->rpc_code();
-        msg2->local_rpc_code = code;
-        return code;
-    }
+    return ((::dsn::message_ex*)msg)->rpc_code();
 }
 
 DSN_API void dsn_msg_set_options(
@@ -471,19 +461,24 @@ error_code message_ex::error()
 
 task_code message_ex::rpc_code()
 {
-    dsn_task_code_t code;
+    if (local_rpc_code != ::dsn::TASK_CODE_INVALID)
+    {
+        return task_code(local_rpc_code);
+    }
+
     auto binary_hash = header->rpc_code.local_hash;
     if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash)
     {
-        code = header->rpc_code.local_code;
+        local_rpc_code = header->rpc_code.local_code;
     }
     else
     {
-        code = dsn_task_code_from_string(header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        local_rpc_code = dsn_task_code_from_string(header->rpc_name, ::dsn::TASK_CODE_INVALID);
         header->rpc_code.local_hash = ::dsn::message_ex::s_local_hash;
-        header->rpc_code.local_code = code;
+        header->rpc_code.local_code = local_rpc_code;
     }
-    return task_code(code);
+
+    return task_code(local_rpc_code);
 }
 
 message_ex* message_ex::create_receive_message(const blob& data)
@@ -526,6 +521,7 @@ message_ex* message_ex::copy(bool clone_content, bool copy_for_receive)
     message_ex* msg = new message_ex();
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
+    msg->hdr_format = hdr_format;
 
     if (!copy_for_receive)
         msg->_is_read = _is_read;
@@ -627,6 +623,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
         hdr.client.timeout_ms = timeout_milliseconds;
     }
 
+    msg->local_rpc_code = rpc_code;
     strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name));
     hdr.rpc_code.local_code = (uint32_t)rpc_code;
     hdr.rpc_code.local_hash = s_local_hash;
@@ -637,7 +634,8 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.context.u.serialize_format = sp->rpc_msg_payload_serialize_default_format;
     hdr.context.u.is_forward_supported = true;
 
-    msg->local_rpc_code = (uint32_t)rpc_code;
+    msg->hdr_format = sp->rpc_call_header_format;
+
     return msg;
 }
 
@@ -652,10 +650,11 @@ message_ex* message_ex::create_response()
     hdr = *header; // copy request header
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
     hdr.body_length = 0;
-    strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
     hdr.context.u.is_request = false;
 
-    msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
+    task_spec* sp = task_spec::get(local_rpc_code);
+    msg->local_rpc_code = sp->rpc_paired_code;
+    strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
     hdr.rpc_code.local_code = msg->local_rpc_code;
     hdr.rpc_code.local_hash = s_local_hash;
 
@@ -664,11 +663,11 @@ message_ex* message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
-    msg->hdr_format = hdr_format;
     msg->io_session = io_session;
+    msg->hdr_format = hdr_format;
 
     // join point
-    task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);
+    sp->on_rpc_create_response.execute(this, msg);
 
     return msg;
 }
