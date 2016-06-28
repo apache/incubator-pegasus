@@ -541,7 +541,7 @@ void event_on_task::init(task* tsk)
 void event_on_rpc::internal_to_string(std::ostream& oss) const
 {
     event_on_task::internal_to_string(oss);
-    if (!_rpc_id.empty()) oss << "rpc_id=" << _rpc_id << ",";
+    if (!_trace_id.empty()) oss << "trace_id=" << _trace_id << ",";
     if (!_rpc_name.empty()) oss << "rpc_name=" << _rpc_name << ",";
     if (!_from.empty()) oss << "from=" << _from << ",";
     if (!_to.empty()) oss << "to=" << _to << ",";
@@ -552,7 +552,7 @@ bool event_on_rpc::internal_parse(const std::map<std::string, std::string>& kv_m
     if (!event_on_task::internal_parse(kv_map))
         return false;
     std::map<std::string, std::string>::const_iterator it;
-    if ((it = kv_map.find("rpc_id")) != kv_map.end()) _rpc_id = it->second;
+    if ((it = kv_map.find("trace_id")) != kv_map.end()) _trace_id = it->second;
     if ((it = kv_map.find("rpc_name")) != kv_map.end()) _rpc_name = boost::algorithm::to_upper_copy(it->second);
     if ((it = kv_map.find("from")) != kv_map.end()) _from = it->second;
     if ((it = kv_map.find("to")) != kv_map.end()) _to = it->second;
@@ -564,7 +564,7 @@ bool event_on_rpc::check_satisfied(const event* ev) const
     if (!event_on_task::check_satisfied(ev))
         return false;
     const event_on_rpc* e = (const event_on_rpc*)ev;
-    if (!_rpc_id.empty() && _rpc_id != e->_rpc_id)
+    if (!_trace_id.empty() && _trace_id != e->_trace_id)
         return false;
     if (!_rpc_name.empty() && _rpc_name != e->_rpc_name)
         return false;
@@ -581,8 +581,8 @@ void event_on_rpc::init(message_ex* msg, task* tsk)
     if (msg != nullptr)
     {
         char buf[100];
-        sprintf(buf, "%016lx", msg->header->rpc_id);
-        _rpc_id = buf;
+        sprintf(buf, "%016lx", msg->header->trace_id);
+        _trace_id = buf;
         _rpc_name = msg->header->rpc_name;
         _from = address_to_node(msg->header->from_address);
         _to = address_to_node(msg->to_address);

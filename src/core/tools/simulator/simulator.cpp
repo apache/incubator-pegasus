@@ -81,8 +81,7 @@ void simulator::install(service_spec& spec)
     spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
 
     network_server_config cs2;
-    cs2.port = 0;    
-    cs2.hdr_format = NET_HDR_DSN;
+    cs2.port = 0;
     cs2.factory_name = "dsn::tools::sim_network_provider";
     cs2.message_buffer_block_size = 1024 * 64;
     cs2.channel = RPC_CHANNEL_TCP;

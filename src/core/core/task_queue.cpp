@@ -108,10 +108,10 @@ void task_queue::enqueue_internal(task* task)
                 auto resp = rtask->get_request()->create_response();
                 task::get_current_rpc()->reply(resp, ERR_BUSY);
 
-                dwarn("too many pending tasks (%d), reject message from %s with rpc_id = %" PRIx64,
+                dwarn("too many pending tasks (%d), reject message from %s with trace_id = %" PRIx64,
                     ac_value,
                     rtask->get_request()->header->from_address.to_string(),
-                    rtask->get_request()->header->rpc_id
+                    rtask->get_request()->header->trace_id
                     );
 
                 task->release_ref(); // added in task::enqueue(pool)

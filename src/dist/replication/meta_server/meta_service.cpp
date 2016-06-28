@@ -303,7 +303,7 @@ int meta_service::check_primary(dsn_message_t req)
     {
         dsn_msg_options_t options;
         dsn_msg_get_options(req, &options);
-        if (options.context.u.is_forward_not_supported)
+        if (!options.context.u.is_forward_supported)
             return -1;
 
         auto primary = _failure_detector->get_primary();

@@ -223,9 +223,9 @@ namespace dsn {
             // failure injection applied
             if (!call->enqueue(err, reply))
             {
-                ddebug("rpc reply %s is dropped (fault inject), rpc_id = %016llx",
+                ddebug("rpc reply %s is dropped (fault inject), trace_id = %" PRIu64,
                     reply->header->rpc_name,
-                    reply->header->rpc_id
+                    reply->header->trace_id
                     );
 
                 // call network failure model
@@ -326,7 +326,7 @@ namespace dsn {
         {
             auto req = call->get_request();
             dinfo("resend reqeust message for rpc %" PRIx64 ", key = %" PRIu64,
-                req->header->rpc_id, key);
+                req->header->trace_id, key);
 
             // resend without handling rpc_matcher, use the same request_id
             _engine->call_ip(req->to_address, req, nullptr);
@@ -537,13 +537,14 @@ namespace dsn {
     network* rpc_engine::create_network(
         const network_server_config& netcs, 
         bool client_only,
+        network_header_format client_hdr_format,
         io_modifer& ctx
         )
     {
         const service_spec& spec = service_engine::fast_instance().spec();
-        auto net = utils::factory_store<network>::create(
+        network* net = utils::factory_store<network>::create(
             netcs.factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, nullptr);
-        net->reset_parser(netcs.hdr_format, netcs.message_buffer_block_size);
+        net->reset_parser_attr(client_hdr_format, netcs.message_buffer_block_size);
 
         for (auto it = spec.network_aspects.begin();
             it != spec.network_aspects.end();
@@ -608,12 +609,12 @@ namespace dsn {
                 }
 
                 network_server_config cs(aspec.id, c);
-
                 cs.factory_name = factory;
                 cs.message_buffer_block_size = blk_size;
-                cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
-                auto net = create_network(cs, true, ctx);
+                auto client_hdr_format = network_header_format(network_header_format::to_string(i));
+
+                auto net = create_network(cs, true, client_hdr_format, ctx);
                 if (!net) return ERR_NETWORK_INIT_FAILED;
                 pnet[j] = net;
 
@@ -624,7 +625,7 @@ namespace dsn {
                         ctx.queue->get_name().c_str(),
                         (uint32_t)(cs.port + ctx.port_shift_value),
                         cs.channel.to_string(),
-                        cs.hdr_format.to_string()
+                        client_hdr_format.to_string()
                         );
                 }
                 else
@@ -633,7 +634,7 @@ namespace dsn {
                         node()->name(),
                         (uint32_t)(cs.port + ctx.port_shift_value),
                         cs.channel.to_string(),
-                        cs.hdr_format.to_string()
+                        client_hdr_format.to_string()
                         );
                 }
             }
@@ -659,7 +660,7 @@ namespace dsn {
                 pnets = &it->second;
             }
 
-            auto net = create_network(sp.second, false, ctx);
+            auto net = create_network(sp.second, false, NET_HDR_DSN, ctx);
             if (net == nullptr)
             {
                 return ERR_NETWORK_INIT_FAILED;
@@ -669,21 +670,19 @@ namespace dsn {
 
             if (ctx.queue)
             {
-                dwarn("[%s.%s] network server started at port %u, channel = %s, fmt = %s ...",
+                dwarn("[%s.%s] network server started at port %u, channel = %s, ...",
                     node()->name(),
                     ctx.queue->get_name().c_str(),
                     (uint32_t)(port + ctx.port_shift_value),
-                    sp.second.channel.to_string(),
-                    sp.second.hdr_format.to_string()
+                    sp.second.channel.to_string()
                     );
             }
             else
             {
-                dwarn("[%s] network server started at port %u, channel = %s, fmt = %s ...",
+                dwarn("[%s] network server started at port %u, channel = %s, ...",
                     node()->name(),
                     (uint32_t)(port + ctx.port_shift_value),
-                    sp.second.channel.to_string(),
-                    sp.second.hdr_format.to_string()
+                    sp.second.channel.to_string()
                     );
             }
         }
@@ -713,20 +712,10 @@ namespace dsn {
 
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
-        int32_t code = 0;
-        auto binary_hash = msg->header->rpc_name_fast.local_hash;
-        if (binary_hash == ::dsn::message_ex::s_local_hash && binary_hash != 0)
-        {
-            code = msg->header->rpc_name_fast.local_rpc_id;
-        }
-        else
-        {
-            code = dsn_task_code_from_string(msg->header->rpc_name, ::dsn::TASK_CODE_INVALID);
-        }
+        auto code = msg->rpc_code();
 
         if (code != ::dsn::TASK_CODE_INVALID)
         {
-            msg->local_rpc_code = code;
             rpc_request_task* tsk = nullptr;
 
             // handle replication
@@ -753,9 +742,9 @@ namespace dsn {
                 // release the task when necessary
                 else
                 {
-                    ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
+                    ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
                         msg->header->rpc_name,
-                        msg->header->rpc_id
+                        msg->header->trace_id
                         );
 
                     // call network failure model when network is present
@@ -771,10 +760,10 @@ namespace dsn {
         }
 
         dwarn(
-            "recv unknown message with type %s from %s, rpc_id = %016llx",
+            "recv message with unknown rpc name %s from %s, trace_id = %" PRIu64,
             msg->header->rpc_name,
             msg->header->from_address.to_string(),
-            msg->header->rpc_id
+            msg->header->trace_id
             );
 
         dassert(msg->get_count() == 0,
@@ -788,9 +777,9 @@ namespace dsn {
         task_spec* sp = task_spec::get(request->local_rpc_code);
 
         hdr.from_address = primary_address();
-        hdr.rpc_id = dsn_random64(
-            std::numeric_limits<decltype(hdr.rpc_id)>::min(),
-            std::numeric_limits<decltype(hdr.rpc_id)>::max()
+        hdr.trace_id = dsn_random64(
+            std::numeric_limits<decltype(hdr.trace_id)>::min(),
+            std::numeric_limits<decltype(hdr.trace_id)>::max()
             );
         request->seal(sp->rpc_message_crc_required);
 
@@ -932,7 +921,7 @@ namespace dsn {
         {
             dwarn("msg request %s (%" PRIx64 ") is in sending queue, try to pick out ...",
                 request->header->rpc_name,
-                request->header->rpc_id
+                request->header->trace_id
                 );
             auto s = request->io_session;
             if (s.get() != nullptr)
@@ -944,15 +933,18 @@ namespace dsn {
         request->to_address = addr;
 
         auto sp = task_spec::get(request->local_rpc_code);
-        auto& hdr = *request->header; 
-        auto& named_nets = _client_nets[sp->rpc_call_header_format];
-        network* net = named_nets[sp->rpc_call_channel];
-        
+        auto& hdr = *request->header;
+
+        network* net = _client_nets[request->hdr_format][sp->rpc_call_channel];
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
             sp->rpc_call_header_format.to_string(),
             hdr.rpc_name
             );
+
+        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, trace_id = %" PRIu64,
+              hdr.rpc_name, addr.to_string(), request->hdr_format.to_string(),
+              sp->rpc_call_channel.to_string(), hdr.trace_id);
 
         bool need_seal = false;
         if (reset_request_id)
@@ -973,9 +965,9 @@ namespace dsn {
         // join point and possible fault injection
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
-            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
+            ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
                 request->header->rpc_name,
-                request->header->rpc_id
+                request->header->trace_id
                 );
 
             // call network failure model
@@ -1006,7 +998,9 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        response->header->server.error = err;
+        strncpy(response->header->server.error_name, err.to_string(), sizeof(response->header->server.error_name));
+        response->header->server.error_code.local_code = err;
+        response->header->server.error_code.local_hash = message_ex::s_local_hash;
         auto sp = task_spec::get(response->local_rpc_code);
         response->seal(sp->rpc_message_crc_required);
 
@@ -1017,7 +1011,7 @@ namespace dsn {
         // connetion oriented network, we have bound session
         if (s != nullptr)
         {
-            // not forwarded
+            // not forwarded, we can use the original rpc session
             if (!response->header->context.u.is_forwarded)
             {
                 if (no_fail)
@@ -1030,21 +1024,19 @@ namespace dsn {
                 }
             }
 
-            // request is forwarded, we cannot use the original rpc session
+            // request is forwarded, we cannot use the original rpc session,
+            // so use client session to send response.
             else
             {
                 dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT, 
                     "target address must have named port in this case");
 
-                auto sp = task_spec::get(response->local_rpc_code);
-                auto& hdr = *response->header;
-                auto& named_nets = _client_nets[sp->rpc_call_header_format];
-                network* net = named_nets[sp->rpc_call_channel];
-
-                dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
-                    sp->rpc_call_channel.to_string(),
-                    sp->rpc_call_header_format.to_string(),
-                    hdr.rpc_name
+                // use the header format recorded in the message
+                network* net = _client_nets[response->hdr_format][RPC_CHANNEL_TCP];
+                dassert(nullptr != net, "client network not present for rpc channel '%s' with format '%s' used by rpc %s",
+                    RPC_CHANNEL_TCP.to_string(),
+                    response->hdr_format.to_string(),
+                    response->header->rpc_name
                     );
 
                 if (no_fail)
@@ -1058,18 +1050,20 @@ namespace dsn {
             }            
         }
 
-        // not connetion oriented network, we always use the named network to send msgs
-        else if (response->to_address.is_invalid())
-        {
-            no_fail = false;
-        }
-        else
+        // not connection oriented network, we always use the named network to send msgs
+        else if (!response->to_address.is_invalid())
         {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
                 "target address must have named port in this case");
 
-            auto sp = task_spec::get(response->local_rpc_code);
-            auto &net = _server_nets[response->header->from_address.port()][sp->rpc_call_channel];
+            network* net = _server_nets[response->header->from_address.port()][RPC_CHANNEL_UDP];
+
+            dassert(nullptr != net, "server network not present for rpc channel '%s' on port %u used by rpc %s",
+                RPC_CHANNEL_UDP.to_string(),
+                response->header->from_address.port(),
+                response->header->rpc_name
+                );
+
             if (no_fail)
             {
                 net->send_message(response);
@@ -1078,6 +1072,17 @@ namespace dsn {
             {
                 net->inject_drop_message(response, true);
             }
+        }
+
+        // response->io_session == nullptr && response->to_address.is_invalid()
+        else
+        {
+            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %" PRIu64,
+                  response->header->rpc_name,
+                  response->header->trace_id
+                  );
+
+            no_fail = false;
         }
 
         if (!no_fail)

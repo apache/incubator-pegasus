@@ -560,7 +560,7 @@ typedef union dsn_msg_context_t
         uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
         uint64_t unused : 4;               ///< not used yet
         uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
-        uint64_t is_forward_not_supported : 1;  ///< whether support forwarding a message to real leader
+        uint64_t is_forward_supported : 1; ///< whether support forwarding a message to real leader
         uint64_t parameter_type : 3;       ///< type of the parameter next, see \ref dsn_msg_parameter_type_t
         uint64_t parameter : 50;           ///< piggybacked parameter for specific flags above
     } u;
@@ -632,11 +632,12 @@ extern DSN_API void         dsn_msg_get_options(
                                 /*out*/ dsn_msg_options_t* opts
                                 );
 
-/*! rpc_message header type */
-typedef enum dsn_msg_header_type{
+/*! rpc message header type */
+typedef enum dsn_msg_header_type {
     DHT_INVALID = 0,
     DHT_DEFAULT = 1,
     DHT_THRIFT = 2,
+    DHT_HTTP = 3,
 } dsn_msg_header_type;
 
 /*!
@@ -664,8 +665,8 @@ extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
 /*! get to-address where the message is sent to */
 extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
-/*! get rpc id of the message */
-extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
+/*! get trace id of the message */
+extern DSN_API uint64_t      dsn_msg_trace_id(dsn_message_t msg);
 
 /*! get task code of the message */
 extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);

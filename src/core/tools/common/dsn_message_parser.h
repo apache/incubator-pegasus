@@ -29,27 +29,23 @@
 *     message parser for browser-generated http request
 *
 * Revision history:
-*     Feb. 2016, Tianyi Wang, first version
+*     Jun. 2016, Zuoyan Qin, first version
 *     xxxx-xx-xx, author, fix bug about xxx
 */
 
 #pragma once
 
-# include <dsn/internal/ports.h>
-# include <dsn/internal/rpc_message.h>
-# include <dsn/internal/singleton.h>
 # include <dsn/internal/message_parser.h>
-# include <vector>
-# include <queue>
-# include "http_parser.h"
+# include <dsn/internal/rpc_message.h>
+# include <dsn/internal/ports.h>
 
 namespace dsn
 {
-    class http_message_parser : public message_parser
+    class dsn_message_parser : public message_parser
     {
     public:
-        http_message_parser();
-        virtual ~http_message_parser() {}
+        dsn_message_parser() : _header_checked(false) {}
+        virtual ~dsn_message_parser() {}
 
         virtual void reset() override;
 
@@ -60,23 +56,6 @@ namespace dsn
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
 
     private:
-        http_parser_settings _parser_setting;
-        http_parser _parser;
-        dsn::blob _current_buffer;
-        std::unique_ptr<message_ex> _current_message;
-        enum
-        {
-            parsing_nothing,
-            parsing_id,
-            parsing_trace_id,
-            parsing_rpc_name,
-            parsing_app_id,
-            parsing_partition_index,
-            parsing_serialize_format,
-            parsing_from_address,
-            parsing_client_hash,
-            parsing_client_timeout,
-            parsing_server_error,
-        } _response_parse_state;
-};
+        bool _header_checked;
+    };
 }

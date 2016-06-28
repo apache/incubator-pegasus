@@ -69,24 +69,24 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
                 rpc_request_task* tsk = (rpc_request_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->header->from_address.to_string(),
                     tsk->get_request()->to_address.to_string(),
-                    tsk->get_request()->header->rpc_id
+                    tsk->get_request()->header->trace_id
                     );
             }
                 break;
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
                 rpc_response_task* tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->to_address.to_string(),
                     tsk->get_request()->header->from_address.to_string(),
-                    tsk->get_request()->header->rpc_id
+                    tsk->get_request()->header->trace_id
                     );
             }
                 break;
@@ -152,11 +152,11 @@ namespace dsn {
         {
             message_header& hdr = *req->header;
             ddebug(
-                "%s RPC.CALL: %s => %s, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
+                "%s RPC.CALL: %s => %s, trace_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
                 req->header->from_address.to_string(),
                 req->to_address.to_string(),
-                hdr.rpc_id,
+                hdr.trace_id,
                 callee ? callee->id() : 0,
                 hdr.client.timeout_ms
                 );
@@ -164,13 +164,13 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, rpc_id = %016llx, queue size = %d",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, trace_id = %016llx, queue size = %d",
                 callee->spec().name.c_str(),
                 callee,
                 callee->id(),
                 callee->get_request()->header->from_address.to_string(),
                 callee->get_request()->to_address.to_string(),
-                callee->get_request()->header->rpc_id,
+                callee->get_request()->header->trace_id,
                 tls_dsn.last_worker_queue_size
                 );
         }
@@ -181,22 +181,22 @@ namespace dsn {
             message_header& hdr = *msg->header;
 
             ddebug(
-                "%s RPC.REPLY: %s => %s, rpc_id = %016llx",
+                "%s RPC.REPLY: %s => %s, trace_id = %016llx",
                 hdr.rpc_name,
                 msg->header->from_address.to_string(),
                 msg->to_address.to_string(),
-                hdr.rpc_id
+                hdr.trace_id
                 );
         }
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, rpc_id = %016llx, queue size = %d",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, trace_id = %016llx, queue size = %d",
                 resp->spec().name.c_str(),
                 resp->id(),
                 resp->get_request()->to_address.to_string(),
                 resp->get_request()->header->from_address.to_string(),
-                resp->get_request()->header->rpc_id,
+                resp->get_request()->header->trace_id,
                 tls_dsn.last_worker_queue_size
                 );
         }
@@ -234,7 +234,7 @@ namespace dsn {
         struct logged_task
         {
             uint64_t task_id;
-            uint64_t rpc_id; // if present
+            uint64_t trace_id; // if present
 
             std::vector<logged_event> events;
         };
@@ -247,7 +247,7 @@ namespace dsn {
 
         static std::string tracer_log_flow(const std::vector<std::string>& args)
         {
-            // forward|f|backward|b rpc|r|task|t rpc_id|task_id(e.g., 002a003920302390) log_file_name(log.xx.txt)
+            // forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., 002a003920302390) log_file_name(log.xx.txt)
             if (args.size() < 4)
             {
                 return tracer_log_flow_error("not enough arguments");
@@ -376,7 +376,7 @@ namespace dsn {
 
             register_command({ "tracer.find" }, 
                 "tracer.find - find related logs", 
-                "tracer.find forward|f|backward|b rpc|r|task|t rpc_id|task_id(e.g., a023003920302390) log_file_name(log.xx.txt)",
+                "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., a023003920302390) log_file_name(log.xx.txt)",
                 tracer_log_flow
                 );
         }

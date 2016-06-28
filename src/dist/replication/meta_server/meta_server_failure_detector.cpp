@@ -87,6 +87,22 @@ void meta_server_failure_detector::on_worker_connected(rpc_address node)
     _svc->set_node_state( std::vector<rpc_address>{ node }, true);
 }
 
+rpc_address meta_server_failure_detector::get_primary()
+{
+    dsn::utils::auto_lock<zlock> l(_primary_address_lock);
+    if ( _lock_svc!=nullptr && !_is_primary )
+    {
+        uint64_t version;
+        error_code ec = _lock_svc->query_cache(_primary_lock_id, _lock_owner_id, version);
+        dinfo("query cache result: err: %s, owner(%s), version(%llu)", ec.to_string(), _lock_owner_id.c_str(), version);
+        if (ec != ERR_OK)
+            _primary_address.set_invalid();
+        else
+            _primary_address.from_string_ipv4(_lock_owner_id.c_str());
+    }
+    return _primary_address;
+}
+
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, fd::THREAD_POOL_FD)
 void meta_server_failure_detector::acquire_leader_lock()
 {

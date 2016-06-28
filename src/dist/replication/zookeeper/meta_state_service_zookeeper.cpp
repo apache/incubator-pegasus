@@ -41,6 +41,11 @@
 #include "zookeeper_session.h"
 #include "zookeeper_error.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "meta.state.service.zk"
+
 namespace dsn{ namespace dist {
 
 class zoo_transaction : public meta_state_service::transaction_entries

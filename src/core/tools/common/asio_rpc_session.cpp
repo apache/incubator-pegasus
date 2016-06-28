@@ -82,12 +82,12 @@ namespace dsn {
             }
         }
 
-        void asio_rpc_session::do_read(int sz)
+        void asio_rpc_session::do_read(int read_next)
         {
             add_ref();
 
-            void* ptr = _parser->read_buffer_ptr((int)sz);
-            int remaining = _parser->read_buffer_capacity();
+            void* ptr = _reader.read_buffer_ptr(read_next);
+            int remaining = _reader.read_buffer_capacity();
 
             _socket->async_read_some(boost::asio::buffer(ptr, remaining),
                 [this](boost::system::error_code ec, std::size_t length)
@@ -99,24 +99,35 @@ namespace dsn {
                 }
                 else
                 {
-                    int read_next;
-                    message_ex* msg = _parser->get_message_on_receive((int)length, read_next);
+                    _reader.mark_read(length);
 
-                    while (msg != nullptr)
+                    int read_next = -1;
+
+                    if (!_parser)
                     {
-                        if (msg->header->from_address.is_invalid())
-                            msg->header->from_address = _remote_addr;
-                        this->on_message_read(msg);
-                        msg = _parser->get_message_on_receive(0, read_next);
+                        read_next = prepare_parser();
+                    }
+
+                    if (_parser)
+                    {
+                        message_ex* msg = _parser->get_message_on_receive(&_reader, read_next);
+
+                        while (msg != nullptr)
+                        {
+                            this->on_message_read(msg);
+                            msg = _parser->get_message_on_receive(&_reader, read_next);
+                        }
                     }
 
                     if (read_next == -1)
                     {
-                        derror("asio read from %s failed: %s", _remote_addr.to_string(), "checksum not correct");
+                        derror("asio read from %s failed", _remote_addr.to_string());
                         on_failure();
                     }
                     else
+                    {
                         start_read_next(read_next);
+                    }
                 }
 
                 release_ref();
@@ -157,11 +168,11 @@ namespace dsn {
             asio_network_provider& net,
             ::dsn::rpc_address remote_addr,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            std::unique_ptr<message_parser>&& parser,
+            message_parser_ptr& parser,
             bool is_client
             )
             :
-            rpc_session(net, remote_addr, std::move(parser), is_client),
+            rpc_session(net, remote_addr, parser, is_client),
             _socket(socket)
         {
             set_options();

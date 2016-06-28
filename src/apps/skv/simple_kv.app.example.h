@@ -80,18 +80,23 @@ public:
     {
         // test for service simple_kv        using namespace svc_simple_kv;
         {
-            std::string req;
+            std::string req = "hello";
             //sync:
             error_code err;
             std::string resp;
             std::tie(err, resp) = _simple_kv_client->read_sync(req);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, return " << err.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, return " << err.to_string();
+            if (ERR_OK == err)
+                std::cout << ", read result: " << resp;
+            std::cout << std::endl;
             //async: 
             //_simple_kv_client->read(req, empty_callback);
 
         }
         {
             kv_pair req;
+            req.key = "hello";
+            req.value = "world";
             //sync:
             error_code err;
             int32_t resp;
@@ -103,6 +108,8 @@ public:
         }
         {
             kv_pair req;
+            req.key = "hello";
+            req.value = "world";
             //sync:
             error_code err;
             int32_t resp;

@@ -1,5 +1,10 @@
 #include "server_load_balancer.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "server.load.balancer"
+
 namespace dsn { namespace replication {
 
 void simple_load_balancer::reconfig(const meta_view &view, const configuration_update_request &request)
