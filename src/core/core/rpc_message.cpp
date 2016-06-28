@@ -66,7 +66,7 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     )
 {
     ::dsn::blob bb((const char*)buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb, false);
+    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
     msg->header->client.hash = hash;
     msg->header->context.u.serialize_format = serialization_type;
@@ -499,24 +499,14 @@ message_ex* message_ex::create_receive_message(const blob& data)
     return msg;
 }
 
-message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data, bool header_included)
+message_ex* message_ex::create_receive_message_with_standalone_header(const blob& data)
 {
     message_ex* msg = new message_ex();
     std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(sizeof(message_header))), [](char* c) {dsn_transient_free(c);});
     msg->header = reinterpret_cast<message_header*>(header_holder.get());
     memset(msg->header, 0, sizeof(message_header));
-
-    // if header included, we push firstly header, then the data. Or-else the order is reversed.
-    if (header_included)
-    {
-        msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
-        msg->buffers.push_back(data);
-    }
-    else
-    {
-        msg->buffers.push_back(data);
-        msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
-    }
+    msg->buffers.push_back(data);
+    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
     msg->_is_read = true;
     return msg;
 }

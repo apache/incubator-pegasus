@@ -125,9 +125,9 @@ namespace dsn
 
         //write message end, which indicate the end of a thrift message
         msg_proto.writeMessageEnd();
-
-        // as we must add a thrift header for the response, so we'd better reserve one more buffer
-        // refer to the get_buffers_on_send
+        //
+        // we must add a thrift header for the response. And let's reserve one more buffer
+        //
         return (int)msg->buffers.size() + 1;
     }
 
@@ -138,29 +138,32 @@ namespace dsn
         dassert(!msg->buffers.empty(), "buffers can not be empty");
 
         // response format:
-        //     <total_len(int32)> <error_len(int32)> <error_str(bytes)> <body_data(bytes)>
+        //     <total_len(int32)> <thrift_string> <body_data(bytes)>
         //    |-----------response header------------------------------|
+        binary_writer header_writer;
+        binary_writer_transport trans(header_writer);
+        boost::shared_ptr<binary_writer_transport> trans_ptr(&trans, [](binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
 
-        int32_t err_len = strlen(msg->header->server.error_name);
-        int32_t header_len = sizeof(int32_t) * 2 + err_len;
-        int32_t total_len = header_len + msg->header->body_length;
+        //Total length, but we don't know the length, so firstly we put a placeholder
+        proto.writeI32(0);
+        char_ptr error_msg(msg->header->server.error_name, strlen(msg->header->server.error_name));
+        //then the error_message
+        proto.writeString<char_ptr>(error_msg);
+        //then the thrift Message Begin
+        proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
 
-        // construct thrift header blob
-        std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_len)), [](char* c) {dsn_transient_free(c);});
-        char* ptr = header_holder.get();
-        *((int32_t*)ptr) = htobe32(total_len);
-        ptr += sizeof(int32_t);
-        *((int32_t*)ptr) = htobe32(err_len);
-        ptr += sizeof(int32_t);
-        memcpy(ptr, msg->header->server.error_name, err_len);
+        //TODO: if more than one buffers in the header_writer, copying is inevitable. Should optimize this
+        blob bb = header_writer.get_buffer();
+        buffers[0].buf = (void*)bb.data();
+        buffers[0].sz = bb.length();
 
-        // first fill the header blob
-        buffers[0].buf = header_holder.get();
-        buffers[0].sz = header_len;
+        //now let's get the total length
+        int32_t* total_length = reinterpret_cast<int32_t*>(buffers[0].buf);
+        *total_length = header_writer.total_size() + msg->header->body_length;
 
-        // fill buffers
-        int i = 1;
-        // we must skip the standard message_header
+        int i=1;
+        // then copy the message body, we must skip the standard message_header
         unsigned int offset = sizeof(message_header);
         for (blob& buf : msg->buffers)
         {
@@ -176,9 +179,8 @@ namespace dsn
             ++i;
         }
 
-        // put thrift header blob at the back of message buffer
-        msg->buffers.emplace_back(blob(std::move(header_holder), header_len));
-
+        //push the prefix buffers to hold memory
+        msg->buffers.push_back(bb);
         return i;
     }
 
@@ -230,7 +232,7 @@ namespace dsn
     dsn::message_ex* thrift_message_parser::parse_message(const thrift_message_header& thrift_header, dsn::blob& message_data)
     {
         dsn::blob body_data = message_data.range(thrift_header.hdr_length);
-        dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(body_data, false);
+        dsn::message_ex* msg = message_ex::create_receive_message_with_standalone_header(body_data);
         dsn::message_header* dsn_hdr = msg->header;
 
         dsn::rpc_read_stream stream(msg);

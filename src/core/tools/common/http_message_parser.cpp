@@ -60,7 +60,7 @@ http_message_parser::http_message_parser()
     _parser_setting.on_message_begin = [](http_parser* parser)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
-        owner->_current_message.reset(message_ex::create_receive_message_with_standalone_header(blob(), false));
+        owner->_current_message.reset(message_ex::create_receive_message_with_standalone_header(blob()));
         message_header* header = owner->_current_message->header;
         header->hdr_length = sizeof(message_header);
         header->hdr_crc32 = header->body_crc32 = CRC_INVALID;
