@@ -512,7 +512,12 @@ void replica::on_learn_reply(
 
         if (err == ERR_OK)
         {
-            err = _app->open_internal(this, true);
+            err = _app->open_new_internal(
+                this,
+                _stub->_log->on_partition_reset(get_gpid(), 0),
+                _private_log->on_partition_reset(get_gpid(), 0)
+                );
+
             if (err != ERR_OK)
             {
                 derror(
@@ -530,20 +535,6 @@ void replica::on_learn_reply(
 
             // reset prepare list
             _prepare_list->reset(0);
-
-            err = _app->update_init_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), 0),
-                _private_log->on_partition_reset(get_gpid(), 0)
-                );
-            if (err != ERR_OK)
-            {
-                derror(
-                    "%s: on_learn_reply[%016llx]: learnee = %s, update app init info failed, err = %s",
-                    name(), req.signature, resp.config.primary.to_string(),
-                    err.to_string()
-                    );
-            }
         }
         
         if (err != ERR_OK)
@@ -567,6 +558,19 @@ void replica::on_learn_reply(
         dassert(resp.state.files.size() == 0, "");
         dassert(_potential_secondary_states.learning_status == learner_status::LearningWithoutPrepare, "");
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepareTransient;
+
+        // reset log positions for later mutations
+        // WARNING: it still requires checkpoint operation in later 
+        // on_copy_remote_state_completed to ensure the state is completed
+        // if there is a failure in between, our checking
+        // during app::open_internal will invalidate the logs
+        // appended by the mutations AFTER current position
+        err = _app->update_init_info(
+            this,
+            _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
+            _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
+            _app->last_committed_decree()
+            );
 
         // reset preparelist
         _potential_secondary_states.learning_start_prepare_decree = resp.prepare_start_decree;
@@ -806,13 +810,6 @@ void replica::on_copy_remote_state_completed(
         if (err == ERR_OK)
         {
             dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
-
-            // update log positions after checkpoint
-            err = _app->update_init_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), 0),
-                _private_log->on_partition_reset(get_gpid(), 0)
-            );
         }
 
         if (err == ERR_NO_NEED_OPERATE)

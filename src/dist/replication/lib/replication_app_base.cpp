@@ -113,7 +113,7 @@ std::string replica_init_info::to_string()
 {
     std::ostringstream oss;
     oss << "init_ballot = " << init_ballot
-        << ", init_decree = " << init_decree
+        << ", init_durable_decree = " << init_durable_decree
         << ", init_offset_in_shared_log = " << init_offset_in_shared_log
         << ", init_offset_in_private_log = " << init_offset_in_private_log;
     return oss.str();
@@ -228,37 +228,78 @@ void replication_app_base::reset_counters_after_learning()
     _app_commit_decree.set(last_committed_decree());
 }
 
-error_code replication_app_base::open_internal(replica* r, bool create_new)
+error_code replication_app_base::open_internal(replica* r)
 {
-    if (create_new)
+    if (!dsn::utils::filesystem::directory_exists(_dir_data))
     {
-        auto& dir = data_dir();
-        dsn::utils::filesystem::remove_path(dir);
-        dsn::utils::filesystem::create_directory(dir);
-    }
-    
-    if (!dsn::utils::filesystem::create_directory(_dir_data))
-    {
-        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+        derror("replica dir %s does not exit", _dir_data.c_str());
+        return ERR_FILE_OPERATION_FAILED;
     }
 
-    if (!dsn::utils::filesystem::create_directory(_dir_learn))
+    if (!dsn::utils::filesystem::directory_exists(_dir_learn))
     {
-        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+        derror("replica dir %s does not exit", _dir_learn.c_str());
+        return ERR_FILE_OPERATION_FAILED;
     }
 
     auto err = open();
     if (err == ERR_OK)
     {
         _last_committed_decree = last_durable_decree();
-        if (!create_new)
-        {
-            std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
-            err = _info.load(info_path.c_str());
-        }
+
+        std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
+        err = _info.load(info_path.c_str());
+
         _app_commit_decree.add(last_committed_decree());
+
+        if (last_durable_decree() < _info.init_durable_decree)
+        {
+            err = ERR_INCOMPLETE_DATA;
+        }
     }
     
+    if (err != ERR_OK)
+    {
+        derror("%s: open replica app return %s", r->name(), err.to_string());
+    }
+    
+    return err;
+}
+
+error_code replication_app_base::open_new_internal(replica* r, int64_t shared_log_start, int64_t private_log_start)
+{
+    auto dir = data_dir();
+    dsn::utils::filesystem::remove_path(dir);
+    dsn::utils::filesystem::create_directory(dir);
+
+    dir = learn_dir();
+    dsn::utils::filesystem::remove_path(dir);
+    dsn::utils::filesystem::create_directory(dir);
+
+    if (!dsn::utils::filesystem::directory_exists(_dir_data))
+    {
+        derror("%s: replica dir %s does not exit", r->name(), _dir_data.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    if (!dsn::utils::filesystem::directory_exists(_dir_learn))
+    {
+        derror("%s: replica dir %s does not exit", r->name(), _dir_learn.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    auto err = open();
+    if (err == ERR_OK)
+    {
+        _last_committed_decree = 0;
+        err = update_init_info(_replica, shared_log_start, private_log_start, 0);
+    }
+
+    if (err != ERR_OK)
+    {
+        derror("%s: open replica app return %s", r->name(), err.to_string());
+    }
+
     return err;
 }
 
@@ -458,7 +499,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         else
         {
             // empty mutation write
-            dwarn("%s: mutation %s #%d: dispatch rpc call %s",
+            dinfo("%s: mutation %s #%d: dispatch rpc call %s",
                     _replica->name(), mu->name(), i, update.code.to_string());
         }
     }
@@ -509,12 +550,16 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     return ERR_OK;
 }
 
-::dsn::error_code replication_app_base::update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
+::dsn::error_code replication_app_base::update_init_info(
+    replica* r, 
+    int64_t shared_log_offset, 
+    int64_t private_log_offset,
+    int64_t durable_decree)
 {
     _info.crc = 0;
     _info.magic = 0xdeadbeef;
     _info.init_ballot = r->get_ballot();
-    _info.init_decree = r->last_committed_decree();
+    _info.init_durable_decree = durable_decree;
     _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
@@ -523,6 +568,10 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
     if (err == ERR_OK)
     {
         ddebug("%s: store replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
+    }
+    else
+    {
+        derror("%s: store replica_init_info failed, err = %s", r->name(), err.to_string());
     }
     return err;
 }
