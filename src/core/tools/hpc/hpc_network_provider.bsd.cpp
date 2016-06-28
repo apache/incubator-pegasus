@@ -189,8 +189,8 @@ namespace dsn
                 if (s != -1)
                 {
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-
-                    auto rs = new hpc_rpc_session(s, nullptr, *this, client_addr, false);
+                    message_parser_ptr null_parser;
+                    auto rs = new hpc_rpc_session(s, null_parser, *this, client_addr, false);
                     rpc_session_ptr s1(rs);
 
                     rs->bind_looper(_looper);

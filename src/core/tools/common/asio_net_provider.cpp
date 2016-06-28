@@ -205,7 +205,8 @@ namespace dsn {
 
                     _recv_reader.mark_read(bytes_transferred);
 
-                    int read_next;
+                    int read_next = -1;
+
                     message_ex* msg = parser->get_message_on_receive(&_recv_reader, read_next);
                     if (msg == nullptr)
                     {

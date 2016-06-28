@@ -37,6 +37,7 @@
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
 # include <dsn/internal/message_parser.h>
+# include <cctype> // for isprint()
 
 # include "task_engine.h"
 # include "transient_memory.h"
@@ -223,7 +224,7 @@ std::string header_type::debug_string() const
     char* ptr = buf;
     for (int i = 0; i < 4; ++i) {
         auto& c = type.stype[i];
-        if (std::isprint(c)) {
+        if (isprint(c)) {
             *ptr++ = c;
         }
         else {

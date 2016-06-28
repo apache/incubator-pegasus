@@ -290,8 +290,8 @@ namespace dsn
                     }
 
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-
-                    auto s = new hpc_rpc_session(_accept_sock, nullptr, *this, client_addr, false);
+                    message_parser_ptr null_parser;
+                    auto s = new hpc_rpc_session(_accept_sock, null_parser, *this, client_addr, false);
                     rpc_session_ptr s1(s);
                     s->bind_looper(_looper);
 
@@ -338,7 +338,7 @@ namespace dsn
             looper->bind_io_handle((dsn_handle_t)_socket, &s_ready_event);
         }
 
-        void hpc_rpc_session::do_read(int sz)
+        void hpc_rpc_session::do_read(int read_next)
         {
             add_ref();
             _read_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
@@ -352,20 +352,29 @@ namespace dsn
                 }
                 else
                 {
-                    int read_next;
-                    message_ex* msg = _parser->get_message_on_receive((int)length, read_next);
+                    _reader.mark_read(length);
 
-                    while (msg != nullptr)
+                    int read_next = -1;
+
+                    if (!_parser)
                     {
-                        if (msg->header->from_address.is_invalid())
-                            msg->header->from_address = _remote_addr;
-                        this->on_read_completed(msg);
-                        msg = _parser->get_message_on_receive(0, read_next);
+                        read_next = prepare_parser();
+                    }
+
+                    if (_parser)
+                    {
+                        message_ex* msg = _parser->get_message_on_receive(&_reader, read_next);
+
+                        while (msg != nullptr)
+                        {
+                            this->on_read_completed(msg);
+                            msg = _parser->get_message_on_receive(&_reader, read_next);
+                        }
                     }
 
                     if (read_next == -1)
                     {
-                        derror("(s = %d) recv failed, err = %s", _socket, "message with wrong checksum");
+                        derror("(s = %d) recv failed on %s, parse failed", _socket, _remote_addr.to_string());
                         on_failure();
                     }
                     else
@@ -380,8 +389,8 @@ namespace dsn
 
             WSABUF buf[1];
 
-            void* ptr = _parser->read_buffer_ptr(sz);
-            int remaining = _parser->read_buffer_capacity();
+            void* ptr = _reader.read_buffer_ptr(read_next);
+            int remaining = _reader.read_buffer_capacity();
             buf[0].buf = (char*)ptr;
             buf[0].len = remaining;
 
@@ -471,7 +480,7 @@ namespace dsn
             }
 
             int buffer_count = (int)_sending_buffers.size() - _sending_buffer_start_index;
-            static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
+            static_assert (sizeof(message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
 
             DWORD bytes = 0;
             int rt = WSASend(
