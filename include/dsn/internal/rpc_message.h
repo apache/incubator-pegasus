@@ -151,12 +151,11 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        network_header_format  hdr_format;
-        message_parser_ptr     msg_parser;
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
         int32_t                local_rpc_code;
+        network_header_format  hdr_format;
 
         // by message queuing
         dlink                  dl;

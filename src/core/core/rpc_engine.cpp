@@ -230,10 +230,6 @@ namespace dsn {
 
                 // call network failure model
                 net->inject_drop_message(reply, false);
-
-                dassert(reply->get_count() == 0,
-                    "reply should not be referenced by anybody so far");
-                delete reply;
             }
         }
 

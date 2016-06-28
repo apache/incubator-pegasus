@@ -133,8 +133,7 @@ namespace dsn {
 
         void asio_udp_provider::send_message(message_ex* request)
         {
-            // prepare parser as there will be concurrent send-message-s
-            auto parser = new_message_parser(request->hdr_format);
+            auto& parser = _parsers[request->hdr_format];
             auto lcount = parser->prepare_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());
@@ -178,40 +177,51 @@ namespace dsn {
                 *send_endpoint,
                 [this, send_endpoint](const boost::system::error_code& error, std::size_t bytes_transferred)
                 {
-                    if (!error) 
+                    if (!!error)
                     {
-                        _recv_reader.mark_read(bytes_transferred);
+                        derror("%s: asio udp read failed: %s", _address.to_string(), error.message().c_str());
+                        do_receive();
+                        return;
+                    }
 
-                        header_type hdr_type(_recv_reader._buffer.data());
-                        network_header_format hdr_format(NET_HDR_DSN);
-                        if (!header_type::header_type_to_format(hdr_type, hdr_format))
-                        {
-                            derror("invalid header type '%s'", hdr_type.debug_string().c_str());
-                        }
-                        else
-                        {
-                            auto parser = new_message_parser(hdr_format);
+                    if (bytes_transferred < sizeof(message_header))
+                    {
+                        derror("%s: asio udp read failed: too short message", _address.to_string());
+                        do_receive();
+                        return;
+                    }
 
-                            int read_next;
-                            message_ex* msg = parser->get_message_on_receive(&_recv_reader, read_next);
+                    header_type hdr_type(_recv_reader._buffer.data());
+                    network_header_format hdr_format(NET_HDR_DSN);
+                    if (!header_type::header_type_to_format(hdr_type, hdr_format))
+                    {
+                        derror("%s: asio udp read failed: invalid header type '%s'", _address.to_string(), hdr_type.debug_string().c_str());
+                        do_receive();
+                        return;
+                    }
 
-                            if (msg == nullptr)
-                            {
-                                derror("invalid udp packet");
-                            }
-                            else
-                            {
-                                msg->to_address = address();
-                                if (msg->header->context.u.is_request)
-                                {
-                                    on_recv_request(msg, 0);
-                                }
-                                else
-                                {
-                                    on_recv_reply(msg->header->id, msg, 0);
-                                }
-                            }
-                        }
+                    auto& parser = _parsers[hdr_format];
+                    parser->reset();
+
+                    _recv_reader.mark_read(bytes_transferred);
+
+                    int read_next;
+                    message_ex* msg = parser->get_message_on_receive(&_recv_reader, read_next);
+                    if (msg == nullptr)
+                    {
+                        derror("%s: asio udp read failed: invalid udp packet", _address.to_string());
+                        do_receive();
+                        return;
+                    }
+
+                    msg->to_address = _address;
+                    if (msg->header->context.u.is_request)
+                    {
+                        on_recv_request(msg, 0);
+                    }
+                    else
+                    {
+                        on_recv_reply(msg->header->id, msg, 0);
                     }
 
                     do_receive();
@@ -231,7 +241,7 @@ namespace dsn {
             {
                 do
                 {
-                    //FIXME: we actually do not need to set a random port for clinet if the rpc_engine is refactored
+                    //FIXME: we actually do not need to set a random port for client if the rpc_engine is refactored
                     _address.assign_ipv4(get_local_ipv4(), std::numeric_limits<uint16_t>::max() - 
                         dsn_random64(std::numeric_limits<uint64_t>::min(),
                                      std::numeric_limits<uint64_t>::max()) % 5000);
@@ -278,7 +288,15 @@ namespace dsn {
                 })));
             }
 
+            _parsers.resize(network_header_format::max_value() + 1);
+            for (int i = 0; i <= network_header_format::max_value(); i++)
+            {
+                auto hdr_format = network_header_format(network_header_format::to_string(i));
+                _parsers[i] = new_message_parser(hdr_format);
+            }
+
             do_receive();
+
             return ERR_OK;
         }
     }

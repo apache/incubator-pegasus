@@ -77,7 +77,10 @@ using namespace ::dsn::service;
         LPC_WRITE_REPLICATION_LOG_SHARED, this,
         [blk, cb_cap = std::move(callback), offset](error_code err, size_t sz)
         {
-            cb_cap(err, sz); 
+            if (cb_cap)
+            {
+                cb_cap(err, sz);
+            }
 
             auto hdr = (log_block_header*)(blk->data()[0].data());
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);

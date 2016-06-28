@@ -96,6 +96,7 @@ namespace dsn {
             std::vector<std::shared_ptr<std::thread>>       _workers;
             ::dsn::rpc_address                              _address;
             message_reader                                  _recv_reader;
+            std::vector<message_parser_ptr>                 _parsers;
 
             static const size_t max_udp_packet_size = 1000;
         };
