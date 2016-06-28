@@ -47,10 +47,12 @@ TEST(core, message_ex)
     ctx0.context = 0;
     ctx0.u.is_request = true;
     ctx0.u.serialize_format = DSF_THRIFT_BINARY;
+    ctx0.u.is_forward_supported = true;
 
     ctx1.context = 0;
     ctx1.u.is_request = false;
     ctx1.u.serialize_format = DSF_THRIFT_BINARY;
+    ctx1.u.is_forward_supported = true;
 
     { // create_request
         uint64_t next_id = message_ex::new_id() + 1;
