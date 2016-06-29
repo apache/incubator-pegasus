@@ -148,7 +148,7 @@ namespace dsn
 
         //now let's get the total length
         int32_t* total_length = reinterpret_cast<int32_t*>(buffers[0].buf);
-        *total_length = header_writer.total_size() + msg->header->body_length;
+        *total_length = htobe32(header_writer.total_size() + msg->header->body_length);
 
         int i=1;
         // then copy the message body, we must skip the standard message_header
