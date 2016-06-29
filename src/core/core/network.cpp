@@ -227,12 +227,7 @@ namespace dsn
         // server only
         if (!is_client())
         {
-            int delay_ms = 0;
-            {
-                utils::auto_lock<utils::ex_lock_nr> l(_delay_lock);
-                delay_ms = _delay_server_receive_ms;
-                _delay_server_receive_ms = 0;
-            }
+            int delay_ms = _delay_server_receive_ms.exchange(0);
 
             // delayed read
             if (delay_ms > 0)

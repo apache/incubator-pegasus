@@ -41,6 +41,7 @@
 # include <dsn/cpp/address.h>
 # include <dsn/internal/priority_queue.h>
 # include <dsn/internal/exp_delay.h>
+# include <atomic>
 
 namespace dsn {
 
@@ -286,16 +287,13 @@ namespace dsn {
         uint64_t                           _message_sent;
         // ]
 
-        ::dsn::utils::ex_lock_nr           _delay_lock; // [
-        int                                _delay_server_receive_ms;
-        // ]
+        std::atomic_int                    _delay_server_receive_ms;
     };
 
     // --------- inline implementation --------------
     inline void rpc_session::delay_recv(int delay_ms)
     {
-        utils::auto_lock<utils::ex_lock_nr> l(_delay_lock);
-        if (delay_ms > _delay_server_receive_ms)
-            _delay_server_receive_ms = delay_ms;
+        int old_delay_ms = _delay_server_receive_ms.load();
+        while (delay_ms > old_delay_ms && !_delay_server_receive_ms.compare_exchange_weak(old_delay_ms, delay_ms)) {}
     }
 }
