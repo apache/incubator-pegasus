@@ -160,7 +160,11 @@ namespace dsn {
             rpc_address addr;
             ::dsn::unmarshall((dsn_message_t)reply, addr);
 
-            // TODO(qinzuoyan): handle the case of forwarding to itself where addr == req->to_address.
+            // handle the case of forwarding to itself where addr == req->to_address.
+            dbg_dassert(addr != req->to_address,
+                "impossible forwarding to myself as this only happens when i'm pure client so i don't get a named to_address %s",
+                addr.to_string()
+                );
 
             // server address side effect
             switch (req->server_address.type())
@@ -1032,7 +1036,7 @@ namespace dsn {
                     "target address must have named port in this case");
 
                 // use the header format recorded in the message
-                network* net = _client_nets[response->hdr_format][RPC_CHANNEL_TCP];
+                network* net = _client_nets[response->hdr_format][sp->rpc_call_channel];
                 dassert(nullptr != net, "client network not present for rpc channel '%s' with format '%s' used by rpc %s",
                     RPC_CHANNEL_TCP.to_string(),
                     response->hdr_format.to_string(),
@@ -1056,7 +1060,7 @@ namespace dsn {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
                 "target address must have named port in this case");
 
-            network* net = _server_nets[response->header->from_address.port()][RPC_CHANNEL_UDP];
+            network* net = _server_nets[response->header->from_address.port()][sp->rpc_call_channel];
 
             dassert(nullptr != net, "server network not present for rpc channel '%s' on port %u used by rpc %s",
                 RPC_CHANNEL_UDP.to_string(),
@@ -1097,6 +1101,16 @@ namespace dsn {
     void rpc_engine::forward(message_ex * request, rpc_address address)
     {
         dassert(request->header->context.u.is_request, "only rpc request can be forwarded");
+        dassert(request->header->context.u.is_forward_supported,
+            "rpc msg %s (trace_id = %" PRIx64 ") does not support being forwared",
+            task_spec::get(request->local_rpc_code)->name.c_str(),
+            request->header->trace_id
+            );
+        dassert(address != primary_address(), 
+            "cannot forward msg %s (trace_id = %" PRIx64 ") to the local node",
+            task_spec::get(request->local_rpc_code)->name.c_str(),
+            request->header->trace_id
+            );
 
         // msg is from pure client (no server port assigned)
         // in this case, we have no way to directly post a message
@@ -1110,7 +1124,8 @@ namespace dsn {
         }
 
         // do real forwarding, not reset request_id, but set forwarded flag
-        // TODO(qinzuoyan): reply to client if forwarding failed for non-timeout reason (such as connection denied).
+        // if forwarding failed for non-timeout reason (such as connection denied),
+        // we will consider this as msg lost from the client side's perspective as
         else
         {
             auto copied_request = request->copy_and_prepare_send(false);

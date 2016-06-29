@@ -334,10 +334,8 @@ public:
     // return true for normal case, false for fault injection applied
     bool             enqueue(error_code err, message_ex* reply);
     void             enqueue() override; // re-enqueue after above enqueue, e.g., after delay
-    message_ex*      get_request() const
-    { return _request; }
-    message_ex*      get_response() const
-    { return _response; }    
+    message_ex*      get_request() const    { return _request; }
+    message_ex*      get_response() const    { return _response; }    
     void             replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context);
     task_worker_pool* caller_pool() const { return _caller_pool; }
     void             set_caller_pool(task_worker_pool* pl) { _caller_pool = pl; }

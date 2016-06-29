@@ -284,6 +284,9 @@ namespace dsn {
         dlink                              _messages;        
         volatile session_state             _connect_state;
         uint64_t                           _message_sent;
+        // ]
+
+        ::dsn::utils::ex_lock_nr           _delay_lock; // [
         int                                _delay_server_receive_ms;
         // ]
     };
@@ -291,7 +294,7 @@ namespace dsn {
     // --------- inline implementation --------------
     inline void rpc_session::delay_recv(int delay_ms)
     {
-        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_delay_lock);
         if (delay_ms > _delay_server_receive_ms)
             _delay_server_receive_ms = delay_ms;
     }

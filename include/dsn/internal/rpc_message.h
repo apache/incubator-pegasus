@@ -174,10 +174,7 @@ namespace dsn
         task_code rpc_code();
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
-        static unsigned int get_body_length(char* hdr)
-        {
-            return ((message_header*)hdr)->body_length;
-        }
+        static unsigned int get_body_length(char* hdr) { return ((message_header*)hdr)->body_length; }
 
         //
         // routines for create messages

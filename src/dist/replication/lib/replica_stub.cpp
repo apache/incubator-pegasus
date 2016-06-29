@@ -500,9 +500,6 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
            proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(), _primary_address.to_string(),
            enum_to_string(proposal.type), proposal.node.to_string());
 
-    // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
-    // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
-    //replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     replica_ptr rep = get_replica(proposal.config.pid, false, &proposal.info);
     if (rep == nullptr)
     {
@@ -602,8 +599,6 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
            request.config.primary.to_string(), request.config.ballot,
            enum_to_string(request.config.status), request.last_committed_decree);
 
-    // TODO(qinzuoyan): if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
-    //replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     replica_ptr rep = get_replica(request.config.pid, false, &request.app);
     if (rep != nullptr)
     {
@@ -1219,11 +1214,6 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
         );
 
     zauto_lock l(_replicas_lock);
-
-    //// TODO: so what?
-    //// initialization is still ongoing
-    //if (nullptr == _failure_detector)
-    //    return nullptr;
 
     if (remove_replica(r))
     {

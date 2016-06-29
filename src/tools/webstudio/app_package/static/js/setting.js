@@ -12,10 +12,11 @@ var vm = new Vue({
         'setting_list': {
             handler: function (lst, oldLst) {
                 var self = this;
+                var index;
                 self.state = 'saving';
-                for(item in lst)
+                for(index = 0; index < lst.length; ++index)
                 {
-                    localStorage.setItem(lst[item].name, lst[item].value);
+                    localStorage.setItem(lst[index].name, lst[index].value);
                 }
                 setTimeout(function(){ self.state = ''; }, 1000);
             },
@@ -28,10 +29,11 @@ var vm = new Vue({
         
     },
     ready: function ()
-    {
-        for(item in this.setting_list)
+    {        
+        var index;
+        for(index = 0; index < this.setting_list.length; ++index)
         {
-            this.setting_list[item].value = localStorage[this.setting_list[item].name];
+            this.setting_list[index].value = localStorage[this.setting_list[index].name];
         }
     }
 });
