@@ -257,7 +257,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     }
 
     // mutations are previously committed already on learner (old primary)
-    // TODO(qinzuoyan): this case will never occur?
+    // this happens when the new primary does not commit the previously prepared mutations
+    // yet, which it should do, so let's help it now.
     else if (request.last_committed_decree_in_app > local_committed_decree)
     {
         derror(
@@ -499,7 +500,6 @@ void replica::on_learn_reply(
 
         // TODO(qinzuoyan):
         // - we'd better backup the old data, which may be recovered in some way.
-        // - if we reuse the app object (not create a new object), the app must be reusable.
         auto err = _app->close(true);
         if (err != ERR_OK)
         {

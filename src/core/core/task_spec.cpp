@@ -140,8 +140,6 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_
         );
 
     rejection_handler = nullptr;
-
-    // TODO: config for following values
     rpc_call_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
 }

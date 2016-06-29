@@ -227,7 +227,6 @@ namespace dsn {
                     return ERR_OK;
                 }
 
-                // TODO: should use async write instead                
                 std::ofstream os(name, std::ios::binary);
 
                 uint64_t count = (uint64_t)_store.size();

@@ -229,8 +229,7 @@ namespace dsn
         {
             int delay_ms = 0;
             {
-                // TODO(qinzuoyan): remove lock here
-                utils::auto_lock<utils::ex_lock_nr> l(_lock);
+                utils::auto_lock<utils::ex_lock_nr> l(_delay_lock);
                 delay_ms = _delay_server_receive_ms;
                 _delay_server_receive_ms = 0;
             }
@@ -540,7 +539,7 @@ namespace dsn
             char name[128];
             if (gethostname(name, sizeof(name)) != 0)
             {
-                dassert(false, "gethostname failed, err = %s\n", strerror(errno));
+                dassert(false, "gethostname failed, err = %s", strerror(errno));
             }
             ip = dsn_ipv4_from_host(name);
         }

@@ -540,7 +540,6 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
     ddebug("%s: mutation %s committed, batched_count = %d",
            _replica->name(), mu->name(), batched_count);
 
-    // TODO(qinzuoyan): check correction of statistics usage
     _replica->update_commit_statistics(1);
     _app_commit_decree.increment();
     _app_commit_throughput.add(1);
