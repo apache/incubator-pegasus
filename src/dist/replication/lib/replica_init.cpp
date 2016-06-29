@@ -185,136 +185,182 @@ error_code replica::initialize_on_load()
 error_code replica::init_app_and_prepare_list(bool create_new)
 {
     dassert(nullptr == _app, "");
+    error_code err;
+    std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
     _app.reset(new replication_app_base(this));
-    error_code err = _app->open_internal(
-        this,
-        create_new
-        );
+    dassert(nullptr == _private_log, "private log must not be initialized yet");
 
-    if (err == ERR_OK)
+    if (create_new)
     {
-        dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
-        _prepare_list->reset(_app->last_committed_decree());
-        
-        dassert(nullptr == _private_log, "private log must not be initialized yet");
-
-        std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
-
-        _private_log = new mutation_log_private(
-            log_dir,                
-            _options->log_private_file_size_mb,
-            get_gpid(),
+        err = _app->open_new_internal(
             this,
-            _options->log_private_batch_buffer_kb * 1024
+            _stub->_log->on_partition_reset(get_gpid(), 0),
+            0
             );
-        ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
-        
-        // sync valid_start_offset between app and logs
-        if (create_new)
+    }        
+    else
+    {
+        err = _app->open_internal(this);
+        if (err == ERR_OK)
         {
-            dassert(_app->last_committed_decree() == 0, "");
-            int64_t shared_log_offset = _stub->_log->on_partition_reset(get_gpid(), 0);
-            int64_t private_log_offset = _private_log->on_partition_reset(get_gpid(), 0);
-            err = _app->update_init_info(this, shared_log_offset, private_log_offset);
-        }
-        else
-        {
-            _stub->_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_shared_log);
-            _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
-        }
+            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
+            _prepare_list->reset(_app->last_committed_decree());
 
-        // replay the logs
-        {
-            ddebug("%s: start to replay private log", name());
+            _private_log = new mutation_log_private(
+                log_dir,
+                _options->log_private_file_size_mb,
+                get_gpid(),
+                this,
+                _options->log_private_batch_buffer_kb * 1024
+                );
+            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
-            std::map<gpid, decree> replay_condition;
-            replay_condition[_config.pid] = _app->last_committed_decree();
+            // sync valid_start_offset between app and logs
+            _stub->_log->set_valid_start_offset_on_open(get_gpid(),
+                _app->init_info().init_offset_in_shared_log
+                );
+            _private_log->set_valid_start_offset_on_open(get_gpid(),
+                _app->init_info().init_offset_in_private_log
+                );
+            
+            // replay the logs
+            {
+                ddebug("%s: start to replay private log", name());
 
-            uint64_t start_time = now_ms();
-            err = _private_log->open(
-                [this](mutation_ptr& mu)
+                std::map<gpid, decree> replay_condition;
+                replay_condition[_config.pid] = _app->last_committed_decree();
+
+                uint64_t start_time = now_ms();
+                err = _private_log->open(
+                    [this](mutation_ptr& mu)
+                    {
+                        return replay_mutation(mu, true);
+                    },
+                    [this](error_code err)
+                    {
+                        tasking::enqueue(
+                            LPC_REPLICATION_ERROR,
+                            this,
+                            [this, err]() { handle_local_failure(err); },
+                            gpid_to_hash(get_gpid())
+                            );
+                    },
+                    replay_condition
+                    );
+
+                uint64_t finish_time = now_ms();
+
+                if (err == ERR_OK)
                 {
-                    return replay_mutation(mu, true);
-                },
-                [this](error_code err) 
+                    ddebug(
+                        "%s: replay private log succeed, durable = %" PRId64 ", committed = %" PRId64 ", "
+                        "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                        "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64 ", "
+                        "time_used = %" PRIu64 " ms",
+                        name(),
+                        _app->last_durable_decree(),
+                        _app->last_committed_decree(),
+                        max_prepared_decree(),
+                        get_ballot(),
+                        _app->init_info().init_offset_in_private_log,
+                        _private_log->max_decree(get_gpid()),
+                        _private_log->max_commit_on_disk(),
+                        finish_time - start_time
+                        );
+                    _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
+                    set_inactive_state_transient(true);
+                }
+                /* in the beginning the prepare_list is reset to the durable_decree */
+                else
+                {
+                    derror(
+                        "%s: replay private log failed, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+                        "maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                        "time_used = %" PRIu64 " ms",
+                        name(),
+                        err.to_string(),
+                        _app->last_durable_decree(),
+                        _app->last_committed_decree(),
+                        max_prepared_decree(),
+                        get_ballot(),
+                        _app->init_info().init_offset_in_private_log,
+                        finish_time - start_time
+                        );
+
+                    set_inactive_state_transient(false);
+
+                    _private_log->close();
+                    _private_log = nullptr;
+
+                    _stub->_log->on_partition_removed(get_gpid());
+                }
+            }
+        }
+
+        // certain checkpoints are missing
+        else if (err == ERR_INCOMPLETE_DATA)
+        {
+            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
+            _prepare_list->reset(_app->last_committed_decree());
+            err = _app->update_init_info(
+                this,
+                _stub->_log->on_partition_reset(get_gpid(), _app->last_durable_decree()),
+                0,
+                _app->last_durable_decree()
+                );
+
+        }
+    }    
+
+    if (err != ERR_OK)
+    {
+        // TODO: handle ERR_INCOMPLETE_DATA to save data
+
+        derror("%s: open replica failed, err = %s", name(), err.to_string());
+        _app->close(false);
+        _app = nullptr;
+    }
+    else
+    {
+        if (nullptr == _private_log)
+        {
+            ::dsn::utils::filesystem::remove_path(log_dir);
+            ::dsn::utils::filesystem::create_directory(log_dir);
+
+            _private_log = new mutation_log_private(
+                log_dir,
+                _options->log_private_file_size_mb,
+                get_gpid(),
+                this,
+                _options->log_private_batch_buffer_kb * 1024
+                );
+            ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
+
+            err = _private_log->open(nullptr,
+                [this](error_code err)
                 {
                     tasking::enqueue(
                         LPC_REPLICATION_ERROR,
-                        this, 
+                        this,
                         [this, err]() { handle_local_failure(err); },
                         gpid_to_hash(get_gpid())
                         );
-                },
-                replay_condition
-                );
-            uint64_t finish_time = now_ms();
-
-            if (err == ERR_OK)
-            {
-                ddebug(
-                    "%s: replay private log succeed, durable = %" PRId64 ", committed = %" PRId64 ", "
-                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
-                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64 ", "
-                    "time_used = %" PRIu64 " ms",
-                    name(),
-                    _app->last_durable_decree(),
-                    _app->last_committed_decree(),
-                    max_prepared_decree(),
-                    get_ballot(),
-                    _app->init_info().init_offset_in_private_log,
-                    _private_log->max_decree(get_gpid()),
-                    _private_log->max_commit_on_disk(),
-                    finish_time - start_time
-                    );
-                _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
-                set_inactive_state_transient(true);
-            }
-            /* in the beginning the prepare_list is reset to the durable_decree */
-            else
-            {
-                derror(
-                    "%s: replay private log failed, err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
-                    "maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
-                    "time_used = %" PRIu64 " ms",
-                    name(),
-                    err.to_string(),
-                    _app->last_durable_decree(),
-                    _app->last_committed_decree(),
-                    max_prepared_decree(),
-                    get_ballot(),
-                    _app->init_info().init_offset_in_private_log,
-                    finish_time - start_time
-                    );
-
-                set_inactive_state_transient(false);
-
-                _private_log->close();
-                _private_log = nullptr;
-
-                _stub->_log->on_partition_removed(get_gpid());
-            }
+                }
+            );
         }
 
-        if (err == ERR_OK && !_options->checkpoint_disabled && nullptr == _checkpoint_timer)
+        if (!_options->checkpoint_disabled && nullptr == _checkpoint_timer)
         {
             _checkpoint_timer = tasking::enqueue_timer(
                 LPC_PER_REPLICA_CHECKPOINT_TIMER,
                 this,
-                [this] {on_checkpoint_timer();},
+                [this] {on_checkpoint_timer(); },
                 std::chrono::seconds(_options->checkpoint_interval_seconds),
                 gpid_to_hash(get_gpid())
                 );
         }
     }
-
-    if (err != ERR_OK)
-    {
-        derror("%s: open replica failed, err = %s", name(), err.to_string());
-        _app->close(false);
-        _app = nullptr;
-    }
-
     return err;
 }
 
