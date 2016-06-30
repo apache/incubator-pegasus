@@ -1,9 +1,9 @@
-# pragma once
-# include <dsn/service_api_cpp.h>
-# include <dsn/cpp/serialization.h>
+#pragma once
+#include <dsn/dist/replication/replication_types.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/cpp/serialization.h>
 
 
-# include <dsn/dist/replication/replication_types.h>
 
 
 namespace dsn { namespace replication { 

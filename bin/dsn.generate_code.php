@@ -165,11 +165,13 @@ case "thrift":
             echo "failed invoke thrift tool to generate '".$g_idl_php."'".PHP_EOL;
             exit(0);
         }
-        if (!file_exists($g_out_dir."/thrift"))
+        //we expect the cpp to generate the moveable types
+        $lang_with_options = $g_lang;
+        if ($g_lang == "cpp")
         {
-            mkdir($g_out_dir."/thrift");
+            $lang_with_options = $g_lang.":moveable_types";
         }
-        $command = $g_cg_dir."/".$os_name."/thrift --gen ".$g_lang." -out ".$g_out_dir."/thrift ".$g_idl;
+        $command = $g_cg_dir."/".$os_name."/thrift --gen ".$lang_with_options." -out ".$g_out_dir." ".$g_idl;
         echo "exec: ".$command.PHP_EOL;
         system($command);
     }

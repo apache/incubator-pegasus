@@ -13,11 +13,8 @@ thrift_description = [
         "path": "src/dist/deployment_service",
         "include_fix": {
             "_types.h": {
-                "add": ["<dsn/service_api_cpp.h>", "<dsn/dist/cluster_scheduler.h>"],
-                "remove": ["\"dsn_types.h\""]
-            },
-            ".types.h": {
                 "add": ["<dsn/dist/cluster_scheduler.h>"],
+                "remove": ["\"dsn_types.h\"", "\"dsn.layer2_types.h\""]
             }
         }
     },
@@ -35,6 +32,10 @@ thrift_description = [
             "_types.cpp": {
                 "add": ["<dsn/dist/failure_detector/fd_types.h>"],
                 "remove": ["\"fd_types.h\""]
+            },
+            ".types.h": {
+                "add": ["<dsn/dist/failure_detector/fd_types.h>"],
+                "remove": ["\"fd_types.h\""]
             }
         }
     }, 
@@ -47,10 +48,14 @@ thrift_description = [
         },
         "include_fix": {
             "_types.h": {
-                "add": ["<dsn/service_api_cpp.h>"],
-                "remove": ["\"dsn_types.h\""]
+                "add": ["<dsn/cpp/serialization_helper/dsn.layer2_types.h>"],
+                "remove": ["\"dsn_types.h\"", "\"dsn.layer2_types.h\""]
             },
             "_types.cpp": {
+                "add": ["<dsn/dist/replication/replication_types.h>"],
+                "remove": ["\"replication_types.h\""]
+            },
+            ".types.h": {
                 "add": ["<dsn/dist/replication/replication_types.h>"],
                 "remove": ["\"replication_types.h\""]
             }
@@ -67,10 +72,21 @@ thrift_description = [
     {
         "name": "nfs", 
         "path": "src/apps/nfs",
+        "file_move": {
+            ".types.h _types.h": "include/dsn/tool/nfs"
+        },
         "include_fix": {
             "_types.h": {
                 "add": ["<dsn/service_api_cpp.h>"],
                 "remove": ["\"dsn_types.h\""]
+            },
+            "_types.cpp": {
+                "add": ["<dsn/tool/nfs.h>"],
+                "remove": ["\"nfs_types.h\""]
+            },
+            ".types.h": {
+                "add": ["<dsn/tool/nfs/nfs_types.h>"],
+                "remove": ["\"nfs_types.h\""]
             }
         }
     }, 
@@ -82,15 +98,18 @@ thrift_description = [
         "name": "cli", 
         "path": "src/apps/cli",
         "file_move": {
-            ".types.h _types.h": "include/dsn/tool"
+            ".types.h _types.h": "include/dsn/tool/cli"
         },
         "include_fix": {
             "_types.h": {
-                "add": ["<dsn/service_api_cpp.h>"],
                 "remove": ["\"dsn_types.h\""]
             },
             "_types.cpp": {
-                "add": ["<dsn/tool/cli_types.h>"],
+                "add": ["<dsn/tool/cli.h>"],
+                "remove": ["\"cli_types.h\""]
+            },
+            ".types.h": {
+                "add": ["<dsn/tool/cli/cli_types.h>"],
                 "remove": ["\"cli_types.h\""]
             }
         }
@@ -224,18 +243,12 @@ def compile_thrift_file(thrift_info):
     os.system("rm -rf output")
     os.system("mkdir output")
     #### first generate .types.h
-    os.system("%s %s.thrift cpp build binary replication"%(env_tools["dsn_gentool"], thrift_name))
-    os.system("cp build/%s.types.h output"%(thrift_name))
+    os.system("%s %s.thrift cpp build binary"%(env_tools["dsn_gentool"], thrift_name))
 
-    #### then generate _types.h _types.cpp
-    thrift_gen = "%s -r --gen cpp:moveable_types -out build %s.thrift"%(env_tools["thrift_exe"], thrift_name)
-    print "exec " + thrift_gen
-    os.system(thrift_gen)
+    os.system("cp build/%s.types.h output"%(thrift_name))
     os.system("cp build/%s_types.h output"%(thrift_name))
     os.system("cp build/%s_types.cpp output"%(thrift_name))
     os.system("rm -rf build")
-
-    toggle_serialization_in_cpp(thrift_name)
 
     if "include_fix" in thrift_info:
         fix_include(thrift_name, thrift_info["include_fix"])
@@ -286,7 +299,7 @@ def constructor_hook(args):
             # this may not be right
             elif line.startswith("};"):
                 in_class = 2
-        elif in_class == 0 and line.startswith("class "+class_name):
+        elif in_class == 0 and line.startswith("class " + class_name + " {"):
             in_class = 1
         dst_fd.write(line)
 
@@ -316,6 +329,26 @@ def remove_all_enums_define_hook(args):
     dst_fd.close()
     os.rename(target_fname, generated_fname)
 
+def remove_struct_define_hook(args):
+    generated_fname = args[0]
+    struct_defines = ["struct "+name+" {" for name in args[1:]]
+
+    target_fname = generated_fname + ".swapfile"
+    src_fd, dst_fd = open(generated_fname, "r"), open(target_fname, "w")
+
+    in_class = 0
+    for line in src_fd:
+        if in_class==0 and line.strip() in struct_defines:
+            in_class = 1
+        if in_class==0:
+            dst_fd.write(line)
+        if in_class==1 and line.startswith("};"):
+            in_class = 0
+
+    src_fd.close()
+    dst_fd.close()
+    os.rename(target_fname, generated_fname)
+
 def add_hook(name, path, func, args):
     for i in thrift_description:
         if name == i["name"] and path == i["path"]:
@@ -327,14 +360,11 @@ def add_hook(name, path, func, args):
 if __name__ == "__main__":
     init_env()
 
-    ctor_gpid = "  global_partition_id(int32_t _app_id, int32_t _pidx): app_id(_app_id), pidx(_pidx) {\n  }"
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
-
-    add_hook("deploy_svc", "src/dist/deployment_service", remove_all_enums_define_hook, ["deploy_svc_types.h"])
-    add_hook("deploy_svc", "src/dist/deployment_service", remove_all_enums_define_hook, ["deploy_svc.types.h"])
-
-    add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "global_partition_id", ctor_gpid])
+    ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
+    add_hook("deploy_svc", "src/dist/deployment_service", remove_struct_define_hook, ["deploy_svc_types.h", "cluster_type", "service_status"])
     add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
+    add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])
 
     if len(sys.argv)>1:
         for i in sys.argv[1:]:
