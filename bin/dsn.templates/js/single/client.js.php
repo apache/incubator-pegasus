@@ -29,7 +29,9 @@ function generate_request_helper($client, $func, $async, $serialization_fmt)
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_<?=$func->name?>_address(hash),
+        this.url,
+        "<?php echo $func->get_rpc_code(); ?>",
+        hash,
         "POST",
 <?php if ($func->params[0]->is_base_type()) { ?>
         this.marshall(args, "<?=$func->get_request_type_name()?>"),
@@ -81,13 +83,6 @@ foreach ($_PROG->services as $svc)
     return unmarshall_thrift_json(buf, value, type);
 }
 
-<?=$client?>.prototype.get_address = function(url, hash) {
-    if (typeof hash == "undefined") {
-        hash = 0;
-    }
-    return url + "/" + hash;
-}
-
 <?php
     foreach ($svc->functions as $func)
     {
@@ -100,10 +95,6 @@ foreach ($_PROG->services as $svc)
     } else {
         this.internal_async_<?=$func->name?>(obj.args, obj.on_success, obj.on_fail, obj.hash);
     }
-}
-
-<?=$client?>.prototype.get_<?=$func->name?>_address = function(hash) {
-    return this.get_address(this.url + "/" + "<?php echo $func->get_rpc_code(); ?>", hash);
 }
 
 <?php

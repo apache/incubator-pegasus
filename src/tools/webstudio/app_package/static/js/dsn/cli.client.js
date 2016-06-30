@@ -12,18 +12,13 @@ cliApp.prototype.unmarshall = function(buf, value, type) {
     return unmarshall_thrift_json(buf, value, type);
 }
 
-cliApp.prototype.get_address = function(url, hash) {
-    if (typeof hash == "undefined") {
-        hash = 0;
-    }
-    return url + "/" + hash;
-}
-
 cliApp.prototype.internal_call = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_call_address(hash),
+        this.url,
+        "RPC_CLI_CLI_CALL",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -42,7 +37,9 @@ cliApp.prototype.internal_async_call = function(args, on_success, on_fail, hash)
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_call_address(hash),
+        this.url,
+        "RPC_CLI_CLI_CALL",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -67,9 +64,5 @@ cliApp.prototype.call = function(obj) {
     } else {
         this.internal_async_call(obj.args, obj.on_success, obj.on_fail, obj.hash);
     }
-}
-
-cliApp.prototype.get_call_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CLI_CLI_CALL", hash);
 }
 

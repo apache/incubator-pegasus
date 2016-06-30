@@ -1,3 +1,5 @@
+//Vue.config.debug = true;
+
 var vm = new Vue({
     el: '#app',
     data:{
@@ -21,7 +23,7 @@ var vm = new Vue({
                 on_success: function (nodedata){
                     try {
                         nodedata = new configuration_list_nodes_response(nodedata);
-                        console.log(JSON.stringify(nodedata));
+                        // console.log(JSON.stringify(nodedata));
                         self.$set('nodeList', nodedata);
                     }
                     catch(err) {
@@ -33,8 +35,9 @@ var vm = new Vue({
                         self.partitionList = [];
                     }
 
-                    for (node in self.nodeList.infos)
-                    {
+                    var index = 0;
+                    for (index = 0; index < self.nodeList.infos.length; ++index)
+                    {                        
                         (function(nodeIndex){
                             result = client.query_configuration_by_node({
                                 args: new configuration_query_by_node_request({
@@ -44,16 +47,17 @@ var vm = new Vue({
                                 on_success: function (servicedata){
                                     try {
                                         servicedata = new configuration_query_by_node_response(servicedata);
-                                        console.log(JSON.stringify(servicedata));
+                                        // console.log(JSON.stringify(servicedata));
                                         self.partitionList.$set(nodeIndex, servicedata);
                                     }
                                     catch(err) {
                                         return;
                                     }
                                     
-                                    for (partition in self.partitionList[nodeIndex].partitions)
+                                    var index = 0;
+                                    for (index = 0; index < self.partitionList[nodeIndex].partitions.length; ++index)
                                     {
-                                        var par = self.partitionList[nodeIndex].partitions[partition];
+                                        var par = self.partitionList[nodeIndex].partitions[index];
                                         par.role = '';
                                         par.working_point = '';
 
@@ -101,7 +105,7 @@ var vm = new Vue({
                                 },
                                 on_fail: function (xhr, textStatus, errorThrown) {}
                             });
-                        })(node);
+                        })(index);
                     }
                 },
                 on_fail: function (xhr, textStatus, errorThrown) {}

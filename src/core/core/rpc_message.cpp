@@ -216,6 +216,7 @@ header_type header_type::hdr_type_dsn("RDSN");
 header_type header_type::hdr_type_thrift("THFT");
 header_type header_type::hdr_type_http_get("GET ");
 header_type header_type::hdr_type_http_post("POST");
+header_type header_type::hdr_type_http_options("OPTI"); 
 header_type header_type::hdr_type_http_response("HTTP");
 
 std::string header_type::debug_string() const
@@ -248,7 +249,11 @@ bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ net
         hdr_format = NET_HDR_THRIFT;
         return true;
     }
-    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post || hdr_type == hdr_type_http_response)
+    else if (hdr_type == hdr_type_http_options
+        || hdr_type == hdr_type_http_get 
+        || hdr_type == hdr_type_http_post 
+        || hdr_type == hdr_type_http_response
+        )
     {
         hdr_format = NET_HDR_HTTP;
         return true;
@@ -265,7 +270,11 @@ dsn_msg_header_type header_type::header_type_to_c_type(const header_type& hdr_ty
         return DHT_DEFAULT;
     else if (hdr_type == hdr_type_thrift)
         return DHT_THRIFT;
-    else if (hdr_type == hdr_type_http_get || hdr_type == hdr_type_http_post || hdr_type == hdr_type_http_response)
+    else if (hdr_type == hdr_type_http_get 
+        || hdr_type == hdr_type_http_post 
+        || hdr_type == hdr_type_http_options
+        || hdr_type == hdr_type_http_response
+        )
         return DHT_HTTP;
     else
         return DHT_INVALID;
