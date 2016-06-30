@@ -156,7 +156,7 @@ namespace dsn
                 --_message_count;
             }
                         
-            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);            
+            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
             rmsg->io_session = nullptr;
 
             if (resend_msgs)
@@ -187,16 +187,21 @@ namespace dsn
 
         while (n != &_messages)
         {
+            dbg_dassert(_parser, "parser should not be null when send");
+
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-            auto lcount = _parser->get_send_buffers_count(lmsg);
+            auto lcount = _parser->prepare_on_send(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
                 break;
             }
 
             _sending_buffers.resize(bcount + lcount);
-            _parser->prepare_buffers_on_send(lmsg, 0, &_sending_buffers[bcount]);
-            bcount += lcount;
+            auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
+            dassert(lcount >= rcount, "");
+            if (lcount != rcount)
+                _sending_buffers.resize(bcount + rcount);
+            bcount += rcount;
             _sending_msgs.push_back(lmsg);
 
             n = n->next();
@@ -222,12 +227,7 @@ namespace dsn
         // server only
         if (!is_client())
         {
-            int delay_ms = 0;
-            {
-                utils::auto_lock<utils::ex_lock_nr> l(_lock);
-                delay_ms = _delay_server_receive_ms;
-                _delay_server_receive_ms = 0;
-            }
+            int delay_ms = _delay_server_receive_ms.exchange(0);
 
             // delayed read
             if (delay_ms > 0)
@@ -250,11 +250,30 @@ namespace dsn
             do_read(read_next);
         }
     }
+
+    int rpc_session::prepare_parser()
+    {
+        if (_reader._buffer_occupied < sizeof(header_type))
+            return sizeof(header_type) - _reader._buffer_occupied;
+
+        header_type hdr_type(_reader._buffer.data());
+        network_header_format hdr_format(NET_HDR_DSN);
+        if (!header_type::header_type_to_format(hdr_type, hdr_format))
+        {
+            derror("invalid header type, remote_client = %s, header_type = '%s'",
+                   _remote_addr.to_string(), hdr_type.debug_string().c_str());
+            return -1;
+        }
+
+        _parser = _net.new_message_parser(hdr_format);
+        dinfo("message parser created, remote_client = %s, header_format = %s",
+              _remote_addr.to_string(), hdr_format.to_string());
+
+        return 0;
+    }
     
     void rpc_session::send_message(message_ex* msg)
     {
-        //dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
-
         msg->add_ref(); // released in on_send_completed
 
         uint64_t sig;
@@ -351,13 +370,14 @@ namespace dsn
     rpc_session::rpc_session(
         connection_oriented_network& net, 
         ::dsn::rpc_address remote_addr,
-        std::unique_ptr<message_parser>&& parser,
+        message_parser_ptr& parser,
         bool is_client
         )
         : _net(net),
         _remote_addr(remote_addr),
         _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
-        _parser(std::move(parser)),
+        _reader(net.message_buffer_block_size()),
+        _parser(parser),
         _is_client(is_client),
         _matcher(_net.engine()->matcher()),
         _is_sending_next(false),
@@ -400,6 +420,8 @@ namespace dsn
 
     bool rpc_session::on_recv_message(message_ex* msg, int delay_ms)
     {
+        if (msg->header->from_address.is_invalid())
+            msg->header->from_address = _remote_addr;
         msg->to_address = _net.address();
         msg->io_session = this;
 
@@ -439,7 +461,7 @@ namespace dsn
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
-        : _engine(srv), _parser_type(NET_HDR_DSN)
+        : _engine(srv), _client_hdr_format(NET_HDR_DSN)
     {   
         _message_buffer_block_size = 1024 * 64;
         _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
@@ -449,10 +471,10 @@ namespace dsn
             );
     }
 
-    void network::reset_parser(network_header_format name, int message_buffer_block_size)
+    void network::reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size)
     {
+        _client_hdr_format = client_hdr_format;
         _message_buffer_block_size = message_buffer_block_size;
-        _parser_type = name;
     }
 
     service_node* network::node() const
@@ -470,21 +492,17 @@ namespace dsn
         _engine->matcher()->on_recv_reply(this, id, msg, delay_ms);
     }
 
-    std::unique_ptr<message_parser> network::new_message_parser()
+    message_parser_ptr network::new_message_parser(network_header_format hdr_format)
     {
-        message_parser * parser = message_parser_manager::instance().create_parser(
-            _parser_type,
-            _message_buffer_block_size,
-            false
-            );
-        dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.to_string());
-
-        return std::unique_ptr<message_parser>(parser);
+        message_parser* parser = message_parser_manager::instance().create_parser(hdr_format);
+        dassert(parser, "message parser '%s' not registerd or invalid!", hdr_format.to_string());
+        return parser;
     }
 
-    std::pair<message_parser::factory2, size_t>  network::get_message_parser_info()
+    std::pair<message_parser::factory2, size_t>  network::get_message_parser_info(network_header_format hdr_format)
     {
-        auto& pinfo = message_parser_manager::instance().get(_parser_type);
+        auto& pinfo = message_parser_manager::instance().get(hdr_format);
+        dassert(pinfo.factory2, "message parser '%s' not registerd or invalid!", hdr_format.to_string());
         return std::make_pair(pinfo.factory2, pinfo.parser_size);
     }
 
@@ -516,7 +534,7 @@ namespace dsn
             char name[128];
             if (gethostname(name, sizeof(name)) != 0)
             {
-                dassert(false, "gethostname failed, err = %s\n", strerror(errno));
+                dassert(false, "gethostname failed, err = %s", strerror(errno));
             }
             ip = dsn_ipv4_from_host(name);
         }

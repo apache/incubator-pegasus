@@ -51,7 +51,7 @@ namespace dsn {
                 asio_network_provider& net,
                 ::dsn::rpc_address remote_addr,
                 std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                std::unique_ptr<message_parser>&& parser,
+                message_parser_ptr& parser,
                 bool is_client
                 );
             virtual ~asio_rpc_session();
@@ -64,7 +64,7 @@ namespace dsn {
             virtual void connect() override;            
             
         private:
-            virtual void do_read(int sz) override;
+            virtual void do_read(int read_next) override;
             void write(uint64_t signature);
             void on_failure(bool is_write = false);
             void set_options();  

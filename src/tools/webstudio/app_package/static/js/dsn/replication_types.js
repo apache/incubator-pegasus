@@ -49,11 +49,15 @@ node_status = {
   'NS_ALIVE' : 1,
   'NS_UNALIVE' : 2
 };
-balancer_type = {
-  'BT_INVALID' : 0,
-  'BT_MOVE_PRIMARY' : 1,
-  'BT_COPY_PRIMARY' : 2,
-  'BT_COPY_SECONDARY' : 3
+meta_ctrl_flags = {
+  'ctrl_meta_freeze' : 1,
+  'ctrl_disable_replica_migration' : 2
+};
+meta_ctrl_type = {
+  'meta_flags_invalid' : 0,
+  'meta_flags_and' : 1,
+  'meta_flags_or' : 2,
+  'meta_flags_overwrite' : 3
 };
 mutation_header = function(args) {
   this.pid = null;
@@ -172,10 +176,14 @@ mutation_header.prototype.write = function(output) {
 
 mutation_update = function(args) {
   this.code = null;
+  this.serialization_type = null;
   this.data = null;
   if (args) {
     if (args.code !== undefined && args.code !== null) {
       this.code = new task_code(args.code);
+    }
+    if (args.serialization_type !== undefined && args.serialization_type !== null) {
+      this.serialization_type = args.serialization_type;
     }
     if (args.data !== undefined && args.data !== null) {
       this.data = new blob(args.data);
@@ -205,6 +213,13 @@ mutation_update.prototype.read = function(input) {
       }
       break;
       case 2:
+      if (ftype == Thrift.Type.I32) {
+        this.serialization_type = input.readI32().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 3:
       if (ftype == Thrift.Type.STRUCT) {
         this.data = new blob();
         this.data.read(input);
@@ -228,8 +243,13 @@ mutation_update.prototype.write = function(output) {
     this.code.write(output);
     output.writeFieldEnd();
   }
+  if (this.serialization_type !== null && this.serialization_type !== undefined) {
+    output.writeFieldBegin('serialization_type', Thrift.Type.I32, 2);
+    output.writeI32(this.serialization_type);
+    output.writeFieldEnd();
+  }
   if (this.data !== null && this.data !== undefined) {
-    output.writeFieldBegin('data', Thrift.Type.STRUCT, 2);
+    output.writeFieldBegin('data', Thrift.Type.STRUCT, 3);
     this.data.write(output);
     output.writeFieldEnd();
   }
@@ -2456,6 +2476,34 @@ configuration_list_nodes_request.prototype.write = function(output) {
   return;
 };
 
+configuration_cluster_info_request = function(args) {
+};
+configuration_cluster_info_request.prototype = {};
+configuration_cluster_info_request.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    input.skip(ftype);
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+configuration_cluster_info_request.prototype.write = function(output) {
+  output.writeStructBegin('configuration_cluster_info_request');
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
 configuration_create_app_response = function(args) {
   this.err = null;
   this.appid = null;
@@ -2523,16 +2571,20 @@ configuration_create_app_response.prototype.write = function(output) {
   return;
 };
 
-control_balancer_migration_request = function(args) {
-  this.enable_migration = null;
+configuration_meta_control_request = function(args) {
+  this.ctrl_flags = null;
+  this.ctrl_type = null;
   if (args) {
-    if (args.enable_migration !== undefined && args.enable_migration !== null) {
-      this.enable_migration = args.enable_migration;
+    if (args.ctrl_flags !== undefined && args.ctrl_flags !== null) {
+      this.ctrl_flags = args.ctrl_flags;
+    }
+    if (args.ctrl_type !== undefined && args.ctrl_type !== null) {
+      this.ctrl_type = args.ctrl_type;
     }
   }
 };
-control_balancer_migration_request.prototype = {};
-control_balancer_migration_request.prototype.read = function(input) {
+configuration_meta_control_request.prototype = {};
+configuration_meta_control_request.prototype.read = function(input) {
   input.readStructBegin();
   while (true)
   {
@@ -2546,15 +2598,19 @@ control_balancer_migration_request.prototype.read = function(input) {
     switch (fid)
     {
       case 1:
-      if (ftype == Thrift.Type.BOOL) {
-        this.enable_migration = input.readBool().value;
+      if (ftype == Thrift.Type.I64) {
+        this.ctrl_flags = input.readI64().value;
       } else {
         input.skip(ftype);
       }
       break;
-      case 0:
+      case 2:
+      if (ftype == Thrift.Type.I32) {
+        this.ctrl_type = input.readI32().value;
+      } else {
         input.skip(ftype);
-        break;
+      }
+      break;
       default:
         input.skip(ftype);
     }
@@ -2564,11 +2620,16 @@ control_balancer_migration_request.prototype.read = function(input) {
   return;
 };
 
-control_balancer_migration_request.prototype.write = function(output) {
-  output.writeStructBegin('control_balancer_migration_request');
-  if (this.enable_migration !== null && this.enable_migration !== undefined) {
-    output.writeFieldBegin('enable_migration', Thrift.Type.BOOL, 1);
-    output.writeBool(this.enable_migration);
+configuration_meta_control_request.prototype.write = function(output) {
+  output.writeStructBegin('configuration_meta_control_request');
+  if (this.ctrl_flags !== null && this.ctrl_flags !== undefined) {
+    output.writeFieldBegin('ctrl_flags', Thrift.Type.I64, 1);
+    output.writeI64(this.ctrl_flags);
+    output.writeFieldEnd();
+  }
+  if (this.ctrl_type !== null && this.ctrl_type !== undefined) {
+    output.writeFieldBegin('ctrl_type', Thrift.Type.I32, 2);
+    output.writeI32(this.ctrl_type);
     output.writeFieldEnd();
   }
   output.writeFieldStop();
@@ -2576,7 +2637,7 @@ control_balancer_migration_request.prototype.write = function(output) {
   return;
 };
 
-control_balancer_migration_response = function(args) {
+configuration_meta_control_response = function(args) {
   this.err = null;
   if (args) {
     if (args.err !== undefined && args.err !== null) {
@@ -2584,8 +2645,8 @@ control_balancer_migration_response = function(args) {
     }
   }
 };
-control_balancer_migration_response.prototype = {};
-control_balancer_migration_response.prototype.read = function(input) {
+configuration_meta_control_response.prototype = {};
+configuration_meta_control_response.prototype.read = function(input) {
   input.readStructBegin();
   while (true)
   {
@@ -2618,8 +2679,8 @@ control_balancer_migration_response.prototype.read = function(input) {
   return;
 };
 
-control_balancer_migration_response.prototype.write = function(output) {
-  output.writeStructBegin('control_balancer_migration_response');
+configuration_meta_control_response.prototype.write = function(output) {
+  output.writeStructBegin('configuration_meta_control_response');
   if (this.err !== null && this.err !== undefined) {
     output.writeFieldBegin('err', Thrift.Type.STRUCT, 1);
     this.err.write(output);
@@ -2630,28 +2691,24 @@ control_balancer_migration_response.prototype.write = function(output) {
   return;
 };
 
-balancer_proposal_request = function(args) {
-  this.pid = null;
+configuration_proposal_action = function(args) {
+  this.target = null;
+  this.node = null;
   this.type = null;
-  this.from_addr = null;
-  this.to_addr = null;
   if (args) {
-    if (args.pid !== undefined && args.pid !== null) {
-      this.pid = new gpid(args.pid);
+    if (args.target !== undefined && args.target !== null) {
+      this.target = new rpc_address(args.target);
+    }
+    if (args.node !== undefined && args.node !== null) {
+      this.node = new rpc_address(args.node);
     }
     if (args.type !== undefined && args.type !== null) {
       this.type = args.type;
     }
-    if (args.from_addr !== undefined && args.from_addr !== null) {
-      this.from_addr = new rpc_address(args.from_addr);
-    }
-    if (args.to_addr !== undefined && args.to_addr !== null) {
-      this.to_addr = new rpc_address(args.to_addr);
-    }
   }
 };
-balancer_proposal_request.prototype = {};
-balancer_proposal_request.prototype.read = function(input) {
+configuration_proposal_action.prototype = {};
+configuration_proposal_action.prototype.read = function(input) {
   input.readStructBegin();
   while (true)
   {
@@ -2666,31 +2723,23 @@ balancer_proposal_request.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRUCT) {
-        this.pid = new gpid();
-        this.pid.read(input);
+        this.target = new rpc_address();
+        this.target.read(input);
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
-      if (ftype == Thrift.Type.I32) {
-        this.type = input.readI32().value;
+      if (ftype == Thrift.Type.STRUCT) {
+        this.node = new rpc_address();
+        this.node.read(input);
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
-      if (ftype == Thrift.Type.STRUCT) {
-        this.from_addr = new rpc_address();
-        this.from_addr.read(input);
-      } else {
-        input.skip(ftype);
-      }
-      break;
-      case 4:
-      if (ftype == Thrift.Type.STRUCT) {
-        this.to_addr = new rpc_address();
-        this.to_addr.read(input);
+      if (ftype == Thrift.Type.I32) {
+        this.type = input.readI32().value;
       } else {
         input.skip(ftype);
       }
@@ -2704,26 +2753,21 @@ balancer_proposal_request.prototype.read = function(input) {
   return;
 };
 
-balancer_proposal_request.prototype.write = function(output) {
-  output.writeStructBegin('balancer_proposal_request');
-  if (this.pid !== null && this.pid !== undefined) {
-    output.writeFieldBegin('pid', Thrift.Type.STRUCT, 1);
-    this.pid.write(output);
+configuration_proposal_action.prototype.write = function(output) {
+  output.writeStructBegin('configuration_proposal_action');
+  if (this.target !== null && this.target !== undefined) {
+    output.writeFieldBegin('target', Thrift.Type.STRUCT, 1);
+    this.target.write(output);
+    output.writeFieldEnd();
+  }
+  if (this.node !== null && this.node !== undefined) {
+    output.writeFieldBegin('node', Thrift.Type.STRUCT, 2);
+    this.node.write(output);
     output.writeFieldEnd();
   }
   if (this.type !== null && this.type !== undefined) {
-    output.writeFieldBegin('type', Thrift.Type.I32, 2);
+    output.writeFieldBegin('type', Thrift.Type.I32, 3);
     output.writeI32(this.type);
-    output.writeFieldEnd();
-  }
-  if (this.from_addr !== null && this.from_addr !== undefined) {
-    output.writeFieldBegin('from_addr', Thrift.Type.STRUCT, 3);
-    this.from_addr.write(output);
-    output.writeFieldEnd();
-  }
-  if (this.to_addr !== null && this.to_addr !== undefined) {
-    output.writeFieldBegin('to_addr', Thrift.Type.STRUCT, 4);
-    this.to_addr.write(output);
     output.writeFieldEnd();
   }
   output.writeFieldStop();
@@ -2731,7 +2775,113 @@ balancer_proposal_request.prototype.write = function(output) {
   return;
 };
 
-balancer_proposal_response = function(args) {
+configuration_balancer_request = function(args) {
+  this.gpid = null;
+  this.action_list = null;
+  this.force = false;
+  if (args) {
+    if (args.gpid !== undefined && args.gpid !== null) {
+      this.gpid = new gpid(args.gpid);
+    }
+    if (args.action_list !== undefined && args.action_list !== null) {
+      this.action_list = Thrift.copyList(args.action_list, [configuration_proposal_action]);
+    }
+    if (args.force !== undefined && args.force !== null) {
+      this.force = args.force;
+    }
+  }
+};
+configuration_balancer_request.prototype = {};
+configuration_balancer_request.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+      if (ftype == Thrift.Type.STRUCT) {
+        this.gpid = new gpid();
+        this.gpid.read(input);
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 2:
+      if (ftype == Thrift.Type.LIST) {
+        var _size34 = 0;
+        var _rtmp338;
+        this.action_list = [];
+        var _etype37 = 0;
+        _rtmp338 = input.readListBegin();
+        _etype37 = _rtmp338.etype;
+        _size34 = _rtmp338.size;
+        for (var _i39 = 0; _i39 < _size34; ++_i39)
+        {
+          var elem40 = null;
+          elem40 = new configuration_proposal_action();
+          elem40.read(input);
+          this.action_list.push(elem40);
+        }
+        input.readListEnd();
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 3:
+      if (ftype == Thrift.Type.BOOL) {
+        this.force = input.readBool().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+configuration_balancer_request.prototype.write = function(output) {
+  output.writeStructBegin('configuration_balancer_request');
+  if (this.gpid !== null && this.gpid !== undefined) {
+    output.writeFieldBegin('gpid', Thrift.Type.STRUCT, 1);
+    this.gpid.write(output);
+    output.writeFieldEnd();
+  }
+  if (this.action_list !== null && this.action_list !== undefined) {
+    output.writeFieldBegin('action_list', Thrift.Type.LIST, 2);
+    output.writeListBegin(Thrift.Type.STRUCT, this.action_list.length);
+    for (var iter41 in this.action_list)
+    {
+      if (this.action_list.hasOwnProperty(iter41))
+      {
+        iter41 = this.action_list[iter41];
+        iter41.write(output);
+      }
+    }
+    output.writeListEnd();
+    output.writeFieldEnd();
+  }
+  if (this.force !== null && this.force !== undefined) {
+    output.writeFieldBegin('force', Thrift.Type.BOOL, 3);
+    output.writeBool(this.force);
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
+configuration_balancer_response = function(args) {
   this.err = null;
   if (args) {
     if (args.err !== undefined && args.err !== null) {
@@ -2739,8 +2889,8 @@ balancer_proposal_response = function(args) {
     }
   }
 };
-balancer_proposal_response.prototype = {};
-balancer_proposal_response.prototype.read = function(input) {
+configuration_balancer_response.prototype = {};
+configuration_balancer_response.prototype.read = function(input) {
   input.readStructBegin();
   while (true)
   {
@@ -2773,8 +2923,8 @@ balancer_proposal_response.prototype.read = function(input) {
   return;
 };
 
-balancer_proposal_response.prototype.write = function(output) {
-  output.writeStructBegin('balancer_proposal_response');
+configuration_balancer_response.prototype.write = function(output) {
+  output.writeStructBegin('configuration_balancer_response');
   if (this.err !== null && this.err !== undefined) {
     output.writeFieldBegin('err', Thrift.Type.STRUCT, 1);
     this.err.write(output);
@@ -2875,19 +3025,19 @@ configuration_list_apps_response.prototype.read = function(input) {
       break;
       case 2:
       if (ftype == Thrift.Type.LIST) {
-        var _size34 = 0;
-        var _rtmp338;
+        var _size42 = 0;
+        var _rtmp346;
         this.infos = [];
-        var _etype37 = 0;
-        _rtmp338 = input.readListBegin();
-        _etype37 = _rtmp338.etype;
-        _size34 = _rtmp338.size;
-        for (var _i39 = 0; _i39 < _size34; ++_i39)
+        var _etype45 = 0;
+        _rtmp346 = input.readListBegin();
+        _etype45 = _rtmp346.etype;
+        _size42 = _rtmp346.size;
+        for (var _i47 = 0; _i47 < _size42; ++_i47)
         {
-          var elem40 = null;
-          elem40 = new app_info();
-          elem40.read(input);
-          this.infos.push(elem40);
+          var elem48 = null;
+          elem48 = new app_info();
+          elem48.read(input);
+          this.infos.push(elem48);
         }
         input.readListEnd();
       } else {
@@ -2913,12 +3063,12 @@ configuration_list_apps_response.prototype.write = function(output) {
   if (this.infos !== null && this.infos !== undefined) {
     output.writeFieldBegin('infos', Thrift.Type.LIST, 2);
     output.writeListBegin(Thrift.Type.STRUCT, this.infos.length);
-    for (var iter41 in this.infos)
+    for (var iter49 in this.infos)
     {
-      if (this.infos.hasOwnProperty(iter41))
+      if (this.infos.hasOwnProperty(iter49))
       {
-        iter41 = this.infos[iter41];
-        iter41.write(output);
+        iter49 = this.infos[iter49];
+        iter49.write(output);
       }
     }
     output.writeListEnd();
@@ -2965,19 +3115,19 @@ configuration_list_nodes_response.prototype.read = function(input) {
       break;
       case 2:
       if (ftype == Thrift.Type.LIST) {
-        var _size42 = 0;
-        var _rtmp346;
+        var _size50 = 0;
+        var _rtmp354;
         this.infos = [];
-        var _etype45 = 0;
-        _rtmp346 = input.readListBegin();
-        _etype45 = _rtmp346.etype;
-        _size42 = _rtmp346.size;
-        for (var _i47 = 0; _i47 < _size42; ++_i47)
+        var _etype53 = 0;
+        _rtmp354 = input.readListBegin();
+        _etype53 = _rtmp354.etype;
+        _size50 = _rtmp354.size;
+        for (var _i55 = 0; _i55 < _size50; ++_i55)
         {
-          var elem48 = null;
-          elem48 = new node_info();
-          elem48.read(input);
-          this.infos.push(elem48);
+          var elem56 = null;
+          elem56 = new node_info();
+          elem56.read(input);
+          this.infos.push(elem56);
         }
         input.readListEnd();
       } else {
@@ -3003,12 +3153,139 @@ configuration_list_nodes_response.prototype.write = function(output) {
   if (this.infos !== null && this.infos !== undefined) {
     output.writeFieldBegin('infos', Thrift.Type.LIST, 2);
     output.writeListBegin(Thrift.Type.STRUCT, this.infos.length);
-    for (var iter49 in this.infos)
+    for (var iter57 in this.infos)
     {
-      if (this.infos.hasOwnProperty(iter49))
+      if (this.infos.hasOwnProperty(iter57))
       {
-        iter49 = this.infos[iter49];
-        iter49.write(output);
+        iter57 = this.infos[iter57];
+        iter57.write(output);
+      }
+    }
+    output.writeListEnd();
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
+configuration_cluster_info_response = function(args) {
+  this.err = null;
+  this.keys = null;
+  this.values = null;
+  if (args) {
+    if (args.err !== undefined && args.err !== null) {
+      this.err = new error_code(args.err);
+    }
+    if (args.keys !== undefined && args.keys !== null) {
+      this.keys = Thrift.copyList(args.keys, [null]);
+    }
+    if (args.values !== undefined && args.values !== null) {
+      this.values = Thrift.copyList(args.values, [null]);
+    }
+  }
+};
+configuration_cluster_info_response.prototype = {};
+configuration_cluster_info_response.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+      if (ftype == Thrift.Type.STRUCT) {
+        this.err = new error_code();
+        this.err.read(input);
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 2:
+      if (ftype == Thrift.Type.LIST) {
+        var _size58 = 0;
+        var _rtmp362;
+        this.keys = [];
+        var _etype61 = 0;
+        _rtmp362 = input.readListBegin();
+        _etype61 = _rtmp362.etype;
+        _size58 = _rtmp362.size;
+        for (var _i63 = 0; _i63 < _size58; ++_i63)
+        {
+          var elem64 = null;
+          elem64 = input.readString().value;
+          this.keys.push(elem64);
+        }
+        input.readListEnd();
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 3:
+      if (ftype == Thrift.Type.LIST) {
+        var _size65 = 0;
+        var _rtmp369;
+        this.values = [];
+        var _etype68 = 0;
+        _rtmp369 = input.readListBegin();
+        _etype68 = _rtmp369.etype;
+        _size65 = _rtmp369.size;
+        for (var _i70 = 0; _i70 < _size65; ++_i70)
+        {
+          var elem71 = null;
+          elem71 = input.readString().value;
+          this.values.push(elem71);
+        }
+        input.readListEnd();
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+configuration_cluster_info_response.prototype.write = function(output) {
+  output.writeStructBegin('configuration_cluster_info_response');
+  if (this.err !== null && this.err !== undefined) {
+    output.writeFieldBegin('err', Thrift.Type.STRUCT, 1);
+    this.err.write(output);
+    output.writeFieldEnd();
+  }
+  if (this.keys !== null && this.keys !== undefined) {
+    output.writeFieldBegin('keys', Thrift.Type.LIST, 2);
+    output.writeListBegin(Thrift.Type.STRING, this.keys.length);
+    for (var iter72 in this.keys)
+    {
+      if (this.keys.hasOwnProperty(iter72))
+      {
+        iter72 = this.keys[iter72];
+        output.writeString(iter72);
+      }
+    }
+    output.writeListEnd();
+    output.writeFieldEnd();
+  }
+  if (this.values !== null && this.values !== undefined) {
+    output.writeFieldBegin('values', Thrift.Type.LIST, 3);
+    output.writeListBegin(Thrift.Type.STRING, this.values.length);
+    for (var iter73 in this.values)
+    {
+      if (this.values.hasOwnProperty(iter73))
+      {
+        iter73 = this.values[iter73];
+        output.writeString(iter73);
       }
     }
     output.writeListEnd();
@@ -3375,19 +3652,19 @@ query_replica_info_response.prototype.read = function(input) {
       break;
       case 2:
       if (ftype == Thrift.Type.LIST) {
-        var _size50 = 0;
-        var _rtmp354;
+        var _size74 = 0;
+        var _rtmp378;
         this.replicas = [];
-        var _etype53 = 0;
-        _rtmp354 = input.readListBegin();
-        _etype53 = _rtmp354.etype;
-        _size50 = _rtmp354.size;
-        for (var _i55 = 0; _i55 < _size50; ++_i55)
+        var _etype77 = 0;
+        _rtmp378 = input.readListBegin();
+        _etype77 = _rtmp378.etype;
+        _size74 = _rtmp378.size;
+        for (var _i79 = 0; _i79 < _size74; ++_i79)
         {
-          var elem56 = null;
-          elem56 = new replica_info();
-          elem56.read(input);
-          this.replicas.push(elem56);
+          var elem80 = null;
+          elem80 = new replica_info();
+          elem80.read(input);
+          this.replicas.push(elem80);
         }
         input.readListEnd();
       } else {
@@ -3413,119 +3690,12 @@ query_replica_info_response.prototype.write = function(output) {
   if (this.replicas !== null && this.replicas !== undefined) {
     output.writeFieldBegin('replicas', Thrift.Type.LIST, 2);
     output.writeListBegin(Thrift.Type.STRUCT, this.replicas.length);
-    for (var iter57 in this.replicas)
+    for (var iter81 in this.replicas)
     {
-      if (this.replicas.hasOwnProperty(iter57))
+      if (this.replicas.hasOwnProperty(iter81))
       {
-        iter57 = this.replicas[iter57];
-        iter57.write(output);
-      }
-    }
-    output.writeListEnd();
-    output.writeFieldEnd();
-  }
-  output.writeFieldStop();
-  output.writeStructEnd();
-  return;
-};
-
-app_state = function(args) {
-  this.info = null;
-  this.available_partitions = null;
-  this.partitions = null;
-  if (args) {
-    if (args.info !== undefined && args.info !== null) {
-      this.info = new app_info(args.info);
-    }
-    if (args.available_partitions !== undefined && args.available_partitions !== null) {
-      this.available_partitions = new atom_int(args.available_partitions);
-    }
-    if (args.partitions !== undefined && args.partitions !== null) {
-      this.partitions = Thrift.copyList(args.partitions, [partition_configuration]);
-    }
-  }
-};
-app_state.prototype = {};
-app_state.prototype.read = function(input) {
-  input.readStructBegin();
-  while (true)
-  {
-    var ret = input.readFieldBegin();
-    var fname = ret.fname;
-    var ftype = ret.ftype;
-    var fid = ret.fid;
-    if (ftype == Thrift.Type.STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-      if (ftype == Thrift.Type.STRUCT) {
-        this.info = new app_info();
-        this.info.read(input);
-      } else {
-        input.skip(ftype);
-      }
-      break;
-      case 2:
-      if (ftype == Thrift.Type.STRUCT) {
-        this.available_partitions = new atom_int();
-        this.available_partitions.read(input);
-      } else {
-        input.skip(ftype);
-      }
-      break;
-      case 3:
-      if (ftype == Thrift.Type.LIST) {
-        var _size58 = 0;
-        var _rtmp362;
-        this.partitions = [];
-        var _etype61 = 0;
-        _rtmp362 = input.readListBegin();
-        _etype61 = _rtmp362.etype;
-        _size58 = _rtmp362.size;
-        for (var _i63 = 0; _i63 < _size58; ++_i63)
-        {
-          var elem64 = null;
-          elem64 = new partition_configuration();
-          elem64.read(input);
-          this.partitions.push(elem64);
-        }
-        input.readListEnd();
-      } else {
-        input.skip(ftype);
-      }
-      break;
-      default:
-        input.skip(ftype);
-    }
-    input.readFieldEnd();
-  }
-  input.readStructEnd();
-  return;
-};
-
-app_state.prototype.write = function(output) {
-  output.writeStructBegin('app_state');
-  if (this.info !== null && this.info !== undefined) {
-    output.writeFieldBegin('info', Thrift.Type.STRUCT, 1);
-    this.info.write(output);
-    output.writeFieldEnd();
-  }
-  if (this.available_partitions !== null && this.available_partitions !== undefined) {
-    output.writeFieldBegin('available_partitions', Thrift.Type.STRUCT, 2);
-    this.available_partitions.write(output);
-    output.writeFieldEnd();
-  }
-  if (this.partitions !== null && this.partitions !== undefined) {
-    output.writeFieldBegin('partitions', Thrift.Type.LIST, 3);
-    output.writeListBegin(Thrift.Type.STRUCT, this.partitions.length);
-    for (var iter65 in this.partitions)
-    {
-      if (this.partitions.hasOwnProperty(iter65))
-      {
-        iter65 = this.partitions[iter65];
-        iter65.write(output);
+        iter81 = this.replicas[iter81];
+        iter81.write(output);
       }
     }
     output.writeListEnd();
@@ -3587,19 +3757,19 @@ node_state.prototype.read = function(input) {
       break;
       case 3:
       if (ftype == Thrift.Type.SET) {
-        var _size66 = 0;
-        var _rtmp370;
+        var _size82 = 0;
+        var _rtmp386;
         this.primaries = [];
-        var _etype69 = 0;
-        _rtmp370 = input.readSetBegin();
-        _etype69 = _rtmp370.etype;
-        _size66 = _rtmp370.size;
-        for (var _i71 = 0; _i71 < _size66; ++_i71)
+        var _etype85 = 0;
+        _rtmp386 = input.readSetBegin();
+        _etype85 = _rtmp386.etype;
+        _size82 = _rtmp386.size;
+        for (var _i87 = 0; _i87 < _size82; ++_i87)
         {
-          var elem72 = null;
-          elem72 = new gpid();
-          elem72.read(input);
-          this.primaries.push(elem72);
+          var elem88 = null;
+          elem88 = new gpid();
+          elem88.read(input);
+          this.primaries.push(elem88);
         }
         input.readSetEnd();
       } else {
@@ -3608,19 +3778,19 @@ node_state.prototype.read = function(input) {
       break;
       case 4:
       if (ftype == Thrift.Type.SET) {
-        var _size73 = 0;
-        var _rtmp377;
+        var _size89 = 0;
+        var _rtmp393;
         this.partitions = [];
-        var _etype76 = 0;
-        _rtmp377 = input.readSetBegin();
-        _etype76 = _rtmp377.etype;
-        _size73 = _rtmp377.size;
-        for (var _i78 = 0; _i78 < _size73; ++_i78)
+        var _etype92 = 0;
+        _rtmp393 = input.readSetBegin();
+        _etype92 = _rtmp393.etype;
+        _size89 = _rtmp393.size;
+        for (var _i94 = 0; _i94 < _size89; ++_i94)
         {
-          var elem79 = null;
-          elem79 = new gpid();
-          elem79.read(input);
-          this.partitions.push(elem79);
+          var elem95 = null;
+          elem95 = new gpid();
+          elem95.read(input);
+          this.partitions.push(elem95);
         }
         input.readSetEnd();
       } else {
@@ -3651,12 +3821,12 @@ node_state.prototype.write = function(output) {
   if (this.primaries !== null && this.primaries !== undefined) {
     output.writeFieldBegin('primaries', Thrift.Type.SET, 3);
     output.writeSetBegin(Thrift.Type.STRUCT, this.primaries.length);
-    for (var iter80 in this.primaries)
+    for (var iter96 in this.primaries)
     {
-      if (this.primaries.hasOwnProperty(iter80))
+      if (this.primaries.hasOwnProperty(iter96))
       {
-        iter80 = this.primaries[iter80];
-        iter80.write(output);
+        iter96 = this.primaries[iter96];
+        iter96.write(output);
       }
     }
     output.writeSetEnd();
@@ -3665,12 +3835,12 @@ node_state.prototype.write = function(output) {
   if (this.partitions !== null && this.partitions !== undefined) {
     output.writeFieldBegin('partitions', Thrift.Type.SET, 4);
     output.writeSetBegin(Thrift.Type.STRUCT, this.partitions.length);
-    for (var iter81 in this.partitions)
+    for (var iter97 in this.partitions)
     {
-      if (this.partitions.hasOwnProperty(iter81))
+      if (this.partitions.hasOwnProperty(iter97))
       {
-        iter81 = this.partitions[iter81];
-        iter81.write(output);
+        iter97 = this.partitions[iter97];
+        iter97.write(output);
       }
     }
     output.writeSetEnd();

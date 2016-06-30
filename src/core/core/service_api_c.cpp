@@ -112,6 +112,11 @@ public:
 
 DSN_API dsn_error_t dsn_error_register(const char* name)
 {
+    dassert(strlen(name) < DSN_MAX_ERROR_CODE_NAME_LENGTH,
+        "error code '%s' is too long - length must be smaller than %d",
+        name,
+        DSN_MAX_ERROR_CODE_NAME_LENGTH
+        );
     return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
 }
 
@@ -330,17 +335,7 @@ DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init, uint64_t x_init, uint64
         y_init, y_final, (uint64_t)y_size
         );
 }
-//------------------------------------------------------------------------------
-//
-// tasking - asynchronous tasks and timers tasks executed in target thread pools
-// (configured in config files)
-// [task.RPC_PREPARE
-// // TODO: what can be configured for a task
-//
-// [threadpool.THREAD_POOL_REPLICATION]
-// // TODO: what can be configured for a thread pool
-//
-//------------------------------------------------------------------------------
+
 DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* context, int hash, dsn_task_tracker_t tracker)
 {
     auto t = new ::dsn::task_c(code, cb, context, nullptr, hash);
@@ -694,7 +689,6 @@ DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call)
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
     
-    // TODO: remove this parameter in future
     auto msg = task->get_request();
     msg->server_address = server;
     ::dsn::task::get_current_rpc()->call(msg, task);

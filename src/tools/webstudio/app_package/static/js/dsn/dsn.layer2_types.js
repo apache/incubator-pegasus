@@ -442,6 +442,7 @@ app_info = function(args) {
   this.partition_count = null;
   this.envs = null;
   this.is_stateful = null;
+  this.max_replica_count = null;
   if (args) {
     if (args.status !== undefined && args.status !== null) {
       this.status = args.status;
@@ -463,6 +464,9 @@ app_info = function(args) {
     }
     if (args.is_stateful !== undefined && args.is_stateful !== null) {
       this.is_stateful = args.is_stateful;
+    }
+    if (args.max_replica_count !== undefined && args.max_replica_count !== null) {
+      this.max_replica_count = args.max_replica_count;
     }
   }
 };
@@ -551,6 +555,13 @@ app_info.prototype.read = function(input) {
         input.skip(ftype);
       }
       break;
+      case 8:
+      if (ftype == Thrift.Type.I32) {
+        this.max_replica_count = input.readI32().value;
+      } else {
+        input.skip(ftype);
+      }
+      break;
       default:
         input.skip(ftype);
     }
@@ -605,6 +616,11 @@ app_info.prototype.write = function(output) {
   if (this.is_stateful !== null && this.is_stateful !== undefined) {
     output.writeFieldBegin('is_stateful', Thrift.Type.BOOL, 7);
     output.writeBool(this.is_stateful);
+    output.writeFieldEnd();
+  }
+  if (this.max_replica_count !== null && this.max_replica_count !== undefined) {
+    output.writeFieldBegin('max_replica_count', Thrift.Type.I32, 8);
+    output.writeI32(this.max_replica_count);
     output.writeFieldEnd();
   }
   output.writeFieldStop();

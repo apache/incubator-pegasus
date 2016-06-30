@@ -56,7 +56,7 @@ namespace std
     template<>
     struct hash< ::dsn::gpid> {
         size_t operator()(const ::dsn::gpid &gpid) const {
-            return std::hash<int>()(gpid.get_app_id()) ^ std::hash<int>()(gpid.get_partition_index());
+            return static_cast<std::size_t>(::dsn::replication::gpid_to_hash(gpid));
         }
     };
 }

@@ -40,6 +40,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/callocator.h>
+# include <dsn/internal/message_parser.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/address.h>
 # include <dsn/internal/link.h>
@@ -55,9 +56,9 @@ namespace dsn
         char          *buffer;
     } dsn_buffer_t;
 
-    struct fast_rpc_name
+    struct fast_code
     {
-        uint32_t local_rpc_id;
+        uint32_t local_code;
         uint32_t local_hash; // same hash from two processes indicates that
                              // the mapping of rpc string and id are consistent, which
                              // we leverage for optimization (fast rpc handler lookup)
@@ -90,11 +91,22 @@ namespace dsn
         }
         bool operator==(const header_type& other) const
         {
-            return type.itype==other.type.itype;
+            return type.itype == other.type.itype;
         }
+        bool operator!=(const header_type& other) const
+        {
+            return type.itype != other.type.itype;
+        }
+        std::string debug_string() const;
     public:
-        static header_type hdr_dsn_default;
-        static header_type hdr_dsn_thrift;
+        static header_type hdr_type_dsn;
+        static header_type hdr_type_thrift;
+        static header_type hdr_type_http_get;
+        static header_type hdr_type_http_post;
+        static header_type hdr_type_http_options;
+        static header_type hdr_type_http_response;
+        static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
+        static dsn_msg_header_type header_type_to_c_type(const header_type& hdr_type);
     };
 
     typedef struct message_header
@@ -105,10 +117,10 @@ namespace dsn
         uint32_t       hdr_crc32;
         uint32_t       body_length;
         uint32_t       body_crc32;
-        uint64_t       id;      // sequence id, can be used to track source
-        uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
+        uint64_t       id;      // sequence id
+        uint64_t       trace_id;  // used for tracking source
         char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
-        fast_rpc_name  rpc_name_fast;
+        fast_code      rpc_code; // dsn::task_code
         dsn_gpid       gpid;    // global partition id
         dsn_msg_context_t context;
         rpc_address       from_address; // always ipv4/v6 address,
@@ -116,16 +128,17 @@ namespace dsn
                                         // case described in message_ex::create_response()'s ATTENTION comment.
                                         // the from_address is always the orignal client's address, it will
                                         // not be changed in forwarding request.
-
         struct
         {
             uint64_t hash; // for both partition hash and thread hash for the exact location of this request
-            int32_t  timeout_ms;            
+            int32_t  timeout_ms;
+            int32_t  padding;
         } client;
 
         struct
         {
-            int32_t  error;
+            char      error_name[DSN_MAX_ERROR_CODE_NAME_LENGTH];
+            fast_code error_code;  // dsn::error_code
         } server;
     } message_header;
 
@@ -143,12 +156,12 @@ namespace dsn
         rpc_session_ptr        io_session;     // send/recv session        
         rpc_address            to_address;     // always ipv4/v6 address, it is the to_node's net address
         rpc_address            server_address; // used by requests, and may be of uri/group address
-        int32_t                local_rpc_code;
+        dsn_task_code_t        local_rpc_code;
+        network_header_format  hdr_format;
 
         // by message queuing
         dlink                  dl;
 
-        bool                   is_response_adjusted_for_custom_rpc;
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
         ~message_ex();
@@ -158,13 +171,11 @@ namespace dsn
         //
         bool is_right_header() const;
         bool is_right_body(bool is_write_msg) const;
-        error_code error() const { return header->server.error; }
+        error_code error();
+        task_code rpc_code();
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
-        static unsigned int get_body_length(char* hdr)
-        {
-            return ((message_header*)hdr)->body_length;
-        }
+        static unsigned int get_body_length(char* hdr) { return ((message_header*)hdr)->body_length; }
 
         //
         // routines for create messages
@@ -175,6 +186,7 @@ namespace dsn
             int timeout_milliseconds = 0,
             uint64_t hash = 0
             );
+
         static message_ex* create_receive_message_with_standalone_header(const blob& data);
         message_ex* create_response();
         message_ex* copy(bool clone_content, bool copy_for_receive);

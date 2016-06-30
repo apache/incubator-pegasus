@@ -178,6 +178,7 @@ private:
     network* create_network(
         const network_server_config& netcs, 
         bool client_only,
+        network_header_format client_hdr_format,
         io_modifer& ctx
         );
 

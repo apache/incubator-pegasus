@@ -159,9 +159,10 @@ ENUM_BEGIN(dsn_msg_serialize_format, DSF_INVALID)
 ENUM_END(dsn_msg_serialize_format)
 
 // define network header format for RPC
-DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
-DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
-DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP);
+DEFINE_CUSTOMIZED_ID_TYPE(network_header_format)
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN)
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
@@ -213,7 +214,7 @@ public:
     // for other tasks - allow-inline allows a task being execution in io-thread
     bool                   allow_inline;
     bool                   randomize_timer_delay_if_zero; // to avoid many timers executing at the same time
-    network_header_format    rpc_call_header_format;
+    network_header_format  rpc_call_header_format;
     dsn_msg_serialize_format rpc_msg_payload_serialize_default_format;
     rpc_channel            rpc_call_channel;
     bool                   rpc_message_crc_required;

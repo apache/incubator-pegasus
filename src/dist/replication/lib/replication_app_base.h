@@ -57,7 +57,7 @@ public:
     int32_t magic;
     int32_t crc;
     ballot  init_ballot;
-    decree  init_decree;
+    decree  init_durable_decree;
     int64_t init_offset_in_shared_log;
     int64_t init_offset_in_private_log;
 
@@ -169,7 +169,7 @@ public:
     //    
     ::dsn::replication::decree last_durable_decree() 
     {
-        return _callbacks.calls.get_last_checkpoint_decree(_app_context_callbacks);
+        return _app_context_callbacks ? _callbacks.calls.get_last_checkpoint_decree(_app_context_callbacks) : 0;
     }
 
 public:
@@ -188,11 +188,17 @@ private:
     friend class replica;
     friend class replica_stub;
     
-    ::dsn::error_code open_internal(replica* r, bool create_new);
+    ::dsn::error_code open_internal(replica* r);
+    ::dsn::error_code open_new_internal(replica* r, int64_t shared_log_start, int64_t private_log_start);
     ::dsn::error_code write_internal(mutation_ptr& mu);
 
     const replica_init_info& init_info() const { return _info; }
-    ::dsn::error_code update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
+    ::dsn::error_code update_init_info(
+        replica* r, 
+        int64_t shared_log_offset, 
+        int64_t private_log_offset, 
+        int64_t durable_decree
+        );
 
     void install_perf_counters();
 

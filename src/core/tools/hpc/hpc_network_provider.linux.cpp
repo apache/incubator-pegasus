@@ -172,7 +172,8 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_session(sock, new_message_parser(), *this, server_addr, true);
+            auto parser = new_message_parser(_client_hdr_format);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper, true);
             return c;
@@ -188,8 +189,8 @@ namespace dsn
                 if (s != -1)
                 {
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-
-                    auto rs = new hpc_rpc_session(s, new_message_parser(), *this, client_addr, false);
+                    message_parser_ptr null_parser;
+                    auto rs = new hpc_rpc_session(s, null_parser, *this, client_addr, false);
                     rpc_session_ptr s1(rs);
 
                     rs->bind_looper(_looper);
@@ -225,33 +226,41 @@ namespace dsn
 
             while (true)
             {
-                char* ptr = (char*)_parser->read_buffer_ptr((int)read_next);
-                int remaining = _parser->read_buffer_capacity();
+                char* ptr = _reader.read_buffer_ptr(read_next);
+                int remaining = _reader.read_buffer_capacity();
 
-                int sz = recv(_socket, ptr, remaining, 0);
+                int length = recv(_socket, ptr, remaining, 0);
                 int err = errno;
                 dinfo("(s = %d) call recv on %s, return %d, err = %s",
                     _socket,
                     _remote_addr.to_string(),
-                    sz,
+                    length,
                     strerror(err)
                     );
 
-                if (sz > 0)
+                if (length > 0)
                 {
-                    message_ex* msg = _parser->get_message_on_receive(sz, read_next);
+                    _reader.mark_read(length);
 
-                    while (msg != nullptr)
+                    if (!_parser)
                     {
-                        if (msg->header->from_address.is_invalid())
-                            msg->header->from_address = _remote_addr;
-                        this->on_read_completed(msg);
-                        msg = _parser->get_message_on_receive(0, read_next);
+                        read_next = prepare_parser();
+                    }
+
+                    if (_parser)
+                    {
+                        message_ex* msg = _parser->get_message_on_receive(&_reader, read_next);
+
+                        while (msg != nullptr)
+                        {
+                            this->on_read_completed(msg);
+                            msg = _parser->get_message_on_receive(&_reader, read_next);
+                        }
                     }
 
                     if (read_next == -1)
                     {
-                        derror("(s = %d) recv failed, err = %s", _socket, "message wrong checksum");
+                        derror("(s = %d) recv failed on %s, parse failed", _socket, _remote_addr.to_string());
                         on_failure();
                         break;
                     }
@@ -260,7 +269,7 @@ namespace dsn
                 {
                     if (err != EAGAIN && err != EWOULDBLOCK)
                     {
-                        derror("(s = %d) recv failed, err = %s", _socket, strerror(err));
+                        derror("(s = %d) recv failed on %s, err = %s", _socket, _remote_addr.to_string(), strerror(err));
                         on_failure();
                     }
                     break;
@@ -293,7 +302,7 @@ namespace dsn
 
         void hpc_rpc_session::do_write(uint64_t sig)
         {
-            static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(struct iovec), 
+            static_assert (sizeof(message_parser::send_buf) == sizeof(struct iovec),
                 "make sure they are compatible");
 
             dbg_dassert(sig != 0, "cannot send empty msg");
@@ -441,12 +450,12 @@ namespace dsn
 
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
-            std::unique_ptr<message_parser>&& parser,
+            message_parser_ptr& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
             bool is_client
             )
-            : rpc_session(net, remote_addr, std::move(parser), is_client),
+            : rpc_session(net, remote_addr, parser, is_client),
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");

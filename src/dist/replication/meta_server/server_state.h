@@ -26,11 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     the meta server's server_state, definition file
  *
  * Revision history:
  *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
 #pragma once

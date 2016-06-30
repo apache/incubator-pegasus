@@ -123,18 +123,30 @@ namespace dsn
 
 # ifdef _WIN32
 
-// TODO(qinzuoyan) port to big-endian machine
+// make sure to include <Winsock2.h> before the usage
 
 # ifndef be16toh
-# define be16toh(x) ( (x)>>8 | ( (x) &255 )<<8 )
+# define be16toh(x) ntohs(x)
 # endif
 
+# ifndef htobe16
+# define htobe16(x) htons(x)
+# endif
+
+static_assert (sizeof(int32_t) == sizeof(long),
+    "sizeof(int32_t) == sizeof(u_long) for use of ntohl");
+
 # ifndef be32toh
-# define be32toh(x) ( (be16toh((x)>>16)&65535) | (be16toh((x)&65535)<<16) )
+# define be32toh(x) ntohl(x)
+# endif
+
+# ifndef htobe32
+# define htobe32(x) htonl(x)
 # endif
 
 # ifndef be64toh
 # define be64toh(x) ( (be32toh((x)>>32)&0xffffffff) | ( be32toh( (x)&0xffffffff ) << 32 ) )
 # endif
+
 
 # endif

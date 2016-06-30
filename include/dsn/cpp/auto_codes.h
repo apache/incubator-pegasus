@@ -331,7 +331,7 @@ namespace dsn
 # endif
         }
 
-        error_code(const error_code& err) 
+        error_code(const error_code& err)
         {
             _internal_code = err._internal_code;
     # ifdef TRACK_ERROR_CODE

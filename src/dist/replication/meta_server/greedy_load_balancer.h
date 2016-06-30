@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     A greedy load balancer
+ *     A greedy load balancer based on Dijkstra & Ford-Fulkerson
  *
  * Revision history:
  *     2016-02-03, Weijie Sun, first version
