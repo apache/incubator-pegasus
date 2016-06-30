@@ -6,7 +6,6 @@ $file_prefix = $argv[3];
 [apps..default]
 run = true
 count = 1
-network.server.0.RPC_CHANNEL_TCP = NET_HDR_HTTP, dsn::tools::asio_network_provider, 65536
 
 [apps.server]
 name = server

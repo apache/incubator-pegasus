@@ -12,18 +12,13 @@ meta_sApp.prototype.unmarshall = function(buf, value, type) {
     return unmarshall_thrift_json(buf, value, type);
 }
 
-meta_sApp.prototype.get_address = function(url, hash) {
-    if (typeof hash == "undefined") {
-        hash = 0;
-    }
-    return url + "/" + hash;
-}
-
 meta_sApp.prototype.internal_create_app = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_create_app_address(hash),
+        this.url,
+        "RPC_CM_CREATE_APP",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -43,7 +38,9 @@ meta_sApp.prototype.internal_async_create_app = function(args, on_success, on_fa
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_create_app_address(hash),
+        this.url,
+        "RPC_CM_CREATE_APP",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -71,15 +68,13 @@ meta_sApp.prototype.create_app = function(obj) {
     }
 }
 
-meta_sApp.prototype.get_create_app_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_CREATE_APP", hash);
-}
-
 meta_sApp.prototype.internal_drop_app = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_drop_app_address(hash),
+        this.url,
+        "RPC_CM_DROP_APP",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -99,7 +94,9 @@ meta_sApp.prototype.internal_async_drop_app = function(args, on_success, on_fail
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_drop_app_address(hash),
+        this.url,
+        "RPC_CM_DROP_APP",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -127,15 +124,13 @@ meta_sApp.prototype.drop_app = function(obj) {
     }
 }
 
-meta_sApp.prototype.get_drop_app_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_DROP_APP", hash);
-}
-
 meta_sApp.prototype.internal_list_nodes = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_list_nodes_address(hash),
+        this.url,
+        "RPC_CM_LIST_NODES",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -155,7 +150,9 @@ meta_sApp.prototype.internal_async_list_nodes = function(args, on_success, on_fa
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_list_nodes_address(hash),
+        this.url,
+        "RPC_CM_LIST_NODES",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -183,15 +180,13 @@ meta_sApp.prototype.list_nodes = function(obj) {
     }
 }
 
-meta_sApp.prototype.get_list_nodes_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_LIST_NODES", hash);
-}
-
 meta_sApp.prototype.internal_list_apps = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_list_apps_address(hash),
+        this.url,
+        "RPC_CM_LIST_APPS",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -211,7 +206,9 @@ meta_sApp.prototype.internal_async_list_apps = function(args, on_success, on_fai
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_list_apps_address(hash),
+        this.url,
+        "RPC_CM_LIST_APPS",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -239,15 +236,13 @@ meta_sApp.prototype.list_apps = function(obj) {
     }
 }
 
-meta_sApp.prototype.get_list_apps_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_LIST_APPS", hash);
-}
-
 meta_sApp.prototype.internal_query_configuration_by_node = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_query_configuration_by_node_address(hash),
+        this.url,
+        "RPC_CM_QUERY_NODE_PARTITIONS",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -267,7 +262,9 @@ meta_sApp.prototype.internal_async_query_configuration_by_node = function(args, 
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_query_configuration_by_node_address(hash),
+        this.url,
+        "RPC_CM_QUERY_NODE_PARTITIONS",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -295,15 +292,13 @@ meta_sApp.prototype.query_configuration_by_node = function(obj) {
     }
 }
 
-meta_sApp.prototype.get_query_configuration_by_node_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_QUERY_NODE_PARTITIONS", hash);
-}
-
 meta_sApp.prototype.internal_query_configuration_by_index = function(args,  hash) {
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_query_configuration_by_index_address(hash),
+        this.url,
+        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -323,7 +318,9 @@ meta_sApp.prototype.internal_async_query_configuration_by_index = function(args,
     var self = this;
     var ret = null;
     dsn_call(
-        this.get_query_configuration_by_index_address(hash),
+        this.url,
+        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+        hash,
         "POST",
         this.marshall(args, "struct"),
         "DSF_THRIFT_JSON",
@@ -349,9 +346,5 @@ meta_sApp.prototype.query_configuration_by_index = function(obj) {
     } else {
         this.internal_async_query_configuration_by_index(obj.args, obj.on_success, obj.on_fail, obj.hash);
     }
-}
-
-meta_sApp.prototype.get_query_configuration_by_index_address = function(hash) {
-    return this.get_address(this.url + "/" + "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", hash);
 }
 

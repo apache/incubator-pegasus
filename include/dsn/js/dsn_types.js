@@ -120,6 +120,45 @@ gpid = function(args) {
   }
 };
 gpid.prototype = {};
+
+gpid.prototype.app_id = function()
+{  
+    var idstr = this.id.toString(2); 
+    var idstr2 = ''; 
+    for (var i = 0; i < 64 - idstr.length; i++) {
+        idstr2 += '0'; 
+    }; 
+
+    idstr2 += idstr;
+
+    return parseInt(idstr2.substring(0, 32), 2);
+}
+
+gpid.prototype.partition_index = function()
+{
+    var idstr = this.id.toString(2); 
+    var idstr2 = ''; 
+    for (var i = 0; i < 64 - idstr.length; i++) {
+        idstr2 += '0'; 
+    }; 
+
+    idstr2 += idstr;
+    return parseInt(idstr2.substring(32), 2);
+}
+
+gpid.prototype.toString = function()
+{
+    var idstr = this.id.toString(2); 
+    var idstr2 = ''; 
+    for (var i = 0; i < 64 - idstr.length; i++) {
+        idstr2 += '0'; 
+    }; 
+
+    idstr2 += idstr;
+    
+    return parseInt(idstr2.substring(32), 2) + "." + parseInt(idstr2.substring(0, 32), 2);
+}
+
 gpid.prototype.read = function(input) {
   input.readStructBegin();
   while (true)

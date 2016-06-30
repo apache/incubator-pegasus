@@ -84,14 +84,6 @@ Thrift.DSNTransport.prototype = {
 };
 
 var DSN = {
-    payload_format : {
-        'DSF_THRIFT_BINARY' : 0,
-        'DSF_THRIFT_COMPACT' : 1,
-        'DSF_THRIFT_JSON' : 2,
-        'DSF_PROTOC_BINARY' : 3,
-        'DSF_PROTOC_JSON' : 4,
-    },
-    
     thrift_type : {
         "bool" : Thrift.Type.BOOL,
         "byte" : Thrift.Type.BYTE,
@@ -104,20 +96,31 @@ var DSN = {
     }
 };
 
-function dsn_call(url, method, send_data, payload_format, is_async, on_success, on_fail) {
+function dsn_call(url, rpc_code, hash, method, send_data, payload_format, is_async, on_success, on_fail) {
     if ((is_async && (!on_success || !on_fail)) || url === undefined || url === '') {
         return null;
-    }
-    if (!method) {
+    }    
+    if (hash == undefined)
+        hash = 0;        
+    if (!method)
         method = "POST";
-    }
-    payload_format_id = DSN.payload_format[payload_format];
     
+    url = url + "/" + payload_format + "/" + hash + "/" + rpc_code;
     $.ajax(
         {
             type: method,
             dataType: "text",
-            url: url + "?payload_format=" + payload_format_id,
+            url: url,
+            /* 
+            the following does not work due to cross-domain queries, see
+            http://stackoverflow.com/questions/8538319/jquery-ajax-custom-http-headers-issue
+            we therefore encode the url instead as shown above.
+            
+            headers : {
+                'rpc_name' : rpc_code,
+                'client_hash' : hash,
+                'serialize_format' : payload_format
+            }, */
             data: send_data,
             async: is_async,
             success: function(response) {

@@ -1,3 +1,5 @@
+//Vue.config.debug = true;
+
 //parameter parsing function
 function getParameterByName(name) {
     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
@@ -9,8 +11,8 @@ function getParameterByName(name) {
 var vm = new Vue({
     el: '#app',
     data:{
-        appList: [],
-        partitionList: [],
+        appInfo: null,
+        appDetails: [],
         appTotal:0,
         updateTimer: 0,
         filterKey: '',
@@ -28,25 +30,25 @@ var vm = new Vue({
                 on_success: function (appdata){
                     try {
                         appdata = new configuration_list_apps_response(appdata);
-                        self.$set('appList', appdata)
-                    
+                        self.$set('appInfo', appdata)                    
                     }
                     catch(err) {
                         console.log(err);
                     }
 
-                    if(self.appTotal !=self.appList.infos.length)
+                    if(self.appTotal != self.appInfo.infos.length)
                     {
-                        self.appTotal = self.appList.infos.length;
-                        self.partitionList = [];
+                        self.appTotal = self.appInfo.infos.length;
+                        self.appDetails = [];
                     }
 
-                    for (app in self.appList.infos)
+                    var app;
+                    for (app = 0; app < self.appInfo.infos.length; ++app)
                     {
                         (function(app){
                             result = client.query_configuration_by_index({
                                 args: new configuration_query_by_index_request({
-                                    'app_name': self.appList.infos[app].app_name,
+                                    'app_name': self.appInfo.infos[app].app_name,
                                     'partition_indices': []
                                 }),
                                 async: true,
@@ -54,17 +56,18 @@ var vm = new Vue({
                                     var is_stateful = false;
                                     try {
                                         servicedata = new configuration_query_by_index_response(servicedata);
-                                        console.log(JSON.stringify(servicedata))
-                                        self.partitionList.$set(app, servicedata)
+                                        console.log(JSON.stringify(servicedata));
+                                        self.appDetails.$set(app, servicedata);
                                         is_stateful = servicedata.is_stateful;
                                     }
                                     catch(err) {
                                         return;
                                     }
                                     
-                                    for (partition in self.partitionList[app].partitions)
+                                    var partition;
+                                    for (partition = 0; partition < self.appDetails[app].partitions.length; ++partition)
                                     {
-                                        var par = self.partitionList[app].partitions[partition];
+                                        var par = self.appDetails[app].partitions[partition];
                                         par.membership = '';
 
                                         if(is_stateful)

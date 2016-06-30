@@ -2,10 +2,8 @@
 
 function usage()
 {
-    echo "dsn.cg %name%.thrift|.proto cpp|csharp|js %out_dir%  [binary|json]".PHP_EOL;
+    echo "dsn.cg %name%.thrift|.proto cpp|csharp|js %out_dir% [format = binary|json] [mode = single]".PHP_EOL;
     echo "\tformat - use binary(default) or json format to send rpc request/response".PHP_EOL;
-    echo "\tsingle - generate code for a single-node service".PHP_EOL;
-    echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
     echo "\tnotice : currently for js we only support json format of thrift".PHP_EOL;
 }
 
@@ -24,8 +22,8 @@ global $g_idl_type;
 global $g_idl_post;
 global $g_program;
 global $g_idl_php;
-global $g_is_replicated;
 global $g_idl_format;
+global $g_mode;
 
 $g_idl = $argv[1];
 $g_lang = $argv[2];

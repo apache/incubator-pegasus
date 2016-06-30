@@ -6,9 +6,6 @@ $file_prefix = $argv[3];
 [apps..default]
 run = true
 count = 1
-;network.client.RPC_CHANNEL_TCP = dsn::tools::sim_network_provider, 65536
-;network.client.RPC_CHANNEL_UDP = dsn::tools::sim_network_provider, 65536
-;network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::sim_network_provider, 65536
 
 [apps.server]
 name = server
