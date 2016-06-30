@@ -129,6 +129,10 @@ namespace dsn
 # define be16toh(x) ntohs(x)
 # endif
 
+# ifndef htobe16
+# define htobe16(x) htons(x)
+# endif
+
 static_assert (sizeof(int32_t) == sizeof(long),
     "sizeof(int32_t) == sizeof(u_long) for use of ntohl");
 
@@ -136,8 +140,13 @@ static_assert (sizeof(int32_t) == sizeof(long),
 # define be32toh(x) ntohl(x)
 # endif
 
+# ifndef htobe32
+# define htobe32(x) htonl(x)
+# endif
+
 # ifndef be64toh
 # define be64toh(x) ( (be32toh((x)>>32)&0xffffffff) | ( be32toh( (x)&0xffffffff ) << 32 ) )
 # endif
+
 
 # endif

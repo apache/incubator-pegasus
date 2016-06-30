@@ -50,6 +50,8 @@ namespace dsn
 
     message_ex* dsn_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
     {
+        read_next = 4096;
+
         dsn::blob& buf = reader->_buffer;
         char* buf_ptr = (char*)buf.data();
         unsigned int buf_len = reader->_buffer_occupied;

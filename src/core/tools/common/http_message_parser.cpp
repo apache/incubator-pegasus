@@ -41,8 +41,6 @@
 # include <iomanip>
 # include "http_message_parser.h"
 # include <dsn/cpp/serialization.h>
-# include <boost/xpressive/xpressive_static.hpp>
-# include <boost/lexical_cast.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -57,10 +55,14 @@ char(&ArraySizeHelper(T(&array)[N]))[N];
 http_message_parser::http_message_parser()
 {
     memset(&_parser_setting, 0, sizeof(_parser_setting));
+    _parser.data = this;
     _parser_setting.on_message_begin = [](http_parser* parser)->int
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
+
         owner->_current_message.reset(message_ex::create_receive_message_with_standalone_header(blob()));
+        owner->_response_parse_state = parsing_nothing;
+
         message_header* header = owner->_current_message->header;
         header->hdr_length = sizeof(message_header);
         header->hdr_crc32 = header->body_crc32 = CRC_INVALID;
@@ -68,36 +70,51 @@ http_message_parser::http_message_parser()
     };
     _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
     {
-        // url is not used now
-        /*
-        using namespace boost::xpressive;
+        // see https://github.com/imzhenyu/rDSN/issues/420
+        // url = "/" + payload_format + "/" + hash + "/" + rpc_code;
+        // e.g., /DSF_THRIFT_JSON/0/RPC_CLI_CLI_CALL
+
+        std::string url(at, length);
+        std::vector<std::string> args;
+        utils::split_args(url.c_str(), args, '/');
+
+        dinfo("http call %s", url.c_str());
+
+        if (args.size() != 3)
+        {
+            dinfo("skip url parse for %s, could be done in headers if not cross-domain", url.c_str());
+            return 0;
+        }
+
         auto owner = static_cast<http_message_parser*>(parser->data);
-
-        http_parser_url url;
-        http_parser_parse_url(at, length, 1, &url);
-        if (((url.field_set >> UF_PATH) & 1) == 0)
+        auto& hdr = owner->_current_message->header;
+        
+        // serialize-type
+        dsn_msg_serialize_format fmt = enum_from_string(args[0].c_str(), DSF_INVALID);
+        if (fmt == DSF_INVALID)
         {
-            derror("no path field exist in url '%.*s'", length, at);
+            derror("invalid serialize_format in url %s", url.c_str());
+            return 1;
+        }
+        hdr->context.u.serialize_format = fmt;
+
+        // hash
+        char *end;
+        hdr->client.hash = std::strtoull(args[1].c_str(), &end, 10);
+        if (end != args[1].c_str() + args[1].length())
+        {
+            derror("invalid hash in url %s", url.c_str());
             return 1;
         }
 
-        cregex url_regex = '/' >> (s1 = +_w);
-        constexpr int const url_regex_subs[] = { 1 };
-        cregex_token_iterator cur(at, at + length, url_regex, url_regex_subs), end;
-        if (cur == end)
+        // rpc-code
+        if (args[2].length() > DSN_MAX_TASK_CODE_NAME_LENGTH)
         {
-            derror("invalid url '%.*s'", length, at);
+            derror("too long rpc code in url %s", url.c_str());
             return 1;
         }
-        if (cur->length() >= DSN_MAX_TASK_CODE_NAME_LENGTH)
-        {
-            derror("too long rpc name in url '%.*s'", length, at);
-            return 1;
-        }
-        std::copy(range_begin(*cur), range_end(*cur), owner->_current_message->header->rpc_name);
-        owner->_current_message->header->rpc_name[cur->length()] = 0;
-        */
-
+        strcpy(hdr->rpc_name, args[2].c_str());
+        
         return 0;
     };
     _parser_setting.on_header_field = [](http_parser* parser, const char *at, size_t length)->int
@@ -307,11 +324,16 @@ http_message_parser::http_message_parser()
             header->hdr_type = header_type::hdr_type_http_post;
             header->context.u.is_request = 1;
         }
+        else if (parser->type == HTTP_REQUEST && parser->method == HTTP_OPTIONS)
+        {
+            header->hdr_type = header_type::hdr_type_http_options;
+            header->context.u.is_request = 1;
+        }        
         else if (parser->type == HTTP_RESPONSE)
         {
             header->hdr_type = header_type::hdr_type_http_response;
             header->context.u.is_request = 0;
-        }
+        }        
         else
         {
             derror("invalid http type %d and method %d", parser->type, parser->method);
@@ -325,22 +347,22 @@ http_message_parser::http_message_parser()
         dassert(owner->_current_buffer.buffer() != nullptr, "the read buffer is not owning");
         owner->_current_message->buffers[0].assign(owner->_current_buffer.buffer(), at - owner->_current_buffer.buffer_ptr(), length);
         owner->_current_message->header->body_length = length;
+        owner->_received_messages.emplace(std::move(owner->_current_message));
         return 0;
-    };
-    _parser.data = this;
+    };    
     http_parser_init(&_parser, HTTP_BOTH);
 }
 
 void http_message_parser::reset()
 {
+    http_parser_init(&_parser, HTTP_BOTH);
 }
 
 message_ex* http_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
 {
+    read_next = 4096;
     _current_buffer = reader->_buffer;
-    _current_message.reset();
-    _response_parse_state = parsing_nothing;
-    http_parser_init(&_parser, HTTP_BOTH);
+
     auto nparsed = http_parser_execute(&_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
     _current_buffer = blob();
     reader->_buffer = reader->_buffer.range(nparsed);
@@ -351,20 +373,21 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
         read_next = -1;
         return nullptr;
     }
-    if (_current_message)
+
+    if (!_received_messages.empty())
     {
-        message_ex* msg = _current_message.release();
+        auto msg = std::move(_received_messages.front());
+        _received_messages.pop();
+
         dinfo("rpc_name: %s, from_address: %s, seq_id: %" PRIu64 ", trace_id: %" PRIu64,
-              msg->header->rpc_name, msg->header->from_address.to_string(),
-              msg->header->id, msg->header->trace_id);
-        read_next = 4096;
+            msg->header->rpc_name, msg->header->from_address.to_string(),
+            msg->header->id, msg->header->trace_id);
+        
         msg->hdr_format = NET_HDR_HTTP;
-        return msg;
+        return msg.release();
     }
     else
     {
-        derror("invalid http message");
-        read_next = -1;
         return nullptr;
     }
 }
@@ -403,6 +426,7 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         ss << "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin\r\n";
         ss << "Content-Type: text/plain\r\n";
         ss << "Access-Control-Allow-Origin: *\r\n";
+        ss << "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n";
         ss << "id: " << msg->header->id << "\r\n";
         ss << "trace_id: " << msg->header->trace_id << "\r\n";
         ss << "rpc_name: " << msg->header->rpc_name << "\r\n";

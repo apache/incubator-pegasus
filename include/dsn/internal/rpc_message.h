@@ -103,6 +103,7 @@ namespace dsn
         static header_type hdr_type_thrift;
         static header_type hdr_type_http_get;
         static header_type hdr_type_http_post;
+        static header_type hdr_type_http_options;
         static header_type hdr_type_http_response;
         static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
         static dsn_msg_header_type header_type_to_c_type(const header_type& hdr_type);

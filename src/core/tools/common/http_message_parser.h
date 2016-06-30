@@ -64,6 +64,8 @@ namespace dsn
         http_parser _parser;
         dsn::blob _current_buffer;
         std::unique_ptr<message_ex> _current_message;
+        std::queue<std::unique_ptr<message_ex> > _received_messages;
+
         enum
         {
             parsing_nothing,
