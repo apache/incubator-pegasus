@@ -139,6 +139,7 @@ public:
         const service_app_spec& spec, 
         io_modifer& ctx
         );
+    void start_serving() { _is_serving = true; }
 
     //
     // rpc registrations
@@ -193,7 +194,8 @@ private:
 
     std::unique_ptr<uri_resolver_manager>            _uri_resolver_mgr;
     
-    volatile bool                 _is_running;
+    volatile bool                                    _is_running;
+    volatile bool                                    _is_serving;
 };
 
 // ------------------------ inline implementations --------------------

@@ -372,7 +372,7 @@ error_code service_node::start()
         }
     }
 
-    // start io engines (only computation and timer), others are started in app start task
+    // start io engines (only timer, disk and rpc), others are started in app start task
     for (auto& io : _ios)
     {
         start_io_engine_in_main(io);
@@ -388,6 +388,14 @@ error_code service_node::start()
         ::dsn::tools::node_scoper scoper(this);
         _app_info.app.app_context_ptr = _app_spec.role->layer1.create(_app_spec.role->type_name, dsn_gpid{ 0 });
     }
+
+    // start rpc serving
+    for (auto& io : _ios)
+    {
+        if (io.rpc)
+            io.rpc->start_serving();
+    }
+
     return err;
 }
 

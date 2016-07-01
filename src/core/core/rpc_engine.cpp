@@ -533,6 +533,7 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
+        _is_serving = false;
     }
     
     //
@@ -716,6 +717,21 @@ namespace dsn {
 
     void rpc_engine::on_recv_request(network* net, message_ex* msg, int delay_ms)
     {
+        if (!_is_serving)
+        {
+            dwarn(
+                "recv message with rpc name %s from %s when rpc engine is not serving, trace_id = %" PRIu64,
+                msg->header->rpc_name,
+                msg->header->from_address.to_string(),
+                msg->header->trace_id
+                );
+
+            dassert(msg->get_count() == 0,
+                "request should not be referenced by anybody so far");
+            delete msg;
+            return;
+        }
+
         auto code = msg->rpc_code();
 
         if (code != ::dsn::TASK_CODE_INVALID)
