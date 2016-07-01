@@ -303,7 +303,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
         _pending_mutation = r->new_mutation(invalid_decree);
     }
 
-    dinfo("add request with trace_id = %" PRIu64 " into mutation with mutation_tid = %" PRIu64,
+    dinfo("add request with trace_id = %016" PRIx64 " into mutation with mutation_tid = %" PRIu64,
           dsn_msg_trace_id(request), _pending_mutation->tid());
 
     _pending_mutation->add_client_request(code, request);

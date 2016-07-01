@@ -82,7 +82,7 @@ namespace dsn
                 if (!msg->is_right_body(false))
                 {
                     message_header* header = (message_header*)buf_ptr;
-                    derror("body check failed for message, id = %" PRIu64 ", trace_id = %" PRIu64 ", rpc_name = %s, from_addr = %s",
+                    derror("body check failed for message, id = %" PRIu64 ", trace_id = %016" PRIx64 ", rpc_name = %s, from_addr = %s",
                            header->id, header->trace_id, header->rpc_name, header->from_address.to_string());
                     read_next = -1;
                     return nullptr;
