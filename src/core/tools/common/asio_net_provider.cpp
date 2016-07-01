@@ -184,7 +184,7 @@ namespace dsn {
                         return;
                     }
 
-                    if (bytes_transferred < sizeof(message_header))
+                    if (bytes_transferred < sizeof(header_type))
                     {
                         derror("%s: asio udp read failed: too short message", _address.to_string());
                         do_receive();

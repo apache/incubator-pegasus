@@ -45,6 +45,7 @@ namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
+    empty_write_disabled = false;
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
 
@@ -84,7 +85,6 @@ replication_options::replication_options()
     config_sync_interval_ms = 30000;
 
     lb_interval_ms = 10000;
-    write_empty_enabled = true;
 }
 
 replication_options::~replication_options()
@@ -135,6 +135,12 @@ void replication_options::initialize()
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
     }
 
+    empty_write_disabled =
+        dsn_config_get_value_bool("replication",
+        "empty_write_disabled",
+        empty_write_disabled,
+        "whether to disable empty write, default is false"
+        );
     prepare_timeout_ms_for_secondaries =
         (int)dsn_config_get_value_uint64("replication", 
         "prepare_timeout_ms_for_secondaries", 
@@ -324,13 +330,6 @@ void replication_options::initialize()
         lb_interval_ms,
         "every this period(ms) the meta server will do load balance"
         );
-
-    write_empty_enabled =
-        dsn_config_get_value_bool("replication",
-            "write_empty_enabled",
-            write_empty_enabled,
-            "whether to enable empty write when no write requests are processed for more than group_check_period, default is true"
-            );
     
     replica_helper::load_meta_servers(meta_servers);
 
