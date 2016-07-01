@@ -46,7 +46,7 @@ inline void error_msg(int err_number, /*out*/char* buffer, int buflen)
 #ifdef _WIN32
     int result = strerror_s(buffer, buflen, err_number);
     if (result != 0)
-        fprintf(stderr, "maybe unknown err number(%s)", err_number);
+        fprintf(stderr, "maybe unknown err number(%d)", err_number);
 #else
     char* result = strerror_r(err_number, buffer, buflen);
     if (result != buffer) {

@@ -15,6 +15,7 @@ rdsn.github.creator
 rdsn.github.creator.user*
 rdsn.github.files
 rdsn.github.includes
+rDSN.github.*
 update_qt_config.sh
 zookeeper-3.4.6.tar.gz
 zookeeper-3.4.6/

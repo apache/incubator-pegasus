@@ -37,9 +37,6 @@
 # include "rpc_engine.h"
 # include <dsn/internal/singleton_store.h>
 
-
-
-
 DSN_API bool dsn_register_app(dsn_app* app_type)
 {
     dsn_app* app;
@@ -56,7 +53,6 @@ DSN_API bool dsn_register_app(dsn_app* app_type)
     dassert(r, "app type %s is already registered", app_type->type_name);
     return r;
 }
-
 
 DSN_API bool dsn_get_app_callbacks(const char* name, /* out */ dsn_app_callbacks* callbacks)
 {
@@ -247,7 +243,7 @@ namespace dsn
                 app = it->second.get();
             }
             else
-                return false;
+                return nullptr;
         }
 
         return app->server_dispatcher.unregister_rpc_handler(rpc_code);
