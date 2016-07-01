@@ -2,6 +2,7 @@
 
 import os
 import sys
+import platform
 
 '''
 the default thrift generator
@@ -129,9 +130,13 @@ class CompileError(Exception):
     def __str__(self):
         return self.msg
 
-def init_env(): 
-    env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.sh"
-    env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift"
+def init_env():
+    if platform.system() == "Windows":
+        env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.bat"
+        env_tools["thrift_exe"] = os.getcwd() + "/bin/Windows/thrift.exe"
+    else:
+        env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.sh"
+        env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift"
     env_tools["root_dir"] = os.getcwd()
 
 def find_struct_define(line, enum_class_list):
@@ -202,6 +207,7 @@ def fix_include_file(filename, fix_commands):
     from_fd.close()
     to_fd.close()
 
+    os.remove(filename)
     os.rename(tmp_result, filename)
 
 def fix_include(thrift_name, include_fix_dict):
@@ -225,6 +231,7 @@ def toggle_serialization_in_cpp(thrift_name):
     os.system("cat %s >> %s"%(cpp_file, new_file))
     os.system("echo \"#endif\" >> %s"%(new_file) )
 
+    os.remove(cpp_file)
     os.rename(new_file, cpp_file)
     os.chdir("..")
 
@@ -305,6 +312,8 @@ def constructor_hook(args):
 
     src_fd.close()
     dst_fd.close()
+
+    os.remove(generated_fname)
     os.rename(target_fname, generated_fname)
 
 def remove_all_enums_define_hook(args):
@@ -327,6 +336,8 @@ def remove_all_enums_define_hook(args):
 
     src_fd.close()
     dst_fd.close()
+
+    os.remove(generated_fname)
     os.rename(target_fname, generated_fname)
 
 def remove_struct_define_hook(args):
@@ -347,6 +358,8 @@ def remove_struct_define_hook(args):
 
     src_fd.close()
     dst_fd.close()
+    
+    os.remove(generated_fname)
     os.rename(target_fname, generated_fname)
 
 def add_hook(name, path, func, args):
