@@ -227,7 +227,7 @@ namespace dsn {
             // failure injection applied
             if (!call->enqueue(err, reply))
             {
-                ddebug("rpc reply %s is dropped (fault inject), trace_id = %" PRIu64,
+                ddebug("rpc reply %s is dropped (fault inject), trace_id = %016" PRIx64,
                     reply->header->rpc_name,
                     reply->header->trace_id
                     );
@@ -746,7 +746,7 @@ namespace dsn {
                 // release the task when necessary
                 else
                 {
-                    ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
+                    ddebug("rpc request %s is dropped (fault inject), trace_id = %016" PRIx64,
                         msg->header->rpc_name,
                         msg->header->trace_id
                         );
@@ -764,7 +764,7 @@ namespace dsn {
         }
 
         dwarn(
-            "recv message with unknown rpc name %s from %s, trace_id = %" PRIu64,
+            "recv message with unknown rpc name %s from %s, trace_id = %016" PRIx64,
             msg->header->rpc_name,
             msg->header->from_address.to_string(),
             msg->header->trace_id
@@ -946,7 +946,7 @@ namespace dsn {
             hdr.rpc_name
             );
 
-        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, trace_id = %" PRIu64,
+        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, trace_id = %016" PRIx64,
               hdr.rpc_name, addr.to_string(), request->hdr_format.to_string(),
               sp->rpc_call_channel.to_string(), hdr.trace_id);
 
@@ -969,7 +969,7 @@ namespace dsn {
         // join point and possible fault injection
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
-            ddebug("rpc request %s is dropped (fault inject), trace_id = %" PRIu64,
+            ddebug("rpc request %s is dropped (fault inject), trace_id = %016" PRIx64,
                 request->header->rpc_name,
                 request->header->trace_id
                 );
@@ -1081,7 +1081,7 @@ namespace dsn {
         // response->io_session == nullptr && response->to_address.is_invalid()
         else
         {
-            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %" PRIu64,
+            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %016" PRIx64,
                   response->header->rpc_name,
                   response->header->trace_id
                   );
@@ -1102,12 +1102,12 @@ namespace dsn {
     {
         dassert(request->header->context.u.is_request, "only rpc request can be forwarded");
         dassert(request->header->context.u.is_forward_supported,
-            "rpc msg %s (trace_id = %" PRIx64 ") does not support being forwared",
+            "rpc msg %s (trace_id = %016" PRIx64 ") does not support being forwared",
             task_spec::get(request->local_rpc_code)->name.c_str(),
             request->header->trace_id
             );
         dassert(address != primary_address(), 
-            "cannot forward msg %s (trace_id = %" PRIx64 ") to the local node",
+            "cannot forward msg %s (trace_id = %016" PRIx64 ") to the local node",
             task_spec::get(request->local_rpc_code)->name.c_str(),
             request->header->trace_id
             );

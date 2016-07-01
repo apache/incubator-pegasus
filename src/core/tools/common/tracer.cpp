@@ -69,7 +69,7 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
                 rpc_request_task* tsk = (rpc_request_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 "",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->header->from_address.to_string(),
@@ -81,7 +81,7 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
                 rpc_response_task* tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 "",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->to_address.to_string(),
@@ -152,7 +152,7 @@ namespace dsn {
         {
             message_header& hdr = *req->header;
             ddebug(
-                "%s RPC.CALL: %s => %s, trace_id = %016llx, callback_task = %016llx, timeout = %d ms",
+                "%s RPC.CALL: %s => %s, trace_id = %016" PRIx64 ", callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
                 req->header->from_address.to_string(),
                 req->to_address.to_string(),
@@ -164,7 +164,7 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, trace_id = %016llx, queue size = %d",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
                 callee->spec().name.c_str(),
                 callee,
                 callee->id(),
@@ -181,7 +181,7 @@ namespace dsn {
             message_header& hdr = *msg->header;
 
             ddebug(
-                "%s RPC.REPLY: %s => %s, trace_id = %016llx",
+                "%s RPC.REPLY: %s => %s, trace_id = %016" PRIx64 "",
                 hdr.rpc_name,
                 msg->header->from_address.to_string(),
                 msg->to_address.to_string(),
@@ -191,7 +191,7 @@ namespace dsn {
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, trace_id = %016llx, queue size = %d",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
                 resp->spec().name.c_str(),
                 resp->id(),
                 resp->get_request()->to_address.to_string(),
