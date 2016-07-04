@@ -310,8 +310,13 @@ int meta_service::check_primary(dsn_message_t req)
         dinfo("primary address: %s", primary.to_string());
         if (!primary.is_invalid())
         {
-            dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
-            return 0;
+            // it is possible that now primary == primary_address()
+            // due to the non-atomic is_primary() and get_primary() above
+            if (primary != primary_address())
+            {
+                dsn_rpc_forward(req, primary.c_addr());
+                return 0;
+            }
         }
     }
 

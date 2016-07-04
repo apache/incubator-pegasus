@@ -129,7 +129,7 @@ void replica::broadcast_group_check()
     }
 
     // send empty prepare when necessary
-    if (_options->write_empty_enabled && 
+    if (!_options->empty_write_disabled &&
         dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms)
     {
         mutation_ptr mu = new_mutation(invalid_decree);

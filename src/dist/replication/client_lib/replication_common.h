@@ -57,6 +57,7 @@ public:
     std::string slog_dir;
     std::vector<std::string> data_dirs;
 
+    bool    empty_write_disabled;
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
         
@@ -96,7 +97,6 @@ public:
     int32_t config_sync_interval_ms;
 
     int32_t lb_interval_ms;
-    bool    write_empty_enabled;
 
 public:
     replication_options();

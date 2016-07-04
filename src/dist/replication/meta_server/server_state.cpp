@@ -881,6 +881,7 @@ void server_state::request_check(const partition_configuration &old, const confi
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
         dassert(old.primary == request.node, "");
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+        break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
         dassert(old.primary == request.node || std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");

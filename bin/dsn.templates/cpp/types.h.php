@@ -22,20 +22,17 @@ if ($idl_type == "thrift")
     $idl_name = "PROTOBUF";
 }
 ?>
-# pragma once
-# include <dsn/service_api_cpp.h>
-# include <dsn/cpp/serialization.h>
+#pragma once
+#include <dsn/service_api_cpp.h>
+#include <dsn/cpp/serialization.h>
 
 <?php if ($idl_type == "thrift") { ?>
 
-# include "thrift/<?=$_PROG->name?>_types.h" 
-<?php foreach ($_PROG->services as $svc) { ?>
-# include "thrift/<?=$svc->name?>.h"
-<?php } ?>
+#include "<?=$_PROG->name?>_types.h"
 
 <?php } else if ($idl_type == "proto") {?>
 
-# include "<?=$_PROG->name?>.pb.h"
+#include "<?=$_PROG->name?>.pb.h"
 
 <?php } ?>
 
