@@ -1,0 +1,130 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+#include "raw_message_parser.h"
+#include <dsn/service_api_c.h>
+#include <dsn/internal/task_spec.h>
+#include <dsn/internal/network.h>
+
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "raw.message.parser"
+
+namespace dsn {
+
+//static
+std::atomic_bool raw_message_parser::s_handler_hooked(false);
+//static
+void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
+{
+    message_ex* special_msg = message_ex::create_receive_message_with_standalone_header(blob());
+    dsn::message_header* header = special_msg->header;
+    header->context.u.is_request = 1;
+    header->context.u.is_forwarded = 0;
+    header->from_address = sp->remote_address();
+    header->gpid.value = 0;
+
+    strncpy(header->rpc_name, "RPC_CALL_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
+    sp->on_recv_message(special_msg, 0);
+}
+
+raw_message_parser::raw_message_parser()
+{
+    bool hooked = false;
+    if (s_handler_hooked.compare_exchange_strong(hooked, true))
+    {
+        rpc_session::on_rpc_session_disconnected.put_native(raw_message_parser::notify_rpc_session_disconnected);
+    }
+}
+
+void raw_message_parser::reset() {}
+
+message_ex* raw_message_parser::get_message_on_receive(message_reader* reader, /*out*/int& read_next)
+{
+    if (reader->_buffer_occupied == 0)
+    {
+        if (reader->_buffer.length() > 0)
+            read_next = reader->_buffer.length();
+        else
+            read_next = reader->_buffer_block_size;
+        return nullptr;
+    }
+    else
+    {
+        auto msg_length = reader->_buffer_occupied;
+        dsn::blob msg_blob = reader->_buffer.range(0, msg_length);
+        message_ex* new_message = message_ex::create_receive_message_with_standalone_header(msg_blob);
+        message_header* header = new_message->header;
+
+        header->hdr_length = sizeof(*header);
+        header->body_length = msg_length;
+        strncpy(header->rpc_name, "RPC_CALL_RAW", DSN_MAX_TASK_CODE_NAME_LENGTH);
+        header->gpid.value = 0;
+        header->context.u.is_request = 1;
+        header->context.u.is_forwarded = 0;
+        header->context.u.is_forward_supported = 0;
+
+        reader->_buffer = reader->_buffer.range(msg_length);
+        reader->_buffer_occupied = 0;
+        read_next = 0;
+        return new_message;
+    }
+}
+
+int raw_message_parser::get_buffer_count_on_send(message_ex *msg)
+{
+    return msg->buffers.size();
+}
+
+int raw_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
+{
+    //we must skip the message header
+    unsigned int offset = sizeof(message_header);
+    int i=0;
+    for (blob& buf : msg->buffers)
+    {
+        if (offset >= buf.length())
+        {
+            offset -= buf.length();
+            continue;
+        }
+        buffers[i].buf = (void*)(buf.data() + offset);
+        buffers[i].sz = buf.length() - offset;
+        offset = 0;
+        ++i;
+    }
+    return i;
+}
+
+}
