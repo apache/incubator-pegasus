@@ -131,7 +131,7 @@ namespace dsn
         struct
         {
             uint64_t hash; // for both partition hash and thread hash for the exact location of this request
-            int32_t  timeout_ms;
+            int32_t  timeout_ms; // timeout in milliseconds
             int32_t  padding;
         } client;
 

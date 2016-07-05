@@ -68,7 +68,12 @@ namespace dsn
             typedef partition_resolver* (*factory)(rpc_address&, const char*);
 
         public:
-            partition_resolver(rpc_address meta_server, const char* app_path);
+            partition_resolver(rpc_address meta_server, const char* app_path)
+                : _app_path(app_path), _meta_server(meta_server)
+            {
+            }
+
+            virtual ~partition_resolver() {}
 
             /**
             * resolve partition_hash into IP or group addresses to know what to connect next
@@ -116,13 +121,5 @@ namespace dsn
         };
 
         typedef ref_ptr<partition_resolver> partition_resolver_ptr;
-
-        //------------- inline implementation ----------------------------
-        
-        inline partition_resolver::partition_resolver(rpc_address meta_server, const char* app_path)
-            : _app_path(app_path), _meta_server(meta_server)
-        {
-
-        }
     }
 }

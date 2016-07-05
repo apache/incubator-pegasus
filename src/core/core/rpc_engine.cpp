@@ -805,7 +805,9 @@ namespace dsn {
 
         call_address(request->server_address, request, call);
     }
-    
+
+    DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
     void rpc_engine::call_uri(rpc_address addr, message_ex* request, rpc_response_task* call)
     {
         dbg_dassert(addr.type() == HOST_TYPE_URI, "only URI is now supported");
@@ -815,6 +817,8 @@ namespace dsn {
         auto resolver = request->server_address.uri_address()->get_resolver();
         if (nullptr == resolver)
         {
+            derror("call uri failed as no partition resolver found, uri = %s", request->server_address.uri_address()->uri());
+
             if (call != nullptr)
             {
                 call->enqueue(ERR_SERVICE_NOT_FOUND, nullptr);
@@ -826,7 +830,7 @@ namespace dsn {
                 request->release_ref();
             }
         }
-        else
+        else // resolver != nullptr
         {
             if (call)
             {
@@ -846,14 +850,28 @@ namespace dsn {
                             {
                                 resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
 
+                                /*
+                                // TODO(qinzuoyan): because the user will fetch reply states from this response_task 'call',
+                                // so it's useless to create another response_task, which will not be handled by user.
+
                                 // still got time, retry
                                 uint64_t nms = dsn_now_ms();
-                                if (nms + 1 < timeout_ts_ms)
+                                if (nms + 1000 < timeout_ts_ms)
                                 {
                                     req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
                                     auto call2 = dsn_rpc_create_response_task(req, callback, context, task::get_current_task()->hash(), task::get_current_task()->tracker());
                                     ((rpc_response_task*)(call2))->set_caller_pool((dynamic_cast<rpc_response_task*>(task::get_current_task()))->caller_pool());
-                                    dsn_rpc_call(req2->server_address.c_addr(), call2);
+                                    // sleep 1 second before retry
+                                    tasking::enqueue(
+                                        LPC_RPC_DELAY_CALL,
+                                        nullptr,
+                                        [server = req2->server_address.c_addr(), rpc_call = call2]()
+                                        {
+                                            dsn_rpc_call(server, rpc_call);
+                                        },
+                                        0,
+                                        std::chrono::seconds(1)
+                                        );
                                     return;
                                 }
                                 else
@@ -862,6 +880,7 @@ namespace dsn {
                                         error_code(err).to_string());
                                     err = ERR_TIMEOUT;
                                 }
+                                */
                             }
                         }
                         
@@ -881,8 +900,9 @@ namespace dsn {
                     {
                         // update gpid when necessary
                         auto& hdr2 = request->header;
-                        if (*(uint64_t*)&hdr2->gpid != *(uint64_t*)&result.pid)
+                        if (hdr2->gpid.value != result.pid.value)
                         {
+                            dassert(hdr2->gpid.value == 0, "");
                             hdr2->gpid = result.pid;
                             hdr2->client.hash = dsn_gpid_to_hash(result.pid);
                             request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
