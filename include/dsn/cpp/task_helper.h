@@ -75,7 +75,7 @@ namespace dsn
         {
             dsn_task_release_ref(_task);
 
-            if (0 != _rpc_response)
+            if (_rpc_response != nullptr)
                 dsn_msg_release_ref(_rpc_response);
         }
 
@@ -100,7 +100,7 @@ namespace dsn
 
         void wait() const
         {
-            return dsn_task_wait(_task);
+            dsn_task_wait(_task);
         }
 
         bool wait(int timeout_millieseconds) const
