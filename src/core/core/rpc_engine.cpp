@@ -329,7 +329,7 @@ namespace dsn {
         if (resend)
         {
             auto req = call->get_request();
-            dinfo("resend reqeust message for rpc %" PRIx64 ", key = %" PRIu64,
+            dinfo("resend request message for rpc %" PRIx64 ", key = %" PRIu64,
                 req->header->trace_id, key);
 
             // resend without handling rpc_matcher, use the same request_id
@@ -850,37 +850,36 @@ namespace dsn {
                             {
                                 resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
 
-                                /*
-                                // TODO(qinzuoyan): because the user will fetch reply states from this response_task 'call',
-                                // so it's useless to create another response_task, which will not be handled by user.
-
                                 // still got time, retry
                                 uint64_t nms = dsn_now_ms();
-                                if (nms + 1000 < timeout_ts_ms)
+                                if (nms + 10 < timeout_ts_ms)
                                 {
                                     req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
-                                    auto call2 = dsn_rpc_create_response_task(req, callback, context, task::get_current_task()->hash(), task::get_current_task()->tracker());
-                                    ((rpc_response_task*)(call2))->set_caller_pool((dynamic_cast<rpc_response_task*>(task::get_current_task()))->caller_pool());
-                                    // sleep 1 second before retry
+                                    auto ctask = dynamic_cast<rpc_response_task*>(task::get_current_task());
+                                    ctask->reset_callback();
+                                    ctask->set_retry(false);
+                                    ctask->add_ref(); // released later after dsn_rpc_call
+                                                                        
+                                    // sleep 10 milliseconds before retry
                                     tasking::enqueue(
                                         LPC_RPC_DELAY_CALL,
                                         nullptr,
-                                        [server = req2->server_address.c_addr(), rpc_call = call2]()
+                                        [server = req2->server_address.c_addr(), ctask]()
                                         {
-                                            dsn_rpc_call(server, rpc_call);
+                                            dsn_rpc_call(server, ctask);
+                                            ctask->release_ref(); // added when set-retry
                                         },
                                         0,
-                                        std::chrono::seconds(1)
+                                        std::chrono::milliseconds(10)
                                         );
                                     return;
                                 }
                                 else
                                 {
-                                    derror("service access failed (%s), no more time for further tries, set error = ERR_TIMEOUT",
-                                        error_code(err).to_string());
+                                    derror("service access failed (%s), no more time for further tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
+                                        error_code(err).to_string(), req2->header->trace_id);
                                     err = ERR_TIMEOUT;
                                 }
-                                */
                             }
                         }
                         

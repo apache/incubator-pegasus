@@ -58,11 +58,6 @@ namespace dsn
 __thread struct __tls_dsn__ tls_dsn;
 __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
-/*static*/ int task::get_current_node_id()
-{
-    return tls_dsn.magic == 0xdeadbeef ? (tls_dsn.node ? tls_dsn.node->id() : 0) : 0;
-}
-
 /*static*/ void task::set_tls_dsn_context(
     service_node* node,  // cannot be null
     task_worker* worker, // null for io or timer threads if they are not worker threads
@@ -75,6 +70,8 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
     if (node)
     {
+        tls_dsn.node_id = node->id();
+
         if (worker != nullptr)
         {
             dassert(worker->pool()->node() == node,
@@ -177,6 +174,18 @@ task::~task()
     }
 }
 
+bool task::set_retry(bool enqueue_immediately /*= true*/)
+{
+    task_state RUNNING_STATE = TASK_STATE_RUNNING;
+    if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_READY, std::memory_order_relaxed))
+    {
+        _error = enqueue_immediately ? ERR_OK : ERR_IO_PENDING;
+        return true;
+    }
+    else
+        return false;
+}
+
 void task::exec_internal()
 {
     task_state READY_STATE = TASK_STATE_READY;
@@ -201,10 +210,12 @@ void task::exec_internal()
         {
             if (!_wait_for_cancel)
             {
-                // for timer
+                // for retried tasks such as timer or rpc_response_task
                 notify_if_necessary = false;
                 _spec->on_task_end.execute(this);
-                enqueue();
+
+                if (ERR_OK == _error)
+                    enqueue();
             }   
             else
             {
@@ -520,9 +531,7 @@ void timer_task::exec()
 
     if (_interval_milliseconds > 0)
     {
-        //_state must be TASK_STATE_RUNNING here
-        dbg_dassert(_state.load(std::memory_order_relaxed) == TASK_STATE_RUNNING, "corrupted timer task state");
-        _state.store(TASK_STATE_READY, std::memory_order_release);
+        set_retry();
         set_delay(_interval_milliseconds);
     }
 }
@@ -599,6 +608,10 @@ rpc_response_task::~rpc_response_task()
 bool rpc_response_task::enqueue(error_code err, message_ex* reply)
 {
     set_error_code(err);
+
+    if (_response != nullptr)
+        _response->release_ref(); // added in previous enqueue
+
     _response = reply;
 
     if (nullptr != reply)
@@ -630,18 +643,42 @@ void rpc_response_task::enqueue()
     }
 }
 
+struct hook_context : public transient_object
+{
+    dsn_rpc_response_handler_t old_callback;
+    dsn_task_cancelled_handler_t old_on_cancel;
+    void* old_context;
+
+    dsn_rpc_response_handler_replace_t new_callback;
+    uint64_t new_context;
+};
+
+static void rpc_response_task_hook_callback(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* ctx)
+{
+    auto nc = (hook_context*)ctx;
+    nc->new_callback(
+        nc->old_callback,
+        err,
+        req,
+        resp,
+        nc->old_context,
+        nc->new_context
+    );
+    delete nc;
+};
+
+static void rpc_response_task_hook_on_cancel(void* ctx)
+{
+    auto nc = (hook_context*)ctx;
+    if (nc->old_on_cancel != nullptr)
+    {
+        nc->old_on_cancel(nc->old_context);
+    }
+    delete nc;
+}
+
 void rpc_response_task::replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context)
 {
-    struct hook_context : public transient_object
-    {
-        dsn_rpc_response_handler_t old_callback;
-        dsn_task_cancelled_handler_t old_on_cancel;
-        void* old_context;
-
-        dsn_rpc_response_handler_replace_t new_callback;
-        uint64_t new_context;
-    };
-
     hook_context* nc = new hook_context();
     nc->old_callback = _cb;
     nc->old_context = _context;
@@ -650,32 +687,37 @@ void rpc_response_task::replace_callback(dsn_rpc_response_handler_replace_t call
     nc->new_context = context;
 
     _context = nc;
-
-    _cb = [](dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* ctx)
-    {
-        auto nc = (hook_context*)ctx;
-        nc->new_callback(
-            nc->old_callback,
-            err,
-            req,
-            resp,
-            nc->old_context,
-            nc->new_context
-            );
-        delete nc;
-    };
-
-    _on_cancel = [](void* ctx)
-    {
-        auto nc = (hook_context*)ctx;
-        if (nc->old_on_cancel != nullptr)
-        {
-            nc->old_on_cancel(nc->old_context);
-        }
-        delete nc;
-    };
-
+    _cb = rpc_response_task_hook_callback;
+    _on_cancel = rpc_response_task_hook_on_cancel;
     _is_null = false;
+}
+
+bool rpc_response_task::reset_callback()
+{
+    if (_cb == rpc_response_task_hook_callback && _on_cancel == rpc_response_task_hook_on_cancel)
+    {
+        if (state() != TASK_STATE_READY &&
+            state() != TASK_STATE_RUNNING)
+            return false;
+
+        // ready or running
+        auto nc = (hook_context*)_context;
+        _context = nc->old_context;
+        _cb = nc->old_callback;
+        _on_cancel = nc->old_on_cancel;
+        _is_null = (_cb == nullptr);
+
+        if (state() != TASK_STATE_RUNNING)
+        {
+            delete nc;
+        }
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 aio_task::aio_task(

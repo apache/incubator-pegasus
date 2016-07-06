@@ -77,6 +77,8 @@ struct __tls_dsn__
     task_worker   *worker;
     int           worker_index;
     service_node  *node;
+    int           node_id;
+
     rpc_engine    *rpc;
     disk_engine   *disk;
     env_provider  *env;
@@ -118,6 +120,7 @@ public:
     bool                    cancel(bool wait_until_finished, /*out*/ bool* finished = nullptr);
     bool                    wait(int timeout_milliseconds = TIME_MS_MAX, bool on_cancel = false);
     virtual void            enqueue();
+    bool                    set_retry(bool enqueue_immediately = true); // return true when called inside exec(), false otherwise
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
     void                    set_tracker(task_tracker* tracker) { _context_tracker.set_tracker(tracker, this); }
@@ -160,8 +163,7 @@ protected:
     void                    signal_waiters();
     void                    enqueue(task_worker_pool* pool);
     void                    set_task_id(uint64_t tid) { _task_id = tid;  }
-
-    mutable std::atomic<task_state> _state;
+        
     bool                   _is_null;
     error_code             _error;
     void                   *_context; // the context for the task/on_cancel callbacks
@@ -172,6 +174,7 @@ private:
     static void            check_tls_dsn();
     static void            on_tls_dsn_not_set();
 
+    mutable std::atomic<task_state> _state;
     uint64_t               _task_id; 
     std::atomic<void*>     _wait_event;
     int                    _hash;
@@ -335,11 +338,12 @@ public:
     bool             enqueue(error_code err, message_ex* reply);
     void             enqueue() override; // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() const    { return _request; }
-    message_ex*      get_response() const    { return _response; }    
-    void             replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context);
+    message_ex*      get_response() const    { return _response; }            
+    void             replace_callback(dsn_rpc_response_handler_replace_t callback, uint64_t context); // not thread-safe
+    bool             reset_callback(); // used only when replace_callback is called before, not thread-safe
     task_worker_pool* caller_pool() const { return _caller_pool; }
     void             set_caller_pool(task_worker_pool* pl) { _caller_pool = pl; }
-
+    
     void  exec() override
     {
         if (_cb)
@@ -492,11 +496,16 @@ __inline /*static*/ service_node* task::get_current_node()
     check_tls_dsn();
     return tls_dsn.node;
 }
+
+__inline /*static*/ int task::get_current_node_id()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.node_id : 0;
+}
+
 __inline /*static*/ service_node* task::get_current_node2()
 {
     return tls_dsn.magic == 0xdeadbeef ? tls_dsn.node : nullptr;
 }
-
 
 __inline /*static*/ int task::get_current_worker_index()
 {
