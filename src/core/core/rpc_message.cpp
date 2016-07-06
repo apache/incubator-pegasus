@@ -281,7 +281,7 @@ dsn_msg_header_type header_type::header_type_to_c_type(const header_type& hdr_ty
 }
 
 message_ex::message_ex()
-    : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_DSN),
+    : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_DSN), send_retry_count(0),
       _rw_index(-1), _rw_offset(0), _rw_committed(true), _is_read(false)
 {
 }

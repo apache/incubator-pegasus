@@ -158,6 +158,7 @@ namespace dsn
         rpc_address            server_address; // used by requests, and may be of uri/group address
         dsn_task_code_t        local_rpc_code;
         network_header_format  hdr_format;
+        int                    send_retry_count;
 
         // by message queuing
         dlink                  dl;
