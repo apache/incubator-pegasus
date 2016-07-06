@@ -852,9 +852,13 @@ namespace dsn {
 
                                 // still got time, retry
                                 uint64_t nms = dsn_now_ms();
-                                if (nms + 10 < timeout_ts_ms)
+                                uint64_t gap = 8 << req2->send_retry_count;
+                                if (gap > 1000)
+                                    gap = 1000;
+                                if (nms + gap < timeout_ts_ms)
                                 {
-                                    req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms);
+                                    req2->send_retry_count++;
+                                    req2->header->client.timeout_ms = static_cast<int>(timeout_ts_ms - nms - gap);
                                     auto ctask = dynamic_cast<rpc_response_task*>(task::get_current_task());
                                     ctask->reset_callback();
                                     ctask->set_retry(false);
@@ -870,7 +874,7 @@ namespace dsn {
                                             ctask->release_ref(); // added when set-retry
                                         },
                                         0,
-                                        std::chrono::milliseconds(10)
+                                        std::chrono::milliseconds(gap)
                                         );
                                     return;
                                 }
