@@ -94,9 +94,9 @@ namespace dsn
         void partition_resolver_simple::on_access_failure(int partition_index, error_code err)
         {
             if (-1 != partition_index
-                && err != ERR_CAPACITY_EXCEEDED
-                && err != ERR_NOT_ENOUGH_MEMBER
-                && err != ERR_INVALID_DATA)
+                && err != ERR_CAPACITY_EXCEEDED // no need for reconfiguration on primary
+                && err != ERR_NOT_ENOUGH_MEMBER // primary won't change and we only r/w on primary in this provider
+                )
             {
                 ddebug("clear partition configuration cache %d.%d due to access failure %s",
                        _app_id, partition_index, err.to_string());
