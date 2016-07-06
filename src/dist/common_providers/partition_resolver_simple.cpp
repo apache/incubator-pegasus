@@ -78,10 +78,10 @@ namespace dsn
                     return;
                 }
             }
-            
+
             auto rc = new request_context();
             rc->partition_hash = partition_hash;
-            rc->callback = move(callback);
+            rc->callback = std::move(callback);
             rc->partition_index = idx;
             rc->timeout_timer = nullptr;
             rc->timeout_ms = timeout_ms;
@@ -93,17 +93,19 @@ namespace dsn
 
         void partition_resolver_simple::on_access_failure(int partition_index, error_code err)
         {
-            if (-1 != partition_index)
+            if (-1 != partition_index
+                && err != ERR_CAPACITY_EXCEEDED // no need for reconfiguration on primary
+                && err != ERR_NOT_ENOUGH_MEMBER // primary won't change and we only r/w on primary in this provider
+                )
             {
                 ddebug("clear partition configuration cache %d.%d due to access failure %s",
-                    _app_id, partition_index, err.to_string());
+                       _app_id, partition_index, err.to_string());
 
                 {
                     zauto_write_lock l(_config_lock);
                     auto it = _config_cache.find(partition_index);
                     if (it != _config_cache.end())
                     {
-                        // TODO: opt to remove unnecessary cache invalidation
                         _config_cache.erase(it);
                     }
                 }
@@ -134,16 +136,13 @@ namespace dsn
             }
             _pending_requests.clear();
         }
-
-        DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-        DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
             
         void partition_resolver_simple::on_timeout(request_context_ptr&& rc) const
         {
-            end_request(std::move(rc), ERR_TIMEOUT, rpc_address());
+            end_request(std::move(rc), ERR_TIMEOUT, rpc_address(), true);
         }
 
-        void partition_resolver_simple::end_request(request_context_ptr&& request, error_code err, rpc_address addr) const
+        void partition_resolver_simple::end_request(request_context_ptr&& request, error_code err, rpc_address addr, bool called_by_timer) const
         {
             zauto_lock l(request->lock);
             if (request->completed)
@@ -152,7 +151,7 @@ namespace dsn
                 return;
             }
 
-            if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
+            if (!called_by_timer && request->timeout_timer != nullptr)
                 request->timeout_timer->cancel(false);
 
             request->callback(resolve_result{
@@ -162,6 +161,9 @@ namespace dsn
             });
             request->completed = true;
         }
+
+        DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+        DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
         void partition_resolver_simple::call(request_context_ptr&& request, bool from_meta_ack)
         {
@@ -189,9 +191,25 @@ namespace dsn
                 return;
             }
 
+            // delay 1 second for further config query
+            if (from_meta_ack)
+            {
+                tasking::enqueue(
+                    LPC_REPLICATION_DELAY_QUERY_CONFIG,
+                    this,
+                    [=, req2 = request]() mutable
+                    {
+                        call(std::move(req2), false);
+                    },
+                    0,
+                    std::chrono::seconds(1)
+                    );
+                return;
+            }
+
             // calculate timeout
             int timeout_ms;
-            if (nts + 1000 > request->timeout_ts_us)
+            if (nts + 1000 >= request->timeout_ts_us)
                 timeout_ms = 1;
             else
                 timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
@@ -222,8 +240,7 @@ namespace dsn
                     auto it = _pending_requests.find(pindex);
                     if (it == _pending_requests.end())
                     {
-                        auto pc = new partition_context;
-                        pc->query_config_task = nullptr;
+                        auto pc = new partition_context();
                         it = _pending_requests.emplace(pindex, pc).first;
                     }
                     it->second->requests.push_back(std::move(request));
@@ -231,7 +248,6 @@ namespace dsn
                     // init configuration query task if necessary
                     if (nullptr == it->second->query_config_task)
                     {
-                        // TODO: delay if from_meta_ack = true
                         it->second->query_config_task = query_config(pindex);
                     }
                 }
@@ -251,7 +267,7 @@ namespace dsn
 
         task_ptr partition_resolver_simple::query_config(int partition_index)
         {
-            dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_path.c_str(), _app_id, partition_index);
+            dinfo("%s.client: start query config, gpid = %d.%d", _app_path.c_str(), _app_id, partition_index);
             auto msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
 
             configuration_query_by_index_request req;
@@ -303,8 +319,10 @@ namespace dsn
                     {
                         auto& new_config = *it;
 
-                        dinfo("query_partition_config reply, gpid:[%s,%d,%d], ballot = %" PRId64 ", primary = %s",
-                            _app_path.c_str(), _app_id, partition_index,
+                        dinfo("%s.client: query config reply, gpid = %d.%d, ballot = %" PRId64 ", primary = %s",
+                            _app_path.c_str(),
+                            new_config.pid.get_app_id(),
+                            new_config.pid.get_partition_index(),
                             new_config.ballot,
                             new_config.primary.to_string()
                             );
@@ -319,8 +337,8 @@ namespace dsn
                         }
                         else if (it2->second->config.ballot < new_config.ballot)
                         {
-                            it2->second->config = new_config;
                             it2->second->timeout_count = 0;
+                            it2->second->config = new_config;
                         }
                         else
                         {
@@ -330,20 +348,22 @@ namespace dsn
                 }
                 else if (resp.err == ERR_OBJECT_NOT_FOUND)
                 {
-                    derror("%s.client: query config reply err = %s, partition index = %d",
+                    derror("%s.client: query config reply, gpid = %d.%d, err = %s",
                         _app_path.c_str(),
-                        resp.err.to_string(),
-                        partition_index
+                        _app_id,
+                        partition_index,
+                        resp.err.to_string()
                         );
 
                     client_err = ERR_APP_NOT_EXIST;
                 }
                 else
                 {
-                    derror("%s.client: query config reply err = %s, partition index = %d",
+                    derror("%s.client: query config reply, gpid = %d.%d, err = %s",
                         _app_path.c_str(),
-                        resp.err.to_string(),
-                        partition_index
+                        _app_id,
+                        partition_index,
+                        resp.err.to_string()
                         );
 
                     client_err = resp.err;
@@ -351,10 +371,11 @@ namespace dsn
             }
             else
             {
-                derror("%s.client: query config reply err = %s, partition index = %d",
+                derror("%s.client: query config reply, gpid = %d.%d, err = %s",
                     _app_path.c_str(),
-                    err.to_string(),
-                    partition_index
+                    _app_id,
+                    partition_index,
+                    err.to_string()
                     );
             }
 
@@ -383,22 +404,22 @@ namespace dsn
             else
             {
                 pending_replica_requests reqs;
-                std::list<request_context_ptr> reqs2;
+                std::deque<request_context_ptr> reqs2;
                 {
                     zauto_lock l(_requests_lock);
-                    reqs = move(_pending_requests);
-                    _pending_requests.clear();
-
-                    reqs2 = move(_pending_requests_before_partition_count_unknown);
-                    _pending_requests_before_partition_count_unknown.clear();
+                    reqs.swap(_pending_requests);
+                    reqs2.swap(_pending_requests_before_partition_count_unknown);
                 }
              
-                if (reqs2.size() > 0)
+                if (!reqs2.empty())
                 {
-                    for (auto& req : reqs2)
+                    if (_app_partition_count != -1)
                     {
-                        dassert(-1 == req->partition_index, "");
-                        req->partition_index = get_partition_index(_app_partition_count, req->partition_hash);
+                        for (auto& req : reqs2)
+                        {
+                            dassert(req->partition_index == -1, "");
+                            req->partition_index = get_partition_index(_app_partition_count, req->partition_hash);
+                        }
                     }
                     handle_pending_requests(reqs2, client_err);
                 }
@@ -411,11 +432,10 @@ namespace dsn
                         delete r.second;
                     }
                 }
-                reqs.clear();
             }
         }
 
-        void partition_resolver_simple::handle_pending_requests(std::list<request_context_ptr>& reqs, error_code err)
+        void partition_resolver_simple::handle_pending_requests(std::deque<request_context_ptr>& reqs, error_code err)
         {
             for (auto& req : reqs)
             {
@@ -448,7 +468,9 @@ namespace dsn
         rpc_address partition_resolver_simple::get_address(const partition_configuration& config) const
         {
             if (_app_is_stateful)
+            {
                 return config.primary;
+            }
             else
             {
                 if (config.last_drops.size() == 0)
