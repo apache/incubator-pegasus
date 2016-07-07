@@ -623,6 +623,28 @@ function(dsn_setup_install)
     endif()
 endfunction(dsn_setup_install)
 
+function(dsn_make_source_group_by_subdir GROUP_PREFIX SOURCE_LIST)
+    if(GROUP_PREFIX STREQUAL "")
+        # Assume that the source file path starts with ${CMAKE_CURRENT_SOURCE_DIR}
+        set(GROUP_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+    string(REPLACE "/" "\\" GROUP_PREFIX "${GROUP_PREFIX}/")
+    string(LENGTH "${GROUP_PREFIX}" GROUP_PREFIX_LENGTH)
+    foreach(SRC_FILE IN LISTS SOURCE_LIST)
+        get_filename_component(SRC_PATH "${SRC_FILE}" PATH)
+        string(REPLACE "/" "\\" SRC_PATH "${SRC_PATH}")
+        string(FIND "${SRC_PATH}" "${GROUP_PREFIX}" IDX)
+        # IDX != 0 means that either the source file is not in ${CMAKE_CURRENT_SOURCE_DIR}
+        # , or it is in the root of ${CMAKE_CURRENT_SOURCE_DIR}.
+        set(GROUP_NAME "")
+		if(IDX EQUAL 0)
+            #math(EXPR IDX "${IDX} + ${prefix_len}")
+            string(SUBSTRING "${SRC_PATH}" "${GROUP_PREFIX_LENGTH}" -1 GROUP_NAME)
+        endif()
+        source_group("${GROUP_NAME}" FILES "${SRC_FILE}")
+    endforeach()    
+endfunction(dsn_make_source_group_by_subdir)
+
 function(dsn_add_pseudo_projects)
     if(DSN_BUILD_RUNTIME AND MSVC_IDE)
         file(GLOB_RECURSE
@@ -630,6 +652,7 @@ function(dsn_add_pseudo_projects)
             "${CMAKE_SOURCE_DIR}/include/dsn/*.h"
             "${CMAKE_SOURCE_DIR}/include/dsn/*.hpp"
             )
+        dsn_make_source_group_by_subdir("${CMAKE_SOURCE_DIR}/include/dsn" "${PROJ_SRC}")
         add_custom_target("dsn.include" SOURCES ${PROJ_SRC})
     endif()
 endfunction(dsn_add_pseudo_projects)
