@@ -560,7 +560,7 @@ message_ex* message_ex::copy(bool clone_content, bool copy_for_receive)
     else
     {
         int total_length = body_size() + sizeof(dsn::message_header);
-        std::shared_ptr<char> recv_buffer(new char[total_length], std::default_delete<char[]>());
+        std::shared_ptr<char> recv_buffer(dsn::make_shared_array<char>(total_length));
         char* ptr = recv_buffer.get();
         int i=0;
 

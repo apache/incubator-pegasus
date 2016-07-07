@@ -269,7 +269,7 @@ namespace dsn
                         {
                             break;
                         }
-                        std::shared_ptr<char> buffer(new char[header.size]);
+                        std::shared_ptr<char> buffer(dsn::make_shared_array<char>(header.size));
                         if (fread(buffer.get(), header.size, 1, fd) != 1)
                         {
                             break;
@@ -440,7 +440,7 @@ namespace dsn
             }
             else {
                 //apply
-                std::shared_ptr<char> batch(new char[total_size], [](char* ptr){ delete []ptr; } );
+                std::shared_ptr<char> batch(dsn::make_shared_array<char>(total_size));
                 char* dest = batch.get();
                 std::for_each(batch_buffer.begin(), batch_buffer.end(),
                     [&dest](const blob& entry)

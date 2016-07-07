@@ -419,7 +419,7 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
             [op](meta_state_service::err_value_callback& cb){
                 blob data;
                 if (ZOK == op->_output.error) {
-                    std::shared_ptr<char> buf(new char[op->_output.get_op.value_length]);
+                    std::shared_ptr<char> buf(dsn::make_shared_array<char>(op->_output.get_op.value_length));
                     memcpy(buf.get(), op->_output.get_op.value, op->_output.get_op.value_length);
                     data.assign(buf, 0, op->_output.get_op.value_length);
                 }

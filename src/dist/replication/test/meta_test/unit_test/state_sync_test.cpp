@@ -44,7 +44,7 @@ static void random_assign_partition_config(
 static void file_data_compare(const char* fname1, const char* fname2)
 {
     static const int length = 4096;
-    std::shared_ptr<char> buffer(new char[length*2], std::default_delete<char[]>{});
+    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(length*2));
     char* buf1 = buffer.get(), *buf2 = buffer.get()+length;
 
     std::ifstream ifile1(fname1, std::ios::in|std::ios::binary);

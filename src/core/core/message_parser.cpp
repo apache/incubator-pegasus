@@ -56,7 +56,7 @@ namespace dsn {
             // switch to next
             unsigned int sz = (read_next + _buffer_occupied > _buffer_block_size ?
                         read_next + _buffer_occupied : _buffer_block_size);
-            _buffer.assign(std::shared_ptr<char>(new char[sz], std::default_delete<char[]>{}), 0, sz);
+            _buffer.assign(dsn::make_shared_array<char>(sz), 0, sz);
             _buffer_occupied = 0;
 
             // copy

@@ -136,7 +136,7 @@ public:
             }
         }
 
-        std::shared_ptr<char> ptr(new char[hdr.length], [](char* raw){ delete []raw; });
+        std::shared_ptr<char> ptr(dsn::make_shared_array<char>(hdr.length));
         char* raw_mem = ptr.get();
         len = 0;
         while (len < hdr.length)

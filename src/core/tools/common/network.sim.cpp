@@ -69,7 +69,7 @@ namespace dsn { namespace tools {
 
     static message_ex* virtual_send_message(message_ex* msg)
     {
-        std::shared_ptr<char> buffer(new char[msg->header->body_length + sizeof(message_header)]);
+        std::shared_ptr<char> buffer(dsn::make_shared_array<char>(msg->header->body_length + sizeof(message_header)));
         char* tmp = buffer.get();
 
         for (auto& buf : msg->buffers)

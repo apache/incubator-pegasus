@@ -221,12 +221,12 @@ namespace dsn {
         }
         void resize(std::size_t new_size)
         {
-            std::shared_ptr<char> b(new char[new_size], std::default_delete<char[]>());
+            std::shared_ptr<char> b(dsn::make_shared_array<char>(new_size));
             _buffer.assign(b, 0, static_cast<int>(new_size));
         }
         void assign(const char* ptr, std::size_t size)
         {
-            std::shared_ptr<char> b(new char[size], std::default_delete<char[]>());
+            std::shared_ptr<char> b(dsn::make_shared_array<char>(size));
             memcpy(b.get(), ptr, size);
             _buffer.assign(b, 0, static_cast<int>(size));
         }

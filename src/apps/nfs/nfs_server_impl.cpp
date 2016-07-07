@@ -87,9 +87,7 @@ namespace dsn {
             }
 
             callback_para cp(reply);
-            cp.bb = blob(
-                std::shared_ptr<char>(new char[_opts.nfs_copy_block_bytes], std::default_delete<char[]>{}),
-                _opts.nfs_copy_block_bytes);
+            cp.bb = blob(dsn::make_shared_array<char>(_opts.nfs_copy_block_bytes), _opts.nfs_copy_block_bytes);
             cp.dst_dir = std::move(request.dst_dir);
             cp.file_path = std::move(file_path);
             cp.hfile = hfile;
