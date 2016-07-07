@@ -276,6 +276,8 @@ namespace dsn
     {
         msg->add_ref(); // released in on_send_completed
 
+        msg->io_session = this;
+
         uint64_t sig;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
