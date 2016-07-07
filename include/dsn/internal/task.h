@@ -429,7 +429,7 @@ public:
 
     void collapse() {
         if (!_unmerged_write_buffers.empty()) {
-            auto buffer = std::shared_ptr<char>(new char[_aio->buffer_size]);
+            std::shared_ptr<char> buffer(dsn::make_shared_array<char>(_aio->buffer_size));
             _merged_write_buffer_holder.assign(buffer, 0, _aio->buffer_size);
             _aio->buffer = buffer.get();
             copy_to(buffer.get());
