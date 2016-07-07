@@ -102,9 +102,10 @@ namespace dsn
         virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) = 0;
 
         // prepare buffer before send.
-        // this method will be called before fill_buffers_on_send() to do some prepare operation.
-        // return buffer count needed by get_buffers_on_send().
-        virtual int prepare_on_send(message_ex* msg) = 0;
+        // this method should be called before get_buffer_count_on_send() and get_buffers_on_send()
+        // to do some prepare operation.
+        // may be invoked for mutiple times if the message is reused for resending.
+        virtual void prepare_on_send(message_ex* msg) {}
 
         // be compatible with WSABUF on windows and iovec on linux
 # ifdef _WIN32
@@ -121,8 +122,13 @@ namespace dsn
         };
 # endif
 
+        // get max buffer count needed by get_buffers_on_send().
+        // may be invoked for mutiple times if the message is reused for resending.
+        virtual int get_buffer_count_on_send(message_ex* msg) = 0;
+
         // get buffers from message to 'buffers'.
-        // return buffer count used, which must be no more than the return value of prepare_on_send().
+        // return buffer count used, which must be no more than the return value of get_buffer_count_on_send().
+        // may be invoked for mutiple times if the message is reused for resending.
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
     };
 

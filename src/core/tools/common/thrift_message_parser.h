@@ -58,8 +58,7 @@ namespace dsn
     };
 
     // response format:
-    //     <total_len(int32)> <thrift_string> <body_data(bytes)>
-    //    |-----------response header--------|
+    //     <total_len(int32)> <thrift_string> <thrift_message_begin> <body_data(bytes)> <thrift_message_end>
 
     class thrift_message_parser : public message_parser
     {
@@ -71,7 +70,9 @@ namespace dsn
 
         virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
 
-        virtual int prepare_on_send(message_ex* msg) override;
+        virtual void prepare_on_send(message_ex* msg) override;
+
+        virtual int get_buffer_count_on_send(message_ex* msg) override;
 
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
 

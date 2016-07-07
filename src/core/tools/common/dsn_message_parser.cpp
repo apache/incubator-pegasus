@@ -60,9 +60,9 @@ namespace dsn
         {
             if (!_header_checked)
             {
-                if (!message_ex::is_right_header(buf_ptr))
+                if (!is_right_header(buf_ptr))
                 {
-                    derror("header check failed");
+                    derror("dsn message header check failed");
                     read_next = -1;
                     return nullptr;
                 }
@@ -79,10 +79,10 @@ namespace dsn
             {
                 dsn::blob msg_bb = buf.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
-                if (!msg->is_right_body(false))
+                if (!is_right_body(msg))
                 {
                     message_header* header = (message_header*)buf_ptr;
-                    derror("body check failed for message, id = %" PRIu64 ", trace_id = %016" PRIx64 ", rpc_name = %s, from_addr = %s",
+                    derror("dsn message body check failed, id = %" PRIu64 ", trace_id = %016" PRIx64 ", rpc_name = %s, from_addr = %s",
                            header->id, header->trace_id, header->rpc_name, header->from_address.to_string());
                     read_next = -1;
                     return nullptr;
@@ -111,7 +111,68 @@ namespace dsn
         }
     }
 
-    int dsn_message_parser::prepare_on_send(message_ex* msg)
+    void dsn_message_parser::prepare_on_send(message_ex* msg)
+    {
+        auto& header = msg->header;
+        auto& buffers = msg->buffers;
+
+#ifndef NDEBUG
+        int i_max = (int)buffers.size() - 1;
+        size_t len = 0;
+        for (int i = 0; i <= i_max; i++)
+        {
+            len += (size_t)buffers[i].length();
+        }
+        dassert(len == (size_t)header->body_length + sizeof(message_header),
+            "data length is wrong");
+#endif
+
+        if (task_spec::get(msg->local_rpc_code)->rpc_message_crc_required)
+        {
+            // compute data crc if necessary (only once for the first time)
+            if (header->body_crc32 == CRC_INVALID)
+            {
+                int i_max = (int)buffers.size() - 1;
+                uint32_t crc32 = 0;
+                size_t len = 0;
+                for (int i = 0; i <= i_max; i++)
+                {
+                    uint32_t lcrc;
+                    const void* ptr;
+                    size_t sz;
+
+                    if (i == 0)
+                    {
+                        ptr = (const void*)(buffers[i].data() + sizeof(message_header));
+                        sz = (size_t)buffers[i].length() - sizeof(message_header);
+                    }
+                    else
+                    {
+                        ptr = (const void*)buffers[i].data();
+                        sz = (size_t)buffers[i].length();
+                    }
+
+                    lcrc = dsn_crc32_compute(ptr, sz, crc32);
+                    crc32 = dsn_crc32_concatenate(
+                        0,
+                        0, crc32, len,
+                        crc32, lcrc, sz
+                        );
+
+                    len += sz;
+                }
+
+                dassert  (len == (size_t)header->body_length, "data length is wrong");
+                header->body_crc32 = crc32;
+            }
+
+            // always compute header crc
+            header->hdr_crc32 = CRC_INVALID;
+            header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header), 0);
+        }
+    }
+
+    int dsn_message_parser::get_buffer_count_on_send(message_ex* msg)
     {
         return (int)msg->buffers.size();
     }
@@ -126,5 +187,70 @@ namespace dsn
             ++i;
         }
         return i;
+    }
+
+    /*static*/ bool dsn_message_parser::is_right_header(char* hdr)
+    {
+        uint32_t* pcrc = reinterpret_cast<uint32_t*>(hdr + FIELD_OFFSET(message_header, hdr_crc32));
+        uint32_t crc32 = *pcrc;
+        if (crc32 != CRC_INVALID)
+        {
+            *pcrc = CRC_INVALID;
+            bool r = (crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
+            *pcrc = crc32;
+            if (!r)
+            {
+                derror("dsn message header crc check failed");
+            }
+            return r;
+        }
+
+        // crc is not enabled
+        else
+        {
+            return true;
+        }
+    }
+
+    /*static*/ bool dsn_message_parser::is_right_body(message_ex* msg)
+    {
+        auto& header = msg->header;
+        auto& buffers = msg->buffers;
+
+        if (header->body_crc32 != CRC_INVALID)
+        {
+            int i_max = (int)buffers.size() - 1;
+            uint32_t crc32 = 0;
+            size_t len = 0;
+            for (int i = 0; i <= i_max; i++)
+            {
+                const void* ptr = (const void*)buffers[i].data();
+                size_t sz = (size_t)buffers[i].length();
+
+                uint32_t lcrc = dsn_crc32_compute(ptr, sz, crc32);
+                crc32 = dsn_crc32_concatenate(
+                    0,
+                    0, crc32, len,
+                    crc32, lcrc, sz
+                    );
+
+                len += sz;
+            }
+
+            dassert(len == (size_t)header->body_length, "data length is wrong");
+
+            bool r = (header->body_crc32 == crc32);
+            if (!r)
+            {
+                derror("dsn message body crc check failed");
+            }
+            return r;
+        }
+
+        // crc is not enabled
+        else
+        {
+            return true;
+        }
     }
 }

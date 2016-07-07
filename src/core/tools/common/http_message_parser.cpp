@@ -361,17 +361,20 @@ void http_message_parser::reset()
 message_ex* http_message_parser::get_message_on_receive(message_reader* reader, /*out*/ int& read_next)
 {
     read_next = 4096;
-    _current_buffer = reader->_buffer;
 
-    auto nparsed = http_parser_execute(&_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
-    _current_buffer = blob();
-    reader->_buffer = reader->_buffer.range(nparsed);
-    reader->_buffer_occupied -= nparsed;
-    if (_parser.upgrade)
+    if (reader->_buffer_occupied > 0)
     {
-        derror("unsupported http protocol");
-        read_next = -1;
-        return nullptr;
+        _current_buffer = reader->_buffer;
+        auto nparsed = http_parser_execute(&_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
+        _current_buffer = blob();
+        reader->_buffer = reader->_buffer.range(nparsed);
+        reader->_buffer_occupied -= nparsed;
+        if (_parser.upgrade)
+        {
+            derror("unsupported http protocol");
+            read_next = -1;
+            return nullptr;
+        }
     }
 
     if (!_received_messages.empty())
@@ -379,10 +382,10 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
         auto msg = std::move(_received_messages.front());
         _received_messages.pop();
 
-        dinfo("rpc_name: %s, from_address: %s, seq_id: %" PRIu64 ", trace_id: %" PRIu64,
+        dinfo("rpc_name = %s, from_address = %s, seq_id = %" PRIu64 ", trace_id = %016" PRIx64,
             msg->header->rpc_name, msg->header->from_address.to_string(),
             msg->header->id, msg->header->trace_id);
-        
+
         msg->hdr_format = NET_HDR_HTTP;
         return msg.release();
     }
@@ -392,29 +395,27 @@ message_ex* http_message_parser::get_message_on_receive(message_reader* reader, 
     }
 }
 
-int http_message_parser::prepare_on_send(message_ex* msg)
+void http_message_parser::prepare_on_send(message_ex *msg)
 {
-    return (int)msg->buffers.size() + 1;
-}
+    auto& header = msg->header;
+    auto& buffers = msg->buffers;
 
-int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
-{
     // construct http header blob
     std::string header_str;
-    if (msg->header->context.u.is_request)
+    if (header->context.u.is_request)
     {
         std::stringstream ss;
-        ss << "POST /" << msg->header->rpc_name << " HTTP/1.1\r\n";
+        ss << "POST /" << header->rpc_name << " HTTP/1.1\r\n";
         ss << "Content-Type: text/plain\r\n";
-        ss << "id: " << msg->header->id << "\r\n";
-        ss << "trace_id: " << msg->header->trace_id << "\r\n";
-        ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
-        ss << "app_id: " << msg->header->gpid.u.app_id << "\r\n";
-        ss << "partition_index: " << msg->header->gpid.u.partition_index << "\r\n";
-        ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)msg->header->context.u.serialize_format) << "\r\n";
-        ss << "from_address: " << msg->header->from_address.to_string() << "\r\n";
-        ss << "client_hash: " << msg->header->client.hash << "\r\n";
-        ss << "client_timeout: " << msg->header->client.timeout_ms << "\r\n";
+        ss << "id: " << header->id << "\r\n";
+        ss << "trace_id: " << header->trace_id << "\r\n";
+        ss << "rpc_name: " << header->rpc_name << "\r\n";
+        ss << "app_id: " << header->gpid.u.app_id << "\r\n";
+        ss << "partition_index: " << header->gpid.u.partition_index << "\r\n";
+        ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)header->context.u.serialize_format) << "\r\n";
+        ss << "from_address: " << header->from_address.to_string() << "\r\n";
+        ss << "client_hash: " << header->client.hash << "\r\n";
+        ss << "client_timeout: " << header->client.timeout_ms << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
         ss << "\r\n";
         header_str = ss.str();
@@ -427,12 +428,12 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
         ss << "Content-Type: text/plain\r\n";
         ss << "Access-Control-Allow-Origin: *\r\n";
         ss << "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n";
-        ss << "id: " << msg->header->id << "\r\n";
-        ss << "trace_id: " << msg->header->trace_id << "\r\n";
-        ss << "rpc_name: " << msg->header->rpc_name << "\r\n";
-        ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)msg->header->context.u.serialize_format) << "\r\n";
-        ss << "from_address: " << msg->header->from_address.to_string() << "\r\n";
-        ss << "server_error: " << msg->header->server.error_name << "\r\n";
+        ss << "id: " << header->id << "\r\n";
+        ss << "trace_id: " << header->trace_id << "\r\n";
+        ss << "rpc_name: " << header->rpc_name << "\r\n";
+        ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)header->context.u.serialize_format) << "\r\n";
+        ss << "from_address: " << header->from_address.to_string() << "\r\n";
+        ss << "server_error: " << header->server.error_name << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
         ss << "\r\n";
         header_str = ss.str();
@@ -441,30 +442,62 @@ int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
     std::shared_ptr<char> header_holder(static_cast<char*>(dsn_transient_malloc(header_len)), [](char* c) {dsn_transient_free(c);});
     memcpy(header_holder.get(), header_str.data(), header_len);
 
-    // first fill the header blob
-    buffers[0].buf = header_holder.get();
-    buffers[0].sz = header_len;
-
-    // fill buffers
-    int i = 1;
-    // we must skip the standard message_header
-    unsigned int offset = sizeof(message_header);
-    for (blob& buf : msg->buffers)
+    unsigned int dsn_size = sizeof(message_header) + header->body_length;
+    int dsn_buf_count = 0;
+    while (dsn_size > 0 && dsn_buf_count < buffers.size())
     {
+        blob& buf = buffers[dsn_buf_count];
+        dassert(dsn_size >= buf.length(), "");
+        dsn_size -= buf.length();
+        ++dsn_buf_count;
+    }
+    dassert(dsn_size == 0, "");
+
+    // put header_bb at the end
+    buffers.resize(dsn_buf_count);
+    buffers.emplace_back(blob(std::move(header_holder), header_len));
+}
+
+int http_message_parser::get_buffer_count_on_send(message_ex* msg)
+{
+    return (int)msg->buffers.size();
+}
+
+int http_message_parser::get_buffers_on_send(message_ex* msg, send_buf* buffers)
+{
+    auto& msg_header = msg->header;
+    auto& msg_buffers = msg->buffers;
+
+    // leave buffers[0] to header
+    int i = 1;
+    // we must skip the dsn message header
+    unsigned int offset = sizeof(message_header);
+    unsigned int dsn_size = sizeof(message_header) + msg_header->body_length;
+    int dsn_buf_count = 0;
+    while (dsn_size > 0 && dsn_buf_count < msg_buffers.size())
+    {
+        blob& buf = msg_buffers[dsn_buf_count];
+        dassert(dsn_size >= buf.length(), "");
+        dsn_size -= buf.length();
+        ++dsn_buf_count;
+
         if (offset >= buf.length())
         {
             offset -= buf.length();
             continue;
         }
-
         buffers[i].buf = (void*)(buf.data() + offset);
         buffers[i].sz = buf.length() - offset;
         offset = 0;
         ++i;
     }
+    dassert(dsn_size == 0, "");
+    dassert(dsn_buf_count + 1 == msg_buffers.size(), "must have 1 more blob at the end");
 
-    // put http header blob at the back of message buffer
-    msg->buffers.emplace_back(blob(std::move(header_holder), header_len));
+    // set header
+    blob& header_bb = msg_buffers[dsn_buf_count];
+    buffers[0].buf = (void*)header_bb.data();
+    buffers[0].sz = header_bb.length();
 
     return i;
 }

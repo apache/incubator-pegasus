@@ -55,7 +55,9 @@ namespace dsn
 
         virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
 
-        virtual int prepare_on_send(message_ex* msg) override;
+        virtual void prepare_on_send(message_ex *msg) override;
+
+        virtual int get_buffer_count_on_send(message_ex* msg) override;
 
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
 

@@ -385,6 +385,10 @@ namespace  dsn
         {
             return _buffers[0];
         }
+        else if (_total_size == 0)
+        {
+            return blob();
+        }
         else
         {
             std::shared_ptr<char> bptr(::dsn::make_shared_array<char>(_total_size));

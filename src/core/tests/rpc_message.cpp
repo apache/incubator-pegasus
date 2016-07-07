@@ -77,11 +77,6 @@ TEST(core, message_ex)
         ASSERT_EQ(1u, m->buffers.size());
         ASSERT_EQ((int)RPC_CODE_FOR_TEST, m->local_rpc_code);
 
-        ASSERT_TRUE(m->is_right_header());
-        ASSERT_TRUE(m->is_right_body(true));
-        ASSERT_TRUE(message_ex::is_right_header((char*)m->header));
-        ASSERT_EQ(0, message_ex::get_body_length((char*)m->header));
-
         m->add_ref();
         ASSERT_EQ(1, m->get_count());
         m->release_ref();
@@ -112,11 +107,6 @@ TEST(core, message_ex)
         ASSERT_EQ((int)RPC_CODE_FOR_TEST_ACK, response->local_rpc_code);
         ASSERT_EQ(request->header->from_address, response->to_address);
         ASSERT_EQ(request->to_address, response->header->from_address);
-
-        ASSERT_TRUE(response->is_right_header());
-        ASSERT_TRUE(response->is_right_body(true));
-        ASSERT_TRUE(message_ex::is_right_header((char*)response->header));
-        ASSERT_EQ(0, message_ex::get_body_length((char*)response->header));
 
         response->add_ref();
         response->release_ref();
@@ -151,17 +141,6 @@ TEST(core, message_ex)
         ASSERT_EQ((void*)((char*)ptr + 10), request->rw_ptr(data_size + 10));
         ASSERT_EQ(nullptr, request->rw_ptr(data_size + data_size));
 
-        ASSERT_TRUE(request->is_right_header());
-        ASSERT_TRUE(request->is_right_body(true));
-
-        request->seal(false);
-        ASSERT_TRUE(request->is_right_header());
-        ASSERT_TRUE(request->is_right_body(true));
-
-        request->seal(true);
-        ASSERT_TRUE(request->is_right_header());
-        ASSERT_TRUE(request->is_right_body(true));
-
         request->add_ref();
         request->release_ref();
     }
@@ -178,15 +157,9 @@ TEST(core, message_ex)
         memcpy(ptr, data, data_size);
         request->write_commit(data_size);
 
-        request->seal(true);
-        ASSERT_TRUE(request->is_right_body(true));
-
         ASSERT_EQ(1u, request->buffers.size());
         message_ex* receive = message_ex::create_receive_message(request->buffers[0]);
         ASSERT_EQ(1u, receive->buffers.size());
-        ASSERT_TRUE(receive->is_right_header());
-        ASSERT_TRUE(receive->is_right_body(false));
-        ASSERT_TRUE(request->is_right_body(true));
 
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), receive->header->rpc_name);
 
