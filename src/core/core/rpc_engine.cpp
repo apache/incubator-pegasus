@@ -794,14 +794,11 @@ namespace dsn {
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto& hdr = *request->header;
-        task_spec* sp = task_spec::get(request->local_rpc_code);
-
         hdr.from_address = primary_address();
         hdr.trace_id = dsn_random64(
             std::numeric_limits<decltype(hdr.trace_id)>::min(),
             std::numeric_limits<decltype(hdr.trace_id)>::max()
             );
-        request->seal(sp->rpc_message_crc_required);
 
         call_address(request->server_address, request, call);
     }
@@ -908,7 +905,6 @@ namespace dsn {
                             dassert(hdr2->gpid.value == 0, "");
                             hdr2->gpid = result.pid;
                             hdr2->client.hash = dsn_gpid_to_hash(result.pid);
-                            request->seal(task_spec::get(request->local_rpc_code)->rpc_message_crc_required);
                         }
 
                         call_address(result.address, request, call);
@@ -985,24 +981,18 @@ namespace dsn {
             hdr.rpc_name
             );
 
-        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, trace_id = %016" PRIx64,
+        dinfo("rpc_name = %s, remote_addr = %s, header_format = %s, channel = %s, seq_id = %" PRIu64 ", trace_id = %016" PRIx64,
               hdr.rpc_name, addr.to_string(), request->hdr_format.to_string(),
-              sp->rpc_call_channel.to_string(), hdr.trace_id);
+              sp->rpc_call_channel.to_string(), hdr.id, hdr.trace_id);
 
-        bool need_seal = false;
         if (reset_request_id)
         {
             hdr.id = message_ex::new_id();
-            need_seal = true;
         }
+
         if (set_forwarded && request->header->context.u.is_forwarded == false)
         {
             request->header->context.u.is_forwarded = true;
-            need_seal = true;
-        }
-        if (need_seal)
-        {
-            request->seal(sp->rpc_message_crc_required);
         }
 
         // join point and possible fault injection
@@ -1045,7 +1035,6 @@ namespace dsn {
         response->header->server.error_code.local_code = err;
         response->header->server.error_code.local_hash = message_ex::s_local_hash;
         auto sp = task_spec::get(response->local_rpc_code);
-        response->seal(sp->rpc_message_crc_required);
 
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
         

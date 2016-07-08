@@ -134,7 +134,8 @@ namespace dsn {
         void asio_udp_provider::send_message(message_ex* request)
         {
             auto& parser = _parsers[request->hdr_format];
-            auto lcount = parser->prepare_on_send(request);
+            parser->prepare_on_send(request);
+            auto lcount = parser->get_buffer_count_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());
             dassert(lcount >= rcount, "");

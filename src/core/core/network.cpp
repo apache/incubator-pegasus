@@ -187,10 +187,8 @@ namespace dsn
 
         while (n != &_messages)
         {
-            dbg_dassert(_parser, "parser should not be null when send");
-
             auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-            auto lcount = _parser->prepare_on_send(lmsg);
+            auto lcount = _parser->get_buffer_count_on_send(lmsg);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
                 break;
@@ -277,6 +275,9 @@ namespace dsn
         msg->add_ref(); // released in on_send_completed
 
         msg->io_session = this;
+
+        dassert(_parser, "parser should not be null when send");
+        _parser->prepare_on_send(msg);
 
         uint64_t sig;
         {

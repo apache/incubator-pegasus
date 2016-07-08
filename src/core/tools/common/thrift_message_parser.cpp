@@ -105,73 +105,108 @@ namespace dsn
         }
     }
 
-    int thrift_message_parser::prepare_on_send(message_ex* msg)
+    void thrift_message_parser::prepare_on_send(message_ex *msg)
     {
-        dassert(!msg->header->context.u.is_request, "only support send response");
+        auto& header = msg->header;
+        auto& buffers = msg->buffers;
 
-        dsn::rpc_write_stream write_stream(msg);
-        ::dsn::binary_writer_transport trans(write_stream);
-        boost::shared_ptr< ::dsn::binary_writer_transport > trans_ptr(&trans, [](::dsn::binary_writer_transport*) {});
-        ::apache::thrift::protocol::TBinaryProtocol msg_proto(trans_ptr);
+        dassert(!header->context.u.is_request, "only support send response");
+        dassert(header->server.error_name[0], "error name should be set");
+        dassert(!buffers.empty(), "buffers can not be empty");
 
-        //write message end, which indicate the end of a thrift message
-        msg_proto.writeMessageEnd();
-        //
-        // we must add a thrift header for the response. And let's reserve one more buffer
-        //
-        return (int)msg->buffers.size() + 1;
+        // write thrift response header and thrift message begin
+        binary_writer header_writer;
+        binary_writer_transport header_trans(header_writer);
+        boost::shared_ptr<binary_writer_transport> header_trans_ptr(&header_trans, [](binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol header_proto(header_trans_ptr);
+        //first total length, but we don't know the length, so firstly we put a placeholder
+        header_proto.writeI32(0);
+        char_ptr error_msg(header->server.error_name, strlen(header->server.error_name));
+        //then the error_message
+        header_proto.writeString<char_ptr>(error_msg);
+        //then the thrift message begin
+        header_proto.writeMessageBegin(header->rpc_name, ::apache::thrift::protocol::T_REPLY, header->id);
+
+        // write thrift message end
+        binary_writer end_writer;
+        binary_writer_transport end_trans(header_writer);
+        boost::shared_ptr<binary_writer_transport> end_trans_ptr(&end_trans, [](binary_writer_transport*) {});
+        ::apache::thrift::protocol::TBinaryProtocol end_proto(end_trans_ptr);
+        end_proto.writeMessageEnd();
+
+        // now let's set the total length
+        blob header_bb = header_writer.get_buffer();
+        blob end_bb = end_writer.get_buffer();
+        int32_t* total_length = reinterpret_cast<int32_t*>((void*)header_bb.data());
+        *total_length = htobe32(header_bb.length() + header->body_length + end_bb.length());
+
+        unsigned int dsn_size = sizeof(message_header) + header->body_length;
+        int dsn_buf_count = 0;
+        while (dsn_size > 0 && dsn_buf_count < buffers.size())
+        {
+            blob& buf = buffers[dsn_buf_count];
+            dassert(dsn_size >= buf.length(), "");
+            dsn_size -= buf.length();
+            ++dsn_buf_count;
+        }
+        dassert(dsn_size == 0, "");
+
+        // put header_bb and end_bb at the end
+        buffers.resize(dsn_buf_count);
+        buffers.emplace_back(std::move(header_bb));
+        buffers.emplace_back(std::move(end_bb));
+    }
+
+    int thrift_message_parser::get_buffer_count_on_send(message_ex* msg)
+    {
+        return (int)msg->buffers.size();
     }
 
     int thrift_message_parser::get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers)
     {
-        dassert(!msg->header->context.u.is_request, "only support send response");
-        dassert(msg->header->server.error_name[0], "error name should be set");
-        dassert(!msg->buffers.empty(), "buffers can not be empty");
+        auto& msg_header = msg->header;
+        auto& msg_buffers = msg->buffers;
 
-        // response format:
-        //     <total_len(int32)> <thrift_string> <body_data(bytes)>
-        //    |-----------response header--------|
-        binary_writer header_writer;
-        binary_writer_transport trans(header_writer);
-        boost::shared_ptr<binary_writer_transport> trans_ptr(&trans, [](binary_writer_transport*) {});
-        ::apache::thrift::protocol::TBinaryProtocol proto(trans_ptr);
-
-        //Total length, but we don't know the length, so firstly we put a placeholder
-        proto.writeI32(0);
-        char_ptr error_msg(msg->header->server.error_name, strlen(msg->header->server.error_name));
-        //then the error_message
-        proto.writeString<char_ptr>(error_msg);
-        //then the thrift Message Begin
-        proto.writeMessageBegin(msg->header->rpc_name, ::apache::thrift::protocol::T_REPLY, msg->header->id);
-
-        //TODO: if more than one buffers in the header_writer, copying is inevitable. Should optimize this
-        blob bb = header_writer.get_buffer();
-        buffers[0].buf = (void*)bb.data();
-        buffers[0].sz = bb.length();
-
-        //now let's get the total length
-        int32_t* total_length = reinterpret_cast<int32_t*>(buffers[0].buf);
-        *total_length = htobe32(header_writer.total_size() + msg->header->body_length);
-
-        int i=1;
-        // then copy the message body, we must skip the standard message_header
+        // leave buffers[0] to header
+        int i = 1;
+        // we must skip the dsn message header
         unsigned int offset = sizeof(message_header);
-        for (blob& buf : msg->buffers)
+        unsigned int dsn_size = sizeof(message_header) + msg_header->body_length;
+        int dsn_buf_count = 0;
+        while (dsn_size > 0 && dsn_buf_count < msg_buffers.size())
         {
+            blob& buf = msg_buffers[dsn_buf_count];
+            dassert(dsn_size >= buf.length(), "");
+            dsn_size -= buf.length();
+            ++dsn_buf_count;
+
             if (offset >= buf.length())
             {
                 offset -= buf.length();
                 continue;
             }
-
             buffers[i].buf = (void*)(buf.data() + offset);
             buffers[i].sz = buf.length() - offset;
             offset = 0;
             ++i;
         }
+        dassert(dsn_size == 0, "");
+        dassert(dsn_buf_count + 2 == msg_buffers.size(), "must have 2 more blob at the end");
 
-        //push the prefix buffers to hold memory
-        msg->buffers.push_back(bb);
+        // set header
+        blob& header_bb = msg_buffers[dsn_buf_count];
+        buffers[0].buf = (void*)header_bb.data();
+        buffers[0].sz = header_bb.length();
+
+        // set end if need
+        blob& end_bb = msg_buffers[dsn_buf_count + 1];
+        if (end_bb.length() > 0)
+        {
+            buffers[i].buf = (void*)end_bb.data();
+            buffers[i].sz = end_bb.length();
+            ++i;
+        }
+
         return i;
     }
 
