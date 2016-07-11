@@ -128,7 +128,7 @@ struct service_app_spec
 
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
-    CONFIG_FLD_STRING(arguments, "", "arguments for the (layer 1) app instances")    
+    CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")    
     CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
     CONFIG_FLD_STRING(dmodule_bridge_arguments, "",
         "\n; when the service cannot automatically register its app types into rdsn \n"

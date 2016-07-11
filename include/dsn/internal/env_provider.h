@@ -40,7 +40,10 @@
 #include <random>
 
 namespace dsn {
-
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 class env_provider
 {
 public:
@@ -61,5 +64,5 @@ protected:
     static __thread unsigned int _tls_magic;
     static __thread std::ranlux48_base* _rng;
 };
-
+/*@}*/
 } // end namespace

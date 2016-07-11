@@ -44,6 +44,13 @@ class task_worker;
 class task_worker_pool;
 class admission_controller;
 
+/*!
+@addtogroup tool-api-providers
+@{
+*/
+/*!
+  task queue batches the input queue for the bound task worker(s) (threads)
+ */
 class task_queue
 {
 public:
@@ -96,5 +103,5 @@ private:
     threadpool_spec*       _spec;
     volatile int           _virtual_queue_length;
 };
-
+/*@}*/
 } // end namespace

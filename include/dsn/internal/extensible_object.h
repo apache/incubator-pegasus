@@ -41,7 +41,10 @@
 # include <atomic>
 
 namespace dsn {
-
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 typedef void (*extension_deletor)(void*);
 
 class extensible
@@ -228,5 +231,5 @@ template <typename TPlaceholder, typename TExtensibleObject> uint32_t uint64_ext
 
 template <typename TExtension, typename TExtensibleObject> uint32_t object_extension_helper<TExtension, TExtensibleObject>::s_slotIdx = 0;
 template <typename TExtension, typename TExtensibleObject> extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_deletor = nullptr;
-
+/*@}*/
 } // end namespace dsn

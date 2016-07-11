@@ -50,6 +50,10 @@ class task_queue;
 # define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)-1)
 # endif
 
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 //
 // !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
 //
@@ -84,7 +88,7 @@ private:
     disk_engine *_engine;
 };
 
-
+/*@}*/
 } // end namespace 
 
 

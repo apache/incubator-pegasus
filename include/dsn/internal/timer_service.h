@@ -40,6 +40,14 @@
 namespace dsn 
 {
     class service_node;
+
+    /*!
+    @addtogroup tool-api-providers
+    @{
+    */
+    /*!
+      timer service schedules the input tasks at specified timepoint
+    */
     class timer_service
     {
     public:
@@ -67,5 +75,5 @@ namespace dsn
     private:
         service_node* _node;
     };
-
+    /*@}*/
 } // end namespace

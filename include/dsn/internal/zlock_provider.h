@@ -45,6 +45,12 @@ class zsemaphore;
 
 namespace dsn {
 
+/*!
+@addtogroup tool-api-providers
+@{
+*/
+
+/*! lock interface */
 class ilock
 {
 public:
@@ -54,6 +60,9 @@ public:
     virtual void unlock() = 0;
 };
 
+/*!
+ recursive exclusive lock
+*/
 class lock_provider : public ilock, public extensible_object<lock_provider, 4>
 {
 public:
@@ -72,6 +81,9 @@ private:
     lock_provider *_inner_provider;
 };
 
+/*!
+ non-recursive exclusive lock
+*/
 class lock_nr_provider : public ilock, public extensible_object<lock_nr_provider, 4>
 {
 public:
@@ -91,6 +103,9 @@ private:
     lock_nr_provider *_inner_provider;
 };
 
+/*!
+ non-recursive rwlock
+*/
 class rwlock_nr_provider : public extensible_object<rwlock_nr_provider, 4>
 {
 public:
@@ -119,6 +134,9 @@ private:
     rwlock_nr_provider *_inner_provider;
 };
 
+/*!
+ semaphore 
+*/
 class semaphore_provider : public extensible_object<semaphore_provider, 4>
 {
 public:
@@ -142,5 +160,5 @@ public:
 private:
     semaphore_provider *_inner_provider;
 };
-
+/*@}*/
 } // end namespace

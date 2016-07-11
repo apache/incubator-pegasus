@@ -44,18 +44,16 @@ extern "C" {
 
 
 /*!
-@defgroup dev-layer1-models Overview
-@ingroup dev-layer1
-*/
+  @defgroup service-api-model Application and Framework Models
+  @ingroup service-api-c
 
-/*!
-  @defgroup app-model Application Model
-  @ingroup dev-layer1-models
-
-  Application and deployment model for rDSN applications.
-
-  - Developers define the required application models and register them into rDSN 
-  so that the latter can manage the applications appropriately, such as creat/destroy/scale-out/replicate them.
+  The base interface (models) for applications and frameworks atop rDSN.
+  In rDSN, both applications and frameworks must implement a base abstract
+  called \ref dsn_app, which are registered into rDSN's service
+  kernel via \ref dsn_register_app. 
+  
+  Here is an example where we register two applications into rDSN; note we
+  use the C++ wrappers atop our C API in this example.
 
   <PRE>
   int main(int argc, char** argv)
@@ -69,275 +67,224 @@ extern "C" {
     return 0;
   }
   </PRE>
-
-  - Developers config the application instances in config files, and rDSN creates
-  them accordingly on start-up.
+  
+  After the applications and frameworks are registered, developers specify 
+  the concrete instances in config files, and rDSN creates them accordingly on start-up.
 
   <PRE>
-
-  [apps..default]
-  ; arguments for the app instances
-  arguments =
-
-  ; count of app instances for this type (ports are 
-  ; automatically calculated accordingly to avoid confliction)
-  count = 1
-
-  ; delay seconds for when the apps should be started
-  delay_seconds = 0
-
-  ; path of a dynamic library which implement this app role, and register itself upon loaded
-  dmodule =
-
-  ;
-  ; when the service cannot automatically register its app types into rdsn
-  ; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule%
-  ; implement an exporte function called "dsn_error_t dsn_bridge(const char* args);",
-  ; which loads the real target (e.g., a python/Java/php module), that registers their
-  ; app types and factories.
-  dmodule_bridge_arguments =
-
-  ; thread pools need to be started
-  pools =
-
-  ; RPC server listening ports needed for this app
-  ports =
-
-  ; whether to run the app instances or not
-  run = true
-
-  ; app type name, as given when registering by dsn_register_app
-  type =
-  
   [apps.client]
-  arguments = localhost 20101
-  
+  arguments = localhost 20101  
   delay_seconds = 1
-
-  pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_TASK_QUEUE_1
-
+  pools = THREAD_POOL_DEFAULT
   type = test
   
-  [apps.server]
-  
-  pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
-
-  ports = 20101
-  
-  type = test
-
+  [apps.server]  
+  pools = THREAD_POOL_TEST_SERVER
+  ports = 20101  
+  type = server
   </PRE>
 
-  - Developers config the main tools and toollets to run the process, among
-    many other configurations.
-
-  <PRE>
-  [core]
-  ; use what tool to run this process, e.g., native, simulator, or fastrun
-  tool = fastrun
-
-  ; use what toollets, e.g., tracer, profiler, fault_injector
-  toollets = tracer, profiler, fault_injector
-
-  ; aio aspect providers, usually for tooling purpose
-  aio_aspects =
-
-  ; asynchonous file system provider
-  aio_factory_name =
-
-  ; whether to enable local command line interface (cli)
-  cli_local = true
-
-  ; whether to enable remote command line interface (using dsn.cli)
-  cli_remote = false
-
-  ; where to put the all the data/log/coredump, etc..
-  data_dir = ./data
-
-  ; how many disk engines? IOE_PER_NODE, or IOE_PER_QUEUE
-  disk_io_mode =
-
-  ; whether to start a default service app for serving the rDSN calls made in
-  ; non-rDSN threads, so that developers do not need to write dsn_mimic_app call before them
-  ; in this case, a [apps.mimic] section must be defined in config files
-  enable_default_app_mimic = false
-
-  ; environment aspect providers, usually for tooling purpose
-  env_aspects =
-
-  ; environment provider
-  env_factory_name =
-
-  ; io thread count, only for IOE_PER_NODE; for IOE_PER_QUEUE, task workers are served as io threads
-  io_worker_count = 1
-
-  ; recursive lock aspect providers, usually for tooling purpose
-  lock_aspects =
-
-  ; recursive exclusive lock provider
-  lock_factory_name =
-
-  ; non-recurisve lock aspect providers, usually for tooling purpose
-  lock_nr_aspects =
-
-  ; non-recurisve exclusive lock provider
-  lock_nr_factory_name =
-
-  ; logging provider
-  logging_factory_name = dsn::tools::simple_logger
-
-  ; logs with level below this will not be logged
-  logging_start_level = LOG_LEVEL_DEBUG
-
-  ; network aspect providers, usually for tooling purpose
-  network_aspects =
-
-  ; nfs provider
-  nfs_factory_name =
-
-  ; how many nfs engines? IOE_PER_NODE, or IOE_PER_QUEUE
-  nfs_io_mode =
-
-  ; whether to pause at startup time for easier debugging
-  pause_on_start = false
-
-  ; peformance counter provider
-  perf_counter_factory_name =
-
-  ; maximum number of performance counters
-  perf_counter_max_count = 10000
-
-  ; how many rpc engines? IOE_PER_NODE, or IOE_PER_QUEUE
-  rpc_io_mode =
-
-  ; non-recursive rwlock aspect providers, usually for tooling purpose
-  rwlock_nr_aspects =
-
-  ; non-recurisve rwlock provider
-  rwlock_nr_factory_name =
-
-  ; semaphore aspect providers, usually for tooling purpose
-  semaphore_aspects =
-
-  ; semaphore provider
-  semaphore_factory_name =
-
-  ; whether to start nfs
-  start_nfs = false
-
-  ; timer service aspect providers, usually for tooling purpose
-  timer_aspects =
-
-  ; timer service provider
-  timer_factory_name =
-
-  ; how many disk timer services? IOE_PER_NODE, or IOE_PER_QUEUE
-  timer_io_mode =
-
-  ; thread number for timer service for core itself
-  timer_service_worker_count = 1
-  </PRE>
-
-  - Developers can also optionally configure many others to fit their
-    special requirement according to the application and the scenario.
-    For full configurations, developers can set ```[core] cli_local = true```,
-    and run ```config-dump``` command to get the latest config file with
-    the help information.
-
+  Developers usually run this using ```./app config.ini```, or ```./app``` for more options.
   @{
  */
  
-/*! callback to create the app context */
+/*! 
+    callback to create the app context 
+
+    \param app_name type name registered on dsn_register_app
+    \param id       assigned global partition id
+
+    \return         the app context used by other APIs to reference this application instance
+ */
 typedef void*       (*dsn_app_create)(
-    const char*,    ///< type name registered on dsn_register_app
-    dsn_gpid        ///< assigned global partition id
+    const char* app_name,
+    dsn_gpid    id
     );
 
-/*! callback to run the app with the app context, similar to main(argc, argv) */
+/*! 
+    callback to run the app with the app context, similar to main(argc, argv) 
+
+    \param app   context returned by dsn_app_create
+    \param argc  as in traditional main(argc, argv)
+    \param argv  as in traditional main(argc, argv)
+
+    \return error code for app start
+ */
 typedef dsn_error_t(*dsn_app_start)(
-    void*,          ///< context return by app_create
-    int,            ///< argc
-    char**          ///< argv
+    void*  app,
+    int    argc,
+    char** argv
     );
 
-/*! callback to stop and destroy the app */
+/*! 
+    callback to stop and destroy the app 
+
+    \param app   context returned by dsn_app_create
+    \param cleanup whether to cleanup the state belonging to this app
+
+    \return error code for app destroy
+ */
 typedef dsn_error_t(*dsn_app_destroy)(
-    void*,          ///< context return by app_create
-    bool            ///< cleanup app state or not
+    void* app,
+    bool  cleanup
     );
 
-/*! callback for layer2 app & framework to handle incoming rpc request */
+/*! 
+    callback for framework to handle incoming rpc request, implemented by frameworks 
+
+    \param app   context returned by dsn_app_create
+    \param gpid  global partition id
+    \param is_write_operation whether the incoming rpc reqeust is a write operation or not
+    \param request incoming rpc request message
+ */
 typedef void(*dsn_framework_rpc_request_handler)(
-    void*,          ///< context from dsn_app_create
-    dsn_gpid,       ///< global partition id
-    bool,           ///< is_write_operation or not
-    dsn_message_t   ///< incoming rpc request
+    void*         app,
+    dsn_gpid      gpid,
+    bool          is_write_operation,
+    dsn_message_t request
     );
 
+/*! basic structure for state (e.g., full/delta checkpoint) transfer across nodes for an app, used by frameworks */
 struct dsn_app_learn_state
 {
-    int     total_learn_state_size; // memory used in the given buffer by this learn-state 
-    int64_t from_decree_excluded;
-    int64_t to_decree_included;
-    int     meta_state_size;
-    int     file_state_count;
-    void*   meta_state_ptr;
-    const char** files;
+    int     total_learn_state_size; ///< memory used in the given buffer by this learn-state 
+    int64_t from_decree_excluded;   ///< the start decree(sequence number, version) of the state
+    int64_t to_decree_included;     ///< the end decree of the state
+    int     meta_state_size;        ///< in-memory state size as stored in \ref meta_state_ptr below
+    int     file_state_count;       ///< on-disk file count to be transferred
+    void*   meta_state_ptr;         ///< in-memory state
+    const char** files;             ///< on-disk file path array, end with nullptr
 };
 
+
+/*! checkpoint apply mode, see \ref dsn_app_apply_checkpoint, used by frameworks*/
 enum dsn_chkpt_apply_mode
 {
-    DSN_CHKPT_COPY,
-    DSN_CHKPT_LEARN
+    DSN_CHKPT_COPY,  ///< simply a checkpoint from remote machine is given, do not change the local state
+    DSN_CHKPT_LEARN  ///< given a checkpoint from remote machine, prepare to change the local state
 };
 
+/*! 
+    batched rpc request from frameworks, used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+    \param decree sequence number for this request batch (when request batches are sent to the apps in order)
+    \param requests incoming rpc request array ptr
+    \param request_count request count in this array
+ */
 typedef void(*dsn_app_on_batched_write_requests)(
-    void*,           ///< context from dsn_app_create
-    int64_t,         ///< decree
-    dsn_message_t*,  ///< request array ptr
-    int              ///< request count
+    void*           app,
+    int64_t         decree,
+    dsn_message_t*  requests,
+    int             request_count
     );
 
+/*! 
+    get physical error (e.g., disk failure) from the app, used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+    \return physical error code, e.g., disk failure, that is not always reproducible on another machine with the same input
+ */
 typedef int(*dsn_app_get_physical_error)(
-    void*     ///< context from dsn_app_create
+    void* app
     );
 
+/*! 
+    checkpoint the application synchronously, used by frameworks, implemented by apps 
+
+    \param app          context returned by dsn_app_create
+    \param last_decree  decree of the last request/request-batch applied to this app
+
+    \return error code for the checkpoint operation
+ */
 typedef dsn_error_t(*dsn_app_sync_checkpoint)(
-    void*,    ///< context from dsn_app_create
-    int64_t   ///< current last committed decree
+    void*   app,
+    int64_t last_decree
     );
 
+/*! 
+    checkpoint the application asynchronously, used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+    \param last_decree  decree of the last request/request-batch applied to this app
+
+    \return error code for the checkpoint operation
+ */
 typedef dsn_error_t(*dsn_app_async_checkpoint)(
-    void*,    ///< context from dsn_app_create
-    int64_t   ///< current last committed decree
+    void*   app,
+    int64_t last_decree
     );
 
+/*! 
+    get the decree of last done checkpoint, used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+
+    \return decree of the last successfully done checkpoint (see last_decree parameter when doing checkpoint)
+ */
 typedef int64_t(*dsn_app_get_last_checkpoint_decree)(
-    void*     ///< context from dsn_app_create
+    void*  app
     );
 
+/*! 
+    learner prepares a get checkpoint request for better fitting the local state (e.g., for delta learning),
+    the request will be used by \ref dsn_app_get_checkpoint below,
+    used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+    \param request_buffer a memory buffer to be filled with a custom learn request
+    \param capcity buffer size, in bytes
+    \param used_size this is the output value telling how many bytes are written by this custom learn request
+
+    \return error code for this operation
+ */
 typedef dsn_error_t(*dsn_app_prepare_get_checkpoint)(
-    void*,    ///< context from dsn_app_create
-    void*,    ///< buffer for filling in learn request
-    int,      ///< buffer capacity
-    int*      ///< occupied size
+    void* app,
+    void* request_buffer,
+    int   capacity,
+    /*out*/ int* used_size
     );
 
+/*!
+    get checkpoint information from learnee, used by frameworks, implemented by apps 
+
+    can be used for both delta checkpoint [learn_start_decree, infinite), or full checkpoint.
+
+    \param app                  context returned by dsn_app_create
+    \param learn_start_decree   the first start decree we want to get for this (if delta) checkpoint
+    \param local_last_decree    decree of the last request/request-batched that are applied locally
+    \param learn_request        learn reqeust as prepared by \ref dsn_app_prepare_get_checkpoint above
+    \param learn_request_size   buffer size (in bytes) of the learn request
+    \param learn_state_buffer   output learn state, see \ref dsn_app_learn_state, to be used by dsn_app_apply_checkpoint below
+    \param capacity             output learn state buffer size (in bytes)
+
+    \return error code for this operation
+ */
 typedef dsn_error_t(*dsn_app_get_checkpoint)(
-    void*,    ///< context from dsn_app_create
-    int64_t,  ///< learn start decree
-    int64_t,  ///< local last committed decree
-    void*,    ///< learn request from prepare_get_checkpoint
-    int,      ///< learn request size
-    dsn_app_learn_state*, ///< learn state buffer to be filled in
-    int                   ///< learn state buffer capacity
+    void*   app,
+    int64_t learn_start_decree,
+    int64_t local_last_decree,
+    void*   learn_request,
+    int     learn_request_size,
+    dsn_app_learn_state* learn_state_buffer,
+    int                  capacity
     );
 
+/*! 
+    apply checkpoint from remote nodes, used by frameworks, implemented by apps 
+
+    \param app    context returned by dsn_app_create
+    \param mode   see \ref dsn_chkpt_apply_mode
+    \param local_last_decree decree of the last request/request-batched that are applied locally
+    \param learn_state as returned from \ref dsn_app_get_checkpoint above
+
+    \return error code for this operation
+ */
 typedef dsn_error_t(*dsn_app_apply_checkpoint)(
-    void*,                     ///< context from dsn_app_create
-    dsn_chkpt_apply_mode,      ///< checkpoint apply mode
-    int64_t,                   ///< local last committed decree
-    const dsn_app_learn_state* ///< learn state
+    void*                 app,
+    dsn_chkpt_apply_mode  mode,
+    int64_t               local_last_decree,
+    const dsn_app_learn_state* learn_state
     );
 
 # define DSN_APP_MASK_APP        0x01 ///< app mask
@@ -346,9 +293,9 @@ typedef dsn_error_t(*dsn_app_apply_checkpoint)(
 # pragma pack(push, 4)
 
 /*!
-  developers define the following dsn_app data structure, and passes it
-  to rDSN through \ref dsn_register_app so that the latter can manage 
-  the app appropriately.
+  callbacks needed by the frameworks, application developers
+  need to implement some of them so that certain frameworks 
+  will work (see each individual framework for its requirements)
  */
 typedef union dsn_app_callbacks
 {
@@ -366,12 +313,20 @@ typedef union dsn_app_callbacks
     } calls;    
 } dsn_app_callbacks;
 
+
+/*!
+developers define the following dsn_app data structure, and passes it
+to rDSN through \ref dsn_register_app so that the latter can manage
+the app appropriately.
+
+Click into the corresponding types for what are the callback means.
+*/
 typedef struct dsn_app
 {
     uint64_t        mask; ///< application capability mask
     char            type_name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< type 
 
-    /*! layer 1 app definition, mask = DSN_APP_MASK_APP */
+    /*! app definition, mask = DSN_APP_MASK_APP */
     struct layer1_callbacks
     {
         dsn_app_create  create;  ///< callback to create the context for the app
@@ -398,7 +353,7 @@ typedef struct dsn_app
 typedef struct dsn_app_info
 {
     //
-    // layer 1 information
+    // app information
     //
     union {
         void* app_context_ptr;                ///< returned by dsn_app_create

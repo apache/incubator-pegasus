@@ -42,6 +42,11 @@
 
 namespace dsn {
 
+    /*!
+    @addtogroup tool-api-providers
+    @{
+    */
+
     struct remote_copy_request
     {
         ::dsn::rpc_address   source;
@@ -88,4 +93,6 @@ namespace dsn {
     protected:
         service_node* _node;
     };
+
+    /*@}*/
 }

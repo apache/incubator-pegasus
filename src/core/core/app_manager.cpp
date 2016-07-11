@@ -198,7 +198,7 @@ namespace dsn
             else
             {
                 dassert(false,
-                    "layer 1 app is missing, gpid = %d.%d!",
+                    "framework hosted app is missing, gpid = %d.%d!",
                     app->gpid.u.app_id,
                     app->gpid.u.partition_index
                     );
@@ -206,7 +206,7 @@ namespace dsn
         }
         else
         {
-            derror("destroy layer 1 app %s failed, err = %s",
+            derror("destroy framework hosted app %s failed, err = %s",
                 app->info.name,
                 err.to_string()
                 );

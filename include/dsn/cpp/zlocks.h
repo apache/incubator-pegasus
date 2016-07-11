@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     lock implementation atop of c service api
+ *     lock implementation atop c service api
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version

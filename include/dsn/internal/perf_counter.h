@@ -43,6 +43,11 @@
 # include <vector>
 
 namespace dsn {
+
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
     ENUM_REG(COUNTER_TYPE_NUMBER)
     ENUM_REG(COUNTER_TYPE_RATE)
@@ -122,5 +127,5 @@ private:
     std::string _full_name;
     friend class perf_counters;
 };
-
+/*@}*/
 } // end namespace

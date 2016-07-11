@@ -49,11 +49,15 @@ namespace dsn {
     class service_node;
     class task_worker_pool;
     class task_queue;
+    /*!
+    @addtogroup tool-api-providers
+    @{
+    */
 
-    //
-    // network bound to a specific rpc_channel and port (see start)
-    // !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
-    //
+    /*!
+      network bound to a specific rpc_channel and port (see start)
+     !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
+    */
     class network
     {
     public:
@@ -147,9 +151,9 @@ namespace dsn {
         void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
     };
 
-    //
-    // an incomplete network implementation for connection oriented network, e.g., TCP
-    //
+    /*!
+      an incomplete network implementation for connection oriented network, e.g., TCP
+    */
     class connection_oriented_network : public network
     {
     public:
@@ -185,9 +189,9 @@ namespace dsn {
         utils::rw_lock_nr             _servers_lock;
     };
 
-    //
-    // session managements (both client and server types)
-    //
+    /*!
+      session managements (both client and server types)
+    */
     class rpc_client_matcher;
     class rpc_session : public ref_counter
     {
@@ -300,4 +304,6 @@ namespace dsn {
         int old_delay_ms = _delay_server_receive_ms.load();
         while (delay_ms > old_delay_ms && !_delay_server_receive_ms.compare_exchange_weak(old_delay_ms, delay_ms)) {}
     }
+
+    /*@}*/
 }

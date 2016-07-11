@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     this file define the C Service API in rDSN layer 1, e.g., Zion.
+ *     this file define the C Service API in rDSN
  *
  * ------------------------------------------------------------------------------
  * 
@@ -79,18 +79,12 @@
 // this file defines the task(i.e., event) abstraction and related
 # include <dsn/c/api_task.h>
 
-// Layer 1 API for local-box distributed system development, 
+// service API for app/framework development, 
 // including threading/tasking, thread synchronization,
 // RPC, asynchronous file IO, environment, etc.
-// For Layer 2, please refer to app_model.h next
-// For Layer 3, it uses a declarative language therefore not
-// included in this C API
 # include <dsn/c/api_layer1.h>
 
-// application model in rDSN, including 
-// layer 1: single-box application development
-// layer 2: make single-box application scalable and reliable
-// layer 3: TODO: refer to xxx instead
+// application/framework model in rDSN
 # include <dsn/c/app_model.h>
 
 // while most development and operation tools
