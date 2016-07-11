@@ -316,22 +316,22 @@ http_message_parser::http_message_parser()
         message_header* header = owner->_current_message->header;
         if (parser->type == HTTP_REQUEST && parser->method == HTTP_GET)
         {
-            header->hdr_type = header_type::hdr_type_http_get;
+            header->hdr_type = *(uint32_t*)"GET ";
             header->context.u.is_request = 1;
         }
         else if (parser->type == HTTP_REQUEST && parser->method == HTTP_POST)
         {
-            header->hdr_type = header_type::hdr_type_http_post;
+            header->hdr_type = *(uint32_t*)"POST";
             header->context.u.is_request = 1;
         }
         else if (parser->type == HTTP_REQUEST && parser->method == HTTP_OPTIONS)
         {
-            header->hdr_type = header_type::hdr_type_http_options;
+            header->hdr_type = *(uint32_t*)"OPTI";
             header->context.u.is_request = 1;
         }        
         else if (parser->type == HTTP_RESPONSE)
         {
-            header->hdr_type = header_type::hdr_type_http_response;
+            header->hdr_type = *(uint32_t*)"HTTP";
             header->context.u.is_request = 0;
         }        
         else

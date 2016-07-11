@@ -228,9 +228,9 @@ namespace dsn {
                 return dsn::utils::factory_store<memory_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
+            bool register_component_provider(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz)
             {
-                message_parser_manager::instance().register_factory(fmt, f, f2, sz);
+                message_parser_manager::instance().register_factory(fmt, signatures, f, f2, sz);
                 return true;
             }
 

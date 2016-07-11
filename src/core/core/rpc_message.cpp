@@ -199,86 +199,10 @@ DSN_API void dsn_msg_get_options(
     opts->gpid = hdr->gpid;
 }
 
-DSN_API dsn_msg_header_type dsn_msg_get_header_type(
-    dsn_message_t msg
-    )
-{
-    auto hdr = ((::dsn::message_ex*)msg)->header;
-    return dsn::header_type::header_type_to_c_type(hdr->hdr_type);
-}
-
 namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);
 uint32_t message_ex::s_local_hash = 0;
-
-header_type header_type::hdr_type_dsn("RDSN");
-header_type header_type::hdr_type_thrift("THFT");
-header_type header_type::hdr_type_http_get("GET ");
-header_type header_type::hdr_type_http_post("POST");
-header_type header_type::hdr_type_http_options("OPTI"); 
-header_type header_type::hdr_type_http_response("HTTP");
-
-std::string header_type::debug_string() const
-{
-    char buf[20];
-    char* ptr = buf;
-    for (int i = 0; i < 4; ++i) {
-        auto& c = type.stype[i];
-        if (isprint(c)) {
-            *ptr++ = c;
-        }
-        else {
-            sprintf(ptr, "\\%02X", c);
-            ptr += 3;
-        }
-    }
-    *ptr = '\0';
-    return std::string(buf);
-}
-
-bool header_type::header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format)
-{
-    if (hdr_type == hdr_type_dsn)
-    {
-        hdr_format = NET_HDR_DSN;
-        return true;
-    }
-    else if (hdr_type == hdr_type_thrift)
-    {
-        hdr_format = NET_HDR_THRIFT;
-        return true;
-    }
-    else if (hdr_type == hdr_type_http_options
-        || hdr_type == hdr_type_http_get 
-        || hdr_type == hdr_type_http_post 
-        || hdr_type == hdr_type_http_response
-        )
-    {
-        hdr_format = NET_HDR_HTTP;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-dsn_msg_header_type header_type::header_type_to_c_type(const header_type& hdr_type)
-{
-    if (hdr_type == hdr_type_dsn)
-        return DHT_DEFAULT;
-    else if (hdr_type == hdr_type_thrift)
-        return DHT_THRIFT;
-    else if (hdr_type == hdr_type_http_get 
-        || hdr_type == hdr_type_http_post 
-        || hdr_type == hdr_type_http_options
-        || hdr_type == hdr_type_http_response
-        )
-        return DHT_HTTP;
-    else
-        return DHT_INVALID;
-}
 
 message_ex::message_ex()
     : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_DSN), send_retry_count(0),
@@ -459,7 +383,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     // init header
     auto& hdr = *msg->header;
     memset(&hdr, 0, sizeof(hdr));
-    hdr.hdr_type = header_type::hdr_type_dsn;
+    hdr.hdr_type = *(uint32_t*)"RDSN";
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 

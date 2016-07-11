@@ -43,6 +43,123 @@
 
 namespace dsn {
 
+    // ------------------- header type ------------------------------
+    struct header_type
+    {
+    public:
+        union
+        {
+            char stype[4];
+            int32_t itype;
+        } type;
+
+        header_type()
+        {
+            type.itype = -1;
+        }
+
+        header_type(int32_t itype)
+        {
+            type.itype = itype;
+        }
+
+        header_type(const char* str)
+        {
+            memcpy(type.stype, str, sizeof(int32_t));
+        }
+        
+        header_type(const header_type& another)
+        {
+            type.itype = another.type.itype;
+        }
+        
+        header_type& operator=(const header_type& another)
+        {
+            type.itype = another.type.itype;
+            return *this;
+        }
+        
+        bool operator==(const header_type& other) const
+        {
+            return type.itype == other.type.itype;
+        }
+        
+        bool operator!=(const header_type& other) const
+        {
+            return type.itype != other.type.itype;
+        }
+        
+        std::string debug_string() const;
+
+    public:
+        static network_header_format header_type_to_c_type(const header_type& hdr_type);
+        static void register_header_signature(int32_t sig, network_header_format type);
+
+    private:
+        static std::unordered_map<int32_t, network_header_format> s_fmt_map;
+    };
+
+    std::unordered_map<int32_t, network_header_format> header_type::s_fmt_map;
+
+    std::string header_type::debug_string() const
+    {
+        char buf[20];
+        char* ptr = buf;
+        for (int i = 0; i < 4; ++i) {
+            auto& c = type.stype[i];
+            if (isprint(c)) {
+                *ptr++ = c;
+            }
+            else {
+                sprintf(ptr, "\\%02X", c);
+                ptr += 3;
+            }
+        }
+        *ptr = '\0';
+        return std::string(buf);
+    }
+
+    /*static*/ network_header_format header_type::header_type_to_c_type(const header_type& hdr_type)
+    {
+        auto it = s_fmt_map.find(hdr_type.type.itype);
+        if (it != s_fmt_map.end())
+        {
+            return it->second;
+        }
+        else
+            return NET_HDR_INVALID;
+    }
+
+    /*static*/ void header_type::register_header_signature(int32_t sig, network_header_format type)
+    {
+        auto it = s_fmt_map.find(sig);
+        if (it != s_fmt_map.end())
+        {
+            if (it->second != type)
+            {
+                dassert(false, "signature %08x is already registerd for header type %s",
+                    sig, type.to_string()
+                    );
+            }
+        }
+        else
+        {
+            s_fmt_map.emplace(sig, type);
+        }
+    }
+
+    /*static*/ network_header_format message_parser::get_header_type(const char* bytes)
+    {
+        header_type ht(bytes);
+        return header_type::header_type_to_c_type(ht);
+    }
+
+    /*static*/ std::string message_parser::get_debug_string(const char* bytes)
+    {
+        header_type ht(bytes);
+        return ht.debug_string();
+    }
+
     //-------------------- msg reader --------------------
     char* message_reader::read_buffer_ptr(unsigned int read_next)
     {
@@ -77,7 +194,7 @@ namespace dsn {
     {
     }
 
-    void message_parser_manager::register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz)
+    void message_parser_manager::register_factory(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz)
     {
         if (static_cast<unsigned int>(fmt) >= _factory_vec.size())
         {
@@ -89,6 +206,12 @@ namespace dsn {
         info.factory = f;
         info.factory2 = f2;
         info.parser_size = sz;
+
+        for (auto& v : signatures)
+        {
+            header_type type(v);
+            header_type::register_header_signature(type.type.itype, fmt);
+        }
     }
 
     message_parser* message_parser_manager::create_parser(network_header_format fmt)

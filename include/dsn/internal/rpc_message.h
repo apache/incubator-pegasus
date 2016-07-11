@@ -64,54 +64,9 @@ namespace dsn
                              // we leverage for optimization (fast rpc handler lookup)
     };
 
-    struct header_type
-    {
-    public:
-        union
-        {
-            char stype[4];
-            int32_t itype;
-        } type;
-        header_type()
-        {
-            type.itype = -1;
-        }
-        header_type(const char* str)
-        {
-            memcpy(type.stype, str, sizeof(int32_t));
-        }
-        header_type(const header_type& another)
-        {
-            type.itype = another.type.itype;
-        }
-        header_type& operator=(const header_type& another)
-        {
-            type.itype = another.type.itype;
-            return *this;
-        }
-        bool operator==(const header_type& other) const
-        {
-            return type.itype == other.type.itype;
-        }
-        bool operator!=(const header_type& other) const
-        {
-            return type.itype != other.type.itype;
-        }
-        std::string debug_string() const;
-    public:
-        static header_type hdr_type_dsn;
-        static header_type hdr_type_thrift;
-        static header_type hdr_type_http_get;
-        static header_type hdr_type_http_post;
-        static header_type hdr_type_http_options;
-        static header_type hdr_type_http_response;
-        static bool header_type_to_format(const header_type& hdr_type, /*out*/ network_header_format& hdr_format);
-        static dsn_msg_header_type header_type_to_c_type(const header_type& hdr_type);
-    };
-
     typedef struct message_header
     {
-        header_type    hdr_type;
+        uint32_t       hdr_type;
         uint32_t       hdr_version;
         uint32_t       hdr_length;
         uint32_t       hdr_crc32;

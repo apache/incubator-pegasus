@@ -160,9 +160,8 @@ ENUM_END(dsn_msg_serialize_format)
 
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format)
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_INVALID)
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN)
-DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
-DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)

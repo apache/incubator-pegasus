@@ -130,6 +130,10 @@ namespace dsn
         // return buffer count used, which must be no more than the return value of get_buffer_count_on_send().
         // may be invoked for mutiple times if the message is reused for resending.
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
+
+    public:
+        static network_header_format get_header_type(const char* bytes); // buffer size >= sizeof(uint32_t)
+        static std::string get_debug_string(const char* bytes);
     };
 
     class message_parser_manager : public utils::singleton<message_parser_manager>
@@ -149,7 +153,7 @@ namespace dsn
         message_parser_manager();
 
         // called only during system init, thread-unsafe
-        void register_factory(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz);
+        void register_factory(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
 
         message_parser* create_parser(network_header_format fmt);
         const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
