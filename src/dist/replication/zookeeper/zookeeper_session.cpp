@@ -142,10 +142,9 @@ void zookeeper_session::dispatch_event(int type, int zstate, const char* path)
 void zookeeper_session::visit(zoo_opcontext *ctx)
 {
     ctx->_priv_session_ref = this;
-    int &ec = ctx->_output.error;
 
     if ( zoo_state(_handle) != ZOO_CONNECTED_STATE ) {
-        ec = ZINVALIDSTATE;
+        ctx->_output.error = ZINVALIDSTATE;
         ctx->_callback_function(ctx);
         free_context(ctx);
         return;
@@ -160,6 +159,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     };
 
     //TODO: the read ops from zookeeper might get the staled data, need to fix
+    int ec;
     zoo_input& input = ctx->_input;
     const char* path = input._path.c_str();
     switch (ctx->_optype)
@@ -237,6 +237,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     }
 
     if (ZOK != ec) {
+        ctx->_output.error = ec;
         ctx->_callback_function(ctx);
         free_context(ctx);
     }
