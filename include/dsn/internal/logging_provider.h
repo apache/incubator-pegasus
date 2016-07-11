@@ -40,6 +40,10 @@
 
 namespace dsn {
 
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 class logging_provider
 {
 public:
@@ -60,6 +64,6 @@ public:
     virtual void flush() = 0;
 };
 
-
+/*@}*/
 // ----------------------- inline implementation ---------------------------------------
 } // end namespace

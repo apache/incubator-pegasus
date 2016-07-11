@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     dsn (layer 1) initialization
+ *     service core initialization
  *
  * Revision history:
  *     July, 2015, @imzhenyu (Zhenyu Guo), first version

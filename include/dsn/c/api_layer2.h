@@ -42,23 +42,22 @@ extern "C" {
 # endif
 
 /*!
- @defgroup dev-layer2-c C API for layer 2
-
- @ingroup dev-layer2
+ @defgroup framework-api Framework APIs
+ @ingroup service-api-c
     
-  layer2 API for building frameworks and applications
+  APIs used by frameworks
   
  @{
  */
  
 /*!
-Creates layer 1 application.
+Creates framework hosted application.
 
 \param type        registered app type
 \param gpid        assigned gpid.
 \param data_idr    assigned data directory
 \param app_context_for_downcalls app_context for usage by dsn_hosted_app_create/start/destroy
-\param app_context_for_callbacks   app_context used by upcalls retrived from dsn_get_app_callbacks
+\param app_context_for_callbacks  app_context used by upcalls retrived from dsn_get_app_callbacks
 
 \return error code: ERR_OK, ERR_SERVICE_ALREADY_EXIST (app_context is also valid)
 */
@@ -70,10 +69,30 @@ extern DSN_API dsn_error_t dsn_hosted_app_create(
     /*out*/void** app_context_for_callbacks
     );
 
+/*!
+start framework hosted application.
+
+\param app_context_for_downcalls see \ref dsn_hosted_app_create
+\param argc same convention with traditional main
+\param argv same convention with traditional main
+*/
 extern DSN_API dsn_error_t dsn_hosted_app_start(void* app_context_for_downcalls, int argc, char** argv);
 
+/*!
+destroy framework hosted application.
+
+\param app_context_for_downcalls see \ref dsn_hosted_app_create
+\param cleanup clean up the state of given application
+*/
 extern DSN_API dsn_error_t dsn_hosted_app_destroy(void* app_context_for_downcalls, bool cleanup);
 
+/*!
+send an RPC request to a local application and execute
+
+\param app_context_for_downcalls see \ref dsn_hosted_app_create
+\param msg the RPC request
+\param exec_inline whether to execute the RPC handler within this call or not
+*/
 extern DSN_API void        dsn_hosted_app_commit_rpc_request(void* app_context_for_downcalls, dsn_message_t msg, bool exec_inline);
 
 /*@}*/

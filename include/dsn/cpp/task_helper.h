@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     helpers for easier task programing atop of C api
+ *     helpers for easier task programing atop C api
  *
  * Revision history:
  *     Sep., 2015, @imzhenyu (Zhenyu Guo), first version

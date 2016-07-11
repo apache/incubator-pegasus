@@ -43,6 +43,13 @@
 
 namespace dsn {
  
+/*!
+@addtogroup tool-api-providers
+@{
+*/
+/*!
+ task worker processes the input tasks from the bound task queue
+*/
 class task_worker : public extensible_object<task_worker, 4>
 {
 public:
@@ -95,7 +102,7 @@ public:
     static join_point<void, task_worker*> on_start;
     static join_point<void, task_worker*> on_create;
 };
-
+/*@}*/
 } // end namespace
 
 

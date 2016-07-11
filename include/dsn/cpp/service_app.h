@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     application model atop of zion in c++
+ *     application model atop zion in c++
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
@@ -108,7 +108,7 @@ namespace dsn
         }
     };
 
-    /*! C++ wrapper of the \ref dsn_register_app function for layer 1 */
+    /*! C++ wrapper of the \ref dsn_register_app function*/
     template<typename TServiceApp>
     void register_app(const char* type_name)
     {

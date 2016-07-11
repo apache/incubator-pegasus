@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     cpp development library atop of zion's c service api
+ *     cpp development library atop zion's c service api
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version

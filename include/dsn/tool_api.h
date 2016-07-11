@@ -27,8 +27,8 @@
 /*
  * Description:
  *     define the interface for implementing and plug-in the tools &
- *     runtime components into Zion.
- *     in Zion, both developement tools and runtime libraries 
+ *     runtime components into rDSN.
+ *     In rDSN, both developement tools and runtime libraries 
  *     (e.g., high performance components) are considered tools.
  *
  * Revision history:
@@ -56,6 +56,14 @@
 
 namespace dsn { namespace tools {
     
+/*!    
+@defgroup tool-api-providers Component Providers
+@ingroup tool-api
+@{
+    the base class for both tools and toollets: only one
+    tool is allowed for one rDSN process, while several toollets
+    may co-exist and work together.    
+ */
 class tool_base
 {
 public:
@@ -154,6 +162,10 @@ configuration_ptr config();
 const service_spec& spec();
 const char* get_service_node_name(service_node* node);
 bool is_engine_ready();
+
+/*
+ @}
+ */
 
 // --------- inline implementation -----------------------------
 template <typename T> bool register_message_header_parser(network_header_format fmt, const std::vector<const char*>& signatures)
