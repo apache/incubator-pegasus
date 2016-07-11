@@ -589,10 +589,11 @@ namespace dsn {
         _client_nets.resize(network_header_format::max_value() + 1);
 
         // for each format
-        for (int i = 0; i <= network_header_format::max_value(); i++)
+        for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++)
         {
             std::vector<network*>& pnet = _client_nets[i];
             pnet.resize(rpc_channel::max_value() + 1);
+            auto client_hdr_format = network_header_format(network_header_format::to_string(i));
 
             // for each channel
             for (int j = 0; j <= rpc_channel::max_value(); j++)
@@ -616,8 +617,6 @@ namespace dsn {
                 network_server_config cs(aspec.id, c);
                 cs.factory_name = factory;
                 cs.message_buffer_block_size = blk_size;
-
-                auto client_hdr_format = network_header_format(network_header_format::to_string(i));
 
                 auto net = create_network(cs, true, client_hdr_format, ctx);
                 if (!net) return ERR_NETWORK_INIT_FAILED;
@@ -695,7 +694,7 @@ namespace dsn {
         _uri_resolver_mgr.reset(new uri_resolver_manager(
             service_engine::fast_instance().spec().config.get()));
 
-        _local_primary_address = _client_nets[0][0]->address();
+        _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
         _local_primary_address.c_addr_ptr()->u.v4.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
         ddebug("=== service_node=[%s], primary_address=[%s] ===",

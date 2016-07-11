@@ -91,12 +91,8 @@ namespace dsn { namespace tools {
     {
         for (auto& msg : _sending_msgs)
         {
-            network_header_format hdr_format(NET_HDR_DSN);
-            bool r = header_type::header_type_to_format(msg->header->hdr_type, hdr_format);
-            dassert(r, "header_type_to_format(%s) failed", msg->header->hdr_type.debug_string().c_str());
-
             sim_network_provider* rnet = nullptr;
-            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel][hdr_format].get(remote_address(), rnet))
+            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel][msg->hdr_format].get(remote_address(), rnet))
             {
                 derror("cannot find destination node %s in simulator",
                     remote_address().to_string()
@@ -109,7 +105,7 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    message_parser_ptr parser = _net.new_message_parser(hdr_format);
+                    message_parser_ptr parser = _net.new_message_parser(msg->hdr_format);
                     server_session = new sim_server_session(*rnet, _net.address(), 
                         cptr, parser);
                     rnet->on_server_session_accepted(server_session);
@@ -191,13 +187,12 @@ namespace dsn { namespace tools {
         auto hostname = boost::asio::ip::host_name();
         if (!client_only)
         {
-            for (int i = 0; i <= network_header_format::max_value(); i++)
+            for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++)
             {
-                auto hdr_format = network_header_format(network_header_format::to_string(i));
-                if (s_switch[channel][hdr_format].put(_address, this))
+                if (s_switch[channel][i].put(_address, this))
                 {
                     auto ep2 = ::dsn::rpc_address(hostname.c_str(), port);
-                    s_switch[channel][hdr_format].put(ep2, this);
+                    s_switch[channel][i].put(ep2, this);
                 }
                 else
                 {

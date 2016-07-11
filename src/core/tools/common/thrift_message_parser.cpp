@@ -212,7 +212,7 @@ namespace dsn
 
     void thrift_message_parser::read_thrift_header(const char* buffer, /*out*/ thrift_message_header& header)
     {
-        header.hdr_type = header_type(buffer);
+        header.hdr_type = *(uint32_t*)(buffer);
         buffer += sizeof(int32_t);
         header.hdr_version = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
@@ -235,11 +235,12 @@ namespace dsn
 
     bool thrift_message_parser::check_thrift_header(const thrift_message_header& header)
     {
-        if (header.hdr_type != header_type::hdr_type_thrift)
+        if (header.hdr_type != THRIFT_HDR_SIG)
         {
             derror("hdr_type should be %s, but %s",
-                   header_type::hdr_type_thrift.debug_string().c_str(),
-                   header.hdr_type.debug_string().c_str());
+                message_parser::get_debug_string("THFT").c_str(),
+                message_parser::get_debug_string((const char*)&header.hdr_type).c_str()
+                );
             return false;
         }
         if (header.hdr_version != 0)
@@ -272,7 +273,7 @@ namespace dsn
         iprot.readMessageBegin(fname, mtype, seqid);
         dinfo("rpc name: %s, type: %d, seqid: %d", fname.c_str(), mtype, seqid);
 
-        dsn_hdr->hdr_type = header_type::hdr_type_thrift;
+        dsn_hdr->hdr_type = THRIFT_HDR_SIG;
         dsn_hdr->hdr_length = sizeof(message_header);
         dsn_hdr->body_length = thrift_header.body_length;
         dsn_hdr->hdr_crc32 = dsn_hdr->body_crc32 = CRC_INVALID;

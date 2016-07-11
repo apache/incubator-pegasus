@@ -45,6 +45,8 @@
 
 namespace dsn
 {
+    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
+
     class http_message_parser : public message_parser
     {
     public:

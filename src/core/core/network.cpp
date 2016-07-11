@@ -260,15 +260,16 @@ namespace dsn
 
     int rpc_session::prepare_parser()
     {
-        if (_reader._buffer_occupied < sizeof(header_type))
-            return sizeof(header_type) - _reader._buffer_occupied;
+        if (_reader._buffer_occupied < sizeof(uint32_t))
+            return sizeof(uint32_t) - _reader._buffer_occupied;
 
-        header_type hdr_type(_reader._buffer.data());
-        network_header_format hdr_format(NET_HDR_DSN);
-        if (!header_type::header_type_to_format(hdr_type, hdr_format))
+        auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
+        if (hdr_format == NET_HDR_INVALID)
         {
             derror("invalid header type, remote_client = %s, header_type = '%s'",
-                   _remote_addr.to_string(), hdr_type.debug_string().c_str());
+                _remote_addr.to_string(),
+                message_parser::get_debug_string(_reader._buffer.data()).c_str()
+            );
             return -1;
         }
 

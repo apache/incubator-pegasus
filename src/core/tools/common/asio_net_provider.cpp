@@ -185,18 +185,20 @@ namespace dsn {
                         return;
                     }
 
-                    if (bytes_transferred < sizeof(header_type))
+                    if (bytes_transferred < sizeof(uint32_t))
                     {
                         derror("%s: asio udp read failed: too short message", _address.to_string());
                         do_receive();
                         return;
                     }
 
-                    header_type hdr_type(_recv_reader._buffer.data());
-                    network_header_format hdr_format(NET_HDR_DSN);
-                    if (!header_type::header_type_to_format(hdr_type, hdr_format))
+                    auto hdr_format = message_parser::get_header_type(_recv_reader._buffer.data());
+                    if (NET_HDR_INVALID == hdr_format)
                     {
-                        derror("%s: asio udp read failed: invalid header type '%s'", _address.to_string(), hdr_type.debug_string().c_str());
+                        derror("%s: asio udp read failed: invalid header type '%s'", 
+                            _address.to_string(), 
+                            message_parser::get_debug_string(_recv_reader._buffer.data()).c_str()
+                            );
                         do_receive();
                         return;
                     }
@@ -291,10 +293,10 @@ namespace dsn {
             }
 
             _parsers.resize(network_header_format::max_value() + 1);
-            for (int i = 0; i <= network_header_format::max_value(); i++)
+            for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++)
             {
-                auto hdr_format = network_header_format(network_header_format::to_string(i));
-                _parsers[i] = new_message_parser(hdr_format);
+                auto client_hdr_format = network_header_format(network_header_format::to_string(i));
+                _parsers[i] = new_message_parser(client_hdr_format);
             }
 
             do_receive();

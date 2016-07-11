@@ -132,7 +132,7 @@ namespace internal_use_only
     bool register_component_provider(const char* name, logging_provider::factory f, ::dsn::provider_type type);
     bool register_component_provider(const char* name, memory_provider::factory f, ::dsn::provider_type type);
     bool register_component_provider(const char* name, nfs_node::factory f, ::dsn::provider_type type);
-    bool register_component_provider(network_header_format fmt, message_parser::factory f, message_parser::factory2 f2, size_t sz);
+    bool register_component_provider(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
     bool register_toollet(const char* name, toollet::factory f, ::dsn::provider_type type);
     bool register_tool(const char* name, tool_app::factory f, ::dsn::provider_type type);
     toollet* get_toollet(const char* name, ::dsn::provider_type type);
@@ -144,7 +144,7 @@ extern join_point<void, sys_exit_type>     sys_exit;
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, ::dsn::PROVIDER_TYPE_ASPECT); }
-template <typename T> bool register_message_header_parser(network_header_format fmt);
+template <typename T> bool register_message_header_parser(network_header_format fmt, const std::vector<const char*>& signatures);
 
 template <typename T> bool register_toollet(const char* name) { return internal_use_only::register_toollet(name, toollet::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
@@ -156,9 +156,9 @@ const char* get_service_node_name(service_node* node);
 bool is_engine_ready();
 
 // --------- inline implementation -----------------------------
-template <typename T> bool register_message_header_parser(network_header_format fmt) 
+template <typename T> bool register_message_header_parser(network_header_format fmt, const std::vector<const char*>& signatures)
 {
-    return internal_use_only::register_component_provider(fmt, T::template create<T>, T::template create2<T>, sizeof(T));
+    return internal_use_only::register_component_provider(fmt, signatures, T::template create<T>, T::template create2<T>, sizeof(T));
 }
 
 }} // end namespace dsn::tools

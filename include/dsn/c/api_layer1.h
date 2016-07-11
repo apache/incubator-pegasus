@@ -632,23 +632,6 @@ extern DSN_API void         dsn_msg_get_options(
                                 /*out*/ dsn_msg_options_t* opts
                                 );
 
-/*! rpc message header type */
-typedef enum dsn_msg_header_type {
-    DHT_INVALID = 0,
-    DHT_DEFAULT = 1,
-    DHT_THRIFT = 2,
-    DHT_HTTP = 3,
-} dsn_msg_header_type;
-
-/*!
- get the message header type
-
- \param msg  the message handle
- */
-extern DSN_API dsn_msg_header_type dsn_msg_get_header_type(
-                                dsn_message_t msg
-                                );
-
 DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt);
 
 DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg);
