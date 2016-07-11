@@ -47,6 +47,9 @@
 
 namespace dsn 
 {
+    /*static*/ join_point<void, rpc_session*> rpc_session::on_rpc_session_connected("rpc.session.connected");
+    /*static*/ join_point<void, rpc_session*> rpc_session::on_rpc_session_disconnected("rpc.session.disconnected");
+
     rpc_session::~rpc_session()
     {
         clear_send_queue(false);
@@ -86,20 +89,26 @@ namespace dsn
 
         rpc_session_ptr sp = this;
         _net.on_client_session_connected(sp);
+
+        on_rpc_session_connected.execute(this);
     }
 
     bool rpc_session::set_disconnected()
     {
-        utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (_connect_state != SS_DISCONNECTED)
         {
-            _connect_state = SS_DISCONNECTED;
-            return true;
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
+            if (_connect_state != SS_DISCONNECTED)
+            {
+                _connect_state = SS_DISCONNECTED;
+            }
+            else
+            {
+                return false;
+            }
         }
-        else
-        {
-            return false;
-        }
+        
+        on_rpc_session_disconnected.execute(this);
+        return true;
     }
 
     void rpc_session::clear_send_queue(bool resend_msgs)
@@ -389,6 +398,10 @@ namespace dsn
         _message_sent(0),
         _delay_server_receive_ms(0)
     {
+        if (!is_client)
+        {
+            on_rpc_session_connected.execute(this);
+        }
     }
 
     bool rpc_session::on_disconnected(bool is_write)
