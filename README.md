@@ -9,7 +9,9 @@ All pull requests please now go to https://github.com/imzhenyu/rdsn for automati
  * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Perfect-Failure-Detector)] Build a perfect failure detector with progressively added system complexity
  * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Plugin-A-New-Network-Implementation)] Plugin my own network implementation for higher performance
  * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
-Robust Distributed System Nucleus (rDSN) is a microkernel-based distributed system framework with a minimal kernel for pluggable components, including applications, distributed frameworks, devops tools, and local runtime/resource providers, enabling their independent development and seamless integration. The project was originally developed for Microsoft Bing, and now has been adopted in production both inside and outside Microsoft. 
+ 
+ 
+**Robust Distributed System Nucleus (rDSN)** is a microkernel-based distributed system framework with a minimal kernel for pluggable components, including applications, distributed frameworks, devops tools, and local runtime/resource providers, enabling their independent development and seamless integration. The project was originally developed for Microsoft Bing, and now has been adopted in production both inside and outside Microsoft. 
 
 * [What is great/novel about rDSN?](#novel)
 * [What I can do with rDSN?](#cando)
