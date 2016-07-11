@@ -9,78 +9,62 @@ All pull requests please now go to https://github.com/imzhenyu/rdsn for automati
  * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Perfect-Failure-Detector)] Build a perfect failure detector with progressively added system complexity
  * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Plugin-A-New-Network-Implementation)] Plugin my own network implementation for higher performance
  * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
+Robust Distributed System Nucleus (rDSN) is a microkernel-based distributed system framework with a minimal kernel for pluggable components, including applications, distributed frameworks, devops tools, and local runtime/resource providers, enabling their independent development and seamless integration. The project was originally developed for Microsoft Bing, and now has been adopted in production both inside and outside Microsoft. 
 
-I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems)  |   [researcher](https://github.com/Microsoft/rDSN/wiki/overview#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications-see-tutorial-1-and-tutorial-2)  |   [student](https://github.com/Microsoft/rDSN/wiki/overview#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
+* [What is great/novel about rDSN?](#novel)
+* [What I can do with rDSN?](#cando)
+* [What are the existing modules I can immediately use?] (#existing)
 
-### See [Wiki](https://github.com/Microsoft/rDSN/wiki) for details  ...
+### <a name="cando"> What I can do with rDSN? </a>
 
-***
+ * an enhanced event-driven RPC library such as libevent, Thrift, and GRPC
+ * a production Paxos framework to quickly turn a local component (e.g., rocksdb) into a online service with replication, partition, failure recovery, and reconfiguration supports
+ * a scale-out and fail-over framework for stateless services such as Memcached
+ * more as you can imagine.
 
-![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg) 
+### <a name="novel"> What is great/novel about rDSN? </a> 
 
-**Robust Distributed System Nucleus (rDSN)** is an open framework for quickly building and managing high performance and robust distributed systems. An early version of rDSN has been **used in Bing** for building a distributed data service, and the system has been online and running well. Based on the feedbacks, rDSN is improved and now [made public](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT open source license. The idea is to advocate **a [coherent and principled meta stack](https://github.com/Microsoft/rDSN/wiki/Design-Rational) that distributed applications, tools, and frameworks are developed independently and integrated (almost) transparently to benefit each other**. Following are some highlights for different audience of this framework.
-
-I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems)  |   [researcher](https://github.com/Microsoft/rDSN/wiki/overview#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications-see-tutorial-1-and-tutorial-2)  |   [student](https://github.com/Microsoft/rDSN/wiki/overview#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
-
-***
-
-##### Developers: a framework for quickly building and managing high performance and robust distributed systems.
-
-
-* Highlights ([more](https://github.com/Microsoft/rDSN/wiki/overview#built-in-three-layer-meta-stack-for-quickly-building-distributed-systems-with-support-from-a-growing-set-of-tools-and-frameworks))
- * compatible code generation via Apache Thrift and Google Protocol Buffer
- * automatic test against various failures and scheduling decisions with reproducable bug
- * flexiable to plugin your own module to adapt to existing culture or for higher performance
- * automatically turn single-node service to a scalable and reliable service with built-in replication
-* Have concerns? [=>](https://github.com/Microsoft/rDSN/wiki/overview#quick-development-and-flexible-deployment-with-concerns-addressed)
-
-###### Built-in three-layer meta stack for quickly building distributed systems with support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools-Policies-and-Frameworks)
- * Layer 1: [quick service development](https://github.com/Microsoft/rDSN/Wiki/Overview#quick-development-and-flexible-deployment-with-concerns-addressed), plus with support from many tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...  (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service))
+ * **microkernel architecture**: applications, frameworks (e.g., replication, scale-out, fail-over), local runtime libraries (e.g., network libraries, locks), and tools are all pluggable modules into a microkernel to enable independent development and seamless integration (therefore modules are reusable and transparently benefit each other) ![rDSN Architecture](doc/imgs/arch.png)
+ * **first-class devops support**: dedicated tool API for tool development; built-in plugged tools for understanding, testing, debugging, and monitoring the upper applications and frameworks ![rDSN Architecture](doc/imgs/viz.png)
+ * **configurable runtime**: tailor the module instances and their mapping on demand with controllable system complexity (e.g., run all nodes in one simulator for testing, allocate CPU resources appropriately for avoiding resource contention, debug with progressively added system compelxity) ![rDSN Configuration](doc/imgs/config.png) 
  
- ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
- * Layer 2: to a partitioned? and replicated? service with simple configuration and minor further development cost
- (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Scalable-and-Reliable-Counter-Service))
-
- ![rDSN-layer2](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer2.jpg)
- * Layer 3: compose workflow across multiple services in a declarative way to handle end-to-end incoming workloads (coming later)
  
- ![rDSN-layer3](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer3.jpg)
+### <a name="existing">Existing pluggable modules (and growing) </a>
 
-###### Quick development and flexible deployment (with concerns addressed)
- * multiple-platform support (Linux, Windows, Mac)
- * Compatible code generation with Thrift and Protocol Buffer, extensible for others
- * [enhanced RPC library](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service#step-14-connect-the-service-with-other-languages-optional) with multi-port, multi-channel, multi-language-client support
- * adapt to your own environment, or rDSN does not perform good enough? rDSN is highly extensible that you can always [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, performanc counter etc.)
- * [flexible deployment]((https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service#step-3-run-with-the-native-runtime-and-deployment)) - single executable, multiple roles, multiple instances
- * more concerns, please do not hesitate to let us [know](mailto:rdsn-support@googlegroups.com)
+##### Distributed frameworks
 
-***
+ * a production Paxos framework to quickly turn a local component (e.g., rocksdb) into a online service with replication, partition, failure recovery, and reconfiguration supports
+ * a scale-out and fail-over framework for stateless services such as Memcached
 
-##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications. (see [Tutorial 1](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Network-Fault-Injection) and [Tutorial 2](https://github.com/Microsoft/rDSN/wiki/Tutorial:-How-to-Implement-A-Coorperative-Scheduler))
+##### Local runtime libraries 
 
-* reliably expose dependencies and non-determinisms in upper systems to the underlying tools at a semantic-rich level (i.e., task)
- * completeness made easy for tools
- * reduced state space for tools to handle
- * easier to map tool results to application logic
-* dedicated Tool API for tool and runtime policy development
-* transparent integration of the tools with the upper applications to make real impact
+ * network libraries on Linux/Windows supporting rDSN/Thrift/HTTP messages at the same time
+ * asynchronous disk IO on Linux/Windows
+ * locks, rwlocks, semaphores
+ * task queues 
+ * timer services
+ * performance counters
+ * loggers (high-perf, screen)
 
-***
+##### Devops tools
 
-##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Perfect-Failure-Detector))
+ * nativerun and fastrun enables native deployment on Windows and Linux 
+ * simulator debugs multiple nodes in one single process without worry about timeout
+ * explorer extracts task-level dependencies automatically
+ * tracer dumps logs for how requests are processed across tasks/nodes
+ * profiler shows detailed task-level performance data (e.g., queue-time, exec-time)
+ * fault-injector mimics data center failures to expose bugs early
+ * glboal-checker enables cross-node assertion 
+ * replayer reproduces the bugs for easier root cause analysis
+ * build-in web stutio to visualize task-level performance and depndency information
 
-* configurable system complexity to learn step by step
- * single thread to multiple threads
- * synchronous and reliable messages to asynchronous and unreliable ones
-* easy test, debug, and monitoring for system understanding, as with the developers
-* easy further tool development, as with the researchers
+##### Other distributed providers and libraries
 
+ * remote file copy 
+ * perfect failure detector
+ * multi-master perfect failure detector 
 
-***
+### License and Support
 
+rDSN is provided on Windows and Linux, with the MIT open source license. You can use the "issues" tab in github to report bugs. 
 
-##### License and Support
-
-rDSN is provided in C++ on Windows, Linux, and Mac, with the MIT open source license. You can use the "issues" tab in github to report bugs. For non-bug issues, please send email to rdsn-support@googlegroups.com.
-
-![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-QR.png)
