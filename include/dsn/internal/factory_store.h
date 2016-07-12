@@ -151,6 +151,13 @@ private:
         TResult* dummy;
         void*    factory;
         ::dsn::provider_type  type;
+
+        factory_entry()
+        {
+            dummy = nullptr;
+            factory = nullptr;
+            type = PROVIDER_TYPE_MAIN;
+        }
     };
 };
 

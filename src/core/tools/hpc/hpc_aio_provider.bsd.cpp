@@ -186,7 +186,7 @@ void hpc_aio_provider::aio(aio_task* aio_tsk)
 error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
 {
     auto aio = (posix_disk_aio_context *)aio_tsk->aio();
-    int r;
+    int r = 0;
 
     aio->this_ = this;
 
