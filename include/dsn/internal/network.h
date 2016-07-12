@@ -136,6 +136,9 @@ namespace dsn {
         network_header_format client_hdr_format() const { return _client_hdr_format; }
         int message_buffer_block_size() const { return _message_buffer_block_size; }
 
+    public:
+        bool                         _raw_message_parser_enabled;
+
     protected:
         static uint32_t get_local_ipv4();
 

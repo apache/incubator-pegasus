@@ -266,13 +266,20 @@ namespace dsn
         auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
         if (hdr_format == NET_HDR_INVALID)
         {
-            derror("invalid header type, remote_client = %s, header_type = '%s'",
-                _remote_addr.to_string(),
-                message_parser::get_debug_string(_reader._buffer.data()).c_str()
-            );
-            return -1;
+            if (_net._raw_message_parser_enabled)
+            {
+                ddebug("unknown hdr format, create a raw message parser");
+                hdr_format = NET_HDR_RAW;
+            }
+            else
+            {
+                derror("invalid header type, remote_client = %s, header_type = '%s'",
+                       _remote_addr.to_string(),
+                       message_parser::get_debug_string(_reader._buffer.data()).c_str()
+                    );
+                return -1;
+            }
         }
-
         _parser = _net.new_message_parser(hdr_format);
         dinfo("message parser created, remote_client = %s, header_format = %s",
               _remote_addr.to_string(), hdr_format.to_string());
@@ -486,6 +493,9 @@ namespace dsn
             "network", "send_queue_threshold",
             4 * 1024, "send queue size above which throttling is applied"
             );
+        _raw_message_parser_enabled = dsn_config_get_value_bool(
+            "network", "raw_message_parser_enabled", false,
+            "whether enable raw message parser for unknown message header");
     }
 
     void network::reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size)

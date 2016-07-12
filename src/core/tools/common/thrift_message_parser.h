@@ -26,7 +26,7 @@
 
 /*
 * Description:
-*     message parser for browser-generated http request
+*     message parser for thrift request
 *
 * Revision history:
 *     Jun. 2016, Zuoyan Qin, first version
