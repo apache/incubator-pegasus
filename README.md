@@ -28,14 +28,14 @@ All pull requests please now go to https://github.com/imzhenyu/rdsn for automati
 
  * **microkernel architecture**: applications, frameworks (e.g., replication, scale-out, fail-over), local runtime libraries (e.g., network libraries, locks), and tools are all pluggable modules into a microkernel to enable independent development and seamless integration (therefore modules are reusable and transparently benefit each other) ![rDSN Architecture](doc/imgs/arch.png)
  * **first-class devops support**: dedicated tool API for tool development; built-in plugged tools for understanding, testing, debugging, and monitoring the upper applications and frameworks ![rDSN Architecture](doc/imgs/viz.png)
- * **configurable runtime**: tailor the module instances and their mapping on demand with controllable system complexity (e.g., run all nodes in one simulator for testing, allocate CPU resources appropriately for avoiding resource contention, debug with progressively added system compelxity) ![rDSN Configuration](doc/imgs/config.png) 
+ * **configurable runtime**: tailor the module instances and their mapping on demand with controllable system complexity (e.g., run all nodes in one simulator for testing, allocate CPU resources appropriately for avoiding resource contention, debug with progressively added system complexity) ![rDSN Configuration](doc/imgs/config.png) 
  
  
 ### <a name="existing">Existing pluggable modules (and growing) </a>
 
 ##### Distributed frameworks
 
- * a production Paxos framework to quickly turn a local component (e.g., rocksdb) into a online service with replication, partition, failure recovery, and reconfiguration supports
+ * a production Paxos framework to quickly turn a local component (e.g., rocksdb) into an online service with replication, partition, failure recovery, and reconfiguration supports
  * a scale-out and fail-over framework for stateless services such as Memcached
 
 ##### Local runtime libraries 
@@ -56,9 +56,9 @@ All pull requests please now go to https://github.com/imzhenyu/rdsn for automati
  * tracer dumps logs for how requests are processed across tasks/nodes
  * profiler shows detailed task-level performance data (e.g., queue-time, exec-time)
  * fault-injector mimics data center failures to expose bugs early
- * glboal-checker enables cross-node assertion 
+ * global-checker enables cross-node assertion 
  * replayer reproduces the bugs for easier root cause analysis
- * build-in web stutio to visualize task-level performance and depndency information
+ * build-in web studio to visualize task-level performance and dependency information
 
 ##### Other distributed providers and libraries
 
@@ -68,5 +68,5 @@ All pull requests please now go to https://github.com/imzhenyu/rdsn for automati
 
 ### License and Support
 
-rDSN is provided on Windows and Linux, with the MIT open source license. You can use the "issues" tab in github to report bugs. 
+rDSN is provided on Windows and Linux, with the MIT open source license. You can use the "issues" tab in GitHub to report bugs. 
 
