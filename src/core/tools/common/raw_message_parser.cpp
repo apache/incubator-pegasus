@@ -43,8 +43,9 @@
 
 namespace dsn {
 
-//static
-std::atomic_bool raw_message_parser::s_handler_hooked(false);
+DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
 //static
 void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
 {
@@ -55,16 +56,22 @@ void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
     header->from_address = sp->remote_address();
     header->gpid.value = 0;
 
-    strncpy(header->rpc_name, "RPC_CALL_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
+    strncpy(header->rpc_name, "RPC_CALL_RAW_SESSION_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
+    special_msg->local_rpc_code = RPC_CALL_RAW_SESSION_DISCONNECT;
+    special_msg->hdr_format = NET_HDR_RAW;
     sp->on_recv_message(special_msg, 0);
 }
 
 raw_message_parser::raw_message_parser()
 {
     bool hooked = false;
+    static std::atomic_bool s_handler_hooked(false);
     if (s_handler_hooked.compare_exchange_strong(hooked, true))
     {
-        rpc_session::on_rpc_session_disconnected.put_native(raw_message_parser::notify_rpc_session_disconnected);
+        rpc_session::on_rpc_session_disconnected.put_back(
+            raw_message_parser::notify_rpc_session_disconnected, 
+            "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT"
+        );
     }
 }
 
@@ -89,7 +96,7 @@ message_ex* raw_message_parser::get_message_on_receive(message_reader* reader, /
 
         header->hdr_length = sizeof(*header);
         header->body_length = msg_length;
-        strncpy(header->rpc_name, "RPC_CALL_RAW", DSN_MAX_TASK_CODE_NAME_LENGTH);
+        strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", DSN_MAX_TASK_CODE_NAME_LENGTH);        
         header->gpid.value = 0;
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
@@ -98,6 +105,9 @@ message_ex* raw_message_parser::get_message_on_receive(message_reader* reader, /
         reader->_buffer = reader->_buffer.range(msg_length);
         reader->_buffer_occupied = 0;
         read_next = 0;
+
+        new_message->local_rpc_code = RPC_CALL_RAW_MESSAGE;
+        new_message->hdr_format = NET_HDR_RAW;
         return new_message;
     }
 }
