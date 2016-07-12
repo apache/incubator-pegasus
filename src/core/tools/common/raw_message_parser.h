@@ -41,12 +41,14 @@
 
 namespace dsn {
 
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_RAW)
+
 class rpc_session;
 class raw_message_parser: public message_parser
 {
-private:
-    static std::atomic_bool s_handler_hooked;
+private:    
     static void notify_rpc_session_disconnected(rpc_session* sp);
+
 public:
     raw_message_parser();
     virtual ~raw_message_parser() {}

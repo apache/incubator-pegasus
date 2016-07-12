@@ -141,7 +141,7 @@ namespace dsn
     public:
         struct parser_factory_info
         {
-            parser_factory_info() : fmt(NET_HDR_DSN), factory(nullptr), factory2(nullptr), parser_size(0) {}
+            parser_factory_info() : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0) {}
 
             network_header_format fmt;
             message_parser::factory factory;

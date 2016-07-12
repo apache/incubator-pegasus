@@ -205,7 +205,7 @@ std::atomic<uint64_t> message_ex::_id(0);
 uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
-    : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_DSN), send_retry_count(0),
+    : header(nullptr), local_rpc_code(::dsn::TASK_CODE_INVALID), hdr_format(NET_HDR_INVALID), send_retry_count(0),
       _rw_index(-1), _rw_offset(0), _rw_committed(true), _is_read(false)
 {
 }

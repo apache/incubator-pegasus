@@ -266,12 +266,9 @@ namespace dsn
         auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
         if (hdr_format == NET_HDR_INVALID)
         {
-            if (_net._raw_message_parser_enabled)
-            {
-                ddebug("unknown hdr format, create a raw message parser");
-                hdr_format = NET_HDR_RAW;
-            }
-            else
+            hdr_format = _net.unknown_msg_hdr_format();
+
+            if (hdr_format == NET_HDR_INVALID)
             {
                 derror("invalid header type, remote_client = %s, header_type = '%s'",
                        _remote_addr.to_string(),
@@ -485,7 +482,7 @@ namespace dsn
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
-        : _engine(srv), _client_hdr_format(NET_HDR_DSN)
+        : _engine(srv), _client_hdr_format(NET_HDR_DSN), _unknown_msg_header_format(NET_HDR_INVALID)
     {   
         _message_buffer_block_size = 1024 * 64;
         _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
@@ -493,9 +490,14 @@ namespace dsn
             "network", "send_queue_threshold",
             4 * 1024, "send queue size above which throttling is applied"
             );
-        _raw_message_parser_enabled = dsn_config_get_value_bool(
-            "network", "raw_message_parser_enabled", false,
-            "whether enable raw message parser for unknown message header");
+
+        _unknown_msg_header_format = network_header_format::from_string(
+            dsn_config_get_value_string(
+                "network", 
+                "unknown_message_header_format", 
+                NET_HDR_INVALID.to_string(),
+                "format for unknown message headers, default is NET_HDR_INVALID"
+                ), NET_HDR_INVALID);
     }
 
     void network::reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size)
