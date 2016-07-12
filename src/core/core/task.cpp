@@ -462,10 +462,12 @@ void task::enqueue(task_worker_pool* pool)
         {
             tools::node_scoper ns(_node);
             exec_internal();
+            return;
         }
         else
         {
             exec_internal();
+            return;
         }
 
         //if (_spec->type == TASK_TYPE_COMPUTE)
@@ -474,12 +476,13 @@ void task::enqueue(task_worker_pool* pool)
         //    {
         //        tools::node_scoper ns(_node);
         //        exec_internal();
+        //        return;
         //    }
         //    else
         //    {
         //        exec_internal();
+        //        return;
         //    }
-        //    return;
         //}
 
         //// io tasks only inlined in io threads
@@ -540,7 +543,8 @@ rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, ser
     : task(dsn_task_code_t(h->code),  // it is possible that request->local_rpc_code != h->code when it is handled in frameworks
         nullptr, 
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
-        static_cast<int>(request->header->client.hash), node),
+        static_cast<int>(request->header->client.hash),
+        node),
     _request(request),
     _handler(h),
     _enqueue_ts_ns(0)

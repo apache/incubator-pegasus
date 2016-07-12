@@ -292,8 +292,7 @@ public:
     rpc_request_task(message_ex* request, rpc_handler_info* h, service_node* node);
     ~rpc_request_task();
 
-    message_ex*  get_request() const
-    { return _request; }
+    message_ex*  get_request() const { return _request; }
 
     void enqueue() override;
 
