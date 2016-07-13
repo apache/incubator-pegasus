@@ -91,7 +91,7 @@ namespace dsn {
                 }
                 catch (boost::system::system_error& err)
                 {
-                    printf("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                    derror("asio tcp listen on port %u failed, err: %s\n", port, err.what());
                     return ERR_ADDRESS_ALREADY_USED;
                 }
             }            
@@ -102,7 +102,7 @@ namespace dsn {
         rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
             auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
-            auto parser = new_message_parser(_client_hdr_format);
+            message_parser_ptr parser(new_message_parser(_client_hdr_format));
             return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
         }
 
@@ -133,7 +133,7 @@ namespace dsn {
 
         void asio_udp_provider::send_message(message_ex* request)
         {
-            auto& parser = _parsers[request->hdr_format];
+            auto parser = get_message_parser(request->hdr_format);
             parser->prepare_on_send(request);
             auto lcount = parser->get_buffer_count_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
@@ -163,6 +163,42 @@ namespace dsn {
                         //we do not handle failure here, rpc matcher would handle timeouts
                     }
                 });
+        }
+
+        asio_udp_provider::asio_udp_provider(rpc_engine* srv, network* inner_provider)
+            : network(srv, inner_provider),
+              _is_client(false),
+              _recv_reader(_message_buffer_block_size)
+        {
+            _parsers = new message_parser*[network_header_format::max_value() + 1];
+            memset(_parsers, 0, sizeof(message_parser*) * (network_header_format::max_value() + 1));
+        }
+
+        asio_udp_provider::~asio_udp_provider()
+        {
+            for (int i = 0; i <= network_header_format::max_value(); i++)
+            {
+                if (_parsers[i] != nullptr)
+                {
+                    delete _parsers[i];
+                    _parsers[i] = nullptr;
+                }
+            }
+            delete []_parsers;
+            _parsers = nullptr;
+        }
+
+        message_parser* asio_udp_provider::get_message_parser(network_header_format hdr_format)
+        {
+            if (_parsers[hdr_format] == nullptr)
+            {
+                utils::auto_lock<utils::ex_lock_nr> l(_lock);
+                if (_parsers[hdr_format] == nullptr) // double check
+                {
+                    _parsers[hdr_format] = new_message_parser(hdr_format);
+                }
+            }
+            return _parsers[hdr_format];
         }
 
         void asio_udp_provider::do_receive()
@@ -203,7 +239,7 @@ namespace dsn {
                         return;
                     }
 
-                    auto& parser = _parsers[hdr_format];
+                    auto parser = get_message_parser(hdr_format);
                     parser->reset();
 
                     _recv_reader.mark_read(bytes_transferred);
@@ -257,7 +293,7 @@ namespace dsn {
                     }
                     catch (boost::system::system_error& err)
                     {
-                        derror("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                        ddebug("asio udp listen on port %u failed, err: %s\n", _address.port(), err.what());
                     }
                 } while (true);
             }
@@ -271,7 +307,7 @@ namespace dsn {
                 }
                 catch (boost::system::system_error& err)
                 {
-                    derror("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                    derror("asio udp listen on port %u failed, err: %s\n", port, err.what());
                     return ERR_ADDRESS_ALREADY_USED;
                 }
             }
@@ -290,13 +326,6 @@ namespace dsn {
                     boost::asio::io_service::work work(_io_service);
                     _io_service.run();
                 })));
-            }
-
-            _parsers.resize(network_header_format::max_value() + 1);
-            for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++)
-            {
-                auto client_hdr_format = network_header_format(network_header_format::to_string(i));
-                _parsers[i] = new_message_parser(client_hdr_format);
             }
 
             do_receive();

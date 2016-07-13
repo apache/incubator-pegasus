@@ -249,7 +249,7 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-            auto parser = new_message_parser(_client_hdr_format);
+            message_parser_ptr parser(new_message_parser(_client_hdr_format));
             auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper);

@@ -49,17 +49,20 @@ DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, THREAD_POOL_DEF
 //static
 void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
 {
-    message_ex* special_msg = message_ex::create_receive_message_with_standalone_header(blob());
-    dsn::message_header* header = special_msg->header;
-    header->context.u.is_request = 1;
-    header->context.u.is_forwarded = 0;
-    header->from_address = sp->remote_address();
-    header->gpid.value = 0;
+    if (!sp->is_client())
+    {
+        message_ex* special_msg = message_ex::create_receive_message_with_standalone_header(blob());
+        dsn::message_header* header = special_msg->header;
+        header->context.u.is_request = 1;
+        header->context.u.is_forwarded = 0;
+        header->from_address = sp->remote_address();
+        header->gpid.value = 0;
 
-    strncpy(header->rpc_name, "RPC_CALL_RAW_SESSION_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
-    special_msg->local_rpc_code = RPC_CALL_RAW_SESSION_DISCONNECT;
-    special_msg->hdr_format = NET_HDR_RAW;
-    sp->on_recv_message(special_msg, 0);
+        strncpy(header->rpc_name, "RPC_CALL_RAW_SESSION_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
+        special_msg->local_rpc_code = RPC_CALL_RAW_SESSION_DISCONNECT;
+        special_msg->hdr_format = NET_HDR_RAW;
+        sp->on_recv_message(special_msg, 0);
+    }
 }
 
 raw_message_parser::raw_message_parser()
@@ -68,6 +71,7 @@ raw_message_parser::raw_message_parser()
     static std::atomic_bool s_handler_hooked(false);
     if (s_handler_hooked.compare_exchange_strong(hooked, true))
     {
+        ddebug("join point on_rpc_session_disconnected registered to notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT");
         rpc_session::on_rpc_session_disconnected.put_back(
             raw_message_parser::notify_rpc_session_disconnected, 
             "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT"
