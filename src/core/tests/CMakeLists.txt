@@ -26,6 +26,7 @@ set(MY_PROJ_LIBS gtest
                  dsn.tools.common
                  dsn.corelib
                  dsn.cli
+                 dsn.dev.utility
 )
 
 set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")

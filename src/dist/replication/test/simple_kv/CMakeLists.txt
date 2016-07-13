@@ -30,6 +30,7 @@ set(MY_PROJ_LIBS gtest
                  dsn.failure_detector
                  dsn.replication.zookeeper_provider
                  zookeeper_mt
+                 dsn.dev.utility
 )
 
 set(MY_PROJ_LIB_PATH 
