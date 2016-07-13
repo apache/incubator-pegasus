@@ -105,7 +105,7 @@ namespace dsn { namespace tools {
                 if (nullptr == server_session)
                 {
                     rpc_session_ptr cptr = this;
-                    message_parser_ptr parser = _net.new_message_parser(msg->hdr_format);
+                    message_parser_ptr parser(_net.new_message_parser(msg->hdr_format));
                     server_session = new sim_server_session(*rnet, _net.address(), 
                         cptr, parser);
                     rnet->on_server_session_accepted(server_session);

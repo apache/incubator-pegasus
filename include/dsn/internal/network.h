@@ -126,7 +126,7 @@ namespace dsn {
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        message_parser_ptr new_message_parser(network_header_format hdr_format);
+        message_parser* new_message_parser(network_header_format hdr_format);
 
         // for in-place new message parser
         std::pair<message_parser::factory2, size_t> get_message_parser_info(network_header_format hdr_format);

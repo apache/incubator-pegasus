@@ -92,7 +92,7 @@ namespace dsn { namespace tools {
 
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
         {
-            auto parser = new_message_parser(_client_hdr_format);
+            message_parser_ptr parser(new_message_parser(_client_hdr_format));
             return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
         }
 

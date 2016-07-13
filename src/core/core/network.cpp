@@ -462,6 +462,9 @@ namespace dsn
             if (is_client() && msg->header->from_address == _net.engine()->primary_address())
             {
                 derror("self connection detected, address = %s", msg->header->from_address.to_string());
+                dassert(msg->get_count() == 0,
+                    "message should not be referenced by anybody so far");
+                delete msg;
                 return false;
             }
 
@@ -521,7 +524,7 @@ namespace dsn
         _engine->matcher()->on_recv_reply(this, id, msg, delay_ms);
     }
 
-    message_parser_ptr network::new_message_parser(network_header_format hdr_format)
+    message_parser* network::new_message_parser(network_header_format hdr_format)
     {
         message_parser* parser = message_parser_manager::instance().create_parser(hdr_format);
         dassert(parser, "message parser '%s' not registerd or invalid!", hdr_format.to_string());

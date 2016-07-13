@@ -172,7 +172,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto parser = new_message_parser(_client_hdr_format);
+            message_parser_ptr parser(new_message_parser(_client_hdr_format));
             auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper, true);

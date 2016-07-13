@@ -66,12 +66,9 @@ namespace dsn {
         class asio_udp_provider : public network
         {
         public:
-            asio_udp_provider(rpc_engine* srv, network* inner_provider)
-                : network(srv, inner_provider),
-                  _is_client(false),
-                  _recv_reader(_message_buffer_block_size)
-            {
-            }
+            asio_udp_provider(rpc_engine* srv, network* inner_provider);
+
+            virtual ~asio_udp_provider();
 
             void send_message(message_ex* request) override;
 
@@ -90,13 +87,19 @@ namespace dsn {
         private:
             void do_receive();
 
+            // create parser on demand
+            message_parser* get_message_parser(network_header_format hdr_format);
+
             bool                                            _is_client;
             boost::asio::io_service                         _io_service;
             std::shared_ptr<boost::asio::ip::udp::socket>   _socket;
             std::vector<std::shared_ptr<std::thread>>       _workers;
             ::dsn::rpc_address                              _address;
             message_reader                                  _recv_reader;
-            std::vector<message_parser_ptr>                 _parsers;
+
+            ::dsn::utils::ex_lock_nr                        _lock; // [
+            message_parser**                                _parsers;
+            // ]
 
             static const size_t max_udp_packet_size = 1000;
         };
