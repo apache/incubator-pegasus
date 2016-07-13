@@ -36,6 +36,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+ /*!
+ @defgroup tool-api-hooks Join Points
+ @ingroup tool-api
+
+ Join points are hooks that allow for system monitoring and manipulation
+
+ @defgroup tool-api-providers Component Providers
+ @ingroup tool-api
+
+ Component providers define the interface for the local components (e.g., network, lock)
+ */
+
 # pragma once
 
 // providers
@@ -55,14 +67,10 @@
 # include <dsn/internal/configuration.h>
 
 namespace dsn { namespace tools {
-    
-/*!    
-@defgroup tool-api-providers Component Providers
-@ingroup tool-api
-@{
-    the base class for both tools and toollets: only one
-    tool is allowed for one rDSN process, while several toollets
-    may co-exist and work together.    
+  
+/*!
+@addtogroup tool-api-providers
+@{  
  */
 class tool_base
 {
@@ -146,9 +154,14 @@ namespace internal_use_only
     toollet* get_toollet(const char* name, ::dsn::provider_type type);
 }
 
+/*!
+@addtogroup tool-api-hooks
+@{
+*/
 extern join_point<void, configuration_ptr> sys_init_before_app_created;
 extern join_point<void, configuration_ptr> sys_init_after_app_created;
 extern join_point<void, sys_exit_type>     sys_exit;
+/*@}*/
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, ::dsn::PROVIDER_TYPE_ASPECT); }

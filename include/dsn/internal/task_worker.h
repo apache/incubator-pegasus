@@ -99,8 +99,13 @@ private:
     void run_internal();
 
 public:
+    /*!
+    @addtogroup tool-api-hooks
+    @{
+    */
     static join_point<void, task_worker*> on_start;
     static join_point<void, task_worker*> on_create;
+    /*@}*/
 };
 /*@}*/
 } // end namespace
