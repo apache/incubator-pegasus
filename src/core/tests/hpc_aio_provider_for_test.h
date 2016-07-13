@@ -35,11 +35,11 @@
 
 # pragma once
 
-# include <dsn/internal/aio_provider.h>
+# include <dsn/tool-api/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
 # include <dsn/service_api_c.h>
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task.h>
 # include "../core/disk_engine.h"
 # include "test_utils.h"
 # include "../tools/hpc/hpc_aio_provider.h"

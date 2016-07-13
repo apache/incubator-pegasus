@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/configuration.h>
+# include <dsn/cpp/configuration.h>
 # include <gtest/gtest.h>
 # include <algorithm>
 # include <fstream>

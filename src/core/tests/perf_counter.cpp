@@ -89,7 +89,7 @@ static void test_perf_counter(perf_counter::factory f)
         ans+=vec[i];
     }
     std::vector<int> gen_numbers{1, 5, 1043};
-    int sleep_interval = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
+    int sleep_interval = (int)dsn_config_get_value_uint64("components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
 
     perf_counter_ptr counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
     perf_counter_inc_dec(counter);

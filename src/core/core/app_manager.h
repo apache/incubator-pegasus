@@ -35,12 +35,12 @@
 
 #pragma once
 
-# include <dsn/internal/ports.h>
-# include <dsn/internal/singleton.h>
-# include <dsn/internal/global_config.h>
+# include <dsn/utility/ports.h>
+# include <dsn/utility/singleton.h>
+# include <dsn/tool-api/global_config.h>
 # include <dsn/cpp/auto_codes.h>
 # include <sstream>
-# include <dsn/internal/synchronize.h>
+# include <dsn/utility/synchronize.h>
 # include "rpc_engine.h"
 
 namespace dsn 

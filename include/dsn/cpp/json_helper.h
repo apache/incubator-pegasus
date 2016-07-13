@@ -43,7 +43,7 @@
 #include <string>
 #include <type_traits>
 #include <cctype>
-#include <dsn/cpp/autoref_ptr.h>
+#include <dsn/utility/autoref_ptr.h>
 #include <dsn/cpp/auto_codes.h>
 #include <dsn/cpp/utils.h>
 #include <dsn/dist/replication/replication_types.h>

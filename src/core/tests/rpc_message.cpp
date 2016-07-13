@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/rpc_message.h>
+# include <dsn/tool-api/rpc_message.h>
 # include <../core/transient_memory.h>
 # include <gtest/gtest.h>
 

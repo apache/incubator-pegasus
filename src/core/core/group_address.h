@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/cpp/address.h>
-# include <dsn/internal/synchronize.h>
+# include <dsn/utility/synchronize.h>
 # include <algorithm> // for std::find()
 
 namespace dsn

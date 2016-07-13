@@ -41,10 +41,10 @@
 # include <dsn/cpp/rpc_stream.h>
 # include <dsn/cpp/serialization.h>
 # include <dsn/cpp/zlocks.h>
-# include <dsn/cpp/autoref_ptr.h>
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/link.h>
-# include <dsn/internal/callocator.h>
+# include <dsn/utility/autoref_ptr.h>
+# include <dsn/utility/synchronize.h>
+# include <dsn/utility/link.h>
+# include <dsn/cpp/callocator.h>
 # include <set>
 # include <map>
 # include <thread>

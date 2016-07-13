@@ -36,8 +36,8 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/ports.h>
-# include <dsn/cpp/autoref_ptr.h>
+# include <dsn/utility/ports.h>
+# include <dsn/utility/autoref_ptr.h>
 # include <memory>
 # include <atomic>
 

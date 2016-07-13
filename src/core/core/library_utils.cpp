@@ -34,7 +34,7 @@
  */
 
 # include <dsn/cpp/utils.h>
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <random>

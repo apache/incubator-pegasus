@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/perf_counters.h>
+# include <dsn/tool-api/perf_counters.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;

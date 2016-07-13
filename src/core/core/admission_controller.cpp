@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/admission_controller.h>
+# include <dsn/tool-api/admission_controller.h>
 # include "task_engine.h"
 
 namespace dsn {

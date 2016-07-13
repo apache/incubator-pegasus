@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/perf_counters.h>
+# include <dsn/tool-api/perf_counters.h>
 # include <dsn/service_api_c.h>
-# include <dsn/internal/command.h>
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/command.h>
+# include <dsn/tool-api/task.h>
 # include <dsn/cpp/json_helper.h>
 # include "service_engine.h"
 

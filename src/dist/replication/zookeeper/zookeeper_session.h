@@ -34,8 +34,8 @@
 
 #include <dsn/cpp/utils.h>
 #include <dsn/cpp/clientlet.h>
-#include <dsn/internal/singleton.h>
-#include <dsn/internal/synchronize.h>
+#include <dsn/utility/singleton.h>
+#include <dsn/utility/synchronize.h>
 
 #include <thread>
 #include <zookeeper.h>

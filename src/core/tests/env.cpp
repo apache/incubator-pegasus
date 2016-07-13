@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/env_provider.h>
+# include <dsn/tool-api/env_provider.h>
 # include <gtest/gtest.h>
 # include "../tools/simulator/env.sim.h"
 

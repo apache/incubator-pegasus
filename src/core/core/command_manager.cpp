@@ -40,8 +40,8 @@
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
-# include <dsn/internal/task.h>
-# include <dsn/internal/rpc_message.h>
+# include <dsn/tool-api/task.h>
+# include <dsn/tool-api/rpc_message.h>
 # include "rpc_engine.h"
 # include <dsn/tool/cli.h>
 

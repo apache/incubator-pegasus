@@ -35,7 +35,7 @@
 
 # include <dsn/service_api_c.h>
 # include <dsn/tool_api.h>
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 # include <gtest/gtest.h>

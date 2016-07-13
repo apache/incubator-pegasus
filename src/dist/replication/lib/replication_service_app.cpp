@@ -45,7 +45,7 @@
 
 # ifdef DSN_REPLICATION_TYPE_1_DYNAMIC_LIB
 
-# include <dsn/internal/module_init.cpp.h>
+# include <dsn/utility/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(replication_type1)
     dsn_task_code_register("RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);

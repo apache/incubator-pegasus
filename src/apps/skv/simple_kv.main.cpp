@@ -53,7 +53,7 @@ static void dsn_app_registration_simple_kv()
 
 # if defined(DSN_RUN_USE_SVCHOST)
 
-# include <dsn/internal/module_init.cpp.h>
+# include <dsn/utility/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(simple_kv)
     dsn_app_registration_simple_kv();

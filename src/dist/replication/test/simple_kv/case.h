@@ -37,7 +37,7 @@
 
 # include "common.h"
 
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 # include <dsn/cpp/zlocks.h>
 
 # include <fstream>

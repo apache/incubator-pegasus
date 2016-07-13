@@ -38,11 +38,11 @@
 
 #include <gtest/gtest.h>
 
-#include <dsn/internal/aio_provider.h>
+#include <dsn/tool-api/aio_provider.h>
 #include <dsn/service_api_cpp.h>
 
-#include <dsn/internal/task.h>
-#include <dsn/internal/task_spec.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/task_spec.h>
 
 #include "../tools/common/asio_net_provider.h"
 #include "../tools/common/network.sim.h"

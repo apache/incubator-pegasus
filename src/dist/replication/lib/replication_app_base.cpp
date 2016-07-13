@@ -36,7 +36,7 @@
 # include "replication_app_base.h"
 # include "replica.h"
 # include "mutation.h"
-# include <dsn/internal/factory_store.h>
+# include <dsn/utility/factory_store.h>
 # include "mutation_log.h"
 # include <fstream>
 # include <sstream>

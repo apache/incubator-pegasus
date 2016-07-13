@@ -41,7 +41,7 @@
 # include <string>
 # include <functional>
 # include <memory>
-# include <dsn/internal/enum_helper.h>
+# include <dsn/utility/enum_helper.h>
 
 namespace dsn
 {

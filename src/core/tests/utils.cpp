@@ -35,8 +35,8 @@
 
 
 # include <dsn/cpp/utils.h>
-# include <dsn/internal/link.h>
-# include <dsn/cpp/autoref_ptr.h>
+# include <dsn/utility/link.h>
+# include <dsn/utility/autoref_ptr.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;

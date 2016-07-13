@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/task_spec.h>
-# include <dsn/internal/singleton.h>
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/task_spec.h>
+# include <dsn/utility/singleton.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/command.h>
 # include <sstream>
 # include <vector>
 

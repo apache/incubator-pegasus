@@ -35,9 +35,9 @@
 
 #pragma once
 
-# include <dsn/internal/rpc_message.h>
-# include <dsn/internal/priority_queue.h>
-# include <dsn/internal/message_parser.h>
+# include <dsn/tool-api/rpc_message.h>
+# include <dsn/utility/priority_queue.h>
+# include <dsn/tool-api/message_parser.h>
 # include <boost/asio.hpp>
 # include "asio_net_provider.h"
 

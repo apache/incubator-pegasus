@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/task_tracker.h>
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task_tracker.h>
+# include <dsn/tool-api/task.h>
 # include <dsn/tool_api.h>
 
 # ifdef __TITLE__

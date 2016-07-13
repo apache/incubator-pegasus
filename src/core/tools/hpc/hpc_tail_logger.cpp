@@ -35,9 +35,9 @@
 
 
 # include "hpc_tail_logger.h"
-# include <dsn/internal/singleton_store.h>
+# include <dsn/utility/singleton_store.h>
 # include <dsn/cpp/utils.h>
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/command.h>
 # include <cstdlib>
 # include <sstream>
 # include <fstream>
@@ -74,7 +74,7 @@ namespace dsn
             : logging_provider(log_dir)
         {
             _log_dir = std::string(log_dir);
-            _per_thread_buffer_bytes = config()->get_value<int>(
+            _per_thread_buffer_bytes = (int)dsn_config_get_value_uint64(
                 "tools.hpc_tail_logger",
                 "per_thread_buffer_bytes",
                 10*1024*1024, // 10 MB by default

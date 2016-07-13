@@ -35,7 +35,7 @@
 # pragma once
 # include "nfs_client.h"
 # include <queue>
-# include <dsn/internal/nfs.h>
+# include <dsn/tool-api/nfs.h>
 
 namespace dsn {
     namespace service {

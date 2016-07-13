@@ -33,10 +33,10 @@
  */
 
 #include <dsn/cpp/address.h>
-#include <dsn/internal/aio_provider.h>
+#include <dsn/tool-api/aio_provider.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
-#include <dsn/internal/priority_queue.h>
+#include <dsn/utility/priority_queue.h>
 #include "../core/group_address.h"
 #include <boost/lexical_cast.hpp>
 #include "test_utils.h"

@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
 # else
 
-# include <dsn/internal/module_int.cpp.h>
+# include <dsn/tool-api/module_int.cpp.h>
 
 MODULE_INIT_BEGIN(deploy_svc)
     dsn_app_registration_deploy_svc();

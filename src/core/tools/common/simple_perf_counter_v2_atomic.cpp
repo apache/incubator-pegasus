@@ -191,7 +191,7 @@ namespace dsn {
                 _results[COUNTER_PERCENTILE_999] = 0;
                 _tail = 0;
 
-                _counter_computation_interval_seconds = config()->get_value<int>(
+                _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
                     "components.simple_perf_counter_v2_atomic",
                     "counter_computation_interval_seconds",
                     30,

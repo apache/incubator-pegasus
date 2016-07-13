@@ -35,7 +35,7 @@
 
 # include "checker.h"
 # include "case.h"
-# include "dsn/internal/factory_store.h"
+# include "dsn/utility/factory_store.h"
 
 # include "../../lib/replica.h"
 # include "../../lib/replica_stub.h"

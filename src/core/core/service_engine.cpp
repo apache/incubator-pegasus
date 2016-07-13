@@ -38,15 +38,15 @@
 # include "disk_engine.h"
 # include "rpc_engine.h"
 # include "uri_address.h"
-# include <dsn/internal/env_provider.h>
-# include <dsn/internal/memory_provider.h>
-# include <dsn/internal/nfs.h>
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/factory_store.h>
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/env_provider.h>
+# include <dsn/tool-api/memory_provider.h>
+# include <dsn/tool-api/nfs.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/tool-api/command.h>
+# include <dsn/tool-api/perf_counters.h>
 # include <dsn/tool_api.h>
 # include <dsn/tool/node_scoper.h>
-
 # include <dsn/dist/layer2_handler.h>
 
 # ifdef __TITLE__
@@ -209,7 +209,7 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
             // update ports if there are more than one rpc engines for one node
             ctx.port_shift_value = spec.get_ports_delta(_app_spec.id, io.pool->spec().pool_code, io.q->index());
         }
-        io.rpc = new rpc_engine(spec.config, this);
+        io.rpc = new rpc_engine(get_main_config(), this);
     }
     else
         io.rpc = nullptr;
@@ -535,6 +535,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
     _memory = factory_store<memory_provider>::create(
         spec.memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN
         );
+
     perf_counters::instance().register_factory(
         factory_store<perf_counter>::get_factory<perf_counter::factory>(
         spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN

@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/ports.h>
-# include <dsn/internal/rpc_message.h>
-# include <dsn/internal/network.h>
-# include <dsn/internal/message_parser.h>
+# include <dsn/utility/ports.h>
+# include <dsn/tool-api/rpc_message.h>
+# include <dsn/tool-api/network.h>
+# include <dsn/tool-api/message_parser.h>
 # include <cctype> // for isprint()
 
 # include "task_engine.h"

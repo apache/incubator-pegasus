@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include <dsn/internal/ports.h>
+# include <dsn/utility/ports.h>
 # include <dsn/cpp/auto_codes.h>
 
 # ifdef __TITLE__

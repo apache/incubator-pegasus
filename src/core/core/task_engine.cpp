@@ -34,8 +34,8 @@
  */
 
 # include "task_engine.h"
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/factory_store.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/utility/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

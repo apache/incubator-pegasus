@@ -38,10 +38,10 @@
 # include <dsn/service_api_cpp.h>
 # include <dsn/service_api_c.h>
 # include <dsn/tool/providers.hpc.h>
-# include <dsn/internal/singleton_store.h>
-# include <dsn/internal/factory_store.h>
+# include <dsn/utility/singleton_store.h>
+# include <dsn/utility/factory_store.h>
 # include <dsn/tool_api.h>
-# include <dsn/internal/logging_provider.h>
+# include <dsn/tool-api/logging_provider.h>
 
 # include "service_engine.h"
 # include "test_utils.h"

@@ -34,7 +34,7 @@
  */
 
 # include "../../tools/cli/cli.client.h"
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/command.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;

@@ -33,5 +33,5 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/perf_counter.h>
+# include <dsn/tool-api/perf_counters.h>
 

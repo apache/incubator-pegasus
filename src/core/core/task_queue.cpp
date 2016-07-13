@@ -33,11 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/task_queue.h>
+# include <dsn/tool-api/task_queue.h>
 # include "task_engine.h"
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/network.h>
-# include <dsn/internal/perf_counters.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/network.h>
 # include <cstdio>
 # include "rpc_engine.h"
 

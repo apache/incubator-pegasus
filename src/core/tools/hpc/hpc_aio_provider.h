@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/tool_api.h>
-# include <dsn/internal/synchronize.h>
+# include <dsn/utility/synchronize.h>
 # include "io_looper.h"
 
 # ifdef __linux__

@@ -1,6 +1,6 @@
 
 # include "deploy_svc.server.impl.h"
-# include <dsn/internal/factory_store.h>
+# include <dsn/utility/factory_store.h>
 
 # include <rapidjson/document.h> 
 # include <rapidjson/writer.h>

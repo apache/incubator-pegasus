@@ -87,9 +87,9 @@
 ************************************************************/
 
 # include "hpc_logger.h"
-# include <dsn/internal/singleton_store.h>
+# include <dsn/utility/singleton_store.h>
 # include <dsn/cpp/utils.h>
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/command.h>
 # include <cstdlib>
 # include <sstream>
 # include <fstream>
@@ -142,7 +142,7 @@ namespace dsn
             : logging_provider(log_dir), _stop_thread(false), _exiting(false)
         {
             _log_dir = std::string(log_dir);
-            _per_thread_buffer_bytes = config()->get_value<int>(
+            _per_thread_buffer_bytes = (int)dsn_config_get_value_uint64(
                 "tools.hpc_logger",
                 "per_thread_buffer_bytes",
                 64 * 1024, // 64 KB by default

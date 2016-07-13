@@ -36,7 +36,7 @@
 #pragma once
 
 # include <boost/asio.hpp>
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 # include <thread>
 # include <memory>
 # include <vector>
@@ -53,7 +53,7 @@ namespace dsn {
         public:
             shared_io_service()
             {
-                _io_service_worker_count = config()->get_value<int>("core", "timer_service_worker_count", 1,
+                _io_service_worker_count = (int)dsn_config_get_value_uint64("core", "timer_service_worker_count", 1,
                     "thread number for timer service for core itself");
                 for (int i = 0; i < _io_service_worker_count; i++)
                 {

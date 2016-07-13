@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/memory_provider.h>
+# include <dsn/tool-api/memory_provider.h>
 
 namespace dsn {
     

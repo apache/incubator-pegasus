@@ -37,7 +37,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/cpp/autoref_ptr.h>
+# include <dsn/utility/autoref_ptr.h>
 # include <unordered_map>
 # include <unordered_set>
 # include <vector>

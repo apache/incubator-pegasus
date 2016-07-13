@@ -34,7 +34,7 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
-# include <dsn/internal/factory_store.h>
+# include <dsn/utility/factory_store.h>
 # include <dsn/cpp/clientlet.h>
 # include <sstream>
 # include <cinttypes>

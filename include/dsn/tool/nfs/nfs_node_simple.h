@@ -35,7 +35,7 @@
 # pragma once
 
 # include <dsn/tool_api.h>
-# include <dsn/internal/nfs.h>
+# include <dsn/tool-api/nfs.h>
 
 namespace dsn { 
     namespace service {

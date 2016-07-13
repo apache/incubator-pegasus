@@ -33,8 +33,8 @@
  */
 #include "raw_message_parser.h"
 #include <dsn/service_api_c.h>
-#include <dsn/internal/task_spec.h>
-#include <dsn/internal/network.h>
+#include <dsn/tool-api/task_spec.h>
+#include <dsn/tool-api/network.h>
 
 #ifdef __TITLE__
 #undef __TITLE__

@@ -55,7 +55,7 @@ namespace dsn {
             if (_acceptor != nullptr)
                 return ERR_SERVICE_ALREADY_RUNNING;
 
-            int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
+            int io_service_worker_count = (int)dsn_config_get_value_uint64("network", "io_service_worker_count", 1,
                 "thread number for io service (timer and boost network)");
             for (int i = 0; i < io_service_worker_count; i++)
             {
@@ -272,7 +272,7 @@ namespace dsn {
         error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
         {
             _is_client = client_only;
-            int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
+            int io_service_worker_count = (int)dsn_config_get_value_uint64("network", "io_service_worker_count", 1,
                                                                    "thread number for io service (timer and boost network)");
            
             dassert(channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
