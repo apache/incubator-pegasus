@@ -232,7 +232,12 @@ public:
     task_rejection_handler rejection_handler;
     
     // COMPUTE
+    /*! 
+     @addtogroup tool-api-hooks 
+     @{
+     */
     join_point<void, task*, task*>               on_task_create;
+
     join_point<void, task*, task*>               on_task_enqueue;    
     join_point<void, task*>                      on_task_begin; // TODO: parent task
     join_point<void, task*>                      on_task_end;
@@ -258,6 +263,7 @@ public:
 
     // message data flow
     join_point<void, message_ex*, message_ex*>   on_rpc_create_response;
+    /*@}*/
 
 public:    
     task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool);

@@ -198,9 +198,13 @@ namespace dsn {
     class rpc_session : public ref_counter
     {
     public:
+        /*!
+        @addtogroup tool-api-hooks
+        @{
+        */
         static join_point<void, rpc_session*> on_rpc_session_connected;
         static join_point<void, rpc_session*> on_rpc_session_disconnected;
-
+        /*@}*/
     public:
         rpc_session(
             connection_oriented_network& net,

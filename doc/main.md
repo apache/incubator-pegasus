@@ -1,6 +1,6 @@
-Robust Distributed System Nucleus (rDSN) is a microkernel-based distributed system framework with a minimal kernel for pluggable components, including applications, distributed frameworks, devops tools, and local runtime/resource providers, enabling their independent development and seamless integration. The project was originally developed for Microsoft Bing, and now has been adopted in production both inside and outside Microsoft. 
+**Robust Distributed System Nucleus (rDSN)** is a framework for quickly building robust distributed systems. It has a microkernel for pluggable components, including applications, distributed frameworks, devops tools, and local runtime/resource providers, enabling their independent development and seamless integration. The project was originally developed for Microsoft Bing, and now has been adopted in production both inside and outside Microsoft. 
 
-* [What is great/novel about rDSN?](#novel)
+* [How does rDSN build robustness?](#novel)
 * [What I can do with rDSN?](#cando)
 * [What are the existing modules I can immediately use?] (#existing)
 * [Install and have a try now] (\ref install)
@@ -12,11 +12,16 @@ Robust Distributed System Nucleus (rDSN) is a microkernel-based distributed syst
  * a scale-out and fail-over framework for stateless services such as Memcached ([tutorial]()).
  * more as you can imagine.
 
-### <a name="novel"> What is great/novel about rDSN? </a> 
+### <a name="novel"> How does rDSN build robustness? </a> 
 
- * **microkernel architecture**: applications, frameworks (e.g., replication, scale-out, fail-over), local runtime libraries (e.g., network libraries, locks), and tools are all pluggable modules into a microkernel to enable independent development and seamless integration (therefore modules are reusable and transparently benefit each other) ![rDSN Architecture](../imgs/arch.png)
- * **first-class devops support**: dedicated tool API for tool development; built-in plugged tools for understanding, testing, debugging, and monitoring the upper applications and frameworks ![rDSN Architecture](../imgs/viz.png)
- * **configurable runtime**: tailor the module instances and their mapping on demand with controllable system complexity (e.g., run all nodes in one simulator for testing, allocate CPU resources appropriately for avoiding resource contention, debug with progressively added system compelxity) ![rDSN Configuration](../imgs/config.png) 
+ * **reduced system complexity via microkernel architecture**: applications, frameworks (e.g., replication, scale-out, fail-over), local runtime libraries (e.g., network libraries, locks), and tools are all pluggable modules into a microkernel to enable independent development and seamless integration (therefore modules are reusable and transparently benefit each other) 
+ ![rDSN Architecture](../imgs/arch.png)
+ * **auto-handled distributed system challenges**: built-in frameworks to achieve scalability, reliability, availability, and consistency etc. for the applications
+ ![rDSN service model](../imgs/rdsn-layer2.jpg)
+ * **transparent tooling support**: dedicated tool API for tool development; built-in plugged tools for understanding, testing, debugging, and monitoring the upper applications and frameworks 
+ ![rDSN Architecture](../imgs/viz.png)
+ * **late resource binding with global deploy-time view**: tailor the module instances and their connections on demand with controllable system complexity and resource mapping (e.g., run all nodes in one simulator for testing, allocate CPU resources appropriately for avoiding resource contention, debug with progressively added system complexity) 
+ ![rDSN Configuration](../imgs/config.png) 
  
  
 ### <a name="existing">Existing pluggable modules (and growing) </a>

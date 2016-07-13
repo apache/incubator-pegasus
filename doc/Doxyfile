@@ -820,7 +820,8 @@ INPUT                  = main.md \
                          ../include/dsn/internal/aio_provider.h \
                          ../include/dsn/internal/env_provider.h \
                          ../include/dsn/internal/logging_provider.h \
-                         ../include/dsn/internal/perf_counter.h
+                         ../include/dsn/internal/perf_counter.h \
+                         ../include/dsn/internal/task_spec.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
