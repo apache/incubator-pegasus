@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/env_provider.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/tool-api/env_provider.h>
+# include <dsn/utility/utils.h>
 # include <chrono>
 
 namespace dsn {

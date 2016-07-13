@@ -36,8 +36,8 @@
 
 #include <dsn/dist/meta_state_service.h>
 #include <dsn/dist/distributed_lock_service.h>
-#include <dsn/internal/synchronize.h>
-#include <dsn/cpp/autoref_ptr.h>
+#include <dsn/utility/synchronize.h>
+#include <dsn/utility/autoref_ptr.h>
 
 namespace dsn{ namespace dist {
 

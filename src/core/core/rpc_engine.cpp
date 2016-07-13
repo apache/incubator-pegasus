@@ -47,9 +47,9 @@
 # include "service_engine.h"
 # include "group_address.h"
 # include "uri_address.h"
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/factory_store.h>
-# include <dsn/internal/task_queue.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/tool-api/task_queue.h>
 # include <dsn/cpp/serialization.h>
 # include <set>
 # include <dsn/dist/layer2_handler.h>
@@ -691,8 +691,7 @@ namespace dsn {
             }
         }
 
-        _uri_resolver_mgr.reset(new uri_resolver_manager(
-            service_engine::fast_instance().spec().config.get()));
+        _uri_resolver_mgr.reset(new uri_resolver_manager());
 
         _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
         _local_primary_address.c_addr_ptr()->u.v4.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;

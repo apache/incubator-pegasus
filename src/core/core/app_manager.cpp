@@ -35,7 +35,7 @@
  
 # include "service_engine.h"
 # include "rpc_engine.h"
-# include <dsn/internal/singleton_store.h>
+# include <dsn/utility/singleton_store.h>
 
 DSN_API bool dsn_register_app(dsn_app* app_type)
 {

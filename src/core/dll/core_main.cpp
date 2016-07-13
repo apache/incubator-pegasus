@@ -35,7 +35,7 @@
 
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/ports.h>
+# include <dsn/utility/ports.h>
 
 # include <dsn/tool/simulator.h>
 # include <dsn/tool/nativerun.h>
@@ -48,7 +48,7 @@
 # include <dsn/tool/providers.common.h>
 # include <dsn/tool/providers.hpc.h>
 # include <dsn/tool/nfs.h>
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 
 # include <dsn/dist/dist.providers.common.h>
 
@@ -84,7 +84,7 @@ void dsn_core_init()
 //
 // global checker implementation
 //
-void sys_init_for_add_global_checker(::dsn::configuration_ptr config);
+void sys_init_for_add_global_checker();
 class global_checker_store : public ::dsn::utils::singleton< global_checker_store >
 {
 public:
@@ -107,7 +107,7 @@ public:
     std::list<global_checker> checkers;
 };
 
-void sys_init_for_add_global_checker(::dsn::configuration_ptr config)
+void sys_init_for_add_global_checker()
 {
     auto t = dynamic_cast<dsn::tools::simulator*>(::dsn::tools::get_current_tool());
     if (t != nullptr)

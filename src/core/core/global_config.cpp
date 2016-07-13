@@ -33,11 +33,11 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/global_config.h>
+# include <dsn/tool-api/global_config.h>
 # include <thread>
-# include <dsn/internal/task_spec.h>
-# include <dsn/internal/network.h>
-# include <dsn/internal/singleton_store.h>
+# include <dsn/tool-api/task_spec.h>
+# include <dsn/tool-api/network.h>
+# include <dsn/utility/singleton_store.h>
 # include "library_utils.h"
 # include "app_manager.h"
 
@@ -369,21 +369,21 @@ extern "C"
     typedef dsn_error_t (*dsn_app_bridge_t)(int, const char**);
 }
 
-void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
+void service_spec::load_app_shared_libraries()
 {
     std::vector<std::string> all_section_names;
-    config->get_all_sections(all_section_names);
+    get_main_config()->get_all_sections(all_section_names);
 
     std::vector< std::pair<std::string, std::string> > modules;
     for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
         {
-            std::string module = config->get_string_value(it->c_str(), "dmodule", "",
+            std::string module = dsn_config_get_value_string(it->c_str(), "dmodule", "",
                 "path of a dynamic library which implement this app role, and register itself upon loaded");
             if (module.length() > 0)
             {
-                std::string bridge_args = config->get_string_value(it->c_str(), "dmodule_bridge_arguments", "",
+                std::string bridge_args = dsn_config_get_value_string(it->c_str(), "dmodule_bridge_arguments", "",
                     "\n; when the service cannot automatically register its app types into rdsn \n"
                     "; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule% \n"
                     "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* args);\", \n"
@@ -473,7 +473,7 @@ bool service_spec::init_app_specs()
         return false;
 
     std::vector<std::string> all_section_names;
-    config->get_all_sections(all_section_names);
+    get_main_config()->get_all_sections(all_section_names);
     
     // check mimic app
     if (enable_default_app_mimic)
@@ -482,13 +482,13 @@ bool service_spec::init_app_specs()
         if (std::find(all_section_names.begin(), all_section_names.end(), mimic_section_name)
             == all_section_names.end())
         {
-            config->set("apps.mimic", "type", mimic_app_role_name, "must be " mimic_app_role_name);
-            config->set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
+            get_main_config()->set("apps.mimic", "type", mimic_app_role_name, "must be " mimic_app_role_name);
+            get_main_config()->set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
             all_section_names.push_back("apps.mimic");
         }
         else
         {
-            auto type = config->get_string_value("apps.mimic", "type", "", "app type, must be " mimic_app_role_name);
+            auto type = dsn_config_get_value_string("apps.mimic", "type", "", "app type, must be " mimic_app_role_name);
             if (strcmp(type, mimic_app_role_name) != 0)
             {
                 printf("invalid config value '%s' for [apps.mimic] type", type);

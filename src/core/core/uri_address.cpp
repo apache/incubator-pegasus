@@ -35,23 +35,23 @@
 
 # include "uri_address.h"
 # include "rpc_engine.h"
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 # include <unordered_map>
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/configuration.h>
-# include <dsn/internal/factory_store.h>
-# include <dsn/internal/task.h>
+# include <dsn/utility/synchronize.h>
+# include <dsn/utility/configuration.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/tool-api/task.h>
 
 namespace dsn
 {
-    void uri_resolver_manager::setup_resolvers(configuration* config)
+    void uri_resolver_manager::setup_resolvers()
     {
         // [uri-resolver.%resolver-address%]
         // factory = %uri-resolver-factory%
         // arguments = %uri-resolver-arguments%
 
         std::vector<std::string> sections;
-        config->get_all_sections(sections);
+        get_main_config()->get_all_sections(sections);
 
         const int prefix_len = (const int)strlen("uri-resolver.");
         for (auto& s : sections)
@@ -69,9 +69,9 @@ namespace dsn
                 continue;
             }
 
-            auto factory = config->get_string_value(s.c_str(), "factory", "", 
+            auto factory = dsn_config_get_value_string(s.c_str(), "factory", "", 
                 "partition-resolver factory name which creates the concrete partition-resolver object");
-            auto arguments = config->get_string_value(s.c_str(), "arguments", "",
+            auto arguments = dsn_config_get_value_string(s.c_str(), "arguments", "",
                 "uri-resolver ctor arguments");
 
             auto resolver = new uri_resolver(resolver_addr.c_str(), factory, arguments);

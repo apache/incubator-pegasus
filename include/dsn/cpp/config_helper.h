@@ -37,7 +37,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 
 # define CONFIG_BEGIN(t_struct) \
     inline bool read_config(\

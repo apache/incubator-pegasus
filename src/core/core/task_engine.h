@@ -36,11 +36,11 @@
 # pragma once
 
 # include "service_engine.h"
-# include <dsn/internal/task_queue.h>
-# include <dsn/internal/admission_controller.h>
-# include <dsn/internal/perf_counter.h>
-# include <dsn/internal/task_worker.h>
-# include <dsn/internal/timer_service.h>
+# include <dsn/tool-api/task_queue.h>
+# include <dsn/tool-api/admission_controller.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/task_worker.h>
+# include <dsn/tool-api/timer_service.h>
 
 namespace dsn {
 

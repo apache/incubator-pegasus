@@ -35,7 +35,7 @@
  */
 
 # include "meta_state_service_simple.h"
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task.h>
 
 # include <stack>
 # include <utility>

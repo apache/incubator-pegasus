@@ -33,7 +33,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <dsn/internal/singleton_store.h>
+#include <dsn/utility/singleton_store.h>
 #include <string>
 
 #pragma once

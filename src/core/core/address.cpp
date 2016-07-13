@@ -56,10 +56,10 @@
 
 # endif
 
-# include <dsn/internal/ports.h>
+# include <dsn/utility/ports.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/address.h>
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task.h>
 # include "group_address.h"
 # include "uri_address.h"
 

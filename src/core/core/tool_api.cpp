@@ -34,8 +34,8 @@
  */
 
 # include <dsn/tool_api.h>
-# include <dsn/internal/factory_store.h>
-# include <dsn/internal/singleton_store.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/utility/singleton_store.h>
 # include "service_engine.h"
 
 namespace dsn { 
@@ -122,11 +122,6 @@ namespace dsn {
             return service_engine::fast_instance().spec();
         }
 
-        configuration_ptr config()
-        {
-            return service_engine::fast_instance().spec().config;
-        }
-
         const service_spec& spec()
         {
             return service_engine::fast_instance().spec();
@@ -137,8 +132,8 @@ namespace dsn {
             return node->name();
         }
 
-        join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
-        join_point<void, configuration_ptr> sys_init_after_app_created("system.init.2");
+        join_point<void> sys_init_before_app_created("system.init.1");
+        join_point<void> sys_init_after_app_created("system.init.2");
         join_point<void, sys_exit_type> sys_exit("system.exit");
 
         namespace internal_use_only

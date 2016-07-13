@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/task.h>
+# include <dsn/tool-api/task.h>
 # include <dsn/tool_api.h>
 # include "task_engine.h"
 

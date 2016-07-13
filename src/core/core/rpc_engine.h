@@ -35,10 +35,11 @@
 
 # pragma once
 
-# include <dsn/internal/task.h>
-# include <dsn/internal/network.h>
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/global_config.h>
+# include <dsn/tool-api/task.h>
+# include <dsn/tool-api/network.h>
+# include <dsn/utility/synchronize.h>
+# include <dsn/tool-api/global_config.h>
+# include <dsn/utility/configuration.h>
 
 namespace dsn {
 

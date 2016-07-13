@@ -35,19 +35,19 @@
 
 # include <dsn/service_api_c.h>
 # include <dsn/tool_api.h>
-# include <dsn/internal/enum_helper.h>
+# include <dsn/utility/enum_helper.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/serialization.h>
-# include <dsn/internal/task_spec.h>
-# include <dsn/internal/zlock_provider.h>
-# include <dsn/internal/nfs.h>
-# include <dsn/internal/env_provider.h>
-# include <dsn/internal/factory_store.h>
-# include <dsn/internal/task.h>
-# include <dsn/internal/singleton_store.h>
-# include <dsn/internal/configuration.h>
-# include <dsn/cpp/utils.h> 
+# include <dsn/tool-api/task_spec.h>
+# include <dsn/tool-api/zlock_provider.h>
+# include <dsn/tool-api/nfs.h>
+# include <dsn/tool-api/env_provider.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/tool-api/task.h>
+# include <dsn/utility/singleton_store.h>
+# include <dsn/utility/utils.h> 
 
+# include <dsn/utility/configuration.h>
 # include "command_manager.h"
 # include "service_engine.h"
 # include "rpc_engine.h"
@@ -1203,7 +1203,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     // regiser external app roles by loading all shared libraries
     // so all code and app factories are automatically registered
-    dsn::service_spec::load_app_shared_libraries(dsn_all.config);
+    dsn::service_spec::load_app_shared_libraries();
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
@@ -1212,7 +1212,6 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     // initialize global specification from config file
     ::dsn::service_spec spec;
-    spec.config = dsn_all.config;
     if (!spec.init())
     {
         printf("error in config file %s, exit ...\n", config_file);
@@ -1283,7 +1282,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     // init provider specific system inits
-    dsn::tools::sys_init_before_app_created.execute(::dsn::service_engine::fast_instance().spec().config);
+    dsn::tools::sys_init_before_app_created.execute();
 
     // TODO: register sys_exit execution
 
@@ -1375,7 +1374,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     });
     
     // invoke customized init after apps are created
-    dsn::tools::sys_init_after_app_created.execute(::dsn::service_engine::fast_instance().spec().config);
+    dsn::tools::sys_init_after_app_created.execute();
 
     // start the tool
     dsn_all.tool->run();
@@ -1415,4 +1414,12 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));
     }
     return i;
+}
+
+namespace dsn
+{
+    configuration_ptr get_main_config()
+    {
+        return dsn_all.config;
+    }
 }

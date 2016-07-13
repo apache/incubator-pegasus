@@ -36,9 +36,9 @@
 # pragma once
 
 # include "service_engine.h"
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/aio_provider.h>
-# include <dsn/internal/work_queue.h>
+# include <dsn/utility/synchronize.h>
+# include <dsn/tool-api/aio_provider.h>
+# include <dsn/utility/work_queue.h>
 
 namespace dsn {
 

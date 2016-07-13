@@ -35,10 +35,10 @@
 
 #pragma once
 
-# include <dsn/internal/command.h>
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/singleton.h>
-# include <dsn/internal/rpc_message.h>
+# include <dsn/tool-api/command.h>
+# include <dsn/utility/synchronize.h>
+# include <dsn/utility/singleton.h>
+# include <dsn/tool-api/rpc_message.h>
 # include <map>
 
 namespace dsn {

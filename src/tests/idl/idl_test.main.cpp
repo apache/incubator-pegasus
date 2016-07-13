@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 # include <gtest/gtest.h>
 # include <dsn/cpp/serialization.h>
 

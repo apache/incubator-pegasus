@@ -114,7 +114,7 @@ namespace dsn {
             perf_counter_number_percentile(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
                 : perf_counter(app, section, name, type, dsptr), _tail(0)
             {
-                _counter_computation_interval_seconds = config()->get_value<int>(
+                _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
                     "components.simple_perf_counter", 
                     "counter_computation_interval_seconds",
                     30,

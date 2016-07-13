@@ -34,7 +34,6 @@
  */
 
 #include "replication_common.h"
-#include <dsn/internal/configuration.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

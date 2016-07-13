@@ -34,9 +34,9 @@
  */
 
 # include "disk_engine.h"
-# include <dsn/internal/perf_counters.h>
-# include <dsn/internal/aio_provider.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/aio_provider.h>
+# include <dsn/utility/utils.h>
 # include "transient_memory.h"
 
 # ifdef __TITLE__

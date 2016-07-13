@@ -40,7 +40,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
-#include <dsn/cpp/utils.h>
+#include <dsn/utility/utils.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>

@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/cpp/utils.h>
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/utils.h>
+# include <dsn/utility/singleton.h>
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <random>

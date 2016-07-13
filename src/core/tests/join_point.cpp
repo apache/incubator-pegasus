@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/join_point.h>
+# include <dsn/utility/join_point.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;

@@ -35,10 +35,10 @@
 
 #pragma once
 
-# include <dsn/internal/ports.h>
-# include <dsn/internal/rpc_message.h>
-# include <dsn/internal/singleton.h>
-# include <dsn/internal/message_parser.h>
+# include <dsn/utility/ports.h>
+# include <dsn/tool-api/rpc_message.h>
+# include <dsn/utility/singleton.h>
+# include <dsn/tool-api/message_parser.h>
 # include <vector>
 # include <queue>
 # include "http_parser.h"

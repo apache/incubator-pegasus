@@ -39,7 +39,7 @@
 # ifdef __linux__
 
 # include <dsn/tool_api.h>
-# include <dsn/internal/synchronize.h>
+# include <dsn/utility/synchronize.h>
 # include <queue>
 # include <stdio.h>        /* for perror() */
 # include <sys/syscall.h>    /* for __NR_* definitions */

@@ -34,7 +34,7 @@
  */
 #pragma once
 
-# include <dsn/internal/ports.h>
+# include <dsn/utility/ports.h>
 # include <dsn/tool_api.h>
 
 # ifndef _WIN32

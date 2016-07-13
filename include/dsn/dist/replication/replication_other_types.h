@@ -42,10 +42,10 @@
 #ifndef replication_OTHER_TYPES_H
 #define replication_OTHER_TYPES_H
 
-# include <dsn/cpp/autoref_ptr.h>
+# include <dsn/utility/autoref_ptr.h>
 # include <dsn/dist/replication/replication.types.h>
 # include <sstream>
-# include <dsn/internal/enum_helper.h>
+# include <dsn/utility/enum_helper.h>
 
 namespace dsn {
 

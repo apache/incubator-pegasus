@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/internal/task_worker.h>
+# include <dsn/tool-api/task_worker.h>
 # include "task_engine.h"
 # include <sstream>
 # include <errno.h>

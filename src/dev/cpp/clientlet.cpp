@@ -36,7 +36,7 @@
 
 # include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/service_app.h>
-# include <dsn/internal/singleton.h>
+# include <dsn/utility/singleton.h>
 # include <iostream>
 # include <map>
 

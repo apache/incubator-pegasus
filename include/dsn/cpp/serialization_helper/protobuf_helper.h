@@ -35,8 +35,8 @@
 
 # pragma once
 
-# include <dsn/internal/ports.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/ports.h>
+# include <dsn/utility/utils.h>
 
 # include <google/protobuf/stubs/common.h>
 # include <google/protobuf/io/zero_copy_stream.h>

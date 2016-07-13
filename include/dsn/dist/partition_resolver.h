@@ -36,7 +36,7 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
-# include <dsn/cpp/autoref_ptr.h>
+# include <dsn/utility/autoref_ptr.h>
 
 namespace dsn
 {

@@ -34,7 +34,7 @@
  */
 
 # include <dsn/dist/replication.h>
-# include <dsn/internal/factory_store.h>
+# include <dsn/utility/factory_store.h>
 # include <dsn/dist/replication/meta_service_app.h>
 
 # include "distributed_lock_service_simple.h"
@@ -50,7 +50,7 @@
 
 # ifdef DSN_META_SERVER_DYNAMIC_LIB
 
-# include <dsn/internal/module_init.cpp.h>
+# include <dsn/utility/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(meta)
     dsn::register_app< ::dsn::service::meta_service_app>("meta");

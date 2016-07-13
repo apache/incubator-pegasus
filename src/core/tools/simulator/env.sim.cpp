@@ -75,7 +75,7 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
 {
     task_worker::on_start.put_front(on_worker_start, "sim_env_provider::on_worker_start");
 
-    _seed = config()->get_value<int>("tools.simulator", "random_seed", 0, "random seed for the simulator, 0 for random random seed");
+    _seed = (int)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed for the simulator, 0 for random random seed");
     if (_seed == 0)
     {
         _seed = std::random_device{}();

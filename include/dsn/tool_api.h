@@ -51,23 +51,23 @@
 # pragma once
 
 // providers
-# include <dsn/internal/global_config.h>
-# include <dsn/internal/task_queue.h>
-# include <dsn/internal/task_worker.h>
-# include <dsn/internal/admission_controller.h>
-# include <dsn/internal/network.h>
-# include <dsn/internal/aio_provider.h>
-# include <dsn/internal/env_provider.h>
-# include <dsn/internal/nfs.h>
-# include <dsn/internal/zlock_provider.h>
-# include <dsn/internal/message_parser.h>
-# include <dsn/internal/logging_provider.h>
-# include <dsn/internal/memory_provider.h>
-# include <dsn/internal/timer_service.h>
-# include <dsn/internal/configuration.h>
+# include <dsn/tool-api/global_config.h>
+# include <dsn/utility/factory_store.h>
+# include <dsn/tool-api/task_queue.h>
+# include <dsn/tool-api/task_worker.h>
+# include <dsn/tool-api/admission_controller.h>
+# include <dsn/tool-api/network.h>
+# include <dsn/tool-api/aio_provider.h>
+# include <dsn/tool-api/env_provider.h>
+# include <dsn/tool-api/nfs.h>
+# include <dsn/tool-api/zlock_provider.h>
+# include <dsn/tool-api/message_parser.h>
+# include <dsn/tool-api/logging_provider.h>
+# include <dsn/tool-api/memory_provider.h>
+# include <dsn/tool-api/timer_service.h>
 
 namespace dsn { namespace tools {
-  
+
 /*!
 @addtogroup tool-api-providers
 @{  
@@ -158,8 +158,8 @@ namespace internal_use_only
 @addtogroup tool-api-hooks
 @{
 */
-extern join_point<void, configuration_ptr> sys_init_before_app_created;
-extern join_point<void, configuration_ptr> sys_init_after_app_created;
+extern join_point<void> sys_init_before_app_created;
+extern join_point<void> sys_init_after_app_created;
 extern join_point<void, sys_exit_type>     sys_exit;
 /*@}*/
 
@@ -171,7 +171,6 @@ template <typename T> bool register_toollet(const char* name) { return internal_
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN); }
 tool_app* get_current_tool();
-configuration_ptr config();
 const service_spec& spec();
 const char* get_service_node_name(service_node* node);
 bool is_engine_ready();

@@ -38,7 +38,7 @@
 # include <dsn/cpp/address.h>
 # include <dsn/dist/partition_resolver.h>
 # include <algorithm> // for std::find()
-# include <dsn/internal/configuration.h>
+# include <dsn/utility/configuration.h>
 
 namespace dsn
 {
@@ -114,14 +114,14 @@ namespace dsn
     class uri_resolver_manager
     {
     public:
-        uri_resolver_manager(configuration* config);        
+        uri_resolver_manager();
 
         std::shared_ptr<uri_resolver> get(rpc_uri_address* uri) const;
 
         std::map<std::string, std::shared_ptr<uri_resolver> > get_all() const;
 
     private:
-        void setup_resolvers(configuration* config);
+        void setup_resolvers();
 
         typedef std::unordered_map<std::string, std::shared_ptr<uri_resolver> > resolvers;
         resolvers _resolvers;
@@ -130,9 +130,9 @@ namespace dsn
 
 
     // ------------------ inline implementation --------------------
-    inline uri_resolver_manager::uri_resolver_manager(configuration* config)
+    inline uri_resolver_manager::uri_resolver_manager()
     {
-        setup_resolvers(config);
+        setup_resolvers();
     }
 }
 

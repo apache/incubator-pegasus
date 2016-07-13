@@ -39,7 +39,7 @@
 
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api_c.h>
-#include <dsn/cpp/autoref_ptr.h>
+#include <dsn/utility/autoref_ptr.h>
 
 #include <iostream>
 

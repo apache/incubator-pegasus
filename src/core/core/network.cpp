@@ -36,8 +36,8 @@
 # ifdef _WIN32
 # include <Winsock2.h>
 # endif
-# include <dsn/internal/network.h>
-# include <dsn/internal/factory_store.h>
+# include <dsn/tool-api/network.h>
+# include <dsn/utility/factory_store.h>
 # include "rpc_engine.h"
 
 # ifdef __TITLE__

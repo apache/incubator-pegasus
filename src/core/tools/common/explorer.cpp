@@ -37,7 +37,7 @@
 
 # include <dsn/toollet/explorer.h>
 # include <dsn/service_api_c.h>
-# include <dsn/internal/command.h>
+# include <dsn/tool-api/command.h>
 
 namespace dsn 
 {
@@ -462,7 +462,7 @@ namespace dsn
 
         void explorer::install(service_spec& spec)
         {
-            auto explore = config()->get_value<bool>("task..default", "is_explore", true, "whether to explore this kind of task");
+            auto explore = dsn_config_get_value_bool("task..default", "is_explore", true, "whether to explore this kind of task");
             
             for (int i = 0; i <= dsn_task_code_max(); i++)
             {
@@ -473,7 +473,7 @@ namespace dsn
                 std::string section_name = std::string("task.") + name;
                 task_spec* spec = task_spec::get(i);
                 dassert(spec != nullptr, "task_spec cannot be null");
-                bool explore2 = config()->get_value<bool>(section_name.c_str(), "is_explore", 
+                bool explore2 = dsn_config_get_value_bool(section_name.c_str(), "is_explore",
                     explore, "whether to explore this kind of task");
 
                 if (explore2)

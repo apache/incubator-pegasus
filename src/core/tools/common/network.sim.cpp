@@ -36,7 +36,7 @@
 
 # include <boost/asio.hpp>
 # include <dsn/service_api_c.h>
-# include <dsn/internal/singleton_store.h>
+# include <dsn/utility/singleton_store.h>
 # include <dsn/tool/node_scoper.h>
 # include "network.sim.h" 
 
@@ -167,16 +167,12 @@ namespace dsn { namespace tools {
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
 
-        auto config = tool_app::get_service_spec().config;
-        if (config != NULL)
-        {
-            _min_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", 
-                "min_message_delay_microseconds", _min_message_delay_microseconds,
-                "min message delay (us)");
-            _max_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", 
-                "max_message_delay_microseconds", _max_message_delay_microseconds,
-                "max message delay (us)");
-        }
+        _min_message_delay_microseconds = (uint32_t)dsn_config_get_value_uint64("tools.simulator",
+            "min_message_delay_microseconds", _min_message_delay_microseconds,
+            "min message delay (us)");
+        _max_message_delay_microseconds = (uint32_t)dsn_config_get_value_uint64("tools.simulator",
+            "max_message_delay_microseconds", _max_message_delay_microseconds,
+            "max message delay (us)");
     }
 
     error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)

@@ -38,7 +38,7 @@
 # include "replication_common.h"
 # include <list>
 # include <atomic>
-# include <dsn/internal/link.h>
+# include <dsn/utility/link.h>
 # include <dsn/cpp/perf_counter_.h>
 
 #ifndef __linux__

@@ -35,5 +35,5 @@
 
 #pragma once
 
-# include <dsn/internal/enum_helper.h>
+# include <dsn/utility/enum_helper.h>
 # include <dsn/dist/replication/replication.types.h>

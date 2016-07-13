@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/internal/factory_store.h>
+#include <dsn/utility/factory_store.h>
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
