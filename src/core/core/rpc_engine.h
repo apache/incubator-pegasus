@@ -39,7 +39,7 @@
 # include <dsn/tool-api/network.h>
 # include <dsn/utility/synchronize.h>
 # include <dsn/tool-api/global_config.h>
-# include <dsn/cpp/configuration.h>
+# include <dsn/utility/configuration.h>
 
 namespace dsn {
 

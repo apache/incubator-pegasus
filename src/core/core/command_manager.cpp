@@ -37,7 +37,7 @@
 # include <iostream>
 # include <thread>
 # include <sstream>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 # include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 # include <dsn/tool-api/task.h>

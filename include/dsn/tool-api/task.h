@@ -43,7 +43,7 @@
 # include <dsn/tool-api/rpc_message.h>
 # include <dsn/cpp/callocator.h>
 # include <dsn/cpp/auto_codes.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 
 namespace dsn 
 {

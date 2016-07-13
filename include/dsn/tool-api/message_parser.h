@@ -40,7 +40,7 @@
 # include <dsn/utility/singleton.h>
 # include <dsn/tool-api/task_spec.h>
 # include <dsn/utility/autoref_ptr.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 # include <vector>
 
 namespace dsn 

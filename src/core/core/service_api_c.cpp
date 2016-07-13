@@ -45,9 +45,9 @@
 # include <dsn/utility/factory_store.h>
 # include <dsn/tool-api/task.h>
 # include <dsn/utility/singleton_store.h>
-# include <dsn/cpp/utils.h> 
+# include <dsn/utility/utils.h> 
 
-# include <dsn/cpp/configuration.h>
+# include <dsn/utility/configuration.h>
 # include "command_manager.h"
 # include "service_engine.h"
 # include "rpc_engine.h"

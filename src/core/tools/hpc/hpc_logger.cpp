@@ -88,7 +88,7 @@
 
 # include "hpc_logger.h"
 # include <dsn/utility/singleton_store.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 # include <dsn/tool-api/command.h>
 # include <cstdlib>
 # include <sstream>

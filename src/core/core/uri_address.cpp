@@ -38,7 +38,7 @@
 # include <dsn/utility/singleton.h>
 # include <unordered_map>
 # include <dsn/utility/synchronize.h>
-# include <dsn/cpp/configuration.h>
+# include <dsn/utility/configuration.h>
 # include <dsn/utility/factory_store.h>
 # include <dsn/tool-api/task.h>
 

@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/cpp/configuration.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/configuration.h>
+# include <dsn/utility/utils.h>
 # include <cassert>
 # include <errno.h>
 # include <iostream>

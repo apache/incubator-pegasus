@@ -34,7 +34,7 @@
 */
 
 # include "partition_resolver_simple.h"
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

@@ -32,7 +32,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <dsn/cpp/utils.h>
+#include <dsn/utility/utils.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/synchronize.h>

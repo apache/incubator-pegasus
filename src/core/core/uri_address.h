@@ -38,7 +38,7 @@
 # include <dsn/cpp/address.h>
 # include <dsn/dist/partition_resolver.h>
 # include <algorithm> // for std::find()
-# include <dsn/cpp/configuration.h>
+# include <dsn/utility/configuration.h>
 
 namespace dsn
 {

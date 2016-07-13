@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/auto_codes.h>
 

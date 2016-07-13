@@ -36,7 +36,7 @@
 # include "common.h"
 # include "checker.h"
 
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 
 # include <sstream>
 # include <boost/lexical_cast.hpp>

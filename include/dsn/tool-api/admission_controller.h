@@ -37,7 +37,7 @@
 # pragma once
 
 # include <dsn/tool-api/task_queue.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/utility/utils.h>
 
 namespace dsn {
 

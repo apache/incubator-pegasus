@@ -34,8 +34,8 @@
  */
 
 # include "repli.app.h"
-# include <dsn/cpp/utils.h>
-# include <dsn/cpp/configuration.h>
+# include <dsn/utility/utils.h>
+# include <dsn/utility/configuration.h>
 # include "mutation_log.h"
 
 # include <iostream>

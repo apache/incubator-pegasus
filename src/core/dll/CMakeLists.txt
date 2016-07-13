@@ -21,6 +21,7 @@ set(MY_PROJ_LIBS dsn.dist.providers.common
                  dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
+                 dsn.dev.utility
    )
 
 set(MY_PROJ_LIB_PATH "")
