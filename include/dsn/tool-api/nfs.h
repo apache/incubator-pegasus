@@ -61,9 +61,9 @@ namespace dsn {
 
     };
 
-    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
+    DSN_API extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
 
-    extern void unmarshall(::dsn::binary_reader& reader, /*out*/ remote_copy_request& val);
+    DSN_API extern void unmarshall(::dsn::binary_reader& reader, /*out*/ remote_copy_request& val);
     
     class service_node;
     class task_worker_pool;
@@ -81,6 +81,8 @@ namespace dsn {
 
     public:
         nfs_node(service_node* node) : _node(node) {}
+
+        virtual ~nfs_node() {}
 
         virtual ::dsn::error_code start(io_modifer& ctx) = 0;
 

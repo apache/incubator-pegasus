@@ -38,7 +38,8 @@
 # include <dsn/tool-api/task_queue.h>
 # include <dsn/utility/extensible_object.h>
 # include <dsn/utility/synchronize.h>
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/utility/dlib.h>
+# include <dsn/tool-api/perf_counter.h>
 # include <thread>
 
 namespace dsn {
@@ -61,14 +62,14 @@ public:
     typedef task_worker*  (*factory)(task_worker_pool*, task_queue*, int, task_worker*);
 
 public:
-    task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
-    virtual ~task_worker(void);
+    DSN_API task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
+    DSN_API virtual ~task_worker(void);
 
     // service management
-    void start();
-    void stop();
+    DSN_API void start();
+    DSN_API void stop();
 
-    virtual void loop(); // run tasks from _input_queue
+    DSN_API virtual void loop(); // run tasks from _input_queue
 
     // inquery
     const std::string& name() const { return _name; }
@@ -76,8 +77,8 @@ public:
     int native_tid() const { return _native_tid; }
     task_worker_pool* pool() const { return _owner_pool; }
     task_queue* queue() const { return _input_queue; }
-    const threadpool_spec& pool_spec() const;
-    static task_worker* current();
+    DSN_API const threadpool_spec& pool_spec() const;
+    DSN_API static task_worker* current();
 
 private:
     task_worker_pool* _owner_pool;    
@@ -91,9 +92,9 @@ private:
     int              _processed_task_count;
 
 public:
-    static void set_name(const char* name);
-    static void set_priority(worker_priority_t pri);
-    static void set_affinity(uint64_t affinity);
+    DSN_API static void set_name(const char* name);
+    DSN_API static void set_priority(worker_priority_t pri);
+    DSN_API static void set_affinity(uint64_t affinity);
 
 private:
     void run_internal();
@@ -103,8 +104,8 @@ public:
     @addtogroup tool-api-hooks
     @{
     */
-    static join_point<void, task_worker*> on_start;
-    static join_point<void, task_worker*> on_create;
+    DSN_API static join_point<void, task_worker*> on_start;
+    DSN_API static join_point<void, task_worker*> on_create;
     /*@}*/
 };
 /*@}*/

@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/message_parser.h>
+# include "message_parser_manager.h"
 # include <dsn/service_api_c.h>
 
 # ifdef __TITLE__

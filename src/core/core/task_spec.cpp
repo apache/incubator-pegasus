@@ -35,10 +35,11 @@
 
 # include <dsn/tool-api/task_spec.h>
 # include <dsn/utility/singleton.h>
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/perf_counter.h>
 # include <dsn/tool-api/command.h>
 # include <sstream>
 # include <vector>
+# include <thread>
 
 # ifdef __TITLE__
 # undef __TITLE__

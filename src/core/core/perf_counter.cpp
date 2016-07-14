@@ -33,5 +33,26 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/perf_counter.h>
+# include "perf_counters.h"
+
+namespace dsn 
+{
+    /*static*/ perf_counter_ptr perf_counter::get_counter(
+        const char* app,
+        const char *section,
+        const char *name,
+        dsn_perf_counter_type_t flags,
+        const char *dsptr,
+        bool create_if_not_exist
+    )
+    {
+        return perf_counters::instance().get_counter(app, section, name, flags, dsptr, create_if_not_exist);
+    }
+
+    /*static*/ bool perf_counter::remove_counter(const char* full_name)
+    {
+        return perf_counters::instance().remove_counter(full_name);
+    }
+}
 

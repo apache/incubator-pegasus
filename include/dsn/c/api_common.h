@@ -38,6 +38,7 @@
 # include <stdint.h>
 # include <stddef.h>
 # include <stdarg.h>
+# include <dsn/utility/dlib.h>
 
 # ifdef __cplusplus
 # define DEFAULT(value) = value
@@ -48,19 +49,6 @@
 # include <stdbool.h>
 # endif
 
-# if defined(DSN_IN_CORE)
-# if defined(_WIN32)
-# define DSN_API __declspec(dllexport)
-# else
-# define DSN_API __attribute__((visibility("default")))
-# endif
-# else
-# if defined(_WIN32)
-# define DSN_API __declspec(dllimport)
-# else
-# define DSN_API
-# endif
-# endif
 
 # ifdef __cplusplus
 extern "C" {

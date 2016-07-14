@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/tool-api/task.h>
+# include <dsn/utility/dlib.h>
 
 namespace dsn {
 
@@ -68,9 +69,9 @@ public:
     typedef aio_provider* (*factory)(disk_engine*, aio_provider*);
 
 public:
-    aio_provider(disk_engine* disk, aio_provider* inner_provider);
+    DSN_API aio_provider(disk_engine* disk, aio_provider* inner_provider);
     virtual ~aio_provider() {}
-    service_node* node() const;
+    DSN_API service_node* node() const;
 
     // return DSN_INVALID_FILE_HANDLE if failed
     virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
@@ -82,7 +83,7 @@ public:
     virtual void start(io_modifer& ctx) = 0;
 
 protected:
-    void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
+    DSN_API void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
     disk_engine *_engine;

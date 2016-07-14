@@ -26,52 +26,44 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     message parser manager 
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/env_provider.h>
-# include <dsn/utility/utils.h>
-# include <chrono>
+#pragma once
 
-namespace dsn {
+# include <dsn/tool-api/message_parser.h>
 
-//------------ env_provider ---------------
-__thread unsigned int env_provider__tls_magic;
-__thread std::ranlux48_base* env_provider__rng;
-
-env_provider::env_provider(env_provider* inner_provider)
+namespace dsn
 {
-}
-
-uint64_t env_provider::now_ns() const 
-{
-    return utils::get_current_physical_time_ns(); 
-}
-
-void env_provider::set_thread_local_random_seed(int s)
-{
-    if (env_provider__tls_magic != 0xdeadbeef)
+    class message_parser_manager : public utils::singleton<message_parser_manager>
     {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
-        env_provider__tls_magic = 0xdeadbeef;
-    }
+    public:
+        struct parser_factory_info
+        {
+            parser_factory_info() : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0) {}
 
-    env_provider__rng->seed(s);
+            network_header_format fmt;
+            message_parser::factory factory;
+            message_parser::factory2 factory2;
+            size_t parser_size;
+        };
+
+    public:
+        message_parser_manager();
+
+        // called only during system init, thread-unsafe
+        void register_factory(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
+
+        message_parser* create_parser(network_header_format fmt);
+        const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
+
+    private:
+        std::vector<parser_factory_info> _factory_vec;
+    };
 }
 
-uint64_t env_provider::random64(uint64_t min, uint64_t max)
-{
-    dassert(min <= max, "invalid random range");
-    if (env_provider__tls_magic != 0xdeadbeef)
-    {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
-        env_provider__tls_magic = 0xdeadbeef;
-    }
-    return std::uniform_int_distribution<uint64_t>{min, max}(*env_provider__rng);
-}
 
-} // end namespace

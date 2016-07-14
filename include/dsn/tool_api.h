@@ -79,7 +79,7 @@ public:
     {
     }
 
-    explicit tool_base(const char* name);
+    DSN_API explicit tool_base(const char* name);
 
     const std::string& name() const { return _name; }
     
@@ -98,7 +98,7 @@ public:
     typedef toollet* (*factory)(const char*);
 
 public:
-    toollet(const char* name);
+    DSN_API toollet(const char* name);
 
     virtual void install(service_spec& spec) = 0;
 };
@@ -114,7 +114,7 @@ public:
     typedef tool_app* (*factory)(const char*);
 
 public:
-    tool_app(const char* name);
+    DSN_API tool_app(const char* name);
    
     virtual void install(service_spec& spec) = 0;
 
@@ -125,42 +125,42 @@ public:
     }
 
 public:
-    virtual void start_all_apps();
-    virtual void stop_all_apps(bool cleanup);
+    DSN_API virtual void start_all_apps();
+    DSN_API virtual void stop_all_apps(bool cleanup);
     
-    static const service_spec& get_service_spec();
+    DSN_API static const service_spec& get_service_spec();
 };
 
 namespace internal_use_only
 {
-    bool register_component_provider(const char* name, timer_service::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, task_queue::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, task_worker::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, admission_controller::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, lock_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, lock_nr_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, rwlock_nr_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, semaphore_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, network::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, aio_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, env_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, perf_counter::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, logging_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, memory_provider::factory f, ::dsn::provider_type type);
-    bool register_component_provider(const char* name, nfs_node::factory f, ::dsn::provider_type type);
-    bool register_component_provider(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
-    bool register_toollet(const char* name, toollet::factory f, ::dsn::provider_type type);
-    bool register_tool(const char* name, tool_app::factory f, ::dsn::provider_type type);
-    toollet* get_toollet(const char* name, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, timer_service::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, task_queue::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, task_worker::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, admission_controller::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, lock_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, lock_nr_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, rwlock_nr_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, semaphore_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, network::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, aio_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, env_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, perf_counter::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, logging_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, memory_provider::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(const char* name, nfs_node::factory f, ::dsn::provider_type type);
+    DSN_API bool register_component_provider(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
+    DSN_API bool register_toollet(const char* name, toollet::factory f, ::dsn::provider_type type);
+    DSN_API bool register_tool(const char* name, tool_app::factory f, ::dsn::provider_type type);
+    DSN_API toollet* get_toollet(const char* name, ::dsn::provider_type type);
 }
 
 /*!
 @addtogroup tool-api-hooks
 @{
 */
-extern join_point<void> sys_init_before_app_created;
-extern join_point<void> sys_init_after_app_created;
-extern join_point<void, sys_exit_type>     sys_exit;
+DSN_API extern join_point<void> sys_init_before_app_created;
+DSN_API extern join_point<void> sys_init_after_app_created;
+DSN_API extern join_point<void, sys_exit_type>     sys_exit;
 /*@}*/
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
@@ -170,10 +170,10 @@ template <typename T> bool register_message_header_parser(network_header_format 
 template <typename T> bool register_toollet(const char* name) { return internal_use_only::register_toollet(name, toollet::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, ::dsn::PROVIDER_TYPE_MAIN); }
 template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN); }
-tool_app* get_current_tool();
-const service_spec& spec();
-const char* get_service_node_name(service_node* node);
-bool is_engine_ready();
+DSN_API tool_app* get_current_tool();
+DSN_API const service_spec& spec();
+DSN_API const char* get_service_node_name(service_node* node);
+DSN_API bool is_engine_ready();
 
 /*
  @}

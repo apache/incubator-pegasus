@@ -33,12 +33,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/perf_counter.h>
 # include <dsn/service_api_c.h>
 # include <dsn/tool-api/command.h>
 # include <dsn/tool-api/task.h>
 # include <dsn/cpp/json_helper.h>
 # include "service_engine.h"
+# include "perf_counters.h"
 
 DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* name, dsn_perf_counter_type_t type, const char* description)
 {

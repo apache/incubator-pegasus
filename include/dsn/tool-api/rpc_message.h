@@ -38,6 +38,7 @@
 # include <atomic>
 # include <dsn/utility/ports.h>
 # include <dsn/utility/extensible_object.h>
+# include <dsn/utility/dlib.h>
 # include <dsn/cpp/callocator.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/address.h>
@@ -96,7 +97,7 @@ namespace dsn
         } server;
     } message_header;
 
-    class message_ex : 
+    class message_ex :
         public ref_counter, 
         public extensible_object<message_ex, 4>,
         public transient_object
@@ -119,43 +120,44 @@ namespace dsn
 
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
-        ~message_ex();
+        DSN_API ~message_ex();
 
         //
         // utility routines
         //
-        error_code error();
-        task_code rpc_code();
+        DSN_API error_code error();
+        DSN_API task_code rpc_code();
         static uint64_t new_id() { return ++_id; }
         static unsigned int get_body_length(char* hdr) { return ((message_header*)hdr)->body_length; }
 
         //
         // routines for create messages
         //
-        static message_ex* create_receive_message(const blob& data);
-        static message_ex* create_request(
+        DSN_API static message_ex* create_receive_message(const blob& data);
+        DSN_API static message_ex* create_request(
             dsn_task_code_t rpc_code, 
             int timeout_milliseconds = 0,
             uint64_t hash = 0
             );
 
-        static message_ex* create_receive_message_with_standalone_header(const blob& data);
-        message_ex* create_response();
-        message_ex* copy(bool clone_content, bool copy_for_receive);
-        message_ex* copy_and_prepare_send(bool clone_content);
+        DSN_API static message_ex* create_receive_message_with_standalone_header(const blob& data);
+        DSN_API message_ex* create_response();
+        DSN_API message_ex* copy(bool clone_content, bool copy_for_receive);
+        DSN_API message_ex* copy_and_prepare_send(bool clone_content);
 
         //
         // routines for buffer management
         //        
-        void write_next(void** ptr, size_t* size, size_t min_size);
-        void write_commit(size_t size);
-        bool read_next(void** ptr, size_t* size);
-        void read_commit(size_t size);        
+        DSN_API void write_next(void** ptr, size_t* size, size_t min_size);
+        DSN_API void write_commit(size_t size);
+        DSN_API bool read_next(void** ptr, size_t* size);
+        DSN_API void read_commit(size_t size);
         size_t body_size() { return (size_t)header->body_length; }
-        void* rw_ptr(size_t offset_begin);
+        DSN_API void* rw_ptr(size_t offset_begin);
+
     private:
-        message_ex();
-        void prepare_buffer_header();
+        DSN_API message_ex();
+        DSN_API void prepare_buffer_header();
 
     private:        
         static std::atomic<uint64_t> _id;
