@@ -26,52 +26,28 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     utilities for dynamic libraries
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Jul., 2016, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/env_provider.h>
-# include <dsn/utility/utils.h>
-# include <chrono>
+# pragma once
 
-namespace dsn {
+#pragma once
 
-//------------ env_provider ---------------
-__thread unsigned int env_provider__tls_magic;
-__thread std::ranlux48_base* env_provider__rng;
+# if defined(DSN_IN_CORE)
+# if defined(_WIN32)
+# define DSN_API __declspec(dllexport)
+# else
+# define DSN_API __attribute__((visibility("default")))
+# endif
+# else
+# if defined(_WIN32)
+# define DSN_API __declspec(dllimport)
+# else
+# define DSN_API
+# endif
+# endif
 
-env_provider::env_provider(env_provider* inner_provider)
-{
-}
-
-uint64_t env_provider::now_ns() const 
-{
-    return utils::get_current_physical_time_ns(); 
-}
-
-void env_provider::set_thread_local_random_seed(int s)
-{
-    if (env_provider__tls_magic != 0xdeadbeef)
-    {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
-        env_provider__tls_magic = 0xdeadbeef;
-    }
-
-    env_provider__rng->seed(s);
-}
-
-uint64_t env_provider::random64(uint64_t min, uint64_t max)
-{
-    dassert(min <= max, "invalid random range");
-    if (env_provider__tls_magic != 0xdeadbeef)
-    {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
-        env_provider__tls_magic = 0xdeadbeef;
-    }
-    return std::uniform_int_distribution<uint64_t>{min, max}(*env_provider__rng);
-}
-
-} // end namespace

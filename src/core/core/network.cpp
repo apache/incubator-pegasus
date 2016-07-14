@@ -38,6 +38,7 @@
 # endif
 # include <dsn/tool-api/network.h>
 # include <dsn/utility/factory_store.h>
+# include "message_parser_manager.h"
 # include "rpc_engine.h"
 
 # ifdef __TITLE__

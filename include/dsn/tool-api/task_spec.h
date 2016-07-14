@@ -44,7 +44,8 @@
 # include <dsn/utility/join_point.h>
 # include <dsn/utility/extensible_object.h>
 # include <dsn/utility/exp_delay.h>
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/utility/dlib.h>
+# include <dsn/tool-api/perf_counter.h>
 
 ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
     ENUM_REG(LOG_LEVEL_INFORMATION)
@@ -190,8 +191,8 @@ typedef struct __io_mode_modifier__
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:
-    static task_spec* get(int ec);
-    static void register_task_code(dsn_task_code_t code, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool);
+    DSN_API static task_spec* get(int ec);
+    DSN_API static void register_task_code(dsn_task_code_t code, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool);
 
 public:
     // not configurable [
@@ -265,11 +266,11 @@ public:
     /*@}*/
 
 public:    
-    task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool);
+    DSN_API task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_priority_t pri, dsn_threadpool_code_t pool);
     
 public:
-    static bool init();
-    void init_profiling(bool profile);
+    DSN_API static bool init();
+    DSN_API void init_profiling(bool profile);
 };
 
 CONFIG_BEGIN(task_spec)
@@ -321,7 +322,7 @@ struct threadpool_spec
     threadpool_spec(const threadpool_spec& source) = default;
     threadpool_spec& operator=(const threadpool_spec& source) = default;
 
-    static bool init(/*out*/ std::vector<threadpool_spec>& specs);
+    DSN_API static bool init(/*out*/ std::vector<threadpool_spec>& specs);
 };
 
 CONFIG_BEGIN(threadpool_spec)

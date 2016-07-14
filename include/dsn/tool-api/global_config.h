@@ -37,6 +37,7 @@
 
 # include <dsn/service_api_c.h>
 # include <dsn/tool-api/task_spec.h>
+# include <dsn/utility/dlib.h>
 # include <string>
 # include <map>
 
@@ -51,7 +52,7 @@ struct network_client_config
     std::string factory_name;
     int         message_buffer_block_size;
 
-    network_client_config();
+    DSN_API network_client_config();
 };
 
 typedef std::map<rpc_channel, network_client_config> network_client_configs;
@@ -66,10 +67,10 @@ struct network_server_config
     std::string           factory_name;
     int                   message_buffer_block_size;
 
-    network_server_config();
-    network_server_config(int p, rpc_channel c);
-    network_server_config(const network_server_config& r);
-    bool operator < (const network_server_config& r) const;
+    DSN_API network_server_config();
+    DSN_API network_server_config(int p, rpc_channel c);
+    DSN_API network_server_config(const network_server_config& r);
+    DSN_API bool operator < (const network_server_config& r) const;
 };
 
 // <port,channel> => config
@@ -117,7 +118,7 @@ struct service_app_spec
 
     service_app_spec() : role(nullptr) {}
     /*service_app_spec(const service_app_spec& r);*/
-    bool init(const char* section, 
+    DSN_API bool init(const char* section,
         const char* role_name_,
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
@@ -201,10 +202,10 @@ struct service_spec
     std::string                   dir_log;
 
     service_spec() {}
-    bool init();
-    bool init_app_specs();
-    int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
-    static void load_app_shared_libraries();
+    DSN_API bool init();
+    DSN_API bool init_app_specs();
+    DSN_API int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
+    DSN_API static void load_app_shared_libraries();
 };
 
 CONFIG_BEGIN(service_spec)

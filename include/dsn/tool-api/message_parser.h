@@ -41,6 +41,7 @@
 # include <dsn/tool-api/task_spec.h>
 # include <dsn/utility/autoref_ptr.h>
 # include <dsn/utility/utils.h>
+# include <dsn/utility/dlib.h>
 # include <vector>
 
 namespace dsn 
@@ -53,7 +54,7 @@ namespace dsn
         ~message_reader() {}
 
         // called before read to extend read buffer
-        char* read_buffer_ptr(unsigned int read_next);
+        DSN_API char* read_buffer_ptr(unsigned int read_next);
 
         // get remaining buffer capacity
         unsigned int read_buffer_capacity() const { return _buffer.length() - _buffer_occupied; }
@@ -132,33 +133,7 @@ namespace dsn
         virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) = 0;
 
     public:
-        static network_header_format get_header_type(const char* bytes); // buffer size >= sizeof(uint32_t)
-        static std::string get_debug_string(const char* bytes);
-    };
-
-    class message_parser_manager : public utils::singleton<message_parser_manager>
-    {
-    public:
-        struct parser_factory_info
-        {
-            parser_factory_info() : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0) {}
-
-            network_header_format fmt;
-            message_parser::factory factory;
-            message_parser::factory2 factory2;
-            size_t parser_size;
-        };
-
-    public:
-        message_parser_manager();
-
-        // called only during system init, thread-unsafe
-        void register_factory(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
-
-        message_parser* create_parser(network_header_format fmt);
-        const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
-
-    private:
-        std::vector<parser_factory_info> _factory_vec;
+        DSN_API static network_header_format get_header_type(const char* bytes); // buffer size >= sizeof(uint32_t)
+        DSN_API static std::string get_debug_string(const char* bytes);
     };
 }

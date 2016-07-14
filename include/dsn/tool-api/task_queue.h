@@ -36,7 +36,8 @@
 # pragma once
 
 # include <dsn/tool-api/task.h>
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/perf_counter.h>
+# include <dsn/utility/dlib.h>
 
 namespace dsn {
 
@@ -62,8 +63,8 @@ public:
     typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
 
 public:
-    task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
-    virtual ~task_queue();
+    DSN_API task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+    DSN_API virtual ~task_queue();
     
     virtual void     enqueue(task* task) = 0;
     // dequeue may return more than 1 tasks, but there is a configured

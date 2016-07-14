@@ -50,24 +50,9 @@ uint64_t sim_env_provider::now_ns() const
     return scheduler::instance().now_ns();
 }
 
-uint64_t sim_env_provider::random64(uint64_t min, uint64_t max)
-{
-    if (_tls_magic != 0xdeadbeef)
-    {
-        _tls_magic = 0xdeadbeef;
-        _rng = new std::remove_pointer<decltype(_rng)>::type;
-    }
-    return std::uniform_int_distribution<uint64_t>{min, max}(*_rng);
-}
-
 void sim_env_provider::on_worker_start(task_worker* worker)
 {
-    if (_tls_magic != 0xdeadbeef)
-    {
-        _tls_magic = 0xdeadbeef;
-        _rng = new std::remove_pointer<decltype(_rng)>::type;
-    }
-    _rng->seed((_seed + worker->index() + worker->index()*worker->pool_spec().pool_code) ^ worker->index());
+    set_thread_local_random_seed((_seed + worker->index() + worker->index()*worker->pool_spec().pool_code) ^ worker->index());
 }
 
 sim_env_provider::sim_env_provider(env_provider* inner_provider)

@@ -59,8 +59,7 @@ namespace dsn
 
         void set_tracker(task_tracker* owner, dsn_task_t task);
         void unset_tracker();
-        task_tracker* tracker() const
-        { return _owner; }
+        task_tracker* tracker() const { return _owner; }
 
     private:
         friend class task_tracker;

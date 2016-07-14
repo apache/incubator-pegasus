@@ -33,42 +33,41 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/perf_counters.h>
+# include <dsn/tool-api/perf_counter.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;
 
 TEST(core, perf_counters)
 {
-    perf_counters& c = perf_counters::instance();
     perf_counter_ptr p;
 
-    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
-    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", true);
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", true);
     ASSERT_NE(nullptr, p);
-    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
-    ASSERT_NE(nullptr, p);
-
-    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
-    ASSERT_EQ(nullptr, p);
-    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", true);
-    ASSERT_NE(nullptr, p);
-    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_NE(nullptr, p);
 
-    ASSERT_FALSE(c.remove_counter("number_counter"));
-    ASSERT_FALSE(c.remove_counter("unexist_counter"));
+    p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    ASSERT_EQ(nullptr, p);
+    p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", true);
+    ASSERT_NE(nullptr, p);
+    p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    ASSERT_NE(nullptr, p);
 
-    ASSERT_TRUE(c.remove_counter("app*test*number_counter"));
-    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    ASSERT_FALSE(perf_counter::remove_counter("number_counter"));
+    ASSERT_FALSE(perf_counter::remove_counter("unexist_counter"));
+
+    ASSERT_TRUE(perf_counter::remove_counter("app*test*number_counter"));
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
 
-    ASSERT_TRUE(c.remove_counter("app*test*rate_counter"));
-    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    ASSERT_TRUE(perf_counter::remove_counter("app*test*rate_counter"));
+    p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
     ASSERT_EQ(nullptr, p);
 
-    p = c.get_counter("app", "test", "unexist_counter", COUNTER_TYPE_NUMBER, "", false);
+    p = perf_counter::get_counter("app", "test", "unexist_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
-    ASSERT_FALSE(c.remove_counter("app*test*unexist_counter"));
+    ASSERT_FALSE(perf_counter::remove_counter("app*test*unexist_counter"));
 }

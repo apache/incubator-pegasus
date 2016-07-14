@@ -40,6 +40,7 @@
 # include <dsn/tool-api/message_parser.h>
 # include <dsn/cpp/address.h>
 # include <dsn/utility/exp_delay.h>
+# include <dsn/utility/dlib.h>
 # include <atomic>
 
 namespace dsn {
@@ -76,7 +77,7 @@ namespace dsn {
         // inner_provider - when not null, this network is simply a wrapper for tooling purpose (e.g., tracing)
         //                  all downcalls should be redirected to the inner provider in the end
         //
-        network(rpc_engine* srv, network* inner_provider); 
+        DSN_API network(rpc_engine* srv, network* inner_provider);
         virtual ~network() {}
 
         //
@@ -107,28 +108,28 @@ namespace dsn {
         //
         // utilities
         //
-        service_node* node() const;
+        DSN_API service_node* node() const;
 
         //
         // called when network received a complete request message
         //
-        void on_recv_request(message_ex* msg, int delay_ms);
+        DSN_API void on_recv_request(message_ex* msg, int delay_ms);
 
         //
         // called when network received a complete reply message or network failed,
         // if network failed, the 'msg' will be nullptr
         //
-        void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
+        DSN_API void on_recv_reply(uint64_t id, message_ex* msg, int delay_ms);
         
         //
         // create a message parser for
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
-        message_parser* new_message_parser(network_header_format hdr_format);
+        DSN_API message_parser* new_message_parser(network_header_format hdr_format);
 
         // for in-place new message parser
-        std::pair<message_parser::factory2, size_t> get_message_parser_info(network_header_format hdr_format);
+        DSN_API std::pair<message_parser::factory2, size_t> get_message_parser_info(network_header_format hdr_format);
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
@@ -137,7 +138,7 @@ namespace dsn {
         int message_buffer_block_size() const { return _message_buffer_block_size; }
 
     protected:
-        static uint32_t get_local_ipv4();
+        DSN_API static uint32_t get_local_ipv4();
 
     protected:
         rpc_engine                    *_engine;
@@ -149,7 +150,7 @@ namespace dsn {
 
     private:
         friend class rpc_engine;
-        void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
+        DSN_API void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
     };
 
     /*!
@@ -158,24 +159,24 @@ namespace dsn {
     class connection_oriented_network : public network
     {
     public:
-        connection_oriented_network(rpc_engine* srv, network* inner_provider);
+        DSN_API connection_oriented_network(rpc_engine* srv, network* inner_provider);
         virtual ~connection_oriented_network() {}
 
         // server session management
-        rpc_session_ptr get_server_session(::dsn::rpc_address ep);
-        void on_server_session_accepted(rpc_session_ptr& s);
-        void on_server_session_disconnected(rpc_session_ptr& s);
+        DSN_API rpc_session_ptr get_server_session(::dsn::rpc_address ep);
+        DSN_API void on_server_session_accepted(rpc_session_ptr& s);
+        DSN_API void on_server_session_disconnected(rpc_session_ptr& s);
 
         // client session management
-        rpc_session_ptr get_client_session(::dsn::rpc_address ep);
-        void on_client_session_connected(rpc_session_ptr& s);
-        void on_client_session_disconnected(rpc_session_ptr& s);
+        DSN_API rpc_session_ptr get_client_session(::dsn::rpc_address ep);
+        DSN_API void on_client_session_connected(rpc_session_ptr& s);
+        DSN_API void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void send_message(message_ex* request) override;
+        DSN_API virtual void send_message(message_ex* request) override;
 
         // called by rpc engine
-        virtual void inject_drop_message(message_ex* msg, bool is_send) override;
+        DSN_API virtual void inject_drop_message(message_ex* msg, bool is_send) override;
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
@@ -201,47 +202,47 @@ namespace dsn {
         @addtogroup tool-api-hooks
         @{
         */
-        static join_point<void, rpc_session*> on_rpc_session_connected;
-        static join_point<void, rpc_session*> on_rpc_session_disconnected;
+        DSN_API static join_point<void, rpc_session*> on_rpc_session_connected;
+        DSN_API static join_point<void, rpc_session*> on_rpc_session_disconnected;
         /*@}*/
     public:
-        rpc_session(
+        DSN_API rpc_session(
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
             message_parser_ptr& parser,
             bool is_client
             );
-        virtual ~rpc_session();
+        DSN_API virtual ~rpc_session();
 
         virtual void close_on_fault_injection() = 0;
                 
-        bool has_pending_out_msgs();
+        DSN_API bool has_pending_out_msgs();
         bool is_client() const { return _is_client; }
         ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         message_parser_ptr parser() const { return _parser; }
-        void send_message(message_ex* msg);
-        bool cancel(message_ex* request);
+        DSN_API void send_message(message_ex* msg);
+        DSN_API bool cancel(message_ex* request);
         void delay_recv(int delay_ms);
-        bool on_recv_message(message_ex* msg, int delay_ms);
+        DSN_API bool on_recv_message(message_ex* msg, int delay_ms);
 
     // for client session
     public:
         // return true if the socket should be closed
-        bool on_disconnected(bool is_write);
+        DSN_API bool on_disconnected(bool is_write);
                
         virtual void connect() = 0;
         
     // for server session
     public:
-        void start_read_next(int read_next = 256);
+        DSN_API void start_read_next(int read_next = 256);
 
         // should be called in do_read() before using _parser when it is nullptr.
         // returns:
         //   -1 : prepare failed, maybe because of invalid message header type
         //    0 : prepare succeed, _parser is not nullptr now.
         //   >0 : need read more data, returns read_next.
-        int prepare_parser();
+        DSN_API int prepare_parser();
 
     // shared
     protected:        
@@ -254,18 +255,18 @@ namespace dsn {
         virtual void do_read(int read_next) = 0;
         
     protected:
-        bool try_connecting(); // return true when it is permitted
-        void set_connected();
-        bool set_disconnected(); // return true when it is permitted
+        DSN_API bool try_connecting(); // return true when it is permitted
+        DSN_API void set_connected();
+        DSN_API bool set_disconnected(); // return true when it is permitted
         bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
         bool is_connected() const { return _connect_state == SS_CONNECTED; }        
-        void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
+        DSN_API void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
 
     private:
         // return whether there are messages for sending; should always be called in lock
-        bool unlink_message_for_send();
-        void clear_send_queue(bool resend_msgs);
+        DSN_API bool unlink_message_for_send();
+        DSN_API void clear_send_queue(bool resend_msgs);
 
     protected:
         // constant info
