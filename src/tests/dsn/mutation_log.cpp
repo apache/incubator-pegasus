@@ -52,7 +52,7 @@ static void copy_file(const char* from_file, const char* to_file, int64_t to_siz
         to_size = from_size;
     if (to_size > 0)
     {
-        std::unique_ptr<char> buf(new char[to_size]);
+        std::unique_ptr<char[]> buf(new char[to_size]);
         auto n = fread(buf.get(), 1, to_size, from);
         ASSERT_EQ(to_size, n);
         n = fwrite(buf.get(), 1, to_size, to);

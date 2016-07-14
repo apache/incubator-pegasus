@@ -66,14 +66,14 @@ bool configuration::load(const char* file_name, const char* arguments)
     {
         std::string cdir;
         dsn::utils::filesystem::get_current_directory(cdir);
-        printf("Cannot open file %s in %s, err=%s\n", file_name, cdir.c_str(), strerror(errno));
+        printf("ERROR: cannot open file %s in %s, err = %s\n", file_name, cdir.c_str(), strerror(errno));
         return false;
     }
     ::fseek(fd, 0, SEEK_END);
     int len = ftell(fd);
     if (len == -1 || len == 0) 
     {
-        printf("Cannot get length of %s, err=%s\n", file_name, strerror(errno));
+        printf("ERROR: cannot get length of %s, err = %s\n", file_name, strerror(errno));
         ::fclose(fd);
         return false;
     }
@@ -84,7 +84,7 @@ bool configuration::load(const char* file_name, const char* arguments)
     ::fclose(fd);
     if (sz != 1)
     {
-        printf("Cannot read correct data of %s, err=%s\n", file_name, strerror(errno));
+        printf("ERROR: cannot read correct data of %s, err = %s\n", file_name, strerror(errno));
         return false;
     }
     _file_data[len] = '\n';
@@ -102,7 +102,7 @@ bool configuration::load(const char* file_name, const char* arguments)
             utils::split_args(kv.c_str(), vs, '=');
             if (vs.size() != 2)
             {
-                printf("invalid configuration argument: '%s' in '%s'\n", kv.c_str(), arguments);
+                printf("ERROR: invalid configuration argument: '%s' in '%s'\n", kv.c_str(), arguments);
                 return false;
             }
 
@@ -175,7 +175,7 @@ bool configuration::load(const char* file_name, const char* arguments)
         {
 ConfReg:
             if (pSection == nullptr) {
-                printf("configuration section not defined\n");
+                printf("ERROR: configuration section not defined\n");
                 goto err;
             }
             if (pEqual)    *pEqual = '\0';
@@ -188,7 +188,7 @@ ConfReg:
             {
                 auto it = pSection->find((const char*)pKey);
 
-                printf("Warning: skip redefinition of option [%s] %s (line %u), already defined as [%s] %s (line %u)\n", 
+                printf("WARNING: skip redefinition of option [%s] %s (line %u), already defined as [%s] %s (line %u)\n",
                     pSectionName,
                     pKey,
                     lineno,
@@ -237,7 +237,7 @@ ConfReg:
 
             bool old = set_warning(false);
             if (has_section((const char*)pSectionName)) {
-                printf("RedefInition of section %s\n", pSectionName);
+                printf("ERROR: configuration section '[%s]' is redefined\n", pSectionName);
                 set_warning(old);
                 goto err;
             }
@@ -258,7 +258,7 @@ Next:
     return true;
     
 err:
-    printf("Unexpected configure in %s(line %d): %s\n", file_name, lineno, pLine);
+    printf("ERROR: unexpected configuration in %s(line %d): %s\n", file_name, lineno, pLine);
     return false;
 }
 
@@ -307,10 +307,12 @@ bool configuration::get_string_value_internal(const char* section, const char* k
         {
             if (!it2->second->present)
             {
-                printf("different default value for [%s] %s: %s <--> %s",
-                    section, key, it2->second->value.c_str(), default_value);
-
-                assert(it2->second->value == default_value);                        
+                if (it2->second->value != default_value)
+                {
+                    printf("ERROR: configuration default value is different for '[%s] %s': %s <--> %s\n",
+                        section, key, it2->second->value.c_str(), default_value);
+                    ::abort();
+                }
             }
 
             if (it2->second->dsptr.length() == 0)
@@ -448,7 +450,8 @@ void configuration::set(const char* section, const char* key, const char* value,
 
 void configuration::register_config_change_notification(config_file_change_notifier notifier)
 {
-    assert(!"not implemented");
+    printf("ERROR: method register_config_change_notification() not implemented\n");
+    ::abort();
 }
 
 bool configuration::has_section(const char* section)

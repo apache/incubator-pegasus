@@ -4,11 +4,12 @@ if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
 cat gtest.filter | while read -r -a line; do
-    echo "============ run dsn.core.tests ${line[0]} with gtest_filter ${line[1]} ============"
-    ./clear.sh
+    test_case=${line[0]}
+    gtest_filter=${line[1]}
     output_xml="${REPORT_DIR}/dsn.core.tests_${test_case/.ini/.xml}"
-    export GTEST_OUTPUT="xml:${output_xml}"
-    GTEST_FILTER=${line[1]} ./dsn.core.tests ${line[0]} < command.txt
+    echo "============ run dsn.core.tests ${test_case} with gtest_filter ${gtest_filter} ============"
+    ./clear.sh
+    GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=${gtest_filter} ./dsn.core.tests ${test_case} < command.txt
 
     if [ $? -ne 0 ]; then
         echo "run dsn.core.tests $test_case failed"

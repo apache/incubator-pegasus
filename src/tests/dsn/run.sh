@@ -4,9 +4,8 @@
 if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
-output_xml="${REPORT_DIR}/dsn.core.tests.xml"
-export GTEST_OUTPUT="xml:${output_xml}"
-./dsn.tests config-test.ini
+output_xml="${REPORT_DIR}/dsn.tests.xml"
+GTEST_OUTPUT="xml:${output_xml}" ./dsn.tests config-test.ini
 if [ $? -ne 0 ]; then
     echo "run dsn.tests failed"
     echo "---- ls ----"
