@@ -51,7 +51,7 @@ namespace dsn
         // release last buffer if necessary
         if (tls_trans_memory.magic == 0xdeadbeef)
         {
-            tls_trans_memory.block->reset((char*)0);
+            tls_trans_memory.block->reset();
         }
         else
         {
@@ -62,7 +62,7 @@ namespace dsn
 
         tls_trans_memory.remain_bytes = (min_size > tls_trans_mem_default_block_bytes ? 
                 min_size : tls_trans_mem_default_block_bytes);
-        tls_trans_memory.block->reset(new char[tls_trans_memory.remain_bytes]);
+        *tls_trans_memory.block = ::dsn::make_shared_array<char>(tls_trans_memory.remain_bytes);
         tls_trans_memory.next = tls_trans_memory.block->get();
     }
 

@@ -89,19 +89,18 @@ void wait_response()
 void rpc_client_session_send(rpc_session_ptr client_session)
 {
     message_ex* msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
-    char *buffer = new char[128];
-    memset(buffer, 0, 128);
-    strcpy(buffer, "hello world");
-    ::dsn::marshall(msg, std::string(buffer));
+    std::unique_ptr<char[]> buf(new char[128]);
+    memset(buf.get(), 0, 128);
+    strcpy(buf.get(), "hello world");
+    ::dsn::marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
-    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buf.get(), nullptr);
 
     client_session->net().engine()->matcher()->on_call(msg, t);
     client_session->send_message(msg);
 
     wait_response();
-    delete []buffer;
 }
 
 TEST(tools_common, asio_net_provider)
@@ -169,19 +168,18 @@ TEST(tools_common, asio_udp_provider)
     ASSERT_TRUE(start_result == ERR_OK);
 
     message_ex* msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
-    char *buffer = new char[128];
-    memset(buffer, 0, 128);
-    strcpy(buffer, "hello world");
-    ::dsn::marshall(msg, std::string(buffer));
+    std::unique_ptr<char[]> buf(new char[128]);
+    memset(buf.get(), 0, 128);
+    strcpy(buf.get(), "hello world");
+    ::dsn::marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
-    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buf.get(), nullptr);
 
     client->engine()->matcher()->on_call(msg, t);
     client->send_message(msg);
 
     wait_response();
-    delete[]buffer;
 
     ASSERT_EQ((void*)101, dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
     TEST_PORT++;

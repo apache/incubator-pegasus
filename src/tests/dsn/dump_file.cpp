@@ -90,10 +90,10 @@ TEST(dump_file, read_write)
         fseek(fp, 0, SEEK_END);
         auto size = ftell(fp);
         fseek(fp, 0, SEEK_SET);
-        char* mem = new char[size-4];
-        size_t cnt = fread(mem, 1, size-4, fp);
+        std::unique_ptr<char[]> buf(new char[size-4]);
+        size_t cnt = fread(buf.get(), 1, size-4, fp);
         ASSERT_EQ(cnt, size-4);
-        cnt = fwrite(mem, 1, cnt, fp2);
+        cnt = fwrite(buf.get(), 1, cnt, fp2);
         ASSERT_EQ(cnt, size-4);
 
         fclose(fp);
