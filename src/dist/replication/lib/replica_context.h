@@ -52,8 +52,10 @@ class primary_context
 {
 public:
     primary_context(gpid gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
-        : next_learning_version(0), write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
-        , last_prepare_ts_ms(0)
+        : next_learning_version(0),
+          write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled),
+          last_prepare_decree_on_new_primary(0),
+          last_prepare_ts_ms(0)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
