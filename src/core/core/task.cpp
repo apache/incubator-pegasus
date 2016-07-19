@@ -326,12 +326,6 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
     
     if (current_tsk == this)
     {
-        /*dwarn(
-            "task %s (id=%016llx) cannot cancel itself",                
-            spec().name(),
-            id()
-            );*/
-        
         // make sure timers are cancelled
         _wait_for_cancel = true;
 

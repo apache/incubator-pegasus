@@ -78,7 +78,7 @@ void replica::init_learn(uint64_t signature)
 
     if (signature < _potential_secondary_states.learning_version)
     {
-        dwarn("%s: learning request is out-dated, therefore skipped: %" PRIx64 " vs %" PRIx64,
+        dwarn("%s: learning request is out-dated, therefore skipped: [%016" PRIx64 "] vs [%016" PRIx64 "]",
             name(), signature, _potential_secondary_states.learning_version
         );
         return;

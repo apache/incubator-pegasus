@@ -329,7 +329,7 @@ namespace dsn {
         if (resend)
         {
             auto req = call->get_request();
-            dinfo("resend request message for rpc %" PRIx64 ", key = %" PRIu64,
+            dinfo("resend request message for rpc trace_id = %016" PRIx64 ", key = %" PRIu64,
                 req->header->trace_id, key);
 
             // resend without handling rpc_matcher, use the same request_id
@@ -956,7 +956,7 @@ namespace dsn {
 
         while (!request->dl.is_alone())
         {
-            dwarn("msg request %s (%" PRIx64 ") is in sending queue, try to pick out ...",
+            dwarn("msg request %s (trace_id = %016" PRIx64 ") is in sending queue, try to pick out ...",
                 request->header->rpc_name,
                 request->header->trace_id
                 );

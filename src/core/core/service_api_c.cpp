@@ -444,7 +444,7 @@ DSN_API void dsn_task_wait(dsn_task_t task)
 {
     auto r = ((::dsn::task*)(task))->wait();
     dassert(r, 
-        "task wait without timeout must succeeds (%" PRIx64 ")",
+        "task wait without timeout must succeeds (task_id = %016" PRIx64 ")",
         ((::dsn::task*)(task))->id()
         );
 }

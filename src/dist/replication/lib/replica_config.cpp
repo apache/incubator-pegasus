@@ -209,7 +209,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     request.last_committed_decree = last_committed_decree();
 
     ddebug(
-        "%s: call one way %s to start learning with signature [%" PRIx64"]",
+        "%s: call one way %s to start learning with signature [%016" PRIx64"]",
         name(),
         proposal.node.to_string(),
         state.signature

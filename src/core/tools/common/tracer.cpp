@@ -47,7 +47,7 @@ namespace dsn {
 
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
-            ddebug("%s ENQUEUE, task_id = %016llx, delay = %d ms, queue size = %d",
+            ddebug("%s ENQUEUE, task_id = %016" PRIx64 ", delay = %d ms, queue size = %d",
                 callee->spec().name.c_str(),
                 callee->id(),
                 callee->delay_milliseconds(),
@@ -61,7 +61,7 @@ namespace dsn {
             {
             case dsn_task_type_t::TASK_TYPE_COMPUTE:
             case dsn_task_type_t::TASK_TYPE_AIO:
-                ddebug("%s EXEC BEGIN, task_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 "",
                     this_->spec().name.c_str(),
                     this_->id()
                     );
@@ -69,7 +69,7 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
                 rpc_request_task* tsk = (rpc_request_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 "",
+                ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->header->from_address.to_string(),
@@ -81,7 +81,7 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
                 rpc_response_task* tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 "",
+                ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
                     this_->spec().name.c_str(),
                     this_->id(),
                     tsk->get_request()->to_address.to_string(),
@@ -97,7 +97,7 @@ namespace dsn {
 
         static void tracer_on_task_end(task* this_)
         {
-            ddebug("%s EXEC END, task_id = %016llx, err = %s",
+            ddebug("%s EXEC END, task_id = %016" PRIx64 ", err = %s",
                 this_->spec().name.c_str(),
                 this_->id(),
                 this_->error().to_string()
@@ -106,7 +106,7 @@ namespace dsn {
 
         static void tracer_on_task_cancelled(task* this_)
         {
-            ddebug("%s CANCELLED, task_id = %016llx",
+            ddebug("%s CANCELLED, task_id = %016" PRIx64 "",
                 this_->spec().name.c_str(),
                 this_->id()
                 );
@@ -130,7 +130,7 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void tracer_on_aio_call(task* caller, aio_task* callee)
         {
-            ddebug("%s AIO.CALL, task_id = %016llx, offset = %" PRIu64 ", size = %d",
+            ddebug("%s AIO.CALL, task_id = %016" PRIx64 ", offset = %" PRIu64 ", size = %d",
                 callee->spec().name.c_str(),
                 callee->id(),
                 callee->aio()->file_offset,
@@ -140,7 +140,7 @@ namespace dsn {
 
         static void tracer_on_aio_enqueue(aio_task* this_)
         {
-            ddebug("%s AIO.ENQUEUE, task_id = %016llx, queue size = %d",
+            ddebug("%s AIO.ENQUEUE, task_id = %016" PRIx64 ", queue size = %d",
                 this_->spec().name.c_str(),
                 this_->id(),
                 tls_dsn.last_worker_queue_size
@@ -152,7 +152,7 @@ namespace dsn {
         {
             message_header& hdr = *req->header;
             ddebug(
-                "%s RPC.CALL: %s => %s, trace_id = %016" PRIx64 ", callback_task = %016llx, timeout = %d ms",
+                "%s RPC.CALL: %s => %s, trace_id = %016" PRIx64 ", callback_task = %016" PRIx64 ", timeout = %d ms",
                 hdr.rpc_name,
                 req->header->from_address.to_string(),
                 req->to_address.to_string(),
@@ -164,7 +164,7 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
                 callee->spec().name.c_str(),
                 callee,
                 callee->id(),
@@ -191,7 +191,7 @@ namespace dsn {
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
                 resp->spec().name.c_str(),
                 resp->id(),
                 resp->get_request()->to_address.to_string(),
@@ -281,7 +281,7 @@ namespace dsn {
             sscanf(args[2].c_str(), "%016" PRIx64, &xid);
             if (xid == 0)
             {
-                return tracer_log_flow_error("invalid id value - must be with 016llx format");
+                return tracer_log_flow_error("invalid id value - must be with 016" PRIx64 " format");
             }
 
             std::string log_dir = utils::filesystem::path_combine(

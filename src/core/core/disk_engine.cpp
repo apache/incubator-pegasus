@@ -380,7 +380,7 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
     if (err != ERR_OK)
     {
         dinfo(
-            "disk operation failure with code %s, err = %s, aio task id = %016llx",
+            "disk operation failure with code %s, err = %s, aio_task_id = %016" PRIx64,
             aio->spec().name.c_str(),
             err.to_string(),
             aio->id()

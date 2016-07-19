@@ -285,20 +285,20 @@ namespace dsn
             {
                 if (nullptr != task::get_current_worker2())
                 {
-                    wn = sprintf(ptr, "%6s.%7s%u.%016llx: ",
+                    wn = sprintf(ptr, "%6s.%7s%d.%016" PRIx64 ": ",
                         task::get_current_node_name(),
                         task::get_current_worker2()->pool_spec().name.c_str(),
                         task::get_current_worker2()->index(),
-                        static_cast<long long unsigned int>(t)
+                        t
                         );
                 }
                 else
                 {
-                    wn = sprintf(ptr, "%6s.%7s.%05d.%016llx: ",
+                    wn = sprintf(ptr, "%6s.%7s.%05d.%016" PRIx64 ": ",
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
-                        static_cast<long long unsigned int>(t)
+                        t
                         );
                 }
             }
