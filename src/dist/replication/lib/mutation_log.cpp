@@ -52,49 +52,167 @@ using namespace ::dsn::service;
 ::dsn::task_ptr mutation_log_shared::append(mutation_ptr& mu,
     dsn_task_code_t callback_code,
     clientlet* callback_host,
-    aio_handler callback,
+    aio_handler&& callback,
     int hash
     )
 {
-    auto blk = log_file::prepare_log_block();
+    auto d = mu->data.header.decree;
+    error_code err = ERR_OK;
+    ::dsn::task_ptr cb = callback ? file::create_aio_task(callback_code, callback_host, 
+        std::forward<aio_handler>(callback), hash) : nullptr;
+    
+    _slock.lock();
 
-    mu->write_to_log_file([=](const blob& bb) 
+    // init pending buffer
+    if (nullptr == _pending_write)
     {
-        blk->add(bb);
+        _pending_write.reset(log_file::prepare_log_block());
+        _pending_write_callbacks.reset(new callbacks());
+        _pending_write_mutations.reset(new mutations());
+        _pending_write_start_offset = mark_new_offset(0, true).second;
+    }
+
+    // save mutations
+    _pending_write_mutations->push_back(mu);
+
+    // save cb for pinning buffer
+    if (cb)
+    {
+        _pending_write_callbacks->push_back(cb);
+    }        
+
+    // write mutation to pending buffer
+    mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
+    //printf("%lld: %lld\n", d, mu->data.header.log_offset);
+    mu->write_to_log_file([this](blob bb)
+    {
+        _pending_write->add(bb);
     });
 
-    auto pr = mark_new_update(blk->size(), mu->data.header.pid, mu->data.header.decree, true);
-    uint64_t offset = pr.second + sizeof(log_block_header);
-    mu->data.header.log_offset = offset;
+    // update meta
+    update_max_decree(mu->data.header.pid, d);
 
-    dinfo("start append shared log for mutation %s, offset = %" PRIu64, mu->name(), offset);
-
-    // patch, fix marshalled data
-    auto mhdr = ((mutation_header*)blk->data()[1].data());
-    mhdr->log_offset = offset;
-
-    return pr.first->commit_log_block(*blk, pr.second,
-        LPC_WRITE_REPLICATION_LOG_SHARED, this,
-        [blk, cb_cap = std::move(callback), offset](error_code err, size_t sz)
-        {
-            if (cb_cap)
-            {
-                cb_cap(err, sz);
-            }
-
-            auto hdr = (log_block_header*)(blk->data()[0].data());
-            dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
-
-            dinfo("end append shared log for offset = %" PRIu64, offset);
-            delete blk;
-        },
-        gpid_to_hash(mu->data.header.pid)
-        );
+    // start to write if possible
+    if (_issued_write.expired())
+    {
+        write_pending_mutations(true);
+    }
+    else
+    {
+        _slock.unlock();
+    }
+    return cb;
 }
 
 void mutation_log_shared::flush()
 {
-    dsn_task_tracker_wait_all(tracker());
+    while (true)
+    {
+        dsn_task_tracker_wait_all(tracker());
+
+        {
+            _slock.lock();
+            if (_pending_write)
+            {
+                if (_issued_write.expired())
+                {
+                    write_pending_mutations(true);
+                }
+                else
+                {
+                    _slock.unlock();
+                }
+            }
+            else
+            {
+                _slock.unlock();
+                break;
+            }    
+        }
+    }
+}
+
+
+void mutation_log_shared::write_pending_mutations(bool release_lock)
+{
+    dassert(release_lock, "lock must be hold at this point");
+    dassert(_pending_write != nullptr, "");
+    dassert(_issued_write.expired(), "");
+
+    _issued_write = _pending_write;
+    auto pr = mark_new_offset(_pending_write->size(), false);
+    dassert(pr.second == _pending_write_start_offset, "");
+
+    auto pwu = std::move(_pending_write_callbacks);
+    _pending_write_callbacks = nullptr;
+
+    auto pmu = std::move(_pending_write_mutations);
+    _pending_write_mutations = nullptr;
+
+    auto blk = std::move(_pending_write);
+    _pending_write = nullptr;
+
+    auto soffset = _pending_write_start_offset;
+
+    // seperate commit_log_block from within the lock
+    _slock.unlock();
+
+    _issued_write_task = pr.first->commit_log_block(
+        *blk,
+        soffset,
+        LPC_WRITE_REPLICATION_LOG_SHARED,
+        this,
+        [this,
+        lf = pr.first,
+        block = blk,
+        callbacks = std::move(pwu),
+        mus = std::move(pmu)
+        ](error_code err, size_t sz) mutable
+        {
+            auto hdr = (log_block_header*)block->front().data();
+            dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
+
+            if (err == ERR_OK)
+            {
+                dassert(sz == block->size(),
+                    "log write size must equal to the given size: %d vs %d",
+                    (int)sz,
+                    block->size()
+                );
+
+                dassert(hdr->length + sizeof(log_block_header) == sz, "");
+
+                // flush to ensure that there is no gap between share log and in-memory buffer
+                // so that we can get all mutations in learning process.
+                //
+                // FIXME : the file could have been closed
+                lf->flush();
+            }
+
+            // notify the callbacks
+            for (auto& c : *callbacks)
+            {
+                c->enqueue_aio(err, sz);
+            }
+
+            // start to write if possible
+            if (err == ERR_OK)
+            {
+                _slock.lock();
+
+                block = nullptr;
+                if (_pending_write)
+                {
+                    write_pending_mutations(true);
+                }
+                else
+                {
+                    _slock.unlock();
+                }
+            }
+        },
+        0
+        );
 }
 
 ////////////////////////////////////////////////////
@@ -102,7 +220,7 @@ void mutation_log_shared::flush()
 ::dsn::task_ptr mutation_log_private::append(mutation_ptr& mu,
     dsn_task_code_t callback_code,
     clientlet* callback_host,
-    aio_handler callback,
+    aio_handler&& callback,
     int hash)
 {
     dassert(nullptr == callback, "callback is not needed in private mutation log");
@@ -110,14 +228,14 @@ void mutation_log_shared::flush()
     auto d = mu->data.header.decree;
     error_code err = ERR_OK;
 
-    zauto_lock l(_plock);
+    _plock.lock();
 
     // init pending buffer
     if (nullptr == _pending_write)
     {
         _pending_write.reset(log_file::prepare_log_block());
         _pending_write_mutations.reset(new mutations());
-        _pending_write_start_offset = mark_new_update(0, _private_gpid, 0, true).second;
+        _pending_write_start_offset = mark_new_offset(0, true).second;
     }
 
     // save mu for pinning buffer
@@ -142,12 +260,11 @@ void mutation_log_shared::flush()
             || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
         )
     {
-        err = write_pending_mutations();
-        dassert(
-            err == ERR_OK,
-            "write pending mutation failed, err = %s",
-            err.to_string()
-            );
+        write_pending_mutations(true);
+    }
+    else
+    {
+        _plock.unlock();
     }
     
     return nullptr;
@@ -190,6 +307,7 @@ bool mutation_log_private::get_learn_state_in_memory(
     return r;
 }
 
+
 void mutation_log_private::flush()
 {
     while (true)
@@ -197,21 +315,23 @@ void mutation_log_private::flush()
         dsn_task_tracker_wait_all(tracker());
 
         {
-            zauto_lock l(_plock);
+            _plock.lock();
             if (_pending_write)
             {
                 if (_issued_write.expired())
                 {
-                    auto err = write_pending_mutations();
-                    dassert(
-                        err == ERR_OK,
-                        "write pending mutation failed, err = %s",
-                        err.to_string()
-                        );
+                    write_pending_mutations(true);
+                }
+                else
+                {
+                    _plock.unlock();
                 }
             }
             else
+            {
+                _plock.unlock();
                 break;
+            }
         }
     }
 }
@@ -230,15 +350,18 @@ void mutation_log_private::init_states()
     _pending_write_max_decree = 0;
 }
 
-error_code mutation_log_private::write_pending_mutations()
+void mutation_log_private::write_pending_mutations(bool release_lock)
 {
+    dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
     dassert(_issued_write.expired(), "");
 
     _issued_write = _pending_write;
     _issued_write_mutations = _pending_write_mutations;
-    auto pr = mark_new_update(_pending_write->size(), _private_gpid, _pending_write_max_decree, false);
+    auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
+
+    update_max_decree(_private_gpid, _pending_write_max_decree);
 
     auto pwu = std::move(_pending_write_mutations);
     _pending_write_mutations = nullptr;
@@ -250,9 +373,14 @@ error_code mutation_log_private::write_pending_mutations()
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 
+    auto soffset = _pending_write_start_offset;
+
+    // seperate commit_log_block from within the lock
+    _plock.unlock();
+
     _issued_write_task = pr.first->commit_log_block(
         *blk,
-        _pending_write_start_offset,
+        soffset,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,
         this,
         [this, 
@@ -297,26 +425,26 @@ error_code mutation_log_private::write_pending_mutations()
             else
             {
                 // start to write if possible
-                zauto_lock l(_plock);
+                _plock.lock();
+
                 block = nullptr;
                 if (_pending_write && 
                     (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
                     || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
                     )
                 {
-                    err = write_pending_mutations();
-                    dassert(
-                        err == ERR_OK,
-                        "write pending mutation failed, err = %s",
-                        err.to_string()
-                    );
+                    write_pending_mutations(true);
+                }
+                else
+                {
+                    _plock.unlock();
                 }
             }
         },
         0
         );
-    return ERR_OK;
 }
+
 
 ///////////////////////////////////////////////////////////////
 
@@ -672,7 +800,7 @@ error_code mutation_log::create_new_log_file()
     return ERR_OK;
 }
 
-std::pair<log_file_ptr, int64_t> mutation_log::mark_new_update(size_t size, gpid gpid, decree d, bool create_new_log_if_needed)
+std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool create_new_log_if_needed)
 {
     zauto_lock l(_lock);
 
@@ -688,9 +816,6 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_update(size_t size, gpid
 
     int64_t offset = _global_end_offset;
     _global_end_offset += size;
-
-    if (d > 0)
-        update_max_decree_no_lock(gpid, d);
 
     return std::make_pair(_current_log_file, offset);
 }
@@ -1841,7 +1966,7 @@ log_block* log_file::prepare_log_block()
                 int64_t offset,
                 dsn_task_code_t evt,
                 clientlet* callback_host,
-                aio_handler callback,
+                aio_handler&& callback,
                 int hash
                 )
 {
@@ -1886,7 +2011,7 @@ log_block* log_file::prepare_log_block()
             static_cast<uint64_t>(local_offset),
             evt,
             callback_host,
-            std::move(callback),
+            std::forward<aio_handler>(callback),
             hash
             );
     }

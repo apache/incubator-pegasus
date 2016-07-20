@@ -136,7 +136,7 @@ public:
     virtual ::dsn::task_ptr append(mutation_ptr& mu,
         dsn_task_code_t callback_code,
         clientlet* callback_host,
-        aio_handler callback,
+        aio_handler&& callback,
         int hash = 0) = 0;
 
     virtual bool get_learn_state_in_memory(
@@ -274,7 +274,7 @@ public:
 
 protected:
     // thread-safe
-    std::pair<log_file_ptr, int64_t> mark_new_update(size_t size, gpid gpid, decree d, bool create_new_log_if_needed);
+    std::pair<log_file_ptr, int64_t> mark_new_offset(size_t size, bool create_new_log_if_needed);
     // thread-safe
     int64_t get_global_offset() const { zauto_lock l(_lock); return _global_end_offset;  }
 
@@ -354,16 +354,38 @@ public:
     mutation_log_shared(
         const std::string& dir,
         int32_t max_log_file_mb
-        ) : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr)
+        ) : 
+        mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
+        _pending_write_start_offset(0)
     {}
 
     virtual ::dsn::task_ptr append(mutation_ptr& mu,
         dsn_task_code_t callback_code,
         clientlet* callback_host,
-        aio_handler callback,
+        aio_handler&& callback,
         int hash = 0) override;
 
     virtual void flush() override;
+
+private:    
+    // async write pending mutations into log file
+    // Preconditions:
+    // - _pending_write != nullptr
+    // - _issued_write.expired() == true (because only one async write is allowed at the same time)
+    // release_lock_required should always be true => this function must release the lock appropriately for less lock contention
+    void write_pending_mutations(bool release_lock_required);
+
+private:    
+    // bufferring - only one concurrent write is allowed
+    typedef std::vector<task_ptr>  callbacks;
+    typedef std::vector<mutation_ptr> mutations;    
+    mutable zlock                  _slock;
+    std::weak_ptr<log_block>       _issued_write;
+    task_ptr                       _issued_write_task; // for debugging
+    std::shared_ptr<log_block>     _pending_write;
+    int64_t                        _pending_write_start_offset;
+    std::shared_ptr<callbacks>     _pending_write_callbacks;
+    std::shared_ptr<mutations>     _pending_write_mutations;
 };
 
 class mutation_log_private : public mutation_log
@@ -387,7 +409,7 @@ public:
     virtual ::dsn::task_ptr append(mutation_ptr& mu,
         dsn_task_code_t callback_code,
         clientlet* callback_host,
-        aio_handler callback,
+        aio_handler&& callback,
         int hash = 0) override;
 
     virtual bool get_learn_state_in_memory(
@@ -403,7 +425,8 @@ private:
     // Preconditions:
     // - _pending_write != nullptr
     // - _issued_write.expired() == true (because only one async write is allowed at the same time)
-    error_code write_pending_mutations();
+    // release_lock_required = true => this function must release the lock appropriately for less lock contention
+    void write_pending_mutations(bool release_lock_required = true);
 
     virtual void init_states() override;
 
@@ -500,7 +523,7 @@ public:
                     int64_t offset,
                     dsn_task_code_t evt,
                     clientlet* callback_host,
-                    aio_handler callback,                    
+                    aio_handler&& callback,                    
                     int hash
                     );
 
