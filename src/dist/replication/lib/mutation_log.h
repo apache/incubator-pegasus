@@ -37,6 +37,7 @@
 
 #include "replication_common.h"
 #include "mutation.h"
+#include <atomic>
 
 namespace dsn { namespace replication {
 
@@ -381,8 +382,7 @@ private:
     typedef std::vector<task_ptr>  callbacks;
     typedef std::vector<mutation_ptr> mutations;    
     mutable zlock                  _slock;
-    volatile bool                  _is_writing;
-    std::weak_ptr<log_block>       _issued_write;
+    std::atomic_bool               _is_writing;
     task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
     int64_t                        _pending_write_start_offset;
@@ -435,8 +435,7 @@ private:
 private:
     // bufferring - only one concurrent write is allowed
     typedef std::vector<mutation_ptr> mutations;
-    volatile bool                  _is_writing;
-    std::weak_ptr<log_block>       _issued_write;
+    std::atomic_bool               _is_writing;
     std::weak_ptr<mutations>       _issued_write_mutations;
     task_ptr                       _issued_write_task; // for debugging
     int64_t                        _pending_write_start_offset;

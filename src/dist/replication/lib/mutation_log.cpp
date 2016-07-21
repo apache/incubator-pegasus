@@ -93,7 +93,7 @@ using namespace ::dsn::service;
     update_max_decree(mu->data.header.pid, d);
 
     // start to write if possible
-    if (!_is_writing)
+    if (!_is_writing.load(std::memory_order_acquire))
     {
         write_pending_mutations(true);
     }
@@ -108,14 +108,14 @@ void mutation_log_shared::flush()
 {
     while (true)
     {
-        if (_is_writing)
+        if (_is_writing.load(std::memory_order_acquire))
         {
             dsn_task_tracker_wait_all(tracker());
         }
         else
         {
             _slock.lock();
-            if (_is_writing)
+            if (_is_writing.load(std::memory_order_acquire))
             {
                 _slock.unlock();
                 continue;
@@ -137,10 +137,9 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
-    dassert(!_is_writing, "");
+    dassert(!_is_writing.load(std::memory_order_acquire), "");
 
-    _is_writing = true;
-    _issued_write = _pending_write;
+    _is_writing.store(true, std::memory_order_release);
     auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
 
@@ -165,7 +164,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
         mus = std::move(pmu)
         ](error_code err, size_t sz) mutable
         {
-            dassert(_is_writing, "");
+            dassert(_is_writing.load(std::memory_order_acquire), "");
 
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
@@ -190,7 +189,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing = false;
+            _is_writing.store(false, std::memory_order_release);
 
             // notify the callbacks
             for (auto& c : *callbacks)
@@ -203,7 +202,8 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             {
                 _slock.lock();
 
-                if (!_is_writing && _pending_write)
+                if (!_is_writing.load(std::memory_order_acquire)
+                    && _pending_write)
                 {
                     write_pending_mutations(true);
                 }
@@ -257,7 +257,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     _pending_write_max_decree = std::max(_pending_write_max_decree, d);
 
     // start to write if possible
-    if (!_is_writing
+    if (!_is_writing.load(std::memory_order_acquire)
         && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes 
             || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
         )
@@ -314,14 +314,14 @@ void mutation_log_private::flush()
 {
     while (true)
     {
-        if (_is_writing)
+        if (_is_writing.load(std::memory_order_acquire))
         {
             dsn_task_tracker_wait_all(tracker());
         }
         else
         {
             _plock.lock();
-            if (_is_writing)
+            if (_is_writing.load(std::memory_order_acquire))
             {
                 _plock.unlock();
                 continue;
@@ -342,8 +342,7 @@ void mutation_log_private::init_states()
 {
     mutation_log::init_states();
 
-    _is_writing = false;
-    _issued_write.reset();
+    _is_writing.store(false, std::memory_order_release);
     _issued_write_mutations.reset();
     _issued_write_task = nullptr;
     _pending_write_start_offset = 0;
@@ -357,10 +356,9 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
-    dassert(!_is_writing, "");
+    dassert(!_is_writing.load(std::memory_order_acquire), "");
 
-    _is_writing = true;
-    _issued_write = _pending_write;
+    _is_writing.store(true, std::memory_order_release);
     _issued_write_mutations = _pending_write_mutations;
     auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
@@ -390,7 +388,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
         mutations = std::move(pwu)
         ](error_code err, size_t sz) mutable
         {
-            dassert(_is_writing, "");
+            dassert(_is_writing.load(std::memory_order_acquire), "");
 
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
@@ -418,7 +416,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing = false;
+            _is_writing.store(false, std::memory_order_release);
             
             // notify error when necessary
             if (err != ERR_OK)
@@ -434,9 +432,10 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                 // start to write if possible
                 _plock.lock();
 
-                if (!_is_writing && _pending_write &&
-                    (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
-                    || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
+                if (!_is_writing.load(std::memory_order_acquire)
+                    && _pending_write
+                    && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
+                        || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
                     )
                 {
                     write_pending_mutations(true);
