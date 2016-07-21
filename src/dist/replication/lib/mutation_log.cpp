@@ -183,7 +183,9 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
                 // so that we can get all mutations in learning process.
                 //
                 // FIXME : the file could have been closed
-                lf->flush();
+                //
+                // TODO : add config option; use O_SYNC when open file
+                //lf->flush();
             }
 
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
