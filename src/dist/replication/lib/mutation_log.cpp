@@ -164,7 +164,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
         mus = std::move(pmu)
         ](error_code err, size_t sz) mutable
         {
-            dassert(_is_writing.load(std::memory_order_acquire), "");
+            dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
@@ -191,7 +191,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_release);
+            _is_writing.store(false, std::memory_order_acquire);
 
             // notify the callbacks
             for (auto& c : *callbacks)
@@ -358,7 +358,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
-    dassert(!_is_writing.load(std::memory_order_acquire), "");
+    dassert(!_is_writing.load(std::memory_order_relaxed), "");
 
     _is_writing.store(true, std::memory_order_release);
     _issued_write_mutations = _pending_write_mutations;
@@ -418,7 +418,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_release);
+            _is_writing.store(false, std::memory_order_acquire);
             
             // notify error when necessary
             if (err != ERR_OK)
