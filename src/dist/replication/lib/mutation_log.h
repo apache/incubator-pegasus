@@ -356,6 +356,7 @@ public:
         int32_t max_log_file_mb
         ) : 
         mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
+        _is_writing(false),
         _pending_write_start_offset(0)
     {}
 
@@ -380,6 +381,7 @@ private:
     typedef std::vector<task_ptr>  callbacks;
     typedef std::vector<mutation_ptr> mutations;    
     mutable zlock                  _slock;
+    volatile bool                  _is_writing;
     std::weak_ptr<log_block>       _issued_write;
     task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
@@ -425,14 +427,15 @@ private:
     // Preconditions:
     // - _pending_write != nullptr
     // - _issued_write.expired() == true (because only one async write is allowed at the same time)
-    // release_lock_required = true => this function must release the lock appropriately for less lock contention
-    void write_pending_mutations(bool release_lock_required = true);
+    // release_lock_required should always be true => this function must release the lock appropriately for less lock contention
+    void write_pending_mutations(bool release_lock_required);
 
     virtual void init_states() override;
 
 private:
     // bufferring - only one concurrent write is allowed
     typedef std::vector<mutation_ptr> mutations;
+    volatile bool                  _is_writing;
     std::weak_ptr<log_block>       _issued_write;
     std::weak_ptr<mutations>       _issued_write_mutations;
     task_ptr                       _issued_write_task; // for debugging

@@ -93,7 +93,7 @@ using namespace ::dsn::service;
     update_max_decree(mu->data.header.pid, d);
 
     // start to write if possible
-    if (_issued_write.expired())
+    if (!_is_writing)
     {
         write_pending_mutations(true);
     }
@@ -108,26 +108,26 @@ void mutation_log_shared::flush()
 {
     while (true)
     {
-        dsn_task_tracker_wait_all(tracker());
-
+        if (_is_writing)
+        {
+            dsn_task_tracker_wait_all(tracker());
+        }
+        else
         {
             _slock.lock();
-            if (_pending_write)
-            {
-                if (_issued_write.expired())
-                {
-                    write_pending_mutations(true);
-                }
-                else
-                {
-                    _slock.unlock();
-                }
-            }
-            else
+            if (_is_writing)
             {
                 _slock.unlock();
+                continue;
+            }
+            if (!_pending_write)
+            {
+                // !_is_writing && !_pending_write, means flush done
+                _slock.unlock();
                 break;
-            }    
+            }
+            // !_is_writing && _pending_write, start next write
+            write_pending_mutations(true);
         }
     }
 }
@@ -137,20 +137,16 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
-    dassert(_issued_write.expired(), "");
+    dassert(!_is_writing, "");
 
+    _is_writing = true;
     _issued_write = _pending_write;
     auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
 
     auto pwu = std::move(_pending_write_callbacks);
-    _pending_write_callbacks = nullptr;
-
     auto pmu = std::move(_pending_write_mutations);
-    _pending_write_mutations = nullptr;
-
     auto blk = std::move(_pending_write);
-    _pending_write = nullptr;
 
     auto soffset = _pending_write_start_offset;
 
@@ -169,6 +165,8 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
         mus = std::move(pmu)
         ](error_code err, size_t sz) mutable
         {
+            dassert(_is_writing, "");
+
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
@@ -189,6 +187,11 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
                 lf->flush();
             }
 
+            // here we use _is_writing instead of _issued_write.expired() to check writing done,
+            // because the following callbacks may run before "block" released, which may cause
+            // the next init_prepare() not starting the write.
+            _is_writing = false;
+
             // notify the callbacks
             for (auto& c : *callbacks)
             {
@@ -200,8 +203,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             {
                 _slock.lock();
 
-                block = nullptr;
-                if (_pending_write)
+                if (!_is_writing && _pending_write)
                 {
                     write_pending_mutations(true);
                 }
@@ -255,7 +257,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     _pending_write_max_decree = std::max(_pending_write_max_decree, d);
 
     // start to write if possible
-    if (_issued_write.expired() 
+    if (!_is_writing
         && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes 
             || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
         )
@@ -312,26 +314,26 @@ void mutation_log_private::flush()
 {
     while (true)
     {
-        dsn_task_tracker_wait_all(tracker());
-
+        if (_is_writing)
+        {
+            dsn_task_tracker_wait_all(tracker());
+        }
+        else
         {
             _plock.lock();
-            if (_pending_write)
+            if (_is_writing)
             {
-                if (_issued_write.expired())
-                {
-                    write_pending_mutations(true);
-                }
-                else
-                {
-                    _plock.unlock();
-                }
+                _plock.unlock();
+                continue;
             }
-            else
+            if (!_pending_write)
             {
+                // !_is_writing && !_pending_write, means flush done
                 _plock.unlock();
                 break;
             }
+            // !_is_writing && _pending_write, start next write
+            write_pending_mutations(true);
         }
     }
 }
@@ -340,6 +342,7 @@ void mutation_log_private::init_states()
 {
     mutation_log::init_states();
 
+    _is_writing = false;
     _issued_write.reset();
     _issued_write_mutations.reset();
     _issued_write_task = nullptr;
@@ -354,8 +357,9 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
     dassert(_pending_write != nullptr, "");
-    dassert(_issued_write.expired(), "");
+    dassert(!_is_writing, "");
 
+    _is_writing = true;
     _issued_write = _pending_write;
     _issued_write_mutations = _pending_write_mutations;
     auto pr = mark_new_offset(_pending_write->size(), false);
@@ -364,11 +368,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
     update_max_decree(_private_gpid, _pending_write_max_decree);
 
     auto pwu = std::move(_pending_write_mutations);
-    _pending_write_mutations = nullptr;
-
     auto blk = std::move(_pending_write);
-    _pending_write = nullptr;
-
     auto max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -390,6 +390,8 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
         mutations = std::move(pwu)
         ](error_code err, size_t sz) mutable
         {
+            dassert(_is_writing, "");
+
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
                         
@@ -412,6 +414,11 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                 // update _private_max_commit_on_disk after writen into log file done
                 update_max_commit_on_disk(max_commit);
             }
+
+            // here we use _is_writing instead of _issued_write.expired() to check writing done,
+            // because the following callbacks may run before "block" released, which may cause
+            // the next init_prepare() not starting the write.
+            _is_writing = false;
             
             // notify error when necessary
             if (err != ERR_OK)
@@ -427,8 +434,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                 // start to write if possible
                 _plock.lock();
 
-                block = nullptr;
-                if (_pending_write && 
+                if (!_is_writing && _pending_write &&
                     (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
                     || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
                     )
