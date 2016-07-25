@@ -70,6 +70,7 @@ namespace dsn {
         static void handle_core_dump(int signal_id)
         {
             printf("got signal id: %d\n", signal_id);
+            fflush(stdout);
             /*
              * firstly we must set the sig_handler to default,
              * to prevent the possible inifinite loop

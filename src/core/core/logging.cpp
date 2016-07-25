@@ -62,7 +62,12 @@ void dsn_log_init()
     dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID, "invalid [core] logging_start_level specified");
 
     // register log flush on exit
-    ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
+    bool logging_flush_on_exit = dsn_config_get_value_bool("core", "logging_flush_on_exit",
+        true, "flush log when exit system");
+    if (logging_flush_on_exit)
+    {
+        ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
+    }
 }
 
 DSN_API dsn_log_level_t dsn_log_get_start_level()
