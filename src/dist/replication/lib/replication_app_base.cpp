@@ -403,7 +403,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
         }
         else
         {
-            dwarn("%s: call app.get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %s, need = %d",
+            dwarn("%s: call app.get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %d, need = %d",
                   _replica->name(), capacity, need_size);
             dassert(need_size > capacity, "");
             capacity = need_size;
