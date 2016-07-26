@@ -537,8 +537,16 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
 
     ++_last_committed_decree;
 
-    ddebug("%s: mutation %s committed, batched_count = %d",
-           _replica->name(), mu->name(), batched_count);
+    if (_replica->status() == partition_status::PS_PRIMARY)
+    {
+        ddebug("%s: mutation %s committed, batched_count = %d",
+               _replica->name(), mu->name(), batched_count);
+    }
+    else
+    {
+        dinfo("%s: mutation %s committed, batched_count = %d",
+              _replica->name(), mu->name(), batched_count);
+    }
 
     _replica->update_commit_statistics(1);
     _app_commit_decree.increment();

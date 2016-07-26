@@ -576,7 +576,7 @@ void replica::on_learn_reply(
         _potential_secondary_states.learning_start_prepare_decree = resp.prepare_start_decree;
         _prepare_list->truncate(_app->last_committed_decree());
         ddebug(
-            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, truncate_prepare_list = %" PRId64 ", current_learning_status = %s",
+            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, truncate prepare list, local_committed_decree = %" PRId64 ", current_learning_status = %s",
             name(), req.signature, resp.config.primary.to_string(),
             _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
@@ -612,9 +612,14 @@ void replica::on_learn_reply(
         }
 
         ddebug(
-            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, prepare_cache_range = <%" PRId64 ", %" PRId64 ">, current_learning_status = %s",
+            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn duration = %" PRIu64 " ms, "
+            "apply cache done, prepare_cache_range = <%" PRId64 ", %" PRId64 ">, "
+            "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64 ", current_learning_status = %s",
             name(), req.signature, resp.config.primary.to_string(),
+            _potential_secondary_states.duration_ms(),
             cache_range.first, cache_range.second,
+            last_committed_decree(),
+            _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
             );
 
@@ -1014,9 +1019,19 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         offset
         );
 
+    ddebug(
+        "%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64 " ms, "
+        "apply private log files done, file_count = %d",
+        name(),
+        _potential_secondary_states.learning_version,
+        _potential_secondary_states.duration_ms(),
+        static_cast<int>(state.files.size())
+    );
+
     // apply in-buffer private logs
     if (err == ERR_OK)
     {
+        int replay_count = 0;
         binary_reader reader(state.meta);
         while (!reader.is_eof())
         {
@@ -1031,7 +1046,17 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
             
             mu->set_logged();
             plist.prepare(mu, partition_status::PS_SECONDARY);
+            ++replay_count;
         }
+
+        ddebug(
+            "%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64 " ms, "
+            "apply in-buffer private logs done, replay_count = %d",
+            name(),
+            _potential_secondary_states.learning_version,
+            _potential_secondary_states.duration_ms(),
+            replay_count
+            );
     }
 
     return err;
