@@ -408,7 +408,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
             dassert(need_size > capacity, "");
             capacity = need_size;
             buffer = dsn_transient_malloc(capacity);
-            dsn_app_learn_state* lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
+            lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
             err = _callbacks.calls.get_checkpoint(
                 _app_context_callbacks, learn_start, last_committed_decree(),
                 (void*)learn_request.data(), learn_request.length(), lstate, capacity);

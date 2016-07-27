@@ -102,7 +102,6 @@ namespace dsn
             {
                 bool succ = true;
 
-                state.total_learn_state_size = sizeof(dsn_app_learn_state);
                 state.from_decree_excluded = from_decree_excluded;
                 state.to_decree_included = to_decree_included;
                 state.meta_state_size = meta_state.length();
@@ -116,8 +115,11 @@ namespace dsn
                     {
                         succ = false;
                     }
-                    state.meta_state_ptr = ptr;
-                    if (succ) memcpy(ptr, meta_state.data(), state.meta_state_size);
+                    if (succ)
+                    {
+                        state.meta_state_ptr = ptr;
+                        memcpy(ptr, meta_state.data(), state.meta_state_size);
+                    }
                     ptr += state.meta_state_size;
                 }
                 else
