@@ -647,8 +647,29 @@ void replica::on_learn_reply(
    
     else if (resp.state.files.size() > 0)
     {
-        utils::filesystem::remove_path(_app->learn_dir());
-        utils::filesystem::create_directory(_app->learn_dir());
+        auto learn_dir = _app->learn_dir();
+        utils::filesystem::remove_path(learn_dir);
+        utils::filesystem::create_directory(learn_dir);
+
+        if (!dsn::utils::filesystem::directory_exists(learn_dir))
+        {
+            derror(
+                "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, create replica learn dir %s failed",
+                name(), req.signature, resp.config.primary.to_string(),
+                learn_dir.c_str()
+                );
+
+            _potential_secondary_states.learn_remote_files_task = tasking::create_task(
+                LPC_LEARN_REMOTE_DELTA_FILES,
+                this,
+                [this, err, req_cap = std::move(req), resp_cap = std::move(resp)]() mutable
+                {
+                    on_copy_remote_state_completed(ERR_FILE_OPERATION_FAILED, 0, std::move(req_cap), std::move(resp_cap));
+                }
+                );
+            _potential_secondary_states.learn_remote_files_task->enqueue();
+            return;
+        }
 
         ddebug(
             "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, start to copy remote files, learn_file_count = %d",
@@ -661,7 +682,7 @@ void replica::on_learn_reply(
             file::copy_remote_files(resp.config.primary,
                 resp.base_local_dir,
                 resp.state.files,
-                _app->learn_dir(),
+                learn_dir,
                 true,
                 LPC_REPLICATION_COPY_REMOTE_FILES,
                 this,
