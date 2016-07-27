@@ -191,7 +191,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_acquire);
+            _is_writing.store(false, std::memory_order_relaxed);
 
             // notify the callbacks
             for (auto& c : *callbacks)
@@ -418,7 +418,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
             // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_acquire);
+            _is_writing.store(false, std::memory_order_relaxed);
             
             // notify error when necessary
             if (err != ERR_OK)
