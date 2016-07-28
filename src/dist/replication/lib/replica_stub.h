@@ -175,7 +175,7 @@ private:
     ::dsn::rpc_address          _primary_address;
 
     ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;
-    volatile replica_node_state   _state;
+    volatile replica_node_state _state;
 
     // constants
     replication_options         _options;

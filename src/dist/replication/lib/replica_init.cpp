@@ -355,7 +355,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             _checkpoint_timer = tasking::enqueue_timer(
                 LPC_PER_REPLICA_CHECKPOINT_TIMER,
                 this,
-                [this] {on_checkpoint_timer(); },
+                [this] { on_checkpoint_timer(); },
                 std::chrono::seconds(_options->checkpoint_interval_seconds),
                 gpid_to_hash(get_gpid())
                 );

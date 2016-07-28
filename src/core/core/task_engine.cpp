@@ -118,6 +118,13 @@ void task_worker_pool::start()
     for (auto& wk : _workers)
         wk->start();
 
+    ddebug("[%s] thread pool [%s] started, pool_code = %s, worker_count = %d, worker_share_core = %s, partitioned = %s, ...",
+        _node->name(), _spec.name.c_str(),
+        dsn_threadpool_code_to_string(_spec.pool_code),
+        _spec.worker_count,
+        _spec.worker_share_core ? "true" : "false",
+        _spec.partitioned ? "true" : "false");
+
     // setup cached ptrs for fast timer service access
     if (service_engine::fast_instance().spec().timer_io_mode == IOE_PER_QUEUE)
     {

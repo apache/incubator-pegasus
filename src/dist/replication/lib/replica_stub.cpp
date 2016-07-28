@@ -40,6 +40,8 @@
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
 #include "replication_app_base.h"
+#include <vector>
+#include <deque>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -157,9 +159,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     ddebug("slog_dir = %s", _options.slog_dir.c_str());
 
     // init rps
-    replicas rps;
-    std::vector<std::string> dir_list;
+    ddebug("start to load replicas");
 
+    std::vector<std::string> dir_list;
     for (auto& dir : _options.data_dirs)
     {
         std::vector<std::string> tmp_list;
@@ -170,6 +172,10 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dir_list.insert(dir_list.end(), tmp_list.begin(), tmp_list.end());
     }
 
+    replicas rps;
+    utils::ex_lock rps_lock;
+    std::deque<task_ptr> load_tasks;
+    uint64_t start_time = dsn_now_ms();
     for (auto& dir : dir_list)
     {
         if (dir.length() >= 4 && dir.substr(dir.length() - 4) == ".err")
@@ -178,27 +184,53 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             continue;
         }
 
-        ddebug("process dir %s", dir.c_str());
-
-        auto r = replica::load(this, dir.c_str());
-        if (r != nullptr)
-        {
-            if (rps.find(r->get_gpid()) != rps.end())
+        load_tasks.push_back(tasking::create_task(
+            LPC_REPLICATION_INIT_LOAD,
+            this,
+            [this, dir, &rps, &rps_lock]
             {
-                dassert(false, "conflict replica dir: %s <--> %s", r->dir().c_str(), rps[r->get_gpid()]->dir().c_str());
-            }
-            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
-                r->get_gpid().get_app_id(), r->get_gpid().get_partition_index(),
-                primary_address().to_string(),
-                dir.c_str(),
-                r->last_durable_decree(),
-                r->last_committed_decree(),
-                r->last_prepared_decree()
-                );
-            rps[r->get_gpid()] = r;
-        }
+                ddebug("process dir %s", dir.c_str());
+
+                auto r = replica::load(this, dir.c_str());
+                if (r != nullptr)
+                {
+                    ddebug(
+                        "%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
+                        r->get_gpid().get_app_id(), r->get_gpid().get_partition_index(),
+                        primary_address().to_string(),
+                        dir.c_str(),
+                        r->last_durable_decree(),
+                        r->last_committed_decree(),
+                        r->last_prepared_decree()
+                        );
+
+                    utils::auto_lock<utils::ex_lock> l(rps_lock);
+
+                    if (rps.find(r->get_gpid()) != rps.end())
+                    {
+                        dassert(false, "conflict replica dir: %s <--> %s", r->dir().c_str(), rps[r->get_gpid()]->dir().c_str());
+                    }
+
+                    rps[r->get_gpid()] = r;
+                }
+            },
+            load_tasks.size())
+        );
+        load_tasks.back()->enqueue();
     }
+    for (auto& tsk : load_tasks)
+    {
+        tsk->wait();
+    }
+    uint64_t finish_time = dsn_now_ms();
+
     dir_list.clear();
+    load_tasks.clear();
+    ddebug(
+        "load replicas succeed, replica_count = %d, time_used = %" PRIu64 " ms",
+        static_cast<int>(rps.size()),
+        finish_time - start_time
+        );
 
     // init shared prepare log
     ddebug("start to replay shared log");
@@ -209,7 +241,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         replay_condition[it->first] = it->second->last_committed_decree();
     }
 
-    uint64_t start_time = dsn_now_ms();
+    start_time = dsn_now_ms();
     error_code err = _log->open(
         [&rps](mutation_ptr& mu)
         {
@@ -226,7 +258,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         [this](error_code err) { this->handle_log_failure(err); },
         replay_condition
     );
-    uint64_t finish_time = dsn_now_ms();
+    finish_time = dsn_now_ms();
 
     if (err == ERR_OK)
     {
