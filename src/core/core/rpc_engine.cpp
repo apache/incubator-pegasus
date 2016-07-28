@@ -221,9 +221,8 @@ namespace dsn {
                 }
             }
 
-            if (call->delay_milliseconds() == 0)
-                call->set_delay(delay_ms);
-            
+            call->set_delay(delay_ms);
+
             // failure injection applied
             if (!call->enqueue(err, reply))
             {
@@ -752,8 +751,7 @@ namespace dsn {
                 // injector
                 if (tsk->spec().on_rpc_request_enqueue.execute(tsk, true))
                 {
-                    if (0 != delay_ms)
-                        tsk->set_delay(delay_ms);
+                    tsk->set_delay(delay_ms);
                     tsk->enqueue();
                 }
 
