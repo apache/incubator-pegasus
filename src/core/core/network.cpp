@@ -325,7 +325,8 @@ namespace dsn
             if (request->dl.is_alone())
                 return false;
 
-            request->dl.remove();  
+            request->dl.remove();
+            --_message_count;
         }
 
         // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
