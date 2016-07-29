@@ -340,7 +340,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         {
             auto mu = _prepare_list->get_mutation_by_decree(d);
             dassert(mu != nullptr, "");
-            mu->write_to(writer);
+            mu->write_to(writer, nullptr);
             count++;
         }
         response.type = learn_type::LT_CACHE;
@@ -1066,7 +1066,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         binary_reader reader(state.meta);
         while (!reader.is_eof())
         {
-            auto mu = mutation::read_from_log_file(reader, nullptr);
+            auto mu = mutation::read_from(reader, nullptr);
             auto d = mu->data.header.decree;
             if (d <= plist.last_committed_decree())
                 continue;

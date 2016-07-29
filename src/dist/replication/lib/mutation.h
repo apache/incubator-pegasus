@@ -82,21 +82,15 @@ public:
 
     // >= 1 MB
     bool is_full() const { return _appro_data_bytes >= 1024 * 1024; }
-    
-    // general reader & writer
-    void write_to(binary_writer& writer) const;
-    static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
 
-    // write-to/read-from mutation log file, for better performance
+    // read & write mutation data
     //
-    // TODO(qinzuoyan): the optimization is to marshall code as int but not string,
-    // but this may cause problem, because log may be used by different program and
-    // the code map may change:
+    // "mutation_update.code" should be marshalled as string for cross-process compatiblity, because:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
-    void write_to_log_file(std::function<void(const blob&)> inserter) const;
-    void write_to_log_file(binary_writer& writer) const;
-    static mutation_ptr read_from_log_file(binary_reader& reader, dsn_message_t from);
+    void write_to(std::function<void(const blob&)> inserter) const;
+    void write_to(binary_writer& writer, dsn_message_t to) const;
+    static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
 
     // data
     mutation_data  data;

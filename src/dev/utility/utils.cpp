@@ -350,6 +350,11 @@ namespace  dsn
     {
     }
 
+    void binary_writer::flush()
+    {
+        commit();
+    }
+
     void binary_writer::create_buffer(size_t size)
     {
         commit();
@@ -381,6 +386,7 @@ namespace  dsn
     blob binary_writer::get_buffer()
     {
         commit();
+
         if (_buffers.size() == 1)
         {
             return _buffers[0];

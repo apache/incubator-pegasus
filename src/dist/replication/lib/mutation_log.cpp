@@ -84,7 +84,7 @@ using namespace ::dsn::service;
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
     //printf("%lld: %lld\n", d, mu->data.header.log_offset);
-    mu->write_to_log_file([this](blob bb)
+    mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
     });
@@ -248,7 +248,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
     //printf("%lld: %lld\n", d, mu->data.header.log_offset);
-    mu->write_to_log_file([this](blob bb)
+    mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
     });
@@ -299,13 +299,13 @@ bool mutation_log_private::get_learn_state_in_memory(
     {
         for (auto& mu : *issued_mutations)
         {
-            mu->write_to_log_file(writer);
+            mu->write_to(writer, nullptr);
         }
     }
     
     for (auto& mu : pending_mutations)
     {
-        mu->write_to_log_file(writer);
+        mu->write_to(writer, nullptr);
     }
 
     return r;
@@ -864,7 +864,7 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool
         while (!reader->is_eof())
         {
             auto old_size = reader->get_remaining_size();
-            mutation_ptr mu = mutation::read_from_log_file(*reader, nullptr);
+            mutation_ptr mu = mutation::read_from(*reader, nullptr);
             dassert(nullptr != mu, "");
             mu->set_logged();
 

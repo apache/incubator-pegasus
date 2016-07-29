@@ -136,40 +136,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
     dassert(client_requests.size() == data.updates.size(), "size must be equal");
 }
 
-void mutation::write_to(binary_writer& writer) const
-{
-    marshall(writer, data, DSF_THRIFT_BINARY);
-}
-
-/*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
-{
-    mutation_ptr mu(new mutation());
-    unmarshall(reader, mu->data, DSF_THRIFT_BINARY);
-
-    for (const mutation_update& update : mu->data.updates)
-    {
-        dassert(update.code != TASK_CODE_INVALID, "invalid mutation task code");
-    }
-
-    mu->client_requests.resize(mu->data.updates.size());
-
-    if (nullptr != from)
-    {
-        mu->_prepare_request = from;
-        dsn_msg_add_ref(from); // released on dctor
-    }
-    
-    snprintf_p(mu->_name, sizeof(mu->_name),
-        "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        mu->data.header.pid.get_app_id(),
-        mu->data.header.pid.get_partition_index(),
-        mu->data.header.ballot,
-        mu->data.header.decree);
-
-    return mu;
-}
-
-void mutation::write_to_log_file(std::function<void(const blob&)> inserter) const
+void mutation::write_to(std::function<void(const blob&)> inserter) const
 {
     {
         binary_writer temp_writer;
@@ -178,8 +145,16 @@ void mutation::write_to_log_file(std::function<void(const blob&)> inserter) cons
 
         for (const mutation_update& update : data.updates)
         {
-            temp_writer.write_pod(static_cast<int>(update.code));
+            // write task_code as string to make it cross-process compatible.
+            // avoid memory copy, equal to writer.write(std::string)
+            const char* cstr  = update.code.to_string();
+            int len = static_cast<int>(strlen(cstr));
+            temp_writer.write_pod(len);
+            if (len > 0)
+                temp_writer.write(cstr, len);
+
             temp_writer.write_pod(static_cast<int>(update.serialization_type));
+
             temp_writer.write_pod(static_cast<int>(update.data.length()));
         }
 
@@ -192,25 +167,34 @@ void mutation::write_to_log_file(std::function<void(const blob&)> inserter) cons
     }
 }
 
-void mutation::write_to_log_file(binary_writer& writer) const
+void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
 {
     writer.write_pod(data.header);
     writer.write_pod(static_cast<int>(data.updates.size()));
 
     for (const mutation_update& update : data.updates)
     {
-        writer.write_pod(static_cast<int>(update.code));
+        // write task_code as string to make it cross-process compatible.
+        // avoid memory copy, equal to writer.write(std::string)
+        const char* cstr  = update.code.to_string();
+        int len = static_cast<int>(strlen(cstr));
+        writer.write_pod(len);
+        if (len > 0)
+            writer.write(cstr, len);
+
         writer.write_pod(static_cast<int>(update.serialization_type));
+
         writer.write_pod(static_cast<int>(update.data.length()));
     }
 
+    // TODO(qinzuoyan): directly append buffer to message to avoid memory copy
     for (const mutation_update& update : data.updates)
     {
         writer.write(update.data.data(), update.data.length());
     }
 }
 
-/*static*/ mutation_ptr mutation::read_from_log_file(binary_reader& reader, dsn_message_t from)
+/*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
     reader.read_pod(mu->data.header);
@@ -220,12 +204,16 @@ void mutation::write_to_log_file(binary_writer& writer) const
     std::vector<int> lengths(size, 0);
     for (int i = 0; i < size; ++i)
     {
-        int code;
-        reader.read_pod(code);
-        mu->data.updates[i].code = ::dsn::task_code(code);
+        std::string name;
+        reader.read(name);
+        ::dsn::task_code code(dsn_task_code_from_string(name.c_str(), TASK_CODE_INVALID));
+        dassert(code != TASK_CODE_INVALID, "invalid mutation task code: %s", name.c_str());
+        mu->data.updates[i].code = code;
+
         int type;
         reader.read_pod(type);
         mu->data.updates[i].serialization_type = type;
+
         reader.read_pod(lengths[i]);
     }
     for (int i = 0; i < size; ++i)

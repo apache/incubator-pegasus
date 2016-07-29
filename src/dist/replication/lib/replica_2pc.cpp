@@ -171,7 +171,7 @@ void replica::send_prepare_message(
         rpc_write_stream writer(msg);
         marshall(writer, get_gpid(), DSF_THRIFT_BINARY);
         marshall(writer, rconfig, DSF_THRIFT_BINARY);
-        mu->write_to(writer);
+        mu->write_to(writer, msg);
     }
     
     mu->remote_tasks()[addr] = rpc::call(addr, msg,

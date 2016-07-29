@@ -303,6 +303,8 @@ namespace dsn {
         binary_writer(blob& buffer);
         virtual ~binary_writer();
 
+        virtual void flush();
+
         template<typename T> void write_pod(const T& val);
         template<typename T> void write(const T& val) { dassert(false, "write of this type is not implemented"); }
         void write(const int8_t& val) { write_pod(val); }

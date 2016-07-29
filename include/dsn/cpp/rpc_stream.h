@@ -122,8 +122,14 @@ namespace dsn
             }
         }
 
-        ~rpc_write_stream()
+        virtual ~rpc_write_stream()
         {
+            flush();
+        }
+
+        virtual void flush() override
+        {
+            binary_writer::flush();
             commit_buffer();
         }
         
