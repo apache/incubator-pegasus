@@ -803,25 +803,24 @@ INPUT                  = main.md \
                          ../include/dsn/cpp/service_app.h \
                          ../include/dsn/cpp/task_helper.h \
                          ../include/dsn/cpp/zlocks.h \
-                         ../include/dsn/toollet/explorer.h \
-                         ../include/dsn/toollet/fault_injector.h \
-                         ../include/dsn/toollet/profiler.h \
-                         ../include/dsn/toollet/tracer.h \
-                         ../include/dsn/tool/fastrun.h \
-                         ../include/dsn/tool/nativerun.h \
-                         ../include/dsn/tool/simulator.h \
                          ../include/dsn/tool_api.h \
-                         ../include/dsn/internal/task_queue.h \
-                         ../include/dsn/internal/task_worker.h \
-                         ../include/dsn/internal/timer_service.h \
-                         ../include/dsn/internal/zlock_provider.h \
-                         ../include/dsn/internal/nfs.h \
-                         ../include/dsn/internal/network.h \
-                         ../include/dsn/internal/aio_provider.h \
-                         ../include/dsn/internal/env_provider.h \
-                         ../include/dsn/internal/logging_provider.h \
-                         ../include/dsn/internal/perf_counter.h \
-                         ../include/dsn/internal/task_spec.h
+                         ../include/dsn/tool-api/task_queue.h \
+                         ../include/dsn/tool-api/task_worker.h \
+                         ../include/dsn/tool-api/timer_service.h \
+                         ../include/dsn/tool-api/zlock_provider.h \
+                         ../include/dsn/tool-api/nfs.h \
+                         ../include/dsn/tool-api/network.h \
+                         ../include/dsn/tool-api/aio_provider.h \
+                         ../include/dsn/tool-api/env_provider.h \
+                         ../include/dsn/tool-api/logging_provider.h \
+                         ../include/dsn/tool-api/perf_counter.h \
+                         ../include/dsn/tool-api/task_spec.h \
+                         ../include/dsn/tool-api/task.h  \                         
+                         ../src/plugins/tools.common/fault_injector.h \
+                         ../src/plugins/tools.common/profiler.h \
+                         ../src/plugins/tools.common/tracer.h \
+                         ../src/plugins/tools.common/nativerun.h \
+                         ../src/plugins/tools.common/simulator.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

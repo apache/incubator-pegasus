@@ -345,7 +345,7 @@ http_message_parser::http_message_parser()
     {
         auto owner = static_cast<http_message_parser*>(parser->data);
         dassert(owner->_current_buffer.buffer() != nullptr, "the read buffer is not owning");
-        owner->_current_message->buffers[0].assign(owner->_current_buffer.buffer(), at - owner->_current_buffer.buffer_ptr(), length);
+        owner->_current_message->buffers.rbegin()->assign(owner->_current_buffer.buffer(), at - owner->_current_buffer.buffer_ptr(), length);
         owner->_current_message->header->body_length = length;
         owner->_received_messages.emplace(std::move(owner->_current_message));
         return 0;
