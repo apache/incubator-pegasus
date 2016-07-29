@@ -601,8 +601,18 @@ void replica::on_learn_reply(
                 mu->set_logged();
                 _private_log->append(mu, LPC_WRITE_REPLICATION_LOG, this, nullptr);                
 
-                // then we prepare
-                _prepare_list->prepare(mu, partition_status::PS_POTENTIAL_SECONDARY);
+                // then we prepare, it is possible that a committed mutation exists in learner's prepare log,
+                // but with DIFFERENT ballot. Reference https://github.com/imzhenyu/rDSN/issues/496
+                mutation_ptr existing_mutation = _prepare_list->get_mutation_by_decree(mu->data.header.decree);
+                if (existing_mutation!=nullptr && existing_mutation->data.header.ballot>=mu->data.header.ballot)
+                {
+                    ddebug("%s: on learn reply[%016" PRIx64 "]: mutation(%s) exist on the learner with larger decree %" PRIx64 "",
+                        name(), req.signature, mu->name(), existing_mutation->data.header.ballot);
+                }
+                else
+                {
+                    _prepare_list->prepare(mu, partition_status::PS_POTENTIAL_SECONDARY);
+                }
 
                 if (cache_range.first == 0 || mu->data.header.decree < cache_range.first)
                     cache_range.first = mu->data.header.decree;
