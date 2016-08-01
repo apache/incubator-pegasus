@@ -80,10 +80,13 @@ public:
 private:
     void register_rpc_handlers();
 
-    // partition server & client => meta server
+    // client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
     void on_query_configuration_by_index(dsn_message_t req);
+
+    // partition server => meta server
+    void on_config_sync(dsn_message_t req);
 
     // update configuration
     void on_propose_balancer(dsn_message_t req);

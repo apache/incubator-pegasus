@@ -530,7 +530,7 @@ void server_state::set_replica_migration_subscriber_for_test(replica_migration_s
     _replica_migration_subscriber = subscriber;
 }
 
-// partition server & client => meta server
+// client => meta server
 void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
@@ -553,6 +553,52 @@ void server_state::query_configuration_by_node(const configuration_query_by_node
             ++i;
         }
     }
+}
+
+// partition server => meta server
+// this is done in meta_state_thread_pool
+void server_state::on_config_sync(dsn_message_t msg)
+{
+    configuration_query_by_node_request request;
+    configuration_query_by_node_response response;
+
+    dsn::unmarshall(msg, request);
+
+    bool ignore_this_request = false;
+    {
+        zauto_read_lock l(_lock);
+        auto it = _nodes.find(request.node);
+        if (it == _nodes.end())
+            response.err = ERR_OBJECT_NOT_FOUND;
+        else {
+            response.err = ERR_OK;
+            response.partitions.resize(it->second.partitions.size());
+            unsigned i = 0;
+            for (auto& p: it->second.partitions) {
+                std::shared_ptr<app_state> app = get_app(p.get_app_id());
+                dassert(app != nullptr, "");
+                config_context& cc = app->helpers->contexts[p.get_partition_index()];
+
+                // config sync need the newest data to keep the perfect FD, so we just ignore this
+                // message unless all messages are not syning with remote
+                if (cc.stage == config_status::pending_remote_sync)
+                    break;
+
+                response.partitions[i].config = app->partitions[p.get_partition_index()];
+                response.partitions[i].info = *app;
+                ++i;
+            }
+
+            if (i < response.partitions.size()) {
+                ignore_this_request = true;
+            }
+        }
+    }
+
+    if (!ignore_this_request) {
+        reply_message(_meta_svc, msg, response);
+    }
+    dsn_msg_release_ref(msg);
 }
 
 bool server_state::query_configuration_by_gpid(dsn::gpid id, /*out*/partition_configuration& config)

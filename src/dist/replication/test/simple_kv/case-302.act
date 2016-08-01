@@ -19,7 +19,7 @@ wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
 inject:on_rpc_call:rpc_name=RPC_CM_UPDATE_PARTITION_CONFIGURATION,from=r1,to=m
 
 # r1 start to do config_sync (config_sync_interval_ms=4000)
-wait:on_rpc_call:rpc_name=RPC_CM_QUERY_NODE_PARTITIONS,from=r1,to=m
+wait:on_rpc_call:rpc_name=RPC_CM_CONFIG_SYNC,from=r1,to=m
 
 # we ignore the config sync when replica's reconfiguration_task is not null
 config:{1,r1,[]}

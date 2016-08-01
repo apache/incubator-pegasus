@@ -779,7 +779,7 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CONFIG_SYNC, 0, 0);
 
     configuration_query_by_node_request req;
     req.node = _primary_address;

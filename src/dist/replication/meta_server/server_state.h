@@ -58,7 +58,7 @@ class meta_service;
 class server_state
 {
 public:
-    static const int s_state_write_hash = 1;
+    static const int s_state_write_hash = 0;
 public:
     server_state();
     ~server_state();
@@ -80,6 +80,7 @@ public:
     void list_apps(const configuration_list_apps_request& request, configuration_list_apps_response& response);
 
     // update configuration
+    void on_config_sync(dsn_message_t msg);
     void on_update_configuration(std::shared_ptr<configuration_update_request>& request, dsn_message_t msg);
 
     // dump & restore

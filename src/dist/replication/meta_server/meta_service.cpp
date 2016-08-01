@@ -251,6 +251,11 @@ void meta_service::register_rpc_handlers()
         &meta_service::on_query_configuration_by_node
         );
     register_rpc_handler(
+        RPC_CM_CONFIG_SYNC,
+        "config_sync",
+        &meta_service::on_config_sync
+        );
+    register_rpc_handler(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
         "query_configuration_by_index",
         &meta_service::on_query_configuration_by_index
@@ -422,7 +427,7 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
     reply(req, response);
 }
 
-// partition server & client => meta server
+// client => meta server
 void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 {
     configuration_query_by_node_response response;
@@ -443,6 +448,28 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
     dsn::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
+}
+
+// partition sever => meta sever
+// as get stale configuration is not allowed for partition server, we need to dispatch it to the
+// meta state thread pool
+void meta_service::on_config_sync(dsn_message_t req)
+{
+    configuration_query_by_node_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    {
+        // this code piece should be referenced together with meta_service::set_node_state.
+        // In which, the replica server's failure event is dispatched to the meta_state_thread with the protection
+        // of _meta_lock. Here we use this lock again, to make sure the config_sync rpc AFTER the node dead is dispatch
+        // AFTER the node dead event
+        zauto_read_lock l(_meta_lock);
+        dsn_msg_add_ref(req);
+        tasking::enqueue(LPC_META_STATE_HIGH,
+            nullptr,
+            std::bind(&server_state::on_config_sync, _state.get(), req),
+            server_state::s_state_write_hash);
+    }
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)
