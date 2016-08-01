@@ -313,10 +313,19 @@ void replica::on_prepare(dsn_message_t request)
     {
         dassert (mu->data.header.decree <= last_committed_decree() + _options->max_mutation_count_in_prepare_list, "");
     }
+    else if (partition_status::PS_SECONDARY == status())
+    {
+        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit, "");
+    }
     else
     {
-        dassert (partition_status::PS_SECONDARY == status(), "");
-        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit, "");
+        derror(
+            "%s: mutation %s on_prepare failed as invalid replica state, state = %s",
+            name(), mu->name(),
+            enum_to_string(status())
+            );
+        ack_prepare_message(ERR_INVALID_STATE, mu);
+        return;
     }
 
     dassert(mu->log_task() == nullptr, "");

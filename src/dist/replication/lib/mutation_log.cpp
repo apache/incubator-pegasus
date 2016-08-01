@@ -749,7 +749,7 @@ error_code mutation_log::create_new_log_file()
         );
     if (logf == nullptr)
     {
-        derror ("cannot create log file with index %d", _last_file_index);
+        derror ("cannot create log file with index %d", _last_file_index + 1);
         return ERR_FILE_OPERATION_FAILED;
     }
     dassert(logf->end_offset() == logf->start_offset(), "");
@@ -817,7 +817,8 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool
             _global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes
             )
         {
-            create_new_log_file();
+            auto ec = create_new_log_file();
+            dassert(ec == ERR_OK, "create new log file failed");
         }
     }
 

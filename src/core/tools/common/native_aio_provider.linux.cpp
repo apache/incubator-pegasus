@@ -73,7 +73,12 @@ namespace dsn {
 
         dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
+            dsn_handle_t fh = (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
+            if (fh == DSN_INVALID_FILE_HANDLE)
+            {
+                derror("create file failed, err = %s", strerror(errno));
+            }
+            return fh;
         }
 
         error_code native_linux_aio_provider::close(dsn_handle_t fh)
