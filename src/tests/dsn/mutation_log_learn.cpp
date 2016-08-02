@@ -86,7 +86,7 @@ TEST(replication, mutation_log_learn)
 
         // writing logs
         time_tic = clock.now();
-        mutation_log_ptr mlog = new mutation_log_private(logp, 32, gpid, nullptr, 4096);
+        mutation_log_ptr mlog = new mutation_log_private(logp, 32, gpid, nullptr, 4096, 512);
         mlog->open(nullptr, nullptr);
         for (auto& mu : mutations)
         {
@@ -106,7 +106,7 @@ TEST(replication, mutation_log_learn)
 
         // reading logs
         time_tic = clock.now();
-        mlog = new mutation_log_private(logp, 1, gpid, nullptr, 1024);
+        mlog = new mutation_log_private(logp, 1, gpid, nullptr, 1024, 512);
         mlog->open([](mutation_ptr& mu)->bool{ return true; }, nullptr);
         time_toc = clock.now();
         std::cout << "learn_point[" << lp << "]: read time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;

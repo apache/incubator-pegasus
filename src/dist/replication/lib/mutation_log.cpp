@@ -179,13 +179,13 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 
                 dassert(hdr->length + sizeof(log_block_header) == sz, "");
 
-                // flush to ensure that there is no gap between share log and in-memory buffer
-                // so that we can get all mutations in learning process.
-                //
-                // FIXME : the file could have been closed
-                //
-                // TODO : add config option; use O_SYNC when open file
-                //lf->flush();
+                if (_force_flush)
+                {
+                    // flush to ensure that shared log data synced to disk
+                    //
+                    // FIXME : the file could have been closed
+                    lf->flush();
+                }
             }
 
             // here we use _is_writing instead of _issued_write.expired() to check writing done,

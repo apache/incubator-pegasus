@@ -354,11 +354,13 @@ class mutation_log_shared : public mutation_log
 public:
     mutation_log_shared(
         const std::string& dir,
-        int32_t max_log_file_mb
+        int32_t max_log_file_mb,
+        bool force_flush
         ) : 
         mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
         _is_writing(false),
-        _pending_write_start_offset(0)
+        _pending_write_start_offset(0),
+        _force_flush(force_flush)
     {}
 
     virtual ::dsn::task_ptr append(mutation_ptr& mu,
@@ -388,6 +390,8 @@ private:
     int64_t                        _pending_write_start_offset;
     std::shared_ptr<callbacks>     _pending_write_callbacks;
     std::shared_ptr<mutations>     _pending_write_mutations;
+
+    bool                           _force_flush;
 };
 
 class mutation_log_private : public mutation_log
@@ -399,7 +403,7 @@ public:
         gpid gpid,
         replica* r,
         uint32_t batch_buffer_bytes,
-        uint32_t batch_buffer_max_count = 512
+        uint32_t batch_buffer_max_count
         ) : 
         mutation_log(dir, max_log_file_mb, gpid, r), 
         _batch_buffer_bytes(batch_buffer_bytes), 

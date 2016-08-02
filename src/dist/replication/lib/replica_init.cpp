@@ -212,7 +212,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 _options->log_private_file_size_mb,
                 get_gpid(),
                 this,
-                _options->log_private_batch_buffer_kb * 1024
+                _options->log_private_batch_buffer_kb * 1024,
+                _options->log_private_batch_buffer_count
                 );
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
@@ -333,7 +334,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 _options->log_private_file_size_mb,
                 get_gpid(),
                 this,
-                _options->log_private_batch_buffer_kb * 1024
+                _options->log_private_batch_buffer_kb * 1024,
+                _options->log_private_batch_buffer_count
                 );
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 

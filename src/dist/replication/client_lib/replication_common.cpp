@@ -74,7 +74,7 @@ replication_options::replication_options()
 
     log_private_file_size_mb = 32;
     log_private_batch_buffer_kb = 512;
-    log_private_force_flush = true;
+    log_private_batch_buffer_count = 512;
 
     log_shared_file_size_mb = 32;
     log_shared_batch_buffer_kb = 0;
@@ -284,11 +284,11 @@ void replication_options::initialize()
         log_private_batch_buffer_kb,
         "private log buffer size (KB) for batching incoming logs"
         );
-    log_private_force_flush =
-        dsn_config_get_value_bool("replication",
-        "log_private_force_flush",
-        log_private_force_flush,
-        "when write private log, whether to flush file after write done"
+    log_private_batch_buffer_count =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_private_batch_buffer_count",
+        log_private_batch_buffer_count,
+        "private log buffer max item count for batching incoming logs"
         );
 
     log_shared_file_size_mb =
