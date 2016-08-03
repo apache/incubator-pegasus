@@ -145,7 +145,7 @@ void replica::init_learn(uint64_t signature)
                             LPC_CATCHUP_WITH_PRIVATE_LOGS,
                             this,
                             [this]() { this->catch_up_with_private_logs(partition_status::PS_POTENTIAL_SECONDARY); },
-                            gpid_to_hash(get_gpid())
+                            gpid_to_thread_hash(get_gpid())
                             );
                         _potential_secondary_states.catchup_with_private_log_task->enqueue();
 
@@ -200,7 +200,7 @@ void replica::init_learn(uint64_t signature)
         );
 
     _potential_secondary_states.learning_task = 
-        rpc::create_message(RPC_LEARN, request, gpid_to_hash(get_gpid()))
+        rpc::create_message(RPC_LEARN, request, std::chrono::milliseconds(0), gpid_to_thread_hash(get_gpid()))
         .call(_config.primary, this, [this, req_cap = std::move(request)](error_code err, learn_response&& resp) mutable
         {
             on_learn_reply(err, std::move(req_cap), std::move(resp));
@@ -457,7 +457,7 @@ void replica::on_learn_reply(
                 LPC_DELAY_LEARN,
                 this,
                 std::bind(&replica::init_learn, this, req.signature),
-                gpid_to_hash(get_gpid())
+                gpid_to_thread_hash(get_gpid())
                 );
             _potential_secondary_states.delay_learning_task->enqueue(std::chrono::seconds(1));
         }
@@ -883,7 +883,7 @@ void replica::on_copy_remote_state_completed(
         {
             on_learn_remote_state_completed(err);
         },
-        gpid_to_hash(get_gpid())
+        gpid_to_thread_hash(get_gpid())
         );
     _potential_secondary_states.learn_remote_files_completed_task->enqueue();
 }
@@ -974,7 +974,7 @@ void replica::notify_learn_completion()
         );
 
     rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETION_NOTIFY, 
-        report, gpid_to_hash(get_gpid()));
+        report, gpid_to_thread_hash(get_gpid()));
 }
 
 void replica::on_learn_completion_notification(const group_check_response& report)

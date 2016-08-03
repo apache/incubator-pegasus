@@ -60,6 +60,7 @@ namespace dsn {
                     std::chrono::milliseconds(0),
                     0,
                     0,
+                    0,
                     req->file_size_req.source
                     );
         }
@@ -191,6 +192,7 @@ namespace dsn {
                                 end_copy(err, std::move(resp), req.get());
                             },
                             std::chrono::milliseconds(0),
+                            0,
                             0,
                             0,
                             req->file_ctx->user_req->file_size_req.source);

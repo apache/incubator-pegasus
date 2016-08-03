@@ -525,8 +525,7 @@ void replication_ddl_client::end_meta_request(task_ptr callback, int retry_times
             [=, callback_capture = std::move(callback)](error_code err, dsn_message_t request, dsn_message_t response)
             {
                 end_meta_request(std::move(callback_capture), retry_times + 1, err, request, response);
-            },
-            0
+            }
          );
     }
     else

@@ -537,7 +537,7 @@ rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_info* h, ser
     : task(dsn_task_code_t(h->code),  // it is possible that request->local_rpc_code != h->code when it is handled in frameworks
         nullptr, 
         [](void*) { dassert(false, "rpc request task cannot be cancelled"); },
-        static_cast<int>(request->header->client.hash),
+        request->header->client.thread_hash,
         node),
     _request(request),
     _handler(h),
@@ -574,7 +574,7 @@ rpc_response_task::rpc_response_task(
     service_node* node
     )
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, context, on_cancel,
-           hash == 0 ? static_cast<int>(request->header->client.hash) : hash, node)
+           hash == 0 ? request->header->client.thread_hash : hash, node)
 {
     _cb = cb;
     _is_null = (_cb == nullptr);

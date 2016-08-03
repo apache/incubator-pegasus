@@ -85,9 +85,9 @@ namespace dsn
                                         // not be changed in forwarding request.
         struct
         {
-            uint64_t hash; // for both partition hash and thread hash for the exact location of this request
-            int32_t  timeout_ms;
-            int32_t  padding;
+            int32_t  timeout_ms;     // rpc timeout in milliseconds
+            int32_t  thread_hash;    // thread hash used for thread dispatching
+            uint64_t partition_hash; // partition hash used for calculating partition index
         } client;
 
         struct
@@ -137,7 +137,8 @@ namespace dsn
         DSN_API static message_ex* create_request(
             dsn_task_code_t rpc_code, 
             int timeout_milliseconds = 0,
-            uint64_t hash = 0
+            int thread_hash = 0,
+            uint64_t partition_hash = 0
             );
 
         DSN_API static message_ex* create_receive_message_with_standalone_header(const blob& data);

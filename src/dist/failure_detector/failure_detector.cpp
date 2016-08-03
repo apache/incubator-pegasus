@@ -557,9 +557,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
                 end_ping(err, std::move(resp), nullptr);
             }
         },
-        0,
-        std::chrono::milliseconds(_check_interval_milliseconds),
-        0
+        std::chrono::milliseconds(_check_interval_milliseconds)
         );
 }
 

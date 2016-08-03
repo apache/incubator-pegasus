@@ -87,6 +87,7 @@ TEST(core, rpc)
         server,
         RPC_TEST_HASH,
         req,
+        std::chrono::milliseconds(0),
         1
         );
     EXPECT_TRUE(result.first == ERR_OK);

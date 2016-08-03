@@ -12,33 +12,35 @@ $_IDL_FORMAT = $argv[4];
 <?=$_PROG->get_cpp_namespace_begin()?>
 
 <?php foreach ($_PROG->services as $svc) { ?>
-class <?=$svc->name?>_client 
+class <?=$svc->name?>_client
     : public virtual ::dsn::clientlet
 {
 public:
     <?=$svc->name?>_client() { }
     explicit <?=$svc->name?>_client(::dsn::rpc_address server) { _server = server; }
     virtual ~<?=$svc->name?>_client() {}
-    
+
 <?php foreach ($svc->functions as $f) { ?>
- 
+
     // ---------- call <?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
         const <?=$f->get_cpp_request_type_name()?>& args,
-        uint64_t hash = 0,
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
-        ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server), 
-            <?=$f->get_rpc_code()?>, args, hash);
+        ::dsn::rpc::call_one_way_typed(server_addr.unwrap_or(_server),
+            <?=$f->get_rpc_code()?>, args, thread_hash, partition_hash);
     }
 <?php    } else { ?>
-    // - synchronous 
+    // - synchronous
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_cpp_request_type_name()?>& args,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        uint64_t hash = 0,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -49,33 +51,35 @@ public:
                 args,
                 nullptr,
                 empty_callback,
-                hash,
                 timeout,
-                0
+                thread_hash,
+                partition_hash
                 )
             );
     }
-    
-    // - asynchronous with on-stack <?=$f->get_cpp_request_type_name()?> and <?=$f->get_cpp_return_type()?>  
+
+    // - asynchronous with on-stack <?=$f->get_cpp_request_type_name()?> and <?=$f->get_cpp_return_type()?>
     template<typename TCallback>
     ::dsn::task_ptr <?=$f->name?>(
         const <?=$f->get_cpp_request_type_name()?>& args,
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int reply_hash = 0,
-        uint64_t hash = 0,
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
+        int reply_thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
         return ::dsn::rpc::call(
-                    server_addr.unwrap_or(_server), 
-                    <?=$f->get_rpc_code()?>, 
+                    server_addr.unwrap_or(_server),
+                    <?=$f->get_rpc_code()?>,
                     args,
                     this,
                     std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
-                    reply_hash
+                    timeout,
+                    thread_hash,
+                    partition_hash,
+                    reply_thread_hash
                     );
     }
 <?php    }?>

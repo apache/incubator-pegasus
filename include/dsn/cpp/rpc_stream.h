@@ -100,8 +100,8 @@ namespace dsn
         }
 
         // for request
-        rpc_write_stream(task_code code, int timeout_ms = 0, uint64_t hash = 0)
-            : safe_handle<dsn_msg_release_ref>(dsn_msg_create_request(code, timeout_ms, hash), false)
+        rpc_write_stream(task_code code, int timeout_ms = 0, int thread_hash = 0, uint64_t partition_hash = 0)
+            : safe_handle<dsn_msg_release_ref>(dsn_msg_create_request(code, timeout_ms, thread_hash, partition_hash), false)
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;

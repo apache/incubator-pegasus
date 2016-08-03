@@ -177,7 +177,7 @@ namespace dsn
                 return;
             }
 
-            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
+            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS);
 
             configuration_query_by_node_request req;
             req.node = primary_address();
@@ -676,7 +676,7 @@ namespace dsn
             rpc_address node = primary_address();
             node.assign_ipv4(node.ip(), app->working_port);
             
-            dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
+            dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
             std::shared_ptr<configuration_update_request> request(new configuration_update_request);
             request->info.is_stateful = false;

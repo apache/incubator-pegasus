@@ -139,7 +139,7 @@ void replica::init_prepare(mutation_ptr& mu)
             std::bind(&replica::on_append_log_completed, this, mu,
                       std::placeholders::_1,
                       std::placeholders::_2),
-                      gpid_to_hash(get_gpid())
+                      gpid_to_thread_hash(get_gpid())
             );
 
         dassert(nullptr != mu->log_task(), "");
@@ -163,7 +163,7 @@ void replica::send_prepare_message(
     int timeout_milliseconds,
     int64_t learn_signature)
 {
-    dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
+    dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_thread_hash(get_gpid()));
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig, learn_signature);
 
@@ -180,7 +180,7 @@ void replica::send_prepare_message(
         {
             on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
         },
-        gpid_to_hash(get_gpid())
+        gpid_to_thread_hash(get_gpid())
         );
 
     dinfo(
@@ -335,7 +335,7 @@ void replica::on_prepare(dsn_message_t request)
         std::bind(&replica::on_append_log_completed, this, mu,
                   std::placeholders::_1,
                   std::placeholders::_2),
-        gpid_to_hash(get_gpid())
+        gpid_to_thread_hash(get_gpid())
         );
 }
 
@@ -401,7 +401,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             LPC_WRITE_REPLICATION_LOG,
             nullptr,
             nullptr,
-            gpid_to_hash(get_gpid())
+            gpid_to_thread_hash(get_gpid())
             );
     }
 }

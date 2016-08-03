@@ -781,7 +781,7 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CONFIG_SYNC, 0, 0);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CONFIG_SYNC);
 
     configuration_query_by_node_request req;
     req.node = _primary_address;
@@ -853,7 +853,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
                 this,
                 std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-                gpid_to_hash(it->config.pid)
+                gpid_to_thread_hash(it->config.pid)
                 );
         }
 
@@ -864,7 +864,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
                 this,
                 std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
-                gpid_to_hash(it->first)
+                gpid_to_thread_hash(it->first)
                 );
         }
     }
@@ -882,7 +882,7 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
             this,
             std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-            gpid_to_hash(it->config.pid)
+            gpid_to_thread_hash(it->config.pid)
             );
     }
 }
@@ -942,7 +942,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpi
 
 void replica_stub::remove_replica_on_meta_server(const app_info& info, const partition_configuration& config)
 {
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = info;
@@ -990,7 +990,7 @@ void replica_stub::on_meta_server_disconnected()
             LPC_CM_DISCONNECTED_SCATTER,
             this,
             std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, it->first),
-            gpid_to_hash(it->first)
+            gpid_to_thread_hash(it->first)
             );
     }
 }
@@ -1230,11 +1230,11 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
 
     if (nullptr != req)
     {
-        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.pid));
+        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_thread_hash(req->config.pid));
     }
     else if (nullptr != req2)
     {
-        rpc::call_one_way_typed(_primary_address, RPC_CONFIG_PROPOSAL, *req2, gpid_to_hash(req2->config.pid));
+        rpc::call_one_way_typed(_primary_address, RPC_CONFIG_PROPOSAL, *req2, gpid_to_thread_hash(req2->config.pid));
     }
 }
 

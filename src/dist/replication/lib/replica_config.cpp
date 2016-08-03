@@ -215,7 +215,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         state.signature
     );
 
-    rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
+    rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_thread_hash(get_gpid()));
 }
 
 void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
@@ -349,7 +349,7 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
     
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = _app_info;
@@ -377,7 +377,7 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
         {
             on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
         },
-        gpid_to_hash(get_gpid())
+        gpid_to_thread_hash(get_gpid())
         );
 }
 
@@ -425,12 +425,12 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
                         {
                             on_update_configuration_on_meta_server_reply(err, request, response, std::move(req2));
                         },
-                        gpid_to_hash(get_gpid())
+                        gpid_to_thread_hash(get_gpid())
                     );
                     dsn_rpc_call(target.c_addr(), _primary_states.reconfiguration_task->native_handle());
                     dsn_msg_release_ref(request);
                 },
-                gpid_to_hash(get_gpid()),
+                gpid_to_thread_hash(get_gpid()),
                 std::chrono::seconds(1)
                 );
             return;
@@ -477,7 +477,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             {
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, req->node, rconfig);
-                rpc::call_one_way_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_hash(get_gpid()));
+                rpc::call_one_way_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_thread_hash(get_gpid()));
             }
             break;
         default:

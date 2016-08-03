@@ -244,7 +244,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                             LPC_REPLICATION_ERROR,
                             this,
                             [this, err]() { handle_local_failure(err); },
-                            gpid_to_hash(get_gpid())
+                            gpid_to_thread_hash(get_gpid())
                             );
                     },
                     replay_condition
@@ -346,7 +346,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         LPC_REPLICATION_ERROR,
                         this,
                         [this, err]() { handle_local_failure(err); },
-                        gpid_to_hash(get_gpid())
+                        gpid_to_thread_hash(get_gpid())
                         );
                 }
             );
@@ -359,7 +359,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 this,
                 [this] { on_checkpoint_timer(); },
                 std::chrono::seconds(_options->checkpoint_interval_seconds),
-                gpid_to_hash(get_gpid())
+                gpid_to_thread_hash(get_gpid())
                 );
         }
     }
@@ -406,7 +406,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
             LPC_WRITE_REPLICATION_LOG,
             this,
             nullptr,
-            gpid_to_hash(get_gpid())
+            gpid_to_thread_hash(get_gpid())
             );
     }
 

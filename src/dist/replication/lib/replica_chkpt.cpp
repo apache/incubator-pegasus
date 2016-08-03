@@ -127,7 +127,8 @@ namespace dsn {
                             auto response_alloc = std::make_shared<learn_response>(std::move(response));
                             on_copy_checkpoint_ack(err_local, rc, response_alloc);
                         },
-                        gpid_to_hash(get_gpid())
+                        std::chrono::milliseconds(0),
+                        gpid_to_thread_hash(get_gpid())
                         );
                 }
             }
@@ -145,7 +146,7 @@ namespace dsn {
                         LPC_CHECKPOINT_REPLICA,
                         this,
                         [this] {background_checkpoint();},
-                        gpid_to_hash(get_gpid()));
+                        gpid_to_thread_hash(get_gpid()));
                     _secondary_states.checkpoint_task->enqueue();
                 }
             }
@@ -254,7 +255,7 @@ namespace dsn {
                 {
                     this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
                 },
-                gpid_to_hash(get_gpid())
+                gpid_to_thread_hash(get_gpid())
                 );
         }
 
@@ -301,7 +302,7 @@ namespace dsn {
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
                 [this, err]() { this->on_checkpoint_completed(err); },
-                gpid_to_hash(get_gpid())
+                gpid_to_thread_hash(get_gpid())
                 );
         }
 
@@ -326,7 +327,7 @@ namespace dsn {
                     {
                         this->on_learn_remote_state_completed(err);
                     },
-                    gpid_to_hash(get_gpid())
+                    gpid_to_thread_hash(get_gpid())
                     );
                 _potential_secondary_states.learn_remote_files_completed_task->enqueue();
             }
@@ -339,7 +340,7 @@ namespace dsn {
                     {
                         this->on_checkpoint_completed(err);
                     },
-                    gpid_to_hash(get_gpid())
+                    gpid_to_thread_hash(get_gpid())
                     );
                 _secondary_states.checkpoint_completed_task->enqueue();
             }
@@ -397,7 +398,7 @@ namespace dsn {
                         LPC_CATCHUP_WITH_PRIVATE_LOGS,
                         this,
                         [this]() { this->catch_up_with_private_logs(partition_status::PS_SECONDARY); },
-                        gpid_to_hash(get_gpid())
+                        gpid_to_thread_hash(get_gpid())
                         );
                     _secondary_states.catchup_with_private_log_task->enqueue();
                 }

@@ -56,7 +56,7 @@ TEST(core, message_ex)
 
     { // create_request
         uint64_t next_id = message_ex::new_id() + 1;
-        message_ex* m = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
+        message_ex* m = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1, 2);
         ASSERT_EQ(0, m->get_count());
 
         message_header& h = *m->header;
@@ -71,7 +71,8 @@ TEST(core, message_ex)
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
-        ASSERT_EQ(1, h.client.hash);
+        ASSERT_EQ(1, h.client.thread_hash);
+        ASSERT_EQ(2, h.client.partition_hash);
         ASSERT_EQ(0, h.from_address.port());
 
         ASSERT_EQ(1u, m->buffers.size());
@@ -178,7 +179,7 @@ TEST(core, message_ex)
     }
 
     { // c interface
-        dsn_message_t request = dsn_msg_create_request(RPC_CODE_FOR_TEST, 100, 1);
+        dsn_message_t request = dsn_msg_create_request(RPC_CODE_FOR_TEST, 100, 1, 2);
         dsn_msg_options_t opts;
 
         opts.context.context = 444;
@@ -191,7 +192,8 @@ TEST(core, message_ex)
 
         dsn_msg_get_options(request, &opts);
         ASSERT_EQ(100, opts.timeout_ms);
-        ASSERT_EQ(1, opts.hash);
+        ASSERT_EQ(1, opts.thread_hash);
+        ASSERT_EQ(2, opts.partition_hash);
         ASSERT_EQ(333u, opts.gpid.value);
         ASSERT_EQ(444u, opts.context.context);
 

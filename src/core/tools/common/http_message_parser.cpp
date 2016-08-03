@@ -71,7 +71,7 @@ http_message_parser::http_message_parser()
     _parser_setting.on_url = [](http_parser* parser, const char *at, size_t length)->int
     {
         // see https://github.com/imzhenyu/rDSN/issues/420
-        // url = "/" + payload_format + "/" + hash + "/" + rpc_code;
+        // url = "/" + payload_format + "/" + thread_hash + "/" + rpc_code;
         // e.g., /DSF_THRIFT_JSON/0/RPC_CLI_CLI_CALL
 
         std::string url(at, length);
@@ -98,12 +98,12 @@ http_message_parser::http_message_parser()
         }
         hdr->context.u.serialize_format = fmt;
 
-        // hash
+        // thread-hash
         char *end;
-        hdr->client.hash = std::strtoull(args[1].c_str(), &end, 10);
+        hdr->client.thread_hash = std::strtol(args[1].c_str(), &end, 10);
         if (end != args[1].c_str() + args[1].length())
         {
-            derror("invalid hash in url %s", url.c_str());
+            derror("invalid thread hash in url %s", url.c_str());
             return 1;
         }
 
@@ -150,13 +150,17 @@ http_message_parser::http_message_parser()
         {
             owner->_response_parse_state = parsing_from_address;
         }
-        else if (MATCH("client_hash"))
-        {
-            owner->_response_parse_state = parsing_client_hash;
-        }
         else if (MATCH("client_timeout"))
         {
             owner->_response_parse_state = parsing_client_timeout;
+        }
+        else if (MATCH("client_thread_hash"))
+        {
+            owner->_response_parse_state = parsing_client_thread_hash;
+        }
+        else if (MATCH("client_partition_hash"))
+        {
+            owner->_response_parse_state = parsing_client_partition_hash;
         }
         else if (MATCH("server_error"))
         {
@@ -270,17 +274,6 @@ http_message_parser::http_message_parser()
             header->from_address.assign_ipv4(host.c_str(), port);
             break;
         }
-        case parsing_client_hash:
-        {
-            char *end;
-            header->client.hash = std::strtoull(at, &end, 10);
-            if (end != at + length)
-            {
-                derror("invalid header.client_hash '%.*s'", length, at);
-                return 1;
-            }
-            break;
-        }
         case parsing_client_timeout:
         {
             char *end;
@@ -288,6 +281,28 @@ http_message_parser::http_message_parser()
             if (end != at + length)
             {
                 derror("invalid header.client_timeout '%.*s'", length, at);
+                return 1;
+            }
+            break;
+        }
+        case parsing_client_thread_hash:
+        {
+            char *end;
+            header->client.thread_hash = std::strtol(at, &end, 10);
+            if (end != at + length)
+            {
+                derror("invalid header.client_thread_hash '%.*s'", length, at);
+                return 1;
+            }
+            break;
+        }
+        case parsing_client_partition_hash:
+        {
+            char *end;
+            header->client.partition_hash = std::strtoull(at, &end, 10);
+            if (end != at + length)
+            {
+                derror("invalid header.client_partition_hash '%.*s'", length, at);
                 return 1;
             }
             break;
@@ -414,8 +429,9 @@ void http_message_parser::prepare_on_send(message_ex *msg)
         ss << "partition_index: " << header->gpid.u.partition_index << "\r\n";
         ss << "serialize_format: " << enum_to_string((dsn_msg_serialize_format)header->context.u.serialize_format) << "\r\n";
         ss << "from_address: " << header->from_address.to_string() << "\r\n";
-        ss << "client_hash: " << header->client.hash << "\r\n";
         ss << "client_timeout: " << header->client.timeout_ms << "\r\n";
+        ss << "client_thread_hash: " << header->client.thread_hash << "\r\n";
+        ss << "client_partition_hash: " << header->client.partition_hash << "\r\n";
         ss << "Content-Length: " << msg->body_size() << "\r\n";
         ss << "\r\n";
         header_str = ss.str();

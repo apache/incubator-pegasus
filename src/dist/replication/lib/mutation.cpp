@@ -279,7 +279,7 @@ mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool ba
     dassert(gpid.get_app_id() != 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(
         RPC_PREPARE,
-        gpid_to_hash(gpid)
+        gpid_to_thread_hash(gpid)
         );
 }
 

@@ -61,7 +61,7 @@ void replica::init_group_check()
         this,
         [this] {broadcast_group_check();},
         std::chrono::milliseconds(_options->group_check_interval_ms),
-        gpid_to_hash(get_gpid())
+        gpid_to_thread_hash(get_gpid())
         );
 }
 
@@ -122,7 +122,8 @@ void replica::broadcast_group_check()
                 auto alloc = std::make_shared<group_check_response>(std::move(resp));
                 on_group_check_reply(err, request, alloc);
             },
-            gpid_to_hash(get_gpid())
+            std::chrono::milliseconds(0),
+            gpid_to_thread_hash(get_gpid())
             );
 
         _primary_states.group_check_pending_replies[addr] = callback_task;
@@ -244,7 +245,7 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
         LPC_GROUP_CHECK,
         this,
         [this] {broadcast_group_check();},
-        gpid_to_hash(get_gpid()),
+        gpid_to_thread_hash(get_gpid()),
         std::chrono::milliseconds(delay_milliseconds)
         );
 }

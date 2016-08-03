@@ -52,7 +52,8 @@ public:
     std::pair< ::dsn::error_code, std::string> ping_sync(
         const std::string& val, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<std::string>(
@@ -62,8 +63,9 @@ public:
                 val,
                 nullptr,
                 empty_callback,
-                hash,
-                timeout
+                timeout,
+                thread_hash,
+                partition_hash
                 )
             );
     }
@@ -74,8 +76,9 @@ public:
         const std::string& val, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         int reply_thread_hash = 0,
-        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -85,8 +88,9 @@ public:
                     val, 
                     this,
                     std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
+                    timeout,
+                    thread_hash,
+                    partition_hash,
                     reply_thread_hash
                     );
     }

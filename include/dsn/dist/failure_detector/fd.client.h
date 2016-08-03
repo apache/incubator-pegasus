@@ -53,7 +53,8 @@ public:
     std::pair< ::dsn::error_code, beacon_ack> ping_sync(
         const beacon_msg& beacon, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -64,8 +65,9 @@ public:
                 beacon,
                 nullptr,
                 empty_callback,
-                hash,
-                timeout
+                timeout,
+                thread_hash,
+                partition_hash
                 )
             );
     }
@@ -76,8 +78,9 @@ public:
         const beacon_msg& beacon, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         int reply_thread_hash = 0,
-        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -87,8 +90,9 @@ public:
                     beacon, 
                     this,
                     std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
+                    timeout,
+                    thread_hash,
+                    partition_hash,
                     reply_thread_hash
                     );
     }

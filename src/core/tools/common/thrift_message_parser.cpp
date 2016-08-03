@@ -228,9 +228,11 @@ namespace dsn
         buffer += sizeof(int32_t);
         header.partition_index = be32toh( *(int32_t*)(buffer) );
         buffer += sizeof(int32_t);
-        header.client_hash = be64toh( *(int64_t*)(buffer) );
-        buffer += sizeof(int64_t);
-        header.client_timeout = be64toh( *(int64_t*)(buffer) );
+        header.client_timeout = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.client_thread_hash = be32toh( *(int32_t*)(buffer) );
+        buffer += sizeof(int32_t);
+        header.client_partition_hash = be64toh( *(int64_t*)(buffer) );
     }
 
     bool thrift_message_parser::check_thrift_header(const thrift_message_header& header)
@@ -282,8 +284,9 @@ namespace dsn
         strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
         dsn_hdr->gpid.u.app_id = thrift_header.app_id;
         dsn_hdr->gpid.u.partition_index = thrift_header.partition_index;
-        dsn_hdr->client.hash = thrift_header.client_hash;
         dsn_hdr->client.timeout_ms = thrift_header.client_timeout;
+        dsn_hdr->client.thread_hash = thrift_header.client_thread_hash;
+        dsn_hdr->client.partition_hash = thrift_header.client_partition_hash;
 
         if (mtype == ::apache::thrift::protocol::T_CALL || mtype == ::apache::thrift::protocol::T_ONEWAY)
             dsn_hdr->context.u.is_request = 1;

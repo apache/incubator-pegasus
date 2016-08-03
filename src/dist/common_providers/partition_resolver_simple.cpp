@@ -268,7 +268,7 @@ namespace dsn
         task_ptr partition_resolver_simple::query_config(int partition_index)
         {
             dinfo("%s.client: start query config, gpid = %d.%d", _app_path.c_str(), _app_id, partition_index);
-            auto msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
+            auto msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
 
             configuration_query_by_index_request req;
             req.app_name = _app_path;

@@ -52,8 +52,9 @@ namespace dsn
         uint32_t       body_crc32;
         int32_t        app_id;
         int32_t        partition_index;
-        uint64_t       client_hash;
-        int64_t        client_timeout;
+        int32_t        client_timeout;
+        int32_t        client_thread_hash;
+        uint64_t       client_partition_hash;
         //------------- sizeof(thrift_message_header) = 48 ----------//
     };
 

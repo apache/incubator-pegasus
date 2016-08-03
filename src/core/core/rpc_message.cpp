@@ -51,11 +51,12 @@ using namespace dsn::utils;
 
 DSN_API dsn_message_t dsn_msg_create_request(
     dsn_task_code_t rpc_code, 
-    int timeout_milliseconds, 
-    uint64_t hash
+    int timeout_milliseconds,
+    int thread_hash,
+    uint64_t partition_hash
     )
 {
-    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
+    return ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, thread_hash, partition_hash);
 }
 
 DSN_API dsn_message_t dsn_msg_create_received_request(
@@ -63,13 +64,15 @@ DSN_API dsn_message_t dsn_msg_create_received_request(
     dsn_msg_serialize_format serialization_type,
     void* buffer,
     int size,
-    uint64_t hash
+    int thread_hash,
+    uint64_t partition_hash
     )
 {
     ::dsn::blob bb((const char*)buffer, 0, size);
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
-    msg->header->client.hash = hash;
+    msg->header->client.thread_hash = thread_hash;
+    msg->header->client.partition_hash = partition_hash;
     msg->header->context.u.serialize_format = serialization_type;
     msg->add_ref(); // released by callers explicitly using dsn_msg_release
     return msg;
@@ -159,9 +162,14 @@ DSN_API void dsn_msg_set_options(
         hdr->client.timeout_ms = opts->timeout_ms;
     }
     
-    if (mask & DSN_MSGM_HASH)
+    if (mask & DSN_MSGM_THREAD_HASH)
     {
-        hdr->client.hash = opts->hash;
+        hdr->client.thread_hash = opts->thread_hash;
+    }
+
+    if (mask & DSN_MSGM_PARTITION_HASH)
+    {
+        hdr->client.partition_hash = opts->partition_hash;
     }
     
     if (mask & DSN_MSGM_VNID)
@@ -193,10 +201,11 @@ DSN_API void dsn_msg_get_options(
     )
 {
     auto hdr = ((::dsn::message_ex*)msg)->header;
-    opts->context = hdr->context;
-    opts->hash = hdr->client.hash;
     opts->timeout_ms = hdr->client.timeout_ms;
+    opts->thread_hash = hdr->client.thread_hash;
+    opts->partition_hash = hdr->client.partition_hash;
     opts->gpid = hdr->gpid;
+    opts->context = hdr->context;
 }
 
 namespace dsn {
@@ -379,7 +388,7 @@ message_ex* message_ex::copy_and_prepare_send(bool clone_content)
     return copy;
 }
 
-message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, uint64_t hash)
+message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int thread_hash, uint64_t partition_hash)
 {
     message_ex* msg = new message_ex();
     msg->_is_read = false;
@@ -392,7 +401,8 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
-    hdr.client.hash = hash;
+    hdr.client.thread_hash = thread_hash;
+    hdr.client.partition_hash = partition_hash;
 
     task_spec* sp = task_spec::get(rpc_code);
     if (0 == timeout_milliseconds)

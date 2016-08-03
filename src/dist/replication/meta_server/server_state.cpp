@@ -898,7 +898,7 @@ void server_state::send_proposal(rpc_address target, const configuration_update_
         proposal.config.pid.get_partition_index(),
         proposal.config.ballot
         );
-    dsn_message_t msg = dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, gpid_to_hash(proposal.config.pid));
+    dsn_message_t msg = dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, gpid_to_thread_hash(proposal.config.pid));
     ::marshall(msg, proposal);
     _meta_svc->send_message(target, msg);
 }

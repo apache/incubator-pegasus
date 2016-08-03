@@ -125,7 +125,7 @@ TEST(core, command_manager)
     rcmd.arguments.clear();
     rpc_address addr("localhost", 20109);
     result.clear();
-    std::tie(err, result) = cli.call_sync(rcmd, std::chrono::seconds(10), 0, addr);
+    std::tie(err, result) = cli.call_sync(rcmd, std::chrono::seconds(10), 0, 0, addr);
     ASSERT_TRUE(err == ERR_TIMEOUT || err == ERR_NETWORK_FAILURE);
 }
 

@@ -256,7 +256,7 @@ namespace dsn {
             {
                 ::dsn::rpc_read_stream response;
                 
-                dsn_message_t msg = dsn_msg_create_request(RPC_CLI_CLI_CALL, 0, 0);
+                dsn_message_t msg = dsn_msg_create_request(RPC_CLI_CLI_CALL);
                 ::dsn::command rcmd;
                 rcmd.cmd = cmd;
                 rcmd.arguments = args;

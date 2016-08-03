@@ -18,6 +18,7 @@ TEST(core, corrupt_message)
         server,
         RPC_TEST_HASH1,
         req,
+        std::chrono::milliseconds(0),
         1
         );
     ASSERT_EQ(result.first, ERR_TIMEOUT);
@@ -26,6 +27,7 @@ TEST(core, corrupt_message)
         server,
         RPC_TEST_HASH2,
         req,
+        std::chrono::milliseconds(0),
         1
         );
     ASSERT_EQ(result.first, ERR_TIMEOUT);
@@ -34,6 +36,7 @@ TEST(core, corrupt_message)
         server,
         RPC_TEST_HASH3,
         req,
+        std::chrono::milliseconds(0),
         1
         );
     ASSERT_EQ(result.first, ERR_TIMEOUT);
@@ -42,6 +45,7 @@ TEST(core, corrupt_message)
         server,
         RPC_TEST_HASH4,
         req,
+        std::chrono::milliseconds(0),
         1
         );
     ASSERT_EQ(result.first, ERR_TIMEOUT);

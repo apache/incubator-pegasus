@@ -119,7 +119,7 @@ namespace dsn {
                     std::cout << "CALL " << _target.to_string() << " ..." << std::endl;
                     error_code err;
                     std::string result;
-                    std::tie(err, result) = _client.call_sync(rcmd, _timeout, 0, _target);
+                    std::tie(err, result) = _client.call_sync(rcmd, _timeout, 0, 0, _target);
                     if (err == ERR_OK)
                     {
                         std::cout << result << std::endl;

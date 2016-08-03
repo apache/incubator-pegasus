@@ -80,8 +80,9 @@ namespace dsn
             parsing_partition_index,
             parsing_serialize_format,
             parsing_from_address,
-            parsing_client_hash,
             parsing_client_timeout,
+            parsing_client_thread_hash,
+            parsing_client_partition_hash,
             parsing_server_error,
         } _response_parse_state;
 };

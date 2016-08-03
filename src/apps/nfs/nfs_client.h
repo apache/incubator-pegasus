@@ -52,7 +52,8 @@ public:
     std::pair< ::dsn::error_code, copy_response> copy_sync(
         const copy_request& request, 
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<copy_response>(
@@ -62,8 +63,9 @@ public:
                 request,
                 nullptr,
                 empty_callback,
-                hash,
-                timeout
+                timeout,
+                thread_hash,
+                partition_hash
                 )
             );
     }
@@ -74,8 +76,9 @@ public:
         const copy_request& request, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         int reply_thread_hash = 0,
-        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -85,8 +88,9 @@ public:
                     request, 
                     this,
                     std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
+                    timeout,
+                    thread_hash,
+                    partition_hash,
                     reply_thread_hash
                     );
     }
@@ -95,8 +99,9 @@ public:
     // - synchronous 
     std::pair< ::dsn::error_code, get_file_size_response> get_file_size_sync(
         const get_file_size_request& request, 
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int hash = 0,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<get_file_size_response>(
@@ -106,8 +111,9 @@ public:
                 request,
                 nullptr,
                 empty_callback,
-                hash,
-                timeout
+                timeout,
+                thread_hash,
+                partition_hash
                 )
             );
     }
@@ -118,8 +124,9 @@ public:
         const get_file_size_request& request, 
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+        int thread_hash = 0,
+        uint64_t partition_hash = 0,
         int reply_thread_hash = 0,
-        uint64_t hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
     {
@@ -129,8 +136,9 @@ public:
                     request, 
                     this,
                     std::forward<TCallback>(callback),
-                    hash, 
-                    timeout, 
+                    timeout,
+                    thread_hash,
+                    partition_hash,
                     reply_thread_hash
                     );
     }

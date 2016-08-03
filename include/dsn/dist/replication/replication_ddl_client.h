@@ -75,7 +75,7 @@ private:
             int reply_thread_hash = 0
             )
     {
-        dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
+        dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds);
         task_ptr task = ::dsn::rpc::create_rpc_response_task(msg, nullptr, [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); }, reply_thread_hash);
         ::dsn::marshall(msg, *req);
         rpc::call(
@@ -85,8 +85,7 @@ private:
             [this, task] (error_code err, dsn_message_t request, dsn_message_t response)
             {
                 end_meta_request(std::move(task), 0, err, request, response);
-            },
-            0
+            }
          );
         return task;
     }

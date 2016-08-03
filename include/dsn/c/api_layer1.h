@@ -623,7 +623,8 @@ rpc message read/write
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                uint64_t hash DEFAULT(0)
+                                int thread_hash DEFAULT(0),
+                                uint64_t partition_hash DEFAULT(0)
                                 );
 
 /*! create a RPC response message correspondent to the given request message */
@@ -656,7 +657,8 @@ extern DSN_API dsn_message_t dsn_msg_create_received_request(
                             dsn_msg_serialize_format serialization_type,
                             void* buffer,
                             int size,
-                            uint64_t hash DEFAULT(0)
+                            int thread_hash DEFAULT(0),
+                            uint64_t partition_hash DEFAULT(0)
                             );
 
 /*! type of the parameter in \ref dsn_msg_context_t */
@@ -689,23 +691,25 @@ typedef union dsn_global_partition_id
     uint64_t value;
 } dsn_gpid;
 
-inline uint64_t dsn_gpid_to_hash(dsn_gpid gpid)
+inline int dsn_gpid_to_thread_hash(dsn_gpid gpid)
 {
-    return (((uint64_t)gpid.u.app_id) << 32) + gpid.u.partition_index;
+    return gpid.u.app_id + gpid.u.partition_index;
 }
 
-# define DSN_MSGM_TIMEOUT (0x1 << 0) ///< msg timeout is to be set/get
-# define DSN_MSGM_HASH    (0x1 << 1) ///< thread hash is to be set/get
-# define DSN_MSGM_VNID    (0x1 << 2) ///< virtual node id (gpid) is to be set/get
-# define DSN_MSGM_CONTEXT (0x1 << 3) ///< rpc message context is to be set/get
+# define DSN_MSGM_TIMEOUT        (0x1 << 0) ///< msg timeout is to be set/get
+# define DSN_MSGM_THREAD_HASH    (0x1 << 1) ///< thread hash is to be set/get
+# define DSN_MSGM_PARTITION_HASH (0x1 << 2) ///< partition hash is to be set/get
+# define DSN_MSGM_VNID           (0x1 << 3) ///< virtual node id (gpid) is to be set/get
+# define DSN_MSGM_CONTEXT        (0x1 << 4) ///< rpc message context is to be set/get
 
 /*! options for RPC messages, used by \ref dsn_msg_set_options and \ref dsn_msg_get_options */
 typedef struct dsn_msg_options_t
 {
-    int               timeout_ms;  ///< RPC timeout in milliseconds
-    int               hash;        ///< thread hash on RPC server
-    dsn_gpid          gpid;        ///< virtual node id, 0 for none
-    dsn_msg_context_t context;     ///< see \ref dsn_msg_context_t
+    int               timeout_ms;     ///< RPC timeout in milliseconds
+    int               thread_hash;    ///< thread hash on RPC server
+    uint64_t          partition_hash; ///< partition hash for calculating partition index
+    dsn_gpid          gpid;           ///< virtual node id, 0 for none
+    dsn_msg_context_t context;        ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
 /*! make sure type sizes match as we simply use uint64_t across language boundaries */
