@@ -282,14 +282,20 @@ void configuration::get_all_sections(std::vector<std::string>& sections)
 
 void configuration::get_all_keys(const char* section, std::vector<const char*>& keys)
 {
+    std::multimap<int, const char*> ordered_keys;
     keys.clear();
     auto it = _configs.find(section);
     if (it != _configs.end())
     {
         for (auto it2 = it->second.begin(); it2 != it->second.end(); it2++)
         {
-            keys.push_back(it2->first.c_str());
+            ordered_keys.emplace(it2->second->line, it2->first.c_str());            
         }
+    }
+
+    for (auto& k : ordered_keys)
+    {
+        keys.push_back(k.second);
     }
 }
 
@@ -399,10 +405,16 @@ void configuration::dump(std::ostream& os)
     {
         os << "[" << s.first << "]" << std::endl;
 
+        std::multimap<int, conf*> ordered_entities;
         for (auto& kv : s.second)
         {
+            ordered_entities.emplace(kv.second->line, kv.second);            
+        }
+
+        for (auto& kv : ordered_entities)
+        {
             os << "; " << kv.second->dsptr << std::endl;
-            os << kv.first << " = " << kv.second->value << std::endl << std::endl;
+            os << kv.second->key << " = " << kv.second->value << std::endl << std::endl;
         }
 
         os << std::endl;
