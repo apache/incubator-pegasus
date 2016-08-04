@@ -693,7 +693,7 @@ typedef union dsn_global_partition_id
 
 inline int dsn_gpid_to_thread_hash(dsn_gpid gpid)
 {
-    return gpid.u.app_id + gpid.u.partition_index;
+    return gpid.u.app_id * 7919 + gpid.u.partition_index;
 }
 
 # define DSN_MSGM_TIMEOUT        (0x1 << 0) ///< msg timeout is to be set/get

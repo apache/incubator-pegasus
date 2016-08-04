@@ -152,7 +152,7 @@ void task_worker_pool::add_timer(task* t)
         _per_node_timer_svc->add_timer(t);
     else
     {
-        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
+        unsigned int idx = (_spec.partitioned ? static_cast<unsigned int>(t->hash()) % static_cast<unsigned int>(_queues.size()) : 0);
         _per_queue_timer_svcs[idx]->add_timer(t);
     }
 }
@@ -166,7 +166,7 @@ void task_worker_pool::enqueue(task* t)
 
     if (_is_running)
     {
-        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);        
+        unsigned int idx = (_spec.partitioned ? static_cast<unsigned int>(t->hash()) % static_cast<unsigned int>(_queues.size()) : 0);
         return _queues[idx]->enqueue_internal(t);
     }
     else
@@ -189,8 +189,8 @@ bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
             return true;
         else if (_spec.partitioned)
         {
-            int sz = static_cast<int>(_workers.size());
-            return current->hash() % sz == tsk->hash() % sz;
+            unsigned int sz = static_cast<unsigned int>(_workers.size());
+            return static_cast<unsigned int>(current->hash()) % sz == static_cast<unsigned int>(tsk->hash()) % sz;
         }
         else
         {
