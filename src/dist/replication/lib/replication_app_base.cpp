@@ -520,16 +520,29 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
 
     ++_last_committed_decree;
 
-    if (_replica->status() == partition_status::PS_PRIMARY
-        || _replica->options()->verbose_log_on_commit)
+    if (_replica->options()->verbose_log_on_commit)
     {
-        ddebug("%s: mutation %s committed, batched_count = %d",
-               _replica->name(), mu->name(), batched_count);
-    }
-    else
-    {
-        dinfo("%s: mutation %s committed, batched_count = %d",
-              _replica->name(), mu->name(), batched_count);
+        auto status = _replica->status();
+        const char* str;
+        switch (status) {
+        case partition_status::PS_INACTIVE:
+            str = "I";
+            break;
+        case partition_status::PS_PRIMARY:
+            str = "P";
+            break;
+        case partition_status::PS_SECONDARY:
+            str = "S";
+            break;
+        case partition_status::PS_POTENTIAL_SECONDARY:
+            str = "PS";
+            break;
+        default:
+            dassert(false, "status = %s", enum_to_string(status));
+            break;
+        }
+        ddebug("%s: mutation %s committed on %s, batched_count = %d",
+              _replica->name(), mu->name(), str, batched_count);
     }
 
     _replica->update_commit_statistics(1);
