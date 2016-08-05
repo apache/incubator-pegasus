@@ -520,7 +520,8 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
 
     ++_last_committed_decree;
 
-    if (_replica->status() == partition_status::PS_PRIMARY)
+    if (_replica->status() == partition_status::PS_PRIMARY
+        || _replica->options()->verbose_log_on_commit)
     {
         ddebug("%s: mutation %s committed, batched_count = %d",
                _replica->name(), mu->name(), batched_count);

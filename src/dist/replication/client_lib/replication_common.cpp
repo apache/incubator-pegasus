@@ -44,6 +44,7 @@ namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
+    verbose_log_on_commit = false;
     empty_write_disabled = false;
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
@@ -134,6 +135,12 @@ void replication_options::initialize()
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
     }
 
+    verbose_log_on_commit =
+        dsn_config_get_value_bool("replication",
+        "verbose_log_on_commit",
+        verbose_log_on_commit,
+        "whether to print detailed log on commit, default is false"
+        );
     empty_write_disabled =
         dsn_config_get_value_bool("replication",
         "empty_write_disabled",

@@ -132,6 +132,7 @@ public:
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
+    const replication_options* options() const { return _options; }
 
     //void json_state(std::stringstream& out) const;
     void update_commit_statistics(int count);

@@ -57,6 +57,7 @@ public:
     std::string slog_dir;
     std::vector<std::string> data_dirs;
 
+    bool    verbose_log_on_commit;
     bool    empty_write_disabled;
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
