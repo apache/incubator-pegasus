@@ -604,9 +604,9 @@ void replica::on_learn_reply(
                 // then we prepare, it is possible that a committed mutation exists in learner's prepare log,
                 // but with DIFFERENT ballot. Reference https://github.com/imzhenyu/rDSN/issues/496
                 mutation_ptr existing_mutation = _prepare_list->get_mutation_by_decree(mu->data.header.decree);
-                if (existing_mutation!=nullptr && existing_mutation->data.header.ballot>=mu->data.header.ballot)
+                if (existing_mutation!=nullptr && existing_mutation->data.header.ballot > mu->data.header.ballot)
                 {
-                    ddebug("%s: on learn reply[%016" PRIx64 "]: mutation(%s) exist on the learner with larger decree %" PRIx64 "",
+                    ddebug("%s: on learn reply[%016" PRIx64 "]: mutation(%s) exist on the learner with larger ballot %" PRId64 "",
                         name(), req.signature, mu->name(), existing_mutation->data.header.ballot);
                 }
                 else
