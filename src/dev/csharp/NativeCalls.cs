@@ -625,7 +625,7 @@ namespace dsn.dev.csharp
         // and msg_release_ref explicitly.
         //
         [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public static extern dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, UInt64 hash);
+        public static extern dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, Int32 thread_hash, UInt64 partition_hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public static extern dsn_message_t dsn_msg_create_response(dsn_message_t request);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

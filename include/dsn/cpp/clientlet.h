@@ -300,7 +300,7 @@ namespace dsn
             clientlet* owner,
             TCallback&& callback,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int thread_hash = 0,
+            int thread_hash = 0, ///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
             uint64_t partition_hash = 0,
             int reply_thread_hash = 0
             )
@@ -332,7 +332,7 @@ namespace dsn
             dsn_task_code_t code,
             TRequest&& req,
             std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-            int thread_hash = 0,
+            int thread_hash = 0,///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
             uint64_t partition_hash = 0
             )
         {
@@ -357,7 +357,7 @@ namespace dsn
             ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
-            int thread_hash = 0,
+            int thread_hash = 0,///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
             uint64_t partition_hash = 0
             )
         {

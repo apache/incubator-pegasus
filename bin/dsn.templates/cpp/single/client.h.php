@@ -26,7 +26,7 @@ public:
 <?php    if ($f->is_one_way()) {?>
     void <?=$f->name?>(
         const <?=$f->get_cpp_request_type_name()?>& args,
-        int thread_hash = 0,
+        int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
         uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
@@ -39,7 +39,7 @@ public:
     std::pair< ::dsn::error_code, <?=$f->get_cpp_return_type()?>> <?=$f->name?>_sync(
         const <?=$f->get_cpp_request_type_name()?>& args,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int thread_hash = 0,
+        int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
         uint64_t partition_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
@@ -64,8 +64,8 @@ public:
         const <?=$f->get_cpp_request_type_name()?>& args,
         TCallback&& callback,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int thread_hash = 0,
-        uint64_t partition_hash = 0,
+        int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+        uint64_t request_partition_hash = 0,
         int reply_thread_hash = 0,
         dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
         )
@@ -77,8 +77,8 @@ public:
                     this,
                     std::forward<TCallback>(callback),
                     timeout,
-                    thread_hash,
-                    partition_hash,
+                    request_thread_hash,
+                    request_partition_hash,
                     reply_thread_hash
                     );
     }

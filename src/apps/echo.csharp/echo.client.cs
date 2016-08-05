@@ -14,10 +14,11 @@ namespace dsn.example
             string val, 
             out string resp, 
             int timeout_milliseconds = 0, 
-            ulong hash = 0,
+            int thread_hash = 0,
+            ulong partition_hash = 0,
             RpcAddress server = null)
         {
-            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, thread_hash, partition_hash);
             s.Write(val);
             s.Flush();
             
@@ -41,10 +42,11 @@ namespace dsn.example
             pingCallback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            ulong request_hash = 0,
+            int thread_hash = 0,
+            ulong partition_hash = 0,
             RpcAddress server = null)
         {
-            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, thread_hash, partition_hash);
             s.Write(val);
             s.Flush();
             
@@ -67,10 +69,11 @@ namespace dsn.example
             pingCallback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            ulong request_hash = 0,
+            int request_thread_hash = 0,
+            ulong request_partition_hash = 0,
             RpcAddress server = null)
         {
-            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_hash);
+            var s = new RpcWriteStream(echoHelper.RPC_ECHO_ECHO_PING, timeout_milliseconds, request_thread_hash, request_partition_hash);
             s.Write(val);
             s.Flush();
             

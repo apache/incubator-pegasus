@@ -616,8 +616,9 @@ rpc message read/write
  \param rpc_code              task code for this request
  \param timeout_milliseconds  timeout for the RPC call, 0 for default value as 
                               configued in config files for the task code 
- \param hash                  used for both partition and thread hash to locate which thread
-   the request should be sent to
+ \param thread_hash           used for thread dispatching on server, 
+                              if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+ \param partition_hash        used for finding which partition the request should be sent to
  \return RPC message handle
  */
 extern DSN_API dsn_message_t dsn_msg_create_request(
@@ -707,6 +708,7 @@ typedef struct dsn_msg_options_t
 {
     int               timeout_ms;     ///< RPC timeout in milliseconds
     int               thread_hash;    ///< thread hash on RPC server
+                                      ///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
     uint64_t          partition_hash; ///< partition hash for calculating partition index
     dsn_gpid          gpid;           ///< virtual node id, 0 for none
     dsn_msg_context_t context;        ///< see \ref dsn_msg_context_t

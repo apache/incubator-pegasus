@@ -25,10 +25,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php    if ($f->is_one_way()) {?>
         public void <?=$f->name?>(
             <?=$f->get_csharp_request_type_name()?> args,
-            UInt64 hash = 0,
+            int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+            UInt64 partition_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, thread_hash, partition_hash);
             s.Write(args);
             s.Flush();
             
@@ -40,10 +41,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             <?=$f->get_csharp_request_type_name()?> args,
             out <?=$f->get_csharp_return_type()?> resp, 
             int timeout_milliseconds = 0, 
-            UInt64 hash = 0,
+            int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+            UInt64 partition_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, thread_hash, partition_hash);
             s.Write(args);
             s.Flush();
             
@@ -67,10 +69,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            UInt64 request_hash = 0,
+            int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+            UInt64 request_partition_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_thread_hash, request_partition_hash);
             s.Write(args);
             s.Flush();
             
@@ -93,10 +96,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 
             int reply_thread_hash = 0,
-            UInt64 hash = 0,
+            int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
+            UInt64 request_partition_hash = 0,
             RpcAddress server = null)
         {
-            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, hash);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_thread_hash, request_partition_hash);
             s.Write(args);
             s.Flush();
             

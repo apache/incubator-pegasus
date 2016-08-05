@@ -130,8 +130,8 @@ namespace dsn.dev.csharp
 
     public class RpcWriteStream : RpcStream
     {
-        public RpcWriteStream(TaskCode code, int timeoutMilliseconds, ulong hash)
-            : base(Native.dsn_msg_create_request(code, timeoutMilliseconds, hash), false, false)
+        public RpcWriteStream(TaskCode code, int timeoutMilliseconds, int thread_hash, ulong partition_hash)
+            : base(Native.dsn_msg_create_request(code, timeoutMilliseconds, thread_hash, partition_hash), false, false)
         {
             _currentWriteOffset = 0;
             _currentBufferLength = IntPtr.Zero;

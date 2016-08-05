@@ -738,8 +738,6 @@ namespace dsn {
             // handle replication
             if (msg->header->gpid.value != 0)
             {
-                int thread_hash = dsn_gpid_to_thread_hash(msg->header->gpid);
-                dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
                 tsk = _node->generate_l2_rpc_request_task(msg);
             }
 
@@ -901,11 +899,11 @@ namespace dsn {
                         {
                             dassert(hdr2->gpid.value == 0, "inconsistent gpid");
                             hdr2->gpid = result.pid;
-                            int thread_hash = dsn_gpid_to_thread_hash(result.pid);
-                            if (hdr2->client.thread_hash != thread_hash)
+
+                            // update thread hash if not assigned by applications
+                            if (hdr2->client.thread_hash == 0)
                             {
-                                dassert(hdr2->client.thread_hash == 0, "inconsistent thread hash");
-                                hdr2->client.thread_hash = thread_hash;
+                                hdr2->client.thread_hash = dsn_gpid_to_thread_hash(result.pid);
                             }
                         }
 

@@ -401,6 +401,8 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 
+    // if thread_hash == 0 && partition_hash != 0, 
+    // thread_hash is computed from partition_hash in rpc_engine
     hdr.client.thread_hash = thread_hash;
     hdr.client.partition_hash = partition_hash;
 
