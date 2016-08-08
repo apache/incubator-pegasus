@@ -152,7 +152,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     // seperate commit_log_block from within the lock
     _slock.unlock();
 
-    _issued_write_task = pr.first->commit_log_block(
+    pr.first->commit_log_block(
         *blk,
         soffset,
         LPC_WRITE_REPLICATION_LOG_SHARED,
@@ -346,7 +346,6 @@ void mutation_log_private::init_states()
 
     _is_writing.store(false, std::memory_order_release);
     _issued_write_mutations.reset();
-    _issued_write_task = nullptr;
     _pending_write_start_offset = 0;
     _pending_write = nullptr;
     _pending_write_mutations = nullptr;
@@ -378,7 +377,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
     // seperate commit_log_block from within the lock
     _plock.unlock();
 
-    _issued_write_task = pr.first->commit_log_block(
+    pr.first->commit_log_block(
         *blk,
         soffset,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,

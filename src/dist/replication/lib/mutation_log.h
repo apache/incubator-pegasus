@@ -385,7 +385,6 @@ private:
     typedef std::vector<mutation_ptr> mutations;    
     mutable zlock                  _slock;
     std::atomic_bool               _is_writing;
-    task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
     int64_t                        _pending_write_start_offset;
     std::shared_ptr<callbacks>     _pending_write_callbacks;
@@ -441,7 +440,6 @@ private:
     typedef std::vector<mutation_ptr> mutations;
     std::atomic_bool               _is_writing;
     std::weak_ptr<mutations>       _issued_write_mutations;
-    task_ptr                       _issued_write_task; // for debugging
     int64_t                        _pending_write_start_offset;
     std::shared_ptr<log_block>     _pending_write;
     std::shared_ptr<mutations>     _pending_write_mutations;
