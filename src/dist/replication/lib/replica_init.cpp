@@ -271,6 +271,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         );
                     _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                     set_inactive_state_transient(true);
+                    _is_initializing = true;
                 }
                 /* in the beginning the prepare_list is reset to the durable_decree */
                 else

@@ -3,16 +3,16 @@
 set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 # on meta server the config is the same with the exit state last time
-config:{3,r1,[r2,r3]}
+config:{4,r1,[r2,r3]}
 
 # and the states will be normal again
-state:{{r1,pri,3,2},{r2,sec,3,2},{r3,sec,3,2}}
+state:{{r1,pri,5,2},{r2,sec,5,2},{r3,sec,5,2}}
 
 # we write an new value for k1
 client:begin_write:id=1,key=k1,value=v3,timeout=0
 
 # and prepared
-state:{{r1,pri,3,3},{r2,sec,3,2},{r3,sec,3,2}}
+state:{{r1,pri,5,3},{r2,sec,5,2},{r3,sec,5,2}}
 client:end_write:id=1,err=ERR_OK,resp=0
 
 # and read

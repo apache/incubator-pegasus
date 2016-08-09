@@ -6,6 +6,6 @@ set:load_balance_for_test=1,not_exit_on_log_failure=1
 # on meta server the config is the same with the exit state last time
 config:{3,r1,[r2,r3]}
 
-# and the states will be normal again
-state:{{r1,pri,3,2},{r2,sec,3,2},{r3,sec,3,2}}
+# and the states will be normal again, ballot will increase as old primary elected as leader
+state:{{r1,pri,4,2},{r2,sec,4,2},{r3,sec,4,2}}
 

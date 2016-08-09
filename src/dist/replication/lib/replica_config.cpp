@@ -336,7 +336,12 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
 {
     newConfig.last_committed_decree = last_committed_decree();
 
-    if (type != config_type::CT_ASSIGN_PRIMARY && type != config_type::CT_UPGRADE_TO_PRIMARY)
+    if (type == config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT)
+    {
+        dassert(status() == partition_status::PS_INACTIVE && _inactive_is_transient && _is_initializing, "");
+        dassert(newConfig.primary == node, "");
+    }
+    else if (type != config_type::CT_ASSIGN_PRIMARY && type != config_type::CT_UPGRADE_TO_PRIMARY)
     {
         dassert (status() == partition_status::PS_PRIMARY, "");
         dassert (newConfig.ballot == _primary_states.membership.ballot, "");
@@ -479,6 +484,10 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
                 replica_helper::get_replica_config(resp.config, req->node, rconfig);
                 rpc::call_one_way_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_thread_hash(get_gpid()));
             }
+            break;
+        case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
+            dassert(_is_initializing, "");
+            _is_initializing = false;
             break;
         default:
             dassert (false, "");
@@ -842,6 +851,17 @@ void replica::on_config_sync(const partition_configuration& config)
     }
     else
     {
+        if (_is_initializing)
+        {
+            //in initializing, when replica still primary, need to inc ballot
+            if (config.primary == _stub->_primary_address && status()==partition_status::PS_INACTIVE && _inactive_is_transient)
+            {
+                update_configuration_on_meta_server(config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT, config.primary, const_cast<partition_configuration&>(config));
+                return;
+            }
+            _is_initializing = false;
+        }
+
         update_configuration(config);
 
         if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient)

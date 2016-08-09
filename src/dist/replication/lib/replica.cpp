@@ -88,6 +88,7 @@ void replica::init_state()
     dassert(r, "app '%s' must be registered at this point", _app_info.app_type.c_str());
 
     _inactive_is_transient = false;
+    _is_initializing = false;
     _prepare_list = new prepare_list(
         0, 
         _options->max_mutation_count_in_prepare_list,

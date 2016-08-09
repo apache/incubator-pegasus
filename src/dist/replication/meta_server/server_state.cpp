@@ -915,6 +915,8 @@ void server_state::send_proposal(const configuration_proposal_action &action, co
 
 void server_state::request_check(const partition_configuration &old, const configuration_update_request& request)
 {
+    const partition_configuration& new_config = request.config;
+
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         dassert(old.primary != request.node, "");
@@ -935,6 +937,10 @@ void server_state::request_check(const partition_configuration &old, const confi
     case config_type::CT_UPGRADE_TO_SECONDARY:
         dassert(old.primary != request.node, "");
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+        break;
+    case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
+        dassert(old.primary==new_config.primary, "");
+        dassert(old.secondaries==new_config.secondaries, "");
         break;
     default:
         break;
@@ -980,12 +986,17 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
             ns.primaries.erase(gpid);
             ns.partitions.erase(gpid);
             break;
+        //nothing to handle, the ballot will updated in below
+        case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
+            break;
 
         case config_type::CT_ADD_SECONDARY:
         case config_type::CT_ADD_SECONDARY_FOR_LB:
             dassert(false, "invalid execution work flow");
-        case config_type::CT_INVALID:
+            break;
+        default:
             dassert(false, "");
+            break;
         }
     }
     else

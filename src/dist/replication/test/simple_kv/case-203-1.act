@@ -11,19 +11,19 @@ wait:on_aio_call:node=r2,type=READ,file_offset=0
 inject:on_aio_call:node=r2,type=READ,file_offset=0
 
 # recover ok
-config:{4,r1,[r3]}
-state:{{r1,pri,4,11},{r3,sec,4,11}}
+config:{5,r1,[r3]}
+state:{{r1,pri,5,11},{r3,sec,5,11}}
 
 set:disable_load_balance=0
 
 # r2 catch up
-config:{5,r1,[r2,r3]}
-state:{{r1,pri,5,11},{r2,sec,5,11},{r3,sec,5,11}}
+config:{6,r1,[r2,r3]}
+state:{{r1,pri,6,11},{r2,sec,6,11},{r3,sec,6,11}}
 
 client:begin_write:id=12,key=k12,value=v12,timeout=0
 client:end_write:id=12,key=k12,err=err_ok,resp=0
 
-state:{{r1,pri,5,12},{r2,sec,5,12},{r3,sec,5,12}}
+state:{{r1,pri,6,12},{r2,sec,6,12},{r3,sec,6,12}}
 
 client:begin_read:id=12,key=k12,timeout=0
 client:end_read:id=12,key=k12,err=err_ok,resp=v12
