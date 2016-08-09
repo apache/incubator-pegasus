@@ -57,16 +57,18 @@ public:
     std::string slog_dir;
     std::vector<std::string> data_dirs;
 
+    bool    delay_for_fd_timeout_on_start;
     bool    verbose_log_on_commit;
     bool    empty_write_disabled;
+
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
-        
+
     bool    batch_write_disabled;
     int32_t staleness_for_commit;
     int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;
-    
+
     bool    group_check_disabled;
     int32_t group_check_interval_ms;
 
@@ -79,7 +81,7 @@ public:
     int32_t gc_interval_ms;
     int32_t gc_memory_replica_interval_ms;
     int32_t gc_disk_error_replica_interval_seconds;
-    
+
     bool    fd_disabled;
     int32_t fd_check_interval_seconds;
     int32_t fd_beacon_interval_seconds;

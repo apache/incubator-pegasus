@@ -62,6 +62,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
     _failure_detector = nullptr;
     _state = NS_Disconnected;
     _log = nullptr;
+    _create_time_ms = now_ms();
     install_perf_counters();
 }
 
@@ -385,30 +386,57 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     _replicas = std::move(rps);
     _counter_replicas_count.add((uint64_t)_replicas.size());
 
+    if (_options.delay_for_fd_timeout_on_start)
+    {
+        uint64_t now_time_ms = now_ms();
+        uint64_t delay_time_ms = (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
+        if (now_time_ms < _create_time_ms + delay_time_ms)
+        {
+            tasking::enqueue(
+                LPC_REPLICA_SERVER_DELAY_START,
+                this,
+                [this]() { this->initialize_start(); },
+                0,
+                std::chrono::milliseconds(_create_time_ms + delay_time_ms - now_time_ms)
+                );
+        }
+        else
+        {
+            initialize_start();
+        }
+    }
+    else
+    {
+        initialize_start();
+    }
+}
+
+void replica_stub::initialize_start()
+{
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
     {
         _config_sync_timer_task = tasking::enqueue_timer(
             LPC_QUERY_CONFIGURATION_ALL,
             this,
-            [this] {query_configuration_by_node();},
+            [this]() { this->query_configuration_by_node(); },
             std::chrono::milliseconds(_options.config_sync_interval_ms),
             0,
             std::chrono::milliseconds(_options.config_sync_interval_ms)
             );
     }
     
-    // init livenessmonitor
+    // init liveness monitor
     dassert (NS_Disconnected == _state, "");
     if (_options.fd_disabled == false)
     {
         _failure_detector = new ::dsn::dist::slave_failure_detector_with_multimaster(
             _options.meta_servers,
-            [=]() {this->on_meta_server_disconnected(); },
-            [=]() {this->on_meta_server_connected(); }
+            [this]() { this->on_meta_server_disconnected(); },
+            [this]() { this->on_meta_server_connected(); }
             );
 
-        err = _failure_detector->start(
+        auto err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
             _options.fd_lease_seconds,

@@ -44,8 +44,10 @@ namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
+    delay_for_fd_timeout_on_start = false;
     verbose_log_on_commit = false;
     empty_write_disabled = false;
+
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
 
@@ -135,6 +137,12 @@ void replication_options::initialize()
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
     }
 
+    delay_for_fd_timeout_on_start =
+        dsn_config_get_value_bool("replication",
+        "delay_for_fd_timeout_on_start",
+        delay_for_fd_timeout_on_start,
+        "whether to delay for beacon grace period to make failure detector timeout when starting the server, default is false"
+        );
     verbose_log_on_commit =
         dsn_config_get_value_bool("replication",
         "verbose_log_on_commit",
@@ -147,6 +155,7 @@ void replication_options::initialize()
         empty_write_disabled,
         "whether to disable empty write, default is false"
         );
+
     prepare_timeout_ms_for_secondaries =
         (int)dsn_config_get_value_uint64("replication", 
         "prepare_timeout_ms_for_secondaries", 

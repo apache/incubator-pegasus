@@ -141,6 +141,7 @@ private:
         NS_Connected
     };
 
+    void initialize_start();
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid gpid);
     void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response);
@@ -172,6 +173,7 @@ private:
     closing_replicas            _closing_replicas;
     
     mutation_log_ptr            _log;
+    uint64_t                    _create_time_ms;
     ::dsn::rpc_address          _primary_address;
 
     ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;
