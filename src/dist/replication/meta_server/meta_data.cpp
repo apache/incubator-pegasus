@@ -66,6 +66,7 @@ void config_context::cancel_sync()
     {
         pending_sync_task->cancel(false);
         pending_sync_task = nullptr;
+        pending_sync_request.reset();
     }
     if (msg)
     {

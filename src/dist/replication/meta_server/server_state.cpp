@@ -564,25 +564,31 @@ void server_state::on_config_sync(dsn_message_t msg)
 
     dsn::unmarshall(msg, request);
 
-    bool ignore_this_request = false;
+    bool reject_this_request = false;
     {
         zauto_read_lock l(_lock);
         auto it = _nodes.find(request.node);
         if (it == _nodes.end())
             response.err = ERR_OBJECT_NOT_FOUND;
-        else {
+        else
+        {
             response.err = ERR_OK;
             response.partitions.resize(it->second.partitions.size());
             unsigned i = 0;
-            for (auto& p: it->second.partitions) {
+            for (auto& p: it->second.partitions)
+            {
                 std::shared_ptr<app_state> app = get_app(p.get_app_id());
                 dassert(app != nullptr, "");
                 config_context& cc = app->helpers->contexts[p.get_partition_index()];
 
-                // config sync need the newest data to keep the perfect FD, so we just ignore this
-                // message unless all messages are not syning with remote
+                // config sync need the newest data to keep the perfect FD,
+                // so if the syncing config is related to the node, we may need to reject this request
                 if (cc.stage == config_status::pending_remote_sync)
-                    break;
+                {
+                    configuration_update_request* req = cc.pending_sync_request.get();
+                    if (req->node == request.node)
+                        break;
+                }
 
                 response.partitions[i].config = app->partitions[p.get_partition_index()];
                 response.partitions[i].info = *app;
@@ -590,14 +596,17 @@ void server_state::on_config_sync(dsn_message_t msg)
             }
 
             if (i < response.partitions.size()) {
-                ignore_this_request = true;
+                reject_this_request = true;
             }
         }
     }
 
-    if (!ignore_this_request) {
-        reply_message(_meta_svc, msg, response);
+    if (reject_this_request)
+    {
+        response.err = ERR_BUSY;
+        response.partitions.clear();
     }
+    reply_message(_meta_svc, msg, response);
     dsn_msg_release_ref(msg);
 }
 
@@ -1068,6 +1077,7 @@ void server_state::on_update_configuration_on_remote_reply(error_code ec, std::s
     {
         update_configuration_locally(*app, config_request);
         cc.pending_sync_task = nullptr;
+        cc.pending_sync_request.reset();
         cc.stage = config_status::not_pending;
         if (cc.msg)
         {
@@ -1118,6 +1128,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state>& app
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
+    cc.pending_sync_request = req;
     cc.msg = nullptr;
 
     cc.pending_sync_task = update_configuration_on_remote(req);
@@ -1183,6 +1194,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state>& app, in
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
+    cc.pending_sync_request = req;
     cc.msg = nullptr;
 
     cc.pending_sync_task = update_configuration_on_remote(req);
@@ -1291,6 +1303,7 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
     {
         dassert(config_status::not_pending==cc.stage || config_status::pending_proposal==cc.stage, "");
         cc.stage = config_status::pending_remote_sync;
+        cc.pending_sync_request = cfg_request;
         cc.msg = msg;
         cc.pending_sync_task = update_configuration_on_remote(cfg_request);
     }

@@ -419,7 +419,11 @@ void replica_stub::initialize_start()
         _config_sync_timer_task = tasking::enqueue_timer(
             LPC_QUERY_CONFIGURATION_ALL,
             this,
-            [this]() { this->query_configuration_by_node(); },
+            [this]()
+            {
+                zauto_lock l(_replicas_lock);
+                this->query_configuration_by_node();
+            },
             std::chrono::milliseconds(_options.config_sync_interval_ms),
             0,
             std::chrono::milliseconds(_options.config_sync_interval_ms)
@@ -806,7 +810,7 @@ void replica_stub::query_configuration_by_node()
 
     if (_config_query_task != nullptr)
     {
-        _config_query_task->cancel(false);
+        return;
     }
 
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_CONFIG_SYNC);
@@ -847,9 +851,10 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
 {
     ddebug("query node partitions replied, err = %s", err.to_string());
 
+    zauto_lock l(_replicas_lock);
+    _config_query_task = nullptr;
     if (err != ERR_OK)
     {
-        zauto_lock l(_replicas_lock);
         if (_state == NS_Connecting)
         {
             query_configuration_by_node();
@@ -857,7 +862,6 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
     }
     else
     {
-        zauto_lock l(_replicas_lock);
         if (_state == NS_Connecting)
         {
             _state = NS_Connected;
@@ -870,6 +874,21 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         configuration_query_by_node_response resp;
         ::dsn::unmarshall(response, resp);
 
+        if (resp.err==ERR_BUSY)
+        {
+            _config_query_task = tasking::enqueue(
+                LPC_QUERY_CONFIGURATION_ALL, this,
+                [this]()
+                {
+                    zauto_lock l(_replicas_lock);
+                    _config_query_task = nullptr;
+                    query_configuration_by_node();
+                },
+                0,
+                std::chrono::milliseconds(500)
+                );
+            return;
+        }
         if (resp.err != ERR_OK)
             return;
         

@@ -88,6 +88,7 @@ public:
     //for server state's update config management
     //[
     task_ptr pending_sync_task;
+    std::shared_ptr<configuration_update_request> pending_sync_request;
     dsn_message_t msg;
     //]
 
