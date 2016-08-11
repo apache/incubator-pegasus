@@ -138,13 +138,18 @@ public:
         dsn_task_code_t callback_code,
         clientlet* callback_host,
         aio_handler&& callback,
-        int hash = 0) = 0;
+        int hash = 0
+        ) = 0;
 
+    // get learn state in memory, including pending and writing mutations
+    // return true if some data is filled into writer
+    // return false if no data is filled into writer
+    // thread safe
     virtual bool get_learn_state_in_memory(
-        bool start_decree,
+        decree start_decree,
         binary_writer& writer
         ) const {
-        return true;
+        return false;
     }
     
     // flush the pending buffer
@@ -237,11 +242,7 @@ public:
     //
     //  when this is a private log, log files are learned by remote replicas
     //
-    void get_learn_state(
-        gpid gpid,
-        ::dsn::replication::decree start,
-        /*out*/ ::dsn::replication::learn_state& state
-        ) const;
+    void get_learn_state(gpid gpid, decree start, /*out*/ learn_state& state) const;
 
     //
     //  other inquiry routines
@@ -272,6 +273,8 @@ public:
     void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
 
     int64_t size() const { return _global_end_offset - _global_start_offset; }
+
+    void hint_switch_file() { _switch_file_hint = true; }
 
 protected:
     // thread-safe
@@ -318,7 +321,8 @@ protected:
     io_failure_callback       _io_error_callback;
 
     // options
-    int64_t                   _max_log_file_size_in_bytes;    
+    int64_t                   _max_log_file_size_in_bytes;
+    int64_t                   _min_log_file_size_in_bytes;
     bool                      _force_flush;
 
 private:
@@ -327,6 +331,7 @@ private:
     ///////////////////////////////////////////////
     mutable zlock                  _lock;
     bool                           _is_opened;
+    bool                           _switch_file_hint;
     
     // logs
     int                            _last_file_index; // new log file index = _last_file_index + 1
@@ -386,9 +391,9 @@ private:
     mutable zlock                  _slock;
     std::atomic_bool               _is_writing;
     std::shared_ptr<log_block>     _pending_write;
-    int64_t                        _pending_write_start_offset;
     std::shared_ptr<callbacks>     _pending_write_callbacks;
     std::shared_ptr<mutations>     _pending_write_mutations;
+    int64_t                        _pending_write_start_offset;
 
     bool                           _force_flush;
 };
@@ -418,10 +423,9 @@ public:
         int hash = 0) override;
 
     virtual bool get_learn_state_in_memory(
-        bool start_decree,
+        decree start_decree,
         binary_writer& writer
         ) const override;
-
 
     virtual void flush() override;
 
@@ -440,9 +444,9 @@ private:
     typedef std::vector<mutation_ptr> mutations;
     std::atomic_bool               _is_writing;
     std::weak_ptr<mutations>       _issued_write_mutations;
-    int64_t                        _pending_write_start_offset;
     std::shared_ptr<log_block>     _pending_write;
     std::shared_ptr<mutations>     _pending_write_mutations;
+    int64_t                        _pending_write_start_offset;
     decree                         _pending_write_max_commit; 
     decree                         _pending_write_max_decree;
     mutable zlock                  _plock;

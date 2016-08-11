@@ -231,9 +231,11 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         reply(msg, response);
         return;
     }
-    else if (it->second.signature != request.signature)
+
+    remote_learner_state& learner_state = it->second;
+    if (learner_state.signature != request.signature)
     {
-        response.config.learner_signature = it->second.signature;
+        response.config.learner_signature = learner_state.signature;
         response.err = ERR_WRONG_CHECKSUM; // means invalid signature
         reply(msg, response);
         return;
@@ -306,10 +308,10 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
            && _prepare_list->count() > 0)
        )
     {
-        if (it->second.prepare_start_decree == invalid_decree)
+        if (learner_state.prepare_start_decree == invalid_decree)
         {
             // start from (last_committed_decree + 1)
-            it->second.prepare_start_decree = local_committed_decree + 1;
+            learner_state.prepare_start_decree = local_committed_decree + 1;
 
             cleanup_preparing_mutations(false);
             
@@ -323,11 +325,11 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             );
         }
 
-        response.prepare_start_decree = it->second.prepare_start_decree;
+        response.prepare_start_decree = learner_state.prepare_start_decree;
     }
     else
     {
-        it->second.prepare_start_decree = invalid_decree;
+        learner_state.prepare_start_decree = invalid_decree;
     }
 
     // only learn mutation cache in range of [learn_start_decree, prepare_start_decree),
@@ -379,9 +381,11 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             response.type = learn_type::LT_APP;
             response.base_local_dir = _app->data_dir();
             ddebug(
-                "%s: on_learn[%016" PRIx64 "]: learner = %s, get app learn state succeed, base_local_dir = %s, learn_file_count = %u",
+                "%s: on_learn[%016" PRIx64 "]: learner = %s, get app learn state succeed, "
+                "learned_meta_size = %u, learned_file_count = %u, learned_to_decree = %" PRId64,
                 name(), request.signature, request.learner.to_string(),
-                response.base_local_dir.c_str(), static_cast<uint32_t>(response.state.files.size())
+                response.state.meta.length(), static_cast<uint32_t>(response.state.files.size()),
+                response.state.to_decree_included
                 );
         }
     }
@@ -393,10 +397,26 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
         response.type = learn_type::LT_LOG;
         response.base_local_dir = _private_log->dir();
+        if (response.state.files.size() > 0)
+        {
+            auto& last_file = response.state.files.back();
+            if (last_file == learner_state.last_learn_log_file)
+            {
+                ddebug(
+                    "%s: on_learn[%016" PRIx64 "]: learner = %s, learn the same file %s repeatedly, hint to switch file",
+                    name(), request.signature, request.learner.to_string(), last_file.c_str()
+                );
+                _private_log->hint_switch_file();
+            }
+            else
+            {
+                learner_state.last_learn_log_file = last_file;
+            }
+        }
         ddebug(
-            "%s: on_learn[%016" PRIx64 "]: learner = %s, learn private logs succeed, base_local_dir = %s, learn_file_count = %u",
+            "%s: on_learn[%016" PRIx64 "]: learner = %s, learn private logs succeed, learned_meta_size = %u, learned_file_count = %u",
             name(), request.signature, request.learner.to_string(),
-            response.base_local_dir.c_str(), static_cast<uint32_t>(response.state.files.size())
+            response.state.meta.length(), static_cast<uint32_t>(response.state.files.size())
             );
     }
 
@@ -432,14 +452,15 @@ void replica::on_learn_reply(
     }
 
     ddebug(
-        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
-        "prepare_start_decree = %" PRId64 ", learn_type::type = %s, learn_file_count = %u, current_learning_status = %s",
+        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
+        "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_meta_size = %u, learned_file_count = %u, current_learning_status = %s",
         name(), req.signature, resp.config.primary.to_string(),
         _potential_secondary_states.duration_ms(),
         resp.err.to_string(), 
         resp.last_committed_decree, 
         resp.prepare_start_decree,
         enum_to_string(resp.type),
+        resp.state.meta.length(),
         static_cast<uint32_t>(resp.state.files.size()),
         enum_to_string(_potential_secondary_states.learning_status)
         );
@@ -682,7 +703,7 @@ void replica::on_learn_reply(
         }
 
         ddebug(
-            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, start to copy remote files, learn_file_count = %d",
+            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, start to copy remote files, copy_file_count = %d",
             name(), req.signature, resp.config.primary.to_string(),
             _potential_secondary_states.duration_ms(),
             static_cast<int>(resp.state.files.size())
@@ -727,12 +748,14 @@ void replica::on_copy_remote_state_completed(
     decree old_durable = _app->last_durable_decree();
 
     ddebug(
-        "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
+        "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
+        "copy remote state done, err = %s, copy_file_count = %d, "
         "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 ", "
         "prepare_start_decree = %" PRId64 ", current_learning_status = %s",
         name(), req.signature, resp.config.primary.to_string(),
         _potential_secondary_states.duration_ms(),
         err.to_string(),
+        static_cast<int>(resp.state.files.size()),
         last_committed_decree(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),
@@ -777,7 +800,7 @@ void replica::on_copy_remote_state_completed(
                 dassert(_app->last_committed_decree() <= resp.last_committed_decree, "");
                 ddebug(
                     "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn duration = %" PRIu64 " ms, "
-                    "checkpoint duration = %" PRIu64 " ns, apply checkpoint succeed, app_last_committed_decree = %" PRId64,
+                    "checkpoint duration = %" PRIu64 " ns, apply checkpoint succeed, app_committed_decree = %" PRId64,
                     name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
                     dsn_now_ns() - start_ts,
@@ -980,9 +1003,22 @@ void replica::notify_learn_completion()
 void replica::on_learn_completion_notification(const group_check_response& report)
 {
     check_hashed_access();
+
     report.err.end_tracking();
+
+    ddebug(
+        "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, learning_status = %s",
+        name(), report.learner_signature, report.node.to_string(), enum_to_string(report.learner_status_)
+        );
+
     if (status() != partition_status::PS_PRIMARY)
+    {
+        dwarn(
+            "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, this replica is not primary, but %s, ignore",
+            name(), report.learner_signature, report.node.to_string(), enum_to_string(status())
+            );
         return;
+    }
 
     if (report.learner_status_ == learner_status::LearningSucceeded)
     {
@@ -1052,11 +1088,12 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
 
     ddebug(
         "%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64 " ms, "
-        "apply private log files done, file_count = %d",
+        "apply private log files done, file_count = %d, app_committed_decree = %" PRId64,
         name(),
         _potential_secondary_states.learning_version,
         _potential_secondary_states.duration_ms(),
-        static_cast<int>(state.files.size())
+        static_cast<int>(state.files.size()),
+        _app->last_committed_decree()
     );
 
     // apply in-buffer private logs
@@ -1082,11 +1119,12 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
 
         ddebug(
             "%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64 " ms, "
-            "apply in-buffer private logs done, replay_count = %d",
+            "apply in-buffer private logs done, replay_count = %d, app_committed_decree = %" PRId64,
             name(),
             _potential_secondary_states.learning_version,
             _potential_secondary_states.duration_ms(),
-            replay_count
+            replay_count,
+            _app->last_committed_decree()
             );
     }
 

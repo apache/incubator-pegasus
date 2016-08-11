@@ -392,12 +392,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         uint64_t delay_time_ms = (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
         if (now_time_ms < _create_time_ms + delay_time_ms)
         {
+            uint64_t delay = _create_time_ms + delay_time_ms - now_time_ms;
+            ddebug("delay for %" PRIu64 "ms to make failure detector timeout", delay);
             tasking::enqueue(
                 LPC_REPLICA_SERVER_DELAY_START,
                 this,
                 [this]() { this->initialize_start(); },
                 0,
-                std::chrono::milliseconds(_create_time_ms + delay_time_ms - now_time_ms)
+                std::chrono::milliseconds(delay)
                 );
         }
         else

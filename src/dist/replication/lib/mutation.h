@@ -65,6 +65,8 @@ public:
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
     bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms) { return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms; }
     uint64_t create_ts_ns() const { return _create_ts_ns; }
+    ballot get_ballot() const { return data.header.ballot; }
+    decree get_decree() const { return data.header.decree; }
 
     // state change
     void set_id(ballot b, decree c);

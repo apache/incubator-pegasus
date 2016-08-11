@@ -43,7 +43,8 @@ struct remote_learner_state
 {
     int64_t signature;
     ::dsn::task_ptr timeout_task;
-    decree   prepare_start_decree;
+    decree prepare_start_decree;
+    std::string last_learn_log_file;
 };
 
 typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_map;

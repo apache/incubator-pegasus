@@ -136,18 +136,20 @@ void mutation_log_shared::flush()
 void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
+    dassert(!_is_writing.load(std::memory_order_relaxed), "");
     dassert(_pending_write != nullptr, "");
-    dassert(!_is_writing.load(std::memory_order_acquire), "");
-
-    _is_writing.store(true, std::memory_order_release);
+    dassert(_pending_write->size() > 0, "");
     auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
 
+    _is_writing.store(true, std::memory_order_release);
+
+    // move or reset pending variables
+    auto blk = std::move(_pending_write);
     auto pwu = std::move(_pending_write_callbacks);
     auto pmu = std::move(_pending_write_mutations);
-    auto blk = std::move(_pending_write);
-
     auto soffset = _pending_write_start_offset;
+    _pending_write_start_offset = 0;
 
     // seperate commit_log_block from within the lock
     _slock.unlock();
@@ -161,7 +163,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
         lf = pr.first,
         block = blk,
         callbacks = std::move(pwu),
-        mus = std::move(pmu)
+        mutations = std::move(pmu)
         ](error_code err, size_t sz) mutable
         {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
@@ -229,9 +231,6 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(nullptr == callback, "callback is not needed in private mutation log");
 
-    auto d = mu->data.header.decree;
-    error_code err = ERR_OK;
-
     _plock.lock();
 
     // init pending buffer
@@ -254,9 +253,8 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     });
 
     // update meta
-    _pending_write_max_commit = std::max(_pending_write_max_commit,
-        mu->data.header.last_committed_decree);
-    _pending_write_max_decree = std::max(_pending_write_max_decree, d);
+    _pending_write_max_commit = std::max(_pending_write_max_commit, mu->data.header.last_committed_decree);
+    _pending_write_max_decree = std::max(_pending_write_max_decree, mu->data.header.decree);
 
     // start to write if possible
     if (!_is_writing.load(std::memory_order_acquire)
@@ -275,40 +273,47 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 }
 
 bool mutation_log_private::get_learn_state_in_memory(
-    bool start_decree,
+    decree start_decree,
     binary_writer& writer
     ) const
 {
-    // learn pending buffer
-    bool r;
     std::shared_ptr<mutations> issued_mutations;
     mutations pending_mutations;
-
-    _plock.lock();
-    
-    r = start_decree <= _pending_write_max_decree;
-
-    issued_mutations = _issued_write_mutations.lock();
-    if (_pending_write_mutations)
     {
-        pending_mutations = *_pending_write_mutations;
+        zauto_lock l(_plock);
+
+        issued_mutations = _issued_write_mutations.lock();
+
+        if (_pending_write_mutations)
+        {
+            pending_mutations = *_pending_write_mutations;
+        }
     }
-    _plock.unlock();
+
+    int learned_count = 0;
 
     if (issued_mutations)
     {
         for (auto& mu : *issued_mutations)
         {
-            mu->write_to(writer, nullptr);
+            if (mu->get_decree() >= start_decree)
+            {
+                mu->write_to(writer, nullptr);
+                learned_count++;
+            }
         }
     }
     
     for (auto& mu : pending_mutations)
     {
-        mu->write_to(writer, nullptr);
+        if (mu->get_decree() >= start_decree)
+        {
+            mu->write_to(writer, nullptr);
+            learned_count++;
+        }
     }
 
-    return r;
+    return learned_count > 0;
 }
 
 
@@ -346,9 +351,9 @@ void mutation_log_private::init_states()
 
     _is_writing.store(false, std::memory_order_release);
     _issued_write_mutations.reset();
-    _pending_write_start_offset = 0;
     _pending_write = nullptr;
     _pending_write_mutations = nullptr;
+    _pending_write_start_offset = 0;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -356,23 +361,25 @@ void mutation_log_private::init_states()
 void mutation_log_private::write_pending_mutations(bool release_lock)
 {
     dassert(release_lock, "lock must be hold at this point");
-    dassert(_pending_write != nullptr, "");
     dassert(!_is_writing.load(std::memory_order_relaxed), "");
-
-    _is_writing.store(true, std::memory_order_release);
-    _issued_write_mutations = _pending_write_mutations;
+    dassert(_pending_write != nullptr, "");
+    dassert(_pending_write->size() > 0, "");
     auto pr = mark_new_offset(_pending_write->size(), false);
     dassert(pr.second == _pending_write_start_offset, "");
 
+    _is_writing.store(true, std::memory_order_release);
+
     update_max_decree(_private_gpid, _pending_write_max_decree);
 
-    auto pwu = std::move(_pending_write_mutations);
+    // move or reset pending variables
     auto blk = std::move(_pending_write);
+    _issued_write_mutations = _pending_write_mutations;
+    auto pwu = std::move(_pending_write_mutations);
+    auto soffset = _pending_write_start_offset;
+    _pending_write_start_offset = 0;
     auto max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
-
-    auto soffset = _pending_write_start_offset;
 
     // seperate commit_log_block from within the lock
     _plock.unlock();
@@ -384,16 +391,16 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
         this,
         [this, 
         lf = pr.first,
-        block = blk, 
+        block = blk,
         max_commit,
         mutations = std::move(pwu)
         ](error_code err, size_t sz) mutable
         {
-            dassert(_is_writing.load(std::memory_order_acquire), "");
+            dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header*)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
-                        
+
             if (err == ERR_OK)
             {
                 dassert(sz == block->size(),
@@ -401,7 +408,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                     (int)sz,
                     block->size()
                     );
-            
+
                 dassert(hdr->length + sizeof(log_block_header) == sz, "");
 
                 // flush to ensure that there is no gap between private log and in-memory buffer
@@ -409,7 +416,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                 //
                 // FIXME : the file could have been closed
                 lf->flush();
-            
+
                 // update _private_max_commit_on_disk after writen into log file done
                 update_max_commit_on_disk(max_commit);
             }
@@ -464,6 +471,7 @@ mutation_log::mutation_log(
     _dir = dir;
     _is_private = (gpid.raw().value != 0);
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
+    _min_log_file_size_in_bytes = _max_log_file_size_in_bytes / 10;
     _owner_replica = r;
     _private_gpid = gpid;
 
@@ -477,6 +485,7 @@ mutation_log::mutation_log(
 void mutation_log::init_states()
 {
     _is_opened = false;
+    _switch_file_hint = false;
 
     // logs
     _last_file_index = 0;
@@ -812,12 +821,39 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool
 
     if (create_new_log_if_needed)
     {
-        if (_current_log_file == nullptr || 
-            _global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes
-            )
+        bool create_file = false;
+        if (_current_log_file == nullptr)
+        {
+            create_file = true;
+        }
+        else
+        {
+            int64_t file_size = _global_end_offset - _current_log_file->start_offset();
+            const char* reason = nullptr;
+
+            if (file_size >= _max_log_file_size_in_bytes)
+            {
+                create_file = true;
+                reason = "limit";
+            }
+            else if (_switch_file_hint && file_size >= _min_log_file_size_in_bytes)
+            {
+                create_file = true;
+                reason = "hint";
+            }
+
+            if (create_file)
+            {
+                ddebug("switch log file by %s, old_file = %s, size = %" PRId64,
+                    reason, _current_log_file->path().c_str(), file_size);
+            }
+        }
+
+        if (create_file)
         {
             auto ec = create_new_log_file();
             dassert(ec == ERR_OK, "create new log file failed");
+            _switch_file_hint = false;
         }
     }
 
@@ -1208,40 +1244,34 @@ void mutation_log::update_max_commit_on_disk_no_lock(decree d)
     }
 }
 
-void mutation_log::get_learn_state(
-    gpid gpid,
-    ::dsn::replication::decree start,
-    /*out*/ ::dsn::replication::learn_state& state
-    ) const
+void mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state& state) const
 {
     dassert(_is_private, "this method is only valid for private logs");
     dassert(_private_gpid == gpid, "replica gpid does not match");
 
-    std::map<int, log_file_ptr> files;
-    std::map<int, log_file_ptr>::reverse_iterator itr;
-    log_file_ptr cfile = nullptr;
-
+    binary_writer temp_writer;
+    if (get_learn_state_in_memory(start, temp_writer))
     {
-        zauto_lock l(_lock);
-
-        files = _log_files;
-        cfile = _current_log_file;
-
-        binary_writer temp_writer;
-        if (!get_learn_state_in_memory(start, temp_writer) &&
-            start > _private_log_info.max_decree)
-            return;
-
         state.meta = temp_writer.get_buffer();
     }
 
-    // flush last file so learning can learn the on-disk state
-    if (nullptr != cfile) cfile->flush();
+    std::map<int, log_file_ptr> files;
+    {
+        zauto_lock l(_lock);
+
+        if (state.meta.length() == 0 && start > _private_log_info.max_decree)
+        {
+            // no memory data and no disk data
+            return;
+        }
+
+        files = _log_files;
+    }
 
     // find all applicable files
     bool skip_next = false;
     std::list<std::string> learn_files;
-    for (itr = files.rbegin(); itr != files.rend(); ++itr)
+    for (auto itr = files.rbegin(); itr != files.rend(); ++itr)
     {
         log_file_ptr& log = itr->second;
         if (log->end_offset() <= _private_log_info.valid_start_offset)
@@ -1275,7 +1305,8 @@ void mutation_log::get_learn_state(
         }
     }
 
-    // reverse the order
+    // reverse the order, to make files ordered by index incrementally
+    state.files.reserve(learn_files.size());
     for (auto it = learn_files.rbegin(); it != learn_files.rend(); ++it)
     {
         state.files.push_back(*it);
