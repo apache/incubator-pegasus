@@ -452,7 +452,7 @@ void replica::on_learn_reply(
     }
 
     ddebug(
-        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
+        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
         "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_meta_size = %u, learned_file_count = %u, current_learning_status = %s",
         name(), req.signature, resp.config.primary.to_string(),
         _potential_secondary_states.duration_ms(),
