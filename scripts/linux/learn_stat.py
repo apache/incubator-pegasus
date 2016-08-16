@@ -18,7 +18,8 @@ p_decree = re.compile('app_committed_decree = ([0-9]+)')
 p_learner = re.compile(' [0-9.]+@([0-9.:]+): init_learn')
 p_learnee = re.compile('learnee = ([0-9.:]+)')
 p_duration = re.compile('learn_duration = ([0-9]+)')
-p_meta_size = re.compile('on_learn_reply.*learned_meta_size = ([0-9]+), learned_file_count = ([0-9]+)')
+p_meta_size = re.compile('on_learn_reply.*learned_meta_size = ([0-9]+)')
+p_file_size = re.compile('on_copy_remote_state_completed.*copy_file_count = ([0-9]+), copy_file_size = ([0-9]+)')
 learn_map = {}
 for fid in file_ids:
   fname = 'log.'+str(fid)+'.txt'
@@ -35,7 +36,7 @@ for fid in file_ids:
       signature = m.group(2)
       id = gpid+'#'+m.group(2)
       if id not in learn_map:
-        learn = {'gpid':gpid,'signature':signature,'log_file':fname,'learn_round':0,'duration':0,'meta_size':0,'file_count':0,'completed':False}
+        learn = {'gpid':gpid,'signature':signature,'log_file':fname,'learn_round':0,'duration':0,'meta_size':0,'file_count':0,'file_size':0,'completed':False}
         learn_map[id] = learn
       else:
         learn = learn_map[id]
@@ -69,9 +70,14 @@ for fid in file_ids:
       m = p_meta_size.search(line)
       if m:
         meta_size = int(m.group(1))
-        file_count = int(m.group(2))
         learn['meta_size'] += meta_size
+      # file size
+      m = p_file_size.search(line)
+      if m:
+        file_count = int(m.group(1))
+        file_size = int(m.group(2))
         learn['file_count'] += file_count
+        learn['file_size'] += file_size
       # completed
       if not learn['completed'] and 'notify_learn_completion' in line:
         learn['completed'] = True

@@ -397,8 +397,10 @@ namespace dsn {
                 req->is_finished = true;
             }
 
+            size_t total_size = 0;
             for (auto& f : req->file_context_map)
             {
+                total_size += f.second->file_size;
                 
                 for (auto& rc : f.second->copy_requests)
                 {
@@ -454,7 +456,7 @@ namespace dsn {
             }
 
             req->file_context_map.clear();
-            req->nfs_task->enqueue(err, 0);
+            req->nfs_task->enqueue(err, err == ERR_OK ? total_size : 0);
 
             delete req;
 

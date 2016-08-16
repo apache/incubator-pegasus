@@ -749,13 +749,14 @@ void replica::on_copy_remote_state_completed(
 
     ddebug(
         "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-        "copy remote state done, err = %s, copy_file_count = %d, "
+        "copy remote state done, err = %s, copy_file_count = %d, copy_file_size = %" PRId64 ", "
         "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 ", "
         "prepare_start_decree = %" PRId64 ", current_learning_status = %s",
         name(), req.signature, resp.config.primary.to_string(),
         _potential_secondary_states.duration_ms(),
         err.to_string(),
         static_cast<int>(resp.state.files.size()),
+        static_cast<int64_t>(size),
         last_committed_decree(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),
