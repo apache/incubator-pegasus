@@ -854,7 +854,7 @@ void replica::on_config_sync(const partition_configuration& config)
         if (_is_initializing)
         {
             //in initializing, when replica still primary, need to inc ballot
-            if (config.primary == _stub->_primary_address && status()==partition_status::PS_INACTIVE && _inactive_is_transient)
+            if (config.primary == _stub->_primary_address && status() == partition_status::PS_INACTIVE && _inactive_is_transient)
             {
                 update_configuration_on_meta_server(config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT, config.primary, const_cast<partition_configuration&>(config));
                 return;

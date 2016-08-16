@@ -1496,8 +1496,9 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                 // log not found for this replica, ok to delete
                 if (it3 == max_decrees.end())
                 {
-                    dassert(valid_start_offset >= log->end_offset(),
-                        "valid start offset must be greater than the end of this log file");
+                    // valid_start_offset may be reset to 0 if initialize_on_load() returns ERR_INCOMPLETE_DATA
+                    dassert(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
+                        "valid start offset must be 0 or greater than the end of this log file");
 
                     dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as gc max decree,"
                         " safe to delete this and all older logs for this replica",

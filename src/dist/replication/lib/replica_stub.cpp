@@ -197,7 +197,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 if (r != nullptr)
                 {
                     ddebug(
-                        "%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
+                        "%d.%d@%s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
                         r->get_gpid().get_app_id(), r->get_gpid().get_partition_index(),
                         primary_address().to_string(),
                         dir.c_str(),
@@ -361,7 +361,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         if (err == ERR_OK)
         {
             dassert(smax == pmax, "incomplete private log state");
-            it->second->set_inactive_state_transient(true);
+            // just leave inactive_state_transient as its old value
         }
         else
         {

@@ -269,9 +269,10 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         _private_log->max_commit_on_disk(),
                         finish_time - start_time
                         );
+
                     _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
+
                     set_inactive_state_transient(true);
-                    _is_initializing = true;
                 }
                 /* in the beginning the prepare_list is reset to the durable_decree */
                 else
@@ -290,8 +291,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                         finish_time - start_time
                         );
 
-                    set_inactive_state_transient(false);
-
                     _private_log->close();
                     _private_log = nullptr;
 
@@ -305,30 +304,37 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         {
             dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
             _prepare_list->reset(_app->last_committed_decree());
+
             err = _app->update_init_info(
                 this,
                 _stub->_log->on_partition_reset(get_gpid(), _app->last_durable_decree()),
                 0,
                 _app->last_durable_decree()
                 );
-
         }
-    }    
+    }
 
     if (err != ERR_OK)
     {
-        // TODO: handle ERR_INCOMPLETE_DATA to save data
-
         derror("%s: open replica failed, err = %s", name(), err.to_string());
         _app->close(false);
         _app = nullptr;
     }
     else
     {
+        _is_initializing = true;
+
         if (nullptr == _private_log)
         {
-            ::dsn::utils::filesystem::remove_path(log_dir);
-            ::dsn::utils::filesystem::create_directory(log_dir);
+            ddebug("%s: clear private log, dir = %s", name(), log_dir.c_str());
+            if (!dsn::utils::filesystem::remove_path(log_dir))
+            {
+                dassert(false, "Fail to delete directory %s.", log_dir.c_str());
+            }
+            if (!::dsn::utils::filesystem::create_directory(log_dir))
+            {
+                dassert(false, "Fail to create directory %s.", log_dir.c_str());
+            }
 
             _private_log = new mutation_log_private(
                 log_dir,
@@ -353,7 +359,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             );
         }
 
-        if (!_options->checkpoint_disabled && nullptr == _checkpoint_timer)
+        if (err == ERR_OK && !_options->checkpoint_disabled && nullptr == _checkpoint_timer)
         {
             _checkpoint_timer = tasking::enqueue_timer(
                 LPC_PER_REPLICA_CHECKPOINT_TIMER,
@@ -364,6 +370,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 );
         }
     }
+
     return err;
 }
 
