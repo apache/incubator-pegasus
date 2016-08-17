@@ -95,6 +95,7 @@ ENUM_BEGIN2(replication::config_type::type, config_type, replication::config_typ
     ENUM_REG(replication::config_type::CT_DOWNGRADE_TO_INACTIVE)
     ENUM_REG(replication::config_type::CT_REMOVE)
     ENUM_REG(replication::config_type::CT_ADD_SECONDARY_FOR_LB)
+    ENUM_REG(replication::config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT)
 ENUM_END2(replication::config_type::type, config_type)
 
 ENUM_BEGIN2(replication::node_status::type, node_status, replication::node_status::NS_INVALID)

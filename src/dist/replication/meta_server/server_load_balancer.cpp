@@ -86,6 +86,9 @@ bool simple_load_balancer::from_proposals(const meta_view &view, const dsn::gpid
         return true;
 
 invalid_action:
+    std::stringstream ss;
+    ss << action;
+    ddebug("proposal action(%s) for gpid(%d.%d) is invalid, clear all proposal actions", ss.str().c_str(), gpid.get_app_id(), gpid.get_partition_index());
     action.type = config_type::CT_INVALID;
     cc.balancer_proposal.reset();
     return false;

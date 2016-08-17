@@ -1425,10 +1425,10 @@ void replica_stub::close()
     // this replica may not be opened
     // or is already closed by calling tool_app::stop_all_apps()
     // in this case, just return
-   /* if(_cli_replica_stub_json_state_handle == nullptr)
+    if(_cli_kill_partition == nullptr)
     {
         return;
-    }*/
+    }
 
     //dsn_cli_deregister(_cli_replica_stub_json_state_handle);
     dsn_cli_deregister(_cli_kill_partition);

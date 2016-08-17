@@ -867,12 +867,8 @@ void replica::on_copy_remote_state_completed(
             );
     }
 
-    // if catch-up done, do flush to enable all learned state is durable
-    if (err == ERR_OK
-        && resp.prepare_start_decree != invalid_decree
-        && _app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree
-        && _app->last_committed_decree() > _app->last_durable_decree()
-        )
+    //do flush to enable all learned state is durable
+    if (err == ERR_OK && _app->last_committed_decree() > _app->last_durable_decree())
     {        
         err = _app->sync_checkpoint();
 

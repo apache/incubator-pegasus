@@ -503,7 +503,7 @@ void meta_service::on_control_meta(dsn_message_t req)
     RPC_CHECK_STATUS(req, response);
 
     dsn::unmarshall(req, request);
-    ddebug("get control meta rpc, flags(%d), type(%d), current flags(%d)", request.ctrl_flags, request.ctrl_type, _meta_ctrl_flags);
+    ddebug("get control meta rpc, flags(%lx), type(%d), current flags(%lx)", request.ctrl_flags, request.ctrl_type, _meta_ctrl_flags);
     {
         zauto_write_lock l(_meta_lock);
         switch (request.ctrl_type)
