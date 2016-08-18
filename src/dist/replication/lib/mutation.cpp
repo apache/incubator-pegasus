@@ -167,6 +167,75 @@ void mutation::write_to(std::function<void(const blob&)> inserter) const
     }
 }
 
+void mutation::write_to(std::function<void(const blob&)> inserter, blob& header) const
+{
+    memcpy((void*)header.data(), (const void*)(&data.header), sizeof(data.header));
+    inserter(header);
+
+    for (const mutation_update& update : data.updates)
+    {
+        inserter(update.data);
+    }
+}
+
+blob mutation::get_header() const {
+    binary_writer temp_writer;
+    temp_writer.write_pod(data.header);        
+    temp_writer.write_pod(static_cast<int>(data.updates.size()));
+
+    for (const mutation_update& update : data.updates)
+    {
+        // write task_code as string to make it cross-process compatible.
+        // avoid memory copy, equal to writer.write(std::string)
+        const char* cstr  = update.code.to_string();
+        int len = static_cast<int>(strlen(cstr));
+        temp_writer.write_pod(len);
+        if (len > 0)
+            temp_writer.write(cstr, len);
+
+        temp_writer.write_pod(static_cast<int>(update.serialization_type));
+
+        temp_writer.write_pod(static_cast<int>(update.data.length()));
+    }
+
+    return temp_writer.get_buffer();
+    // Alternative as following: do only one time memory copy
+/*
+    int len = sizeof(data.header) + sizeof(int);
+    for (const mutation_update& update : data.updates) {
+        const char* cstr = update.code.to_string();
+        len += sizeof(int) * 3 + static_cast<int>(strlen(cstr));
+    }
+
+    std::shared_ptr<char> bptr(::dsn::make_shared_array<char>(len));
+    blob bb(bptr, len);
+    const char* ptr = bb.data();
+
+    memcpy((void*)ptr, (void*)(&data.header), sizeof(data.header));
+    ptr += sizeof(data.header);
+    int tmp = static_cast<int>(data.updates.size());
+    memcpy((void*)ptr, (void*)&tmp, sizeof(int));
+    ptr += sizeof(int);
+    for (const mutation_update& update : data.updates) {
+        const char* cstr = update.code.to_string();
+        int slen = strlen(cstr);
+        memcpy((void*)ptr, (void*)&slen, sizeof(int));
+        ptr += sizeof(int);
+        if (slen > 0) {
+            memcpy((void*)ptr, (void*)cstr, slen);
+            ptr += slen;
+        }
+        tmp = static_cast<int>(update.serialization_type);
+        memcpy((void*)ptr, (void*)&tmp, sizeof(int));
+        ptr += sizeof(int);
+        tmp = static_cast<int>(update.data.length());
+        memcpy((void*)ptr, (void*)&tmp, sizeof(int));
+        ptr += sizeof(int);
+    }
+    return bb;
+*/
+}
+
 void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
 {
     writer.write_pod(data.header);

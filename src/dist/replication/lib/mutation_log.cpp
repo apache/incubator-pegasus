@@ -60,6 +60,7 @@ using namespace ::dsn::service;
     error_code err = ERR_OK;
     ::dsn::task_ptr cb = callback ? file::create_aio_task(callback_code, callback_host, 
         std::forward<aio_handler>(callback), hash) : nullptr;
+    blob header = mu->get_header();
     
     _slock.lock();
 
@@ -87,7 +88,7 @@ using namespace ::dsn::service;
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
-    });
+    }, header);
 
     // update meta
     update_max_decree(mu->data.header.pid, d);
