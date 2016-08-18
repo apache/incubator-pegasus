@@ -298,20 +298,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 }
             }
         }
-
-        // certain checkpoints are missing
-        else if (err == ERR_INCOMPLETE_DATA)
-        {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
-            _prepare_list->reset(_app->last_committed_decree());
-
-            err = _app->update_init_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), _app->last_durable_decree()),
-                0,
-                _app->last_durable_decree()
-                );
-        }
     }
 
     if (err != ERR_OK)
