@@ -62,6 +62,7 @@ void simulator::install(service_spec& spec)
     register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
     register_component_provider<sim_lock_provider>("dsn::tools::sim_lock_provider");
     register_component_provider<sim_lock_nr_provider>("dsn::tools::sim_lock_nr_provider");
+    register_component_provider<sim_rwlock_nr_provider>("dsn::tools::sim_rwlock_nr_provider");
 
     scheduler::instance();
 
@@ -108,7 +109,7 @@ void simulator::install(service_spec& spec)
         spec.lock_nr_factory_name = ("dsn::tools::sim_lock_nr_provider");
 
     if (spec.rwlock_nr_factory_name == "")
-        spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");
+        spec.rwlock_nr_factory_name = ("dsn::tools::sim_rwlock_nr_provider");
 
     if (spec.semaphore_factory_name == "")
         spec.semaphore_factory_name = ("dsn::tools::sim_semaphore_provider");

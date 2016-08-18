@@ -138,28 +138,7 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 
 void mutation::write_to(std::function<void(const blob&)> inserter) const
 {
-    {
-        binary_writer temp_writer;
-        temp_writer.write_pod(data.header);        
-        temp_writer.write_pod(static_cast<int>(data.updates.size()));
-
-        for (const mutation_update& update : data.updates)
-        {
-            // write task_code as string to make it cross-process compatible.
-            // avoid memory copy, equal to writer.write(std::string)
-            const char* cstr  = update.code.to_string();
-            int len = static_cast<int>(strlen(cstr));
-            temp_writer.write_pod(len);
-            if (len > 0)
-                temp_writer.write(cstr, len);
-
-            temp_writer.write_pod(static_cast<int>(update.serialization_type));
-
-            temp_writer.write_pod(static_cast<int>(update.data.length()));
-        }
-
-        inserter(temp_writer.get_buffer());
-    }
+    inserter(get_header());
 
     for (const mutation_update& update : data.updates)
     {
@@ -178,8 +157,9 @@ void mutation::write_to(std::function<void(const blob&)> inserter, blob& header)
     }
 }
 
-blob mutation::get_header() const {
-    binary_writer temp_writer;
+blob mutation::get_header() const
+{
+    binary_writer temp_writer(1024);
     temp_writer.write_pod(data.header);        
     temp_writer.write_pod(static_cast<int>(data.updates.size()));
 
@@ -199,6 +179,7 @@ blob mutation::get_header() const {
     }
 
     return temp_writer.get_buffer();
+
     // Alternative as following: do only one time memory copy
 /*
     int len = sizeof(data.header) + sizeof(int);

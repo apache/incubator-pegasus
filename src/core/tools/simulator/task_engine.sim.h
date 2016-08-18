@@ -116,4 +116,26 @@ private:
     sim_semaphore_provider _sema;
 };
 
+
+// degrade to lock_nr for simplicity
+class sim_rwlock_nr_provider : public rwlock_nr_provider
+{
+public:
+    sim_rwlock_nr_provider(rwlock_nr_provider* inner_provider)
+        : rwlock_nr_provider(inner_provider), _l(nullptr) {}
+
+    virtual ~sim_rwlock_nr_provider() {}
+
+    virtual void lock_read() { return _l.lock(); }
+    virtual void unlock_read() { return _l.unlock(); }
+    virtual bool try_lock_read() { return _l.try_lock(); }
+
+    virtual void lock_write() { return _l.lock(); }
+    virtual void unlock_write() { return _l.unlock(); }
+    virtual bool try_lock_write() { return _l.try_lock(); }
+
+private:    
+    sim_lock_nr_provider _l;
+};
+
 }} // end namespace

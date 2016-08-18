@@ -57,7 +57,6 @@ using namespace ::dsn::service;
     )
 {
     auto d = mu->data.header.decree;
-    error_code err = ERR_OK;
     ::dsn::task_ptr cb = callback ? file::create_aio_task(callback_code, callback_host, 
         std::forward<aio_handler>(callback), hash) : nullptr;
     blob header = mu->get_header();
@@ -232,6 +231,8 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(nullptr == callback, "callback is not needed in private mutation log");
 
+    blob header = mu->get_header();
+
     _plock.lock();
 
     // init pending buffer
@@ -251,7 +252,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
-    });
+    }, header);
 
     // update meta
     _pending_write_max_commit = std::max(_pending_write_max_commit, mu->data.header.last_committed_decree);
