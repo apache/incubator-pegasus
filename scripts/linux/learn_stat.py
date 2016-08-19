@@ -13,6 +13,7 @@ if len(sys.argv) == 1:
   sys.exit(1)
 dir = sys.argv[1]
 file_ids = sorted([int(f[4:][0:-4]) for f in listdir(dir) if isfile(join(dir, f)) and f.startswith('log.') and f.endswith('.txt')])
+p_learn = re.compile('learnee =|learner =|learn_duration =')
 p_id = re.compile(' ([0-9.]+)@[0-9.:]+: .*\[([0-9]+)\]: ')
 p_decree = re.compile('app_committed_decree = ([0-9]+)')
 p_learner = re.compile(' [0-9.]+@([0-9.:]+): init_learn')
@@ -25,8 +26,10 @@ for fid in file_ids:
   fname = 'log.'+str(fid)+'.txt'
   fpath = join(dir,fname)
   with open(fpath) as f:
+    lineno = 0
     for line in f:
-      if 'replica.learn:' not in line:
+      lineno += 1
+      if not p_learn.search(line):
         continue
       # id
       m = p_id.search(line)
@@ -36,7 +39,7 @@ for fid in file_ids:
       signature = m.group(2)
       id = gpid+'#'+m.group(2)
       if id not in learn_map:
-        learn = {'gpid':gpid,'signature':signature,'log_file':fname,'learn_round':0,'duration':0,'meta_size':0,'file_count':0,'file_size':0,'completed':False}
+        learn = {'gpid':gpid,'signature':signature,'log_file':fname+':'+str(lineno),'learn_round':0,'duration':0,'meta_size':0,'file_count':0,'file_size':0,'completed':False}
         learn_map[id] = learn
       else:
         learn = learn_map[id]
@@ -88,7 +91,9 @@ for fid in file_ids:
             learn['end_decree'] = end_decree
         if 'start_decree' in learn and 'end_decree' in learn:
           learn['increased_decree'] = learn['end_decree'] - learn['start_decree'] + 1
-        print learn
+for id, learn in learn_map.items():
+  if learn['completed']:
+    print learn
 print
 print '=========================================================='
 print

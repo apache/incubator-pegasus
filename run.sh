@@ -153,7 +153,10 @@ function usage_install()
 }
 function run_install()
 {
-    INSTALL_DIR=`pwd`/install
+    INSTALL_DIR=$DSN_ROOT
+    if [ ! -d $INSTALL_DIR ]; then
+        INSTALL_DIR=`pwd`/install
+    fi
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
