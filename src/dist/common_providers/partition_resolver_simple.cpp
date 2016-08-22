@@ -335,7 +335,12 @@ namespace dsn
                             pi->config = new_config;
                             _config_cache.emplace(new_config.pid.get_partition_index(), std::move(pi));
                         }
-                        else if (it2->second->config.ballot < new_config.ballot)
+                        else if (_app_is_stateful && it2->second->config.ballot < new_config.ballot)
+                        {
+                            it2->second->timeout_count = 0;
+                            it2->second->config = new_config;
+                        }
+                        else if (!_app_is_stateful)
                         {
                             it2->second->timeout_count = 0;
                             it2->second->config = new_config;
