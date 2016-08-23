@@ -51,12 +51,14 @@ namespace dsn {
 
         static std::string s_dump_dir;
         static void handle_core_dump(int);
+        static void handle_term(int);
 
         void coredump::init(const char* dump_dir)
         {
             s_dump_dir = dump_dir;
 
             signal(SIGSEGV, handle_core_dump);
+            signal(SIGTERM, handle_term);
         }
 
         void coredump::write()
@@ -81,6 +83,13 @@ namespace dsn {
                 signal(SIGSEGV, SIG_DFL);
             }
             coredump::write();
+        }
+
+        static void handle_term(int signal_id)
+        {
+            printf("got signal id: %d\n", signal_id);
+            fflush(stdout);
+            dsn_exit(0);
         }
     }
 }

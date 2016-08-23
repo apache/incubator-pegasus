@@ -91,7 +91,7 @@ namespace dsn {
                 }
                 catch (boost::system::system_error& err)
                 {
-                    derror("asio tcp listen on port %u failed, err: %s\n", port, err.what());
+                    derror("asio tcp listen on port %u failed, err: %s", port, err.what());
                     return ERR_ADDRESS_ALREADY_USED;
                 }
             }            
@@ -293,7 +293,7 @@ namespace dsn {
                     }
                     catch (boost::system::system_error& err)
                     {
-                        ddebug("asio udp listen on port %u failed, err: %s\n", _address.port(), err.what());
+                        ddebug("asio udp listen on port %u failed, err: %s", _address.port(), err.what());
                     }
                 } while (true);
             }
@@ -307,7 +307,7 @@ namespace dsn {
                 }
                 catch (boost::system::system_error& err)
                 {
-                    derror("asio udp listen on port %u failed, err: %s\n", port, err.what());
+                    derror("asio udp listen on port %u failed, err: %s", port, err.what());
                     return ERR_ADDRESS_ALREADY_USED;
                 }
             }

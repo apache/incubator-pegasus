@@ -235,6 +235,7 @@ namespace dsn {
         {
             utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
             ::fflush(_log);
+            ::fflush(stdout);
         }
 
         void simple_logger::dsn_logv(const char *file,

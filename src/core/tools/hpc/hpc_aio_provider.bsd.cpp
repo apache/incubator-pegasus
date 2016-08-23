@@ -150,7 +150,7 @@ error_code hpc_aio_provider::close(dsn_handle_t fh)
     }
     else
     {
-        derror("close file failed, err = %s\n", strerror(errno));
+        derror("close file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
 }

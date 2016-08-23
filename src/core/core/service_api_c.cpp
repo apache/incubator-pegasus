@@ -952,7 +952,7 @@ static BOOL SuspendAllThreads()
         hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
         if (hSnapshot == INVALID_HANDLE_VALUE) 
         {
-            derror("CreateToolhelp32Snapshot failed, err = %d\n", ::GetLastError());
+            derror("CreateToolhelp32Snapshot failed, err = %d", ::GetLastError());
             return FALSE;
         }
 
@@ -963,7 +963,7 @@ static BOOL SuspendAllThreads()
 
         if (FALSE == ::Thread32First(hSnapshot, &ti)) 
         {
-            derror("Thread32First failed, err = %d\n", ::GetLastError());
+            derror("Thread32First failed, err = %d", ::GetLastError());
             goto err;
         }
 
@@ -976,11 +976,11 @@ static BOOL SuspendAllThreads()
                     HANDLE hThread = ::OpenThread(THREAD_ALL_ACCESS, FALSE, ti.th32ThreadID);
                     if (hThread == NULL) 
                     {
-                        derror("OpenThread failed, err = %d\n", ::GetLastError());
+                        derror("OpenThread failed, err = %d", ::GetLastError());
                         goto err;
                     }
                     ::SuspendThread(hThread);
-                    ddebug("thread %d find and suspended ...\n", ti.th32ThreadID);
+                    ddebug("thread %d find and suspended ...", ti.th32ThreadID);
                     threads.insert(std::make_pair(ti.th32ThreadID, hThread));
                     bChange = TRUE;
                 }
@@ -999,6 +999,10 @@ err:
 
 NORETURN DSN_API void dsn_exit(int code)
 {
+    printf("dsn exit with code %d\n", code);
+    fflush(stdout);
+    ::dsn::tools::sys_exit.execute(::dsn::SYS_EXIT_NORMAL);
+
 # if defined(_WIN32)
     // TODO: do not use std::map above, coz when suspend the other threads, they may stop
     // inside certain locks which causes deadlock

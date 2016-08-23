@@ -134,7 +134,7 @@ dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int
         break;
     default:                /* error, bad oflag */
         _doserrno = 0L; /* not an OS error */
-        derror("Invalid open flag\n");
+        derror("Invalid open flag");
     }
 
     /*
@@ -185,7 +185,7 @@ dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int
     {
         if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
         {
-            dassert(false, "cannot associate file handle %s to io completion port, err = 0x%x\n", file_name, ::GetLastError());
+            dassert(false, "cannot associate file handle %s to io completion port, err = 0x%x", file_name, ::GetLastError());
             return 0;
         }
         else
@@ -195,7 +195,7 @@ dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int
     }
     else
     {
-        derror("cannot create file %s, err = 0x%x\n", file_name, ::GetLastError());
+        derror("cannot create file %s, err = 0x%x", file_name, ::GetLastError());
         return 0;
     }
 }
@@ -208,7 +208,7 @@ error_code native_win_aio_provider::close(dsn_handle_t fh)
     }
     else
     {
-        derror("close file failed, err = 0x%x\n", ::GetLastError());
+        derror("close file failed, err = 0x%x", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }        
 }
@@ -221,7 +221,7 @@ error_code native_win_aio_provider::flush(dsn_handle_t fh)
     }
     else
     {
-        derror("close file failed, err = 0x%x\n", ::GetLastError());
+        derror("close file failed, err = 0x%x", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }
 }

@@ -153,7 +153,7 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 
         if (i == nullptr)
         {
-            derror("get local ip from network interfaces failed, network_interface = %s\n", network_interface);
+            derror("get local ip from network interfaces failed, network_interface = %s", network_interface);
         }
 
         if (ifa != nullptr)
