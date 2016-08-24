@@ -59,20 +59,6 @@
 # endif
 # define __TITLE__ "core.main"
 
-# if defined(__linux__)
-# include <dsn/version.h>
-# include <dsn/git_commit.h>
-#define DSN_STR_I(var) #var
-#define DSN_STR(var) DSN_STR_I(var)
-static char const rcsid[] = "$Version: rDSN Core " DSN_CORE_VERSION ", git commit " DSN_GIT_COMMIT
-    ", built by GCC " DSN_STR(__GNUC__) "." DSN_STR(__GNUC_MINOR__) "." DSN_STR(__GNUC_PATCHLEVEL__)
-    ", built at " __DATE__ " " __TIME__ " $";
-const char* dsn_core_rcsid()
-{
-    return rcsid;
-}
-# endif
-
 void dsn_core_init()
 {
     // register all providers
@@ -142,3 +128,17 @@ DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create creat
 
     global_checker_store::instance().checkers.push_back(ck);
 }
+
+# if defined(__linux__)
+# include <dsn/version.h>
+# include <dsn/git_commit.h>
+#define STR_I(var) #var
+#define STR(var) STR_I(var)
+static char const rcsid[] = "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
+    ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
+    ", built at " __DATE__ " " __TIME__ " $";
+const char* dsn_rcsid()
+{
+    return rcsid;
+}
+# endif
