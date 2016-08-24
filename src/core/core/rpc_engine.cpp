@@ -1033,12 +1033,24 @@ namespace dsn {
     {
         strncpy(response->header->server.error_name, err.to_string(), sizeof(response->header->server.error_name));
         response->header->server.error_code.local_code = err;
-        response->header->server.error_code.local_hash = message_ex::s_local_hash;
+        response->header->server.error_code.local_hash = message_ex::s_local_hash;        
+        auto s = response->io_session.get();
         auto sp = task_spec::get(response->local_rpc_code);
 
+        // when a message doesn't need to reply, we don't do the on_rpc_reply hooks to avoid mistakes
+        // for example, the profiler may be mistakenly calculated
+        if (s==nullptr && response->to_address.is_invalid())
+        {
+            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %016" PRIx64,
+                  response->header->rpc_name,
+                  response->header->trace_id
+                  );
+            response->add_ref();
+            response->release_ref();
+            return;
+        }
+
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
-        
-        auto s = response->io_session.get();
 
         // connetion oriented network, we have bound session
         if (s != nullptr)
@@ -1083,7 +1095,7 @@ namespace dsn {
         }
 
         // not connection oriented network, we always use the named network to send msgs
-        else if (!response->to_address.is_invalid())
+        else
         {
             dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
                 "target address must have named port in this case");
@@ -1104,17 +1116,6 @@ namespace dsn {
             {
                 net->inject_drop_message(response, true);
             }
-        }
-
-        // response->io_session == nullptr && response->to_address.is_invalid()
-        else
-        {
-            dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %016" PRIx64,
-                  response->header->rpc_name,
-                  response->header->trace_id
-                  );
-
-            no_fail = false;
         }
 
         if (!no_fail)
