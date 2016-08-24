@@ -157,6 +157,16 @@ then
     cd ..
 fi
 
+cd $ROOT
+DSN_GIT_COMMIT=`git log | head -n 1 | awk '{print $2}'`
+GIT_COMMIT_FILE=include/dsn/git_commit.h
+if [ ! -f $GIT_COMMIT_FILE ] || ! grep $DSN_GIT_COMMIT $GIT_COMMIT_FILE
+then
+    echo "Generating $GIT_COMMIT_FILE..."
+    echo "#pragma once" >$GIT_COMMIT_FILE
+    echo "#define DSN_GIT_COMMIT \"$DSN_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+fi
+
 cd $BUILD_DIR
 echo "Building..."
 make install $MAKE_OPTIONS

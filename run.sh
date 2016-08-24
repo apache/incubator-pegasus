@@ -134,6 +134,9 @@ function run_build()
         usage_build
         exit -1
     fi
+    if [ "$ONLY_BUILD" == "NO" ]; then
+        run_start_zk -g $GIT_SOURCE
+    fi
     BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" \
         GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \

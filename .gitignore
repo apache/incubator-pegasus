@@ -8,6 +8,7 @@ install/
 test_reports/
 Dockerfile
 include/thrift/
+include/dsn/git_commit.h
 
 rdsn.github.config
 rdsn.github.creator

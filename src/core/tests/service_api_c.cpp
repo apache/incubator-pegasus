@@ -50,7 +50,7 @@ TEST(core, dsn_error)
     ASSERT_STREQ("ERR_OK", dsn_error_to_string(ERR_OK));
 }
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST);
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST)
 TEST(core, dsn_threadpool_code)
 {
     ASSERT_EQ(THREAD_POOL_INVALID, dsn_threadpool_code_from_string("THREAD_POOL_NOT_EXIST", THREAD_POOL_INVALID));
@@ -66,9 +66,9 @@ TEST(core, dsn_threadpool_code)
     ASSERT_LT(0, dsn_threadpool_get_current_tid());
 }
 
-DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
-DEFINE_TASK_CODE_AIO(TASK_CODE_AIO_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
-DEFINE_TASK_CODE_RPC(TASK_CODE_RPC_FOR_TEST, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT);
+DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_AIO(TASK_CODE_AIO_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(TASK_CODE_RPC_FOR_TEST, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT)
 TEST(core, dsn_task_code)
 {
     dsn_task_type_t type;
@@ -342,7 +342,6 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
-        ASSERT_EQ(0, r.sz);
         // this is only true for simulator
         if (dsn::tools::get_current_tool()->name() == "simulator")
         {
@@ -385,7 +384,6 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
-        ASSERT_EQ(0, r.sz);
         // this is only true for simulator
         if (dsn::tools::get_current_tool()->name() == "simulator")
         {
@@ -414,7 +412,6 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
-        ASSERT_EQ(0, r.sz);
         // this is only true for simulator
         if (dsn::tools::get_current_tool()->name() == "simulator")
         {
