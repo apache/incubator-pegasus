@@ -1011,6 +1011,31 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
     else
     {
         dassert(old_cfg.ballot == new_cfg.ballot, "");
+
+        new_cfg = old_cfg;
+        partition_configuration_stateless pcs(new_cfg);
+        if (config_request->type == config_type::type::CT_ADD_SECONDARY)
+        {
+            pcs.hosts().emplace_back(config_request->host_node);
+            pcs.workers().emplace_back(config_request->node);
+        }
+        else
+        {
+            auto it = std::remove(
+                pcs.hosts().begin(),
+                pcs.hosts().end(),
+                config_request->host_node
+                );
+            pcs.hosts().erase(it);
+
+            it = std::remove(
+                pcs.workers().begin(),
+                pcs.workers().end(),
+                config_request->node
+                );
+            pcs.workers().erase(it);
+        }
+
         auto it = _nodes.find(config_request->host_node);
         dassert(it != _nodes.end(), "");
         if (config_type::CT_REMOVE == config_request->type)
@@ -1218,7 +1243,7 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
         response.config.primary.set_invalid();
         response.config.secondaries.clear();
     }
-    else if (is_partition_config_equal(pc, cfg_request->config))
+    else if (app->is_stateful && is_partition_config_equal(pc, cfg_request->config))
     {
         ddebug("duplicated update request for gpid(%d.%d), ballot: %" PRId64 "", gpid.get_app_id(), gpid.get_partition_index(), pc.ballot);
         response.err = ERR_OK;
@@ -1275,8 +1300,7 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
         {
             if (config_type::CT_REMOVE == cfg_request->type)
             {
-                //well, the request config should be the new config
-                dassert(!request_pcs.is_host(cfg_request->host_node) && !request_pcs.is_worker(cfg_request->node), "");
+                // removed already
                 if (!pcs.is_host(cfg_request->host_node) || !pcs.is_worker(cfg_request->node))
                 {
                     response.err = ERR_OK;
@@ -1285,6 +1309,7 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
             }
             else
             {
+                // added already
                 if (pcs.is_host(cfg_request->host_node))
                 {
                     response.err = ERR_OK;
