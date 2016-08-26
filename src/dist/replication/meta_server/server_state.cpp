@@ -550,6 +550,7 @@ void server_state::query_configuration_by_node(const configuration_query_by_node
             dassert(app != nullptr, "");
             response.partitions[i].config = app->partitions[p.get_partition_index()];
             response.partitions[i].info = *app;
+            response.partitions[i].host_node = request.node;
             ++i;
         }
     }
