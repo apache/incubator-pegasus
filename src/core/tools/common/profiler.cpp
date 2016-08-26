@@ -98,6 +98,11 @@ namespace dsn {
         };
 
         // call normal task
+        static void profiler_on_task_create(task* caller, task* callee)
+        {
+            task_ext_for_profiler::get(callee) = dsn_now_ns();
+        }
+
         static void profiler_on_task_enqueue(task* caller, task* callee)
         {
             if (caller != nullptr)
@@ -439,6 +444,7 @@ namespace dsn {
                     }
                 }
 
+                spec->on_task_create.put_back(profiler_on_task_create, "profiler");
                 spec->on_task_enqueue.put_back(profiler_on_task_enqueue, "profiler");
                 spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
                 spec->on_task_end.put_back(profiler_on_task_end, "profiler");
