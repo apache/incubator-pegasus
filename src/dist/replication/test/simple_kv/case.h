@@ -73,6 +73,7 @@ class set_case_line : public case_line
 {
 public:
     static const char* NAME() { return "set"; }
+    virtual ~set_case_line() {}
     virtual std::string name() const { return NAME(); }
     virtual std::string to_string() const;
     virtual bool parse(const std::string& params);
@@ -104,6 +105,7 @@ class skip_case_line : public case_line
 {
 public:
     static const char* NAME() { return "skip"; }
+    virtual ~skip_case_line() {}
     virtual std::string name() const { return NAME(); }
     virtual std::string to_string() const;
     virtual bool parse(const std::string& params);
@@ -122,6 +124,7 @@ class exit_case_line : public case_line
 {
 public:
     static const char* NAME() { return "exit"; }
+    virtual ~exit_case_line() {}
     virtual std::string name() const { return NAME(); }
     virtual std::string to_string() const;
     virtual bool parse(const std::string& params);
@@ -131,6 +134,7 @@ class state_case_line : public case_line
 {
 public:
     static const char* NAME() { return "state"; }
+    virtual ~state_case_line() {}
     virtual std::string name() const { return NAME(); }
     virtual std::string to_string() const;
     virtual bool parse(const std::string& params);
@@ -146,6 +150,7 @@ class config_case_line : public case_line
 {
 public:
     static const char* NAME() { return "config"; }
+    virtual ~config_case_line() {}
     virtual std::string name() const { return NAME(); }
     virtual std::string to_string() const;
     virtual bool parse(const std::string& params);

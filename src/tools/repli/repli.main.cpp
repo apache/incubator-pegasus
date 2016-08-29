@@ -61,7 +61,9 @@ int main(int argc, char** argv)
 # else
     slen = readlink("/proc/self/exe", buf, sizeof(buf));
 # endif
-    
+    dassert(slen<4906, "");
+    buf[slen] = 0;
+
     if (slen != -1)
     {
         std::string dir = dsn::utils::filesystem::remove_file_name(buf);

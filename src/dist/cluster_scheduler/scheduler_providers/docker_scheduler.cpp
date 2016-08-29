@@ -250,6 +250,7 @@ void docker_scheduler::create_containers(std::string& name,std::function<void(er
             auto unit = _deploy_map[name];
             unit->service_url = buffer;
         }
+        pclose(f);
 #endif
         deployment_callback(ERR_OK,rpc_address());
     }

@@ -1066,6 +1066,7 @@ out_error:
                     return ERR_PATH_NOT_FOUND;
                 }
 
+                tls_path_buffer[err] = 0;
                 path = tls_path_buffer;
 # elif defined(__FreeBSD__)
                 struct kinfo_proc* proc;

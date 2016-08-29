@@ -44,7 +44,7 @@ class std_lock_provider : public lock_provider
 {
 public:
     std_lock_provider( lock_provider* inner_provider) : lock_provider(inner_provider) {}
-
+    virtual ~std_lock_provider() {}
     virtual void lock() { _lock.lock(); }
     virtual bool try_lock() { return _lock.try_lock();  }
     virtual void unlock() { _lock.unlock(); }
@@ -57,7 +57,7 @@ class std_lock_nr_provider : public lock_nr_provider
 {
 public:
     std_lock_nr_provider(lock_nr_provider* inner_provider) : lock_nr_provider(inner_provider) {}
-
+    virtual ~std_lock_nr_provider() {}
     virtual void lock() { _lock.lock(); }
     virtual bool try_lock() { return _lock.try_lock(); }
     virtual void unlock() { _lock.unlock(); }
@@ -71,7 +71,7 @@ class std_rwlock_nr_provider : public rwlock_nr_provider
 {
 public:
     std_rwlock_nr_provider(rwlock_nr_provider* inner_provider) : rwlock_nr_provider(inner_provider) {}
-
+    virtual ~std_rwlock_nr_provider() {}
     virtual void lock_read() { _lock.lock_read(); }
     virtual void unlock_read() { _lock.unlock_read(); }
     virtual bool try_lock_read() { return _lock.try_lock_read(); }
@@ -93,6 +93,7 @@ public:
     }
 
 public:
+    virtual ~std_semaphore_provider() {}
     virtual void signal(int count) { _sema.signal(count); }
     virtual bool wait(int timeout_milliseconds) { return _sema.wait(timeout_milliseconds); }
 

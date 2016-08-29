@@ -64,22 +64,22 @@ namespace dsn {
 
             virtual void   increment()
             {
-                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                uint64_t task_id = static_cast<uint64_t>(::dsn::utils::get_current_tid());
                 _val[task_id % DIVIDE_CONTAINER]++;
             }
             virtual void   decrement()
             {
-                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                uint64_t task_id = static_cast<uint64_t>(::dsn::utils::get_current_tid());
                 _val[task_id % DIVIDE_CONTAINER]--;
             }
             virtual void   add(uint64_t val)
             {
-                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                uint64_t task_id = static_cast<uint64_t>(::dsn::utils::get_current_tid());
                 _val[task_id % DIVIDE_CONTAINER] += val;
             }
             virtual void   set(uint64_t val)
             {
-                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                uint64_t task_id = static_cast<uint64_t>(::dsn::utils::get_current_tid());
                 _val[task_id % DIVIDE_CONTAINER] = val;
             }
             virtual double get_value()
