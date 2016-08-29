@@ -805,6 +805,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state>& app, dsn_message_t ms
             {
                 zauto_write_lock l(_lock);
                 _exist_apps.erase(app->app_name);
+                app->status = app_status::AS_DROPPED;
                 for (partition_configuration& pc: app->partitions)
                 {
                     if (!pc.primary.is_invalid() && _nodes.find(pc.primary)!=_nodes.end()) {
@@ -1241,6 +1242,7 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
     {
         response.err = ERR_INVALID_VERSION;
         response.config.ballot = cfg_request->config.ballot+1;
+        response.config.pid = gpid;
         response.config.primary.set_invalid();
         response.config.secondaries.clear();
     }
