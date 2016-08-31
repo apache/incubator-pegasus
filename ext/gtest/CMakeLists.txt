@@ -16,5 +16,10 @@ endif()
 
 include(${PROJECT_SOURCE_DIR}/bin/dsn.ext.cmake)
 
+install(DIRECTORY ${my_source_dir}/include/gtest
+    DESTINATION include/ext
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tcc" PATTERN "*.cpp"
+)
+
 set(GTEST_INCLUDE_DIR ${my_source_dir}/include PARENT_SCOPE)
 set(GTEST_LIB_DIR ${my_binary_dir} PARENT_SCOPE)
