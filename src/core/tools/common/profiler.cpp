@@ -392,7 +392,7 @@ namespace dsn {
 
                 if (dsn_config_get_value_bool(section_name.c_str(), "profiler::inqueue", true,
                     "whether to profile the number of this kind of tasks in all queues"))
-                    s_spec_profilers[i].ptr[TASK_IN_QUEUE] = perf_counter::get_counter("zion", "profiler", (name + std::string(".inqueue(#)")).c_str(), COUNTER_TYPE_NUMBER, 
+                    s_spec_profilers[i].ptr[TASK_IN_QUEUE] = perf_counter::get_counter("zion", "profiler", (name + std::string(".inqueue")).c_str(), COUNTER_TYPE_NUMBER,
                         "task number in all queues", true);
 
                 if (dsn_config_get_value_bool(section_name.c_str(), "profiler::queue", true,
@@ -409,7 +409,7 @@ namespace dsn {
 
                 if (dsn_config_get_value_bool(section_name.c_str(), "profiler::cancelled", true,
                     "whether to profile the cancelled times of a task"))
-                    s_spec_profilers[i].ptr[TASK_CANCELLED] = perf_counter::get_counter("zion", "profiler", (name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, "cancelled times of a specific task type", true);
+                    s_spec_profilers[i].ptr[TASK_CANCELLED] = perf_counter::get_counter("zion", "profiler", (name + std::string(".cancelled")).c_str(), COUNTER_TYPE_NUMBER, "cancelled times of a specific task type", true);
 
                 if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST)
                 {

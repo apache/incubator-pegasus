@@ -204,7 +204,7 @@ void replication_app_base::install_perf_counters()
 {
     std::stringstream ss;
     
-    ss << replica_name() << ".commit(#/s)";
+    ss << replica_name() << ".commit_qps";
     _app_commit_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
 
     ss.clear();
@@ -214,12 +214,12 @@ void replication_app_base::install_perf_counters()
 
     ss.clear();
     ss.str("");
-    ss << replica_name() << ".decree#";
+    ss << replica_name() << ".decree";
     _app_commit_decree.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
 
     ss.clear();
     ss.str("");
-    ss << replica_name() << ".req(#/s)";
+    ss << replica_name() << ".req_qps";
     _app_req_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "request throughput for current app");
 }
 
