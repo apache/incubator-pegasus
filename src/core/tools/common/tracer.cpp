@@ -45,6 +45,41 @@
 namespace dsn {
     namespace tools {
 
+        static void tracer_on_task_create(task* caller, task* callee)
+        {
+            dsn_task_type_t type = callee->spec().type;
+            if (TASK_TYPE_RPC_REQUEST == type)
+            {
+                rpc_request_task* tsk = (rpc_request_task*)callee;
+                ddebug("%s CREATE, task_id = %016" PRIx64 ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
+                    callee->spec().name.c_str(),
+                    callee->id(),
+                    dsn_task_type_to_string(type),
+                    tsk->get_request()->header->rpc_name,
+                    tsk->get_request()->header->trace_id
+                    );
+            }
+            else if (TASK_TYPE_RPC_RESPONSE == type)
+            {
+                rpc_response_task* tsk = (rpc_response_task*)callee;
+                ddebug("%s CREATE, task_id = %016" PRIx64 ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
+                    callee->spec().name.c_str(),
+                    callee->id(),
+                    dsn_task_type_to_string(type),
+                    tsk->get_request()->header->rpc_name,
+                    tsk->get_request()->header->trace_id
+                    );
+            }
+            else
+            {
+                ddebug("%s CREATE, task_id = %016" PRIx64 ", type = %s",
+                    callee->spec().name.c_str(),
+                    callee->id(),
+                    dsn_task_type_to_string(type)
+                    );
+            }
+        }
+
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
             ddebug("%s ENQUEUE, task_id = %016" PRIx64 ", delay = %d ms, queue size = %d",
@@ -201,6 +236,14 @@ namespace dsn {
                 );
         }
 
+        static void tracer_on_rpc_create_response(message_ex* req, message_ex* resp)
+        {
+            ddebug("%s RPC.CREATE.RESPONSE, trace_id = %016" PRIx64 "",
+                resp->header->rpc_name,
+                resp->header->trace_id
+                );
+        }
+
         enum logged_event_t
         {
             LET_TASK_BEGIN,
@@ -321,6 +364,10 @@ namespace dsn {
                     "whether to trace this kind of task"))
                     continue;
 
+                if (dsn_config_get_value_bool(section_name.c_str(), "tracer::on_task_create", true,
+                    "whether to trace when a task is created"))
+                    spec->on_task_create.put_back(tracer_on_task_create, "tracer");
+
                 if (dsn_config_get_value_bool(section_name.c_str(), "tracer::on_task_enqueue", true, 
                     "whether to trace when a timer or async task is enqueued"))
                     spec->on_task_enqueue.put_back(tracer_on_task_enqueue, "tracer");
@@ -372,6 +419,10 @@ namespace dsn {
                 if (dsn_config_get_value_bool(section_name.c_str(), "tracer::on_rpc_response_enqueue", true,
                     "whetehr to trace when a rpc response task is enqueued"))
                     spec->on_rpc_response_enqueue.put_back(tracer_on_rpc_response_enqueue, "tracer");
+
+                if (dsn_config_get_value_bool(section_name.c_str(), "tracer::on_rpc_create_response", true,
+                    "whetehr to trace when a rpc response task is created"))
+                    spec->on_rpc_create_response.put_back(tracer_on_rpc_create_response, "tracer");
             }
 
             register_command({ "tracer.find" }, 

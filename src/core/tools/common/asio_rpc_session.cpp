@@ -70,6 +70,18 @@ namespace dsn {
 
                     dinfo("boost asio recv buffer size is %u, set as 16MB, now is %u",
                             old, option.value());
+
+                    // Nagle algorithm may cause an extra delay in some cases, because if
+                    // the data in a single write spans 2n packets, the last packet will be
+                    // withheld, waiting for the ACK for the previous packet. For more, please
+                    // refer to <https://en.wikipedia.org/wiki/Nagle's_algorithm>.
+                    //
+                    // Disabling the Nagle algorithm would cause these affacts:
+                    //   * decrease delay time (positive affact)
+                    //   * decrease the qps (negative affact)
+                    _socket->set_option(boost::asio::ip::tcp::no_delay(true));
+
+                    dinfo("boost asio set no_delay = true");
                 }
                 catch (std::exception& ex)
                 {
