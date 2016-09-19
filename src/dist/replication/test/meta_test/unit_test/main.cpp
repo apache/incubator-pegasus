@@ -37,6 +37,11 @@ TEST(meta, apply_balancer)
     g_app->apply_balancer_test();
 }
 
+TEST(meta, balance_config_file)
+{
+    g_app->balance_config_file();
+}
+
 dsn::error_code meta_service_test_app::start(int argc, char **argv)
 {
     uint32_t seed = (uint32_t)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed");

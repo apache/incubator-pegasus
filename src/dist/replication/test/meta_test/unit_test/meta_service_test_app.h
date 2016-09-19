@@ -40,6 +40,7 @@ public:
     void data_definition_op_test();
     void update_configuration_test();
     void balancer_validator();
+    void balance_config_file();
     void apply_balancer_test();
 
     void call_update_configuration(dsn::replication::meta_service* svc,

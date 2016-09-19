@@ -25,32 +25,52 @@ void generate_node_list(std::vector<dsn::rpc_address> &output_list, int min_coun
         output_list[i].assign_ipv4("127.0.0.1", i+1);
 }
 
+void verbose_apps(const app_mapper& input_apps)
+{
+    std::cout << input_apps.size() << std::endl;
+    for (const auto& apps: input_apps)
+    {
+        const std::shared_ptr<app_state>& app = apps.second;
+        std::cout << apps.first << " " << app->partition_count << std::endl;
+        for (int i=0; i<app->partition_count; ++i)
+        {
+            std::cout << app->partitions[i].secondaries.size()+1 << " " << app->partitions[i].primary.to_string();
+            for (int j=0; j<app->partitions[i].secondaries.size(); ++j)
+            {
+                std::cout  << " " << app->partitions[i].secondaries[j].to_string();
+            }
+            std::cout << std::endl;
+        }
+    }
+}
+
 void generate_node_mapper(
     /*out*/node_mapper& output_nodes,
     const app_mapper& input_apps,
     const std::vector<dsn::rpc_address>& input_node_list)
 {
     output_nodes.clear();
-    for (auto& addr: input_node_list) {
-        output_nodes[addr].is_alive = true;
-        output_nodes[addr].address = addr;
+    for (auto& addr: input_node_list)
+    {
+        get_node_state(output_nodes, addr, true)->set_alive(true);
     }
 
-    for (auto& kv: input_apps) {
+    for (auto& kv: input_apps)
+    {
         const std::shared_ptr<app_state>& app = kv.second;
-        for (const dsn::partition_configuration& pc: app->partitions) {
+        for (const dsn::partition_configuration& pc: app->partitions)
+        {
             node_state* ns;
-            if (!pc.primary.is_invalid()) {
-                ns = &output_nodes[pc.primary];
-                ns->is_alive = true;
-                ns->primaries.emplace(pc.pid);
-                ns->partitions.emplace(pc.pid);
+            if (!pc.primary.is_invalid())
+            {
+                ns = get_node_state(output_nodes, pc.primary, true);
+                ns->put_partition(pc.pid, true);
             }
-            for (const dsn::rpc_address& sec: pc.secondaries) {
+            for (const dsn::rpc_address& sec: pc.secondaries)
+            {
                 ASSERT_FALSE(sec.is_invalid());
-                ns = &output_nodes[sec];
-                ns->is_alive = true;
-                ns->partitions.emplace(pc.pid);
+                ns = get_node_state(output_nodes, sec, true);
+                ns->put_partition(pc.pid, false);
             }
         }
     }
@@ -83,8 +103,9 @@ void generate_app(/*out*/std::shared_ptr<app_state>& app, const std::vector<dsn:
 void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_list& ml)
 {
     int i=0;
-    for (std::shared_ptr<configuration_balancer_request> &proposal: ml)
+    for (auto kv=ml.begin(); kv!=ml.end(); ++kv)
     {
+        std::shared_ptr<configuration_balancer_request>& proposal = kv->second;
         dinfo("the %dth round of proposal, gpid(%d.%d)", i++, proposal->gpid.get_app_id(), proposal->gpid.get_partition_index());
         std::shared_ptr<app_state>& the_app = apps.find(proposal->gpid.get_app_id())->second;
 
@@ -112,8 +133,8 @@ void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_l
                 ASSERT_EQ(act.node, act.target);
                 ASSERT_EQ(act.node, pc.primary);
                 ASSERT_TRUE(nodes.find(act.node) != nodes.end());
-                ASSERT_EQ(nodes[act.node].primaries.erase(pc.pid), 1);
                 ASSERT_FALSE(is_secondary(pc, pc.primary));
+                nodes[act.node].remove_partition(pc.pid, true);
                 pc.secondaries.push_back(pc.primary);
                 pc.primary.set_invalid();
 
@@ -128,8 +149,7 @@ void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_l
                 ns = &nodes[act.node];
                 pc.primary = act.node;
                 ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
-                ASSERT_TRUE(ns->primaries.insert(pc.pid).second);
-                ASSERT_FALSE(ns->partitions.insert(pc.pid).second);
+                ns->put_partition(pc.pid, true);
                 break;
 
             case config_type::CT_ADD_SECONDARY_FOR_LB:
@@ -139,8 +159,8 @@ void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_l
                 pc.secondaries.push_back(act.node);
 
                 ns = &nodes[act.node];
-                ASSERT_TRUE(ns->partitions.insert(pc.pid).second);
-                ASSERT_TRUE(ns->primaries.find(pc.pid)==ns->primaries.end());
+                ns->put_partition(pc.pid, false);
+                ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
                 break;
 
             //in balancer, remove primary is not allowed
@@ -153,8 +173,8 @@ void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_l
                 ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
 
                 ns = &nodes[act.node];
-                ASSERT_EQ(ns->partitions.erase(pc.pid), 1);
-                ASSERT_EQ(ns->primaries.erase(pc.pid), 0);
+                ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+                ns->remove_partition(pc.pid, false);
                 break;
 
             default:

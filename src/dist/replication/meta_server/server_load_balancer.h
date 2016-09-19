@@ -60,11 +60,11 @@ public:
     server_load_balancer(meta_service* svc): _svc(svc) {}
     virtual ~server_load_balancer() {}
 
-    virtual void reconfig(const meta_view& view, const configuration_update_request& request) = 0;
+    virtual void reconfig(meta_view view, const configuration_update_request& request) = 0;
     //try to cure the partition of gpid, balancer provider can get the current server's view by view
     //and if provider wants to modify the context for this gpid, "get_context" can be used
-    virtual pc_status cure(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action/*out*/) = 0;
-    virtual bool balance(const meta_view& view, migration_list& list) = 0;
+    virtual pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action/*out*/) = 0;
+    virtual bool balance(meta_view view, migration_list& list) = 0;
 
 public:
     typedef std::function<bool (const rpc_address& addr1, const rpc_address& addr2)> node_comparator;
@@ -83,8 +83,9 @@ public:
     {
         sorted_node.clear();
         sorted_node.reserve(nodes.size());
-        for (auto& iter: nodes) {
-            if (!iter.first.is_invalid() && iter.second.is_alive)
+        for (auto& iter: nodes)
+        {
+            if (!iter.first.is_invalid() && iter.second.alive())
                 sorted_node.push_back(iter.first);
         }
         std::sort(sorted_node.begin(), sorted_node.end(), cmp);
@@ -94,8 +95,8 @@ public:
     {
         return [&nodes](const rpc_address& r1, const rpc_address& r2)
         {
-            int p1 = nodes.find(r1)->second.primaries.size();
-            int p2 = nodes.find(r2)->second.primaries.size();
+            int p1 = nodes.find(r1)->second.primary_count();
+            int p2 = nodes.find(r2)->second.primary_count();
             if (p1 != p2)
                 return p1 < p2;
             return r1 < r2;
@@ -106,8 +107,8 @@ public:
     {
         return [&nodes](const rpc_address& r1, const rpc_address& r2)
         {
-            int p1 = nodes.find(r1)->second.partitions.size();
-            int p2 = nodes.find(r2)->second.partitions.size();
+            int p1 = nodes.find(r1)->second.partition_count();
+            int p2 = nodes.find(r2)->second.partition_count();
             if (p1 != p2)
                 return p1 < p2;
             return r1 < r2;
@@ -139,20 +140,20 @@ public:
             replica_assign_delay_ms_for_dropouts = 0;
         }
     }
-    bool balance(const meta_view&, migration_list& list) override
+    bool balance(meta_view, migration_list& list) override
     {
         list.clear();
         return false;
     }
 
-    void reconfig(const meta_view& view, const configuration_update_request& request) override;
-    pc_status cure(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
+    void reconfig(meta_view view, const configuration_update_request& request) override;
+    pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
 protected:
-    bool from_proposals(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_primary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_secondary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_redundant_secondary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_worker(const meta_view& view,
+    bool from_proposals(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
+    pc_status on_missing_primary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
+    pc_status on_missing_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
+    pc_status on_redundant_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
+    pc_status on_missing_worker(meta_view& view,
         const dsn::gpid& gpid,
         const partition_configuration_stateless& pcs,
         /*out*/configuration_proposal_action &act);

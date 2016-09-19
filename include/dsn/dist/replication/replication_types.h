@@ -199,8 +199,6 @@ class query_replica_info_request;
 
 class query_replica_info_response;
 
-class node_state;
-
 typedef struct _mutation_header__isset {
   _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false) {}
   bool pid :1;
@@ -2687,72 +2685,6 @@ class query_replica_info_response {
 void swap(query_replica_info_response &a, query_replica_info_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const query_replica_info_response& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _node_state__isset {
-  _node_state__isset() : is_alive(false), address(false), primaries(false), partitions(false) {}
-  bool is_alive :1;
-  bool address :1;
-  bool primaries :1;
-  bool partitions :1;
-} _node_state__isset;
-
-class node_state {
- public:
-
-  node_state(const node_state&);
-  node_state(node_state&&);
-  node_state& operator=(const node_state&);
-  node_state& operator=(node_state&&);
-  node_state() : is_alive(0) {
-  }
-
-  virtual ~node_state() throw();
-  bool is_alive;
-   ::dsn::rpc_address address;
-  std::set< ::dsn::gpid>  primaries;
-  std::set< ::dsn::gpid>  partitions;
-
-  _node_state__isset __isset;
-
-  void __set_is_alive(const bool val);
-
-  void __set_address(const  ::dsn::rpc_address& val);
-
-  void __set_primaries(const std::set< ::dsn::gpid> & val);
-
-  void __set_partitions(const std::set< ::dsn::gpid> & val);
-
-  bool operator == (const node_state & rhs) const
-  {
-    if (!(is_alive == rhs.is_alive))
-      return false;
-    if (!(address == rhs.address))
-      return false;
-    if (!(primaries == rhs.primaries))
-      return false;
-    if (!(partitions == rhs.partitions))
-      return false;
-    return true;
-  }
-  bool operator != (const node_state &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const node_state & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(node_state &a, node_state &b);
-
-inline std::ostream& operator<<(std::ostream& out, const node_state& obj)
 {
   obj.printTo(out);
   return out;

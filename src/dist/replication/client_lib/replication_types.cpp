@@ -86,7 +86,8 @@ int _kconfig_typeValues[] = {
   config_type::CT_DOWNGRADE_TO_SECONDARY,
   config_type::CT_DOWNGRADE_TO_INACTIVE,
   config_type::CT_REMOVE,
-  config_type::CT_ADD_SECONDARY_FOR_LB
+  config_type::CT_ADD_SECONDARY_FOR_LB,
+  config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT
 };
 const char* _kconfig_typeNames[] = {
   "CT_INVALID",
@@ -97,9 +98,10 @@ const char* _kconfig_typeNames[] = {
   "CT_DOWNGRADE_TO_SECONDARY",
   "CT_DOWNGRADE_TO_INACTIVE",
   "CT_REMOVE",
-  "CT_ADD_SECONDARY_FOR_LB"
+  "CT_ADD_SECONDARY_FOR_LB",
+  "CT_PRIMARY_FORCE_UPDATE_BALLOT"
 };
-const std::map<int, const char*> _config_type_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(9, _kconfig_typeValues, _kconfig_typeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+const std::map<int, const char*> _config_type_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(10, _kconfig_typeValues, _kconfig_typeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 int _knode_statusValues[] = {
   node_status::NS_INVALID,
@@ -6042,209 +6044,6 @@ void query_replica_info_response::printTo(std::ostream& out) const {
   out << "query_replica_info_response(";
   out << "err=" << to_string(err);
   out << ", " << "replicas=" << to_string(replicas);
-  out << ")";
-}
-
-
-node_state::~node_state() throw() {
-}
-
-
-void node_state::__set_is_alive(const bool val) {
-  this->is_alive = val;
-}
-
-void node_state::__set_address(const  ::dsn::rpc_address& val) {
-  this->address = val;
-}
-
-void node_state::__set_primaries(const std::set< ::dsn::gpid> & val) {
-  this->primaries = val;
-}
-
-void node_state::__set_partitions(const std::set< ::dsn::gpid> & val) {
-  this->partitions = val;
-}
-
-uint32_t node_state::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->is_alive);
-          this->__isset.is_alive = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->address.read(iprot);
-          this->__isset.address = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_SET) {
-          {
-            this->primaries.clear();
-            uint32_t _size241;
-            ::apache::thrift::protocol::TType _etype244;
-            xfer += iprot->readSetBegin(_etype244, _size241);
-            uint32_t _i245;
-            for (_i245 = 0; _i245 < _size241; ++_i245)
-            {
-               ::dsn::gpid _elem246;
-              xfer += _elem246.read(iprot);
-              this->primaries.insert(_elem246);
-            }
-            xfer += iprot->readSetEnd();
-          }
-          this->__isset.primaries = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 4:
-        if (ftype == ::apache::thrift::protocol::T_SET) {
-          {
-            this->partitions.clear();
-            uint32_t _size247;
-            ::apache::thrift::protocol::TType _etype250;
-            xfer += iprot->readSetBegin(_etype250, _size247);
-            uint32_t _i251;
-            for (_i251 = 0; _i251 < _size247; ++_i251)
-            {
-               ::dsn::gpid _elem252;
-              xfer += _elem252.read(iprot);
-              this->partitions.insert(_elem252);
-            }
-            xfer += iprot->readSetEnd();
-          }
-          this->__isset.partitions = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t node_state::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("node_state");
-
-  xfer += oprot->writeFieldBegin("is_alive", ::apache::thrift::protocol::T_BOOL, 1);
-  xfer += oprot->writeBool(this->is_alive);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("address", ::apache::thrift::protocol::T_STRUCT, 2);
-  xfer += this->address.write(oprot);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("primaries", ::apache::thrift::protocol::T_SET, 3);
-  {
-    xfer += oprot->writeSetBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->primaries.size()));
-    std::set< ::dsn::gpid> ::const_iterator _iter253;
-    for (_iter253 = this->primaries.begin(); _iter253 != this->primaries.end(); ++_iter253)
-    {
-      xfer += (*_iter253).write(oprot);
-    }
-    xfer += oprot->writeSetEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_SET, 4);
-  {
-    xfer += oprot->writeSetBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->partitions.size()));
-    std::set< ::dsn::gpid> ::const_iterator _iter254;
-    for (_iter254 = this->partitions.begin(); _iter254 != this->partitions.end(); ++_iter254)
-    {
-      xfer += (*_iter254).write(oprot);
-    }
-    xfer += oprot->writeSetEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-void swap(node_state &a, node_state &b) {
-  using ::std::swap;
-  swap(a.is_alive, b.is_alive);
-  swap(a.address, b.address);
-  swap(a.primaries, b.primaries);
-  swap(a.partitions, b.partitions);
-  swap(a.__isset, b.__isset);
-}
-
-node_state::node_state(const node_state& other255) {
-  is_alive = other255.is_alive;
-  address = other255.address;
-  primaries = other255.primaries;
-  partitions = other255.partitions;
-  __isset = other255.__isset;
-}
-node_state::node_state( node_state&& other256) {
-  is_alive = std::move(other256.is_alive);
-  address = std::move(other256.address);
-  primaries = std::move(other256.primaries);
-  partitions = std::move(other256.partitions);
-  __isset = std::move(other256.__isset);
-}
-node_state& node_state::operator=(const node_state& other257) {
-  is_alive = other257.is_alive;
-  address = other257.address;
-  primaries = other257.primaries;
-  partitions = other257.partitions;
-  __isset = other257.__isset;
-  return *this;
-}
-node_state& node_state::operator=(node_state&& other258) {
-  is_alive = std::move(other258.is_alive);
-  address = std::move(other258.address);
-  primaries = std::move(other258.primaries);
-  partitions = std::move(other258.partitions);
-  __isset = std::move(other258.__isset);
-  return *this;
-}
-void node_state::printTo(std::ostream& out) const {
-  using ::apache::thrift::to_string;
-  out << "node_state(";
-  out << "is_alive=" << to_string(is_alive);
-  out << ", " << "address=" << to_string(address);
-  out << ", " << "primaries=" << to_string(primaries);
-  out << ", " << "partitions=" << to_string(partitions);
   out << ")";
 }
 

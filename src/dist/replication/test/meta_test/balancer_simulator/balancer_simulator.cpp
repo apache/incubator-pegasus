@@ -58,7 +58,7 @@ void generate_balanced_apps(/*out*/app_mapper& apps, node_mapper& nodes, const s
 {
     nodes.clear();
     for (const auto& node: node_list)
-        nodes[node].is_alive = true;
+        nodes[node].set_alive(true);
 
     int partitions_per_node = random32(20, 100);
     dsn::app_info info;
@@ -74,8 +74,7 @@ void generate_balanced_apps(/*out*/app_mapper& apps, node_mapper& nodes, const s
     //generate balanced primary
     for (dsn::partition_configuration& pc: the_app->partitions) {
         dsn::rpc_address n = pq1.pop();
-        nodes[n].primaries.emplace(pc.pid);
-        nodes[n].partitions.emplace(pc.pid);
+        nodes[n].put_partition(pc.pid, true);
         pc.primary = n;
         pq1.push(n);
     }
@@ -90,7 +89,7 @@ void generate_balanced_apps(/*out*/app_mapper& apps, node_mapper& nodes, const s
             dsn::rpc_address n = pq2.pop();
             if ( !is_member(pc, n) ) {
                 pc.secondaries.push_back(n);
-                nodes[n].partitions.emplace(pc.pid);
+                nodes[n].put_partition(pc.pid, false);
             }
             temp.push_back(n);
         }
@@ -106,14 +105,14 @@ void generate_balanced_apps(/*out*/app_mapper& apps, node_mapper& nodes, const s
 
     for (auto& kv: nodes)
     {
-        if (kv.second.primaries.size() > pri_max)
-            pri_max = kv.second.primaries.size();
-        if (kv.second.primaries.size() < pri_min)
-            pri_min = kv.second.primaries.size();
-        if (kv.second.partitions.size() > part_max)
-            part_max = kv.second.partitions.size();
-        if (kv.second.partitions.size() < part_min)
-            part_min = kv.second.partitions.size();
+        if (kv.second.primary_count() > pri_max)
+            pri_max = kv.second.primary_count();
+        if (kv.second.primary_count() < pri_min)
+            pri_min = kv.second.primary_count();
+        if (kv.second.partition_count() > part_max)
+            part_max = kv.second.partition_count();
+        if (kv.second.partition_count() < part_min)
+            part_min = kv.second.partition_count();
     }
 
     apps.emplace(the_app->app_id, the_app);
@@ -126,15 +125,15 @@ void random_move_primary(app_mapper& apps, node_mapper& nodes, int primary_move_
 {
     app_state& the_app = *(apps[0]);
     int space_size = the_app.partition_count*100;
-    for (dsn::partition_configuration& pc: the_app.partitions) {
+    for (dsn::partition_configuration& pc: the_app.partitions)
+    {
         int n = random32(1, space_size)/100;
         if (n<primary_move_ratio)
         {
             int indice = random32(0, 1);
-            ASSERT_EQ(nodes[pc.primary].primaries.erase(pc.pid), 1);
+            nodes[pc.primary].remove_partition(pc.pid, true);
             std::swap(pc.primary, pc.secondaries[indice]);
-            ASSERT_TRUE(nodes[pc.primary].primaries.insert(pc.pid).second);
-            ASSERT_FALSE(nodes[pc.primary].partitions.insert(pc.pid).second);
+            nodes[pc.primary].put_partition(pc.pid, true);
         }
     }
 }
@@ -155,8 +154,11 @@ void greedy_balancer_perfect_move_primary()
 
     while ( glb.balance({&apps, &nodes}, ml) )
     {
-        for (std::shared_ptr<configuration_balancer_request>& req: ml) {
-            for (configuration_proposal_action& act: req->action_list) {
+        for (const auto& kv: ml)
+        {
+            const std::shared_ptr<configuration_balancer_request>& req = kv.second;
+            for (const configuration_proposal_action& act: req->action_list)
+            {
                 ASSERT_TRUE( act.type!=config_type::CT_ADD_SECONDARY_FOR_LB );
             }
         }

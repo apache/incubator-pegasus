@@ -118,4 +118,130 @@ std::shared_ptr<app_state> app_state::create(const app_info& info)
     return result;
 }
 
+bool node_state::for_each_partition(const std::function<bool (const gpid &)> &f) const
+{
+    for (const auto& pair: app_partitions)
+    {
+        const partition_set& ps = pair.second;
+        for (const auto& gpid: ps)
+        {
+            if (!f(gpid))
+                return false;
+        }
+    }
+    return true;
+}
+
+const partition_set* node_state::get_partitions(int app_id, bool only_primary) const
+{
+    const std::map<int32_t, partition_set>* all_partitions;
+    if (only_primary)
+        all_partitions = &app_primaries;
+    else
+        all_partitions = &app_partitions;
+
+    auto iter = all_partitions->find(app_id);
+    if (iter == all_partitions->end())
+        return nullptr;
+    else
+        return &(iter->second);
+}
+
+partition_set* node_state::get_partitions(app_id id, bool only_primary, bool create_new)
+{
+    std::map<int32_t, partition_set>* all_partitions;
+    if (only_primary)
+        all_partitions = &app_primaries;
+    else
+        all_partitions = &app_partitions;
+
+    if (create_new)
+    {
+        return &((*all_partitions)[id]);
+    }
+    else
+    {
+        auto iter = all_partitions->find(id);
+        if (iter == all_partitions->end())
+            return nullptr;
+        else
+            return &(iter->second);
+    }
+}
+
+partition_set* node_state::partitions(app_id id, bool only_primary)
+{
+    return const_cast<partition_set*>(get_partitions(id, only_primary));
+}
+
+const partition_set* node_state::partitions(app_id id, bool only_primary) const
+{
+    return get_partitions(id, only_primary);
+}
+
+void node_state::put_partition(const gpid &pid, bool is_primary)
+{
+    partition_set* all = get_partitions(pid.get_app_id(), false, true);
+    if ((all->insert(pid)).second)
+        total_partitions++;
+    if (is_primary)
+    {
+        partition_set* pri = get_partitions(pid.get_app_id(), true, true);
+        if ((pri->insert(pid)).second)
+            total_primaries++;
+    }
+}
+
+void node_state::remove_partition(const gpid &pid, bool only_primary)
+{
+    partition_set* pri = get_partitions(pid.get_app_id(), true, true);
+    total_primaries -= pri->erase(pid);
+    if (!only_primary)
+    {
+        partition_set* all = get_partitions(pid.get_app_id(), false, true);
+        total_partitions -= all->erase(pid);
+    }
+}
+
+bool node_state::for_each_primary(app_id id, const std::function<bool (const gpid &)> &f) const
+{
+    const partition_set* pri = partitions(id, true);
+    if (pri == nullptr)
+        return false;
+    for (const gpid& pid: *pri)
+    {
+        dassert(id == pid.get_app_id(), "");
+        if (!f(pid))
+            return false;
+    }
+    return true;
+}
+
+unsigned node_state::primary_count(app_id id) const
+{
+    const partition_set* pri = partitions(id, true);
+    if (pri == nullptr)
+        return 0;
+    return pri->size();
+}
+
+unsigned node_state::partition_count(app_id id) const
+{
+    const partition_set* pri = partitions(id, false);
+    if (pri == nullptr)
+        return 0;
+    return pri->size();
+}
+
+partition_status::type node_state::served_as(const gpid &pid) const
+{
+    const partition_set* ps1 = partitions(pid.get_app_id(), true);
+    if (ps1 != nullptr && ps1->find(pid) != ps1->end())
+        return partition_status::PS_PRIMARY;
+    const partition_set* ps2 = partitions(pid.get_app_id(), false);
+    if (ps2 != nullptr && ps2->find(pid) != ps2->end())
+        return partition_status::PS_SECONDARY;
+    return partition_status::PS_INACTIVE;
+}
+
 }}

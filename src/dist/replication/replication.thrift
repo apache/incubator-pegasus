@@ -168,6 +168,7 @@ enum config_type
     CT_DOWNGRADE_TO_INACTIVE,
     CT_REMOVE,
     CT_ADD_SECONDARY_FOR_LB,
+    CT_PRIMARY_FORCE_UPDATE_BALLOT
 }
 
 enum node_status
@@ -366,14 +367,6 @@ struct query_replica_info_response
 {
     1:dsn.error_code      err;
     2:list<replica_info>  replicas;
-}
-
-struct node_state
-{
-    1:bool            is_alive;
-    2:dsn.rpc_address address;
-    3:set<dsn.gpid>   primaries;
-    4:set<dsn.gpid>   partitions;
 }
 
 /*

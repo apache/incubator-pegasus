@@ -66,7 +66,7 @@ public:
     static bool s_disable_balancer;
 public:
     checker_load_balancer(meta_service* svc): simple_load_balancer(svc) {}
-    pc_status cure(const meta_view &view, const dsn::gpid& gpid, configuration_proposal_action &action) override
+    pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action &action) override
     {
         const partition_configuration& pc = *get_config(*view.apps, gpid);
         action.type = config_type::CT_INVALID;

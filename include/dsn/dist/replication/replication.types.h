@@ -49,6 +49,5 @@ namespace dsn { namespace replication {
     GENERATED_TYPE_SERIALIZATION(replica_info, THRIFT)
     GENERATED_TYPE_SERIALIZATION(query_replica_info_request, THRIFT)
     GENERATED_TYPE_SERIALIZATION(query_replica_info_response, THRIFT)
-    GENERATED_TYPE_SERIALIZATION(node_state, THRIFT)
 
 } } 

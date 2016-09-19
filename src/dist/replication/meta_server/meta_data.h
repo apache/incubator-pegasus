@@ -40,6 +40,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <functional>
 #include <dsn/utility/utils.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
@@ -161,9 +162,58 @@ public:
     }
 };
 
-typedef std::map<int32_t, std::shared_ptr<app_state>> app_mapper;
+typedef std::set<dsn::gpid> partition_set;
+typedef std::map<app_id, std::shared_ptr<app_state>> app_mapper;
+
+class node_state
+{
+private:
+    //partitions
+    std::map<int32_t, partition_set > app_primaries;
+    std::map<int32_t, partition_set > app_partitions;
+    unsigned total_primaries;
+    unsigned total_partitions;
+
+    //status
+    bool is_alive;
+    dsn::rpc_address address;
+
+    const partition_set* get_partitions(app_id id, bool only_primary) const;
+    partition_set* get_partitions(app_id id, bool only_primary, bool create_new);
+
+public:
+    const partition_set* partitions(app_id id, bool only_primary) const;
+    partition_set* partitions(app_id id, bool only_primary);
+
+    unsigned primary_count(app_id id) const;
+    unsigned secondary_count(app_id id) const { return partition_count(id) - primary_count(id); }
+    unsigned partition_count(app_id id) const;
+
+    unsigned primary_count() const { return total_primaries; }
+    unsigned secondary_count() const { return total_partitions - total_primaries; }
+    unsigned partition_count() const { return total_partitions; }
+
+    partition_status::type served_as(const gpid& pid) const;
+
+    bool alive() const { return is_alive; }
+    void set_alive(bool alive) { is_alive = alive; }
+    dsn::rpc_address addr() const { return address; }
+    void set_addr(const dsn::rpc_address& addr) { address = addr; }
+
+    void put_partition(const dsn::gpid& pid, bool is_primary);
+    void remove_partition(const dsn::gpid& pid, bool only_primary);
+
+    bool for_each_partition(const std::function<bool (const dsn::gpid& pid)>& f) const;
+    bool for_each_primary(app_id id, const std::function<bool (const dsn::gpid& pid)>& f) const;
+
+    //this is partition count with newly add replicas
+    unsigned newly_primary_count(app_id id) const;
+    unsigned newly_secondary_count(app_id id) const;
+    unsigned newly_partition_count(app_id id) const;
+};
+
 typedef std::unordered_map<rpc_address, node_state> node_mapper;
-typedef std::list< std::shared_ptr<configuration_balancer_request> > migration_list;
+typedef std::map<dsn::gpid, std::shared_ptr<configuration_balancer_request> > migration_list;
 
 struct meta_view
 {
@@ -171,12 +221,26 @@ struct meta_view
     node_mapper* nodes;
 };
 
+inline node_state* get_node_state(node_mapper& nodes, rpc_address addr, bool create_new)
+{
+    node_state* ns;
+    if (nodes.find(addr) == nodes.end())
+    {
+        if (!create_new)
+            return nullptr;
+        ns = &nodes[addr];
+        ns->set_addr(addr);
+    }
+    ns = &nodes[addr];
+    return ns;
+}
+
 inline bool is_node_alive(const node_mapper& nodes, rpc_address addr)
 {
     auto iter = nodes.find(addr);
     if (iter == nodes.end())
         return false;
-    return iter->second.is_alive;
+    return iter->second.alive();
 }
 
 inline const partition_configuration* get_config(const app_mapper& apps, const dsn::gpid& gpid)
@@ -195,34 +259,14 @@ inline const config_context* get_config_context(const app_mapper& apps, const ds
     return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
 }
 
-inline bool walk_through_primary(const meta_view& view, const dsn::rpc_address& addr, const std::function<bool (const partition_configuration& pc)>& func)
+inline void for_each_available_app(const app_mapper& apps, const std::function<bool (const std::shared_ptr<app_state>&)>& action)
 {
-    auto iter = view.nodes->find(addr);
-    if (iter == view.nodes->end())
-        return false;
-    node_state& ns = iter->second;
-    for (const dsn::gpid& gpid: ns.primaries)
-    {
-        const partition_configuration* pc = get_config(*view.apps, gpid);
-        if (pc != nullptr && !func(*pc) )
-            return false;
+    for (const auto& p: apps) {
+        if (p.second->status == app_status::AS_AVAILABLE) {
+            if (!action(p.second))
+                break;
+        }
     }
-    return true;
-}
-
-inline bool walk_through_partitions(const meta_view& view, const dsn::rpc_address& addr, const std::function<bool (const partition_configuration& pc)>& func)
-{
-    auto iter = view.nodes->find(addr);
-    if (iter == view.nodes->end() )
-        return false;
-    node_state& ns = iter->second;
-    for (const dsn::gpid& gpid: ns.partitions)
-    {
-        const partition_configuration* pc = get_config(*view.apps, gpid);
-        if (pc != nullptr && !func(*pc) )
-            return false;
-    }
-    return true;
 }
 
 inline int count_partitions(const app_mapper& apps)

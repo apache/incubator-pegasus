@@ -81,8 +81,7 @@ void meta_service_test_app::call_update_configuration(meta_service *svc,
         LPC_META_STATE_HIGH,
         nullptr,
         std::bind(&server_state::on_update_configuration, svc->_state.get(), request, fake_request),
-        server_state::s_state_write_hash,
-        std::chrono::milliseconds( random32(1, 1000) )
+        server_state::s_state_write_hash
     );
 }
 
@@ -259,8 +258,8 @@ void meta_service_test_app::apply_balancer_test()
         migration_list result;
         for (auto& iter: list)
         {
-            std::shared_ptr<configuration_balancer_request> req = std::make_shared<configuration_balancer_request>(*iter);
-            result.emplace_back(req);
+            std::shared_ptr<configuration_balancer_request> req = std::make_shared<configuration_balancer_request>(*(iter.second));
+            result.emplace(iter.first, req);
         }
         migration_check_and_apply(backed_app, backed_nodes, result);
     };

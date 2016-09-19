@@ -7,7 +7,7 @@
 
 namespace dsn { namespace replication {
 
-void simple_load_balancer::reconfig(const meta_view &view, const configuration_update_request &request)
+void simple_load_balancer::reconfig(meta_view view, const configuration_update_request &request)
 {
     const dsn::gpid& gpid = request.config.pid;
     if (!((*view.apps)[gpid.get_app_id()]->is_stateful))
@@ -42,7 +42,7 @@ void simple_load_balancer::reconfig(const meta_view &view, const configuration_u
     }
 }
 
-bool simple_load_balancer::from_proposals(const meta_view &view, const dsn::gpid &gpid, configuration_proposal_action &action)
+bool simple_load_balancer::from_proposals(meta_view &view, const dsn::gpid &gpid, configuration_proposal_action &action)
 {
     const partition_configuration& pc = *get_config(*(view.apps), gpid);
     config_context& cc = *get_mutable_context(*(view.apps), gpid);
@@ -94,7 +94,7 @@ invalid_action:
     return false;
 }
 
-pc_status simple_load_balancer::on_missing_primary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
+pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
 {
     const partition_configuration& pc = *get_config(*(view.apps), gpid);
     action.type = config_type::CT_INVALID;
@@ -112,10 +112,10 @@ pc_status simple_load_balancer::on_missing_primary(const meta_view& view, const 
         if (!sort_result.empty())
         {
             action.type = config_type::CT_ASSIGN_PRIMARY;
-            int min_load = (*view.nodes)[sort_result[0]].partitions.size();
+            int min_load = (*view.nodes)[sort_result[0]].partition_count();
             int i;
             for (i=1; i!=sort_result.size(); ++i)
-                if ((*view.nodes)[sort_result[i]].partitions.size() != min_load)
+                if ((*view.nodes)[sort_result[i]].partition_count() != min_load)
                     break;
             action.node = sort_result[dsn_random32(0, i-1)];
             action.target = action.node;
@@ -136,7 +136,7 @@ pc_status simple_load_balancer::on_missing_primary(const meta_view& view, const 
     }
 }
 
-pc_status simple_load_balancer::on_missing_secondary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
+pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
 {
     const partition_configuration& pc = *get_config(*(view.apps), gpid);
     config_context& cc = *get_mutable_context(*(view.apps), gpid);
@@ -177,7 +177,7 @@ pc_status simple_load_balancer::on_missing_secondary(const meta_view& view, cons
     {
         std::vector<rpc_address> sort_result;
         sort_node(*view.nodes, partition_comparator(*view.nodes), [&pc](const node_state& ns){
-            return ns.is_alive && !ns.address.is_invalid() && !is_member(pc, ns.address);
+            return ns.alive() && !ns.addr().is_invalid() && !is_member(pc, ns.addr());
         }, sort_result);
 
         if (!sort_result.empty())
@@ -185,10 +185,10 @@ pc_status simple_load_balancer::on_missing_secondary(const meta_view& view, cons
             action.target = pc.primary;
             action.type = config_type::CT_ADD_SECONDARY;
 
-            int min_load = (*view.nodes)[sort_result[0]].partitions.size();
+            int min_load = (*view.nodes)[sort_result[0]].partition_count();
             int i=1;
             for (; i<sort_result.size(); ++i)
-                if ((*view.nodes)[sort_result[i]].partitions.size() != min_load)
+                if ((*view.nodes)[sort_result[i]].partition_count() != min_load)
                     break;
             action.node = sort_result[dsn_random32(0, i-1)];
         }
@@ -202,15 +202,15 @@ pc_status simple_load_balancer::on_missing_secondary(const meta_view& view, cons
     return pc_status::ill;
 }
 
-pc_status simple_load_balancer::on_redundant_secondary(const meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
+pc_status simple_load_balancer::on_redundant_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action)
 {
     const node_mapper& nodes = *(view.nodes);
     const partition_configuration& pc = *get_config(*(view.apps), gpid);
     int target = 0;
-    int load = nodes.find(pc.secondaries.front())->second.partitions.size();
+    int load = nodes.find(pc.secondaries.front())->second.partition_count();
     for (int i=0; i!=pc.secondaries.size(); ++i)
     {
-        int l = nodes.find(pc.secondaries[i])->second.partitions.size();
+        int l = nodes.find(pc.secondaries[i])->second.partition_count();
         if (l > load)
         {
             load = l;
@@ -224,22 +224,22 @@ pc_status simple_load_balancer::on_redundant_secondary(const meta_view& view, co
 }
 
 pc_status simple_load_balancer::on_missing_worker(
-    const meta_view& view,
+    meta_view& view,
     const dsn::gpid& gpid,
     const partition_configuration_stateless& pcs,
     /*out*/configuration_proposal_action& act)
 {
     std::vector<rpc_address> sort_result;
     sort_node(*view.nodes, partition_comparator(*view.nodes), [&pcs](const node_state& ns){
-        return ns.is_alive && !ns.address.is_invalid() && !pcs.is_member(ns.address);
+        return ns.alive() && !ns.addr().is_invalid() && !pcs.is_member(ns.addr());
     }, sort_result);
 
     if (!sort_result.empty())
     {
-        int min_load = (*view.nodes)[sort_result[0]].partitions.size();
+        int min_load = (*view.nodes)[sort_result[0]].partition_count();
         int i=1;
         for (; i<sort_result.size(); ++i)
-            if ((*view.nodes)[sort_result[i]].partitions.size() != min_load)
+            if ((*view.nodes)[sort_result[i]].partition_count() != min_load)
                 break;
         act.node = sort_result[dsn_random32(0, i-1)];
         act.target = act.node;
@@ -249,7 +249,7 @@ pc_status simple_load_balancer::on_missing_worker(
 }
 
 pc_status simple_load_balancer::cure(
-    const meta_view& view,
+    meta_view view,
     const dsn::gpid& gpid,
     configuration_proposal_action& action)
 {

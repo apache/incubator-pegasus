@@ -282,8 +282,6 @@ inline void json_encode(std::stringstream& out, const dsn::partition_configurati
 inline void json_decode(string_tokenizer& in, dsn::partition_configuration& config);
 inline void json_encode(std::stringstream& out, const dsn::app_info& info);
 inline void json_decode(string_tokenizer& in, dsn::app_info& info);
-inline void json_encode(std::stringstream& out, const dsn::replication::node_state& ns);
-inline void json_decode(string_tokenizer& in, dsn::replication::node_state& ns);
 
 template<typename T> inline void json_encode_iterable(std::stringstream& out, const T& t)
 {
@@ -530,14 +528,6 @@ inline void json_encode(std::stringstream& out, const dsn::app_info& info)
 inline void json_decode(dsn::json::string_tokenizer& in, dsn::app_info& info)
 {
     JSON_DECODE_ENTRIES(in, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count);
-}
-inline void json_encode(std::stringstream& out, const dsn::replication::node_state& ns)
-{
-    JSON_ENCODE_ENTRIES(out, ns, is_alive, address, primaries, partitions);
-}
-inline void json_decode(dsn::json::string_tokenizer& in, dsn::replication::node_state& ns)
-{
-    JSON_DECODE_ENTRIES(in, ns, is_alive, address, primaries, partitions);
 }
 
 }}
