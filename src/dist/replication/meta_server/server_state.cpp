@@ -1416,7 +1416,7 @@ void server_state::on_propose_balancer(const configuration_balancer_request& req
     {
         partition_configuration& pc = app->partitions[request.gpid.get_partition_index()];
         config_context& cc = app->helpers->contexts[request.gpid.get_partition_index()];
-        if (cc.balancer_proposal != nullptr)
+        if (!cc.balancer_proposal->action_list.empty())
         {
             ddebug("an exist balancer proposal is executing, ignore current one");
             response.err = ERR_INVALID_PARAMETERS;
@@ -1424,11 +1424,13 @@ void server_state::on_propose_balancer(const configuration_balancer_request& req
         else if (request.force)
         {
             for (const configuration_proposal_action& act: request.action_list)
+            {
                 send_proposal(act, pc, *app);
+            }
         }
         else
         {
-            cc.balancer_proposal = std::make_shared<configuration_balancer_request>(request);
+            cc.balancer_proposal->action_list = std::move(request.action_list);
             for (configuration_proposal_action& act: cc.balancer_proposal->action_list)
                 if (act.target.is_invalid())
                     act.target = pc.primary;
@@ -1457,6 +1459,7 @@ void server_state::apply_migration_actions(migration_list &ml)
         dassert(app->status==app_status::AS_AVAILABLE, "");
         config_context& cc = app->helpers->contexts[gpid.get_partition_index()];
         cc.balancer_proposal = std::move(kv->second);
+        cc.is_cure_proposal = false;
     }
     ml.clear();
 }

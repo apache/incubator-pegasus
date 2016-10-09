@@ -28,6 +28,13 @@ struct reply_context
 };
 dsn_message_t create_corresponding_receive(dsn_message_t req);
 
+//release the dsn_message who's reference is 0
+inline void destroy_message(dsn_message_t msg)
+{
+    dsn_msg_add_ref(msg);
+    dsn_msg_release_ref(msg);
+}
+
 class meta_service_test_app: public dsn::service::meta_service_app
 {
 public:
@@ -42,6 +49,8 @@ public:
     void balancer_validator();
     void balance_config_file();
     void apply_balancer_test();
+    void simple_lb_cure_test();
+    void simple_lb_balanced_cure();
 
     void call_update_configuration(dsn::replication::meta_service* svc,
         std::shared_ptr<dsn::replication::configuration_update_request>& request);
@@ -74,8 +83,7 @@ public:
         );
 
         //release the sending message
-        dsn_msg_add_ref(msg);
-        dsn_msg_release_ref(msg);
+        destroy_message(msg);
 
         return result;
     }

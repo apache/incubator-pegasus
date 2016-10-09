@@ -11,7 +11,8 @@
 
 using namespace dsn::replication;
 
-class fake_sender_meta_service: public dsn::replication::meta_service {
+class fake_sender_meta_service: public dsn::replication::meta_service
+{
 private:
     meta_service_test_app* _app;
 public:
@@ -28,11 +29,8 @@ public:
         std::shared_ptr<configuration_update_request> update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
 
-        dsn_msg_add_ref(request);
-        dsn_msg_release_ref(request);
-
-        dsn_msg_add_ref(recv_request);
-        dsn_msg_release_ref(recv_request);
+        destroy_message(request);
+        destroy_message(recv_request);
 
         dsn::partition_configuration& pc = update_req->config;
         pc.ballot++;

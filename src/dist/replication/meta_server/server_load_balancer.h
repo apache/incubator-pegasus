@@ -55,7 +55,6 @@ public:
         return new T(svc);
     }
     typedef server_load_balancer* (*factory)(meta_service* svc);
-
 public:
     server_load_balancer(meta_service* svc): _svc(svc) {}
     virtual ~server_load_balancer() {}
@@ -74,8 +73,12 @@ public:
         result.clear();
         result.reserve(nodes.size());
         for (auto& iter: nodes)
+        {
             if (filter(iter.second))
+            {
                 result.push_back(iter.first);
+            }
+        }
         std::sort(result.begin(), result.end(), cmp);
     }
 
@@ -86,7 +89,9 @@ public:
         for (auto& iter: nodes)
         {
             if (!iter.first.is_invalid() && iter.second.alive())
+            {
                 sorted_node.push_back(iter.first);
+            }
         }
         std::sort(sorted_node.begin(), sorted_node.end(), cmp);
     }
@@ -116,11 +121,6 @@ public:
     }
 
 protected:
-    config_context* get_mutable_context(const app_mapper& app, const dsn::gpid& gpid)
-    {
-        return const_cast<config_context*>(get_config_context(app, gpid));
-    }
-protected:
     meta_service* _svc;
 };
 
@@ -149,14 +149,29 @@ public:
     void reconfig(meta_view view, const configuration_update_request& request) override;
     pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
 protected:
-    bool from_proposals(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_primary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_redundant_secondary(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
-    pc_status on_missing_worker(meta_view& view,
+    void reset_proposal(meta_view& view, const dsn::gpid& gpid);
+
+    bool from_proposals(
+        meta_view& view,
+        const dsn::gpid& gpid,
+        configuration_proposal_action& action);
+    pc_status on_missing_primary(
+        meta_view& view,
+        const dsn::gpid& gpid,
+        configuration_proposal_action& action);
+    pc_status on_missing_secondary(
+        meta_view& view,
+        const dsn::gpid& gpid,
+        configuration_proposal_action& action);
+    pc_status on_redundant_secondary(
+        meta_view& view,
+        const dsn::gpid& gpid,
+        configuration_proposal_action& action);
+    pc_status on_missing_worker(
+        meta_view& view,
         const dsn::gpid& gpid,
         const partition_configuration_stateless& pcs,
-        /*out*/configuration_proposal_action &act);
+        configuration_proposal_action &act);
 
     int32_t mutation_2pc_min_replica_count;
     uint64_t replica_assign_delay_ms_for_dropouts;

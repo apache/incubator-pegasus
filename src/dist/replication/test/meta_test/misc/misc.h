@@ -4,7 +4,7 @@
 #include <vector>
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
-
+#include <dsn/dist/replication/replication.types.h>
 #include "meta_data.h"
 
 uint32_t random32(uint32_t min, uint32_t max);
@@ -26,6 +26,12 @@ void migration_check_and_apply(
     /*in-out*/dsn::replication::node_mapper& nodes,
     /*in-out*/dsn::replication::migration_list& ml
 );
+
+void proposal_action_check_and_apply(
+    const dsn::replication::configuration_proposal_action& act,
+    const dsn::gpid& pid,
+    dsn::replication::app_mapper& apps,
+    dsn::replication::node_mapper& nodes);
 
 void app_mapper_compare(const dsn::replication::app_mapper& mapper1, const dsn::replication::app_mapper& mapper2);
 

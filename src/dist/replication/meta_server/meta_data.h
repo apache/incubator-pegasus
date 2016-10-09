@@ -42,6 +42,7 @@
 #include <unordered_map>
 #include <functional>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/extensible_object.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>
@@ -96,6 +97,7 @@ public:
     //for load balancer's decision
     //[
     std::shared_ptr<configuration_balancer_request> balancer_proposal;
+    bool is_cure_proposal;
     std::deque<dropped_server> history;
     //]
 public:
@@ -165,12 +167,12 @@ public:
 typedef std::set<dsn::gpid> partition_set;
 typedef std::map<app_id, std::shared_ptr<app_state>> app_mapper;
 
-class node_state
+class node_state: public extensible_object<node_state, 4>
 {
 private:
     //partitions
-    std::map<int32_t, partition_set > app_primaries;
-    std::map<int32_t, partition_set > app_partitions;
+    std::map<int32_t, partition_set> app_primaries;
+    std::map<int32_t, partition_set> app_partitions;
     unsigned total_primaries;
     unsigned total_partitions;
 
@@ -182,6 +184,7 @@ private:
     partition_set* get_partitions(app_id id, bool only_primary, bool create_new);
 
 public:
+    node_state();
     const partition_set* partitions(app_id id, bool only_primary) const;
     partition_set* partitions(app_id id, bool only_primary);
 
@@ -205,11 +208,6 @@ public:
 
     bool for_each_partition(const std::function<bool (const dsn::gpid& pid)>& f) const;
     bool for_each_primary(app_id id, const std::function<bool (const dsn::gpid& pid)>& f) const;
-
-    //this is partition count with newly add replicas
-    unsigned newly_primary_count(app_id id) const;
-    unsigned newly_secondary_count(app_id id) const;
-    unsigned newly_partition_count(app_id id) const;
 };
 
 typedef std::unordered_map<rpc_address, node_state> node_mapper;
@@ -251,7 +249,23 @@ inline const partition_configuration* get_config(const app_mapper& apps, const d
     return &(iter->second->partitions[gpid.get_partition_index()]);
 }
 
+inline partition_configuration* get_config(app_mapper& apps, const dsn::gpid& gpid)
+{
+    auto iter = apps.find(gpid.get_app_id());
+    if (iter==apps.end() || iter->second->status==app_status::AS_DROPPED)
+        return nullptr;
+    return &(iter->second->partitions[gpid.get_partition_index()]);
+}
+
 inline const config_context* get_config_context(const app_mapper& apps, const dsn::gpid& gpid)
+{
+    auto iter = apps.find(gpid.get_app_id());
+    if (iter == apps.end() || iter->second->status==app_status::AS_DROPPED)
+        return nullptr;
+    return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
+}
+
+inline config_context* get_config_context(app_mapper& apps, const dsn::gpid& gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
     if (iter == apps.end() || iter->second->status==app_status::AS_DROPPED)
@@ -261,8 +275,10 @@ inline const config_context* get_config_context(const app_mapper& apps, const ds
 
 inline void for_each_available_app(const app_mapper& apps, const std::function<bool (const std::shared_ptr<app_state>&)>& action)
 {
-    for (const auto& p: apps) {
-        if (p.second->status == app_status::AS_AVAILABLE) {
+    for (const auto& p: apps)
+    {
+        if (p.second->status == app_status::AS_AVAILABLE)
+        {
             if (!action(p.second))
                 break;
         }

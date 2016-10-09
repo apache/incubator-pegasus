@@ -51,7 +51,9 @@ void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address
         {
             drops.push_back(node);
             if (drops.size() > 3)
+            {
                 drops.erase(drops.begin());
+            }
         }
         else
         {
@@ -80,7 +82,7 @@ void config_context::clear_proposal()
 {
     if (config_status::pending_remote_sync != stage)
         stage = config_status::not_pending;
-    balancer_proposal.reset();
+    balancer_proposal->action_list.clear();
 }
 
 void app_state_helper::on_init_partitions()
@@ -89,7 +91,13 @@ void app_state_helper::on_init_partitions()
     context.stage = config_status::not_pending;
     context.pending_sync_task = nullptr;
     context.msg = nullptr;
+
+    context.is_cure_proposal = false;
     contexts.assign(owner->partition_count, context);
+    for (unsigned int i=0; i!=owner->partition_count; ++i)
+    {
+        contexts[i].balancer_proposal = std::make_shared<configuration_balancer_request>();
+    }
 }
 
 app_state::app_state(const app_info &info): app_info(info), helpers(new app_state_helper())
@@ -116,6 +124,13 @@ std::shared_ptr<app_state> app_state::create(const app_info& info)
     std::shared_ptr<app_state> result = std::make_shared<app_state>(info);
     result->helpers->owner = result.get();
     return result;
+}
+
+node_state::node_state():
+    total_primaries(0),
+    total_partitions(0),
+    is_alive(false)
+{
 }
 
 bool node_state::for_each_partition(const std::function<bool (const gpid &)> &f) const

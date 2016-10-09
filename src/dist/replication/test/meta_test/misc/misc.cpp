@@ -100,6 +100,96 @@ void generate_app(/*out*/std::shared_ptr<app_state>& app, const std::vector<dsn:
     }
 }
 
+void proposal_action_check_and_apply(
+    const configuration_proposal_action& act,
+    const dsn::gpid& pid,
+    app_mapper& apps,
+    node_mapper& nodes)
+{
+    dsn::partition_configuration& pc = *get_config(apps, pid);
+    node_state* ns;
+
+    ++pc.ballot;
+    ASSERT_TRUE(act.type!=config_type::CT_INVALID);
+    ASSERT_FALSE(act.target.is_invalid());
+    ASSERT_FALSE(act.node.is_invalid());
+
+    switch (act.type) {
+    case config_type::CT_ASSIGN_PRIMARY:
+        ASSERT_EQ(act.node, act.target);
+        ASSERT_TRUE(pc.primary.is_invalid());
+        ASSERT_TRUE(pc.secondaries.empty());
+
+        pc.primary = act.node;
+        ns = &nodes[act.node];
+        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+        ns->put_partition(pc.pid, true);
+        break;
+
+    case config_type::CT_ADD_SECONDARY:
+        ASSERT_EQ(act.target, pc.primary);
+        ASSERT_FALSE(is_member(pc, act.node));
+
+        pc.secondaries.push_back(act.node);
+        ns = &nodes[act.node];
+        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+        ns->put_partition(pc.pid, false);
+
+        break;
+
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+        ASSERT_EQ(act.node, act.target);
+        ASSERT_EQ(act.node, pc.primary);
+        ASSERT_TRUE(nodes.find(act.node) != nodes.end());
+        ASSERT_FALSE(is_secondary(pc, pc.primary));
+        nodes[act.node].remove_partition(pc.pid, true);
+        pc.secondaries.push_back(pc.primary);
+        pc.primary.set_invalid();
+        break;
+
+    case config_type::CT_UPGRADE_TO_PRIMARY:
+        ASSERT_TRUE(pc.primary.is_invalid());
+        ASSERT_EQ(act.node, act.target);
+        ASSERT_TRUE( is_secondary(pc, act.node) );
+        ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
+
+        ns = &nodes[act.node];
+        pc.primary = act.node;
+        ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
+        ns->put_partition(pc.pid, true);
+        break;
+
+    case config_type::CT_ADD_SECONDARY_FOR_LB:
+        ASSERT_EQ(act.target, pc.primary);
+        ASSERT_FALSE( is_member(pc, act.node) );
+        ASSERT_FALSE(act.node.is_invalid());
+        pc.secondaries.push_back(act.node);
+
+        ns = &nodes[act.node];
+        ns->put_partition(pc.pid, false);
+        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+        break;
+
+    //in balancer, remove primary is not allowed
+    case config_type::CT_REMOVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+        ASSERT_FALSE(pc.primary.is_invalid());
+        ASSERT_EQ(pc.primary, act.target);
+        ASSERT_TRUE( is_secondary(pc, act.node) );
+        ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
+        ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
+
+        ns = &nodes[act.node];
+        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+        ns->remove_partition(pc.pid, false);
+        break;
+
+    default:
+        ASSERT_TRUE(false);
+        break;
+    }
+}
+
 void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_list& ml)
 {
     int i=0;
@@ -119,68 +209,11 @@ void migration_check_and_apply(app_mapper& apps, node_mapper& nodes, migration_l
             ASSERT_FALSE(addr.is_invalid());
         ASSERT_FALSE(is_secondary(pc, pc.primary));
 
-        node_state* ns;
-        for (unsigned int j=0; j<proposal->action_list.size(); ++j) {
-            ++pc.ballot;
+        for (unsigned int j=0; j<proposal->action_list.size(); ++j)
+        {
             configuration_proposal_action& act = proposal->action_list[j];
             dinfo("the %dth round of action, type: %s, node: %s, target: %s", j, dsn::enum_to_string(act.type), act.node.to_string(), act.target.to_string());
-            ASSERT_TRUE(act.type!=config_type::CT_INVALID);
-            ASSERT_FALSE(act.target.is_invalid());
-            ASSERT_FALSE(act.node.is_invalid());
-
-            switch (act.type) {
-            case config_type::CT_DOWNGRADE_TO_SECONDARY:
-                ASSERT_EQ(act.node, act.target);
-                ASSERT_EQ(act.node, pc.primary);
-                ASSERT_TRUE(nodes.find(act.node) != nodes.end());
-                ASSERT_FALSE(is_secondary(pc, pc.primary));
-                nodes[act.node].remove_partition(pc.pid, true);
-                pc.secondaries.push_back(pc.primary);
-                pc.primary.set_invalid();
-
-                break;
-
-            case config_type::CT_UPGRADE_TO_PRIMARY:
-                ASSERT_TRUE(pc.primary.is_invalid());
-                ASSERT_EQ(act.node, act.target);
-                ASSERT_TRUE( is_secondary(pc, act.node) );
-                ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
-
-                ns = &nodes[act.node];
-                pc.primary = act.node;
-                ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
-                ns->put_partition(pc.pid, true);
-                break;
-
-            case config_type::CT_ADD_SECONDARY_FOR_LB:
-                ASSERT_EQ(act.target, pc.primary);
-                ASSERT_FALSE( is_member(pc, act.node) );
-                ASSERT_FALSE(act.node.is_invalid());
-                pc.secondaries.push_back(act.node);
-
-                ns = &nodes[act.node];
-                ns->put_partition(pc.pid, false);
-                ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
-                break;
-
-            //in balancer, remove primary is not allowed
-            case config_type::CT_REMOVE:
-            case config_type::CT_DOWNGRADE_TO_INACTIVE:
-                ASSERT_FALSE(pc.primary.is_invalid());
-                ASSERT_EQ(pc.primary, act.target);
-                ASSERT_TRUE( is_secondary(pc, act.node) );
-                ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
-                ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
-
-                ns = &nodes[act.node];
-                ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
-                ns->remove_partition(pc.pid, false);
-                break;
-
-            default:
-                ASSERT_TRUE(false);
-                break;
-            }
+            proposal_action_check_and_apply(act, proposal->gpid, apps, nodes);
         }
     }
 }

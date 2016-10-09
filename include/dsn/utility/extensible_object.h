@@ -46,6 +46,7 @@ namespace dsn {
 @{
 */
 typedef void (*extension_deletor)(void*);
+typedef void*(*extension_creator)(void*);
 
 class extensible
 {
@@ -135,7 +136,7 @@ public:
     
 private:
     uint64_t                     _extensions[MAX_EXTENSION_COUNT];
-    static extension_deletor     s_extensionDeletors[MAX_EXTENSION_COUNT]; 
+    static extension_deletor     s_extensionDeletors[MAX_EXTENSION_COUNT];
     static std::atomic<uint32_t> s_nextExtensionIndex;
 };
 
@@ -182,6 +183,15 @@ public:
     static uint32_t register_ext(extension_deletor deletor = nullptr)
     {
         s_slotIdx = TExtensibleObject::register_extension(deletor);
+        s_deletor = deletor;
+        return s_slotIdx;
+    }
+
+    static uint32_t register_ext(extension_creator creator, extension_deletor deletor)
+    {
+        s_slotIdx = TExtensibleObject::register_extension(deletor);
+        s_creator = creator;
+        s_deletor = deletor;
         return s_slotIdx;
     }
 
@@ -199,11 +209,19 @@ public:
     static TExtension* get_inited(TExtensibleObject* ctx)
     {
         uint64_t& val = ctx->get_extension(s_slotIdx);
-        if (val == TExtensibleObject::INVALID_VALUE)
+        if (val != TExtensibleObject::INVALID_VALUE)
+            return (TExtension*)val;
+
+        if (s_creator == nullptr)
         {
             TExtension* obj = new TExtension();
             val = (uint64_t)obj;
         }
+        else
+        {
+            val = (uint64_t)s_creator(ctx);
+        }
+
         return (TExtension*)val;
     }
 
@@ -220,6 +238,7 @@ public:
 private:
     static uint32_t          s_slotIdx;
     static extension_deletor s_deletor;
+    static extension_creator s_creator;
 };
 
 
@@ -231,5 +250,6 @@ template <typename TPlaceholder, typename TExtensibleObject> uint32_t uint64_ext
 
 template <typename TExtension, typename TExtensibleObject> uint32_t object_extension_helper<TExtension, TExtensibleObject>::s_slotIdx = 0;
 template <typename TExtension, typename TExtensibleObject> extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_deletor = nullptr;
+template <typename TExtension, typename TExtensibleObject> extension_creator object_extension_helper<TExtension, TExtensibleObject>::s_creator = nullptr;
 /*@}*/
 } // end namespace dsn
