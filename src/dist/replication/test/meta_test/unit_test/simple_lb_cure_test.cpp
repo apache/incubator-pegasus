@@ -103,6 +103,8 @@ void meta_service_test_app::simple_lb_cure_test()
     dsn::task_ptr t;
     std::shared_ptr<message_filter> svc(new message_filter(this));
     bool proposal_sent;
+    dsn::rpc_address last_addr;
+
     ec = svc->remote_storage_initialize();
     ASSERT_EQ(ec, dsn::ERR_OK);
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
@@ -150,9 +152,10 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
-        EXPECT_EQ(update_req->node, nodes[0]);
-        EXPECT_EQ(target, nodes[0]);
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
+        EXPECT_EQ(target, update_req->node);
 
+        last_addr = update_req->node;
         proposal_sent = true;
         return nullptr;
     });
@@ -170,8 +173,8 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(config_type::CT_UPGRADE_TO_PRIMARY, update_req->type);
-        EXPECT_EQ(update_req->node, nodes[0]);
-        EXPECT_EQ(target, nodes[0]);
+        EXPECT_EQ(update_req->node, last_addr);
+        EXPECT_EQ(target, update_req->node);
 
         proposal_sent = true;
         apply_update_request(*update_req);
@@ -183,7 +186,7 @@ void meta_service_test_app::simple_lb_cure_test()
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.primary == nodes[0];} );
+    CONDITION_CHECK( [&]{return pc.primary == last_addr;} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case2: upgrade secondary to primary, and the candidate died" << std::endl;
@@ -205,10 +208,11 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
-        EXPECT_EQ(update_req->node, nodes[0]);
-        EXPECT_EQ(target, nodes[0]);
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
+        EXPECT_EQ(target, update_req->node);
 
         proposal_sent = true;
+        last_addr = update_req->node;
         svc->set_node_state({target}, false);
         return nullptr;
     });
@@ -226,8 +230,9 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
-        EXPECT_EQ(update_req->node, nodes[1]);
-        EXPECT_EQ(target, nodes[1]);
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
+        EXPECT_EQ(target, update_req->node);
+        EXPECT_NE(target, last_addr);
 
         proposal_sent = true;
         apply_update_request(*update_req);
@@ -238,7 +243,7 @@ void meta_service_test_app::simple_lb_cure_test()
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.primary == nodes[1];} );
+    CONDITION_CHECK( [&]{return !pc.primary.is_invalid() && pc.primary!=last_addr;} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case3: add secondary, and the message lost" << std::endl;
@@ -260,9 +265,10 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[2]);
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
+        last_addr = update_req->node;
         proposal_sent = true;
         return nullptr;
     });
@@ -280,7 +286,7 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[2]);
+        EXPECT_EQ(update_req->node, last_addr);
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
@@ -292,7 +298,7 @@ void meta_service_test_app::simple_lb_cure_test()
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, nodes[2]);} );
+    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case4: add secondary, but the primary is removing another" << std::endl;
@@ -314,7 +320,7 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[2]);
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         update_req->config.ballot++;
@@ -331,7 +337,7 @@ void meta_service_test_app::simple_lb_cure_test()
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{ return is_secondary(pc, nodes[2]); } );
+    CONDITION_CHECK( [&]{ return pc.secondaries.size()==2; } );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case5: add secondary, and the added secondary is dead" << std::endl;
@@ -353,10 +359,11 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[2]);
+        EXPECT_FALSE( is_secondary(pc, update_req->node) );
         EXPECT_EQ(target, nodes[0]);
 
-        svc->set_node_state({nodes[2]}, false);
+        last_addr = update_req->node;
+        svc->set_node_state({update_req->node}, false);
         proposal_sent = true;
         return nullptr;
     });
@@ -374,10 +381,12 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[3]);
+        EXPECT_NE(update_req->node, last_addr);
+        EXPECT_FALSE( is_secondary(pc, update_req->node) );
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
+        last_addr = update_req->node;
         apply_update_request(*update_req);
         svc->set_filter(default_filter);
         return update_req;
@@ -386,7 +395,7 @@ void meta_service_test_app::simple_lb_cure_test()
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, nodes[3]);} );
+    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case6: add secondary, and the primary is dead" << std::endl;
@@ -408,10 +417,10 @@ void meta_service_test_app::simple_lb_cure_test()
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_EQ(update_req->node, nodes[2]);
-        EXPECT_EQ(target, nodes[0]);
+        EXPECT_FALSE( is_secondary(pc, update_req->node) );
+        EXPECT_EQ(target, pc.primary);
 
-        svc->set_node_state( {nodes[0]}, false);
+        svc->set_node_state( {pc.primary}, false);
         svc->set_filter(default_filter);
         proposal_sent = true;
         return nullptr;
