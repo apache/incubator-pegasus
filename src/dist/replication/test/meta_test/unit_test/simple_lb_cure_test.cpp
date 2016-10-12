@@ -130,9 +130,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false
 
 #define CONDITION_CHECK( cond ) ASSERT_TRUE(spin_wait_condition(cond, 20))
-    /**
-     * Case1: upgrade sec to pri, message lost
-     */
+
+    std::cerr << "Case1: upgrade secondary to primary, and message lost" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
@@ -187,9 +186,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{return pc.primary == nodes[0];} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case2: upgrade sec to pri, candidate died
-     */
+    std::cerr << "Case2: upgrade secondary to primary, and the candidate died" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
@@ -244,9 +241,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{return pc.primary == nodes[1];} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case3: add secondary, message lost
-     */
+    std::cerr << "Case3: add secondary, and the message lost" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -300,9 +295,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, nodes[2]);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case4: add secondary, primary is removing another
-     */
+    std::cerr << "Case4: add secondary, but the primary is removing another" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -341,9 +334,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{ return is_secondary(pc, nodes[2]); } );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case5: add secondary, the added sec is died
-     */
+    std::cerr << "Case5: add secondary, and the added secondary is dead" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -398,9 +389,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, nodes[3]);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case6: add secondary, primary died
-     */
+    std::cerr << "Case6: add secondary, and the primary is dead" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -434,9 +423,7 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{ return pc.primary==nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    /**
-     * Case7: recover from DDD state
-     */
+    std::cerr << "Case7: recover from DDD state" << std::endl;
     state->_nodes.clear();
     pc.primary.set_invalid();
     pc.secondaries.clear();
