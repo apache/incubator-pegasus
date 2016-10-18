@@ -335,7 +335,18 @@ mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool ba
 
 mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, replica* r)
 {
-    // batch and add to work queue
+    task_spec* spec = task_spec::get(code);
+
+    // if not allow write batch, switch work queue
+    if (_pending_mutation && !spec->rpc_request_is_write_allow_batch)
+    {
+        _pending_mutation->add_ref(); // released when unlink
+        _hdr.add(_pending_mutation);
+        _pending_mutation = nullptr;
+        ++(*_pcount);
+    }
+
+    // add to work queue
     if (!_pending_mutation)
     {
         _pending_mutation = r->new_mutation(invalid_decree);
@@ -358,8 +369,8 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
         return ret;
     }
 
-    // check if full
-    if (_batch_write_disabled || _pending_mutation->is_full())
+    // check if need to switch work queue
+    if (_batch_write_disabled || !spec->rpc_request_is_write_allow_batch || _pending_mutation->is_full())
     {
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);

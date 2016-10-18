@@ -227,6 +227,7 @@ public:
     // layer 2 configurations
     bool                   rpc_request_layer2_handler_required; // need layer 2 handler
     bool                   rpc_request_is_write_operation;      // need stateful replication
+    bool                   rpc_request_is_write_allow_batch;    // if write allow batch
     // ]
 
     task_rejection_handler rejection_handler;
@@ -296,6 +297,7 @@ CONFIG_BEGIN(task_spec)
     // layer 2 configurations
     CONFIG_FLD(bool, bool, rpc_request_layer2_handler_required, false, "whether this request needs to be handled by a layer2 handler (e.g., replicated or partitioned)")
     CONFIG_FLD(bool, bool, rpc_request_is_write_operation, false, "whether this request updates app's state which needs to be replicated using a replication layer2 handler")
+    CONFIG_FLD(bool, bool, rpc_request_is_write_allow_batch, true, "whether this write request allows updating app's state in batch mode")
     
 CONFIG_END
 
