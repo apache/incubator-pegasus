@@ -60,6 +60,7 @@ void command_manager_module_init()
     );
 }
 
+/*
 TEST(core, command_manager)
 {
     cli_client cli(rpc_address("localhost", 20101));
@@ -128,4 +129,4 @@ TEST(core, command_manager)
     std::tie(err, result) = cli.call_sync(rcmd, std::chrono::seconds(10), 0, 0, addr);
     ASSERT_TRUE(err == ERR_TIMEOUT || err == ERR_NETWORK_FAILURE);
 }
-
+*/
