@@ -35,6 +35,7 @@
  */
 
 # include <dsn/service_api_c.h>
+# include <dsn/tool-api/command.h>
 # include <dsn/tool-api/logging_provider.h>
 # include <dsn/tool_api.h>
 # include "service_engine.h"
@@ -68,6 +69,21 @@ void dsn_log_init()
     {
         ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
     }
+
+    // register command for tail logging
+    ::dsn::register_command("flush-log",
+        "flush-log - flush log to stderr or log file",
+        "flush-log - flush log to stderr or log file",
+        [](const std::vector<std::string>& args)
+        {
+            ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
+            if (logger != nullptr)
+            {
+                logger->flush();
+            }
+            return "Flush done.";
+        }
+    );
 }
 
 DSN_API dsn_log_level_t dsn_log_get_start_level()

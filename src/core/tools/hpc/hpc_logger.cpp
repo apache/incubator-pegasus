@@ -125,21 +125,25 @@ namespace dsn
                 _write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
                 saved_list = std::move(_write_list);
                 _write_list.clear();
+                _is_writing = true;
                 _write_list_lock.unlock();
                 
                 write_buffer_list(saved_list);
+                _is_writing = false;
             }
 
             _write_list_lock.lock();
             saved_list = _write_list;
             _write_list.clear();
+            _is_writing = true;
             _write_list_lock.unlock();
 
             write_buffer_list(saved_list);
+            _is_writing = false;
         }
 
         hpc_logger::hpc_logger(const char* log_dir) 
-            : logging_provider(log_dir), _stop_thread(false), _exiting(false)
+            : logging_provider(log_dir), _stop_thread(false), _is_writing(false)
         {
             _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = (int)dsn_config_get_value_uint64(
@@ -219,6 +223,8 @@ namespace dsn
 
         hpc_logger::~hpc_logger(void)
         {
+            flush();
+
             if (!_stop_thread)
             {
                 _stop_thread = true;
@@ -232,21 +238,8 @@ namespace dsn
 
         void hpc_logger::flush()
         {
-            //dangerous operation
-            //print retained log in the buffers of threads
-            //this is only used at process exit
-            flush_all_buffers_at_exit();
-
-            _stop_thread = true;
-            _write_list_cond.notify_one();
-            _log_thread.join();
-        }
-
-        void hpc_logger::flush_all_buffers_at_exit()
-        {
             std::vector<int> threads;
             hpc_log_manager::instance().get_all_keys(threads);
-            _exiting = true;
 
             for (auto& tid : threads)
             {
@@ -254,9 +247,27 @@ namespace dsn
                 if (!hpc_log_manager::instance().get(tid, log))
                     continue;
 
-                buffer_push(log->buffer, static_cast<int>(log->next_write_ptr - log->buffer));
+                _write_list_lock.lock();
+                if (log->next_write_ptr != log->buffer)
+                {
+                    buffer_push(log->buffer, static_cast<int>(log->next_write_ptr - log->buffer));
+                    log->buffer = (char*)malloc(_per_thread_buffer_bytes);
+                    log->next_write_ptr = log->buffer;
+                }
+                _write_list_lock.unlock();
+            }
 
-                hpc_log_manager::instance().remove(tid);
+            _write_list_cond.notify_one();
+
+            bool wait = true;
+            while (wait)
+            {
+                _write_list_lock.lock();
+                if (_write_list.size() == 0 && !_is_writing)
+                    wait = false;
+                _write_list_lock.unlock();
+                if (wait)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
 
@@ -283,12 +294,11 @@ namespace dsn
             {
                 _write_list_lock.lock();
                 buffer_push(s_hpc_log_tls_info.buffer, static_cast<int>(s_hpc_log_tls_info.next_write_ptr - s_hpc_log_tls_info.buffer));
+                s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
+                s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
                 _write_list_lock.unlock();
 
                 _write_list_cond.notify_one();
-
-                s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
-                s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
             }
 
             char* ptr = s_hpc_log_tls_info.next_write_ptr;
@@ -366,7 +376,6 @@ namespace dsn
                 std::cout.write(ptr0, ptr - ptr0);
             }    
         }
-        //log operation
 
         void hpc_logger::buffer_push(char* buffer, int size)
         {
@@ -391,13 +400,8 @@ namespace dsn
                     _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
                     _current_log_file_bytes += new_buffer_info.buffer_size;
                 }                
-
-                // do not free the buffer at exit as it may still be written
-                if (!_exiting)
-                {
-                    free(new_buffer_info.buffer);
-                }
             }
+            _current_log->flush();
             llist.clear();
         }
     }

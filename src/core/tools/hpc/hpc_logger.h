@@ -69,8 +69,7 @@ namespace dsn {
 
         private:
             void log_thread();
-            
-            void flush_all_buffers_at_exit();
+
             void buffer_push(char* buffer, int size);
             //print logs in log list
             void write_buffer_list(std::vector<buffer_info>& llist);
@@ -84,7 +83,8 @@ namespace dsn {
             // global buffer list
             std::condition_variable_any   _write_list_cond;
             ::dsn::utils::ex_lock_nr_spin _write_list_lock;            
-            std::vector<buffer_info>        _write_list;
+            std::vector<buffer_info>      _write_list;
+            volatile bool                 _is_writing;
 
             // log file and line count
             int _start_index;
@@ -95,9 +95,6 @@ namespace dsn {
 
             // current write file            
             std::ofstream *_current_log;
-
-            // only used at exit
-            bool _exiting;
         };
     }
 }

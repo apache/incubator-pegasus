@@ -52,6 +52,7 @@ namespace dsn {
             std::cout << "help:   show this message" << std::endl;
             std::cout << "exit:   exit the console" << std::endl;
             std::cout << "remote: set cli target by 'remote %machine% %port% %timeout_seconds%" << std::endl;
+            std::cout << "rhelp:  show help message of remote target" << std::endl;
             std::cout << "all other commands are sent to remote target %machine%:%port%" << std::endl;
             std::cout << "---------------------------------" << std::endl;
         }
@@ -67,6 +68,10 @@ namespace dsn {
                 std::string cmdline;
                 std::cout << ">";
                 std::getline(std::cin, cmdline);
+                if (!std::cin)
+                {
+                    exit(0);
+                }
 
                 std::string scmd = cmdline;
                 std::vector<std::string> args;
@@ -85,7 +90,6 @@ namespace dsn {
                 else if (cmd == "exit")
                 {
                     exit(0);
-                    continue;
                 }
                 else if (cmd == "remote")
                 {
@@ -108,9 +112,14 @@ namespace dsn {
                 }
                 else
                 {
+                    if (_target.is_invalid())
+                    {
+                        std::cout << "remote target is not specified, try help" << std::endl;
+                        continue;
+                    }
 
                     command rcmd;
-                    rcmd.cmd = cmd;
+                    rcmd.cmd = cmd == "rhelp" ? "help" : cmd;
                     for (size_t i = 1; i < args.size(); i++)
                     {
                         rcmd.arguments.push_back(args[i]);
