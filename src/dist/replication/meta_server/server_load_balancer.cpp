@@ -285,7 +285,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
 
         if (action.node.is_invalid())
         {
-            derror("all nodes for gpid(%s.%s) are dead, waiting for some secondary to come back....", gpid.get_app_id(), gpid.get_partition_index());
+            derror("all nodes for gpid(%d.%d) are dead, waiting for some secondary to come back....", gpid.get_app_id(), gpid.get_partition_index());
             return pc_status::dead;
         }
 

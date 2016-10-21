@@ -186,7 +186,7 @@ bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address
         _masters.insert(std::make_pair(to, it->second));
         _masters.erase(from);
 
-        dinfo("switch master successfully, from[%s], to[%s]",
+        ddebug("switch master successfully, from[%s], to[%s]",
               from.to_string(), to.to_string());
     }
     else
@@ -416,7 +416,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     if (err != ERR_OK)
     {
-        dwarn("ping master failed, err=%s", err.to_string());
+        dwarn("ping master(%s) failed, err=%s", node.to_string(), err.to_string());
         return true;
     }
 
