@@ -1247,7 +1247,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     ::dsn::utils::coredump::init(spec.dir_coredump.c_str());
 
     // setup log dir
-    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "logs");
+    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "log");
     dsn::utils::filesystem::create_directory(spec.dir_log);
     
     // init tools
