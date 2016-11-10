@@ -159,7 +159,9 @@ void lock_struct::remove_lock()
 
 void lock_struct::on_operation_timeout()
 {
+    ddebug("zookeeper operation times out, removing the current watching");
     _state = lock_state::uninitialized;
+    _dist_lock_service->session()->detach(this);
     __lock_task_bind_and_enqueue(_lock_callback, 
                                  ERR_TIMEOUT, 
                                  _owner._node_value, 
@@ -225,11 +227,15 @@ void lock_struct::my_lock_removed(lock_struct_ptr _this, int zoo_event)
 void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
 {
     static const lock_state allow_state[] = {
-        lock_state::pending, lock_state::cancelled, lock_state::expired
+        lock_state::uninitialized, lock_state::pending, lock_state::cancelled, lock_state::expired
     };
     _this->check_hashed_access();
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
     
+    if (_this->_state==lock_state::uninitialized) {
+        dwarn("this is mainly due to a timeout happens before, just ignore the event %s", string_zooevt(zoo_event));
+        return;
+    }
     if (_this->_state==lock_state::cancelled || _this->_state==lock_state::expired) {
         return;
     }
@@ -252,14 +258,17 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this, int ec
         ZCONNECTIONLOSS, ZOPERATIONTIMEOUT, ZINVALIDSTATE //operation timeout
     };
     static const int allow_state[] = {
-        lock_state::pending, lock_state::cancelled, lock_state::expired
+        lock_state::pending, lock_state::cancelled, lock_state::expired, lock_state::locked
     };
     _this->check_hashed_access();
     __check_code(ec, allow_ec, 5, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    __check_code(_this->_state, allow_state, 4, string_state(_this->_state));
 
     if (_this->_state==lock_state::cancelled || _this->_state==lock_state::expired) {
         return;
+    }
+    if (_this->_state==lock_state::locked) {
+        ddebug("the state is locked mainly because owner changed watcher is triggered first");
     }
     if (ZOK==ec || ZNONODE==ec) {
         ddebug("lock(%s) remove duplicated node(%s), rely on delete watcher to be actived", 
