@@ -902,7 +902,7 @@ void server_state::drop_app(dsn_message_t msg)
 
 void server_state::list_apps(const configuration_list_apps_request& request, configuration_list_apps_response& response)
 {
-    ddebug("list app request, status(%d)", request.status);
+    dinfo("list app request, status(%d)", request.status);
     zauto_read_lock l(_lock);
     for (auto& kv: _all_apps)
     {
