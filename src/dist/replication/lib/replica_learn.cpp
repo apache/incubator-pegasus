@@ -452,7 +452,7 @@ void replica::on_learn_reply(
     }
 
     ddebug(
-        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
+        "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
         "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_meta_size = %u, learned_file_count = %u, current_learning_status = %s",
         name(), req.signature, resp.config.primary.to_string(),
         _potential_secondary_states.duration_ms(),
@@ -643,7 +643,7 @@ void replica::on_learn_reply(
         }
 
         ddebug(
-            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn duration = %" PRIu64 " ms, "
+            "%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
             "apply cache done, prepare_cache_range = <%" PRId64 ", %" PRId64 ">, "
             "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64 ", current_learning_status = %s",
             name(), req.signature, resp.config.primary.to_string(),
@@ -800,7 +800,7 @@ void replica::on_copy_remote_state_completed(
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
                 dassert(_app->last_committed_decree() <= resp.last_committed_decree, "");
                 ddebug(
-                    "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn duration = %" PRIu64 " ms, "
+                    "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn_duration = %" PRIu64 " ms, "
                     "checkpoint duration = %" PRIu64 " ns, apply checkpoint succeed, app_committed_decree = %" PRId64,
                     name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
@@ -811,7 +811,7 @@ void replica::on_copy_remote_state_completed(
             else
             {
                 derror(
-                    "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn duration = %" PRIu64 " ms, "
+                    "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn_duration = %" PRIu64 " ms, "
                     "checkpoint duration = %" PRIu64 " ns, apply checkpoint failed, err = %s",
                     name(), req.signature, req.learner.to_string(),
                     _potential_secondary_states.duration_ms(),
