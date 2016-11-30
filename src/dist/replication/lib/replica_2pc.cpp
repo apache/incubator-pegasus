@@ -63,6 +63,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
         return;
     }
 
+    dinfo("%s: got write reqeust from %s", name(), dsn_address_to_string(dsn_msg_from_address(request)));
     auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu)
     {
@@ -76,18 +77,22 @@ void replica::init_prepare(mutation_ptr& mu)
 
     error_code err = ERR_OK;
     uint8_t count = 0;
-            
     mu->data.header.last_committed_decree = last_committed_decree();
+
+    dsn_log_level_t level = LOG_LEVEL_INFORMATION;
     if (mu->data.header.decree == invalid_decree)
     {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
+        //print a debug log per 1024 decrees
+        if ((mu->get_decree()&0x3ff) == 0)
+            level = LOG_LEVEL_DEBUG;
     }
     else
     {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
     
-    dinfo("%s: mutation %s init_prepare, mutation_tid=%" PRIu64, name(), mu->name(), mu->tid());
+    dlog(level, __TITLE__, "%s: mutation %s init_prepare, mutation_tid=%" PRIu64, name(), mu->name(), mu->tid());
 
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit)
