@@ -205,6 +205,7 @@ private:
     void garbage_collection();
     void init_checkpoint();
     void background_checkpoint();
+    void sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, const std::shared_ptr<replica_configuration>& req, const std::shared_ptr<learn_response>& resp);
@@ -214,6 +215,7 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
+    friend class ::dsn::replication::replica_stub;
 
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;

@@ -306,6 +306,22 @@ namespace dsn {
                 );
         }
 
+        // run in init thread
+        void replica::sync_checkpoint()
+        {
+            auto err = _app->sync_checkpoint();
+            if (err == ERR_OK)
+            {
+                ddebug("%s: call app.sync_checkpoint() succeed, "
+                       "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
+                       name(), _app->last_committed_decree(), _app->last_durable_decree());
+            }
+            else
+            {
+                derror("%s: call app.sync_checkpoint() failed, err = %s", name(), err.to_string());
+            }
+        }
+
         // in non-replication thread
         void replica::catch_up_with_private_logs(partition_status::type s)
         {

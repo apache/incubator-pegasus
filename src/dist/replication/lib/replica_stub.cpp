@@ -316,6 +316,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     for (auto it = rps.begin(); it != rps.end(); ++it)
     {
+        it->second->sync_checkpoint();
         it->second->reset_prepare_list_after_replay();
                 
         decree smax = _log->max_decree(it->first);
