@@ -147,6 +147,8 @@ public:
     mutation_ptr add_work(task_code code, dsn_message_t request, replica* r);
 
     void clear();
+    // called when you want to clear the mutation_queue and want to get the remaining messages
+    void clear(std::vector<mutation_ptr>& queued_mutations);
 
     // called when the curren operation is completed or replica configuration is change,
     // which triggers further round of operations as returned

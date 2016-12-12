@@ -111,6 +111,13 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
  
+    // stop prepare if there are too few replicas
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
+    {
+        err = ERR_NOT_ENOUGH_MEMBER;
+        goto ErrOut;
+    }
+
     dassert (mu->data.header.decree > last_committed_decree(), "");
 
     // local prepare

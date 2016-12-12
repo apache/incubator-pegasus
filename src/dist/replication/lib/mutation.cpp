@@ -446,4 +446,25 @@ void mutation_queue::clear()
     }
 }
 
+void mutation_queue::clear(std::vector<mutation_ptr>& queued_mutations)
+{
+    mutation_ptr r;
+    queued_mutations.clear();
+    while ((r = unlink_next_workload()) != nullptr)
+    {
+        queued_mutations.emplace_back(r);
+    }
+
+    if (_pending_mutation != nullptr)
+    {
+        queued_mutations.emplace_back(std::move(_pending_mutation));
+        _pending_mutation = nullptr;
+    }
+
+    // we don't reset the current_op_count, coz this is handled by
+    // check_possible_work. In which, the variable current_running_count
+    // is handled by prepare_list
+    // _current_op_count = 0;
+}
+
 }} // namespace end
