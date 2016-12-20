@@ -50,7 +50,19 @@ namespace dsn {
         void replica::on_checkpoint_timer()
         {
             check_hashed_access();
-            init_checkpoint();
+
+            if (now_ms() - _last_checkpoint_generate_time_ms > _options->checkpoint_max_interval_hours * 3600 * 1000)
+            {
+                // we trigger emergency checkpoint if no checkpoint generated for a long time
+                ddebug("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, interval = %d",
+                       name(), _options->checkpoint_max_interval_hours);
+                init_checkpoint(true);
+            }
+            else
+            {
+                init_checkpoint(false);
+            }
+
             garbage_collection();
         }
 
@@ -70,7 +82,7 @@ namespace dsn {
         }
 
         // run in replica thread
-        void replica::init_checkpoint()
+        void replica::init_checkpoint(bool is_emergency)
         {
             // only applicable to primary and secondary replicas
             if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY)
@@ -80,7 +92,7 @@ namespace dsn {
             //if (_app->is_delta_state_learning_supported())
             //    return;
 
-            auto err = _app->async_checkpoint();
+            auto err = _app->async_checkpoint(is_emergency);
             if (err != ERR_NOT_IMPLEMENTED)
             {
                 if (err == ERR_OK)
@@ -88,8 +100,24 @@ namespace dsn {
                     ddebug("%s: call app.async_checkpoint() succeed, "
                            "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
                            name(), _app->last_committed_decree(), _app->last_durable_decree());
+                    _last_checkpoint_generate_time_ms = now_ms();
                 }
-                if (err != ERR_OK && err != ERR_WRONG_TIMING && err != ERR_NO_NEED_OPERATE && err != ERR_TRY_AGAIN)
+                else if (err == ERR_TRY_AGAIN)
+                {
+                    // already triggered memory flushing on async_checkpoint(), then try again later.
+                    ddebug("%s: schedule later checkpoint after 10 seconds", name());
+                    tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                                     this,
+                                     [this] { init_checkpoint(false); },
+                                     gpid_to_thread_hash(get_gpid()),
+                                     std::chrono::seconds(10)
+                                     );
+                }
+                else if (err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE)
+                {
+                    // do nothing
+                }
+                else
                 {
                     derror("%s: call app.async_checkpoint() failed, err = %s", name(), err.to_string());
                 }
@@ -98,7 +126,7 @@ namespace dsn {
 
             // private log must be enabled to make sure commits
             // are not lost during checkpinting
-            if (last_committed_decree() - last_durable_decree() < _options->checkpoint_min_decree_gap)
+            if (!is_emergency && last_committed_decree() - last_durable_decree() < _options->checkpoint_min_decree_gap)
                 return;
 
             // primary cannot checkpoint (TODO: test if async checkpoint is supported)
@@ -405,6 +433,7 @@ namespace dsn {
 
                     // everything is ok now, done checkpointing
                     _secondary_states.checkpoint_is_running = false;
+                    _last_checkpoint_generate_time_ms = now_ms();
                 }
 
                 // missed ones need to be loaded via private logs
@@ -425,6 +454,7 @@ namespace dsn {
             {
                 // everything is ok now, done checkpointing
                 _secondary_states.checkpoint_is_running = false;
+                _last_checkpoint_generate_time_ms = now_ms();
             }
         }
     }

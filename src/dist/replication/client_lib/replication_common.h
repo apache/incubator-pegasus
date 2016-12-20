@@ -93,6 +93,7 @@ public:
     int32_t log_private_batch_buffer_count;
 
     int32_t log_shared_file_size_mb;
+    int32_t log_shared_file_count_limit;
     int32_t log_shared_batch_buffer_kb;
     bool    log_shared_force_flush;
 

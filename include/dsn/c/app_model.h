@@ -207,12 +207,14 @@ typedef dsn_error_t(*dsn_app_sync_checkpoint)(
 
     \param app    context returned by dsn_app_create
     \param last_decree  decree of the last request/request-batch applied to this app
+    \param is_emergency  if it is emergency to checkpoint the application
 
     \return error code for the checkpoint operation
  */
 typedef dsn_error_t(*dsn_app_async_checkpoint)(
     void*   app,
-    int64_t last_decree
+    int64_t last_decree,
+    bool is_emergency
     );
 
 /*! 

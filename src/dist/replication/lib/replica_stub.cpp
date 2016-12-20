@@ -1097,6 +1097,22 @@ void replica_stub::on_gc()
     }
 
     // gc shared prepare log
+    //
+    // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when necessary.
+    // that is, we should be able to trigger memtable flush when necessary.
+    //
+    // How to trigger memtable flush?
+    //   we add a parameter `is_emergency' in dsn_app_async_checkpoint() function, when set true, the undering
+    //   storage system should flush memtable as soon as possiable.
+    //
+    // When to trigger memtable flush?
+    //   1. Using `[replication].checkpoint_max_interval_hours' option, we can set max interval time of two
+    //      adjacent checkpoints; If the time interval is arrived, then emergency checkpoint will be triggered.
+    //   2. Using `[replication].log_shared_file_count_limit' option, we can set max file count of shared log;
+    //      If the limit is exceeded, then emergency checkpoint will be triggered; Instead of triggering all
+    //      replicas to do checkpoint, we will only trigger a few of necessary replicas which block garbage
+    //      collection of the oldest log file.
+    //
     if (_log != nullptr)
     {
         replica_log_info_map gc_condition;
@@ -1107,17 +1123,51 @@ void replica_stub::on_gc()
             mutation_log_ptr plog = r->private_log();
             if (plog)
             {
+                // flush private log to update plog_max_commit_on_disk,
+                // and just flush once to avoid flushing infinitely
+                plog->flush_once();
+
                 ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit_on_disk());
+                ddebug("gc_shared: gc condition for %s, garbage_max_decree = %" PRId64 ", "
+                       "last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
+                       r->name(), ri.max_decree, r->last_durable_decree(), plog->max_commit_on_disk());
             }
             else
             {
                 ri.max_decree = r->last_durable_decree();
+                ddebug("gc_shared: gc condition for %s, garbage_max_decree = %" PRId64 ", "
+                       "last_durable_decree = %" PRId64 "",
+                       r->name(), ri.max_decree, r->last_durable_decree());
             }
             ri.valid_start_offset = r->get_app()->init_info().init_offset_in_shared_log;
             gc_condition[it->first] = ri;
         }
-        _log->garbage_collection(gc_condition);
-        _counter_shared_log_size.set(_log->size() / 1000000);
+
+        std::set<gpid> prevent_gc_replicas;
+        int reserved_log_count = _log->garbage_collection(gc_condition, prevent_gc_replicas);
+        if (reserved_log_count > _options.log_shared_file_count_limit)
+        {
+            ddebug("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
+                   "limit = %d, reserved_log_count = %d, prevent_gc_replica_count = %d",
+                   _options.log_shared_file_count_limit, reserved_log_count, (int)prevent_gc_replicas.size());
+            zauto_lock l(_replicas_lock);
+            for (auto& id : prevent_gc_replicas)
+            {
+                auto find = _replicas.find(id);
+                if (find != _replicas.end())
+                {
+                    tasking::enqueue(
+                        LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                        this,
+                        std::bind(&replica_stub::trigger_checkpoint, this, find->second, true),
+                        gpid_to_thread_hash(id),
+                        std::chrono::milliseconds(dsn_random32(0, 3000)) // delay random to avoid write compete
+                        );
+                }
+            }
+        }
+
+        _counter_shared_log_size.set(_log->size() / (1024 * 1024));
     }
     
     // gc on-disk rps
@@ -1127,7 +1177,7 @@ void replica_stub::on_gc()
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false))
         {
-            dwarn("gc: failed to get subdirectories in %s", dir.c_str());
+            dwarn("gc_replica: failed to get subdirectories in %s", dir.c_str());
             return;
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -1143,7 +1193,7 @@ void replica_stub::on_gc()
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt))
             {
-                dwarn("gc: failed to get last write time of %s", fpath.c_str());
+                dwarn("gc_replica: failed to get last write time of %s", fpath.c_str());
                 continue;
             }
 
@@ -1151,11 +1201,11 @@ void replica_stub::on_gc()
             {
                 if (!dsn::utils::filesystem::remove_path(fpath))
                 {
-                    dwarn("gc: failed to delete directory %s", fpath.c_str());
+                    dwarn("gc_replica: failed to delete directory %s", fpath.c_str());
                 }
                 else
                 {
-                    ddebug("gc: deleted directory %s", fpath.c_str());
+                    ddebug("gc_replica: deleted directory %s", fpath.c_str());
                 }
             }
         }
@@ -1374,6 +1424,11 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
             _replica_state_subscriber(_primary_address, config, is_closing);
         }
     }
+}
+
+void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
+{
+    r->init_checkpoint(is_emergency);
 }
 
 void replica_stub::handle_log_failure(error_code err)

@@ -61,7 +61,7 @@ namespace dsn
 
         virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) { return ERR_NOT_IMPLEMENTED; }
 
-        virtual ::dsn::error_code async_checkpoint(int64_t last_commit) { return ERR_NOT_IMPLEMENTED; }
+        virtual ::dsn::error_code async_checkpoint(int64_t last_commit, bool is_emergency) { return ERR_NOT_IMPLEMENTED; }
 
         virtual int64_t get_last_checkpoint_decree() { return 0; }
         //
@@ -210,9 +210,9 @@ namespace dsn
             return reinterpret_cast<replicated_service_app_type_1*>(app)->sync_checkpoint(last_commit);
         }
 
-        static dsn_error_t app_async_checkpoint(void* app, int64_t last_commit)
+        static dsn_error_t app_async_checkpoint(void* app, int64_t last_commit, bool is_emergency)
         {
-            return reinterpret_cast<replicated_service_app_type_1*>(app)->async_checkpoint(last_commit);
+            return reinterpret_cast<replicated_service_app_type_1*>(app)->async_checkpoint(last_commit, is_emergency);
         }
 
         static int64_t app_get_last_checkpoint_decree(void* app)

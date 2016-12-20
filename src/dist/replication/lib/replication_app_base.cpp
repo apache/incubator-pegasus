@@ -491,10 +491,12 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
     uint64_t start = dsn_now_ns();
     if (_callbacks.calls.on_batched_write_requests)
     {
+        dinfo("%s: mutation %s: call on_batched_write_requests(), batched_count = %d",
+              _replica->name(), mu->name(), batched_count);
         _callbacks.calls.on_batched_write_requests(_app_context_callbacks,
                                                    mu->data.header.decree,
                                                    batched_requests, batched_count);
-    }   
+    }
     else
     {
         for (int i = 0; i < batched_count; i++)

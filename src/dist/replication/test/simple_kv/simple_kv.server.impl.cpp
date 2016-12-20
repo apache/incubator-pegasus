@@ -256,7 +256,7 @@ namespace dsn {
                 return ERR_OK;
             }
 
-            ::dsn::error_code simple_kv_service_impl::async_checkpoint(int64_t last_commit)
+            ::dsn::error_code simple_kv_service_impl::async_checkpoint(int64_t last_commit, bool is_emergency)
             {
                 return sync_checkpoint(last_commit);
             }

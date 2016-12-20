@@ -119,9 +119,9 @@ public:
     // It is not always necessary for the apps to implement this method,
     // but if it is implemented, the checkpoint logic in replication will be much simpler.
     //
-    ::dsn::error_code async_checkpoint() 
+    ::dsn::error_code async_checkpoint(bool is_emergency)
     { 
-        return _callbacks.calls.async_checkpoint(_app_context_callbacks, _last_committed_decree.load());
+        return _callbacks.calls.async_checkpoint(_app_context_callbacks, _last_committed_decree.load(), is_emergency);
     }
     
     //

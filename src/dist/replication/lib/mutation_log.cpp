@@ -106,7 +106,18 @@ using namespace ::dsn::service;
 
 void mutation_log_shared::flush()
 {
-    while (true)
+    flush_internal(-1);
+}
+
+void mutation_log_shared::flush_once()
+{
+    flush_internal(1);
+}
+
+void mutation_log_shared::flush_internal(int max_count)
+{
+    int count = 0;
+    while (max_count <= 0 || count < max_count)
     {
         if (_is_writing.load(std::memory_order_acquire))
         {
@@ -128,6 +139,7 @@ void mutation_log_shared::flush()
             }
             // !_is_writing && _pending_write, start next write
             write_pending_mutations(true);
+            count++;
         }
     }
 }
@@ -318,10 +330,20 @@ bool mutation_log_private::get_learn_state_in_memory(
     return learned_count > 0;
 }
 
-
 void mutation_log_private::flush()
 {
-    while (true)
+    flush_internal(-1);
+}
+
+void mutation_log_private::flush_once()
+{
+    flush_internal(1);
+}
+
+void mutation_log_private::flush_internal(int max_count)
+{
+    int count = 0;
+    while (max_count <= 0 || count < max_count)
     {
         if (_is_writing.load(std::memory_order_acquire))
         {
@@ -343,6 +365,7 @@ void mutation_log_private::flush()
             }
             // !_is_writing && _pending_write, start next write
             write_pending_mutations(true);
+            count++;
         }
     }
 }
@@ -1426,44 +1449,60 @@ int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t v
         {
             zauto_lock l(_lock);
             _log_files.erase(it->first);
+            _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
         }
     }
 
-    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
     return deleted;
 }
 
-int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
+int mutation_log::garbage_collection(const replica_log_info_map& gc_condition,
+                                     std::set<gpid>& prevent_gc_replicas)
 {
     dassert(!_is_private, "this method is only valid for shared log");
 
     std::map<int, log_file_ptr> files;
     replica_log_info_map max_decrees;
-    int current_file_index = -1;
+    int current_log_index = -1;
+    int64_t total_log_size = 0;
 
     {
         zauto_lock l(_lock);
         files = _log_files;
         max_decrees = _shared_log_info_map;
         if (_current_log_file != nullptr)
-            current_file_index = _current_log_file->index();
+            current_log_index = _current_log_file->index();
+        total_log_size = size();
     }
 
     if (files.size() <= 1)
     {
         // nothing to do
-        return 0;
+        ddebug("gc_shared: too few files to delete, "
+               "reserved_log_count = %d, reserved_log_size = %" PRId64 ", current_log_index = %d",
+               (int)files.size(), total_log_size, current_log_index);
+        return (int)files.size();
     }
     else
     {
         // the last one should be the current log file
-        dassert(-1 == current_file_index || files.rbegin()->first == current_file_index, "");
+        dassert(-1 == current_log_index || files.rbegin()->first == current_log_index, "");
     }
+
+    int reserved_log_count = files.size();
+    int64_t reserved_log_size = total_log_size;
+    int reserved_smallest_log = files.begin()->first;
+    int reserved_largest_log = current_log_index;
 
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
     std::map<int, log_file_ptr>::reverse_iterator mark_it;
     std::set<gpid> kickout_replicas;
+    gpid stop_gc_replica;
+    int stop_gc_log_index = 0;
+    decree stop_gc_decree_gap = 0;
+    decree stop_gc_garbage_max_decree = 0;
+    decree stop_gc_log_max_decree = 0;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it)
     {
         log_file_ptr log = mark_it->second;
@@ -1472,13 +1511,15 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
         bool delete_ok = true;
 
         // skip current file
-        if (current_file_index == log->index())
+        if (current_log_index == log->index())
         {
             delete_ok = false;
         }
 
         if (delete_ok)
         {
+            std::set<gpid> prevent_gc_replicas_for_this_log;
+
             for (auto& kv : gc_condition)
             {
                 if (kickout_replicas.find(kv.first) != kickout_replicas.end())
@@ -1488,7 +1529,7 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                 }
 
                 gpid gpid = kv.first;
-                decree gc_max_decree = kv.second.max_decree;
+                decree garbage_max_decree = kv.second.max_decree;
                 int64_t valid_start_offset = kv.second.valid_start_offset;
 
                 bool delete_ok_for_this_replica = false;
@@ -1502,12 +1543,12 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                     dassert(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
                         "valid start offset must be 0 or greater than the end of this log file");
 
-                    dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as gc max decree,"
+                    dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as garbage max decree,"
                         " safe to delete this and all older logs for this replica",
                         gpid.get_app_id(),
                         gpid.get_partition_index(),
                         log->path().c_str(),
-                        gc_max_decree
+                        garbage_max_decree
                         );
                     delete_ok_for_this_replica = true;
                     kickout_this_replica = true;
@@ -1517,7 +1558,7 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                 else if (log->end_offset() <= valid_start_offset)
                 {
                     dinfo("gc @ %d.%d: log is invalid for %s, as"
-                        " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ", "
+                        " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ","
                         " it is therefore safe to delete this and all older logs for this replica",
                         gpid.get_app_id(),
                         gpid.get_partition_index(),
@@ -1529,19 +1570,43 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
                     kickout_this_replica = true;
                 }
 
-                // all decrees are no more than gc max decree, ok to delete
-                else if (it3->second.max_decree <= gc_max_decree)
+                // all decrees are no more than garbage max decree, ok to delete
+                else if (it3->second.max_decree <= garbage_max_decree)
                 {
-                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as gc max decree,"
+                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as garbage max decree,"
                         " it is therefore safe to delete this and all older logs for this replica",
                         gpid.get_app_id(),
                         gpid.get_partition_index(),
                         log->path().c_str(),
                         it3->second.max_decree,
-                        gc_max_decree
+                        garbage_max_decree
                         );
                     delete_ok_for_this_replica = true;
                     kickout_this_replica = true;
+                }
+
+                else // it3->second.max_decree > garbage_max_decree
+                {
+                    // should not delete this file
+                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as garbage max decree,"
+                        " it is therefore not allowed to delete this and all older logs",
+                        gpid.get_app_id(),
+                        gpid.get_partition_index(),
+                        log->path().c_str(),
+                        it3->second.max_decree,
+                        garbage_max_decree
+                        );
+                    prevent_gc_replicas_for_this_log.insert(gpid);
+                    decree gap = it3->second.max_decree - garbage_max_decree;
+                    if (log->index() < stop_gc_log_index || gap > stop_gc_decree_gap)
+                    {
+                        // record the max gap replica for the smallest log
+                        stop_gc_replica = gpid;
+                        stop_gc_log_index = log->index();
+                        stop_gc_decree_gap = gap;
+                        stop_gc_garbage_max_decree = garbage_max_decree;
+                        stop_gc_log_max_decree = it3->second.max_decree;
+                    }
                 }
 
                 if (kickout_this_replica)
@@ -1553,10 +1618,15 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 
                 if (!delete_ok_for_this_replica)
                 {
-                    // can not delete this file
+                    // can not delete this file, mark it, and continue to check other replicas
                     delete_ok = false;
-                    break;
                 }
+            }
+
+            // update prevent_gc_replicas
+            if (!prevent_gc_replicas_for_this_log.empty())
+            {
+                prevent_gc_replicas.swap(prevent_gc_replicas_for_this_log);
             }
         }
 
@@ -1573,17 +1643,45 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
     if (mark_it == files.rend())
     {
         // no file to delete
-        return 0;
+        if (stop_gc_decree_gap > 0)
+        {
+            ddebug("gc_shared: no file can be deleted, "
+                   "reserved_log_count = %d, reserved_log_size = %" PRId64 ", "
+                   "reserved_smallest_log = %d, reserved_largest_log = %d, "
+                   "stop_gc_log_index = %d, stop_gc_replica_count = %d, "
+                   "stop_gc_replica = %u.%u, stop_gc_decree_gap = %" PRId64 ", "
+                   "stop_gc_garbage_max_decree = %" PRId64 ", stop_gc_log_max_decree = %" PRId64 "",
+                   reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log,
+                   stop_gc_log_index, (int)prevent_gc_replicas.size(),
+                   stop_gc_replica.get_app_id(), stop_gc_replica.get_partition_index(),stop_gc_decree_gap,
+                   stop_gc_garbage_max_decree, stop_gc_log_max_decree);
+        }
+        else
+        {
+            ddebug("gc_shared: no file can be deleted, "
+                   "reserved_log_count = %d, reserved_log_size = %" PRId64 ", "
+                   "reserved_smallest_log = %d, reserved_largest_log = %d, ",
+                   reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log);
+        }
+
+        return reserved_log_count;
     }
 
     // ok, let's delete files in increasing order of file index
     // to avoid making a hole in the file list
-    int largest_to_delete = mark_it->second->index();
-    int deleted = 0;
-    for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_to_delete; ++it)
+    int largest_log_to_delete = mark_it->second->index();
+    int to_delete_log_count = 0;
+    int64_t to_delete_log_size = 0;
+    int deleted_log_count = 0;
+    int64_t deleted_log_size = 0;
+    int deleted_smallest_log = 0;
+    int deleted_largest_log = 0;
+    for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_log_to_delete; ++it)
     {
         log_file_ptr log = it->second;
         dassert(it->first == log->index(), "");
+        to_delete_log_count++;
+        to_delete_log_size += log->end_offset() - log->start_offset();
 
         // close first
         log->close();
@@ -1592,25 +1690,72 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
         auto& fpath = log->path();
         if (!dsn::utils::filesystem::remove_path(fpath))
         {
-            derror("gc: fail to remove %s, stop current gc cycle ...", fpath.c_str());
+            derror("gc_shared: fail to remove %s, stop current gc cycle ...", fpath.c_str());
             break;
         }
 
         // delete succeed
-        ddebug("gc: log file %s is removed", fpath.c_str());
-        deleted++;
+        ddebug("gc_shared: log file %s is removed", fpath.c_str());
+        deleted_log_count++;
+        deleted_log_size += log->end_offset() - log->start_offset();
+        if (deleted_smallest_log == 0)
+            deleted_smallest_log = log->index();
+        deleted_largest_log = log->index();
 
         // erase from _log_files
         {
             zauto_lock l(_lock);
             _log_files.erase(it->first);
+            _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
+            reserved_log_count = _log_files.size();
+            reserved_log_size = size();
+            if (reserved_log_count > 0)
+            {
+                reserved_smallest_log = _log_files.begin()->first;
+                reserved_largest_log = _log_files.rbegin()->first;
+            }
+            else
+            {
+                reserved_smallest_log = -1;
+                reserved_largest_log = -1;
+            }
         }
     }
 
-    _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
+    if (stop_gc_decree_gap > 0)
+    {
+        ddebug("gc_shared: deleted some files, "
+               "reserved_log_count = %d, reserved_log_size = %" PRId64 ", "
+               "reserved_smallest_log = %d, reserved_largest_log = %d, "
+               "to_delete_log_count = %d, to_delete_log_size = %" PRId64 ", "
+               "deleted_log_count = %d, deleted_log_size = %" PRId64 ", "
+               "deleted_smallest_log = %d, deleted_largest_log = %d, "
+               "stop_gc_log_index = %d, stop_gc_replica_count = %d, "
+               "stop_gc_replica = %u.%u, stop_gc_decree_gap = %" PRId64 ", "
+               "stop_gc_garbage_max_decree = %" PRId64 ", stop_gc_log_max_decree = %" PRId64 "",
+               reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log,
+               to_delete_log_count, to_delete_log_size,
+               deleted_log_count, deleted_log_size, deleted_smallest_log, deleted_largest_log,
+               stop_gc_log_index, (int)prevent_gc_replicas.size(),
+               stop_gc_replica.get_app_id(), stop_gc_replica.get_partition_index(), stop_gc_decree_gap,
+               stop_gc_garbage_max_decree, stop_gc_log_max_decree);
+    }
+    else
+    {
+        ddebug("gc_shared: deleted some files, "
+               "reserved_log_count = %d, reserved_log_size = %" PRId64 ", "
+               "reserved_smallest_log = %d, reserved_largest_log = %d, "
+               "to_delete_log_count = %d, to_delete_log_size = %" PRId64 ", "
+               "deleted_log_count = %d, deleted_log_size = %" PRId64 ", "
+               "deleted_smallest_log = %d, deleted_largest_log = %d",
+               reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log,
+               to_delete_log_count, to_delete_log_size,
+               deleted_log_count, deleted_log_size, deleted_smallest_log, deleted_largest_log);
+    }
 
-    return deleted;
+    return reserved_log_count;
 }
+
 //log_file::file_streamer
 class log_file::file_streamer
 {

@@ -80,6 +80,7 @@ replication_options::replication_options()
     log_private_batch_buffer_count = 512;
 
     log_shared_file_size_mb = 32;
+    log_shared_file_count_limit = 100;
     log_shared_batch_buffer_kb = 0;
     log_shared_force_flush = false;
 
@@ -313,9 +314,15 @@ void replication_options::initialize()
         log_shared_file_size_mb,
         "shared log maximum segment file size (MB)"
         );
+    log_shared_file_count_limit =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_shared_file_count_limit",
+        log_shared_file_count_limit,
+        "shared log maximum file count"
+        );
     log_shared_batch_buffer_kb =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_batch_buffer_KB_shared", 
+        "log_shared_batch_buffer_kb",
         log_shared_batch_buffer_kb,
         "shared log buffer size (KB) for batching incoming logs"
         );

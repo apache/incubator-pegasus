@@ -130,6 +130,7 @@ public:
     bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
+    uint64_t last_checkpoint_generate_time_ms() const { return _last_checkpoint_generate_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
     const replication_options* options() const { return _options; }
@@ -203,7 +204,7 @@ private:
     // check timer for gc, checkpointing etc.
     void on_checkpoint_timer();
     void garbage_collection();
-    void init_checkpoint();
+    void init_checkpoint(bool is_emergency);
     void background_checkpoint();
     void sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
@@ -221,6 +222,7 @@ private:
     replica_configuration   _config;
     uint64_t                _create_time_ms;
     uint64_t                _last_config_change_time_ms;
+    uint64_t                _last_checkpoint_generate_time_ms;
 
     // prepare list
     prepare_list*           _prepare_list;

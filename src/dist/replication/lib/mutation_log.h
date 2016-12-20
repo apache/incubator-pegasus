@@ -152,9 +152,13 @@ public:
         return false;
     }
     
-    // flush the pending buffer
+    // flush the pending buffer until all data is on disk
     // thread safe
     virtual void flush() = 0;
+
+    // flush the pending buffer at most once
+    // thread safe
+    virtual void flush_once() = 0;
 
 public:
     //
@@ -222,22 +226,23 @@ public:
     //  durable state on disk, return deleted log segment count
     //
 
-    // garbage collection for private log
+    // garbage collection for private log, returns removed file count.
     // remove log files if satisfy:
     //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
     //  - the current log file is excluded
     // thread safe
     int garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset);
 
-    // garbage collection for shared log
+    // garbage collection for shared log, returns reserved file count.
+    // `prevent_gc_replicas' will store replicas which prevent the smallest log file to be deleted.
     // remove log files if satisfy:
     //  - for each replica "r":
-    //         r in not in file.max_decree
+    //         r is not in file.max_decree
     //      || file.max_decree[r] <= gc_condition[r].max_decree
     //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
     //  - the current log file should not be removed
     // thread safe
-    int garbage_collection(replica_log_info_map& gc_condition);
+    int garbage_collection(const replica_log_info_map& gc_condition, std::set<gpid>& prevent_gc_replicas);
 
     //
     //  when this is a private log, log files are learned by remote replicas
@@ -375,6 +380,7 @@ public:
         int hash = 0) override;
 
     virtual void flush() override;
+    virtual void flush_once() override;
 
 private:    
     // async write pending mutations into log file
@@ -383,6 +389,10 @@ private:
     // - _issued_write.expired() == true (because only one async write is allowed at the same time)
     // release_lock_required should always be true => this function must release the lock appropriately for less lock contention
     void write_pending_mutations(bool release_lock_required);
+
+    // flush at most count times
+    // if count <= 0, means flush until all data is on disk
+    void flush_internal(int max_count);
 
 private:    
     // bufferring - only one concurrent write is allowed
@@ -428,6 +438,7 @@ public:
         ) const override;
 
     virtual void flush() override;
+    virtual void flush_once() override;
 
 private:
     // async write pending mutations into log file
@@ -438,6 +449,10 @@ private:
     void write_pending_mutations(bool release_lock_required);
 
     virtual void init_states() override;
+
+    // flush at most count times
+    // if count <= 0, means flush until all data is on disk
+    void flush_internal(int max_count);
 
 private:
     // bufferring - only one concurrent write is allowed

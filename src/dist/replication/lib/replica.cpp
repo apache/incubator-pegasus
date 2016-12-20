@@ -106,6 +106,7 @@ void replica::init_state()
     _primary_states.membership.ballot = 0;
     _create_time_ms = now_ms();
     _last_config_change_time_ms = _create_time_ms;
+    _last_checkpoint_generate_time_ms = _create_time_ms;
     _private_log = nullptr;
 }
 
