@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "../../tools/cli/cli.client.h"
+# include <dsn/tool/cli/cli.client.h>
 # include <dsn/tool-api/command.h>
 # include <gtest/gtest.h>
 

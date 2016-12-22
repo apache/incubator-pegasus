@@ -37,7 +37,7 @@
 #pragma once
 
 # include <dsn/cpp/serverlet.h>
-# include "cli.client.h"
+# include <dsn/tool/cli/cli.client.h>
 
 namespace dsn {
     namespace service {
