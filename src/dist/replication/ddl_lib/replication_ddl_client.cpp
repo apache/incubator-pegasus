@@ -247,7 +247,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status,
+                                                   std::map<dsn::rpc_address, dsn::replication::node_status::type>& nodes)
 {
     std::shared_ptr<configuration_list_nodes_request> req(new configuration_list_nodes_request());
     req->status = status;
@@ -269,6 +270,24 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
         return resp.err;
     }
 
+    for (const dsn::replication::node_info& n : resp.infos)
+    {
+        nodes[n.address] = n.status;
+    }
+
+    return dsn::ERR_OK;
+}
+
+
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
+{
+    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    auto r = list_nodes(status, nodes);
+    if (r != dsn::ERR_OK)
+    {
+        return r;
+    }
+
     // print configuration_list_nodes_response
     std::streambuf * buf;
     std::ofstream of;
@@ -282,12 +301,11 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     std::ostream out(buf);
 
     std::map<std::string, std::string> tmp_map;
-    for(int i = 0; i < resp.infos.size(); i++)
+    for (auto& kv : nodes)
     {
-        dsn::replication::node_info info = resp.infos[i];
-        std::string status_str = enum_to_string(info.status);
+        std::string status_str = enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        tmp_map[info.address.to_std_string()] = status_str;
+        tmp_map[kv.first.to_std_string()] = status_str;
     }
 
     out << std::setw(25) << std::left << "address"
