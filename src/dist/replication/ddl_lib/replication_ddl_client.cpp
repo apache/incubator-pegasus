@@ -189,7 +189,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, std::vector< ::dsn::app_info>& apps)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -211,6 +211,20 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         return resp.err;
     }
 
+    apps = resp.infos;
+
+    return dsn::ERR_OK;
+}
+
+dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, const std::string& file_name)
+{
+    std::vector< ::dsn::app_info> apps;
+    auto r = list_apps(status, apps);
+    if (r != dsn::ERR_OK)
+    {
+        return r;
+    }
+
     // print configuration_list_apps_response
     std::streambuf * buf;
     std::ofstream of;
@@ -228,11 +242,12 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(20) << std::left << "app_name"
         << std::setw(20) << std::left << "app_type"
         << std::setw(20) << std::left << "partition_count"
+        << std::setw(20) << std::left << "replica_count"
         << std::setw(20) << std::left << "is_stateful"
         << std::endl;
-    for(int i = 0; i < resp.infos.size(); i++)
+    for(int i = 0; i < apps.size(); i++)
     {
-        dsn::app_info info = resp.infos[i];
+        dsn::app_info info = apps[i];
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
         out << std::setw(10) << std::left << info.app_id
@@ -240,6 +255,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             << std::setw(20) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
             << std::setw(20) << std::left << info.partition_count
+            << std::setw(20) << std::left << info.max_replica_count
             << std::setw(20) << std::left << (info.is_stateful ? "true" : "false")
             << std::endl;
     }
@@ -278,14 +294,73 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     return dsn::ERR_OK;
 }
 
+struct list_nodes_helper
+{
+    std::string node_name;
+    std::string node_status;
+    int primary_count;
+    int secondary_count;
+    list_nodes_helper(const std::string& n, const std::string& s) : node_name(n), node_status(s), primary_count(0), secondary_count(0) {}
+};
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status, bool detailed, const std::string& file_name)
 {
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto r = list_nodes(status, nodes);
     if (r != dsn::ERR_OK)
     {
         return r;
+    }
+
+    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    for (auto& kv : nodes)
+    {
+        std::string status_str = enum_to_string(kv.second);
+        status_str = status_str.substr(status_str.find("NS_") + 3);
+        tmp_map.emplace(kv.first, list_nodes_helper(kv.first.to_std_string(), status_str));
+    }
+
+    if (detailed)
+    {
+        std::vector< ::dsn::app_info> apps;
+        r = list_apps(dsn::app_status::AS_AVAILABLE, apps);
+        if (r != dsn::ERR_OK)
+        {
+            return r;
+        }
+
+        for (auto& app : apps)
+        {
+            int32_t app_id;
+            int32_t partition_count;
+            std::vector<partition_configuration> partitions;
+            r = list_app(app.app_name, app_id, partition_count, partitions);
+            if(r != dsn::ERR_OK)
+            {
+                return r;
+            }
+
+            for(int i = 0; i < partitions.size(); i++)
+            {
+                const dsn::partition_configuration& p = partitions[i];
+                if (!p.primary.is_invalid())
+                {
+                    auto find = tmp_map.find(p.primary);
+                    if (find != tmp_map.end())
+                    {
+                        find->second.primary_count++;
+                    }
+                }
+                for(int j = 0; j < p.secondaries.size(); j++)
+                {
+                    auto find = tmp_map.find(p.secondaries[j]);
+                    if (find != tmp_map.end())
+                    {
+                        find->second.secondary_count++;
+                    }
+                }
+            }
+        }
     }
 
     // print configuration_list_nodes_response
@@ -300,24 +375,38 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
     std::ostream out(buf);
 
-    std::map<std::string, std::string> tmp_map;
-    for (auto& kv : nodes)
+    if (detailed)
     {
-        std::string status_str = enum_to_string(kv.second);
-        status_str = status_str.substr(status_str.find("NS_") + 3);
-        tmp_map[kv.first.to_std_string()] = status_str;
-    }
-
-    out << std::setw(25) << std::left << "address"
-        << std::setw(20) << std::left << "status"
-        << std::endl;
-    for (auto& kv : tmp_map)
-    {
-        out << std::setw(25) << std::left << kv.first
-            << std::setw(20) << std::left << kv.second
+        out << std::setw(25) << std::left << "address"
+            << std::setw(20) << std::left << "status"
+            << std::setw(20) << std::left << "replica_count"
+            << std::setw(20) << std::left << "primary_count"
+            << std::setw(20) << std::left << "secondary_count"
             << std::endl;
+        for (auto& kv : tmp_map)
+        {
+            out << std::setw(25) << std::left << kv.second.node_name
+                << std::setw(20) << std::left << kv.second.node_status
+                << std::setw(20) << std::left << kv.second.primary_count + kv.second.secondary_count
+                << std::setw(20) << std::left << kv.second.primary_count
+                << std::setw(20) << std::left << kv.second.secondary_count
+                << std::endl;
+        }
+    }
+    else
+    {
+        out << std::setw(25) << std::left << "address"
+            << std::setw(20) << std::left << "status"
+            << std::endl;
+        for (auto& kv : tmp_map)
+        {
+            out << std::setw(25) << std::left << kv.second.node_name
+                << std::setw(20) << std::left << kv.second.node_status
+                << std::endl;
+        }
     }
     out << std::endl << std::flush;
+
     return dsn::ERR_OK;
 }
 
@@ -407,6 +496,9 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             << std::setw(25) << std::left << "primary"
             << std::setw(40) << std::left << "secondaries"
             << std::endl;
+        int total_prim_count = 0;
+        int total_sec_count = 0;
+        int total_healthy_partition = 0;
         for(int i = 0; i < partitions.size(); i++)
         {
             const dsn::partition_configuration& p = partitions[i];
@@ -415,8 +507,14 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             {
                 replica_count++;
                 node_stat[p.primary].first++;
+                total_prim_count++;
             }
             replica_count += p.secondaries.size();
+            total_sec_count += p.secondaries.size();
+            if (replica_count == p.max_replica_count)
+            {
+                total_healthy_partition++;
+            }
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             out << std::setw(10) << std::left << p.pid.get_partition_index()
@@ -447,6 +545,15 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
                 << std::setw(10) << std::left << (kv.second.first + kv.second.second)
                 << std::endl;
         }
+        out << std::setw(25) << std::left << ""
+            << std::setw(10) << std::left << total_prim_count
+            << std::setw(10) << std::left << total_sec_count
+            << std::setw(10) << std::left << total_prim_count + total_sec_count
+            << std::endl;
+        out << std::endl;
+        width = strlen("unhealthy_partition_count");
+        out << std::setw(width) << std::left << "healthy_partition_count" << " : " << total_healthy_partition << std::endl;
+        out << std::setw(width) << std::left << "unhealthy_partition_count" << " : " << partition_count - total_healthy_partition << std::endl;
     }
     out << std::endl;
     return dsn::ERR_OK;

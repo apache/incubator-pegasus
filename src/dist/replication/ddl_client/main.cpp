@@ -186,7 +186,7 @@ int main(int argc, char** argv)
             if(s == dsn::replication::node_status::NS_INVALID)
                 usage(argv[0]);
         }
-        dsn::error_code err = client.list_nodes(s, out_file);
+        dsn::error_code err = client.list_nodes(s, false, out_file);
         if(err != dsn::ERR_OK)
             std::cout << "list nodes failed, error=" << dsn_error_to_string(err) << std::endl;
     }
