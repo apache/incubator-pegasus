@@ -57,7 +57,7 @@ void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address
         }
         else
         {
-            dassert(false, "the node cannot be in drops set before this update", node.to_string());
+            dassert(false, "the node %s cannot be in drops set before this update", node.to_string());
         }
     }
 }
