@@ -53,13 +53,13 @@ void replica::on_client_write(task_code code, dsn_message_t request)
 
     if (partition_status::PS_PRIMARY != status())
     {
-        response_client_message(request, ERR_INVALID_STATE);
+        response_client_message(false, request, ERR_INVALID_STATE);
         return;
     }
 
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
     {
-        response_client_message(request, ERR_NOT_ENOUGH_MEMBER);
+        response_client_message(false, request, ERR_NOT_ENOUGH_MEMBER);
         return;
     }
 
@@ -156,7 +156,7 @@ void replica::init_prepare(mutation_ptr& mu)
 ErrOut:
     for (auto& r : mu->client_requests)
     {
-        response_client_message(r, err);
+        response_client_message(false, r, err);
     }
     return;
 }

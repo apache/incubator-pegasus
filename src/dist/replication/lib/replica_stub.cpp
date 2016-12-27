@@ -538,7 +538,7 @@ void replica_stub::on_client_write(gpid gpid, dsn_message_t request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(gpid, false, request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -551,7 +551,7 @@ void replica_stub::on_client_read(gpid gpid, dsn_message_t request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(gpid, true, request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -559,13 +559,13 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 {
     if (!is_connected())
     {
-        dwarn("%u.%u@%s: received config proposal %s for %s: not connected, ignore",
+        dwarn("%d.%d@%s: received config proposal %s for %s: not connected, ignore",
               proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(), _primary_address.to_string(),
               enum_to_string(proposal.type), proposal.node.to_string());
         return;
     }
 
-    ddebug("%u.%u@%s: received config proposal %s for %s",
+    ddebug("%d.%d@%s: received config proposal %s for %s",
            proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(), _primary_address.to_string(),
            enum_to_string(proposal.type), proposal.node.to_string());
 
@@ -658,12 +658,12 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 {
     if (!is_connected())
     {
-        dwarn("%u.%u@%s: received group check: not connected, ignore",
+        dwarn("%d.%d@%s: received group check: not connected, ignore",
               request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string());
         return;
     }
 
-    ddebug("%u.%u@%s: received group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+    ddebug("%d.%d@%s: received group check, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
            request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
            request.config.primary.to_string(), request.config.ballot,
            enum_to_string(request.config.status), request.last_committed_decree);
@@ -739,13 +739,13 @@ void replica_stub::on_add_learner(const group_check_request& request)
 {
     if (!is_connected())
     {
-        dwarn("%u.%u@%s: received add learner: not connected, ignore",
+        dwarn("%d.%d@%s: received add learner: not connected, ignore",
               request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
               request.config.primary.to_string());
         return;
     }
 
-    ddebug("%u.%u@%s: received add learner, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
+    ddebug("%d.%d@%s: received add learner, primary = %s, ballot = %" PRId64 ", status = %s, last_committed_decree = %" PRId64,
            request.config.pid.get_app_id(), request.config.pid.get_partition_index(), _primary_address.to_string(),
            request.config.primary.to_string(), request.config.ballot,
            enum_to_string(request.config.status), request.last_committed_decree);
@@ -956,7 +956,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const con
         if (req.config.primary == _primary_address)
         {
             ddebug(
-                "%u.%u@%s: replica not exists on replica server, which is primary, remove it from meta server",
+                "%d.%d@%s: replica not exists on replica server, which is primary, remove it from meta server",
                 req.config.pid.get_app_id(), req.config.pid.get_partition_index(), _primary_address.to_string()
                 );
             remove_replica_on_meta_server(req.info, req.config);
@@ -964,7 +964,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const con
         else
         {
             ddebug(
-                "%u.%u@%s: replica not exists on replica server, which is not primary, just ignore",
+                "%d.%d@%s: replica not exists on replica server, which is not primary, just ignore",
                 req.config.pid.get_app_id(), req.config.pid.get_partition_index(), _primary_address.to_string()
                 );
         }
@@ -1061,7 +1061,7 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(dsn_message_t request, error_code error)
+void replica_stub::response_client_error(gpid gpid, bool is_read, dsn_message_t request, error_code error)
 {
     if (nullptr == request)
     {
@@ -1069,7 +1069,18 @@ void replica_stub::response_client_error(dsn_message_t request, error_code error
         return;
     }
 
-    ddebug("reply client read/write, err = %s", error.to_string());
+    if (error == ERR_OK)
+    {
+        dinfo("%d.%d@%s: reply client %s, err = %s",
+              gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(),
+              is_read ? "read" : "write", error.to_string());
+    }
+    else
+    {
+        derror("%d.%d@%s: reply client %s, err = %s",
+               gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(),
+               is_read ? "read" : "write", error.to_string());
+    }
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
@@ -1267,7 +1278,7 @@ void replica_stub::on_gc()
                 // unlock here to avoid dead lock
                 _replicas_lock.unlock();
 
-                ddebug( "open replica which is to be closed '%s.%u.%u'", app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());
+                ddebug( "open replica which is to be closed '%s.%d.%d'", app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());
 
                 if (req != nullptr)
                 {
@@ -1278,7 +1289,7 @@ void replica_stub::on_gc()
             else 
             {
                 _replicas_lock.unlock();
-                dwarn( "open replica '%s.%u.%u' failed coz replica is under closing", 
+                dwarn( "open replica '%s.%d.%d' failed coz replica is under closing",
                     app.app_type.c_str(), gpid.get_app_id(), gpid.get_partition_index());                
                 return nullptr;
             }
@@ -1301,7 +1312,7 @@ void replica_stub::open_replica(const app_info& app, gpid gpid,
     std::shared_ptr<configuration_update_request> req2)
 {
     std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
-    ddebug("%u.%u@%s: start to open replica %s group check, dir = %s",
+    ddebug("%d.%d@%s: start to open replica %s group check, dir = %s",
            gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(), req ? "with" : "without", dir.c_str());
 
     replica_ptr rep = replica::load(this, dir.c_str());
@@ -1524,7 +1535,7 @@ void replica_stub::close()
             // task will automatically remove this replica from _closing_replicas
             if(false == _closing_replicas.empty())
             {
-                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%u.%u' should be removed from _closing_replicas, gpid", tmp_gpid.get_app_id(), tmp_gpid.get_partition_index());
+                dassert((tmp_gpid == _closing_replicas.begin()->first) == false, "this replica '%d.%d' should be removed from _closing_replicas, gpid", tmp_gpid.get_app_id(), tmp_gpid.get_partition_index());
             }
         }
 
@@ -1566,7 +1577,7 @@ void replica_stub::close()
 std::string replica_stub::get_replica_dir(const char* app_type, gpid gpid) const
 {
     char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.get_app_id(), gpid.get_partition_index(), app_type);
+    sprintf(buffer, "%d.%d.%s", gpid.get_app_id(), gpid.get_partition_index(), app_type);
     std::string ret_dir;
     for (auto& dir : _options.data_dirs)
     {

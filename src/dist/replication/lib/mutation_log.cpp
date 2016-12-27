@@ -1649,7 +1649,7 @@ int mutation_log::garbage_collection(const replica_log_info_map& gc_condition,
                    "reserved_log_count = %d, reserved_log_size = %" PRId64 ", "
                    "reserved_smallest_log = %d, reserved_largest_log = %d, "
                    "stop_gc_log_index = %d, stop_gc_replica_count = %d, "
-                   "stop_gc_replica = %u.%u, stop_gc_decree_gap = %" PRId64 ", "
+                   "stop_gc_replica = %d.%d, stop_gc_decree_gap = %" PRId64 ", "
                    "stop_gc_garbage_max_decree = %" PRId64 ", stop_gc_log_max_decree = %" PRId64 "",
                    reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log,
                    stop_gc_log_index, (int)prevent_gc_replicas.size(),
@@ -1731,7 +1731,7 @@ int mutation_log::garbage_collection(const replica_log_info_map& gc_condition,
                "deleted_log_count = %d, deleted_log_size = %" PRId64 ", "
                "deleted_smallest_log = %d, deleted_largest_log = %d, "
                "stop_gc_log_index = %d, stop_gc_replica_count = %d, "
-               "stop_gc_replica = %u.%u, stop_gc_decree_gap = %" PRId64 ", "
+               "stop_gc_replica = %d.%d, stop_gc_decree_gap = %" PRId64 ", "
                "stop_gc_garbage_max_decree = %" PRId64 ", stop_gc_log_max_decree = %" PRId64 "",
                reserved_log_count, reserved_log_size, reserved_smallest_log, reserved_largest_log,
                to_delete_log_count, to_delete_log_size,

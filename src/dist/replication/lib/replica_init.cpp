@@ -126,7 +126,7 @@ error_code replica::initialize_on_load()
 
     char app_type[128];
     gpid gpid;
-    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.raw().u.app_id, &gpid.raw().u.partition_index, app_type))
+    if (3 != sscanf(name.c_str(), "%d.%d.%s", &gpid.raw().u.app_id, &gpid.raw().u.partition_index, app_type))
     {
         derror("invalid replica dir %s", dir);
         return nullptr;

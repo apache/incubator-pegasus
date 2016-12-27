@@ -56,7 +56,7 @@ replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char*
     dassert(stub != nullptr, "");
     _stub = stub;
     _dir = dir;
-    sprintf(_name, "%u.%u@%s", gpid.get_app_id(), gpid.get_partition_index(), stub->_primary_address.to_string());
+    sprintf(_name, "%d.%d@%s", gpid.get_app_id(), gpid.get_partition_index(), stub->_primary_address.to_string());
     _options = &stub->options();
     init_state();
     _config.pid = gpid;
@@ -129,7 +129,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     {
         derror("%s: invalid status: partition_status=%s",
                name(), enum_to_string(status()));
-        response_client_message(request, ERR_INVALID_STATE);
+        response_client_message(true, request, ERR_INVALID_STATE);
         return;
     }
 
@@ -142,7 +142,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
         {
             derror("%s: invalid status: partition_status=%s",
                    name(), enum_to_string(status()));
-            response_client_message(request, ERR_INVALID_STATE);
+            response_client_message(true, request, ERR_INVALID_STATE);
             return;
         }
 
@@ -150,7 +150,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
         {
             derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
                    name(), last_committed_decree(), _primary_states.last_prepare_decree_on_new_primary);
-            response_client_message(request, ERR_INVALID_STATE);
+            response_client_message(true, request, ERR_INVALID_STATE);
             return;
         }
     }
@@ -160,7 +160,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     dsn_hosted_app_commit_rpc_request(_app->app_context(), request, true);
 }
 
-void replica::response_client_message(dsn_message_t request, error_code error)
+void replica::response_client_message(bool is_read, dsn_message_t request, error_code error)
 {
     if (nullptr == request)
     {
@@ -170,11 +170,11 @@ void replica::response_client_message(dsn_message_t request, error_code error)
 
     if (error == ERR_OK)
     {
-        ddebug("%s: reply client read/write, err = %s", name(), error.to_string());
+        dinfo("%s: reply client %s, err = %s", name(), is_read ? "read" : "write", error.to_string());
     }
     else
     {
-        derror("%s: reply client read/write, err = %s", name(), error.to_string());
+        derror("%s: reply client %s, err = %s", name(), is_read ? "read" : "write", error.to_string());
     }
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }

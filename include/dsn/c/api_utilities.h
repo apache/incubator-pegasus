@@ -248,6 +248,7 @@ typedef enum dsn_log_level_t
 // logs with level smaller than this start_level will not be logged
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
 extern DSN_API dsn_log_level_t       dsn_log_get_start_level();
+extern DSN_API void                  dsn_log_set_start_level(dsn_log_level_t level);
 extern DSN_API void                  dsn_logv(
                                         const char *file, 
                                         const char *function, 

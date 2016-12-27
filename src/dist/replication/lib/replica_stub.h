@@ -206,7 +206,7 @@ private:
 
     perf_counter_    _counter_shared_log_size;
 private:
-    void response_client_error(dsn_message_t request, error_code error);
+    void response_client_error(gpid gpid, bool is_read, dsn_message_t request, error_code error);
 };
 //------------ inline impl ----------------------
 
