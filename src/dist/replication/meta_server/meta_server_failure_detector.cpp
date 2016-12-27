@@ -39,6 +39,9 @@
 #include "meta_service.h"
 #include "meta_options.h"
 
+#include <chrono>
+#include <thread>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -148,6 +151,11 @@ void meta_server_failure_detector::acquire_leader_lock()
                 set_primary(addr);
                 break;
             }
+        }
+        else
+        {
+            // sleep for 1 second before retry
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 }
