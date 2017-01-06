@@ -200,12 +200,13 @@ class query_replica_info_request;
 class query_replica_info_response;
 
 typedef struct _mutation_header__isset {
-  _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false) {}
+  _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false), timestamp(false) {}
   bool pid :1;
   bool ballot :1;
   bool decree :1;
   bool log_offset :1;
   bool last_committed_decree :1;
+  bool timestamp :1;
 } _mutation_header__isset;
 
 class mutation_header {
@@ -215,7 +216,7 @@ class mutation_header {
   mutation_header(mutation_header&&);
   mutation_header& operator=(const mutation_header&);
   mutation_header& operator=(mutation_header&&);
-  mutation_header() : ballot(0), decree(0), log_offset(0), last_committed_decree(0) {
+  mutation_header() : ballot(0), decree(0), log_offset(0), last_committed_decree(0), timestamp(0) {
   }
 
   virtual ~mutation_header() throw();
@@ -224,6 +225,7 @@ class mutation_header {
   int64_t decree;
   int64_t log_offset;
   int64_t last_committed_decree;
+  int64_t timestamp;
 
   _mutation_header__isset __isset;
 
@@ -237,6 +239,8 @@ class mutation_header {
 
   void __set_last_committed_decree(const int64_t val);
 
+  void __set_timestamp(const int64_t val);
+
   bool operator == (const mutation_header & rhs) const
   {
     if (!(pid == rhs.pid))
@@ -248,6 +252,8 @@ class mutation_header {
     if (!(log_offset == rhs.log_offset))
       return false;
     if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    if (!(timestamp == rhs.timestamp))
       return false;
     return true;
   }

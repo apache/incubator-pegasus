@@ -55,7 +55,7 @@ namespace dsn
         // for stateful apps with layer 2 support
         //
 
-        virtual void on_batched_write_requests(int64_t decree, dsn_message_t* requests, int count) { }
+        virtual void on_batched_write_requests(int64_t decree, int64_t timestamp, dsn_message_t* requests, int count) { }
 
         virtual int get_physical_error() { return 0; }
 
@@ -195,9 +195,9 @@ namespace dsn
             ) = 0;
 
     public:
-        static void app_on_batched_write_requests(void* app, int64_t decree, dsn_message_t* requests, int count)
+        static void app_on_batched_write_requests(void* app, int64_t decree, int64_t timestamp, dsn_message_t* requests, int count)
         {
-            reinterpret_cast<replicated_service_app_type_1*>(app)->on_batched_write_requests(decree, requests, count);
+            reinterpret_cast<replicated_service_app_type_1*>(app)->on_batched_write_requests(decree, timestamp, requests, count);
         }
 
         static int app_get_physical_error(void* app)

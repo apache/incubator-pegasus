@@ -10,6 +10,7 @@ struct mutation_header
     3:i64                  decree;
     4:i64                  log_offset;
     5:i64                  last_committed_decree;
+    6:i64                  timestamp;
 }
 
 struct mutation_update

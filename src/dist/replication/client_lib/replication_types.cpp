@@ -164,6 +164,10 @@ void mutation_header::__set_last_committed_decree(const int64_t val) {
   this->last_committed_decree = val;
 }
 
+void mutation_header::__set_timestamp(const int64_t val) {
+  this->timestamp = val;
+}
+
 uint32_t mutation_header::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -225,6 +229,14 @@ uint32_t mutation_header::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 6:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->timestamp);
+          this->__isset.timestamp = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -262,6 +274,10 @@ uint32_t mutation_header::write(::apache::thrift::protocol::TProtocol* oprot) co
   xfer += oprot->writeI64(this->last_committed_decree);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("timestamp", ::apache::thrift::protocol::T_I64, 6);
+  xfer += oprot->writeI64(this->timestamp);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -274,6 +290,7 @@ void swap(mutation_header &a, mutation_header &b) {
   swap(a.decree, b.decree);
   swap(a.log_offset, b.log_offset);
   swap(a.last_committed_decree, b.last_committed_decree);
+  swap(a.timestamp, b.timestamp);
   swap(a.__isset, b.__isset);
 }
 
@@ -283,6 +300,7 @@ mutation_header::mutation_header(const mutation_header& other0) {
   decree = other0.decree;
   log_offset = other0.log_offset;
   last_committed_decree = other0.last_committed_decree;
+  timestamp = other0.timestamp;
   __isset = other0.__isset;
 }
 mutation_header::mutation_header( mutation_header&& other1) {
@@ -291,6 +309,7 @@ mutation_header::mutation_header( mutation_header&& other1) {
   decree = std::move(other1.decree);
   log_offset = std::move(other1.log_offset);
   last_committed_decree = std::move(other1.last_committed_decree);
+  timestamp = std::move(other1.timestamp);
   __isset = std::move(other1.__isset);
 }
 mutation_header& mutation_header::operator=(const mutation_header& other2) {
@@ -299,6 +318,7 @@ mutation_header& mutation_header::operator=(const mutation_header& other2) {
   decree = other2.decree;
   log_offset = other2.log_offset;
   last_committed_decree = other2.last_committed_decree;
+  timestamp = other2.timestamp;
   __isset = other2.__isset;
   return *this;
 }
@@ -308,6 +328,7 @@ mutation_header& mutation_header::operator=(mutation_header&& other3) {
   decree = std::move(other3.decree);
   log_offset = std::move(other3.log_offset);
   last_committed_decree = std::move(other3.last_committed_decree);
+  timestamp = std::move(other3.timestamp);
   __isset = std::move(other3.__isset);
   return *this;
 }
@@ -319,6 +340,7 @@ void mutation_header::printTo(std::ostream& out) const {
   out << ", " << "decree=" << to_string(decree);
   out << ", " << "log_offset=" << to_string(log_offset);
   out << ", " << "last_committed_decree=" << to_string(last_committed_decree);
+  out << ", " << "timestamp=" << to_string(timestamp);
   out << ")";
 }
 

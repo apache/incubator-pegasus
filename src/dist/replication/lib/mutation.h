@@ -70,6 +70,7 @@ public:
 
     // state change
     void set_id(ballot b, decree c);
+    void set_timestamp(int64_t timestamp);
     void add_client_request(task_code code, dsn_message_t request);
     void copy_from(mutation_ptr& old);
     void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
@@ -191,6 +192,11 @@ inline void mutation::set_id(ballot b, decree c)
         data.header.pid.get_partition_index(),
         data.header.ballot,
         data.header.decree);
+}
+
+inline void mutation::set_timestamp(int64_t timestamp)
+{
+    data.header.timestamp = timestamp;
 }
 
 }} // namespace

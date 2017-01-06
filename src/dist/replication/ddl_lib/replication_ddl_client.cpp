@@ -244,12 +244,26 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(20) << std::left << "partition_count"
         << std::setw(20) << std::left << "replica_count"
         << std::setw(20) << std::left << "is_stateful"
+        << std::setw(20) << std::left << "settings"
         << std::endl;
     for(int i = 0; i < apps.size(); i++)
     {
         dsn::app_info info = apps[i];
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
+        std::string settings = "{";
+        for (auto kv : info.envs)
+        {
+            settings += (kv.first + ":" + kv.second + ",");
+        }
+        if (settings.length() > 1)
+        {
+            settings.back() = '}';
+        }
+        else
+        {
+            settings = "{}";
+        }
         out << std::setw(10) << std::left << info.app_id
             << std::setw(20) << std::left << status_str
             << std::setw(20) << std::left << info.app_name
@@ -257,6 +271,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             << std::setw(20) << std::left << info.partition_count
             << std::setw(20) << std::left << info.max_replica_count
             << std::setw(20) << std::left << (info.is_stateful ? "true" : "false")
+            << std::setw(20) << std::left << settings
             << std::endl;
     }
     out << std::endl << std::flush;

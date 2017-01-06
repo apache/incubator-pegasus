@@ -46,6 +46,15 @@
 
 namespace dsn { namespace replication {
 
+static int64_t get_uniq_timestamp()
+{
+    static int64_t last = 0;
+    static ::dsn::utils::ex_lock_nr_spin _lock;
+    int64_t time = dsn_now_ns() / 1000;
+    ::dsn::utils::auto_lock < ::dsn::utils::ex_lock_nr_spin> l(_lock);
+    last = std::max(time, last + 1);
+    return last;
+}
 
 void replica::on_client_write(task_code code, dsn_message_t request)
 {
@@ -86,6 +95,7 @@ void replica::init_prepare(mutation_ptr& mu)
         //print a debug log per 1024 decrees
         if ((mu->get_decree()&0x3ff) == 0)
             level = LOG_LEVEL_DEBUG;
+        mu->set_timestamp(get_uniq_timestamp());
     }
     else
     {

@@ -169,12 +169,14 @@ enum dsn_chkpt_apply_mode
 
     \param app    context returned by dsn_app_create
     \param decree sequence number for this request batch (when request batches are sent to the apps in order)
+    \param timestamp    the timestamp when write request arrived server (in microseconds)
     \param requests incoming rpc request array ptr
     \param request_count request count in this array
  */
 typedef void(*dsn_app_on_batched_write_requests)(
     void*           app,
     int64_t         decree,
+    int64_t         timestamp,
     dsn_message_t*  requests,
     int             request_count
     );

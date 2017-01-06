@@ -295,10 +295,26 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
             &_app_context, &_app_context_callbacks);
     if (err == ERR_OK)
     {
-        // TODO: setup info->envs
-        char* argv[1];
+        char* argv[2];
         argv[0] = (char*)info->app_name.c_str();
-        err = dsn_hosted_app_start(_app_context, 1, argv);
+        std::string env_string; // k1:v1,k2:v2 ...
+        for (auto kv : info->envs)
+        {
+            if (kv.first.find_first_of(":,") != std::string::npos ||
+                    kv.second.find_first_of(":,") != std::string::npos)
+            {
+                derror("Invalid character ':' or ',' in envs keyvalue %s <> %s", 
+                        kv.first.c_str(), kv.second.c_str());
+                return ERR_INVALID_PARAMETERS;
+            }
+            env_string += (kv.first + ':' + kv.second + ',');
+        } 
+        if (!env_string.empty())
+        {
+            env_string.back() = '\0';
+        }
+        argv[1] = const_cast<char*>(env_string.c_str());
+        err = dsn_hosted_app_start(_app_context, 2, argv);
     }
     return err;
 }
@@ -495,6 +511,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
               _replica->name(), mu->name(), batched_count);
         _callbacks.calls.on_batched_write_requests(_app_context_callbacks,
                                                    mu->data.header.decree,
+                                                   mu->data.header.timestamp,
                                                    batched_requests, batched_count);
     }
     else
