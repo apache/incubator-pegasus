@@ -59,7 +59,6 @@ using namespace ::dsn::service;
     auto d = mu->data.header.decree;
     ::dsn::task_ptr cb = callback ? file::create_aio_task(callback_code, callback_host, 
         std::forward<aio_handler>(callback), hash) : nullptr;
-    blob header = mu->get_header();
     
     _slock.lock();
 
@@ -87,7 +86,7 @@ using namespace ::dsn::service;
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
-    }, header);
+    });
 
     // update meta
     update_max_decree(mu->data.header.pid, d);
@@ -243,8 +242,6 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 {
     dassert(nullptr == callback, "callback is not needed in private mutation log");
 
-    blob header = mu->get_header();
-
     _plock.lock();
 
     // init pending buffer
@@ -264,7 +261,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
-    }, header);
+    });
 
     // update meta
     _pending_write_max_commit = std::max(_pending_write_max_commit, mu->data.header.last_committed_decree);
@@ -697,13 +694,13 @@ error_code mutation_log::open(replay_callback read_callback, io_failure_callback
     int64_t end_offset = 0;
     err = replay(
         replay_logs,
-        [this, read_callback](mutation_ptr& mu)
+        [this, read_callback](int log_length, mutation_ptr& mu)
         {
             bool ret = true;
 
             if (read_callback)
             {
-                ret = read_callback(mu); // actually replica::replay_mutation(mu, true|false);
+                ret = read_callback(log_length, mu); // actually replica::replay_mutation(mu, true|false);
             }
 
             if (ret)
@@ -937,9 +934,11 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool
                 break;
             }
 
-            callback(mu);
+            int log_length = old_size - reader->get_remaining_size();
 
-            end_offset += old_size - reader->get_remaining_size();
+            callback(log_length, mu);
+
+            end_offset += log_length;
         }
 
         err = log->read_next_log_block(bb);

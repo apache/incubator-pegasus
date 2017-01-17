@@ -115,7 +115,7 @@ namespace dsn {
                 int64_t offset = 0;
                 std::vector<std::string> files;
                 files.push_back(file_name);
-                err = mutation_log::replay(files, [](mutation_ptr mu)->bool
+                err = mutation_log::replay(files, [](int log_length, mutation_ptr mu)->bool
                     {
                         std::cout << "  " << mu->name() << " : " << mu->data.header.last_committed_decree
                                   << " : " << mu->data.header.log_offset << std::endl;

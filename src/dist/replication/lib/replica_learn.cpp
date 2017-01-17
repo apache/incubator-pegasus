@@ -1071,7 +1071,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
 
     err = mutation_log::replay(
         state.files,
-        [this, &plist](mutation_ptr& mu)
+        [this, &plist](int log_length, mutation_ptr& mu)
         {
             auto d = mu->data.header.decree;
             if (d <= plist.last_committed_decree())

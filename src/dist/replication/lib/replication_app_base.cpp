@@ -303,12 +303,12 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
             if (kv.first.find_first_of(":,") != std::string::npos ||
                     kv.second.find_first_of(":,") != std::string::npos)
             {
-                derror("Invalid character ':' or ',' in envs keyvalue %s <> %s", 
+                derror("Invalid character ':' or ',' in envs keyvalue %s <> %s",
                         kv.first.c_str(), kv.second.c_str());
                 return ERR_INVALID_PARAMETERS;
             }
             env_string += (kv.first + ':' + kv.second + ',');
-        } 
+        }
         if (!env_string.empty())
         {
             env_string.back() = '\0';

@@ -35,7 +35,7 @@
 
 # pragma once
 
-# include "replication_common.h"
+# include "../client_lib/replication_common.h"
 # include <list>
 # include <atomic>
 # include <dsn/utility/link.h>
@@ -92,10 +92,11 @@ public:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
     void write_to(std::function<void(const blob&)> inserter) const;
-    void write_to(std::function<void(const blob&)> inserter, blob& header) const;
     void write_to(binary_writer& writer, dsn_message_t to) const;
-    blob get_header() const;
     static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
+
+    static void write_mutation_header(binary_writer& writer, const mutation_header& header);
+    static void read_mutation_header(binary_reader& reader, mutation_header& header);
 
     // data
     mutation_data  data;

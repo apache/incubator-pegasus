@@ -43,7 +43,7 @@
 //
 
 # include <dsn/cpp/serverlet.h>
-# include "replication_common.h"
+# include "../client_lib/replication_common.h"
 # include "mutation.h"
 # include "prepare_list.h"
 # include "replica_context.h"

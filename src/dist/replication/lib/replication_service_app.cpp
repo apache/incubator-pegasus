@@ -34,7 +34,7 @@
  */
 
 
-# include "replication_common.h"
+# include "../client_lib/replication_common.h"
 # include "replica_stub.h"
 # include <dsn/dist/replication/replication_service_app.h>
 

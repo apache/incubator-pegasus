@@ -234,6 +234,7 @@ void replica::on_prepare(dsn_message_t request)
 
     dinfo("%s: mutation %s on_prepare", name(), mu->name());
 
+    dassert(mu->data.header.pid == rconfig.pid, "");
     dassert(mu->data.header.ballot == rconfig.ballot, "");
 
     if (mu->data.header.ballot < get_ballot())

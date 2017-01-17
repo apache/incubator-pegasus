@@ -160,6 +160,7 @@ namespace dsn
         void set_app_id(int32_t v) { _value.u.app_id = v; }
         void set_partition_index(int32_t v) { _value.u.partition_index = v; }
         dsn_gpid& raw() { return _value; }
+        const dsn_gpid& raw() const { return _value; }
         
 #ifdef DSN_USE_THRIFT_SERIALIZATION
         uint32_t read(::apache::thrift::protocol::TProtocol* iprot);

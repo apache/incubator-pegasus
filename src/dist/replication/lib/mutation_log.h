@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include "replication_common.h"
+#include "../client_lib/replication_common.h"
 #include "mutation.h"
 #include <atomic>
 
@@ -127,7 +127,7 @@ class mutation_log : public ref_counter, public virtual clientlet
 public:
     // return true when the mutation's offset is not less than
     // the remembered (shared or private) valid_start_offset therefore valid for the replica
-    typedef std::function<bool (mutation_ptr&)> replay_callback;
+    typedef std::function<bool (int log_length, mutation_ptr&)> replay_callback;
     typedef std::function<void(dsn::error_code err)> io_failure_callback;
 
 public:

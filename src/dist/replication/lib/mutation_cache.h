@@ -36,7 +36,7 @@
 #pragma once
 
 
-#include "replication_common.h"
+#include "../client_lib/replication_common.h"
 #include <vector>
 #include <atomic>
 

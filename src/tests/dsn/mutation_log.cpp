@@ -348,7 +348,7 @@ TEST(replication, mutation_log)
 
     int mutation_index = -1;
     mlog->open(
-        [&mutations, &mutation_index](mutation_ptr& mu)->bool
+        [&mutations, &mutation_index](int log_length, mutation_ptr& mu)->bool
     {
         mutation_ptr wmu = mutations[++mutation_index];
 #ifdef DSN_USE_THRIFT_SERIALIZATION

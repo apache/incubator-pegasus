@@ -245,7 +245,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     start_time = dsn_now_ms();
     error_code err = _log->open(
-        [&rps](mutation_ptr& mu)
+        [&rps](int log_length, mutation_ptr& mu)
         {
             auto it = rps.find(mu->data.header.pid);
             if (it != rps.end())

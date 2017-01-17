@@ -41,7 +41,7 @@
 //   replica_stub(singleton) --> replica --> replication_app
 //
 
-# include "replication_common.h"
+# include "../client_lib/replication_common.h"
 # include <dsn/cpp/perf_counter_.h>
 # include <dsn/dist/failure_detector_multimaster.h>
 

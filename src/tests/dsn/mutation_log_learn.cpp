@@ -107,7 +107,7 @@ TEST(replication, mutation_log_learn)
         // reading logs
         time_tic = clock.now();
         mlog = new mutation_log_private(logp, 1, gpid, nullptr, 1024, 512);
-        mlog->open([](mutation_ptr& mu)->bool{ return true; }, nullptr);
+        mlog->open([](int log_length, mutation_ptr& mu)->bool{ return true; }, nullptr);
         time_toc = clock.now();
         std::cout << "learn_point[" << lp << "]: read time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
 
@@ -125,7 +125,7 @@ TEST(replication, mutation_log_learn)
         int64_t offset = 0;
         std::set<decree> learned_decress;
         mutation_log::replay(state.files,
-            [&mutations, &learned_decress, &clock](mutation_ptr& mu)->bool
+            [&mutations, &learned_decress, &clock](int log_length, mutation_ptr& mu)->bool
             {
                 //wait for 5 usec mimicing mutation replay time
                 auto tic = clock.now();

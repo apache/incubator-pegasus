@@ -138,90 +138,9 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 
 void mutation::write_to(std::function<void(const blob&)> inserter) const
 {
-    inserter(get_header());
-
-    for (const mutation_update& update : data.updates)
-    {
-        inserter(update.data);
-    }
-}
-
-void mutation::write_to(std::function<void(const blob&)> inserter, blob& header) const
-{
-    memcpy((void*)header.data(), (const void*)(&data.header), sizeof(data.header));
-    inserter(header);
-
-    for (const mutation_update& update : data.updates)
-    {
-        inserter(update.data);
-    }
-}
-
-blob mutation::get_header() const
-{
-    binary_writer temp_writer(1024);
-    temp_writer.write_pod(data.header);        
-    temp_writer.write_pod(static_cast<int>(data.updates.size()));
-
-    for (const mutation_update& update : data.updates)
-    {
-        // write task_code as string to make it cross-process compatible.
-        // avoid memory copy, equal to writer.write(std::string)
-        const char* cstr  = update.code.to_string();
-        int len = static_cast<int>(strlen(cstr));
-        temp_writer.write_pod(len);
-        if (len > 0)
-            temp_writer.write(cstr, len);
-
-        temp_writer.write_pod(static_cast<int>(update.serialization_type));
-
-        temp_writer.write_pod(static_cast<int>(update.data.length()));
-    }
-
-    return temp_writer.get_buffer();
-
-    // Alternative as following: do only one time memory copy
-/*
-    int len = sizeof(data.header) + sizeof(int);
-    for (const mutation_update& update : data.updates) {
-        const char* cstr = update.code.to_string();
-        len += sizeof(int) * 3 + static_cast<int>(strlen(cstr));
-    }
-
-    std::shared_ptr<char> bptr(::dsn::make_shared_array<char>(len));
-    blob bb(bptr, len);
-    const char* ptr = bb.data();
-
-    memcpy((void*)ptr, (void*)(&data.header), sizeof(data.header));
-    ptr += sizeof(data.header);
-    int tmp = static_cast<int>(data.updates.size());
-    memcpy((void*)ptr, (void*)&tmp, sizeof(int));
-    ptr += sizeof(int);
-    for (const mutation_update& update : data.updates) {
-        const char* cstr = update.code.to_string();
-        int slen = strlen(cstr);
-        memcpy((void*)ptr, (void*)&slen, sizeof(int));
-        ptr += sizeof(int);
-        if (slen > 0) {
-            memcpy((void*)ptr, (void*)cstr, slen);
-            ptr += slen;
-        }
-        tmp = static_cast<int>(update.serialization_type);
-        memcpy((void*)ptr, (void*)&tmp, sizeof(int));
-        ptr += sizeof(int);
-        tmp = static_cast<int>(update.data.length());
-        memcpy((void*)ptr, (void*)&tmp, sizeof(int));
-        ptr += sizeof(int);
-    }
-    return bb;
-*/
-}
-
-void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
-{
-    writer.write_pod(data.header);
+    binary_writer writer(1024);
+    write_mutation_header(writer, data.header);
     writer.write_pod(static_cast<int>(data.updates.size()));
-
     for (const mutation_update& update : data.updates)
     {
         // write task_code as string to make it cross-process compatible.
@@ -236,7 +155,31 @@ void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
 
         writer.write_pod(static_cast<int>(update.data.length()));
     }
+    inserter(writer.get_buffer());
+    for (const mutation_update& update : data.updates)
+    {
+        inserter(update.data);
+    }
+}
 
+void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
+{
+    write_mutation_header(writer, data.header);
+    writer.write_pod(static_cast<int>(data.updates.size()));
+    for (const mutation_update& update : data.updates)
+    {
+        // write task_code as string to make it cross-process compatible.
+        // avoid memory copy, equal to writer.write(std::string)
+        const char* cstr  = update.code.to_string();
+        int len = static_cast<int>(strlen(cstr));
+        writer.write_pod(len);
+        if (len > 0)
+            writer.write(cstr, len);
+
+        writer.write_pod(static_cast<int>(update.serialization_type));
+
+        writer.write_pod(static_cast<int>(update.data.length()));
+    }
     // TODO(qinzuoyan): directly append buffer to message to avoid memory copy
     for (const mutation_update& update : data.updates)
     {
@@ -247,7 +190,8 @@ void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
 /*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
-    reader.read_pod(mu->data.header);
+    read_mutation_header(reader, mu->data.header);
+
     int size;
     reader.read_pod(size);
     mu->data.updates.resize(size);
@@ -290,6 +234,62 @@ void mutation::write_to(binary_writer& writer, dsn_message_t /*to*/) const
         mu->data.header.decree);
 
     return mu;
+}
+
+/*static*/ void mutation::write_mutation_header(binary_writer& writer, const mutation_header& header)
+{
+    writer.write_pod((int64_t)0);
+    writer.write_pod(header.pid.raw().value);
+    writer.write_pod(header.ballot);
+    writer.write_pod(header.decree);
+    writer.write_pod(header.log_offset);
+    writer.write_pod(header.last_committed_decree);
+    writer.write_pod(header.timestamp);
+}
+
+/*static*/ void mutation::read_mutation_header(binary_reader& reader, mutation_header& header)
+{
+    // original code:
+    //   reader.read_pod(mu->data.header);
+    // this will read 7*8=56 bytes of:
+    //   - vptr (which must > 64)
+    //   - gpid
+    //   - ballot
+    //   - decree
+    //   - log_offset
+    //   - last_committed_decree
+    //   - __isset
+    //
+    // new code (also 7*8=56 bytes):
+    //   - version
+    //   - gpid
+    //   - decree
+    //   - ballot
+    //   - log_offset
+    //   - last_committed_decree
+    //   - timestamp
+    int64_t version;
+    reader.read_pod(version);
+    reader.read_pod(header.pid.raw().value);
+    reader.read_pod(header.ballot);
+    reader.read_pod(header.decree);
+    reader.read_pod(header.log_offset);
+    reader.read_pod(header.last_committed_decree);
+    if (version == 0)
+    {
+        reader.read_pod(header.timestamp);
+    }
+    else if (version > 64)
+    {
+        // version is vptr, we need read '__isset', and ignore it
+        int64_t isset;
+        reader.read_pod(isset);
+        header.timestamp = 0;
+    }
+    else
+    {
+        dassert(false, "invalid mutation log version: 0x%" PRIx64, version);
+    }
 }
 
 int mutation::clear_prepare_or_commit_tasks()

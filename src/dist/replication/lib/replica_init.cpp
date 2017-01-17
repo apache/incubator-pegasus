@@ -234,7 +234,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
                 uint64_t start_time = now_ms();
                 err = _private_log->open(
-                    [this](mutation_ptr& mu)
+                    [this](int log_length, mutation_ptr& mu)
                     {
                         return replay_mutation(mu, true);
                     },
