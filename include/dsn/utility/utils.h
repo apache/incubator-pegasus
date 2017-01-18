@@ -427,6 +427,8 @@ namespace dsn {
 
         extern void time_ms_to_string(uint64_t ts_ms, char* str);
 
+        extern void time_ms_to_date(uint64_t ts_ms, char* str);
+
         extern int get_current_tid_internal();
 
         typedef struct _tls_tid
