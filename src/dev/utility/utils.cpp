@@ -195,18 +195,23 @@ namespace dsn {
             struct tm tmp;
             auto ret = localtime_r(&t, &tmp);
             auto ms = static_cast<uint32_t>(ts_ms % 1000);
-
             sprintf(str, "%02d:%02d:%02d.%03u", ret->tm_hour, ret->tm_min, ret->tm_sec, ms);
         }
 
-        void time_ms_to_date(uint64_t ts_ms, char* str)
+        void time_ms_to_date(uint64_t ts_ms, char* str, int len)
         {
             auto t = (time_t)(ts_ms / 1000);
             struct tm tmp;
             auto ret = localtime_r(&t, &tmp);
+            strftime(str, len, "%Y-%m-%d", ret);
+        }
 
-            sprintf(str, "%04d-%02d-%02d %02d:%02d:%02d",
-                    ret->tm_year + 1900, ret->tm_mon, ret->tm_mday, ret->tm_hour, ret->tm_min, ret->tm_sec);
+        void time_ms_to_date_time(uint64_t ts_ms, char* str, int len)
+        {
+            auto t = (time_t)(ts_ms / 1000);
+            struct tm tmp;
+            auto ret = localtime_r(&t, &tmp);
+            strftime(str, len, "%Y-%m-%d %H:%M:%S", ret);
         }
     }
 }

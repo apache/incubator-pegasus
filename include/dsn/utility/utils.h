@@ -425,9 +425,10 @@ namespace dsn {
 # endif
         }
 
-        extern void time_ms_to_string(uint64_t ts_ms, char* str);
+        extern void time_ms_to_string(uint64_t ts_ms, char* str); // hh:mm:ss.SSS
 
-        extern void time_ms_to_date(uint64_t ts_ms, char* str);
+        extern void time_ms_to_date(uint64_t ts_ms, char* str, int len); // yyyy-MM-dd
+        extern void time_ms_to_date_time(uint64_t ts_ms, char* str, int len); // yyyy-MM-dd hh:mm:ss
 
         extern int get_current_tid_internal();
 
