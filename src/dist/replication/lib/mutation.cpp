@@ -319,9 +319,8 @@ mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool ba
     : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
     std::stringstream ss;
-    ss << gpid.get_app_id() << "." << gpid.get_partition_index() << "." << "2pc#";
-
-    _current_op_counter.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
+    ss << "2pc(Count)@" << gpid.get_app_id() << "." << gpid.get_partition_index();
+    _current_op_counter.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
     _current_op_counter.set(0);
     
     _current_op_count = 0;

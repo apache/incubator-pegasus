@@ -204,22 +204,26 @@ void replication_app_base::install_perf_counters()
 {
     std::stringstream ss;
     
-    ss << replica_name() << ".commit_qps";
+    gpid pid = _replica->get_gpid();
+    char gpid_name[128];
+    memset(gpid_name, 0, sizeof(gpid_name));
+    snprintf(gpid_name, 127, "%d.%d", pid.get_app_id(), pid.get_partition_index());
+    ss << "commit_qps@" << gpid_name;
     _app_commit_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
 
     ss.clear();
     ss.str("");
-    ss << replica_name() << ".latency(ns)";
+    ss << "latency(ns)@" << gpid_name;
     _app_commit_latency.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
 
     ss.clear();
     ss.str("");
-    ss << replica_name() << ".decree";
+    ss << "decree@" << gpid_name;
     _app_commit_decree.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
 
     ss.clear();
     ss.str("");
-    ss << replica_name() << ".req_qps";
+    ss << "req_qps@" << gpid_name;
     _app_req_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "request throughput for current app");
 }
 

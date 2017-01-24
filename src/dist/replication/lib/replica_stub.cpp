@@ -73,18 +73,17 @@ replica_stub::~replica_stub(void)
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_count.init("eon.replication", "replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
-    _counter_replicas_opening_count.init("eon.replication", "opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
-    _counter_replicas_closing_count.init("eon.replication", "closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
-    _counter_replicas_total_commit_throught.init("eon.replication", "replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
+    _counter_replicas_count.init("eon.replica_stub", "replica(Count)", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
+    _counter_replicas_opening_count.init("eon.replica_stub", "opening_replica(Count)", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
+    _counter_replicas_closing_count.init("eon.replica_stub", "closing_replica(Count)", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
+    _counter_replicas_total_commit_throught.init("eon.replica_stub", "replicas.commit.qps", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
 
-    _counter_replicas_learning_failed_latency.init("eon.replication", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
-    _counter_replicas_learning_success_latency.init("eon.replication", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
-    _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
+    _counter_replicas_learning_failed_latency.init("eon.replica_stub", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
+    _counter_replicas_learning_success_latency.init("eon.replica_stub", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
+    _counter_replicas_learning_count.init("eon.replica_stub", "replicas.learnig(Count)", COUNTER_TYPE_NUMBER, "total learning count");
 
     std::stringstream ss;
-    ss << primary_address().to_std_string() << ".replica_stub.shared_log_size";
-    _counter_shared_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "shared log size(MB)");
+    _counter_shared_log_size.init("eon.replica_stub", "shared_log_size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)

@@ -62,13 +62,12 @@ replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char*
     _config.pid = gpid;
 
     std::stringstream ss;
-    ss << _name << ".2pc.latency(ns)";
-    _counter_commit_latency.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
+    ss << "2pc.latency(ns)" << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
+    _counter_commit_latency.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
 
     ss.str("");
-    ss << _name << ".private_log_size(MB)";
-    _counter_private_log_size.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
-
+    ss << "private_log_size(MB)" << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
+    _counter_private_log_size.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
 }
 
 //void replica::json_state(std::stringstream& out) const
