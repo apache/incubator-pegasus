@@ -42,6 +42,11 @@
 # include <dsn/utility/factory_store.h>
 # include <dsn/tool-api/task.h>
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "uri_address"
+
 namespace dsn
 {
     void uri_resolver_manager::setup_resolvers()
@@ -99,10 +104,10 @@ namespace dsn
         {
             dwarn(
                 "cannot find uri resolver for uri '%s' with resolver address as '%s', "
-                "please fix it by setting up a uri resolver section in config file, as follows:\r\n"
-                "[uri-resolver.%s]\r\n"
-                "factory = partition-resolver-factory (e.g., partition_resolver_simple)\r\n"
-                "arguments = uri-resolver-arguments (e.g., localhost:34601,localhost:34602)\r\n",
+                "please fix it by setting up a uri resolver section in config file, as follows:\n"
+                "[uri-resolver.%s]\n"
+                "factory = partition-resolver-factory (e.g., partition_resolver_simple)\n"
+                "arguments = uri-resolver-arguments (e.g., localhost:34601,localhost:34602)\n",
                 uri->uri(),
                 pr.first.c_str(),
                 pr.first.c_str()
