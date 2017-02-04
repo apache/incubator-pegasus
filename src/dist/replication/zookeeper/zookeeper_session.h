@@ -119,12 +119,16 @@ public:
         };
     };
 
-    struct zoo_opcontext {
+    struct zoo_opcontext: public dsn::ref_counter
+    {
         ZOO_OPERATION _optype;
         zoo_input _input;
         zoo_output _output;
         std::function<void (zoo_opcontext*)> _callback_function;
+
+        // this are for implement usage, user shouldn't modify this directly
         zookeeper_session* _priv_session_ref;
+        int32_t _ref_count;
     };
 
     static zoo_opcontext* create_context()
@@ -140,9 +144,18 @@ public:
         result->_optype = ZOO_OPINVALID;
         result->_callback_function = nullptr;
         result->_priv_session_ref = nullptr;
+
+        result->add_ref();
         return result;
     }
-    static void free_context(zoo_opcontext* ctx) { delete ctx; }
+
+    static void add_ref(zoo_opcontext* op) { op->add_ref(); }
+    static void release_ref(zoo_opcontext* op) {
+        op->release_ref();
+    }
+    static const char* string_zoo_operation(ZOO_OPERATION op);
+    static const char* string_zoo_event(int zoo_event);
+    static const char* string_zoo_state(int zoo_state);
 
 public:
     typedef std::function<void (int)> state_callback;

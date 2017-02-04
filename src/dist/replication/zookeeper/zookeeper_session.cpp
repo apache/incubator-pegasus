@@ -74,6 +74,66 @@ char* zookeeper_session::zoo_atomic_packet::alloc_buffer(int buffer_length)
     return (char*)malloc(buffer_length);
 }
 
+/*static*/
+const char* zookeeper_session::string_zoo_operation(ZOO_OPERATION op) {
+    switch (op) {
+    case ZOO_CREATE:
+        return "zoo_create";
+    case ZOO_DELETE:
+        return "zoo_delete";
+    case ZOO_EXISTS:
+        return "zoo_exists";
+    case ZOO_GET:
+        return "zoo_get";
+    case ZOO_GETCHILDREN:
+        return "zoo_getchildren";
+    case ZOO_SET:
+        return "zoo_set";
+    case ZOO_ASYNC:
+        return "zoo_async";
+    case ZOO_TRANSACTION:
+        return "zoo_transaction";
+    default:
+        return "invalid";
+    }
+}
+
+/*static*/
+const char* zookeeper_session::string_zoo_event(int zoo_event)
+{
+    if (ZOO_SESSION_EVENT==zoo_event)
+        return "session event";
+    if (ZOO_CREATED_EVENT==zoo_event)
+        return "created event";
+    if (ZOO_DELETED_EVENT==zoo_event)
+        return "deleted event";
+    if (ZOO_CHANGED_EVENT==zoo_event)
+        return "changed event";
+    if (ZOO_CHILD_EVENT==zoo_event)
+        return "child event";
+    if (ZOO_NOTWATCHING_EVENT==zoo_event)
+        return "notwatching event";
+    return "invalid event";
+}
+
+/*static*/
+const char* zookeeper_session::string_zoo_state(int zoo_state)
+{
+    if (ZOO_CONNECTED_STATE == zoo_state)
+        return "connected_state";
+    if (ZOO_EXPIRED_SESSION_STATE == zoo_state)
+        return "expired_session_state";
+    if (ZOO_AUTH_FAILED_STATE == zoo_state)
+        return "auth_failed_state";
+    if (ZOO_CONNECTING_STATE == zoo_state)
+        return "connecting_state";
+    if (ZOO_ASSOCIATING_STATE == zoo_state)
+        return "associating_state";
+    if (ZOO_CONNECTED_STATE == zoo_state)
+        return "connected_state";
+    return "invalid_state";
+}
+
 zookeeper_session::~zookeeper_session()
 {
 
@@ -146,7 +206,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     if ( zoo_state(_handle) != ZOO_CONNECTED_STATE ) {
         ctx->_output.error = ZINVALIDSTATE;
         ctx->_callback_function(ctx);
-        free_context(ctx);
+        release_ref(ctx);
         return;
     }
 
@@ -239,7 +299,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     if (ZOK != ec) {
         ctx->_output.error = ec;
         ctx->_callback_function(ctx);
-        free_context(ctx);
+        release_ref(ctx);
     }
 }
 
@@ -260,7 +320,7 @@ void zookeeper_session::global_watcher(zhandle_t *handle, int type, int state, c
 {
     zookeeper_session* zoo_session = (zookeeper_session*)ctx;
     zoo_session->init_non_dsn_thread();
-    ddebug("global watcher, type(%d), state(%d)", type, state);
+    ddebug("global watcher, type(%s), state(%s)", string_zoo_event(type), string_zoo_state(state));
     if (type!=ZOO_SESSION_EVENT && path!=nullptr)
         ddebug("watcher path: %s", path);
 
@@ -282,7 +342,7 @@ void zookeeper_session::global_string_completion(int rc, const char *name, const
         dinfo("created path:%s", name);
     output.create_op._created_path = name;
     op_ctx->_callback_function(op_ctx);
-    free_context(op_ctx);
+    release_ref(op_ctx);
 }
 /* static */
 void zookeeper_session::global_data_completion(int rc, const char *value, int value_length, const Stat*, const void *data)
@@ -292,7 +352,7 @@ void zookeeper_session::global_data_completion(int rc, const char *value, int va
     output.get_op.value_length = value_length;
     output.get_op.value = value;
     op_ctx->_callback_function(op_ctx);
-    free_context(op_ctx);
+    release_ref(op_ctx);
 }
 /* static */
 void zookeeper_session::global_state_completion(int rc, const Stat *stat, const void *data)
@@ -307,7 +367,7 @@ void zookeeper_session::global_state_completion(int rc, const Stat *stat, const 
         output.set_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
     }
-    free_context(op_ctx);
+    release_ref(op_ctx);
 }
 /* static */
 void zookeeper_session::global_strings_completion(int rc, const String_vector *strings, const void *data)
@@ -318,7 +378,7 @@ void zookeeper_session::global_strings_completion(int rc, const String_vector *s
         dinfo("child count: %d", strings->count);
     output.getchildren_op.strings = strings;
     op_ctx->_callback_function(op_ctx);
-    free_context(op_ctx);
+    release_ref(op_ctx);
 }
 /* static */
 void zookeeper_session::global_void_completion(int rc, const void *data)
@@ -328,7 +388,7 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
         dinfo("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
     else
         dinfo("rc(%s)", zerror(rc));    op_ctx->_callback_function(op_ctx);
-    free_context(op_ctx);
+    release_ref(op_ctx);
 }
 
 }}

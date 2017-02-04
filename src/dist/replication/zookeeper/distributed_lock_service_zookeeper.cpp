@@ -290,10 +290,17 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
     {
         _this->_first_call = false;
         _this->_waiting_attach.notify();
+        return;
     }
-    else if (ZOO_CONNECTED_STATE!=zoo_state)
+
+    if (ZOO_EXPIRED_SESSION_STATE==zoo_state || ZOO_AUTH_FAILED_STATE==zoo_state)
     {
+        derror("get zoo state: %s, which means the session is expired", zookeeper_session::string_zoo_state(zoo_state));
         _this->dispatch_zookeeper_session_expire();
+    }
+    else
+    {
+        dwarn("get zoo state: %s, ignore it", zookeeper_session::string_zoo_state(zoo_state));
     }
 }
 

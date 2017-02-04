@@ -50,6 +50,13 @@ public:
     virtual error_code initialize(const std::vector<std::string>& args) override;
     virtual error_code finalize() override;
 
+    //
+    // distributed lock service implemented by zk.
+    // lock_cb is called when get the lock
+    //
+    // lease_expire_callback is called when the session-expire's zk-event is encountered
+    // use should exist the process when lease expires
+    //
     virtual std::pair<task_ptr, task_ptr> lock(
         const std::string& lock_id,
         const std::string& myself_id,
@@ -59,6 +66,7 @@ public:
         const lock_callback& lease_expire_callback, 
         const lock_options& opt
         ) override;
+
     virtual task_ptr cancel_pending_lock(
         const std::string& lock_id,
         const std::string& myself_id,
