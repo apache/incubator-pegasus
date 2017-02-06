@@ -146,12 +146,16 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
     if (setup_timer)
     {
+        // delay the beacon slightly to make first beacon greater than the
+        // last_beacon_send_time_with_ack
         ret.first->second.send_beacon_timer = tasking::enqueue_timer(LPC_BEACON_SEND, this,
             [this, target]() 
             {
                 this->send_beacon(target, now_ms());
             },
-            std::chrono::milliseconds(_beacon_interval_milliseconds)
+            std::chrono::milliseconds(_beacon_interval_milliseconds),
+            0,
+            std::chrono::milliseconds(1)
             );
     }
 }
@@ -200,11 +204,7 @@ bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address
 
 bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 {
-    uint64_t delta = ts - base;
-    if (delta <= 24ULL*3600ULL*1000ULL)
-        return true;
-    else
-        return false;
+    return ts > base;
 }
 
 void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
@@ -407,7 +407,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack))
     {
         // out-dated beacon acks, do nothing
-        dinfo("ignore out dated beacon acks");
+        dinfo("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)", beacon_send_time, record.last_send_time_for_beacon_with_ack);
         err.end_tracking();
         return false;
     }
