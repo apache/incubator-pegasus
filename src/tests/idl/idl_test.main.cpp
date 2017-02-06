@@ -178,7 +178,7 @@ void thrift_basic_type_serialization_checker(std::vector<T> &data, Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
-    for (auto& i : data)
+    for (const T& i : data)
     {
         T input = i;
         dsn::blob b(buf, 0, bufsize);

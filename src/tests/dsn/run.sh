@@ -27,7 +27,7 @@ filters="distributed_lock_service_zookeeper.simple_lock_unlock -distributed_lock
 
 for filter in $filters; do
     output_xml="${REPORT_DIR}/dsn.tests.xml"
-    prepare_environment $filter
+    #prepare_environment $filter
 
     GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=$filter ./dsn.tests config-test.ini
     if [ $? -ne 0 ]; then
@@ -45,5 +45,5 @@ for filter in $filters; do
         destroy_environment $filter
         exit -1
     fi
-    destroy_environment $filter
+    #destroy_environment $filter
 done

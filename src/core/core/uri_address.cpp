@@ -100,19 +100,17 @@ namespace dsn
                 ret = it->second;
         }
         
-        if (ret == nullptr)
-        {
-            dwarn(
-                "cannot find uri resolver for uri '%s' with resolver address as '%s', "
-                "please fix it by setting up a uri resolver section in config file, as follows:\n"
-                "[uri-resolver.%s]\n"
-                "factory = partition-resolver-factory (e.g., partition_resolver_simple)\n"
-                "arguments = uri-resolver-arguments (e.g., localhost:34601,localhost:34602)\n",
-                uri->uri(),
-                pr.first.c_str(),
-                pr.first.c_str()
-                );
-        }
+        dassert(
+            ret != nullptr,
+            "cannot find uri resolver for uri '%s' with resolver address as '%s', "
+            "please fix it by setting up a uri resolver section in config file, as follows:\n"
+            "[uri-resolver.%s]\n"
+            "factory = partition-resolver-factory (e.g., partition_resolver_simple)\n"
+            "arguments = uri-resolver-arguments (e.g., localhost:34601,localhost:34602)\n",
+            uri->uri(),
+            pr.first.c_str(),
+            pr.first.c_str()
+            );
 
         return ret;
     }
