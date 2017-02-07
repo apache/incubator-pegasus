@@ -12,6 +12,7 @@ struct partition_configuration
     5:list<dsn.rpc_address>  secondaries;
     6:list<dsn.rpc_address>  last_drops;
     7:i64                    last_committed_decree;
+    8:i32                    partition_flags;
 }
 
 
@@ -39,6 +40,7 @@ enum app_status
     AS_DROPPING,
     AS_DROP_FAILED,
     AS_DROPPED,
+    AS_RECALLING
 }
 
 struct app_info
@@ -51,4 +53,5 @@ struct app_info
     6:map<string, string> envs;
     7:bool          is_stateful;
     8:i32           max_replica_count;
+    9:i32           expire_second;
 }

@@ -528,6 +528,20 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
     return get_replica(gpid);
 }
 
+replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(const gpid &pid, bool lock_protected)
+{
+    dassert(lock_protected, "this can only be visited in the _replicas_lock");
+    if (_opening_replicas.find(pid) != _opening_replicas.end())
+        return replica_stub::RL_creating;
+    if (_replicas.find(pid) != _replicas.end())
+        return replica_stub::RL_serving;
+    if (_closing_replicas.find(pid) != _closing_replicas.end())
+        return replica_stub::RL_closing;
+    if (_closed_replicas.find(pid) != _closed_replicas.end())
+        return replica_stub::RL_closed;
+    return replica_stub::RL_invalid;
+}
+
 void replica_stub::on_client_write(gpid gpid, dsn_message_t request)
 {
     replica_ptr rep = get_replica(gpid);
@@ -624,12 +638,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
     {
         replica_ptr r = it->second;
         replica_info info;
-        info.pid = r->get_gpid();
-        info.ballot = r->get_ballot();
-        info.status = r->status();
-        info.last_committed_decree = r->last_committed_decree();
-        info.last_prepared_decree = r->last_prepared_decree();
-        info.last_durable_decree = r->last_durable_decree();
+        get_replica_info(info, r);
         resp.replicas.push_back(info);
     }
     resp.err = ERR_OK;
@@ -803,6 +812,46 @@ void replica_stub::static_replica_stub_json_state_freer(dsn_cli_reply reply)
     delete danglingstr;
 }
 
+void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
+{
+    info.pid = r->get_gpid();
+    info.ballot = r->get_ballot();
+    info.status = r->status();
+    info.app_type = r->get_app_info()->app_type;
+    info.last_committed_decree = r->last_committed_decree();
+    info.last_prepared_decree = r->last_prepared_decree();
+    info.last_durable_decree = r->last_durable_decree();
+}
+
+void replica_stub::get_local_replicas(std::vector<replica_info> &replicas, bool lock_protected)
+{
+    dassert(lock_protected, "this should be visited in the protection of replica_lock");
+
+    // local_replicas = replicas + closing_replicas + closed_replicas
+    int total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
+    replicas.reserve(total_replicas);
+    replica_info info;
+
+    for (auto& pairs: _replicas)
+    {
+        replica_ptr& rep = pairs.second;
+        get_replica_info(info, rep);
+        replicas.push_back(info);
+    }
+
+    for (auto& pairs: _closing_replicas)
+    {
+        replica_ptr& rep = pairs.second.second;
+        get_replica_info(info, rep);
+        replicas.push_back(info);
+    }
+
+    for (auto& pairs: _closed_replicas)
+    {
+        replicas.push_back(pairs.second);
+    }
+}
+
 void replica_stub::query_configuration_by_node()
 {
     if (_state == NS_Disconnected)
@@ -819,9 +868,12 @@ void replica_stub::query_configuration_by_node()
 
     configuration_query_by_node_request req;
     req.node = _primary_address;
-    ::dsn::marshall(msg, req);
 
-    ddebug("send query node partitions request to meta server");
+    //TODO: send stored replicas may cost network, we shouldn't config the frequency
+    get_local_replicas(req.stored_replicas, true);
+    req.__isset.stored_replicas = true;
+
+    ::dsn::marshall(msg, req);
 
     ddebug("send query node partitions request to meta server");
 
@@ -915,6 +967,23 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
                 std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
                 gpid_to_thread_hash(it->first)
                 );
+        }
+
+        //handle the replicas which need to be gc
+        if (resp.__isset.gc_replicas)
+        {
+            for (replica_info& rep: resp.gc_replicas)
+            {
+                replica_stub::replica_life_cycle lc = get_replica_life_cycle(rep.pid, true);
+                if (lc == replica_stub::RL_closed)
+                {
+                    tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+                        this,
+                        std::bind(&replica_stub::on_gc_replica, this, this, rep.pid),
+                        0
+                    );
+                }
+            }
         }
     }
 }
@@ -1094,6 +1163,34 @@ void replica_stub::init_gc_for_test()
         0,
         std::chrono::milliseconds(_options.gc_interval_ms)
         );
+}
+
+void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
+{
+    std::string replica_path;
+    std::string app_type;
+
+    {
+        zauto_lock l(_replicas_lock);
+        auto iter = _closed_replicas.find(pid);
+        if (iter == _closed_replicas.end())
+            return;
+        app_type = iter->second.app_type;
+        _closed_replicas.erase(iter);
+    }
+
+    replica_path = get_replica_dir(app_type.c_str(), pid, false);
+    if (replica_path.empty())
+    {
+        dwarn("gc closed replica(%d.%d.%s) failed, no exist data", pid.get_app_id(), pid.get_partition_index(), app_type.c_str());
+        return;
+    }
+    ddebug("start to remove replica(%d.%d), path: %s", pid.get_app_id(), pid.get_partition_index(), replica_path.c_str());
+    if (!dsn::utils::filesystem::remove_path(replica_path))
+    {
+        derror("remove path %s failed", replica_path.c_str());
+        dsn::utils::filesystem::rename_path(replica_path, replica_path+".err");
+    }
 }
 
 void replica_stub::on_gc()
@@ -1390,12 +1487,15 @@ void replica_stub::close_replica(replica_ptr r)
 {
     ddebug("%s: start to close replica", r->name());
 
+    replica_info info;
+    get_replica_info(info, r);
     r->close();
 
     {
         _counter_replicas_closing_count.decrement();
         zauto_lock l(_replicas_lock);
         _closing_replicas.erase(r->get_gpid());
+        _closed_replicas.emplace(info.pid, std::move(info));
     }
 }
 
@@ -1573,7 +1673,7 @@ void replica_stub::close()
     }
 }
 
-std::string replica_stub::get_replica_dir(const char* app_type, gpid gpid) const
+std::string replica_stub::get_replica_dir(const char* app_type, gpid gpid, bool create_new) const
 {
     char buffer[256];
     sprintf(buffer, "%d.%d.%s", gpid.get_app_id(), gpid.get_partition_index(), app_type);
@@ -1590,7 +1690,7 @@ std::string replica_stub::get_replica_dir(const char* app_type, gpid gpid) const
             ret_dir = cur_dir;
         }
     }
-    if (ret_dir.empty())
+    if (ret_dir.empty() && create_new)
     {
         /*
         int r = dsn_random32(0, _options.data_dirs.size() - 1);

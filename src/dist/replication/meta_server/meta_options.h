@@ -54,6 +54,8 @@ public:
     uint64_t replica_assign_delay_ms_for_dropouts;
     uint64_t node_live_percentage_threshold_for_update;
     uint64_t min_live_node_count_for_unfreeze;
+    int32_t hold_seconds_for_dropped_app;
+    int32_t proposal_ttl;
 public:
     void initialize();
 

@@ -71,12 +71,10 @@ public:
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock
     void set_node_state(const std::vector<rpc_address>& nodes_list, bool is_alive);
-    void get_node_state(/*out*/std::set<rpc_address>&, bool is_alive);
+    void get_node_state(/*out*/std::map<rpc_address, bool>& all_nodes);
 
-    void prepare_service_starting();
-    void service_starting();
+    void start_service();
     void balancer_run();
-
 private:
     void register_rpc_handlers();
 
@@ -95,6 +93,7 @@ private:
     // table operations
     void on_create_app(dsn_message_t req);
     void on_drop_app(dsn_message_t req);
+    void on_recall_app(dsn_message_t req);
     void on_list_apps(dsn_message_t req);
     void on_list_nodes(dsn_message_t req);
 
@@ -112,7 +111,7 @@ private:
     {
         int total = _alive_set.size() + _dead_set.size();
         return (_alive_set.size()<_meta_opts.min_live_node_count_for_unfreeze) ||
-                (_alive_set.size()*100<=_node_live_percentage_threshold_for_update*total);
+               (_alive_set.size()*100<=_node_live_percentage_threshold_for_update*total);
     }
 private:
     friend class replication_checker;
@@ -127,10 +126,12 @@ private:
     std::shared_ptr<dist::meta_state_service> _storage;
     std::shared_ptr<server_load_balancer> _balancer;
 
-    mutable zrwlock_nr _meta_lock;
+    // [
+    // this is protected by failure_detector::_lock
     std::set<rpc_address> _alive_set;
     std::set<rpc_address> _dead_set;
-
+    // ]
+    mutable zrwlock_nr _meta_lock;
     int  _node_live_percentage_threshold_for_update;
     volatile bool _started;
     volatile int64_t _meta_ctrl_flags;

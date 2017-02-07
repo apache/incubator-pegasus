@@ -58,7 +58,7 @@ class meta_service;
 class server_state
 {
 public:
-    static const int s_state_write_hash = 0;
+    static const int sStateHash = 0;
 public:
     server_state();
     ~server_state();
@@ -77,6 +77,7 @@ public:
     // table options
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
+    void recall_app(dsn_message_t msg);
     void list_apps(const configuration_list_apps_request& request, configuration_list_apps_response& response);
 
     // update configuration
@@ -98,7 +99,8 @@ public:
     void set_replica_migration_subscriber_for_test(replica_migration_subscriber subscriber);
 private:
     //-1 means waiting forever
-    bool spin_wait_creating(int timeout_seconds = -1);
+    bool spin_wait_staging(int timeout_seconds = -1);
+    bool count_staging_app();
     bool is_server_state_stable(int healthy_partitions);
 
     error_code dump_app_states(const char* local_path, const std::function<app_state* ()>& iterator);
@@ -109,18 +111,21 @@ private:
 
     void check_consistency(const dsn::gpid& gpid);
 
-    void do_app_create(std::shared_ptr<app_state>& app, dsn_message_t msg);
-    void do_app_drop(std::shared_ptr<app_state> &app, dsn_message_t msg);
+    void do_app_create(std::shared_ptr<app_state>& app);
+    void do_app_drop(std::shared_ptr<app_state>& app);
+    void do_app_recall(std::shared_ptr<app_state> &app);
     void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx);
 
     task_ptr update_configuration_on_remote(std::shared_ptr<configuration_update_request>& config_request);
     void on_update_configuration_on_remote_reply(error_code ec, std::shared_ptr<configuration_update_request>& request);
     void update_configuration_locally(app_state& app, std::shared_ptr<configuration_update_request>& config_request);
-    void apply_migration_actions(migration_list& ml);
     void request_check(const partition_configuration& old, const configuration_update_request& request);
+    void recall_partition(std::shared_ptr<app_state>& app, int pidx);
+    void drop_partition(std::shared_ptr<app_state>& app, int pidx);
     void downgrade_primary_to_inactive(std::shared_ptr<app_state>& app, int pidx);
     void downgrade_secondary_to_inactive(std::shared_ptr<app_state>& app, int pidx, const rpc_address& node);
     void downgrade_stateless_nodes(std::shared_ptr<app_state>& app, int pidx, const rpc_address& address);
+
     void on_partition_node_dead(std::shared_ptr<app_state>& app, int pidx, const dsn::rpc_address& address);
     void send_proposal(rpc_address target, const configuration_update_request& proposal);
     void send_proposal(const configuration_proposal_action& action, const partition_configuration& pc, const app_state &app);
@@ -163,16 +168,8 @@ private:
             return nullptr;
         return iter->second;
     }
-    void inc_creating_app_available_partitions(std::shared_ptr<app_state>& app)
-    {
-        int ans = ++app->helpers->available_partitions;
-        if (ans == app->partition_count)
-        {
-            zauto_write_lock l(_lock);
-            app->status = app_status::AS_AVAILABLE;
-            --_creating_apps_count;
-        }
-    }
+    void process_one_partition(std::shared_ptr<app_state>& app);
+    void transition_staging_state(std::shared_ptr<app_state>& app);
 private:
     friend class replication_checker;
     friend class test::test_checker;
@@ -188,9 +185,6 @@ private:
     std::map< std::string, std::shared_ptr<app_state> > _exist_apps;
     //_exist_apps + dropped apps: app_id -> app_state
     app_mapper                                          _all_apps;
-
-    std::atomic_int                                     _creating_apps_count;
-    std::atomic_int                                     _dropping_apps_count;
 
     //for load balancer
     migration_list                                      _temporary_list;

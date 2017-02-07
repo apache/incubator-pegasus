@@ -50,16 +50,6 @@ static void apply_update_request(/*in-out*/configuration_update_request& update_
     }
 }
 
-bool spin_wait_condition(const std::function<bool ()>& pred, int seconds)
-{
-    for (int i=0; i!=seconds; ++i) {
-        if (pred())
-            return true;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    return pred();
-}
-
 static auto default_filter = [](const dsn::rpc_address& target, dsn_message_t request)
 {
     dsn_message_t recv_request = create_corresponding_receive(request);
@@ -119,7 +109,7 @@ void meta_service_test_app::simple_lb_cure_test()
     std::shared_ptr<app_state> app = app_state::create(info);
     state->_all_apps.emplace(1, app);
     state->sync_apps_to_remote_storage();
-    ASSERT_TRUE(state->spin_wait_creating(20));
+    ASSERT_TRUE(state->spin_wait_staging(20));
     svc->_started = true;
 
     std::vector<dsn::rpc_address> nodes;
@@ -160,7 +150,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -183,7 +173,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.primary == last_addr;} );
@@ -217,7 +207,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -240,7 +230,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return !pc.primary.is_invalid() && pc.primary!=last_addr;} );
@@ -273,7 +263,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -295,7 +285,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
@@ -334,7 +324,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.secondaries.size()==2; } );
@@ -368,7 +358,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -392,7 +382,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
@@ -426,7 +416,7 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.primary==nodes[1]; });
@@ -457,7 +447,7 @@ void meta_service_test_app::simple_lb_cure_test()
         proposal_sent = true;
         return update_req;
     });
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::s_state_write_hash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.primary==nodes[2]; });

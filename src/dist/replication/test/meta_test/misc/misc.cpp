@@ -242,3 +242,14 @@ void app_mapper_compare(const app_mapper& mapper1, const app_mapper& mapper2)
         }
     }
 }
+
+bool spin_wait_condition(const std::function<bool()>& pred, int seconds)
+{
+    for (int i=0; i!=seconds; ++i) {
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        if (pred())
+            return true;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    return pred();
+}

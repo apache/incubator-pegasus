@@ -36,4 +36,6 @@ void proposal_action_check_and_apply(
 void app_mapper_compare(const dsn::replication::app_mapper& mapper1, const dsn::replication::app_mapper& mapper2);
 
 void verbose_apps(const dsn::replication::app_mapper& input_apps);
+
+bool spin_wait_condition(const std::function<bool ()>& pred, int seconds);
 #endif

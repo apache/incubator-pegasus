@@ -79,7 +79,8 @@ struct config_type {
     CT_DOWNGRADE_TO_INACTIVE = 6,
     CT_REMOVE = 7,
     CT_ADD_SECONDARY_FOR_LB = 8,
-    CT_PRIMARY_FORCE_UPDATE_BALLOT = 9
+    CT_PRIMARY_FORCE_UPDATE_BALLOT = 9,
+    CT_DROP_PARTITION = 10
   };
 };
 
@@ -145,8 +146,6 @@ class group_check_response;
 
 class node_info;
 
-class meta_response_header;
-
 class configuration_update_request;
 
 class configuration_update_response;
@@ -169,6 +168,8 @@ class configuration_list_nodes_request;
 
 class configuration_cluster_info_request;
 
+class configuration_recall_app_request;
+
 class configuration_create_app_response;
 
 class configuration_meta_control_request;
@@ -188,6 +189,8 @@ class configuration_list_apps_response;
 class configuration_list_nodes_response;
 
 class configuration_cluster_info_response;
+
+class configuration_recall_app_response;
 
 class query_replica_decree_request;
 
@@ -1211,60 +1214,6 @@ inline std::ostream& operator<<(std::ostream& out, const node_info& obj)
   return out;
 }
 
-typedef struct _meta_response_header__isset {
-  _meta_response_header__isset() : err(false), primary_address(false) {}
-  bool err :1;
-  bool primary_address :1;
-} _meta_response_header__isset;
-
-class meta_response_header {
- public:
-
-  meta_response_header(const meta_response_header&);
-  meta_response_header(meta_response_header&&);
-  meta_response_header& operator=(const meta_response_header&);
-  meta_response_header& operator=(meta_response_header&&);
-  meta_response_header() {
-  }
-
-  virtual ~meta_response_header() throw();
-   ::dsn::error_code err;
-   ::dsn::rpc_address primary_address;
-
-  _meta_response_header__isset __isset;
-
-  void __set_err(const  ::dsn::error_code& val);
-
-  void __set_primary_address(const  ::dsn::rpc_address& val);
-
-  bool operator == (const meta_response_header & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(primary_address == rhs.primary_address))
-      return false;
-    return true;
-  }
-  bool operator != (const meta_response_header &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const meta_response_header & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(meta_response_header &a, meta_response_header &b);
-
-inline std::ostream& operator<<(std::ostream& out, const meta_response_header& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
 typedef struct _configuration_update_request__isset {
   _configuration_update_request__isset() : info(false), config(false), type(true), node(false), host_node(false) {}
   bool info :1;
@@ -1394,8 +1343,9 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_update_re
 }
 
 typedef struct _configuration_query_by_node_request__isset {
-  _configuration_query_by_node_request__isset() : node(false) {}
+  _configuration_query_by_node_request__isset() : node(false), stored_replicas(false) {}
   bool node :1;
+  bool stored_replicas :1;
 } _configuration_query_by_node_request__isset;
 
 class configuration_query_by_node_request {
@@ -1410,14 +1360,21 @@ class configuration_query_by_node_request {
 
   virtual ~configuration_query_by_node_request() throw();
    ::dsn::rpc_address node;
+  std::vector<replica_info>  stored_replicas;
 
   _configuration_query_by_node_request__isset __isset;
 
   void __set_node(const  ::dsn::rpc_address& val);
 
+  void __set_stored_replicas(const std::vector<replica_info> & val);
+
   bool operator == (const configuration_query_by_node_request & rhs) const
   {
     if (!(node == rhs.node))
+      return false;
+    if (__isset.stored_replicas != rhs.__isset.stored_replicas)
+      return false;
+    else if (__isset.stored_replicas && !(stored_replicas == rhs.stored_replicas))
       return false;
     return true;
   }
@@ -1442,9 +1399,10 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_
 }
 
 typedef struct _configuration_query_by_node_response__isset {
-  _configuration_query_by_node_response__isset() : err(false), partitions(false) {}
+  _configuration_query_by_node_response__isset() : err(false), partitions(false), gc_replicas(false) {}
   bool err :1;
   bool partitions :1;
+  bool gc_replicas :1;
 } _configuration_query_by_node_response__isset;
 
 class configuration_query_by_node_response {
@@ -1460,6 +1418,7 @@ class configuration_query_by_node_response {
   virtual ~configuration_query_by_node_response() throw();
    ::dsn::error_code err;
   std::vector<configuration_update_request>  partitions;
+  std::vector<replica_info>  gc_replicas;
 
   _configuration_query_by_node_response__isset __isset;
 
@@ -1467,11 +1426,17 @@ class configuration_query_by_node_response {
 
   void __set_partitions(const std::vector<configuration_update_request> & val);
 
+  void __set_gc_replicas(const std::vector<replica_info> & val);
+
   bool operator == (const configuration_query_by_node_response & rhs) const
   {
     if (!(err == rhs.err))
       return false;
     if (!(partitions == rhs.partitions))
+      return false;
+    if (__isset.gc_replicas != rhs.__isset.gc_replicas)
+      return false;
+    else if (__isset.gc_replicas && !(gc_replicas == rhs.gc_replicas))
       return false;
     return true;
   }
@@ -1866,6 +1831,60 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_i
   return out;
 }
 
+typedef struct _configuration_recall_app_request__isset {
+  _configuration_recall_app_request__isset() : app_id(false), new_app_name(false) {}
+  bool app_id :1;
+  bool new_app_name :1;
+} _configuration_recall_app_request__isset;
+
+class configuration_recall_app_request {
+ public:
+
+  configuration_recall_app_request(const configuration_recall_app_request&);
+  configuration_recall_app_request(configuration_recall_app_request&&);
+  configuration_recall_app_request& operator=(const configuration_recall_app_request&);
+  configuration_recall_app_request& operator=(configuration_recall_app_request&&);
+  configuration_recall_app_request() : app_id(0), new_app_name() {
+  }
+
+  virtual ~configuration_recall_app_request() throw();
+  int32_t app_id;
+  std::string new_app_name;
+
+  _configuration_recall_app_request__isset __isset;
+
+  void __set_app_id(const int32_t val);
+
+  void __set_new_app_name(const std::string& val);
+
+  bool operator == (const configuration_recall_app_request & rhs) const
+  {
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(new_app_name == rhs.new_app_name))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recall_app_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_recall_app_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_recall_app_request &a, configuration_recall_app_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_recall_app_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
 typedef struct _configuration_create_app_response__isset {
   _configuration_create_app_response__isset() : err(false), appid(false) {}
   bool err :1;
@@ -2023,27 +2042,29 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_meta_cont
 }
 
 typedef struct _configuration_proposal_action__isset {
-  _configuration_proposal_action__isset() : target(false), node(false), type(false) {}
+  _configuration_proposal_action__isset() : target(false), node(false), type(false), period_ts(false) {}
   bool target :1;
   bool node :1;
   bool type :1;
+  bool period_ts :1;
 } _configuration_proposal_action__isset;
 
 class configuration_proposal_action {
  public:
-  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}
+  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp), period_ts(0) {}
 
   configuration_proposal_action(const configuration_proposal_action&);
   configuration_proposal_action(configuration_proposal_action&&);
   configuration_proposal_action& operator=(const configuration_proposal_action&);
   configuration_proposal_action& operator=(configuration_proposal_action&&);
-  configuration_proposal_action() : type((config_type::type)0) {
+  configuration_proposal_action() : type((config_type::type)0), period_ts(0) {
   }
 
   virtual ~configuration_proposal_action() throw();
    ::dsn::rpc_address target;
    ::dsn::rpc_address node;
   config_type::type type;
+  int64_t period_ts;
 
   _configuration_proposal_action__isset __isset;
 
@@ -2053,6 +2074,8 @@ class configuration_proposal_action {
 
   void __set_type(const config_type::type val);
 
+  void __set_period_ts(const int64_t val);
+
   bool operator == (const configuration_proposal_action & rhs) const
   {
     if (!(target == rhs.target))
@@ -2060,6 +2083,8 @@ class configuration_proposal_action {
     if (!(node == rhs.node))
       return false;
     if (!(type == rhs.type))
+      return false;
+    if (!(period_ts == rhs.period_ts))
       return false;
     return true;
   }
@@ -2408,6 +2433,60 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_i
   return out;
 }
 
+typedef struct _configuration_recall_app_response__isset {
+  _configuration_recall_app_response__isset() : err(false), info(false) {}
+  bool err :1;
+  bool info :1;
+} _configuration_recall_app_response__isset;
+
+class configuration_recall_app_response {
+ public:
+
+  configuration_recall_app_response(const configuration_recall_app_response&);
+  configuration_recall_app_response(configuration_recall_app_response&&);
+  configuration_recall_app_response& operator=(const configuration_recall_app_response&);
+  configuration_recall_app_response& operator=(configuration_recall_app_response&&);
+  configuration_recall_app_response() {
+  }
+
+  virtual ~configuration_recall_app_response() throw();
+   ::dsn::error_code err;
+   ::dsn::app_info info;
+
+  _configuration_recall_app_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_info(const  ::dsn::app_info& val);
+
+  bool operator == (const configuration_recall_app_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(info == rhs.info))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recall_app_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_recall_app_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_recall_app_response &a, configuration_recall_app_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_recall_app_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
 typedef struct _query_replica_decree_request__isset {
   _query_replica_decree_request__isset() : pid(false), node(false) {}
   bool pid :1;
@@ -2517,13 +2596,14 @@ inline std::ostream& operator<<(std::ostream& out, const query_replica_decree_re
 }
 
 typedef struct _replica_info__isset {
-  _replica_info__isset() : pid(false), ballot(false), status(false), last_committed_decree(false), last_prepared_decree(false), last_durable_decree(false) {}
+  _replica_info__isset() : pid(false), ballot(false), status(false), last_committed_decree(false), last_prepared_decree(false), last_durable_decree(false), app_type(false) {}
   bool pid :1;
   bool ballot :1;
   bool status :1;
   bool last_committed_decree :1;
   bool last_prepared_decree :1;
   bool last_durable_decree :1;
+  bool app_type :1;
 } _replica_info__isset;
 
 class replica_info {
@@ -2533,7 +2613,7 @@ class replica_info {
   replica_info(replica_info&&);
   replica_info& operator=(const replica_info&);
   replica_info& operator=(replica_info&&);
-  replica_info() : ballot(0), status((partition_status::type)0), last_committed_decree(0), last_prepared_decree(0), last_durable_decree(0) {
+  replica_info() : ballot(0), status((partition_status::type)0), last_committed_decree(0), last_prepared_decree(0), last_durable_decree(0), app_type() {
   }
 
   virtual ~replica_info() throw();
@@ -2543,6 +2623,7 @@ class replica_info {
   int64_t last_committed_decree;
   int64_t last_prepared_decree;
   int64_t last_durable_decree;
+  std::string app_type;
 
   _replica_info__isset __isset;
 
@@ -2558,6 +2639,8 @@ class replica_info {
 
   void __set_last_durable_decree(const int64_t val);
 
+  void __set_app_type(const std::string& val);
+
   bool operator == (const replica_info & rhs) const
   {
     if (!(pid == rhs.pid))
@@ -2571,6 +2654,8 @@ class replica_info {
     if (!(last_prepared_decree == rhs.last_prepared_decree))
       return false;
     if (!(last_durable_decree == rhs.last_durable_decree))
+      return false;
+    if (!(app_type == rhs.app_type))
       return false;
     return true;
   }

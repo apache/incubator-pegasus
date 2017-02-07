@@ -383,7 +383,8 @@ decree replica::last_prepared_decree() const
 void replica::close()
 {
     dassert(
-        status() == partition_status::PS_ERROR || status() == partition_status::PS_INACTIVE,
+        status() == partition_status::PS_ERROR ||
+        status() == partition_status::PS_INACTIVE,
         "%s: invalid state %s when calling replica::close",
         name(),
         enum_to_string(status())

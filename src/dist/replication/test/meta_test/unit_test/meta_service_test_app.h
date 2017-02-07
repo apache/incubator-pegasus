@@ -51,6 +51,7 @@ public:
     void apply_balancer_test();
     void simple_lb_cure_test();
     void simple_lb_balanced_cure();
+    void json_compacity();
 
     void call_update_configuration(dsn::replication::meta_service* svc,
         std::shared_ptr<dsn::replication::configuration_update_request>& request);
@@ -78,7 +79,7 @@ public:
             server_state_write_code,
             nullptr,
             std::bind(handle, ss, received),
-            dsn::replication::server_state::s_state_write_hash,
+            dsn::replication::server_state::sStateHash,
             delay
         );
 

@@ -150,11 +150,11 @@ private:
     class master_record
     {
     public:
-        ::dsn::rpc_address       node;
-        uint64_t        last_send_time_for_beacon_with_ack;
-        bool            is_alive;
-        bool            rejected;
-        task_ptr        send_beacon_timer;
+        ::dsn::rpc_address node;
+        uint64_t last_send_time_for_beacon_with_ack;
+        bool is_alive;
+        bool rejected;
+        task_ptr send_beacon_timer;
 
         // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
         master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_)
@@ -169,9 +169,9 @@ private:
     class worker_record
     {
     public:
-        ::dsn::rpc_address       node;
-        uint64_t        last_beacon_recv_time;
-        bool            is_alive;
+        ::dsn::rpc_address node;
+        uint64_t last_beacon_recv_time;
+        bool is_alive;
 
         // workers are always considered *connected* initially which is ok even when workers think master is disconnected
         worker_record(::dsn::rpc_address node, uint64_t last_beacon_recv_time)

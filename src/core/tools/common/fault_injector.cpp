@@ -67,7 +67,8 @@ namespace dsn {
             uint32_t        disk_io_delay_ms_min;
             uint32_t        disk_io_delay_ms_max;
             uint32_t        execution_extra_delay_us_max;
-            
+            uint32_t        execution_extra_delay_us_min;
+
             // node crash
             uint32_t        node_crash_minutes_min;
             uint32_t        node_crash_minutes_max;
@@ -94,6 +95,7 @@ namespace dsn {
             CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_max, 1000, "maximum message delay (ms) for rpc messages")
             CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_min, 1, "miminum disk operation delay (ms)")
             CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_max, 12, "maximum disk operation delay (ms)")
+            CONFIG_FLD(uint32_t, uint64, execution_extra_delay_us_min, 0, "extra execution time delay (us) for this task")
             CONFIG_FLD(uint32_t, uint64, execution_extra_delay_us_max, 0, "extra execution time delay (us) for this task")
 
             CONFIG_FLD(uint32_t, uint64, node_crash_minutes_min, 40, "every minimum period (mins) the node should crash")

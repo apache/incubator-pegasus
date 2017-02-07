@@ -49,6 +49,8 @@ public:
 
     dsn::error_code drop_app(const std::string& app_name);
 
+    dsn::error_code recall_app(int32_t app_id, const std::string& new_app_name);
+
     dsn::error_code list_apps(const dsn::app_status::type status, const std::string& file_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status, std::vector< ::dsn::app_info>& apps);
@@ -66,6 +68,8 @@ public:
     dsn::error_code control_meta_balancer_migration(bool start);
 
     dsn::error_code send_balancer_proposal(const configuration_balancer_request& request);
+
+    dsn::error_code wait_app_ready(const std::string& app_name, int partition_count, int max_replica_count);
 private:
     bool static valid_app_char(int c);
 

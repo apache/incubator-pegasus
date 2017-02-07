@@ -7,6 +7,7 @@
 #ifndef dsn_layer2_TYPES_H
 #define dsn_layer2_TYPES_H
 
+#include <dsn/cpp/serialization_helper/dsn_types.h>
 #include <iosfwd>
 
 #include <thrift/Thrift.h>
@@ -15,7 +16,7 @@
 #include <thrift/transport/TTransport.h>
 
 #include <thrift/cxxfunctional.h>
-#include <dsn/cpp/serialization_helper/dsn_types.h>
+
 
 namespace dsn {
 
@@ -27,7 +28,8 @@ struct app_status {
     AS_CREATE_FAILED = 3,
     AS_DROPPING = 4,
     AS_DROP_FAILED = 5,
-    AS_DROPPED = 6
+    AS_DROPPED = 6,
+    AS_RECALLING = 7
   };
 };
 
@@ -42,7 +44,7 @@ class configuration_query_by_index_response;
 class app_info;
 
 typedef struct _partition_configuration__isset {
-  _partition_configuration__isset() : pid(false), ballot(false), max_replica_count(false), primary(false), secondaries(false), last_drops(false), last_committed_decree(false) {}
+  _partition_configuration__isset() : pid(false), ballot(false), max_replica_count(false), primary(false), secondaries(false), last_drops(false), last_committed_decree(false), partition_flags(false) {}
   bool pid :1;
   bool ballot :1;
   bool max_replica_count :1;
@@ -50,14 +52,17 @@ typedef struct _partition_configuration__isset {
   bool secondaries :1;
   bool last_drops :1;
   bool last_committed_decree :1;
+  bool partition_flags :1;
 } _partition_configuration__isset;
 
 class partition_configuration {
  public:
 
   partition_configuration(const partition_configuration&);
+  partition_configuration(partition_configuration&&);
   partition_configuration& operator=(const partition_configuration&);
-  partition_configuration() : ballot(0), max_replica_count(0), last_committed_decree(0) {
+  partition_configuration& operator=(partition_configuration&&);
+  partition_configuration() : ballot(0), max_replica_count(0), last_committed_decree(0), partition_flags(0) {
   }
 
   virtual ~partition_configuration() throw();
@@ -68,6 +73,7 @@ class partition_configuration {
   std::vector< ::dsn::rpc_address>  secondaries;
   std::vector< ::dsn::rpc_address>  last_drops;
   int64_t last_committed_decree;
+  int32_t partition_flags;
 
   _partition_configuration__isset __isset;
 
@@ -85,6 +91,8 @@ class partition_configuration {
 
   void __set_last_committed_decree(const int64_t val);
 
+  void __set_partition_flags(const int32_t val);
+
   bool operator == (const partition_configuration & rhs) const
   {
     if (!(pid == rhs.pid))
@@ -100,6 +108,8 @@ class partition_configuration {
     if (!(last_drops == rhs.last_drops))
       return false;
     if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    if (!(partition_flags == rhs.partition_flags))
       return false;
     return true;
   }
@@ -133,7 +143,9 @@ class configuration_query_by_index_request {
  public:
 
   configuration_query_by_index_request(const configuration_query_by_index_request&);
+  configuration_query_by_index_request(configuration_query_by_index_request&&);
   configuration_query_by_index_request& operator=(const configuration_query_by_index_request&);
+  configuration_query_by_index_request& operator=(configuration_query_by_index_request&&);
   configuration_query_by_index_request() : app_name() {
   }
 
@@ -188,7 +200,9 @@ class configuration_query_by_index_response {
  public:
 
   configuration_query_by_index_response(const configuration_query_by_index_response&);
+  configuration_query_by_index_response(configuration_query_by_index_response&&);
   configuration_query_by_index_response& operator=(const configuration_query_by_index_response&);
+  configuration_query_by_index_response& operator=(configuration_query_by_index_response&&);
   configuration_query_by_index_response() : app_id(0), partition_count(0), is_stateful(0) {
   }
 
@@ -246,7 +260,7 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_
 }
 
 typedef struct _app_info__isset {
-  _app_info__isset() : status(true), app_type(false), app_name(false), app_id(false), partition_count(false), envs(false), is_stateful(false), max_replica_count(false) {}
+  _app_info__isset() : status(true), app_type(false), app_name(false), app_id(false), partition_count(false), envs(false), is_stateful(false), max_replica_count(false), expire_second(false) {}
   bool status :1;
   bool app_type :1;
   bool app_name :1;
@@ -255,14 +269,17 @@ typedef struct _app_info__isset {
   bool envs :1;
   bool is_stateful :1;
   bool max_replica_count :1;
+  bool expire_second :1;
 } _app_info__isset;
 
 class app_info {
  public:
 
   app_info(const app_info&);
+  app_info(app_info&&);
   app_info& operator=(const app_info&);
-  app_info() : status((app_status::type)0), app_type(), app_name(), app_id(0), partition_count(0), is_stateful(0), max_replica_count(0) {
+  app_info& operator=(app_info&&);
+  app_info() : status((app_status::type)0), app_type(), app_name(), app_id(0), partition_count(0), is_stateful(0), max_replica_count(0), expire_second(0) {
     status = (app_status::type)0;
 
   }
@@ -276,6 +293,7 @@ class app_info {
   std::map<std::string, std::string>  envs;
   bool is_stateful;
   int32_t max_replica_count;
+  int32_t expire_second;
 
   _app_info__isset __isset;
 
@@ -295,6 +313,8 @@ class app_info {
 
   void __set_max_replica_count(const int32_t val);
 
+  void __set_expire_second(const int32_t val);
+
   bool operator == (const app_info & rhs) const
   {
     if (!(status == rhs.status))
@@ -312,6 +332,8 @@ class app_info {
     if (!(is_stateful == rhs.is_stateful))
       return false;
     if (!(max_replica_count == rhs.max_replica_count))
+      return false;
+    if (!(expire_second == rhs.expire_second))
       return false;
     return true;
   }

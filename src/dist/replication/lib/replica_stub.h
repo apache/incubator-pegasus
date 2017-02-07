@@ -131,7 +131,7 @@ public:
     //static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
     static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
 
-    std::string get_replica_dir(const char* app_type, gpid gpid) const;
+    std::string get_replica_dir(const char* app_type, gpid gpid, bool create_new = true) const;
 
 private:    
     enum replica_node_state
@@ -139,6 +139,15 @@ private:
         NS_Disconnected,
         NS_Connecting,
         NS_Connected
+    };
+
+    enum replica_life_cycle
+    {
+        RL_invalid,
+        RL_creating,
+        RL_serving,
+        RL_closing,
+        RL_closed
     };
 
     void initialize_start();
@@ -149,7 +158,7 @@ private:
     void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpid);
     void remove_replica_on_meta_server(const app_info& info, const partition_configuration& config);
     ::dsn::task_ptr begin_open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req, std::shared_ptr<configuration_update_request> req2);
-    void    open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req, std::shared_ptr<configuration_update_request> req2);
+    void open_replica(const app_info& app, gpid gpid, std::shared_ptr<group_check_request> req, std::shared_ptr<configuration_update_request> req2);
     ::dsn::task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void add_replica(replica_ptr r);
@@ -161,18 +170,24 @@ private:
     void install_perf_counters();
     void on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
 
+    void get_replica_info(/*out*/replica_info& info, /*in*/replica_ptr r);
+    void get_local_replicas(/*out*/std::vector<replica_info>& replicas, bool lock_protected);
+    replica_life_cycle get_replica_life_cycle(const dsn::gpid& pid, bool lock_protected);
+    void on_gc_replica(replica_stub_ptr this_, gpid pid);
 private:
     friend class ::dsn::replication::replication_checker;    
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::replica;
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::map<gpid, replica_info> closed_replicas; // <gpid, <replica_info, closed_reason> >
 
     mutable zlock               _replicas_lock;
     replicas                    _replicas;
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;
-    
+    closed_replicas             _closed_replicas;
+
     mutation_log_ptr            _log;
     uint64_t                    _create_time_ms;
     ::dsn::rpc_address          _primary_address;

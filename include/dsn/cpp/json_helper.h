@@ -59,27 +59,38 @@
 #define JSON_ENCODE_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6) JSON_ENCODE_ENTRIES5(out, prefix, T1, T2, T3, T4, T5); out << ","; JSON_ENCODE_ENTRY(out, prefix, T6)
 #define JSON_ENCODE_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_ENCODE_ENTRIES6(out, prefix, T1, T2, T3, T4, T5, T6); out << ","; JSON_ENCODE_ENTRY(out, prefix, T7)
 #define JSON_ENCODE_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_ENCODE_ENTRIES7(out, prefix, T1, T2, T3, T4, T5, T6, T7); out << ","; JSON_ENCODE_ENTRY(out, prefix, T8)
+#define JSON_ENCODE_ENTRIES9(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9) JSON_ENCODE_ENTRIES8(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8); out << ","; JSON_ENCODE_ENTRY(out, prefix, T9)
 
 #define JSON_DECODE_ENTRY(in, prefix, T) do {\
     in.expect_token("\""#T"\""); \
     in.expect_token(':'); \
     ::dsn::json::json_forwarder<std::decay<decltype((prefix).T)>::type>::decode(in, (prefix).T); \
 } while (0)
-#define JSON_DECODE_ENTRIES2(in, prefix, T1, T2) JSON_DECODE_ENTRY(in, prefix, T1); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T2)
-#define JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3) JSON_DECODE_ENTRIES2(in, prefix, T1, T2); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T3)
-#define JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4) JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T4)
-#define JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5) JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T5)
-#define JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6) JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T6)
-#define JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T7)
-#define JSON_DECODE_ENTRIES8(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7); in.expect_token(','); JSON_DECODE_ENTRY(in, prefix, T8)
 
-#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8, NAME, ...) NAME
+#define JSON_TRY_DECODE_ENTRY(in, prefix, T) do {\
+    if (in.verify_token(','))\
+    {\
+        JSON_DECODE_ENTRY(in, prefix, T);\
+    }\
+} while(0)
+
+#define JSON_DECODE_ENTRIES2(in, prefix, T1, T2) JSON_DECODE_ENTRY(in, prefix, T1); JSON_TRY_DECODE_ENTRY(in, prefix, T2)
+#define JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3) JSON_DECODE_ENTRIES2(in, prefix, T1, T2); JSON_TRY_DECODE_ENTRY(in, prefix, T3)
+#define JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4) JSON_DECODE_ENTRIES3(in, prefix, T1, T2, T3); JSON_TRY_DECODE_ENTRY(in, prefix, T4)
+#define JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5) JSON_DECODE_ENTRIES4(in, prefix, T1, T2, T3, T4); JSON_TRY_DECODE_ENTRY(in, prefix, T5)
+#define JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6) JSON_DECODE_ENTRIES5(in, prefix, T1, T2, T3, T4, T5); JSON_TRY_DECODE_ENTRY(in, prefix, T6)
+#define JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7) JSON_DECODE_ENTRIES6(in, prefix, T1, T2, T3, T4, T5, T6); JSON_TRY_DECODE_ENTRY(in, prefix, T7)
+#define JSON_DECODE_ENTRIES8(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8) JSON_DECODE_ENTRIES7(in, prefix, T1, T2, T3, T4, T5, T6, T7); JSON_TRY_DECODE_ENTRY(in, prefix, T8)
+#define JSON_DECODE_ENTRIES9(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9) JSON_DECODE_ENTRIES8(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8); JSON_TRY_DECODE_ENTRY(in, prefix, T9)
+
+#define JSON_ENTRIES_GET_MACRO(ph1,ph2,ph3,ph4,ph5,ph6,ph7,ph8,ph9, NAME, ...) NAME
 //workaround due to the way VC handles "..."
 #define JSON_ENTRIES_GET_MACRO_(tuple) JSON_ENTRIES_GET_MACRO tuple
 
 #define JSON_ENCODE_ENTRIES(out, prefix, ...)\
     out<<"{";\
     JSON_ENTRIES_GET_MACRO_((__VA_ARGS__, \
+        JSON_ENCODE_ENTRIES9, \
         JSON_ENCODE_ENTRIES8, \
         JSON_ENCODE_ENTRIES7, \
         JSON_ENCODE_ENTRIES6, \
@@ -93,6 +104,7 @@
 #define JSON_DECODE_ENTRIES(in, prefix, ...)\
     in.expect_token('{');\
     JSON_ENTRIES_GET_MACRO_((__VA_ARGS__,\
+        JSON_DECODE_ENTRIES9, \
         JSON_DECODE_ENTRIES8, \
         JSON_DECODE_ENTRIES7, \
         JSON_DECODE_ENTRIES6, \
@@ -160,6 +172,16 @@ public:
         {
             dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
         }
+    }
+    bool verify_token(char token)
+    {
+        while (pos<length && isblank(buffer[pos])) ++pos;
+        if (pos<length && buffer[pos] == token)
+        {
+            ++pos;
+            return true;
+        }
+        return false;
     }
     char peek_next() const
     {
@@ -515,19 +537,19 @@ public:
 
 inline void json_encode(std::stringstream& out, const dsn::partition_configuration& config)
 {
-    JSON_ENCODE_ENTRIES(out, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+    JSON_ENCODE_ENTRIES(out, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree, partition_flags);
 }
 inline void json_decode(dsn::json::string_tokenizer& in, dsn::partition_configuration& config)
 {
-    JSON_DECODE_ENTRIES(in, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+    JSON_DECODE_ENTRIES(in, config, pid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree, partition_flags);
 }
 inline void json_encode(std::stringstream& out, const dsn::app_info& info)
 {
-    JSON_ENCODE_ENTRIES(out, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count);
+    JSON_ENCODE_ENTRIES(out, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count, expire_second);
 }
 inline void json_decode(dsn::json::string_tokenizer& in, dsn::app_info& info)
 {
-    JSON_DECODE_ENTRIES(in, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count);
+    JSON_DECODE_ENTRIES(in, info, status, app_type, app_name, app_id, partition_count, envs, is_stateful, max_replica_count, expire_second);
 }
 
 }}

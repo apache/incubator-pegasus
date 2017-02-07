@@ -60,10 +60,12 @@ public:
     virtual ~server_load_balancer() {}
 
     virtual void reconfig(meta_view view, const configuration_update_request& request) = 0;
-    //try to cure the partition of gpid, balancer provider can get the current server's view by view
-    //and if provider wants to modify the context for this gpid, "get_context" can be used
     virtual pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action/*out*/) = 0;
     virtual bool balance(meta_view view, migration_list& list) = 0;
+    virtual bool collect_replica(meta_view view, const dsn::rpc_address& node, const replica_info& info) = 0;
+    static void register_proposals(meta_view view, const configuration_balancer_request& req, configuration_balancer_response& resp);
+    static void apply_balancer(meta_view view, const migration_list& ml);
+    static int suggest_alive_time(config_type::type t);
 
 public:
     typedef std::function<bool (const rpc_address& addr1, const rpc_address& addr2)> node_comparator;
@@ -148,30 +150,15 @@ public:
 
     void reconfig(meta_view view, const configuration_update_request& request) override;
     pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
+    bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info) override;
+
 protected:
     void reset_proposal(meta_view& view, const dsn::gpid& gpid);
+    bool from_proposals(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
 
-    bool from_proposals(
-        meta_view& view,
-        const dsn::gpid& gpid,
-        configuration_proposal_action& action);
-    pc_status on_missing_primary(
-        meta_view& view,
-        const dsn::gpid& gpid,
-        configuration_proposal_action& action);
-    pc_status on_missing_secondary(
-        meta_view& view,
-        const dsn::gpid& gpid,
-        configuration_proposal_action& action);
-    pc_status on_redundant_secondary(
-        meta_view& view,
-        const dsn::gpid& gpid,
-        configuration_proposal_action& action);
-    pc_status on_missing_worker(
-        meta_view& view,
-        const dsn::gpid& gpid,
-        const partition_configuration_stateless& pcs,
-        configuration_proposal_action &act);
+    pc_status on_missing_primary(meta_view& view, const dsn::gpid& gpid);
+    pc_status on_missing_secondary(meta_view& view, const dsn::gpid& gpid);
+    pc_status on_redundant_secondary(meta_view& view, const dsn::gpid& gpid);
 
     int32_t mutation_2pc_min_replica_count;
     uint64_t replica_assign_delay_ms_for_dropouts;

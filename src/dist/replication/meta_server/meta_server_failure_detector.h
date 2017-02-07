@@ -53,7 +53,6 @@ public:
     rpc_address get_primary();
     
     void acquire_leader_lock();
-    void sync_node_state_and_start_service();
 
     // client side
     virtual void on_master_disconnected(const std::vector<rpc_address>&)
@@ -87,6 +86,9 @@ private:
     void set_primary(rpc_address primary);
 
 private:
+    //meta_service need to visit the failure_detector's lock
+    friend class meta_service;
+
     friend class replication_checker;
     friend class test::test_checker;
 

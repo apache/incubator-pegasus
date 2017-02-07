@@ -79,7 +79,7 @@ void meta_service_test_app::call_update_configuration(meta_service *svc,
         LPC_META_STATE_HIGH,
         nullptr,
         std::bind(&server_state::on_update_configuration, svc->_state.get(), request, fake_request),
-        server_state::s_state_write_hash
+        server_state::sStateHash
     );
 }
 
@@ -94,7 +94,7 @@ bool meta_service_test_app::wait_state(
             LPC_META_STATE_NORMAL,
             nullptr,
             std::bind(&server_state::check_all_partitions, ss),
-            server_state::s_state_write_hash,
+            server_state::sStateHash,
             std::chrono::seconds(1)
         );
         t->wait();
@@ -145,7 +145,7 @@ void meta_service_test_app::update_configuration_test()
     pc1.ballot = 3;
 
     ss->sync_apps_to_remote_storage();
-    ASSERT_TRUE(ss->spin_wait_creating(30));
+    ASSERT_TRUE(ss->spin_wait_staging(30));
     ss->initialize_node_state();
     svc->set_node_state({nodes[0], nodes[1], nodes[2]}, true);
     svc->_started = true;
@@ -241,7 +241,7 @@ void meta_service_test_app::apply_balancer_test()
 
     ss->initialize(meta_svc, "/meta_test/apps");
     ASSERT_EQ(dsn::ERR_OK, meta_svc->_state->sync_apps_to_remote_storage());
-    ASSERT_TRUE(ss->spin_wait_creating(30));
+    ASSERT_TRUE(ss->spin_wait_staging(30));
     ss->initialize_node_state();
 
     meta_svc->_started = true;
@@ -269,7 +269,7 @@ void meta_service_test_app::apply_balancer_test()
             LPC_META_STATE_NORMAL,
             nullptr,
             [&result, ss]() { result = ss->check_all_partitions(); },
-            server_state::s_state_write_hash
+            server_state::sStateHash
             );
         tsk->wait();
         if (result)

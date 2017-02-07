@@ -160,28 +160,6 @@ void meta_server_failure_detector::acquire_leader_lock()
     }
 }
 
-void meta_server_failure_detector::sync_node_state_and_start_service()
-{
-    /*
-     * we do need the failure_detector::_lock to protect,
-     * because we want to keep the states of server_state::_nodes
-     * and meta_service::{alive_set,dead_set} consistent
-     */
-    zauto_lock l(failure_detector::_lock);
-
-    std::set<rpc_address> nodes;
-    _svc->prepare_service_starting();
-    _svc->get_node_state(nodes, true);
-    for(auto& node: nodes) {
-        // a worker may have been dead in the fd, so we must reactive it
-        unregister_worker(node);
-        register_worker(node, true);
-    }
-
-    //now nodes in server_state and in fd are in consistent state
-    _svc->service_starting();
-}
-
 void meta_server_failure_detector::set_primary(rpc_address primary)
 {
     /*

@@ -35,7 +35,7 @@ enum partition_status
     PS_ERROR,
     PS_PRIMARY,
     PS_SECONDARY,
-    PS_POTENTIAL_SECONDARY,
+    PS_POTENTIAL_SECONDARY
 }
 
 struct replica_configuration
@@ -169,7 +169,8 @@ enum config_type
     CT_DOWNGRADE_TO_INACTIVE,
     CT_REMOVE,
     CT_ADD_SECONDARY_FOR_LB,
-    CT_PRIMARY_FORCE_UPDATE_BALLOT
+    CT_PRIMARY_FORCE_UPDATE_BALLOT,
+    CT_DROP_PARTITION
 }
 
 enum node_status
@@ -183,12 +184,6 @@ struct node_info
 {
     1:node_status      status = node_status.NS_INVALID;
     2:dsn.rpc_address  address;
-}
-
-struct meta_response_header
-{
-    1:dsn.error_code   err;
-    2:dsn.rpc_address  primary_address;
 }
 
 // primary | secondary(upgrading) (w/ new config) => meta server
@@ -213,12 +208,14 @@ struct configuration_update_response
 struct configuration_query_by_node_request
 {
     1:dsn.rpc_address  node;
+    2:optional list<replica_info> stored_replicas;
 }
 
 struct configuration_query_by_node_response
 {
     1:dsn.error_code                    err;
     2:list<configuration_update_request> partitions;
+    3:optional list<replica_info> gc_replicas;
 }
 
 struct create_app_options
@@ -262,6 +259,12 @@ struct configuration_cluster_info_request
 {
 }
 
+struct configuration_recall_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
 // meta server => client
 struct configuration_create_app_response
 {
@@ -299,6 +302,7 @@ struct configuration_proposal_action
     1:dsn.rpc_address target;
     2:dsn.rpc_address node;
     3:config_type type;
+    4:i64 period_ts; //rpc sender set a ttl time for this, but meta_server may store a expire_ts use this field
 }
 
 struct configuration_balancer_request
@@ -337,6 +341,12 @@ struct configuration_cluster_info_response
     3:list<string>     values;
 }
 
+struct configuration_recall_app_response
+{
+    1:dsn.error_code err;
+    2:dsn.layer2.app_info info;
+}
+
 struct query_replica_decree_request
 {
     1:dsn.gpid pid;
@@ -357,6 +367,7 @@ struct replica_info
     4:i64                    last_committed_decree;
     5:i64                    last_prepared_decree;
     6:i64                    last_durable_decree;
+    7:string                 app_type;
 }
 
 struct query_replica_info_request
@@ -390,19 +401,10 @@ service meta_s
 {
     configuration_create_app_response create_app(1:configuration_create_app_request req);
     configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
-    configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
-    configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
-    configuration_update_response update_configuration(1:configuration_update_request update);
-}
-
-service meta_s
-{
-    configuration_create_app_response create_app(1:configuration_create_app_request req);
-    configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
     configuration_list_nodes_response list_nodes(1:configuration_list_nodes_request req);
     configuration_list_apps_response list_apps(1:configuration_list_apps_request req);
     configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
     configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
-    
+    configuration_sync_response config_sync(1:configuration_sync_request req);
 }
 */

@@ -32,34 +32,53 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+#include <boost/lexical_cast.hpp>
 #include <dsn/service_api_cpp.h>
 #include "meta_data.h"
 
 namespace dsn { namespace replication {
 
-void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
+void when_update_replicas(config_type::type t, const std::function<void (bool)> &func)
 {
-    auto it = std::find(drops.begin(), drops.end(), node);
-    if (is_add)
+    switch (t)
     {
-        if (it != drops.end())
-            drops.erase(it);
+    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_UPGRADE_TO_PRIMARY:
+    case config_type::CT_UPGRADE_TO_SECONDARY:
+        func(true);
+        break;
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_REMOVE:
+        func(false);
+        break;
+    default:
+        break;
     }
-    else
+}
+
+void maintain_drops(std::vector<rpc_address>& drops, const rpc_address& node, config_type::type t)
+{
+    auto action = [&drops, &node](bool is_adding)
     {
-        if (it == drops.end())
+        auto it = std::find(drops.begin(), drops.end(), node);
+        if (is_adding)
         {
+            if (it != drops.end())
+            {
+                drops.erase(it);
+            }
+        }
+        else
+        {
+            dassert(it==drops.end(), "the node(%s) cannot be in drops set before this update", node.to_string());
             drops.push_back(node);
             if (drops.size() > 3)
             {
                 drops.erase(drops.begin());
             }
         }
-        else
-        {
-            dassert(false, "the node %s cannot be in drops set before this update", node.to_string());
-        }
-    }
+    };
+    when_update_replicas(t, action);
 }
 
 void config_context::cancel_sync()
@@ -78,30 +97,23 @@ void config_context::cancel_sync()
     stage = config_status::not_pending;
 }
 
-void config_context::clear_proposal()
-{
-    if (config_status::pending_remote_sync != stage)
-        stage = config_status::not_pending;
-    balancer_proposal->action_list.clear();
-}
-
 void app_state_helper::on_init_partitions()
 {
     config_context context;
     context.stage = config_status::not_pending;
     context.pending_sync_task = nullptr;
     context.msg = nullptr;
+    context.lb_actions.from_balancer = false;
 
-    context.is_cure_proposal = false;
+    context.prefered_dropped = -1;
     contexts.assign(owner->partition_count, context);
-    for (unsigned int i=0; i!=owner->partition_count; ++i)
-    {
-        contexts[i].balancer_proposal = std::make_shared<configuration_balancer_request>();
-    }
+
+    partitions_in_progress.store(owner->partition_count);
 }
 
 app_state::app_state(const app_info &info): app_info(info), helpers(new app_state_helper())
 {
+    log_name = info.app_name + "@" + boost::lexical_cast<std::string>(info.app_id);
     helpers->owner = this;
 
     partition_configuration config;

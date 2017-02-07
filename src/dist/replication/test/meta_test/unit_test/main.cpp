@@ -52,6 +52,11 @@ TEST(meta, simple_lb_cure_test)
     g_app->simple_lb_cure_test();
 }
 
+TEST(meta, json_compacity)
+{
+    g_app->json_compacity();
+}
+
 dsn::error_code meta_service_test_app::start(int argc, char **argv)
 {
     uint32_t seed = (uint32_t)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed");
@@ -68,10 +73,13 @@ dsn::error_code meta_service_test_app::start(int argc, char **argv)
     return dsn::ERR_OK;
 }
 
-GTEST_API_ int main(int, char **)
+GTEST_API_ int main(int argc, char **argv)
 {
     dsn::register_app<meta_service_test_app>("meta");
-    dassert(dsn_run_config("config-test.ini", false), "");
+    if (argc < 2)
+        dassert(dsn_run_config("config-test.ini", false), "");
+    else
+        dassert(dsn_run_config(argv[1], false), "");
 
     while (gtest_flags == 0)
     {

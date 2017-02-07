@@ -85,6 +85,7 @@ void meta_service_test_app::state_sync_test()
 
     std::string apps_root = "/meta_test/apps";
     std::shared_ptr<server_state> ss1 = svc->_state;
+
     // create apss randomly, and sync it to meta state service simple
     std::cerr << "testing create apps and sync to remote storage" << std::endl;
     {
@@ -103,20 +104,29 @@ void meta_service_test_app::state_sync_test()
             std::shared_ptr<app_state> app = app_state::create(info);
 
             ss->_all_apps.emplace(app->app_id, app);
-            if (i<apps_count && random32(1, apps_count)<=drop_ratio) {
-                app->status = dsn::app_status::AS_DROPPED;
+            if (i<apps_count && random32(1, apps_count)<=drop_ratio)
+            {
+                app->status = dsn::app_status::AS_DROPPING;
                 drop_set.push_back(i);
                 app->app_name = "test_app" + boost::lexical_cast<std::string>(apps_count);
             }
         }
-        for (int i=1; i<=apps_count; ++i) {
+        for (int i=1; i<=apps_count; ++i)
+        {
             std::shared_ptr<app_state> app = ss->get_app(i);
             random_assign_partition_config(app, server_list, 3);
+            if (app->status == dsn::app_status::AS_DROPPING)
+            {
+                for (int j=0; j<app->partition_count; ++j)
+                {
+                    app->partitions[j].partition_flags = pc_flags::dropped;
+                }
+            }
         }
 
         dsn::error_code ec = ss->sync_apps_to_remote_storage();
         ASSERT_EQ(ec, dsn::ERR_OK);
-        ss->spin_wait_creating();
+        ss->spin_wait_staging();
     }
 
     // then we sync from meta_state_service_simple, and dump to local file
@@ -144,6 +154,21 @@ void meta_service_test_app::state_sync_test()
 
     opt.meta_state_service_type = "meta_state_service_zookeeper";
     svc->remote_storage_initialize();
+    //first clean up
+    std::cerr << "start to clean up zookeeper storage" << std::endl;
+    {
+        dsn::error_code ec;
+        dsn::dist::meta_state_service* storage = svc->get_remote_storage();
+        storage->delete_node(
+            apps_root,
+            true,
+            LPC_META_CALLBACK,
+            [&ec](dsn::error_code error) { ec = error; },
+            nullptr
+        )->wait();
+        ASSERT_TRUE(dsn::ERR_OK==ec || dsn::ERR_OBJECT_NOT_FOUND==ec);
+    }
+
     std::cerr << "test sync to zookeeper's remote storage" << std::endl;
     // restore from the local file, and restore to zookeeper
     {
@@ -195,13 +220,13 @@ void meta_service_test_app::state_sync_test()
         configuration_query_by_node_request request;
         configuration_query_by_node_response response;
 
-        //1.1 normal
+        std::cerr << "test query config by node normal " << std::endl;
         request.node = server_list[random32(0, 9)];
         ss2->query_configuration_by_node(request, response);
         ASSERT_EQ(dsn::ERR_OK, response.err);
 
         std::vector<dsn::partition_configuration> pc_list;
-        for (auto& iter: ss1->_exist_apps) {
+        for (auto& iter: ss1->_all_apps) {
             std::shared_ptr<app_state>& app = iter.second;
             for (dsn::partition_configuration& pc: app->partitions)
                 if ( is_member(pc, request.node) )
@@ -278,21 +303,6 @@ void meta_service_test_app::state_sync_test()
 
         ec = ss2->sync_apps_from_remote_storage();
         ASSERT_EQ(ec, dsn::ERR_OK);
-        ASSERT_TRUE(ss2->spin_wait_creating(30));
-    }
-
-    //clean up
-    std::cerr << "start to clean up" << std::endl;
-    {
-        dsn::error_code ec;
-        dsn::dist::meta_state_service* storage = svc->get_remote_storage();
-        storage->delete_node(
-            apps_root,
-            true,
-            LPC_META_CALLBACK,
-            [&ec](dsn::error_code error) { ec = error; },
-            nullptr
-        )->wait();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_TRUE(ss2->spin_wait_staging(30));
     }
 }

@@ -105,9 +105,9 @@ error_code meta_service::remote_storage_initialize()
     return ERR_OK;
 }
 
+// visited in protection of failure_detector::_lock
 void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is_alive)
 {
-    zauto_write_lock l(_meta_lock);
     for (auto& node: nodes)
     {
         if (is_alive) {
@@ -126,18 +126,18 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
             LPC_META_STATE_HIGH,
             nullptr,
             std::bind(&server_state::on_change_node_state, _state.get(), address, is_alive),
-            server_state::s_state_write_hash
+            server_state::sStateHash
         );
     }
 }
 
-void meta_service::get_node_state(std::set<rpc_address> &node_set, bool is_alive)
+void meta_service::get_node_state(/*out*/std::map<rpc_address, bool>& all_nodes)
 {
-    zauto_read_lock l(_meta_lock);
-    if (is_alive)
-        node_set = _alive_set;
-    else
-        node_set = _dead_set;
+    zauto_lock l(_failure_detector->_lock);
+    for (auto& node : _alive_set)
+        all_nodes[node] = true;
+    for (auto& node : _dead_set)
+        all_nodes[node] = false;
 }
 
 void meta_service::balancer_run()
@@ -145,36 +145,42 @@ void meta_service::balancer_run()
     _state->check_all_partitions();
 }
 
-void meta_service::prepare_service_starting()
+void meta_service::start_service()
 {
-    zauto_write_lock l(_meta_lock);
+    zauto_lock l(_failure_detector->_lock);
+
     const meta_view view = _state->get_meta_view();
-    for (auto& kv : *view.nodes)
+    for (auto &kv: *view.nodes)
     {
         if (_dead_set.find(kv.first) == _dead_set.end())
             _alive_set.insert(kv.first);
     }
-}
 
-void meta_service::service_starting()
-{
-    zauto_read_lock l(_meta_lock);
+    for (const dsn::rpc_address& node: _alive_set)
+    {
+        //sync alive set and the failure_detector
+        _failure_detector->unregister_worker(node);
+        _failure_detector->register_worker(node, true);
+    }
 
     _started = true;
-    std::list< std::pair<rpc_address, bool> > nodes;
-    for (const rpc_address& node: _alive_set) {
-        nodes.push_back( std::make_pair(node, true) );
-    }
-    for (const rpc_address& node: _dead_set) {
-        nodes.push_back( std::make_pair(node, false) );
-    }
-    for (auto& node_pair: nodes) {
+    for (const dsn::rpc_address& node: _alive_set)
+    {
         tasking::enqueue(
             LPC_META_STATE_HIGH,
             nullptr,
-            std::bind(&server_state::on_change_node_state, _state.get(), node_pair.first, node_pair.second),
-            server_state::s_state_write_hash
-        );
+            std::bind(&server_state::on_change_node_state, _state.get(), node, true),
+            server_state::sStateHash
+            );
+    }
+    for (const dsn::rpc_address& node: _dead_set)
+    {
+        tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            nullptr,
+            std::bind(&server_state::on_change_node_state, _state.get(), node, false),
+            server_state::sStateHash
+            );
     }
 
     tasking::enqueue_timer(
@@ -182,9 +188,9 @@ void meta_service::service_starting()
         nullptr,
         std::bind(&meta_service::balancer_run, this),
         std::chrono::milliseconds(_opts.lb_interval_ms),
-        server_state::s_state_write_hash,
+        server_state::sStateHash,
         std::chrono::milliseconds(_opts.lb_interval_ms)
-    );
+        );
 }
 
 error_code meta_service::start()
@@ -238,7 +244,7 @@ error_code meta_service::start()
         this);
     _balancer.reset(balancer);
 
-    _failure_detector->sync_node_state_and_start_service();
+    start_service();
     ddebug("start meta_service succeed");
     return ERR_OK;
 }
@@ -274,6 +280,11 @@ void meta_service::register_rpc_handlers()
         RPC_CM_DROP_APP,
         "drop_app",
         &meta_service::on_drop_app
+        );
+    register_rpc_handler(
+        RPC_CM_RECALL_APP,
+        "recall_app",
+        &meta_service::on_recall_app
         );
     register_rpc_handler(
         RPC_CM_LIST_APPS,
@@ -334,6 +345,7 @@ int meta_service::check_primary(dsn_message_t req)
     if (result == 0) return;\
     if (result == -1 || !_started) {\
         response_struct.err = (result==-1)?ERR_FORWARD_TO_OTHERS:ERR_SERVICE_NOT_ACTIVE;\
+        ddebug("reject request with %s", response_struct.err.to_string());\
         reply(dsn_msg, response_struct);\
         return;\
     }\
@@ -345,7 +357,7 @@ void meta_service::on_create_app(dsn_message_t req)
     RPC_CHECK_STATUS(req, response);
 
     dsn_msg_add_ref(req);
-    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::create_app, _state.get(), req), server_state::s_state_write_hash);
+    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::create_app, _state.get(), req), server_state::sStateHash);
 }
 
 void meta_service::on_drop_app(dsn_message_t req)
@@ -354,7 +366,16 @@ void meta_service::on_drop_app(dsn_message_t req)
     RPC_CHECK_STATUS(req, response);
 
     dsn_msg_add_ref(req);
-    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::drop_app, _state.get(), req), server_state::s_state_write_hash);
+    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::drop_app, _state.get(), req), server_state::sStateHash);
+}
+
+void meta_service::on_recall_app(dsn_message_t req)
+{
+    configuration_recall_app_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::recall_app, _state.get(), req), server_state::sStateHash);
 }
 
 void meta_service::on_list_apps(dsn_message_t req)
@@ -377,7 +398,7 @@ void meta_service::on_list_nodes(dsn_message_t req)
     dsn::unmarshall(req, request);
 
     {
-        zauto_read_lock l(_meta_lock);
+        zauto_lock l(_failure_detector->_lock);
         dsn::replication::node_info info;
         if (request.status == node_status::NS_INVALID || request.status == node_status::NS_ALIVE)
         {
@@ -461,14 +482,15 @@ void meta_service::on_config_sync(dsn_message_t req)
     {
         // this code piece should be referenced together with meta_service::set_node_state.
         // In which, the replica server's failure event is dispatched to the meta_state_thread with the protection
-        // of _meta_lock. Here we use this lock again, to make sure the config_sync rpc AFTER the node dead is dispatch
+        // of failure_detector::_lock. Here we use this lock again, to make sure the config_sync rpc AFTER the node dead is dispatch
         // AFTER the node dead event
-        zauto_read_lock l(_meta_lock);
+        zauto_lock l(_failure_detector->_lock);
         dsn_msg_add_ref(req);
         tasking::enqueue(LPC_META_STATE_HIGH,
             nullptr,
             std::bind(&server_state::on_config_sync, _state.get(), req),
-            server_state::s_state_write_hash);
+            server_state::sStateHash
+        );
     }
 }
 
@@ -492,7 +514,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
     tasking::enqueue(LPC_META_STATE_HIGH,
         nullptr,
         std::bind(&server_state::on_update_configuration, _state.get(), request, req),
-        server_state::s_state_write_hash
+        server_state::sStateHash
     );
 }
 
@@ -526,7 +548,7 @@ void meta_service::on_control_meta(dsn_message_t req)
         tasking::enqueue(LPC_META_STATE_NORMAL,
             nullptr,
             std::bind(&server_state::clear_proposals, _state.get()),
-            server_state::s_state_write_hash
+            server_state::sStateHash
         );
     }
     response.err = ERR_OK;
