@@ -105,15 +105,8 @@ void meta_options::initialize()
     hold_seconds_for_dropped_app = dsn_config_get_value_uint64(
         "meta_server",
         "hold_seconds_for_dropped_app",
-        10080,
+        604800,
         "how long to hold data for dropped apps"
-        );
-
-    proposal_ttl = dsn_config_get_value_uint64(
-        "meta_server",
-        "proposal_ttl",
-        30,
-        "the time to alive for a proposal"
         );
 }
 
