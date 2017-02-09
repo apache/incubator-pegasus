@@ -44,17 +44,7 @@ inject:on_rpc_call:rpc_name=rpc_prepare,from=r1,to=r2
 config:{3,r1,[]}
 
 # all requests will timeout
-client:end_write:id=6,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=3,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=5,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=2,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=8,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=7,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=9,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=4,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=11,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=10,err=ERR_TIMEOUT,resp=32598
-client:end_write:id=1,err=ERR_TIMEOUT,resp=32598
+client:end_write:id=11,err=ERR_TIMEOUT,resp=0
 
 # no request will commit in primary
 state:{{r1,pri,3,0,0}}
@@ -74,9 +64,6 @@ client:begin_write:id=14,key=k14,value=v14,timeout=0
 client:begin_write:id=15,key=k15,value=v15,timeout=0
 
 # all write will be succeed
-client:end_write:id=14,err=ERR_OK,resp=0
-client:end_write:id=12,err=ERR_OK,resp=0
-client:end_write:id=13,err=ERR_OK,resp=0
 client:end_write:id=15,err=ERR_OK,resp=0
 
 # all requests will be committed

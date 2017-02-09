@@ -832,7 +832,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             {
                 for (auto& r: m->client_requests)
                 {
-                    response_client_message(r, ERR_NOT_ENOUGH_MEMBER);
+                    response_client_message(false, r, ERR_NOT_ENOUGH_MEMBER);
                 }
             }
         }
