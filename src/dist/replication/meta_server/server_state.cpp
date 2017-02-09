@@ -1346,7 +1346,7 @@ task_ptr server_state::update_configuration_on_remote(std::shared_ptr<configurat
     meta_function_level::type l = _meta_svc->get_function_level();
     if (l <= meta_function_level::fl_blind)
     {
-        dwarn("ignore update configuration on remote due to level is %s", *_meta_function_level_VALUES_TO_NAMES.find(l));
+        dwarn("ignore update configuration on remote due to level is %s", _meta_function_level_VALUES_TO_NAMES.find(l)->second);
         //NOTICE: pending_sync_task need to be reassigned
         return tasking::enqueue(LPC_META_STATE_HIGH, nullptr, [this, config_request]() mutable
         {
@@ -1847,7 +1847,7 @@ bool server_state::check_all_partitions()
     // first the cure stage
     if (level <= meta_function_level::fl_freezed)
     {
-        dwarn("service is in level(%s), don't do any cure or balancer actions", *_meta_function_level_VALUES_TO_NAMES.find(level));
+        dwarn("service is in level(%s), don't do any cure or balancer actions", _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
     }
     for (auto& app_pair: _exist_apps)
@@ -1880,7 +1880,7 @@ bool server_state::check_all_partitions()
     // then the balancer stage
     if (level <= meta_function_level::fl_steady)
     {
-        ddebug("don't do replica migration coz meta server is in level(%s)", *_meta_function_level_VALUES_TO_NAMES.find(level));
+        ddebug("don't do replica migration coz meta server is in level(%s)", _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
     }
 

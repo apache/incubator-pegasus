@@ -520,7 +520,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
         ddebug("refuse request %s coz meta function level is %s or node freezed",
             boost::lexical_cast<std::string>(*request).c_str(),
-            *_meta_function_level_VALUES_TO_NAMES.find(_function_level.load()));
+            _meta_function_level_VALUES_TO_NAMES.find(_function_level.load())->second);
         return;
     }
 
@@ -538,6 +538,7 @@ void meta_service::on_control_meta_level(dsn_message_t req)
     configuration_meta_control_response response;
     RPC_CHECK_STATUS(req, response);
 
+    dsn::unmarshall(req, request);
     response.err = ERR_OK;
     response.old_level = _function_level.load();
     if (request.level == meta_function_level::fl_invalid)
