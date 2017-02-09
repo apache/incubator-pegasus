@@ -108,6 +108,24 @@ void meta_options::initialize()
         604800,
         "how long to hold data for dropped apps"
         );
+
+    meta_function_level_on_start = meta_function_level::fl_invalid;
+    const char* level_str = dsn_config_get_value_string(
+        "meta_server",
+        "meta_function_level_on_start",
+        "lively",
+        "meta function level on start"
+        );
+    std::string level = std::string("fl_") + level_str;
+    for (auto& kv : _meta_function_level_VALUES_TO_NAMES)
+    {
+        if (level == kv.second)
+        {
+            meta_function_level_on_start = (meta_function_level::type)kv.first;
+            break;
+        }
+    }
+    dassert(meta_function_level_on_start != meta_function_level::fl_invalid, "invalid function level: %s", level_str);
 }
 
 }}

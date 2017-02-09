@@ -55,6 +55,7 @@ public:
     uint64_t node_live_percentage_threshold_for_update;
     uint64_t min_live_node_count_for_unfreeze;
     int32_t hold_seconds_for_dropped_app;
+    meta_function_level::type meta_function_level_on_start;
 public:
     void initialize();
 

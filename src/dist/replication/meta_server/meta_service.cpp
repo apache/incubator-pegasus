@@ -56,10 +56,10 @@ meta_service::meta_service():
     _failure_detector(nullptr),
     _started(false)
 {
-    _function_level.store(meta_function_level::fl_lively);
     _opts.initialize();
     _meta_opts.initialize();
     _state.reset(new server_state());
+    _function_level.store(_meta_opts.meta_function_level_on_start);
 }
 
 meta_service::~meta_service()
@@ -453,6 +453,8 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
     response.values.push_back(_failure_detector->get_primary().to_string());
     response.keys.push_back("remote_storage_cluster_root");
     response.values.push_back(_cluster_root);
+    response.keys.push_back("meta_function_level");
+    response.values.push_back(_meta_function_level_VALUES_TO_NAMES.find(get_function_level())->second + 3);
     response.err = dsn::ERR_OK;
 
     reply(req, response);

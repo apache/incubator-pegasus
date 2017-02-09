@@ -189,6 +189,7 @@ namespace dsn {
             return nanos;
         }
 
+        // len >= 13
         void time_ms_to_string(uint64_t ts_ms, char* str)
         {
             auto t = (time_t)(ts_ms / 1000);
@@ -198,6 +199,7 @@ namespace dsn {
             sprintf(str, "%02d:%02d:%02d.%03u", ret->tm_hour, ret->tm_min, ret->tm_sec, ms);
         }
 
+        // len >= 11
         void time_ms_to_date(uint64_t ts_ms, char* str, int len)
         {
             auto t = (time_t)(ts_ms / 1000);
@@ -206,6 +208,7 @@ namespace dsn {
             strftime(str, len, "%Y-%m-%d", ret);
         }
 
+        // len >= 20
         void time_ms_to_date_time(uint64_t ts_ms, char* str, int len)
         {
             auto t = (time_t)(ts_ms / 1000);
