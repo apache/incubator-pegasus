@@ -6,6 +6,7 @@
 #include "meta_service.h"
 #include "server_state.h"
 #include "greedy_load_balancer.h"
+#include "meta_server_failure_detector.h"
 #include "meta_service_test_app.h"
 #include "../misc/misc.h"
 
@@ -225,6 +226,7 @@ void meta_service_test_app::apply_balancer_test()
     ec = meta_svc->remote_storage_initialize();    
     ASSERT_EQ(dsn::ERR_OK, ec);
 
+    meta_svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(meta_svc));
     meta_svc->_balancer.reset(new greedy_load_balancer(meta_svc));
 
     //initialize data structure

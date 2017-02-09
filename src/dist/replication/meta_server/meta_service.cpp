@@ -54,10 +54,9 @@ namespace dsn { namespace replication {
 meta_service::meta_service():
     serverlet("meta_service"),
     _failure_detector(nullptr),
-    _started(false),
-    _meta_ctrl_flags(0)
+    _started(false)
 {
-    _node_live_percentage_threshold_for_update = 65;
+    _function_level.store(meta_function_level::fl_lively);
     _opts.initialize();
     _meta_opts.initialize();
     _state.reset(new server_state());
@@ -65,6 +64,15 @@ meta_service::meta_service():
 
 meta_service::~meta_service()
 {
+}
+
+bool meta_service::check_freeze() const
+{
+    zauto_lock l(_failure_detector->_lock);
+    if (_alive_set.size() < _meta_opts.min_live_node_count_for_unfreeze)
+        return true;
+    int total = _alive_set.size() + _dead_set.size();
+    return _alive_set.size()*100<=_meta_opts.node_live_percentage_threshold_for_update*total;
 }
 
 error_code meta_service::remote_storage_initialize()
@@ -119,8 +127,10 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
             _dead_set.insert(node);
         }
     }
+
     if (!_started)
         return;
+
     for (const rpc_address& address: nodes) {
         tasking::enqueue(
             LPC_META_STATE_HIGH,
@@ -308,8 +318,8 @@ void meta_service::register_rpc_handlers()
         );
     register_rpc_handler(
         RPC_CM_CONTROL_META,
-        "control_meta",
-        &meta_service::on_control_meta
+        "control_meta_level",
+        &meta_service::on_control_meta_level
         );
 }
 
@@ -502,11 +512,15 @@ void meta_service::on_update_configuration(dsn_message_t req)
     std::shared_ptr<configuration_update_request> request = std::make_shared<configuration_update_request>();
     dsn::unmarshall(req, *request);
 
-    if (is_service_freezed())
+    if (_function_level.load() <= meta_function_level::fl_freezed || check_freeze())
     {
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
+
+        ddebug("refuse request %s coz meta function level is %s or node freezed",
+            boost::lexical_cast<std::string>(*request).c_str(),
+            *_meta_function_level_VALUES_TO_NAMES.find(_function_level.load()));
         return;
     }
 
@@ -518,40 +532,30 @@ void meta_service::on_update_configuration(dsn_message_t req)
     );
 }
 
-void meta_service::on_control_meta(dsn_message_t req)
+void meta_service::on_control_meta_level(dsn_message_t req)
 {
     configuration_meta_control_request request;
-    configuration_balancer_response response;
+    configuration_meta_control_response response;
     RPC_CHECK_STATUS(req, response);
 
-    dsn::unmarshall(req, request);
-    ddebug("get control meta rpc, flags(%lx), type(%d), current flags(%lx)", request.ctrl_flags, request.ctrl_type, _meta_ctrl_flags);
+    response.err = ERR_OK;
+    response.old_level = _function_level.load();
+    if (request.level == meta_function_level::fl_invalid)
     {
-        zauto_write_lock l(_meta_lock);
-        switch (request.ctrl_type)
-        {
-        case meta_ctrl_type::meta_flags_and:
-            _meta_ctrl_flags &= request.ctrl_flags;
-            break;
-        case meta_ctrl_type::meta_flags_or:
-            _meta_ctrl_flags |= request.ctrl_flags;
-            break;
-        case meta_ctrl_type::meta_flags_overwrite:
-            _meta_ctrl_flags = request.ctrl_flags;
-            break;
-        default:
-            ddebug("invalid requst ctrl type: %d", request.ctrl_type);
-            break;
-        }
+        reply(req, response);
+        return;
     }
-    if (request.ctrl_flags&meta_ctrl_flags::ctrl_disable_replica_migration) {
+
+    if (request.level <= meta_function_level::fl_steady)
+    {
         tasking::enqueue(LPC_META_STATE_NORMAL,
             nullptr,
             std::bind(&server_state::clear_proposals, _state.get()),
             server_state::sStateHash
         );
     }
-    response.err = ERR_OK;
+
+    _function_level.store(request.level);
     reply(req, response);
 }
 

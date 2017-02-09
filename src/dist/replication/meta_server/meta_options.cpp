@@ -92,8 +92,8 @@ void meta_options::initialize()
     node_live_percentage_threshold_for_update = dsn_config_get_value_uint64(
         "meta_server",
         "node_live_percentage_threshold_for_update",
-        50,
-        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, then freeze the cluster; default is 50");
+        65,
+        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, then freeze the cluster; default is 65");
 
     min_live_node_count_for_unfreeze = dsn_config_get_value_uint64(
         "meta_server",

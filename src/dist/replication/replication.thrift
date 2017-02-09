@@ -272,29 +272,33 @@ struct configuration_create_app_response
     2:i32              appid;
 }
 
-enum meta_ctrl_flags
+enum meta_function_level
 {
-    ctrl_meta_freeze = 1,
-    ctrl_disable_replica_migration = 2
+    // there are 4 ways to modify the meta-server's status:
+    // 0. DDL operation: create/drop/recall table
+    // 1. downgrade primary when dectect it is not alive
+    // 2. accept primary's update-request to kickoff some secondaries
+    // 3. make balancer proposal, which further trigger 2
+    // according to these ways, we give meta several active level.
+
+    fl_stopped = 100, //we don't take any action to modify the meta's status, even the DDL operations are not responsed
+    fl_blind = 200, //only DDL operations are responsed, 1 2 3 are just ignored
+    fl_freezed = 300, //0 1 are responsed, 2 3 ignored
+    fl_steady = 400, //0 1 2 are responsed, don't do any balancer
+    fl_lively = 500, //full functional
+    fl_invalid = 10000
 }
 
-enum meta_ctrl_type
-{
-    meta_flags_invalid,
-    meta_flags_and,
-    meta_flags_or,
-    meta_flags_overwrite
-}
-
+// if the level is invalid, we just response the old level of meta without updating it
 struct configuration_meta_control_request
 {
-    1:i64 ctrl_flags;
-    2:meta_ctrl_type ctrl_type;
+    1:meta_function_level level;
 }
 
 struct configuration_meta_control_response
 {
     1:dsn.error_code err;
+    2:meta_function_level old_level;
 }
 
 struct configuration_proposal_action
@@ -401,10 +405,14 @@ service meta_s
 {
     configuration_create_app_response create_app(1:configuration_create_app_request req);
     configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
+    configuration_recall_app_response recall_app(1:configuration_recall_app_request req);
     configuration_list_nodes_response list_nodes(1:configuration_list_nodes_request req);
     configuration_list_apps_response list_apps(1:configuration_list_apps_request req);
+
     configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
     configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
     configuration_sync_response config_sync(1:configuration_sync_request req);
+    configuration_meta_control_response control_meta(1:configuration_meta_control_request req); // depreciated
+    configuration_meta_control_response control_meta_level(1:configuration_meta_control_request req);
 }
 */

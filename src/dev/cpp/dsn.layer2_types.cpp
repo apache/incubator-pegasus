@@ -701,7 +701,7 @@ void app_info::__set_max_replica_count(const int32_t val) {
   this->max_replica_count = val;
 }
 
-void app_info::__set_expire_second(const int32_t val) {
+void app_info::__set_expire_second(const int64_t val) {
   this->expire_second = val;
 }
 
@@ -808,8 +808,8 @@ uint32_t app_info::read(::apache::thrift::protocol::TProtocol* iprot) {
         }
         break;
       case 9:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->expire_second);
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->expire_second);
           this->__isset.expire_second = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -873,8 +873,8 @@ uint32_t app_info::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeI32(this->max_replica_count);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("expire_second", ::apache::thrift::protocol::T_I32, 9);
-  xfer += oprot->writeI32(this->expire_second);
+  xfer += oprot->writeFieldBegin("expire_second", ::apache::thrift::protocol::T_I64, 9);
+  xfer += oprot->writeI64(this->expire_second);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();

@@ -53,5 +53,5 @@ struct app_info
     6:map<string, string> envs;
     7:bool          is_stateful;
     8:i32           max_replica_count;
-    9:i32           expire_second;
+    9:i64           expire_second;
 }

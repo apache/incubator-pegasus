@@ -96,25 +96,18 @@ struct node_status {
 
 extern const std::map<int, const char*> _node_status_VALUES_TO_NAMES;
 
-struct meta_ctrl_flags {
+struct meta_function_level {
   enum type {
-    ctrl_meta_freeze = 1,
-    ctrl_disable_replica_migration = 2
+    fl_stopped = 100,
+    fl_blind = 200,
+    fl_freezed = 300,
+    fl_steady = 400,
+    fl_lively = 500,
+    fl_invalid = 10000
   };
 };
 
-extern const std::map<int, const char*> _meta_ctrl_flags_VALUES_TO_NAMES;
-
-struct meta_ctrl_type {
-  enum type {
-    meta_flags_invalid = 0,
-    meta_flags_and = 1,
-    meta_flags_or = 2,
-    meta_flags_overwrite = 3
-  };
-};
-
-extern const std::map<int, const char*> _meta_ctrl_type_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _meta_function_level_VALUES_TO_NAMES;
 
 class mutation_header;
 
@@ -1940,9 +1933,8 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_create_ap
 }
 
 typedef struct _configuration_meta_control_request__isset {
-  _configuration_meta_control_request__isset() : ctrl_flags(false), ctrl_type(false) {}
-  bool ctrl_flags :1;
-  bool ctrl_type :1;
+  _configuration_meta_control_request__isset() : level(false) {}
+  bool level :1;
 } _configuration_meta_control_request__isset;
 
 class configuration_meta_control_request {
@@ -1952,24 +1944,19 @@ class configuration_meta_control_request {
   configuration_meta_control_request(configuration_meta_control_request&&);
   configuration_meta_control_request& operator=(const configuration_meta_control_request&);
   configuration_meta_control_request& operator=(configuration_meta_control_request&&);
-  configuration_meta_control_request() : ctrl_flags(0), ctrl_type((meta_ctrl_type::type)0) {
+  configuration_meta_control_request() : level((meta_function_level::type)0) {
   }
 
   virtual ~configuration_meta_control_request() throw();
-  int64_t ctrl_flags;
-  meta_ctrl_type::type ctrl_type;
+  meta_function_level::type level;
 
   _configuration_meta_control_request__isset __isset;
 
-  void __set_ctrl_flags(const int64_t val);
-
-  void __set_ctrl_type(const meta_ctrl_type::type val);
+  void __set_level(const meta_function_level::type val);
 
   bool operator == (const configuration_meta_control_request & rhs) const
   {
-    if (!(ctrl_flags == rhs.ctrl_flags))
-      return false;
-    if (!(ctrl_type == rhs.ctrl_type))
+    if (!(level == rhs.level))
       return false;
     return true;
   }
@@ -1994,8 +1981,9 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_meta_cont
 }
 
 typedef struct _configuration_meta_control_response__isset {
-  _configuration_meta_control_response__isset() : err(false) {}
+  _configuration_meta_control_response__isset() : err(false), old_level(false) {}
   bool err :1;
+  bool old_level :1;
 } _configuration_meta_control_response__isset;
 
 class configuration_meta_control_response {
@@ -2005,19 +1993,24 @@ class configuration_meta_control_response {
   configuration_meta_control_response(configuration_meta_control_response&&);
   configuration_meta_control_response& operator=(const configuration_meta_control_response&);
   configuration_meta_control_response& operator=(configuration_meta_control_response&&);
-  configuration_meta_control_response() {
+  configuration_meta_control_response() : old_level((meta_function_level::type)0) {
   }
 
   virtual ~configuration_meta_control_response() throw();
    ::dsn::error_code err;
+  meta_function_level::type old_level;
 
   _configuration_meta_control_response__isset __isset;
 
   void __set_err(const  ::dsn::error_code& val);
 
+  void __set_old_level(const meta_function_level::type val);
+
   bool operator == (const configuration_meta_control_response & rhs) const
   {
     if (!(err == rhs.err))
+      return false;
+    if (!(old_level == rhs.old_level))
       return false;
     return true;
   }

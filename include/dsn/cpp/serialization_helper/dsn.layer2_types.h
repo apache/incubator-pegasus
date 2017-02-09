@@ -293,7 +293,7 @@ class app_info {
   std::map<std::string, std::string>  envs;
   bool is_stateful;
   int32_t max_replica_count;
-  int32_t expire_second;
+  int64_t expire_second;
 
   _app_info__isset __isset;
 
@@ -313,7 +313,7 @@ class app_info {
 
   void __set_max_replica_count(const int32_t val);
 
-  void __set_expire_second(const int32_t val);
+  void __set_expire_second(const int64_t val);
 
   bool operator == (const app_info & rhs) const
   {

@@ -199,14 +199,6 @@ int main(int argc, char** argv)
         else
             std::cout << "list app:" << app_name << " failed, error=" << dsn_error_to_string(err) << std::endl;
     }
-    else if (command == "stop_migration") {
-        dsn::error_code err = client.control_meta_balancer_migration(false);
-        std::cout << "stop migration result: " << dsn_error_to_string(err) << std::endl;
-    }
-    else if (command == "start_migration") {
-        dsn::error_code err = client.control_meta_balancer_migration(true);
-        std::cout << "start migration result: " << err.to_string() << std::endl;
-    }
     else if (command == "balancer") {
         dsn::replication::configuration_balancer_request request;
         proposal_action* action_func = nullptr;

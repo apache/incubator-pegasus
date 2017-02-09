@@ -63,8 +63,8 @@ public:
     const meta_options& get_meta_options() const { return _meta_opts; }
     dist::meta_state_service* get_remote_storage() { return _storage.get(); }
     server_load_balancer* get_balancer() { return _balancer.get(); }
-    int64_t get_control_flags() const { return _meta_ctrl_flags; }
-    bool is_service_freezed() const { return (_meta_ctrl_flags&meta_ctrl_flags::ctrl_meta_freeze) || check_freeze(); }
+    meta_function_level::type get_function_level() { return _function_level.load(); }
+    bool check_freeze() const;
 
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
     virtual void send_message(const rpc_address& target, dsn_message_t request) { dsn_rpc_call_one_way(target.c_addr(), request); }
@@ -101,18 +101,12 @@ private:
     void on_query_cluster_info(dsn_message_t req);
 
     // meta control
-    void on_control_meta(dsn_message_t req);
+    void on_control_meta_level(dsn_message_t req);
 
     // common routines
     int check_primary(dsn_message_t req);
 
     error_code remote_storage_initialize();
-    bool check_freeze() const
-    {
-        int total = _alive_set.size() + _dead_set.size();
-        return (_alive_set.size()<_meta_opts.min_live_node_count_for_unfreeze) ||
-               (_alive_set.size()*100<=_node_live_percentage_threshold_for_update*total);
-    }
 private:
     friend class replication_checker;
     friend class test::test_checker;
@@ -132,9 +126,10 @@ private:
     std::set<rpc_address> _dead_set;
     // ]
     mutable zrwlock_nr _meta_lock;
-    int  _node_live_percentage_threshold_for_update;
-    volatile bool _started;
-    volatile int64_t _meta_ctrl_flags;
+
+    std::atomic_bool _started;
+    //reference replication.thrift for what the meta_function_level means
+    std::atomic<meta_function_level::type> _function_level;
 
     std::string _cluster_root;
 };

@@ -142,7 +142,8 @@ bool server_state::count_staging_app()
     for (const auto& app_kv: _all_apps)
     {
         if (app_kv.second->status == app_status::AS_CREATING ||
-            app_kv.second->status == app_status::AS_DROPPING)
+            app_kv.second->status == app_status::AS_DROPPING ||
+            app_kv.second->status == app_status::AS_RECALLING)
             ++ans;
     }
     return ans;
@@ -1342,6 +1343,19 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
 
 task_ptr server_state::update_configuration_on_remote(std::shared_ptr<configuration_update_request>& config_request)
 {
+    meta_function_level::type l = _meta_svc->get_function_level();
+    if (l <= meta_function_level::fl_blind)
+    {
+        dwarn("ignore update configuration on remote due to level is %s", *_meta_function_level_VALUES_TO_NAMES.find(l));
+        //NOTICE: pending_sync_task need to be reassigned
+        return tasking::enqueue(LPC_META_STATE_HIGH, nullptr, [this, config_request]() mutable
+        {
+            std::shared_ptr<app_state> app = get_app(config_request->config.pid.get_app_id());
+            config_context& cc = app->helpers->contexts[config_request->config.pid.get_partition_index()];
+            cc.pending_sync_task = update_configuration_on_remote(config_request);
+        }, 0, std::chrono::seconds(1));
+    }
+
     partition_configuration& pc = config_request->config;
     std::string storage_path = get_partition_path(pc.pid);
 
@@ -1823,10 +1837,19 @@ bool server_state::is_server_state_stable(int healthy_partitions)
 bool server_state::check_all_partitions()
 {
     int healthy_partitions = 0;
-    bool is_service_freeze = _meta_svc->is_service_freezed();
-    bool is_migration_disabled = (_meta_svc->get_control_flags()&meta_ctrl_flags::ctrl_disable_replica_migration);
+
+    meta_function_level::type level = _meta_svc->get_function_level();
+    if (level>meta_function_level::fl_freezed && _meta_svc->check_freeze())
+        level = meta_function_level::fl_freezed;
 
     zauto_write_lock l(_lock);
+
+    // first the cure stage
+    if (level <= meta_function_level::fl_freezed)
+    {
+        dwarn("service is in level(%s), don't do any cure or balancer actions", *_meta_function_level_VALUES_TO_NAMES.find(level));
+        return false;
+    }
     for (auto& app_pair: _exist_apps)
     {
         std::shared_ptr<app_state>& app = app_pair.second;
@@ -1837,7 +1860,7 @@ bool server_state::check_all_partitions()
             partition_configuration& pc = app->partitions[i];
             config_context& cc = app->helpers->contexts[i];
 
-            if (cc.stage != config_status::pending_remote_sync && !is_service_freeze)
+            if (cc.stage != config_status::pending_remote_sync)
             {
                 configuration_proposal_action action;
                 pc_status s = _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, pc.pid, action);
@@ -1854,14 +1877,17 @@ bool server_state::check_all_partitions()
         }
     }
 
-    if (is_service_freeze || is_migration_disabled)
+    // then the balancer stage
+    if (level <= meta_function_level::fl_steady)
     {
-        ddebug("don't do replica migration coz meta server forbidden this: %s", is_service_freeze?"freezed":"migration_disabled");
+        ddebug("don't do replica migration coz meta server is in level(%s)", *_meta_function_level_VALUES_TO_NAMES.find(level));
         return false;
     }
 
     if ( !is_server_state_stable(healthy_partitions) )
+    {
         return false;
+    }
 
     dinfo("try to do replica migration");
     if (_meta_svc->get_balancer()->balance({&_all_apps, &_nodes}, _temporary_list))

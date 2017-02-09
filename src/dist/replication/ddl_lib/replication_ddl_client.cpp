@@ -645,29 +645,25 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name,
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::control_meta_balancer_migration(bool start)
+dsn::replication::configuration_meta_control_response replication_ddl_client::control_meta_function_level(meta_function_level::type level)
 {
     std::shared_ptr<configuration_meta_control_request> req = std::make_shared<configuration_meta_control_request>();
-    if (start)
-    {
-        req->ctrl_flags = ~(meta_ctrl_flags::ctrl_disable_replica_migration);
-        req->ctrl_type = meta_ctrl_type::meta_flags_and;
-    }
-    else
-    {
-        req->ctrl_flags = meta_ctrl_flags::ctrl_disable_replica_migration;
-        req->ctrl_type = meta_ctrl_type::meta_flags_or;
-    }
+    req->level = level;
 
     auto response_task = request_meta<configuration_meta_control_request>(
         RPC_CM_CONTROL_META,
         req);
     response_task->wait();
-    if ( response_task->error() != dsn::ERR_OK)
-        return response_task->error();
     configuration_meta_control_response resp;
-    dsn::unmarshall(response_task->response(), resp);
-    return resp.err;
+    if ( response_task->error() != dsn::ERR_OK)
+    {
+        resp.err = response_task->error();
+    }
+    else
+    {
+        dsn::unmarshall(response_task->response(), resp);
+    }
+    return resp;
 }
 
 dsn::error_code replication_ddl_client::send_balancer_proposal(const configuration_balancer_request &request)
