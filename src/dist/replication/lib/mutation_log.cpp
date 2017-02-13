@@ -1436,12 +1436,14 @@ int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t v
         auto& fpath = log->path();
         if (!dsn::utils::filesystem::remove_path(fpath))
         {
-            derror("gc: fail to remove %s, stop current gc cycle ...", fpath.c_str());
+            derror("gc @ %d.%d: fail to remove %s, stop current gc cycle ...",
+                   _private_gpid.get_app_id(), _private_gpid.get_partition_index(), fpath.c_str());
             break;
         }
 
         // delete succeed
-        ddebug("gc: log file %s is removed", fpath.c_str());
+        ddebug("gc @ %d.%d: log file %s is removed",
+               _private_gpid.get_app_id(), _private_gpid.get_partition_index(), fpath.c_str());
         deleted++;
 
         // erase from _log_files
