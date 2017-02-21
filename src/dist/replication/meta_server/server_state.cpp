@@ -465,7 +465,7 @@ error_code server_state::sync_apps_to_remote_storage()
         std::shared_ptr<app_state>& app = kv.second;
         for (unsigned int i=0; i!=app->partition_count; ++i)
         {
-            task_ptr init_callback = tasking::create_task(LPC_META_STATE_HIGH, &tracker, empty_callback, sStateHash);
+            task_ptr init_callback = tasking::create_task(LPC_META_STATE_HIGH, &tracker, []{}, sStateHash);
             init_app_partition_node(app, i, init_callback);
         }
     }
