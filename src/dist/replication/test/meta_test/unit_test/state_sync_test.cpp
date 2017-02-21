@@ -306,3 +306,67 @@ void meta_service_test_app::state_sync_test()
         ASSERT_TRUE(ss2->spin_wait_staging(30));
     }
 }
+
+static dsn::app_info create_app_info(dsn::app_status::type status, std::string app_name, int32_t id, int32_t partition_count)
+{
+    dsn::app_info info;
+    info.status = status;
+    info.app_type = "pegasus";
+    info.app_name = app_name;
+    info.app_id = id;
+    info.partition_count = partition_count;
+    info.is_stateful = true;
+    info.max_replica_count = 3;
+    info.expire_second = 0;
+
+    return info;
+}
+
+static bool app_info_eq(const dsn::app_info& info1, const dsn::app_info& info2)
+{
+    return info1.app_id == info2.app_id &&
+           info1.app_name == info2.app_name &&
+           info1.app_type == info2.app_type &&
+           info1.partition_count == info2.partition_count;
+}
+
+void meta_service_test_app::construct_apps_test()
+{
+    std::vector<dsn::app_info> apps =
+    {
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4", 2, 10),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 4, 20),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
+    };
+
+    query_app_info_response resp;
+    resp.apps = apps;
+    resp.err = dsn::ERR_OK;
+
+    std::shared_ptr<meta_service> svc(new meta_service());
+
+    std::vector<dsn::rpc_address> nodes;
+    generate_node_list(nodes, 1, 1);
+    svc->_state->construct_apps({resp}, nodes);
+
+    meta_view mv = svc->_state->get_meta_view();
+    const app_mapper& mapper = *(mv.apps);
+    ASSERT_EQ(6, mv.apps->size());
+
+    std::vector<dsn::app_info> result_apps =
+    {
+        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__1", 1, 1),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4-2", 2, 10),
+        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__3", 3, 1),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4", 4, 20),
+        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__5", 5, 1),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
+    };
+
+    int i=0;
+    for (const auto& kv_pair: mapper)
+    {
+        ASSERT_TRUE( app_info_eq(*(kv_pair.second), result_apps[i]) );
+        i++;
+    }
+}

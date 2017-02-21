@@ -225,7 +225,7 @@ void test_checker::exit()
 
     for (meta_service_app* app : _meta_servers)
     {
-        app->_service->_started = false;
+        app->_service->_started.store(false);
     }
 
     if (test_case::s_close_replica_stub_on_exit)

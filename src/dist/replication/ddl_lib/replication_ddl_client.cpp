@@ -690,6 +690,50 @@ dsn::error_code replication_ddl_client::send_balancer_proposal(const configurati
     return resp.err;
 }
 
+dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_address> &replica_nodes, int wait_seconds)
+{
+    std::shared_ptr<configuration_recovery_request> req = std::make_shared<configuration_recovery_request>();
+    req->recovery_set.clear();
+    for (const dsn::rpc_address& node: replica_nodes)
+    {
+        if (std::find(req->recovery_set.begin(), req->recovery_set.end(), node) != req->recovery_set.end())
+        {
+            std::cout << "duplicate replica node " << node.to_string() << ", just ingore it" << std::endl;
+        }
+        else
+        {
+            req->recovery_set.push_back(node);
+        }
+    }
+    if (req->recovery_set.empty())
+    {
+        std::cout << "node set for recovery it empty" << std::endl;
+        return ERR_INVALID_PARAMETERS;
+    }
+
+    auto response_task = request_meta<configuration_recovery_request>(RPC_CM_START_RECOVERY, req, wait_seconds*1000);
+    bool result = false;
+    for (int i=0; i<wait_seconds && !result; ++i)
+    {
+        result = response_task->wait(1000);
+        std::cout << "wait for meta to recover for " << i << " seconds" << std::endl;
+        if (result)
+            std::cout << "recover got respnose" << std::endl;
+        else
+            std::cout << "recover pending" << std::endl;
+    }
+    if (!result) {
+        std::cout << "wait recovery failed, administrator should check the meta for progress" << std::endl;
+        return dsn::ERR_TIMEOUT;
+    }
+    else {
+        configuration_recovery_response resp;
+        dsn::unmarshall(response_task->response(), resp);
+        std::cout << "recover result: " << resp.err.to_string() << std::endl;
+        return resp.err;
+    }
+}
+
 bool replication_ddl_client::valid_app_char(int c)
 {
     return (bool)std::isalnum(c) || c == '_' || c == '.';

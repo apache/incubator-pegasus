@@ -49,8 +49,13 @@ public:
     void balancer_validator();
     void balance_config_file();
     void apply_balancer_test();
+    void cannot_run_balancer_test();
+    void construct_apps_test();
+
     void simple_lb_cure_test();
     void simple_lb_balanced_cure();
+    void simple_lb_collect_replica();
+    void simple_lb_construct_replica();
     void json_compacity();
 
     void call_update_configuration(dsn::replication::meta_service* svc,

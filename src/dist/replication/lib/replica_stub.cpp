@@ -644,6 +644,26 @@ void replica_stub::on_query_replica_info(const query_replica_info_request& req, 
     resp.err = ERR_OK;
 }
 
+void replica_stub::on_query_app_info(const query_app_info_request &req, query_app_info_response& resp)
+{
+    ddebug("got query app info request from (%s)", req.meta_server.to_string());
+    resp.err = dsn::ERR_OK;
+    std::set<app_id> visited_apps;
+    {
+        zauto_lock l(_replicas_lock);
+        for (auto it = _replicas.begin(); it != _replicas.end(); ++it)
+        {
+            replica_ptr r = it->second;
+            const app_info& info = *r->get_app_info();
+            if (visited_apps.find(info.app_id) == visited_apps.end())
+            {
+                resp.apps.push_back(info);
+                visited_apps.insert(info.app_id);
+            }
+        }
+    }
+}
+
 void replica_stub::on_prepare(dsn_message_t request)
 {
     gpid gpid;
@@ -1564,6 +1584,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 
+    register_rpc_handler(RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
     /*_cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
         this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
     dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");*/

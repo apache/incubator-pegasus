@@ -385,6 +385,27 @@ struct query_replica_info_response
     2:list<replica_info>  replicas;
 }
 
+struct query_app_info_request
+{
+    1:dsn.rpc_address meta_server;
+}
+
+struct query_app_info_response
+{
+    1:dsn.error_code err;
+    2:list<dsn.layer2.app_info> apps;
+}
+
+struct configuration_recovery_request
+{
+    1:list<dsn.rpc_address> recovery_set;
+}
+
+struct configuration_recovery_response
+{
+    1:dsn.error_code err;
+}
+
 /*
 service replica_s
 {

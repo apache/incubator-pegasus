@@ -115,6 +115,7 @@ void meta_service_test_app::update_configuration_test()
 {
     dsn::error_code ec;
     std::shared_ptr<fake_sender_meta_service> svc(new fake_sender_meta_service(this));
+    svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
     ec = svc->remote_storage_initialize();
     ASSERT_EQ(ec, dsn::ERR_OK);
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
@@ -281,4 +282,99 @@ void meta_service_test_app::apply_balancer_test()
     }
 
     app_mapper_compare(backed_app, ss->_all_apps);
+}
+
+class null_meta_service: public dsn::replication::meta_service
+{
+public:
+    void send_message(const dsn::rpc_address& target, dsn_message_t request)
+    {
+        ddebug("send request to %s", target.to_string());
+        dsn_msg_add_ref(request);
+        dsn_msg_release_ref(request);
+    }
+};
+
+class dummy_balancer: public dsn::replication::server_load_balancer {
+public:
+    dummy_balancer(meta_service* s): server_load_balancer(s) {}
+    virtual pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) {
+        action.type = config_type::CT_INVALID;
+        const dsn::partition_configuration& pc = *get_config(*view.apps, gpid);
+        if (!pc.primary.is_invalid() && pc.secondaries.size()==2)
+            return pc_status::healthy;
+        return pc_status::ill;
+    }
+    virtual void reconfig(meta_view view, const configuration_update_request &request) {}
+    virtual bool balance(meta_view view, migration_list &list) {
+        return false;
+    }
+    virtual bool collect_replica(meta_view view, const dsn::rpc_address &node, const replica_info &info) {
+        return false;
+    }
+    virtual bool construct_replica(meta_view view, const dsn::gpid &pid, int max_replica_count) {
+        return false;
+    }
+};
+
+void meta_service_test_app::cannot_run_balancer_test()
+{
+    std::shared_ptr<null_meta_service> svc(new null_meta_service());
+    svc->_meta_opts.min_live_node_count_for_unfreeze = 0;
+    svc->_meta_opts.node_live_percentage_threshold_for_update = 0;
+
+    svc->_state->initialize(svc.get(), "/");
+    svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));
+    svc->_balancer.reset(new dummy_balancer(svc.get()));
+
+    std::vector<dsn::rpc_address> nodes;
+    generate_node_list(nodes, 10, 10);
+
+    dsn::app_info info;
+    info.app_id = 1; info.app_name = "test"; info.app_type = "pegasus";
+    info.expire_second = 0; info.is_stateful = true; info.max_replica_count = 3;
+    info.partition_count = 1; info.status = dsn::app_status::AS_AVAILABLE;
+
+    std::shared_ptr<app_state> the_app = app_state::create(info);
+    svc->_state->_all_apps.emplace(info.app_id, the_app);
+    svc->_state->_exist_apps.emplace(info.app_name, the_app);
+
+    dsn::partition_configuration& pc = the_app->partitions[0];
+    pc.primary = nodes[0];
+    pc.secondaries = {nodes[1], nodes[2]};
+
+#define REGENERATE_NODE_MAPPER \
+    svc->_state->_nodes.clear();\
+    generate_node_mapper(svc->_state->_nodes, svc->_state->_all_apps, nodes)
+
+    REGENERATE_NODE_MAPPER;
+    // stage are freezed
+    svc->_function_level.store(meta_function_level::fl_freezed);
+    ASSERT_FALSE( svc->_state->check_all_partitions() );
+
+    // stage are steady
+    svc->_function_level.store(meta_function_level::fl_steady);
+    ASSERT_FALSE( svc->_state->check_all_partitions() );
+
+    // all the partitions are not healthy
+    svc->_function_level.store(meta_function_level::fl_lively);
+    pc.primary.set_invalid();
+    REGENERATE_NODE_MAPPER;
+
+    ASSERT_FALSE( svc->_state->check_all_partitions() );
+
+    // some dropped node still exists in nodes
+    pc.primary = nodes[0];
+    REGENERATE_NODE_MAPPER;
+    get_node_state(svc->_state->_nodes, pc.primary, true)->set_alive(false);
+    ASSERT_FALSE( svc->_state->check_all_partitions() );
+
+    // some apps are staging
+    REGENERATE_NODE_MAPPER;
+    the_app->status = dsn::app_status::AS_DROPPING;
+    ASSERT_FALSE( svc->_state->check_all_partitions() );
+
+    // call function can run balancer
+    the_app->status = dsn::app_status::AS_AVAILABLE;
+    ASSERT_TRUE( svc->_state->can_run_balancer() );
 }

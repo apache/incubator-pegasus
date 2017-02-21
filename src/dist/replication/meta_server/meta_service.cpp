@@ -72,7 +72,7 @@ bool meta_service::check_freeze() const
     if (_alive_set.size() < _meta_opts.min_live_node_count_for_unfreeze)
         return true;
     int total = _alive_set.size() + _dead_set.size();
-    return _alive_set.size()*100<=_meta_opts.node_live_percentage_threshold_for_update*total;
+    return _alive_set.size()*100<_meta_opts.node_live_percentage_threshold_for_update*total;
 }
 
 error_code meta_service::remote_storage_initialize()
@@ -242,17 +242,22 @@ error_code meta_service::start()
     ddebug("%s got the primary lock, start to recover server state from remote storage", primary_address().to_string());
 
     _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
-    while ((err = _state->initialize_data_structure()) != ERR_OK)
-    {
-        derror("recover server state failed, err = %s, retry ...", err.to_string());
-    }
-    _state->register_cli_commands();
-
     server_load_balancer* balancer = utils::factory_store<server_load_balancer>::create(
         _meta_opts.server_load_balancer_type.c_str(),
         PROVIDER_TYPE_MAIN,
         this);
     _balancer.reset(balancer);
+
+    while ((err = _state->initialize_data_structure()) != ERR_OK)
+    {
+        if (err == ERR_OBJECT_NOT_FOUND && _meta_opts.recover_from_replica_server)
+        {
+            ddebug("can't find apps from remote storage, administrator should recover this cluster manually later");
+            return dsn::ERR_OK;
+        }
+        derror("recover server state failed, err = %s, retry ...", err.to_string());
+    }
+    _state->register_cli_commands();
 
     start_service();
     ddebug("start meta_service succeed");
@@ -321,6 +326,11 @@ void meta_service::register_rpc_handlers()
         "control_meta_level",
         &meta_service::on_control_meta_level
         );
+    register_rpc_handler(
+        RPC_CM_START_RECOVERY,
+        "start_recovery",
+        &meta_service::on_start_recovery
+        );
 }
 
 int meta_service::check_primary(dsn_message_t req)
@@ -343,6 +353,14 @@ int meta_service::check_primary(dsn_message_t req)
                 dsn_rpc_forward(req, primary.c_addr());
                 return 0;
             }
+            else
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            return -1;
         }
     }
 
@@ -571,6 +589,42 @@ void meta_service::on_propose_balancer(dsn_message_t req)
     dsn::unmarshall(req, request);
     ddebug("get proposal balancer request, gpid(%d.%d)", request.gpid.get_app_id(), request.gpid.get_partition_index());
     _state->on_propose_balancer(request, response);
+    reply(req, response);
+}
+
+void meta_service::on_start_recovery(dsn_message_t req)
+{
+    configuration_recovery_response response;
+    ddebug("got start recovery request, start to do recovery");
+    int result = check_primary(req);
+    if (result == 0) // request has been forwarded to others
+    {
+        return;
+    }
+
+    if (result == -1)
+    {
+        response.err = ERR_FORWARD_TO_OTHERS;
+    }
+    else
+    {
+        zauto_write_lock l(_meta_lock);
+        if (_started.load())
+        {
+            ddebug("service(%s) is already started, ignore the recovery request", primary_address().to_string());
+            response.err = ERR_SERVICE_ALREADY_RUNNING;
+        }
+        else
+        {
+            configuration_recovery_request request;
+            dsn::unmarshall(req, request);
+            _state->on_start_recovery(request, response);
+            if (response.err == dsn::ERR_OK)
+            {
+                start_service();
+            }
+        }
+    }
     reply(req, response);
 }
 

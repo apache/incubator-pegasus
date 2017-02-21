@@ -12,6 +12,14 @@ int gtest_flags = 0;
 int gtest_ret = 0;
 meta_service_test_app* g_app;
 
+// as it is not easy to clean test environment in some cases, we simply run these tests in several commands,
+// please check the script "run.sh" to modify the GTEST_FILTER
+// currently, three filters are used to run these tests:
+//   1. a test only run "meta.data_definition", coz it use different config-file
+//   2. a test only run "meta.apply_balancer", coz it modify the global state of remote-storage, this conflicts meta.state_sync
+//   3. all others tests
+//
+// If adding a test which doesn't modify the global state, you should simple add your test to the case3.
 TEST(meta, state_sync)
 {
     g_app->state_sync_test();
@@ -37,6 +45,16 @@ TEST(meta, apply_balancer)
     g_app->apply_balancer_test();
 }
 
+TEST(meta, cannot_run_balancer_test)
+{
+    g_app->cannot_run_balancer_test();
+}
+
+TEST(meta, construct_apps_test)
+{
+    g_app->construct_apps_test();
+}
+
 TEST(meta, balance_config_file)
 {
     g_app->balance_config_file();
@@ -50,6 +68,16 @@ TEST(meta, simple_lb_balanced_cure)
 TEST(meta, simple_lb_cure_test)
 {
     g_app->simple_lb_cure_test();
+}
+
+TEST(meta, simple_lb_collect_replica)
+{
+    g_app->simple_lb_collect_replica();
+}
+
+TEST(meta, simple_lb_construct_replica)
+{
+    g_app->simple_lb_construct_replica();
 }
 
 TEST(meta, json_compacity)

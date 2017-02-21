@@ -55,8 +55,49 @@ typedef std::function<void (const migration_list& )> replica_migration_subscribe
 
 class meta_service;
 
+//
+// Notes for server_state
+//
+// A. structure of remote storage
+//
+// the tree structure on remote storage are like this:
+// _apps_root/<app-id1>/0
+// _apps_root/<app-id1>/1
+// ....
+// _apps_root/<app-id1>/n
+// _apps_root/<app-id2>/0
+// ...
+// the content in _apps_root/<app-id> is a json string for class "app-info"
+// the content in _apps_root/<app-id>/<partition-id> is a json string for class "partition-configuration"
+//
+// B. app management
+//
+// When recving create-app request from the DDL client(let's say, NEW-APP-NAME with NEW-APP-ID),
+// we first create the root-node for this app, i.e: _apps_root/<NEW-APP-ID>,
+// then all the partition nodes of NEW-APP-NAME is created asynchronously with multiple tasks.
+// Reasons for this are:
+//    1. an app may have thousands/millions of replicas, creating all these things in a task is time-consuming,
+//       which may block the update-thread for a long time.
+//    2. there are so many requests to the remote storage that it is very likely to timeout if all requests are in a task
+// For the same reason, dropping and recalling for an app also have similar implementations.
+// Generally, an app may have serveral status of two kinds:
+//    a. staging-status: creating, dropping, recalling
+//    b. stable-status: available, dropped
+//
+// Notice: in remote storage, only stable status are stored. We can tell if an app-state is in staging by checking if
+// all of its partitions are ready:
+//    1. for available app, it should have as many partitions as app_info.partition_count AND
+//       ALL of the partitions shouldn't have the flags DROPPED
+//    2. for dropped app, All of the partitions should have the flags DROPPED
+// If theses constraints are not satisfied, it means that some work are not finished.
+// Meta-server will check these constraints and continue the creating/dropping/recalling work if necessary.
+//
+// C. persistence of meta data
+// D. thread-model of meta server
+// E. load balancer
+
 class server_state
-{
+{    
 public:
     static const int sStateHash = 0;
 public:
@@ -90,31 +131,41 @@ public:
 
     void on_change_node_state(rpc_address node, bool is_alive);
     void on_propose_balancer(const configuration_balancer_request& request, configuration_balancer_response& response);
+    void on_start_recovery(const configuration_recovery_request& request, configuration_recovery_response& response);
+
     //return true if no need to do any actions
     bool check_all_partitions();
     void clear_proposals();
 
+    int count_staging_app();
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
     void set_replica_migration_subscriber_for_test(replica_migration_subscriber subscriber);
 private:
     //-1 means waiting forever
     bool spin_wait_staging(int timeout_seconds = -1);
-    bool count_staging_app();
-    bool is_server_state_stable(int healthy_partitions);
+    bool can_run_balancer();
 
     error_code dump_app_states(const char* local_path, const std::function<app_state* ()>& iterator);
     error_code sync_apps_from_remote_storage();
+    // sync local state to remote storage,
+    // if return OK, all states are synced correctly, and all apps are in stable state
+    // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
+
+    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address>& node_list);
     error_code initialize_default_apps();
     void initialize_node_state();
 
     void check_consistency(const dsn::gpid& gpid);
 
+    void construct_apps(const std::vector<query_app_info_response>& query_app_responses, const std::vector<dsn::rpc_address>& replica_nodes);
+    void construct_partitions(const std::vector<query_replica_info_response>& query_replica_info_responses, const std::vector<dsn::rpc_address>& response_nodes);
+
     void do_app_create(std::shared_ptr<app_state>& app);
     void do_app_drop(std::shared_ptr<app_state>& app);
     void do_app_recall(std::shared_ptr<app_state> &app);
-    void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx);
+    void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx, task_ptr callback);
 
     task_ptr update_configuration_on_remote(std::shared_ptr<configuration_update_request>& config_request);
     void on_update_configuration_on_remote_reply(error_code ec, std::shared_ptr<configuration_update_request>& request);

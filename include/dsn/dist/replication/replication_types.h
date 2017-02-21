@@ -195,6 +195,14 @@ class query_replica_info_request;
 
 class query_replica_info_response;
 
+class query_app_info_request;
+
+class query_app_info_response;
+
+class configuration_recovery_request;
+
+class configuration_recovery_response;
+
 typedef struct _mutation_header__isset {
   _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false), timestamp(false) {}
   bool pid :1;
@@ -2769,6 +2777,204 @@ class query_replica_info_response {
 void swap(query_replica_info_response &a, query_replica_info_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const query_replica_info_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _query_app_info_request__isset {
+  _query_app_info_request__isset() : meta_server(false) {}
+  bool meta_server :1;
+} _query_app_info_request__isset;
+
+class query_app_info_request {
+ public:
+
+  query_app_info_request(const query_app_info_request&);
+  query_app_info_request(query_app_info_request&&);
+  query_app_info_request& operator=(const query_app_info_request&);
+  query_app_info_request& operator=(query_app_info_request&&);
+  query_app_info_request() {
+  }
+
+  virtual ~query_app_info_request() throw();
+   ::dsn::rpc_address meta_server;
+
+  _query_app_info_request__isset __isset;
+
+  void __set_meta_server(const  ::dsn::rpc_address& val);
+
+  bool operator == (const query_app_info_request & rhs) const
+  {
+    if (!(meta_server == rhs.meta_server))
+      return false;
+    return true;
+  }
+  bool operator != (const query_app_info_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const query_app_info_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(query_app_info_request &a, query_app_info_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const query_app_info_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _query_app_info_response__isset {
+  _query_app_info_response__isset() : err(false), apps(false) {}
+  bool err :1;
+  bool apps :1;
+} _query_app_info_response__isset;
+
+class query_app_info_response {
+ public:
+
+  query_app_info_response(const query_app_info_response&);
+  query_app_info_response(query_app_info_response&&);
+  query_app_info_response& operator=(const query_app_info_response&);
+  query_app_info_response& operator=(query_app_info_response&&);
+  query_app_info_response() {
+  }
+
+  virtual ~query_app_info_response() throw();
+   ::dsn::error_code err;
+  std::vector< ::dsn::app_info>  apps;
+
+  _query_app_info_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_apps(const std::vector< ::dsn::app_info> & val);
+
+  bool operator == (const query_app_info_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(apps == rhs.apps))
+      return false;
+    return true;
+  }
+  bool operator != (const query_app_info_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const query_app_info_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(query_app_info_response &a, query_app_info_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const query_app_info_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_recovery_request__isset {
+  _configuration_recovery_request__isset() : recovery_set(false) {}
+  bool recovery_set :1;
+} _configuration_recovery_request__isset;
+
+class configuration_recovery_request {
+ public:
+
+  configuration_recovery_request(const configuration_recovery_request&);
+  configuration_recovery_request(configuration_recovery_request&&);
+  configuration_recovery_request& operator=(const configuration_recovery_request&);
+  configuration_recovery_request& operator=(configuration_recovery_request&&);
+  configuration_recovery_request() {
+  }
+
+  virtual ~configuration_recovery_request() throw();
+  std::vector< ::dsn::rpc_address>  recovery_set;
+
+  _configuration_recovery_request__isset __isset;
+
+  void __set_recovery_set(const std::vector< ::dsn::rpc_address> & val);
+
+  bool operator == (const configuration_recovery_request & rhs) const
+  {
+    if (!(recovery_set == rhs.recovery_set))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recovery_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_recovery_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_recovery_request &a, configuration_recovery_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_recovery_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_recovery_response__isset {
+  _configuration_recovery_response__isset() : err(false) {}
+  bool err :1;
+} _configuration_recovery_response__isset;
+
+class configuration_recovery_response {
+ public:
+
+  configuration_recovery_response(const configuration_recovery_response&);
+  configuration_recovery_response(configuration_recovery_response&&);
+  configuration_recovery_response& operator=(const configuration_recovery_response&);
+  configuration_recovery_response& operator=(configuration_recovery_response&&);
+  configuration_recovery_response() {
+  }
+
+  virtual ~configuration_recovery_response() throw();
+   ::dsn::error_code err;
+
+  _configuration_recovery_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  bool operator == (const configuration_recovery_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recovery_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_recovery_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_recovery_response &a, configuration_recovery_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_recovery_response& obj)
 {
   obj.printTo(out);
   return out;

@@ -6316,4 +6316,446 @@ void query_replica_info_response::printTo(std::ostream& out) const {
   out << ")";
 }
 
+
+query_app_info_request::~query_app_info_request() throw() {
+}
+
+
+void query_app_info_request::__set_meta_server(const  ::dsn::rpc_address& val) {
+  this->meta_server = val;
+}
+
+uint32_t query_app_info_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->meta_server.read(iprot);
+          this->__isset.meta_server = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t query_app_info_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("query_app_info_request");
+
+  xfer += oprot->writeFieldBegin("meta_server", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->meta_server.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(query_app_info_request &a, query_app_info_request &b) {
+  using ::std::swap;
+  swap(a.meta_server, b.meta_server);
+  swap(a.__isset, b.__isset);
+}
+
+query_app_info_request::query_app_info_request(const query_app_info_request& other258) {
+  meta_server = other258.meta_server;
+  __isset = other258.__isset;
+}
+query_app_info_request::query_app_info_request( query_app_info_request&& other259) {
+  meta_server = std::move(other259.meta_server);
+  __isset = std::move(other259.__isset);
+}
+query_app_info_request& query_app_info_request::operator=(const query_app_info_request& other260) {
+  meta_server = other260.meta_server;
+  __isset = other260.__isset;
+  return *this;
+}
+query_app_info_request& query_app_info_request::operator=(query_app_info_request&& other261) {
+  meta_server = std::move(other261.meta_server);
+  __isset = std::move(other261.__isset);
+  return *this;
+}
+void query_app_info_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "query_app_info_request(";
+  out << "meta_server=" << to_string(meta_server);
+  out << ")";
+}
+
+
+query_app_info_response::~query_app_info_response() throw() {
+}
+
+
+void query_app_info_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void query_app_info_response::__set_apps(const std::vector< ::dsn::app_info> & val) {
+  this->apps = val;
+}
+
+uint32_t query_app_info_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->apps.clear();
+            uint32_t _size262;
+            ::apache::thrift::protocol::TType _etype265;
+            xfer += iprot->readListBegin(_etype265, _size262);
+            this->apps.resize(_size262);
+            uint32_t _i266;
+            for (_i266 = 0; _i266 < _size262; ++_i266)
+            {
+              xfer += this->apps[_i266].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.apps = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t query_app_info_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("query_app_info_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("apps", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->apps.size()));
+    std::vector< ::dsn::app_info> ::const_iterator _iter267;
+    for (_iter267 = this->apps.begin(); _iter267 != this->apps.end(); ++_iter267)
+    {
+      xfer += (*_iter267).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(query_app_info_response &a, query_app_info_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.apps, b.apps);
+  swap(a.__isset, b.__isset);
+}
+
+query_app_info_response::query_app_info_response(const query_app_info_response& other268) {
+  err = other268.err;
+  apps = other268.apps;
+  __isset = other268.__isset;
+}
+query_app_info_response::query_app_info_response( query_app_info_response&& other269) {
+  err = std::move(other269.err);
+  apps = std::move(other269.apps);
+  __isset = std::move(other269.__isset);
+}
+query_app_info_response& query_app_info_response::operator=(const query_app_info_response& other270) {
+  err = other270.err;
+  apps = other270.apps;
+  __isset = other270.__isset;
+  return *this;
+}
+query_app_info_response& query_app_info_response::operator=(query_app_info_response&& other271) {
+  err = std::move(other271.err);
+  apps = std::move(other271.apps);
+  __isset = std::move(other271.__isset);
+  return *this;
+}
+void query_app_info_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "query_app_info_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "apps=" << to_string(apps);
+  out << ")";
+}
+
+
+configuration_recovery_request::~configuration_recovery_request() throw() {
+}
+
+
+void configuration_recovery_request::__set_recovery_set(const std::vector< ::dsn::rpc_address> & val) {
+  this->recovery_set = val;
+}
+
+uint32_t configuration_recovery_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->recovery_set.clear();
+            uint32_t _size272;
+            ::apache::thrift::protocol::TType _etype275;
+            xfer += iprot->readListBegin(_etype275, _size272);
+            this->recovery_set.resize(_size272);
+            uint32_t _i276;
+            for (_i276 = 0; _i276 < _size272; ++_i276)
+            {
+              xfer += this->recovery_set[_i276].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.recovery_set = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t configuration_recovery_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("configuration_recovery_request");
+
+  xfer += oprot->writeFieldBegin("recovery_set", ::apache::thrift::protocol::T_LIST, 1);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->recovery_set.size()));
+    std::vector< ::dsn::rpc_address> ::const_iterator _iter277;
+    for (_iter277 = this->recovery_set.begin(); _iter277 != this->recovery_set.end(); ++_iter277)
+    {
+      xfer += (*_iter277).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(configuration_recovery_request &a, configuration_recovery_request &b) {
+  using ::std::swap;
+  swap(a.recovery_set, b.recovery_set);
+  swap(a.__isset, b.__isset);
+}
+
+configuration_recovery_request::configuration_recovery_request(const configuration_recovery_request& other278) {
+  recovery_set = other278.recovery_set;
+  __isset = other278.__isset;
+}
+configuration_recovery_request::configuration_recovery_request( configuration_recovery_request&& other279) {
+  recovery_set = std::move(other279.recovery_set);
+  __isset = std::move(other279.__isset);
+}
+configuration_recovery_request& configuration_recovery_request::operator=(const configuration_recovery_request& other280) {
+  recovery_set = other280.recovery_set;
+  __isset = other280.__isset;
+  return *this;
+}
+configuration_recovery_request& configuration_recovery_request::operator=(configuration_recovery_request&& other281) {
+  recovery_set = std::move(other281.recovery_set);
+  __isset = std::move(other281.__isset);
+  return *this;
+}
+void configuration_recovery_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "configuration_recovery_request(";
+  out << "recovery_set=" << to_string(recovery_set);
+  out << ")";
+}
+
+
+configuration_recovery_response::~configuration_recovery_response() throw() {
+}
+
+
+void configuration_recovery_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+uint32_t configuration_recovery_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t configuration_recovery_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("configuration_recovery_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(configuration_recovery_response &a, configuration_recovery_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.__isset, b.__isset);
+}
+
+configuration_recovery_response::configuration_recovery_response(const configuration_recovery_response& other282) {
+  err = other282.err;
+  __isset = other282.__isset;
+}
+configuration_recovery_response::configuration_recovery_response( configuration_recovery_response&& other283) {
+  err = std::move(other283.err);
+  __isset = std::move(other283.__isset);
+}
+configuration_recovery_response& configuration_recovery_response::operator=(const configuration_recovery_response& other284) {
+  err = other284.err;
+  __isset = other284.__isset;
+  return *this;
+}
+configuration_recovery_response& configuration_recovery_response::operator=(configuration_recovery_response&& other285) {
+  err = std::move(other285.err);
+  __isset = std::move(other285.__isset);
+  return *this;
+}
+void configuration_recovery_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "configuration_recovery_response(";
+  out << "err=" << to_string(err);
+  out << ")";
+}
+
 }} // namespace

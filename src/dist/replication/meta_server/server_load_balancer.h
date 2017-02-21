@@ -61,8 +61,36 @@ public:
 
     virtual void reconfig(meta_view view, const configuration_update_request& request) = 0;
     virtual pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action/*out*/) = 0;
+
+    //
+    // Make balancer according to current meta-view
+    // params:
+    //   list: the returned balance results
+    // ret:
+    //   if any balancer proposal is generated, return true. Or-else, false
+    //
     virtual bool balance(meta_view view, migration_list& list) = 0;
+
+    //
+    // When replica infos are collected from replica servers, meta-server
+    // will use this to check if a replica on a server is useful
+    // params:
+    //   node: the owner of the replica info
+    //   info: the replica info on node
+    // ret:
+    //   return true if the info should be kept on the node laterly. Or-else false.
+    //   WARNING: if false is returned, the replica on node may be garbage-collected
+    //
     virtual bool collect_replica(meta_view view, const dsn::rpc_address& node, const replica_info& info) = 0;
+
+    //
+    // Try to construct a replica-group by current replica-infos of a gpid
+    // ret:
+    //   if construct the replica successfully, return true.
+    //   Notice: as long as we can construct something from current infos, we treat it as a success
+    //
+    virtual bool construct_replica(meta_view view, const gpid& pid, int max_replica_count) = 0;
+
     static void register_proposals(meta_view view, const configuration_balancer_request& req, configuration_balancer_response& resp);
     static void apply_balancer(meta_view view, const migration_list& ml);
     static int suggest_alive_time(config_type::type t);
@@ -151,6 +179,7 @@ public:
     void reconfig(meta_view view, const configuration_update_request& request) override;
     pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
     bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info) override;
+    bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) override;
 
 protected:
     void reset_proposal(meta_view& view, const dsn::gpid& gpid);

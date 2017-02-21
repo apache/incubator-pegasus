@@ -102,10 +102,14 @@ private:
 
     // meta control
     void on_control_meta_level(dsn_message_t req);
+    void on_start_recovery(dsn_message_t req);
 
     // common routines
+    // ret:
+    //   1. the meta is primary
+    //   0. meta isn't primary, and rpc-msg can forward to others
+    //  -1. meta isn't primary, and rpc-msg can't forward to others
     int check_primary(dsn_message_t req);
-
     error_code remote_storage_initialize();
 private:
     friend class replication_checker;

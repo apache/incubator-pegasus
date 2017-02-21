@@ -233,41 +233,21 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
         const std::vector<rpc_address>& config_dropped = request.config.last_drops;
         for (const rpc_address& drop_node: config_dropped)
         {
-            auto iter = std::find_if(cc->dropped.begin(), cc->dropped.end(), [&drop_node](const dropped_server& d)
-            {
-                return d.node == drop_node;
-            });
-            if (iter == cc->dropped.end())
-            {
-                cc->dropped.push_back({drop_node, dsn_now_ms()});
-            }
+            cc->record_drop_history(drop_node);
         }
     }
     else
     {
         when_update_replicas(request.type, [cc, pc, &request](bool is_adding)
         {
-            auto iter = std::find_if(cc->dropped.begin(), cc->dropped.end(), [&request](const dropped_server& d)
-            {
-                return d.node==request.node;
-            });
-
             if (is_adding)
             {
-                if (iter != cc->dropped.end())
-                {
-                    cc->dropped.erase(iter);
-                }
+                cc->remove_from_dropped(request.node);
             }
             else
             {
-                dassert(iter == cc->dropped.end(), "");
-                cc->dropped.push_back({request.node, dsn_now_ms()});
-                while (cc->dropped.size()+replica_count(*pc) > 5)
-                    cc->dropped.erase(cc->dropped.begin());
+                dassert(cc->record_drop_history(request.node), "node(%s) has been in the dropped", request.node.to_string());
             }
-
-            cc->prefered_dropped = cc->dropped.size()-1;
         });
     }
 }
@@ -482,9 +462,10 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
 
     if (is_emergency)
     {
+        dassert(cc.prefered_dropped < (int)(cc.dropped.size()), "prefered_dropped(%d) may not updated when drop_list(size %d) update", cc.prefered_dropped, cc.dropped.size());
         while (cc.prefered_dropped >= 0)
         {
-            dropped_server& server = cc.dropped[cc.prefered_dropped--];
+            dropped_replica& server = cc.dropped[cc.prefered_dropped--];
             if (is_node_alive(*view.nodes, server.node))
             {
                 action.node = server.node;
@@ -497,7 +478,7 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
     {
         for (auto iter=cc.dropped.rbegin(); iter!=cc.dropped.rend(); ++iter)
         {
-            dropped_server& server = *iter;
+            dropped_replica& server = *iter;
             if (is_node_alive(*view.nodes, server.node))
             {
                 dassert(!server.node.is_invalid(), "");
@@ -608,48 +589,66 @@ bool simple_load_balancer::collect_replica(meta_view view, const rpc_address &no
     partition_configuration& pc = *get_config(*view.apps, info.pid);
     if (is_member(pc, node))
         return true;
+
     config_context& cc = *get_config_context(*view.apps, info.pid);
+    int ans = cc.collect_drop_replica(node, info);
+    dassert(cc.check_order(), "");
+    return ans != -1;
+}
 
-    for (dropped_server& d: cc.dropped)
-        if (d.node == node)
-            return true;
+bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, int max_replica_count)
+{
+    partition_configuration& pc = *get_config(*view.apps, pid);
+    config_context& cc = *get_config_context(*view.apps, pid);
 
-    int i;
-    for (i=0; i<cc.dropped.size(); ++i)
+    dassert(replica_count(pc)==0, "");
+    dassert(max_replica_count>0, "max replica count is %d, should be at lease 1", max_replica_count);
+
+    std::vector<dropped_replica>& drop_list = cc.dropped;
+    if (drop_list.empty())
     {
-        dropped_server& d = cc.dropped[i];
-        if (d.time != INVALID_TIMESTAMP)
-            break;
-        if (d.ballot > info.ballot)
-            break;
-        if (d.ballot==info.ballot && d.last_prepared_decree>=info.last_prepared_decree)
-            break;
+        dwarn("construct for (%d.%d) failed, coz no replicas collected", pid.get_app_id(), pid.get_partition_index());
+        return false;
     }
 
-    bool ans = false;
-    if (cc.dropped.size() + replica_count(pc) >= 5)
-    {
-        for (int j=0; j<i-1; ++j)
-            cc.dropped[j] = cc.dropped[j+1];
+    //treat last server in drop_list as the primary
+    dropped_replica server = drop_list.back();
+    dassert(server.time == dropped_replica::INVALID_TIMESTAMP, "");
+    pc.primary = server.node;
+    pc.ballot = server.ballot;
+    pc.partition_flags = 0;
+    pc.max_replica_count = max_replica_count;
 
-        if (i>0)
-        {
-            cc.dropped[i-1] = {node, INVALID_TIMESTAMP, info.ballot, info.last_prepared_decree};
-        }
-        ans = (i>0);
-    }
-    else
+    ddebug("construct for (%d.%d), select %s as primary, ballot(%" PRId64 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+        pid.get_app_id(),
+        pid.get_partition_index(),
+        server.node.to_string(),
+        server.ballot,
+        server.last_committed_decree,
+        server.last_prepared_decree);
+
+    drop_list.pop_back();
+
+    // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the only primary dead
+    // when add node to pc.last_drops, we don't remove it from our cc.drop_list
+    dassert(pc.last_drops.empty(), "");
+    for (auto iter=drop_list.rbegin(); iter!=drop_list.rend(); ++iter)
     {
-        cc.dropped.push_back( dropped_server() );
-        for (int j=cc.dropped.size()-2; j>=i; --j)
-            cc.dropped[j+1] = cc.dropped[j];
-        cc.dropped[i] = {node, INVALID_TIMESTAMP, info.ballot, info.last_prepared_decree};
-        ans = true;
+        if (pc.last_drops.size()+1 >= max_replica_count)
+            break;
+        // similar to cc.drop_list, pc.last_drop is also a stack structure
+        pc.last_drops.insert(pc.last_drops.begin(), iter->node);
+        ddebug("construct for (%d.%d), select %s as last_drop, ballot(%" PRId64 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+            pid.get_app_id(),
+            pid.get_partition_index(),
+            server.node.to_string(),
+            server.ballot,
+            server.last_committed_decree,
+            server.last_prepared_decree);
     }
 
-    if (ans)
-        cc.prefered_dropped = cc.dropped.size() - 1;
-    return ans;
+    cc.prefered_dropped = drop_list.size() - 1;
+    return true;
 }
 
 }}

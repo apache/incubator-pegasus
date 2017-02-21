@@ -70,6 +70,8 @@ public:
     dsn::error_code send_balancer_proposal(const configuration_balancer_request& request);
 
     dsn::error_code wait_app_ready(const std::string& app_name, int partition_count, int max_replica_count);
+
+    dsn::error_code do_recovery(const std::vector<dsn::rpc_address>& replica_nodes, int wait_seconds);
 private:
     bool static valid_app_char(int c);
 
