@@ -98,7 +98,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string& app_na
         }
         if(ready_count == partition_count)
         {
-            std::cout << app_name << "app ready now: (" << ready_count << "/" << partition_count << ")" << std::endl;
+            std::cout << app_name << " is ready now: (" << ready_count << "/" << partition_count << ")" << std::endl;
             break;
         }
         std::cout << app_name << " not ready yet, still waiting... ("
