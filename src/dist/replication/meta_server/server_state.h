@@ -153,14 +153,19 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
-    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address>& node_list);
+    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address>& node_list,
+                                            bool skip_bad_nodes, bool skip_lost_partitions, std::string& hint_message);
     error_code initialize_default_apps();
     void initialize_node_state();
 
     void check_consistency(const dsn::gpid& gpid);
 
-    void construct_apps(const std::vector<query_app_info_response>& query_app_responses, const std::vector<dsn::rpc_address>& replica_nodes);
-    void construct_partitions(const std::vector<query_replica_info_response>& query_replica_info_responses, const std::vector<dsn::rpc_address>& response_nodes);
+    error_code construct_apps(const std::vector<query_app_info_response>& query_app_responses,
+                              const std::vector<dsn::rpc_address>& replica_nodes,
+                              std::string& hint_message);
+    error_code construct_partitions(const std::vector<query_replica_info_response>& query_replica_info_responses,
+                                    const std::vector<dsn::rpc_address>& replica_nodes,
+                                    bool skip_lost_partitions, std::string& hint_message);
 
     void do_app_create(std::shared_ptr<app_state>& app);
     void do_app_drop(std::shared_ptr<app_state>& app);

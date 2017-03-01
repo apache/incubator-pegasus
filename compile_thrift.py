@@ -3,6 +3,7 @@
 import os
 import sys
 import platform
+import re
 
 '''
 the default thrift generator
@@ -380,6 +381,24 @@ def remove_struct_define_hook(args):
 
     src_fd.close()
     dst_fd.close()
+
+    os.remove(generated_fname)
+    os.rename(target_fname, generated_fname)
+
+def replace_hook(args):
+    generated_fname = args[0]
+    replace_map = args[1]
+
+    target_fname = generated_fname + ".swapfile"
+    src_fd, dst_fd = open(generated_fname, "r"), open(target_fname, "w")
+
+    for line in src_fd:
+        for key, value in replace_map.items():
+            line = re.sub(key, value, line)
+        dst_fd.write(line)
+
+    src_fd.close()
+    dst_fd.close()
     
     os.remove(generated_fname)
     os.rename(target_fname, generated_fname)
@@ -400,6 +419,7 @@ if __name__ == "__main__":
     add_hook("deploy_svc", "src/dist/deployment_service", remove_struct_define_hook, ["deploy_svc_types.h", "cluster_type", "service_status"])
     add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
     add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])
+    add_hook("dsn.layer2", "src", replace_hook, ["dsn.layer2_types.h", {r"dsn\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])
 
     if len(sys.argv)>1:
         for i in sys.argv[1:]:

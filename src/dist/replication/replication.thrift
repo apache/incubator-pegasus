@@ -399,11 +399,14 @@ struct query_app_info_response
 struct configuration_recovery_request
 {
     1:list<dsn.rpc_address> recovery_set;
+    2:bool skip_bad_nodes;
+    3:bool skip_lost_partitions;
 }
 
 struct configuration_recovery_response
 {
     1:dsn.error_code err;
+    2:string hint_message;
 }
 
 /*

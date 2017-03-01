@@ -612,7 +612,7 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
     }
 
     //treat last server in drop_list as the primary
-    dropped_replica server = drop_list.back();
+    dropped_replica& server = drop_list.back();
     dassert(server.time == dropped_replica::INVALID_TIMESTAMP, "");
     pc.primary = server.node;
     pc.ballot = server.ballot;
@@ -638,13 +638,13 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
             break;
         // similar to cc.drop_list, pc.last_drop is also a stack structure
         pc.last_drops.insert(pc.last_drops.begin(), iter->node);
-        ddebug("construct for (%d.%d), select %s as last_drop, ballot(%" PRId64 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+        ddebug("construct for (%d.%d), select %s into last_drops, ballot(%" PRId64 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
             pid.get_app_id(),
             pid.get_partition_index(),
-            server.node.to_string(),
-            server.ballot,
-            server.last_committed_decree,
-            server.last_prepared_decree);
+            iter->node.to_string(),
+            iter->ballot,
+            iter->last_committed_decree,
+            iter->last_prepared_decree);
     }
 
     cc.prefered_dropped = drop_list.size() - 1;

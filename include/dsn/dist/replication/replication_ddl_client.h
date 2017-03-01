@@ -71,7 +71,7 @@ public:
 
     dsn::error_code wait_app_ready(const std::string& app_name, int partition_count, int max_replica_count);
 
-    dsn::error_code do_recovery(const std::vector<dsn::rpc_address>& replica_nodes, int wait_seconds);
+    dsn::error_code do_recovery(const std::vector<dsn::rpc_address>& replica_nodes, int wait_seconds, bool skip_bad_nodes, bool skip_lost_partitions);
 private:
     bool static valid_app_char(int c);
 

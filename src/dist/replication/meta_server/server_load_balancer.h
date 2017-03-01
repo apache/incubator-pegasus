@@ -78,7 +78,7 @@ public:
     //   node: the owner of the replica info
     //   info: the replica info on node
     // ret:
-    //   return true if the info should be kept on the node laterly. Or-else false.
+    //   return true if the replica is accepted as an useful replica. Or-else false.
     //   WARNING: if false is returned, the replica on node may be garbage-collected
     //
     virtual bool collect_replica(meta_view view, const dsn::rpc_address& node, const replica_info& info) = 0;

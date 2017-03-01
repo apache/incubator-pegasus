@@ -63,8 +63,12 @@ public:
     const meta_options& get_meta_options() const { return _meta_opts; }
     dist::meta_state_service* get_remote_storage() { return _storage.get(); }
     server_load_balancer* get_balancer() { return _balancer.get(); }
-    meta_function_level::type get_function_level() { return _function_level.load(); }
-    bool check_freeze() const;
+    meta_function_level::type get_function_level() {
+        meta_function_level::type level = _function_level.load();
+        if (level > meta_function_level::fl_freezed && check_freeze())
+            level = meta_function_level::fl_freezed;
+        return level;
+    }
 
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
     virtual void send_message(const rpc_address& target, dsn_message_t request) { dsn_rpc_call_one_way(target.c_addr(), request); }
@@ -111,6 +115,7 @@ private:
     //  -1. meta isn't primary, and rpc-msg can't forward to others
     int check_primary(dsn_message_t req);
     error_code remote_storage_initialize();
+    bool check_freeze() const;
 private:
     friend class replication_checker;
     friend class test::test_checker;
@@ -132,6 +137,7 @@ private:
     mutable zrwlock_nr _meta_lock;
 
     std::atomic_bool _started;
+    std::atomic_bool _recovering;
     //reference replication.thrift for what the meta_function_level means
     std::atomic<meta_function_level::type> _function_level;
 

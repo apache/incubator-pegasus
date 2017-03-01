@@ -6557,6 +6557,14 @@ void configuration_recovery_request::__set_recovery_set(const std::vector< ::dsn
   this->recovery_set = val;
 }
 
+void configuration_recovery_request::__set_skip_bad_nodes(const bool val) {
+  this->skip_bad_nodes = val;
+}
+
+void configuration_recovery_request::__set_skip_lost_partitions(const bool val) {
+  this->skip_lost_partitions = val;
+}
+
 uint32_t configuration_recovery_request::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -6598,6 +6606,22 @@ uint32_t configuration_recovery_request::read(::apache::thrift::protocol::TProto
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->skip_bad_nodes);
+          this->__isset.skip_bad_nodes = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->skip_lost_partitions);
+          this->__isset.skip_lost_partitions = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -6627,6 +6651,14 @@ uint32_t configuration_recovery_request::write(::apache::thrift::protocol::TProt
   }
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("skip_bad_nodes", ::apache::thrift::protocol::T_BOOL, 2);
+  xfer += oprot->writeBool(this->skip_bad_nodes);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("skip_lost_partitions", ::apache::thrift::protocol::T_BOOL, 3);
+  xfer += oprot->writeBool(this->skip_lost_partitions);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -6635,24 +6667,34 @@ uint32_t configuration_recovery_request::write(::apache::thrift::protocol::TProt
 void swap(configuration_recovery_request &a, configuration_recovery_request &b) {
   using ::std::swap;
   swap(a.recovery_set, b.recovery_set);
+  swap(a.skip_bad_nodes, b.skip_bad_nodes);
+  swap(a.skip_lost_partitions, b.skip_lost_partitions);
   swap(a.__isset, b.__isset);
 }
 
 configuration_recovery_request::configuration_recovery_request(const configuration_recovery_request& other278) {
   recovery_set = other278.recovery_set;
+  skip_bad_nodes = other278.skip_bad_nodes;
+  skip_lost_partitions = other278.skip_lost_partitions;
   __isset = other278.__isset;
 }
 configuration_recovery_request::configuration_recovery_request( configuration_recovery_request&& other279) {
   recovery_set = std::move(other279.recovery_set);
+  skip_bad_nodes = std::move(other279.skip_bad_nodes);
+  skip_lost_partitions = std::move(other279.skip_lost_partitions);
   __isset = std::move(other279.__isset);
 }
 configuration_recovery_request& configuration_recovery_request::operator=(const configuration_recovery_request& other280) {
   recovery_set = other280.recovery_set;
+  skip_bad_nodes = other280.skip_bad_nodes;
+  skip_lost_partitions = other280.skip_lost_partitions;
   __isset = other280.__isset;
   return *this;
 }
 configuration_recovery_request& configuration_recovery_request::operator=(configuration_recovery_request&& other281) {
   recovery_set = std::move(other281.recovery_set);
+  skip_bad_nodes = std::move(other281.skip_bad_nodes);
+  skip_lost_partitions = std::move(other281.skip_lost_partitions);
   __isset = std::move(other281.__isset);
   return *this;
 }
@@ -6660,6 +6702,8 @@ void configuration_recovery_request::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "configuration_recovery_request(";
   out << "recovery_set=" << to_string(recovery_set);
+  out << ", " << "skip_bad_nodes=" << to_string(skip_bad_nodes);
+  out << ", " << "skip_lost_partitions=" << to_string(skip_lost_partitions);
   out << ")";
 }
 
@@ -6670,6 +6714,10 @@ configuration_recovery_response::~configuration_recovery_response() throw() {
 
 void configuration_recovery_response::__set_err(const  ::dsn::error_code& val) {
   this->err = val;
+}
+
+void configuration_recovery_response::__set_hint_message(const std::string& val) {
+  this->hint_message = val;
 }
 
 uint32_t configuration_recovery_response::read(::apache::thrift::protocol::TProtocol* iprot) {
@@ -6701,6 +6749,14 @@ uint32_t configuration_recovery_response::read(::apache::thrift::protocol::TProt
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->hint_message);
+          this->__isset.hint_message = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -6722,6 +6778,10 @@ uint32_t configuration_recovery_response::write(::apache::thrift::protocol::TPro
   xfer += this->err.write(oprot);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("hint_message", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->hint_message);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -6730,24 +6790,29 @@ uint32_t configuration_recovery_response::write(::apache::thrift::protocol::TPro
 void swap(configuration_recovery_response &a, configuration_recovery_response &b) {
   using ::std::swap;
   swap(a.err, b.err);
+  swap(a.hint_message, b.hint_message);
   swap(a.__isset, b.__isset);
 }
 
 configuration_recovery_response::configuration_recovery_response(const configuration_recovery_response& other282) {
   err = other282.err;
+  hint_message = other282.hint_message;
   __isset = other282.__isset;
 }
 configuration_recovery_response::configuration_recovery_response( configuration_recovery_response&& other283) {
   err = std::move(other283.err);
+  hint_message = std::move(other283.hint_message);
   __isset = std::move(other283.__isset);
 }
 configuration_recovery_response& configuration_recovery_response::operator=(const configuration_recovery_response& other284) {
   err = other284.err;
+  hint_message = other284.hint_message;
   __isset = other284.__isset;
   return *this;
 }
 configuration_recovery_response& configuration_recovery_response::operator=(configuration_recovery_response&& other285) {
   err = std::move(other285.err);
+  hint_message = std::move(other285.hint_message);
   __isset = std::move(other285.__isset);
   return *this;
 }
@@ -6755,6 +6820,7 @@ void configuration_recovery_response::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "configuration_recovery_response(";
   out << "err=" << to_string(err);
+  out << ", " << "hint_message=" << to_string(hint_message);
   out << ")";
 }
 

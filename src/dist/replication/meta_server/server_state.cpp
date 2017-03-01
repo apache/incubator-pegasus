@@ -49,7 +49,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "meta.server.state"
+# define __TITLE__ "server.state"
 
 # include "dump_file.h"
 
@@ -426,6 +426,10 @@ error_code server_state::sync_apps_to_remote_storage()
             err.to_string());
         return err;
     }
+    else
+    {
+        ddebug("set %s to lock state in remote storage", _apps_root.c_str());
+    }
 
     err = ERR_OK;
     clientlet tracker(1);
@@ -478,9 +482,15 @@ error_code server_state::sync_apps_to_remote_storage()
     );
     t->wait();
     if (dsn::ERR_OK == err)
+    {
+        ddebug("set %s to unlock state in remote storage", _apps_root.c_str());
         return err;
-    derror("set %s in remote storage failed, reason(%s)", _apps_root.c_str(), err.to_string());
-    return err;
+    }
+    else
+    {
+        derror("set %s to unlock state in remote storage failed, reason(%s)", _apps_root.c_str(), err.to_string());
+        return err;
+    }
 }
 
 dsn::error_code server_state::sync_apps_from_remote_storage()
@@ -670,14 +680,21 @@ error_code server_state::initialize_data_structure()
         }
         else
         {
-            ddebug("can't find apps from remote storage, start to create default apps");
+            ddebug("can't find apps from remote storage, start to initialize default apps");
             err = initialize_default_apps();
         }
     }
     else if (err == ERR_OK)
     {
-        ddebug("sync apps from remote storage ok, get %d apps, init the node state accordingly", _all_apps.size());
-        initialize_node_state();
+        if (_meta_svc->get_meta_options().recover_from_replica_server)
+        {
+            dassert(false, "find apps from remote storage, but [meta_server].recover_from_replica_server = true");
+        }
+        else
+        {
+            ddebug("sync apps from remote storage ok, get %d apps, init the node state accordingly", _all_apps.size());
+            initialize_node_state();
+        }
     }
     return err;
 }
@@ -732,7 +749,7 @@ void server_state::on_config_sync(dsn_message_t msg)
 
     bool reject_this_request = false;
     response.__isset.gc_replicas = false;
-    ddebug("got config sync request from %s, stored_replicas_flag(%s)", request.node.to_string(), request.__isset.stored_replicas?"true":"false");
+    ddebug("got config sync request from %s, stored_replicas_count(%d)", request.node.to_string(), (int)request.stored_replicas.size());
 
     {
         zauto_read_lock l(_lock);
@@ -740,11 +757,14 @@ void server_state::on_config_sync(dsn_message_t msg)
         //sync the partitions to the replica server
         node_state* ns = get_node_state(_nodes, request.node, false);
         if (ns == nullptr)
+        {
+            dwarn("node(%s) not found in meta server", request.node.to_string());
             response.err = ERR_OBJECT_NOT_FOUND;
+        }
         else
         {
             response.err = ERR_OK;
-            unsigned int i=0;
+            unsigned int i = 0;
             response.partitions.resize(ns->partition_count());
             ns->for_each_partition(
                 [&, this](const gpid& pid)
@@ -779,6 +799,7 @@ void server_state::on_config_sync(dsn_message_t msg)
         if (!reject_this_request && request.__isset.stored_replicas)
         {
             std::vector<replica_info>& replicas = request.stored_replicas;
+            meta_function_level::type level = _meta_svc->get_function_level();
             // if the node serve the replica on the meta server, then we ignore it
             // if the dropped servers on the meta servers are enough, we need to gc it
             // there are not enough dropped servers, we need to add it to dropped
@@ -788,21 +809,34 @@ void server_state::on_config_sync(dsn_message_t msg)
             {
                 dinfo("receive stored replica from %s, pid(%d.%d)", request.node.to_string(), rep.pid.get_app_id(), rep.pid.get_partition_index());
                 std::shared_ptr<app_state> app = get_app(rep.pid.get_app_id());
-                if (app == nullptr || app->partition_count <= rep.pid.get_partition_index())
+                if (app == nullptr || rep.pid.get_partition_index() >= app->partition_count)
                 {
-                    response.gc_replicas.push_back(rep);
-                    dwarn("gpid(%d.%d) not exist on meta server, notify the replica server to remove it",
-                          rep.pid.get_app_id(),
-                          rep.pid.get_partition_index());
+                    // app is not recognized or partition is not recognized
+                    dassert(false, "gpid(%d.%d) on node(%s) is not exist on meta server, administrator should check consistency of meta data",
+                        rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string());
                 }
                 else if (app->status == app_status::AS_DROPPED)
                 {
-                    if (has_seconds_expired(app->expire_second))
+                    if (app->expire_second == 0)
                     {
-                        response.gc_replicas.push_back(rep);
-                        dwarn("notify rs(%s) to gc replica(%d.%d) coz the app is dropped and expired",
-                            request.node.to_string(),
-                            rep.pid.get_app_id(), rep.pid.get_partition_index());
+                        dwarn("gpid(%d.%d) on node(%s) is of dropped table, but expire second is not specified, do not delete it for safety reason",
+                            rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string());
+                    }
+                    else if (has_seconds_expired(app->expire_second))
+                    {
+                        // can delete replica only when expire second is explicitely specified and expired.
+                        if (level <= meta_function_level::fl_steady)
+                        {
+                            dwarn("gpid(%d.%d) on node(%s) is of dropped and expired table, but current function level is %s, do not delete it for safety reason",
+                                rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string(),
+                                _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+                        }
+                        else
+                        {
+                            response.gc_replicas.push_back(rep);
+                            dwarn("notify node(%s) to gc replica(%d.%d) coz the app is dropped and expired",
+                                request.node.to_string(), rep.pid.get_app_id(), rep.pid.get_partition_index());
+                        }
                     }
                 }
                 else if (app->status == app_status::AS_AVAILABLE)
@@ -810,10 +844,17 @@ void server_state::on_config_sync(dsn_message_t msg)
                     bool is_useful_replica = _meta_svc->get_balancer()->collect_replica({&_all_apps, &_nodes}, request.node, rep);
                     if (!is_useful_replica)
                     {
-                        response.gc_replicas.push_back(rep);
-                        dwarn("notify rs(%s) to gc replica(%d.%d) coz it is useless",
-                            request.node.to_string(),
-                            rep.pid.get_app_id(), rep.pid.get_partition_index());
+                        if (level <= meta_function_level::fl_steady)
+                        {
+                            dwarn("gpid(%d.%d) on node(%s) is useless, but current function level is %s, do not delete it for safety reason",
+                                rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string(),
+                                _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+                        }
+                        else {
+                            response.gc_replicas.push_back(rep);
+                            dwarn("notify node(%s) to gc replica(%d.%d) coz it is useless",
+                                request.node.to_string(), rep.pid.get_app_id(), rep.pid.get_partition_index());
+                        }
                     }
                 }
             }
@@ -830,6 +871,9 @@ void server_state::on_config_sync(dsn_message_t msg)
         response.err = ERR_BUSY;
         response.partitions.clear();
     }
+    ddebug("send config sync response to %s, err(%s), partitions_count(%d), gc_replicas_count(%d)",
+        request.node.to_string(), response.err.to_string(),
+        (int)response.partitions.size(), (int)response.gc_replicas.size());
     reply_message(_meta_svc, msg, response);
     dsn_msg_release_ref(msg);
 }
@@ -962,7 +1006,9 @@ void server_state::create_app(dsn_message_t msg)
     bool will_create_app = false;
     dsn::unmarshall(msg ,request);
     
-    ddebug("create app request, name(%s), type(%s)", request.app_name.c_str(), request.options.app_type.c_str());
+    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d)",
+           request.app_name.c_str(), request.options.app_type.c_str(),
+           request.options.partition_count, request.options.replica_count);
 
     auto option_match_check = [](const create_app_options& opt, const app_state& exist_app)
     {
@@ -1385,9 +1431,7 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
     //we assume config in config_request stores the proper new config
     //as we sync to remote storage according to it
     old_cfg = config_request->config;
-    std::stringstream cf;
-    cf << *config_request;
-    ddebug("meta update config ok: %s", cf.str().c_str());
+    ddebug("meta update config ok: %s", boost::lexical_cast<std::string>(*config_request).c_str());
 
 #ifndef NDEBUG
     check_consistency(gpid);
@@ -1842,12 +1886,16 @@ void server_state::on_propose_balancer(const configuration_balancer_request& req
     }
 }
 
-void server_state::construct_apps(const std::vector<query_app_info_response>& query_app_responses, const std::vector<dsn::rpc_address>& replica_nodes)
+error_code server_state::construct_apps(const std::vector<query_app_info_response>& query_app_responses,
+                                        const std::vector<dsn::rpc_address>& replica_nodes,
+                                        std::string& hint_message)
 {
-    int min_app_id = 1, max_app_id = 0;
-    for (unsigned int i=0; i<query_app_responses.size(); ++i)
+    int max_app_id = 0;
+    for (unsigned int i = 0; i < query_app_responses.size(); ++i)
     {
         query_app_info_response query_resp = query_app_responses[i];
+        if (query_resp.err != dsn::ERR_OK)
+            continue;
 
         for (const app_info& info: query_resp.apps)
         {
@@ -1856,41 +1904,38 @@ void server_state::construct_apps(const std::vector<query_app_info_response>& qu
             if (iter == _all_apps.end())
             {
                 std::shared_ptr<app_state> app = app_state::create(info);
-                std::stringstream ss;
-                ss << info;
-                ddebug("create app state according to info from (%s): %s",
-                    replica_nodes[i].to_string(),
-                    ss.str().c_str());
+                ddebug("create app info from (%s) for id(%d): %s",
+                       replica_nodes[i].to_string(), info.app_id,
+                       boost::lexical_cast<std::string>(info).c_str());
                 _all_apps.emplace(app->app_id, app);
                 max_app_id = std::max(app->app_id, max_app_id);
             }
             else
             {
-                std::shared_ptr<app_state>& app = iter->second;
+                app_info* old_info = iter->second.get();
                 // all info in all replica servers should be the same
                 // coz the app info is only initialized when the replica is
                 // created, and it will NEVER change even if the app is dropped/recalled...
-                if (info != *app) // app_info::operator !=
+                if (info != *old_info) // app_info::operator !=
                 {
-                    derror("conflict app info from (%s) for id(%d): new info (%s), old_info(%s)",
-                        replica_nodes[i].to_string(),
-                        info.app_id,
-                        boost::lexical_cast<std::string>(info).c_str(),
-                        boost::lexical_cast<std::string>( (dsn::app_info&)(*app) ).c_str() );
-                    dassert(false, "");
+                    dassert(false, "conflict app info from (%s) for id(%d): new_info(%s), old_info(%s)",
+                            replica_nodes[i].to_string(), info.app_id,
+                            boost::lexical_cast<std::string>(info).c_str(),
+                            boost::lexical_cast<std::string>(*old_info).c_str());
                 }
             }
         }
     }
 
     // create placeholder for dropped table
-    for (; min_app_id <= max_app_id; ++min_app_id)
+    for (int app_id = 1; app_id <= max_app_id; ++app_id)
     {
-        if (_all_apps.find(min_app_id) == _all_apps.end())
+        auto iter = _all_apps.find(app_id);
+        if (iter == _all_apps.end())
         {
             app_info dropped_holder;
-            dropped_holder.app_id = min_app_id;
-            dropped_holder.app_name = "__drop_holder__" + boost::lexical_cast<std::string>(min_app_id);
+            dropped_holder.app_id = app_id;
+            dropped_holder.app_name = "__drop_holder__" + boost::lexical_cast<std::string>(app_id);
             dropped_holder.app_type = "pegasus";
             dropped_holder.is_stateful = true;
             dropped_holder.max_replica_count = 3;
@@ -1898,73 +1943,136 @@ void server_state::construct_apps(const std::vector<query_app_info_response>& qu
             // we assume there is at least one partition
             dropped_holder.partition_count = 1;
             dropped_holder.status = app_status::AS_DROPPING;
-            dropped_holder.expire_second = dsn_now_ms()/1000;
+            dropped_holder.expire_second = dsn_now_ms() / 1000;
 
-            std::shared_ptr<app_state> app = app_state::create(dropped_holder);
-
-            _all_apps.emplace(min_app_id, app);
+            _all_apps.emplace(app_id, app_state::create(dropped_holder));
         }
         else
         {
-            std::shared_ptr<app_state> app = _all_apps[min_app_id];
-            app->status = (app_status::AS_AVAILABLE==app->status)?app_status::AS_CREATING:app_status::AS_DROPPING;
+            app_info* app_info = iter->second.get();
+            app_info->status = (app_status::AS_AVAILABLE == app_info->status) ?
+                        app_status::AS_CREATING : app_status::AS_DROPPING;
         }
     }
 
-    // conflict table name
+    // check conflict table name
     std::map<std::string, int32_t> checked_names;
-    for (int id=max_app_id; id>=1; --id)
+    for (int app_id = max_app_id; app_id >= 1; --app_id)
     {
-        dassert(_all_apps.find(id) != _all_apps.end(), "");
-        std::shared_ptr<app_state>& app = _all_apps[id];
+        dassert(_all_apps.find(app_id) != _all_apps.end(), "");
+        std::shared_ptr<app_state>& app = _all_apps[app_id];
         std::string old_name = app->app_name;
         while (checked_names.find(app->app_name) != checked_names.end())
         {
-            app->app_name = app->app_name + "-" + boost::lexical_cast<std::string>(id);
+            app->app_name = app->app_name + "-" + boost::lexical_cast<std::string>(app_id);
         }
         if (app->app_name != old_name)
         {
-            dwarn("app(%d)'s old name(%s) is conflict with others, rename it to (%s)", id, old_name.c_str(), app->app_name.c_str());
+            dwarn("app(%d)'s old name(%s) is conflict with others, rename it to (%s)", app_id, old_name.c_str(), app->app_name.c_str());
+            std::ostringstream oss;
+            oss << "WARNING: app(" << app_id << ")'s old name(" << old_name
+                << ") is conflict with others, rename it to (" << app->app_name << ")" << std::endl;
+            hint_message += oss.str();
         }
-        checked_names.emplace(app->app_name, id);
+        checked_names.emplace(app->app_name, app_id);
     }
+
+    ddebug("construct apps done, max_app_id = %d", max_app_id);
+
+    return dsn::ERR_OK;
 }
 
-void server_state::construct_partitions(const std::vector<query_replica_info_response>& query_replica_responses, const std::vector<dsn::rpc_address>& response_nodes)
+error_code server_state::construct_partitions(const std::vector<query_replica_info_response>& query_replica_responses,
+                                              const std::vector<dsn::rpc_address>& replica_nodes,
+                                              bool skip_lost_partitions, std::string& hint_message)
 {
-    for (unsigned int i=0; i!=query_replica_responses.size(); ++i)
+    for (unsigned int i = 0; i < query_replica_responses.size(); ++i)
     {
         query_replica_info_response query_resp = query_replica_responses[i];
-        dassert(query_resp.err == dsn::ERR_OK, "");
+        if (query_resp.err != dsn::ERR_OK)
+            continue;
 
         for (replica_info& r: query_resp.replicas)
         {
             dassert(_all_apps.find(r.pid.get_app_id()) != _all_apps.end(), "");
-            bool is_useful = _meta_svc->get_balancer()->collect_replica({&_all_apps, &_nodes}, response_nodes[i], r);
-            if (!is_useful)
+            bool is_accepted = _meta_svc->get_balancer()->collect_replica({&_all_apps, &_nodes}, replica_nodes[i], r);
+            if (is_accepted)
             {
-                std::stringstream ss;
-                ss << r;
-                dwarn("ignore %s from node (%s)", ss.str().c_str(), response_nodes[i].to_string());
+                ddebug("accept replica(%s) from node(%s)",
+                       boost::lexical_cast<std::string>(r).c_str(), replica_nodes[i].to_string());
             }
             else
             {
-                ddebug("use %s from node %s", boost::lexical_cast<std::string>(r).c_str(), response_nodes[i].to_string());
+                ddebug("ignore replica(%s) from node(%s)",
+                       boost::lexical_cast<std::string>(r).c_str(), replica_nodes[i].to_string());
             }
         }
     }
 
+    int succeed_count = 0;
+    int failed_count = 0;
     for (auto& app_kv: _all_apps)
     {
         std::shared_ptr<app_state>& app = app_kv.second;
-        for (partition_configuration& pc: app->partitions)
+        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING, "");
+        if (app->status == app_status::AS_DROPPING)
         {
-            _meta_svc->get_balancer()->construct_replica({&_all_apps, &_nodes}, pc.pid, app->max_replica_count);
+            ddebug("ignore constructing partitions for dropping app(%d)", app->app_id);
         }
+        else
+        {
+            for (partition_configuration& pc: app->partitions)
+            {
+                bool is_succeed = _meta_svc->get_balancer()->construct_replica({&_all_apps, &_nodes}, pc.pid, app->max_replica_count);
+                if (is_succeed)
+                {
+                    ddebug("construct partition(%d.%d) succeed: %s", app->app_id, pc.pid.get_partition_index(), boost::lexical_cast<std::string>(pc).c_str());
+                    if (pc.last_drops.size() + 1 < pc.max_replica_count)
+                    {
+                        std::ostringstream oss;
+                        oss << "WARNING: partition(" << app->app_id << "." << pc.pid.get_partition_index()
+                            << ") only collects " << (pc.last_drops.size() + 1) << "/" << pc.max_replica_count
+                            <<" of replicas, may lost data" << std::endl;
+                        hint_message += oss.str();
+                    }
+                    succeed_count++;
+                }
+                else
+                {
+                    dwarn("construct partition(%d.%d) failed", app->app_id, pc.pid.get_partition_index());
+                    std::ostringstream oss;
+                    if (skip_lost_partitions)
+                    {
+                        oss << "WARNING: partition(" << app->app_id << "." << pc.pid.get_partition_index()
+                            << ") has no replica collected, force recover the lost partition to empty" << std::endl;
+                    }
+                    else
+                    {
+                        oss << "ERROR: partition(" << app->app_id << "." << pc.pid.get_partition_index()
+                            << ") has no replica collected, you can force recover it by set skip_lost_partitions option" << std::endl;
+                    }
+                    hint_message += oss.str();
+                    failed_count++;
+                }
+            }
+        }
+    }
+
+    ddebug("construct partition done, succeed_count = %d, failed_count = %d, skip_lost_partitions = %s",
+           succeed_count, failed_count, (skip_lost_partitions ? "true" : "false"));
+
+    if (failed_count > 0 && !skip_lost_partitions)
+    {
+        return dsn::ERR_TRY_AGAIN;
+    }
+    else
+    {
+        return dsn::ERR_OK;
     }
 }
 
-dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address>& replica_nodes)
+dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address>& replica_nodes,
+                                                           bool skip_bad_nodes, bool skip_lost_partitions, std::string& hint_message)
 {
     int n_replicas = replica_nodes.size();
     std::vector<query_app_info_response> query_app_responses(n_replicas);
@@ -1975,6 +2083,8 @@ dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn
     clientlet tracker(1);
     for (int i=0; i<n_replicas; ++i)
     {
+        ddebug("send query app and replica request to node(%s)", replica_nodes[i].to_string());
+
         query_app_info_request app_query;
         app_query.meta_server = _meta_svc->primary_address();
 
@@ -1983,10 +2093,13 @@ dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn
             RPC_QUERY_APP_INFO,
             app_query,
             &tracker,
-            [this, i, &query_app_errors, &query_app_responses](dsn::error_code err, query_app_info_response&& resp) mutable
+            [this, i, &replica_nodes, &query_app_errors, &query_app_responses](dsn::error_code err, query_app_info_response&& resp) mutable
             {
+                ddebug("received query app response from node(%s), err(%s), apps_count(%d)",
+                       replica_nodes[i].to_string(), err.to_string(), (int)resp.apps.size());
                 query_app_errors[i] = err;
-                if (err == dsn::ERR_OK) {
+                if (err == dsn::ERR_OK)
+                {
                     query_app_responses[i] = std::move(resp);
                 }
             }
@@ -1999,10 +2112,13 @@ dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn
             RPC_QUERY_REPLICA_INFO,
             replica_query,
             &tracker,
-            [this, i, &query_replica_errors, &query_replica_responses](dsn::error_code err, query_replica_info_response&& resp) mutable
+            [this, i, &replica_nodes, &query_replica_errors, &query_replica_responses](dsn::error_code err, query_replica_info_response&& resp) mutable
             {
+                ddebug("received query replica response from node(%s), err(%s), replicas_count(%d)",
+                       replica_nodes[i].to_string(), err.to_string(), (int)resp.replicas.size());
                 query_replica_errors[i] = err;
-                if (err == dsn::ERR_OK) {
+                if (err == dsn::ERR_OK)
+                {
                     query_replica_responses[i] = std::move(resp);
                 }
             }
@@ -2010,40 +2126,92 @@ dsn::error_code server_state::sync_apps_from_replica_nodes(const std::vector<dsn
     }
 
     dsn_task_tracker_wait_all(tracker.tracker());
+    int failed_count = 0;
+    int succeed_count = 0;
     for (int i=0; i<n_replicas; ++i)
     {
+        error_code err = dsn::ERR_OK;
         if (query_app_errors[i] != dsn::ERR_OK)
         {
-            dwarn("query app info from %s failed, reason %s", replica_nodes[i].to_string(), query_app_errors[i].to_string());
-            return dsn::ERR_TRY_AGAIN;
+            dwarn("query app info from node(%s) failed, reason: %s", replica_nodes[i].to_string(), query_app_errors[i].to_string());
+            err = query_app_errors[i];
         }
         if (query_replica_errors[i] != dsn::ERR_OK)
         {
-            dwarn("query replica info from %s failed, reason %s", replica_nodes[i].to_string(), query_replica_errors[i].to_string());
-            return dsn::ERR_TRY_AGAIN;
+            dwarn("query replica info from node(%s) failed, reason: %s", replica_nodes[i].to_string(), query_replica_errors[i].to_string());
+            err = query_replica_errors[i];
+        }
+        if (err != dsn::ERR_OK)
+        {
+            failed_count++;
+            query_app_errors[i] = err;
+            query_replica_errors[i] = err;
+            std::ostringstream oss;
+            if (skip_bad_nodes)
+            {
+                oss << "WARNING: collect app and replica info from node(" << replica_nodes[i].to_string()
+                    << ") failed with err(" << err.to_string() << "), skip the bad node" << std::endl;
+            }
+            else
+            {
+                oss << "ERROR: collect app and replica info from node(" << replica_nodes[i].to_string()
+                    << ") failed with err(" << err.to_string() << "), you can skip it by set skip_bad_nodes option" << std::endl;
+            }
+            hint_message += oss.str();
+        }
+        else
+        {
+            succeed_count++;
         }
     }
 
+    ddebug("sync apps and replicas from replica nodes done, succeed_count = %d, failed_count = %d, skip_bad_nodes = %s",
+           succeed_count, failed_count, (skip_bad_nodes ? "true" : "false"));
+
+    if (failed_count > 0 && !skip_bad_nodes)
     {
-        zauto_write_lock l(_lock);
-        construct_apps(query_app_responses, replica_nodes);
-        construct_partitions(query_replica_responses, replica_nodes);
+        return dsn::ERR_TRY_AGAIN;
     }
+
+    zauto_write_lock l(_lock);
+
+    dsn::error_code err = construct_apps(query_app_responses, replica_nodes, hint_message);
+    if (err != dsn::ERR_OK)
+    {
+        derror("construct apps failed, err = %s", err.to_string());
+        return err;
+    }
+
+    err = construct_partitions(query_replica_responses, replica_nodes, skip_lost_partitions, hint_message);
+    if (err != dsn::ERR_OK)
+    {
+        derror("construct partitions failed, err = %s", err.to_string());
+        return err;
+    }
+
     return dsn::ERR_OK;
 }
 
 void server_state::on_start_recovery(const configuration_recovery_request& req, configuration_recovery_response& resp)
 {
-    resp.err = sync_apps_from_replica_nodes(req.recovery_set);
+    ddebug("start recovery, node_count = %d, skip_bad_nodes = %s, skip_lost_partitions = %s",
+           (int)req.recovery_set.size(), req.skip_bad_nodes ? "true" : "false", req.skip_lost_partitions ? "true" : "false");
+
+    resp.err = sync_apps_from_replica_nodes(req.recovery_set, req.skip_bad_nodes, req.skip_lost_partitions, resp.hint_message);
     if (resp.err != dsn::ERR_OK)
+    {
+        derror("sync apps from replica nodes failed when do recovery, err = %s", resp.err.to_string());
+        _all_apps.clear();
         return;
+    }
 
     resp.err = sync_apps_to_remote_storage();
     if (resp.err != dsn::ERR_OK)
     {
-        derror("sync apps to remote storage failed, need to manually clear things from remote storage and restart the service");
-        dassert(false, "");
+        dassert(false, "sync apps to remote storage failed when do recovery, err = %s, "
+                "need to manually clear things from remote storage and restart the service", resp.err.to_string());
     }
+
     initialize_node_state();
 }
 
@@ -2092,8 +2260,6 @@ bool server_state::check_all_partitions()
     int unhealthy_partitions = 0;
     int total_partitions = 0;
     meta_function_level::type level = _meta_svc->get_function_level();
-    if (level>meta_function_level::fl_freezed && _meta_svc->check_freeze())
-        level = meta_function_level::fl_freezed;
 
     zauto_write_lock l(_lock);
 

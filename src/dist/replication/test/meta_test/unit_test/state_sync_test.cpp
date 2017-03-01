@@ -346,8 +346,9 @@ void meta_service_test_app::construct_apps_test()
     std::shared_ptr<meta_service> svc(new meta_service());
 
     std::vector<dsn::rpc_address> nodes;
+    std::string hint_message;
     generate_node_list(nodes, 1, 1);
-    svc->_state->construct_apps({resp}, nodes);
+    svc->_state->construct_apps({resp}, nodes, hint_message);
 
     meta_view mv = svc->_state->get_meta_view();
     const app_mapper& mapper = *(mv.apps);

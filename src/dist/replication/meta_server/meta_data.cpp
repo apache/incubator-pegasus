@@ -210,9 +210,7 @@ app_state::app_state(const app_info &info): app_info(info), helpers(new app_stat
 
 std::shared_ptr<app_state> app_state::create(const app_info& info)
 {
-    std::shared_ptr<app_state> result = std::make_shared<app_state>(info);
-    result->helpers->owner = result.get();
-    return result;
+    return std::make_shared<app_state>(info);
 }
 
 node_state::node_state():

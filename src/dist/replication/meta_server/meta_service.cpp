@@ -54,12 +54,23 @@ namespace dsn { namespace replication {
 meta_service::meta_service():
     serverlet("meta_service"),
     _failure_detector(nullptr),
-    _started(false)
+    _started(false),
+    _recovering(false)
 {
     _opts.initialize();
     _meta_opts.initialize();
     _state.reset(new server_state());
     _function_level.store(_meta_opts.meta_function_level_on_start);
+    if (_meta_opts.recover_from_replica_server)
+    {
+        ddebug("enter recovery mode for [meta_server].recover_from_replica_server = true");
+        _recovering = true;
+        if (_meta_opts.meta_function_level_on_start > meta_function_level::fl_steady)
+        {
+            ddebug("meta server function level changed to fl_steady under recovery mode");
+            _function_level.store(meta_function_level::fl_steady);
+        }
+    }
 }
 
 meta_service::~meta_service()
@@ -110,6 +121,8 @@ error_code meta_service::remote_storage_initialize()
         }
     }
     _cluster_root = current.empty() ? "/" : current;
+
+    ddebug("init meta_state_service succeed, cluster_root = %s", _cluster_root.c_str());
     return ERR_OK;
 }
 
@@ -252,10 +265,11 @@ error_code meta_service::start()
     {
         if (err == ERR_OBJECT_NOT_FOUND && _meta_opts.recover_from_replica_server)
         {
-            ddebug("can't find apps from remote storage, administrator should recover this cluster manually later");
+            ddebug("can't find apps from remote storage, and [meta_server].recover_from_replica_server = true, "
+                   "administrator should recover this cluster manually later");
             return dsn::ERR_OK;
         }
-        derror("recover server state failed, err = %s, retry ...", err.to_string());
+        derror("initialize server state from remote storage failed, err = %s, retry ...", err.to_string());
     }
     _state->register_cli_commands();
 
@@ -372,7 +386,12 @@ int meta_service::check_primary(dsn_message_t req)
     int result = check_primary(dsn_msg);\
     if (result == 0) return;\
     if (result == -1 || !_started) {\
-        response_struct.err = (result==-1)?ERR_FORWARD_TO_OTHERS:ERR_SERVICE_NOT_ACTIVE;\
+        if (result == -1)\
+            response_struct.err = ERR_FORWARD_TO_OTHERS;\
+        else if (_recovering)\
+            response_struct.err = ERR_UNDER_RECOVERY;\
+        else\
+            response_struct.err = ERR_SERVICE_NOT_ACTIVE;\
         ddebug("reject request with %s", response_struct.err.to_string());\
         reply(dsn_msg, response_struct);\
         return;\
@@ -532,15 +551,16 @@ void meta_service::on_update_configuration(dsn_message_t req)
     std::shared_ptr<configuration_update_request> request = std::make_shared<configuration_update_request>();
     dsn::unmarshall(req, *request);
 
-    if (_function_level.load() <= meta_function_level::fl_freezed || check_freeze())
+    meta_function_level::type level = get_function_level();
+    if (level <= meta_function_level::fl_freezed)
     {
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
 
-        ddebug("refuse request %s coz meta function level is %s or node freezed",
+        ddebug("refuse request %s coz meta function level is %s",
             boost::lexical_cast<std::string>(*request).c_str(),
-            _meta_function_level_VALUES_TO_NAMES.find(_function_level.load())->second);
+            _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return;
     }
 
@@ -621,6 +641,7 @@ void meta_service::on_start_recovery(dsn_message_t req)
             _state->on_start_recovery(request, response);
             if (response.err == dsn::ERR_OK)
             {
+                _recovering = false;
                 start_service();
             }
         }

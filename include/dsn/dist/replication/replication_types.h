@@ -2885,8 +2885,10 @@ inline std::ostream& operator<<(std::ostream& out, const query_app_info_response
 }
 
 typedef struct _configuration_recovery_request__isset {
-  _configuration_recovery_request__isset() : recovery_set(false) {}
+  _configuration_recovery_request__isset() : recovery_set(false), skip_bad_nodes(false), skip_lost_partitions(false) {}
   bool recovery_set :1;
+  bool skip_bad_nodes :1;
+  bool skip_lost_partitions :1;
 } _configuration_recovery_request__isset;
 
 class configuration_recovery_request {
@@ -2896,19 +2898,29 @@ class configuration_recovery_request {
   configuration_recovery_request(configuration_recovery_request&&);
   configuration_recovery_request& operator=(const configuration_recovery_request&);
   configuration_recovery_request& operator=(configuration_recovery_request&&);
-  configuration_recovery_request() {
+  configuration_recovery_request() : skip_bad_nodes(0), skip_lost_partitions(0) {
   }
 
   virtual ~configuration_recovery_request() throw();
   std::vector< ::dsn::rpc_address>  recovery_set;
+  bool skip_bad_nodes;
+  bool skip_lost_partitions;
 
   _configuration_recovery_request__isset __isset;
 
   void __set_recovery_set(const std::vector< ::dsn::rpc_address> & val);
 
+  void __set_skip_bad_nodes(const bool val);
+
+  void __set_skip_lost_partitions(const bool val);
+
   bool operator == (const configuration_recovery_request & rhs) const
   {
     if (!(recovery_set == rhs.recovery_set))
+      return false;
+    if (!(skip_bad_nodes == rhs.skip_bad_nodes))
+      return false;
+    if (!(skip_lost_partitions == rhs.skip_lost_partitions))
       return false;
     return true;
   }
@@ -2933,8 +2945,9 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_recovery_
 }
 
 typedef struct _configuration_recovery_response__isset {
-  _configuration_recovery_response__isset() : err(false) {}
+  _configuration_recovery_response__isset() : err(false), hint_message(false) {}
   bool err :1;
+  bool hint_message :1;
 } _configuration_recovery_response__isset;
 
 class configuration_recovery_response {
@@ -2944,19 +2957,24 @@ class configuration_recovery_response {
   configuration_recovery_response(configuration_recovery_response&&);
   configuration_recovery_response& operator=(const configuration_recovery_response&);
   configuration_recovery_response& operator=(configuration_recovery_response&&);
-  configuration_recovery_response() {
+  configuration_recovery_response() : hint_message() {
   }
 
   virtual ~configuration_recovery_response() throw();
    ::dsn::error_code err;
+  std::string hint_message;
 
   _configuration_recovery_response__isset __isset;
 
   void __set_err(const  ::dsn::error_code& val);
 
+  void __set_hint_message(const std::string& val);
+
   bool operator == (const configuration_recovery_response & rhs) const
   {
     if (!(err == rhs.err))
+      return false;
+    if (!(hint_message == rhs.hint_message))
       return false;
     return true;
   }

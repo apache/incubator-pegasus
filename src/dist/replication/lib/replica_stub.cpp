@@ -629,17 +629,40 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, /*ou
 
 void replica_stub::on_query_replica_info(const query_replica_info_request& req, /*out*/ query_replica_info_response& resp)
 {
-    replicas rs;
+    std::set<gpid> visited_replicas;
     {
         zauto_lock l(_replicas_lock);
-        rs = _replicas;
-    }
-    for (auto it = rs.begin(); it != rs.end(); ++it)
-    {
-        replica_ptr r = it->second;
-        replica_info info;
-        get_replica_info(info, r);
-        resp.replicas.push_back(info);
+        for (auto it = _replicas.begin(); it != _replicas.end(); ++it)
+        {
+            replica_ptr r = it->second;
+            replica_info info;
+            get_replica_info(info, r);
+            if (visited_replicas.find(info.pid) == visited_replicas.end())
+            {
+                visited_replicas.insert(info.pid);
+                resp.replicas.push_back(std::move(info));
+            }
+        }
+        for (auto it = _closing_replicas.begin(); it != _closing_replicas.end(); ++it)
+        {
+            replica_ptr r = it->second.second;
+            replica_info info;
+            get_replica_info(info, r);
+            if (visited_replicas.find(info.pid) == visited_replicas.end())
+            {
+                visited_replicas.insert(info.pid);
+                resp.replicas.push_back(std::move(info));
+            }
+        }
+        for (auto it = _closed_replicas.begin(); it != _closed_replicas.end(); ++it)
+        {
+            const replica_info& info = it->second.second;
+            if (visited_replicas.find(info.pid) == visited_replicas.end())
+            {
+                visited_replicas.insert(info.pid);
+                resp.replicas.push_back(info);
+            }
+        }
     }
     resp.err = ERR_OK;
 }
@@ -655,6 +678,25 @@ void replica_stub::on_query_app_info(const query_app_info_request &req, query_ap
         {
             replica_ptr r = it->second;
             const app_info& info = *r->get_app_info();
+            if (visited_apps.find(info.app_id) == visited_apps.end())
+            {
+                resp.apps.push_back(info);
+                visited_apps.insert(info.app_id);
+            }
+        }
+        for (auto it = _closing_replicas.begin(); it != _closing_replicas.end(); ++it)
+        {
+            replica_ptr r = it->second.second;
+            const app_info& info = *r->get_app_info();
+            if (visited_apps.find(info.app_id) == visited_apps.end())
+            {
+                resp.apps.push_back(info);
+                visited_apps.insert(info.app_id);
+            }
+        }
+        for (auto it = _closed_replicas.begin(); it != _closed_replicas.end(); ++it)
+        {
+            const app_info& info = it->second.first;
             if (visited_apps.find(info.app_id) == visited_apps.end())
             {
                 resp.apps.push_back(info);
@@ -868,7 +910,7 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas, bool 
 
     for (auto& pairs: _closed_replicas)
     {
-        replicas.push_back(pairs.second);
+        replicas.push_back(pairs.second.second);
     }
 }
 
@@ -895,7 +937,7 @@ void replica_stub::query_configuration_by_node()
 
     ::dsn::marshall(msg, req);
 
-    ddebug("send query node partitions request to meta server");
+    ddebug("send query node partitions request to meta server, stored_replicas_count = %d", (int)req.stored_replicas.size());
 
     rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
@@ -948,8 +990,10 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         configuration_query_by_node_response resp;
         ::dsn::unmarshall(response, resp);
 
-        if (resp.err==ERR_BUSY)
+        if (resp.err == ERR_BUSY)
         {
+            int delay_ms = 500;
+            ddebug("resend query node partitions request after %d ms for resp.err = ERR_BUSY", delay_ms);
             _config_query_task = tasking::enqueue(
                 LPC_QUERY_CONFIGURATION_ALL, this,
                 [this]()
@@ -959,12 +1003,18 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
                     query_configuration_by_node();
                 },
                 0,
-                std::chrono::milliseconds(500)
+                std::chrono::milliseconds(delay_ms)
                 );
             return;
         }
         if (resp.err != ERR_OK)
+        {
+            ddebug("ignore query node partitions response for resp.err = %s", resp.err.to_string());
             return;
+        }
+
+        ddebug("process query node partitions response for resp.err = ERR_OK, partitions_count(%d), gc_replicas_count(%d)",
+               (int)resp.partitions.size(), (int)resp.gc_replicas.size());
         
         replicas rs = _replicas;
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
@@ -1195,7 +1245,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
         auto iter = _closed_replicas.find(pid);
         if (iter == _closed_replicas.end())
             return;
-        app_type = iter->second.app_type;
+        app_type = iter->second.second.app_type;
         _closed_replicas.erase(iter);
     }
 
@@ -1507,15 +1557,16 @@ void replica_stub::close_replica(replica_ptr r)
 {
     ddebug("%s: start to close replica", r->name());
 
-    replica_info info;
-    get_replica_info(info, r);
+    replica_info r_info;
+    get_replica_info(r_info, r);
+    app_info a_info = *(r->get_app_info());
     r->close();
 
     {
         _counter_replicas_closing_count.decrement();
         zauto_lock l(_replicas_lock);
         _closing_replicas.erase(r->get_gpid());
-        _closed_replicas.emplace(info.pid, std::move(info));
+        _closed_replicas.emplace(r_info.pid, std::make_pair(std::move(a_info), std::move(r_info)));
     }
 }
 
@@ -1525,6 +1576,7 @@ void replica_stub::add_replica(replica_ptr r)
     zauto_lock l(_replicas_lock);
     auto pr = _replicas.insert(replicas::value_type(r->get_gpid(), r));
     dassert(pr.second, "replica %s is already in the collection", r->name());
+    _closed_replicas.erase(r->get_gpid());
 }
 
 bool replica_stub::remove_replica(replica_ptr r)

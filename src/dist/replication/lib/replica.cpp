@@ -423,7 +423,8 @@ void replica::close()
 
     if (_app != nullptr)
     {
-        _app->close(false);
+        ::dsn::error_code err = _app->close(false);
+        err.end_tracking();
     }
 }
 
