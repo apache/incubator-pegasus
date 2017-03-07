@@ -52,45 +52,38 @@ namespace dsn {
         {
             if (_socket->is_open())
             {
-                try {
-                    boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
-                    _socket->get_option(option);
-                    int old = option.value();
-                    _socket->set_option(option2);
-                    _socket->get_option(option);
+                boost::system::error_code ec;
+                boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
+                _socket->get_option(option, ec);
+                if (ec) dwarn("asio socket get option failed, error = %s", ec.message().c_str());
+                int old = option.value();
+                _socket->set_option(option2, ec);
+                if (ec) dwarn("asio socket set option failed, error = %s", ec.message().c_str());
+                _socket->get_option(option, ec);
+                if (ec) dwarn("asio socket get option failed, error = %s", ec.message().c_str());
+                dinfo("boost asio send buffer size is %u, set as 16MB, now is %u", old, option.value());
 
-                    dinfo("boost asio send buffer size is %u, set as 16MB, now is %u",
-                            old, option.value());
+                boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
+                _socket->get_option(option3, ec);
+                if (ec) dwarn("asio socket get option failed, error = %s", ec.message().c_str());
+                old = option3.value();
+                _socket->set_option(option4, ec);
+                if (ec) dwarn("asio socket set option failed, error = %s", ec.message().c_str());
+                _socket->get_option(option3, ec);
+                if (ec) dwarn("asio socket get option failed, error = %s", ec.message().c_str());
+                dinfo("boost asio recv buffer size is %u, set as 16MB, now is %u", old, option.value());
 
-                    boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
-                    _socket->get_option(option3);
-                    old = option3.value();
-                    _socket->set_option(option4);
-                    _socket->get_option(option3);
-
-                    dinfo("boost asio recv buffer size is %u, set as 16MB, now is %u",
-                            old, option.value());
-
-                    // Nagle algorithm may cause an extra delay in some cases, because if
-                    // the data in a single write spans 2n packets, the last packet will be
-                    // withheld, waiting for the ACK for the previous packet. For more, please
-                    // refer to <https://en.wikipedia.org/wiki/Nagle's_algorithm>.
-                    //
-                    // Disabling the Nagle algorithm would cause these affacts:
-                    //   * decrease delay time (positive affact)
-                    //   * decrease the qps (negative affact)
-                    _socket->set_option(boost::asio::ip::tcp::no_delay(true));
-
-                    dinfo("boost asio set no_delay = true");
-                }
-                catch (std::exception& ex)
-                {
-                    dwarn("network session 0x%x:%hu set socket option failed, err = %s",
-                        remote_address().ip(),
-                        remote_address().port(),
-                        ex.what()
-                        );
-                }
+                // Nagle algorithm may cause an extra delay in some cases, because if
+                // the data in a single write spans 2n packets, the last packet will be
+                // withheld, waiting for the ACK for the previous packet. For more, please
+                // refer to <https://en.wikipedia.org/wiki/Nagle's_algorithm>.
+                //
+                // Disabling the Nagle algorithm would cause these affacts:
+                //   * decrease delay time (positive affact)
+                //   * decrease the qps (negative affact)
+                _socket->set_option(boost::asio::ip::tcp::no_delay(true), ec);
+                if (ec) dwarn("asio socket set option failed, error = %s", ec.message().c_str());
+                dinfo("boost asio set no_delay = true");
             }
         }
 
@@ -201,18 +194,11 @@ namespace dsn {
 
         void asio_rpc_session::safe_close()
         {
-            try {
-                _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
-                _socket->close();
-            }
-            catch (std::exception& /*ex*/)
-            {
-                /*dwarn("network session %s exits failed, err = %s",
-                remote_address().to_ip_string().c_str(),
-                static_cast<int>remote_address().port(),
-                ex.what()
-                );*/
-            }
+            boost::system::error_code ec;
+            _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
+            if (ec) dwarn("asio socket shutdown failed, error = %s", ec.message().c_str());
+            _socket->close(ec);
+            if (ec) dwarn("asio socket close failed, error = %s", ec.message().c_str());
         }
 
         void asio_rpc_session::connect()

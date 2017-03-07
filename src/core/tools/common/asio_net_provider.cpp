@@ -82,18 +82,33 @@ namespace dsn {
             if (!client_only)
             {
                 auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
-                ::boost::asio::ip::tcp::endpoint ep(v4_addr, _address.port());
-
-                try
+                ::boost::asio::ip::tcp::endpoint endpoint(v4_addr, _address.port());
+                boost::system::error_code ec;
+                _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service));
+                _acceptor->open(endpoint.protocol(), ec);
+                if (ec)
                 {
-                    _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service, ep, true));
-                    do_accept();
+                    derror("asio tcp acceptor open failed, error = %s", ec.message().c_str());
+                    _acceptor.reset();
+                    return ERR_NETWORK_INIT_FAILED;
                 }
-                catch (boost::system::system_error& err)
+                _acceptor->set_option(boost::asio::socket_base::reuse_address(true));
+                _acceptor->bind(endpoint, ec);
+                if (ec)
                 {
-                    derror("asio tcp listen on port %u failed, err: %s", port, err.what());
-                    return ERR_ADDRESS_ALREADY_USED;
+                    derror("asio tcp acceptor bind failed, error = %s", ec.message().c_str());
+                    _acceptor.reset();
+                    return ERR_NETWORK_INIT_FAILED;
                 }
+                int backlog = boost::asio::socket_base::max_connections;
+                _acceptor->listen(backlog, ec);
+                if (ec)
+                {
+                    derror("asio tcp acceptor listen failed, port = %u, error = %s", _address.port(), ec.message().c_str());
+                    _acceptor.reset();
+                    return ERR_NETWORK_INIT_FAILED;
+                }
+                do_accept();
             }            
 
             return ERR_OK;
@@ -285,30 +300,45 @@ namespace dsn {
                     _address.assign_ipv4(get_local_ipv4(), std::numeric_limits<uint16_t>::max() - 
                         dsn_random64(std::numeric_limits<uint64_t>::min(),
                                      std::numeric_limits<uint64_t>::max()) % 5000);
-                    ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
-                    try
+                    ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(), _address.port());
+                    boost::system::error_code ec;
+                    _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
+                    _socket->open(endpoint.protocol(), ec);
+                    if (ec)
                     {
-                        _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
-                        break;
+                        dwarn("asio udp socket open failed, error = %s", ec.message().c_str());
+                        _socket.reset();
+                        continue;
                     }
-                    catch (boost::system::system_error& err)
+                    _socket->bind(endpoint, ec);
+                    if (ec)
                     {
-                        ddebug("asio udp listen on port %u failed, err: %s", _address.port(), err.what());
+                        dwarn("asio udp socket bind failed, port = %u, error = %s", _address.port(), ec.message().c_str());
+                        _socket.reset();
+                        continue;
                     }
+                    break;
                 } while (true);
             }
             else
             {
                 _address.assign_ipv4(get_local_ipv4(), port);
-                ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
-                try
+                ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(), _address.port());
+                boost::system::error_code ec;
+                _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
+                _socket->open(endpoint.protocol(), ec);
+                if (ec)
                 {
-                    _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
+                    dwarn("asio udp socket open failed, error = %s", ec.message().c_str());
+                    _socket.reset();
+                    return ERR_NETWORK_INIT_FAILED;
                 }
-                catch (boost::system::system_error& err)
+                _socket->bind(endpoint, ec);
+                if (ec)
                 {
-                    derror("asio udp listen on port %u failed, err: %s", port, err.what());
-                    return ERR_ADDRESS_ALREADY_USED;
+                    dwarn("asio udp socket bind failed, port = %u, error = %s", _address.port(), ec.message().c_str());
+                    _socket.reset();
+                    return ERR_NETWORK_INIT_FAILED;
                 }
             }
 
