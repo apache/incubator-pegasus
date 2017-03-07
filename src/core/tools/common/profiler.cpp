@@ -148,7 +148,7 @@ namespace dsn {
 
             ptr = s_spec_profilers[this_->spec().code].ptr[TASK_THROUGHPUT];
             if (ptr != nullptr)
-                s_spec_profilers[this_->spec().code].ptr[TASK_THROUGHPUT]->increment();
+                ptr->increment();
         }
 
         static void profiler_on_task_cancelled(task* this_)

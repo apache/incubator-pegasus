@@ -87,7 +87,7 @@ namespace dsn
             return _counter.load();
         }
 
-    private:
+    protected:
         unsigned int _magic;
         std::atomic<long> _counter;   
 
