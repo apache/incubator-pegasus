@@ -770,8 +770,11 @@ extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 /*! get trace id of the message */
 extern DSN_API uint64_t      dsn_msg_trace_id(dsn_message_t msg);
 
-/*! get task code of the message */
+/*! get task code of the message, return TASK_CODE_INVALID if code name is not recognized */
 extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);
+
+/*! get rpc name of the message */
+extern DSN_API const char* dsn_msg_rpc_name(dsn_message_t msg);
 
 /*!
  get message write buffer

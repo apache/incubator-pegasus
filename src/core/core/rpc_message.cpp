@@ -149,6 +149,11 @@ DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->rpc_code();
 }
 
+DSN_API const char* dsn_msg_rpc_name(dsn_message_t msg)
+{
+    return ((::dsn::message_ex*)msg)->header->rpc_name;
+}
+
 DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
     dsn_msg_options_t *opts,

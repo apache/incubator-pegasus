@@ -489,7 +489,7 @@ namespace dsn {
             return nullptr;
     }
 
-    void rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
+    bool rpc_server_dispatcher::on_request_with_inline_execution(message_ex* msg, service_node* node)
     {
         rpc_handler_info* handler = nullptr;
 
@@ -517,10 +517,11 @@ namespace dsn {
         if (handler)
         {
             handler->c_handler(msg, handler->parameter);
+            return true;
         }
         else
         {
-            dassert(false, "msg not handled at all");
+            return false;
         }
     }
 
@@ -771,20 +772,32 @@ namespace dsn {
                     tsk->add_ref();
                     tsk->release_ref();
                 }
-                return;
+            }
+            else
+            {
+                derror(
+                    "recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
+                    msg->header->rpc_name,
+                    msg->header->from_address.to_string(),
+                    msg->header->trace_id
+                    );
+
+                dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
+                delete msg;
             }
         }
+        else
+        {
+            derror(
+                "recv message with unknown rpc name %s from %s, trace_id = %016" PRIx64,
+                msg->header->rpc_name,
+                msg->header->from_address.to_string(),
+                msg->header->trace_id
+                );
 
-        dwarn(
-            "recv message with unknown rpc name %s from %s, trace_id = %016" PRIx64,
-            msg->header->rpc_name,
-            msg->header->from_address.to_string(),
-            msg->header->trace_id
-            );
-
-        dassert(msg->get_count() == 0,
-            "request should not be referenced by anybody so far");
-        delete msg;
+            dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
+            delete msg;
+        }
     }
 
     void rpc_engine::call(message_ex* request, rpc_response_task* call)

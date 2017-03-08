@@ -96,22 +96,33 @@ DSN_API void dsn_hosted_app_commit_rpc_request(void* app_context, dsn_message_t 
 {
     auto app = (::dsn::app_manager::app_internal*)(app_context);
 
+    bool handled = false;
     if (exec_inline)
     {
-        app->server_dispatcher.on_request_with_inline_execution((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
+        handled = app->server_dispatcher.on_request_with_inline_execution((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
     }
     else
     {
         auto tsk = app->server_dispatcher.on_request((::dsn::message_ex*)(msg), ::dsn::task::get_current_node2());
         if (tsk)
-            tsk->enqueue();
-        else
         {
-            dassert(false, "to be handled");
+            tsk->enqueue();
+            handled = true;
         }
     }
-}
 
+    if (!handled)
+    {
+        derror(
+            "recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
+            dsn_msg_rpc_name(msg),
+            dsn_address_to_string(dsn_msg_from_address(msg)),
+            dsn_msg_trace_id(msg)
+            );
+
+        dsn_rpc_reply(dsn_msg_create_response(msg), ::dsn::ERR_HANDLER_NOT_FOUND);
+    }
+}
 
 namespace dsn 
 {

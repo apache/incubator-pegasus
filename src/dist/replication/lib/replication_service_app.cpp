@@ -90,15 +90,15 @@ error_code replication_service_app::stop(bool cleanup)
     return ERR_OK;
 }
 
-void replication_service_app::on_request(dsn_gpid dpid, bool is_write, dsn_message_t msg)
+void replication_service_app::on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg)
 {
     if (is_write)
     {
-        _stub->on_client_write(dpid, msg);
+        _stub->on_client_write(gpid, msg);
     }
     else
     {
-        _stub->on_client_read(dpid, msg);
+        _stub->on_client_read(gpid, msg);
     }
 }
 
