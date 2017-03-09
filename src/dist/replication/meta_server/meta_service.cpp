@@ -482,13 +482,16 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
     for (size_t i = 0; i < _opts.meta_servers.size(); ++i)
     {
         if (i != 0)
-            oss << ", ";
+            oss << ",";
         oss << _opts.meta_servers[i].to_string();
     }
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
     response.values.push_back(_failure_detector->get_primary().to_string());
-    response.keys.push_back("remote_storage_cluster_root");
+    std::string zk_hosts = dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
+    response.keys.push_back("zookeeper_hosts");
+    response.values.push_back(zk_hosts);
+    response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");
     response.values.push_back(_meta_function_level_VALUES_TO_NAMES.find(get_function_level())->second + 3);

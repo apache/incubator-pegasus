@@ -521,13 +521,18 @@ dsn::error_code replication_ddl_client::cluster_info(const std::string& file_nam
 
 dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
-    int32_t app_id;
-    int32_t partition_count;
+    int32_t app_id = 0;
+    int32_t partition_count = 0;
+    int32_t max_replica_count = 0;
     std::vector<partition_configuration> partitions;
     dsn::error_code err = list_app(app_name, app_id, partition_count, partitions);
     if(err != dsn::ERR_OK)
     {
         return err;
+    }
+    if (!partitions.empty())
+    {
+        max_replica_count = partitions[0].max_replica_count;
     }
 
     // print configuration_query_by_index_response
@@ -542,10 +547,11 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
     }
     std::ostream out(buf);
 
-    int width = strlen("partition_count");
+    int width = strlen("max_replica_count");
     out << std::setw(width) << std::left << "app_name" << " : " << app_name << std::endl;
     out << std::setw(width) << std::left << "app_id" << " : " << app_id << std::endl;
     out << std::setw(width) << std::left << "partition_count" << " : " << partition_count << std::endl;
+    out << std::setw(width) << std::left << "max_replica_count" << " : " << max_replica_count << std::endl;
     if(detailed)
     {
         std::map<rpc_address, std::pair<int, int> > node_stat;
@@ -558,7 +564,8 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             << std::endl;
         int total_prim_count = 0;
         int total_sec_count = 0;
-        int total_healthy_partition = 0;
+        int total_fully_healthy_partition = 0;
+        int total_partly_healthy_partition = 0;
         for(int i = 0; i < partitions.size(); i++)
         {
             const dsn::partition_configuration& p = partitions[i];
@@ -571,20 +578,23 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             }
             replica_count += p.secondaries.size();
             total_sec_count += p.secondaries.size();
-            if (replica_count == p.max_replica_count)
+            if (!p.primary.is_invalid())
             {
-                total_healthy_partition++;
+                if (replica_count >= p.max_replica_count)
+                    total_fully_healthy_partition++;
+                else if (replica_count >= 2)
+                    total_partly_healthy_partition++;
             }
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             out << std::setw(10) << std::left << p.pid.get_partition_index()
                 << std::setw(10) << std::left << p.ballot
                 << std::setw(20) << std::left << oss.str()
-                << std::setw(25) << std::left << p.primary.to_std_string()
-                << std::left<< p.secondaries.size() << ":[";
+                << std::setw(25) << std::left << (p.primary.is_invalid() ? "-" : p.primary.to_std_string())
+                << std::left << "[";
             for(int j = 0; j < p.secondaries.size(); j++)
             {
-                if(j!= 0)
+                if(j != 0)
                     out << ",";
                 out << p.secondaries[j].to_std_string();
                 node_stat[p.secondaries[j]].second++;
@@ -611,9 +621,10 @@ dsn::error_code replication_ddl_client::list_app(const std::string& app_name, bo
             << std::setw(10) << std::left << total_prim_count + total_sec_count
             << std::endl;
         out << std::endl;
-        width = strlen("unhealthy_partition_count");
-        out << std::setw(width) << std::left << "healthy_partition_count" << " : " << total_healthy_partition << std::endl;
-        out << std::setw(width) << std::left << "unhealthy_partition_count" << " : " << partition_count - total_healthy_partition << std::endl;
+        width = strlen("partly_healthy_partition_count");
+        out << std::setw(width) << std::left << "fully_healthy_partition_count" << " : " << total_fully_healthy_partition << std::endl;
+        out << std::setw(width) << std::left << "partly_healthy_partition_count" << " : " << total_partly_healthy_partition << std::endl;
+        out << std::setw(width) << std::left << "unhealthy_partition_count" << " : " << (partition_count - total_fully_healthy_partition - total_partly_healthy_partition) << std::endl;
     }
     out << std::endl;
     return dsn::ERR_OK;
