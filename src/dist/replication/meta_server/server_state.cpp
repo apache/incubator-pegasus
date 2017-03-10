@@ -1431,7 +1431,15 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
     //we assume config in config_request stores the proper new config
     //as we sync to remote storage according to it
     old_cfg = config_request->config;
-    ddebug("meta update config ok: %s", boost::lexical_cast<std::string>(*config_request).c_str());
+    auto find_name = _config_type_VALUES_TO_NAMES.find(config_request->type);
+    if (find_name != _config_type_VALUES_TO_NAMES.end())
+    {
+        ddebug("meta update config ok: type(%s), %s", find_name->second, boost::lexical_cast<std::string>(*config_request).c_str());
+    }
+    else
+    {
+        ddebug("meta update config ok: type(%d), %s", config_request->type, boost::lexical_cast<std::string>(*config_request).c_str());
+    }
 
 #ifndef NDEBUG
     check_consistency(gpid);

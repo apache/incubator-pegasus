@@ -124,6 +124,7 @@ void meta_server_failure_detector::acquire_leader_lock()
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this, &err, &local_owner_id](error_code ec, const std::string& owner, uint64_t version)
             {
+                ddebug("leader lock granted callback: err(%s), owner(%s), version(%llu)", ec.to_string(), owner.c_str(), version);
                 err = ec;
                 local_owner_id = owner;
             },
@@ -132,6 +133,7 @@ void meta_server_failure_detector::acquire_leader_lock()
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this](error_code ec, const std::string& owner, uint64_t version)
             {
+                derror("leader lock expired callback: err(%s), owner(%s), version(%llu)", ec.to_string(), owner.c_str(), version);
                 // let's take the easy way right now
                 dsn_exit(0);
             },

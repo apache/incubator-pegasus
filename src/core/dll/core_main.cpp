@@ -134,14 +134,15 @@ DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create creat
 # include <dsn/git_commit.h>
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
-#ifndef DSN_BUILD_TYPE
-#define BUILD_TYPE ""
-#else
-#define BUILD_TYPE STR(DSN_BUILD_TYPE)
-#endif
-static char const rcsid[] = "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ") " BUILD_TYPE
-    ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
-    ", built at " __DATE__ " " __TIME__ " $";
+static char const rcsid[] = "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
+# if defined(DSN_BUILD_TYPE)
+        " " STR(DSN_BUILD_TYPE)
+# endif
+        ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
+# if defined(DSN_BUILD_HOSTNAME)
+        ", built on " STR(DSN_BUILD_HOSTNAME)
+# endif
+        ", built at " __DATE__ " " __TIME__ " $";
 const char* dsn_rcsid()
 {
     return rcsid;
