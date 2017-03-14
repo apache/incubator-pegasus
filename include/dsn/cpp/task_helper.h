@@ -277,7 +277,7 @@ namespace dsn
             int delay_milliseconds = 0
             )
         {
-            _bound_handler = binder(_handler);
+            _bound_handler = _handler ? binder(_handler) : nullptr;
             _handler = nullptr;
             dsn_task_call(native_handle(), delay_milliseconds);
         }
@@ -291,8 +291,11 @@ namespace dsn
         static void exec(void* task)
         {
             auto t = (safe_late_task<THandler>*)task;
-            t->_bound_handler();
-            t->_bound_handler = nullptr;
+            if (t->_bound_handler)
+            {
+                t->_bound_handler();
+                t->_bound_handler = nullptr;
+            }
             t->release_ref(); // added upon callback exec registration
         }
 
