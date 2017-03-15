@@ -198,7 +198,7 @@ public:
     // not configurable [
     dsn_task_code_t        code;
     dsn_task_type_t        type;
-    std::string            name;    
+    std::string            name;
     dsn_task_code_t        rpc_paired_code;
     shared_exp_delay       rpc_request_delayer;
     // ]

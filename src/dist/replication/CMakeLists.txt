@@ -1,5 +1,6 @@
 add_subdirectory(client_lib)
 add_subdirectory(ddl_lib)
+add_subdirectory(tool_lib)
 add_subdirectory(meta_server)
 add_subdirectory(meta_server_lib)
 add_subdirectory(lib)
