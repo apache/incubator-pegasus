@@ -122,7 +122,7 @@ bool config_context::record_drop_history(const rpc_address &node)
     auto iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d) { return d.node==node; });
     if (iter != dropped.end())
         return false;
-    dropped.emplace_back( dropped_replica{node, dsn_now_ms()} );
+    dropped.emplace_back( dropped_replica{node, dsn_now_ms(), invalid_ballot, invalid_decree, invalid_decree} );
     check_size();
     prefered_dropped = dropped.size() - 1;
     return true;
@@ -130,23 +130,35 @@ bool config_context::record_drop_history(const rpc_address &node)
 
 int config_context::collect_drop_replica(const rpc_address &node, const replica_info &info)
 {
-    // TODO: adjust the position of node according to the info
+    bool in_dropped = false;
     auto iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d) { return d.node==node; });
     if (iter != dropped.end())
-        return 1;
+    {
+        in_dropped = true;
+        dropped.erase(iter);
+    }
 
     dropped_replica current = {node, dropped_replica::INVALID_TIMESTAMP, info.ballot, info.last_committed_decree, info.last_prepared_decree};
     auto cmp = [](const dropped_replica& d1, const dropped_replica& d2) {
         return dropped_cmp(d1, d2) < 0;
     };
     iter = std::lower_bound(dropped.begin(), dropped.end(), current, cmp);
-    if (iter == dropped.begin() && replica_count(*config_owner) + dropped.size() >= MAX_REPLICA_COUNT_IN_GRROUP)
-        return -1;
 
     dropped.emplace(iter, current);
     check_size();
     prefered_dropped = dropped.size() - 1;
-    return 0;
+
+    iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d){ return d.node == node; });
+    if (iter == dropped.end())
+    {
+        dassert(!in_dropped, "adjust position of existing node(%s) failed, this is a bug, partition(%d.%d)",
+            node.to_string(),
+            config_owner->pid.get_app_id(),
+            config_owner->pid.get_partition_index()
+        );
+        return -1;
+    }
+    return in_dropped ? 1 : 0;
 }
 
 bool config_context::check_order()

@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <boost/lexical_cast.hpp>
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -884,7 +885,12 @@ void replica::on_config_sync(const partition_configuration& config)
                 || config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 )
             {
+                ddebug("%s: downgrade myself as inactive is not transient, remote_config(%s)", name(), boost::lexical_cast<std::string>(config).c_str());
                 _stub->remove_replica_on_meta_server(_app_info, config);
+            }
+            else
+            {
+                ddebug("%s: state is non-transient inactive, waiting primary to remove me", name());
             }
         }
     }

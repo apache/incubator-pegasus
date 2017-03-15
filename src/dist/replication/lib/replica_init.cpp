@@ -367,6 +367,16 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
     auto offset = mu->data.header.log_offset;
+
+    // it's very import to keep the ballot.
+    // for example, the recovery need it to select a proper primary
+    if (mu->data.header.ballot > get_ballot())
+    {
+        _config.ballot = mu->data.header.ballot;
+        bool ret = update_local_configuration(_config, true);
+        dassert(ret, "");
+    }
+
     if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
         dinfo(
@@ -432,13 +442,6 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
             );
 
         return true;
-    }
-    
-    if (mu->data.header.ballot > get_ballot())
-    {
-        _config.ballot = mu->data.header.ballot;
-        bool ret = update_local_configuration(_config, true);
-        dassert(ret, "");
     }
 
     dinfo(

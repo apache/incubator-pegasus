@@ -313,6 +313,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dassert(lerr == ERR_OK, "restart log service must succeed");
     }
 
+    bool is_log_complete = true;
     for (auto it = rps.begin(); it != rps.end(); ++it)
     {
         it->second->sync_checkpoint();
@@ -360,10 +361,27 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
         if (err == ERR_OK)
         {
-            dassert(smax == pmax, "incomplete private log state");
-            // just leave inactive_state_transient as its old value
+            if (smax != pmax)
+            {
+                derror("%s: some shared log state must be lost, smax(%" PRId64 ") vs pmax(%" PRId64 ")", it->second->name(), smax, pmax);
+                is_log_complete = false;
+            }
+            else
+            {
+                // just leave inactive_state_transient as its old value
+            }
         }
         else
+        {
+            it->second->set_inactive_state_transient(false);
+        }
+    }
+
+    //we will mark all replicas inactive not transient unless all logs are complete
+    if (!is_log_complete)
+    {
+        derror("logs are not complete for some replicas, which means that shared log is truncated, mark all replicas as inactive");
+        for (auto it = rps.begin(); it != rps.end(); ++it)
         {
             it->second->set_inactive_state_transient(false);
         }
@@ -1467,6 +1485,7 @@ void replica_stub::on_gc()
 
             _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
+            _closed_replicas.erase(gpid);
             _replicas_lock.unlock();
             return task;
         }

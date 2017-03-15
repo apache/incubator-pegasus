@@ -1734,6 +1734,16 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
     response.err = ERR_IO_PENDING;
 
     dassert(app != nullptr, "");
+    auto iter = _config_type_VALUES_TO_NAMES.find(cfg_request->type);
+    if (iter == _config_type_VALUES_TO_NAMES.end())
+    {
+        ddebug("recv update configuration, type(%d), request(%s)", cfg_request->type, boost::lexical_cast<std::string>(*cfg_request).c_str());
+    }
+    else
+    {
+        ddebug("recv update configuration, type(%s), request(%s)", iter->second, boost::lexical_cast<std::string>(*cfg_request).c_str());
+    }
+
     if (app->is_stateful && is_partition_config_equal(pc, cfg_request->config))
     {
         ddebug("duplicated update request for gpid(%d.%d), ballot: %" PRId64 "", gpid.get_app_id(), gpid.get_partition_index(), pc.ballot);

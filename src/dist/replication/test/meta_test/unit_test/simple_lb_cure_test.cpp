@@ -5,6 +5,7 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication.h>
 
+#include "meta_data.h"
 #include "meta_service.h"
 #include "server_state.h"
 #include "meta_server_failure_detector.h"
@@ -119,6 +120,7 @@ void meta_service_test_app::simple_lb_cure_test()
     generate_node_list(nodes, 4, 4);
 
     dsn::partition_configuration& pc = app->partitions[0];
+    config_context& cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
 
 #define PROPOSAL_FLAG_CHECK \
     ASSERT_TRUE(proposal_sent);\
@@ -425,14 +427,19 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK( [&]{ return pc.primary==nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case7: recover from DDD state" << std::endl;
+    std::cerr << "Case7: recover from DDD state, some replicas don't in config_context::dropped" << std::endl;
     state->_nodes.clear();
     pc.primary.set_invalid();
     pc.secondaries.clear();
     pc.last_drops = {nodes[0], nodes[1], nodes[2]};
-    pc.ballot = 1;
+    pc.ballot = 4;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
+    cc.dropped =
+    {
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}
+    };
 
     svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
     {
@@ -450,6 +457,35 @@ void meta_service_test_app::simple_lb_cure_test()
         proposal_sent = true;
         return update_req;
     });
+
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK( [&]{ return pc.primary.is_invalid(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cerr << "Case8: recover from DDD state, all in dropped, ballot-decree info are not full" << std::endl;
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], 12234, -1, -1, -1},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}
+    };
+
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK( [&]{ return pc.primary.is_invalid(); } );
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cerr << "Case9: recover from DDD state, select primary from config_context::dropped" << std::endl;
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 4, 2, 2},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 2, 3},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
+    };
+
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;

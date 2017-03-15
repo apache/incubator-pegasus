@@ -353,7 +353,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
                 continue;
 
             newly_partitions* np = newly_partitions_ext::get_inited(ns);
-            if (action.node.is_invalid() || np->less_primaries( *get_newly_partitions(*(view.nodes), action.node), gpid.get_app_id()) )
+            if (action.node.is_invalid() || np->less_primaries( *get_newly_partitions(*(view.nodes), action.node), gpid.get_app_id()))
             {
                 action.node = ns->addr();
             }
@@ -407,23 +407,73 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
     else
     {
         action.node = *pc.last_drops.rbegin();
-        derror("%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+        derror("%d.%d enters DDD state, we are waiting for all replicas to come back, and select primary according to informations collected",
             pc.pid.get_app_id(),
-            pc.pid.get_partition_index(),
-            action.node.to_string()
+            pc.pid.get_partition_index()
             );
+        // when considering how to handle the DDD state, we must keep in mind that our shared-private/log data only write to OS-cache.
+        // so the last removed replica can't act as primary directly.
+        // We can only make choice by collecting all the messages of a group and have a comparision
+        bool ready_for_decision = true;
+        const config_context& cc = *get_config_context(*view.apps, gpid);
 
-        if (is_node_alive(*view.nodes, action.node))
+        // firstly check if all informations has been collected for node in last_drop
+        for (const dsn::rpc_address& node: pc.last_drops)
         {
+            if (ready_for_decision && !is_node_alive(*view.nodes, node))
+            {
+                dwarn("%s is not alive for %d.%d, don't make any decision", node.to_string(), pc.pid.get_app_id(), pc.pid.get_partition_index());
+                ready_for_decision = false;
+            }
+            if (ready_for_decision)
+            {
+                auto iter = std::find_if(cc.dropped.begin(), cc.dropped.end(), [&node](const dropped_replica& r) { return r.node == node; });
+                // A non-invalid time stamp means that the node hasn't report anything
+                if (iter == cc.dropped.end() || iter->time != dropped_replica::INVALID_TIMESTAMP)
+                {
+                    dwarn("haven't yet collected information from %s of %d.%d for reason %s, don't make any decision",
+                        node.to_string(), pc.pid.get_app_id(), pc.pid.get_partition_index(),
+                        iter == cc.dropped.end()?"not exist in dropped":"no replica state");
+                    ready_for_decision = false;
+                }
+            }
+        }
+
+        // then let's select a node with most information
+        if (ready_for_decision)
+        {
+            auto iter = cc.dropped.rbegin();
+            for (; iter != cc.dropped.rend(); ++iter)
+            {
+                if (std::find(pc.last_drops.begin(), pc.last_drops.end(), iter->node) != pc.last_drops.end())
+                {
+                    break;
+                }
+            }
+            dassert(iter != cc.dropped.rend(), "can't find from confing_context::dropped for node (%s)", iter->node.to_string());
+            const dropped_replica& r = *iter;
+            action.node = r.node;
+            action.target = r.node;
             action.type = config_type::CT_ASSIGN_PRIMARY;
-            action.target = action.node;
-            get_newly_partitions(*view.nodes, action.node)->newly_add_primary(gpid.get_app_id());
             // well, we will give a very large alive time for the primary to come back
             // as this is our only choice
             action.period_ts = 86400;
+            ddebug("select primary for DDD of %d.%d, node(%s), "
+               "ballot(%" PRId64 "), committed_decree(%" PRId64 "), prepared_decree(%" PRId64")",
+               gpid.get_app_id(),
+               gpid.get_partition_index(),
+               action.node.to_string(),
+               r.ballot,
+               r.last_committed_decree,
+               r.last_prepared_decree);
+
+            get_newly_partitions(*view.nodes, action.node)->newly_add_primary(gpid.get_app_id());
         }
         else
+        {
+            derror("we don't take any decision for %d.%d, administrator can assign a pirmary manually by shell", gpid.get_app_id(), gpid.get_partition_index());
             action.node.set_invalid();
+        }
         result = pc_status::dead;
     }
 

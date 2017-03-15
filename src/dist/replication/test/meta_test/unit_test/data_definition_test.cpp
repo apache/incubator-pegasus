@@ -95,6 +95,7 @@ void meta_service_test_app::data_definition_op_test()
     ASSERT_EQ(ec, dsn::ERR_OK);
 
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
+    svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));
     server_state* state = svc->_state.get();
 
     state->initialize(svc.get(), svc->_cluster_root + "/apps");
