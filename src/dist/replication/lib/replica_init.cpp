@@ -406,12 +406,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     // fix private log completeness when it is from shared
     if (!is_private && d > _private_log->max_commit_on_disk())
     {
-        _private_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            nullptr,
-            gpid_to_thread_hash(get_gpid())
-            );
+        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
     }
 
     if (d <= last_committed_decree())

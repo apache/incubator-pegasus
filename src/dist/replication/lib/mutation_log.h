@@ -73,7 +73,7 @@ struct log_block_header
     int32_t  magic; //0xdeadbeef
     int32_t  length; // block data length (not including log_block_header)
     int32_t  body_crc; // block data crc (not including log_block_header)
-    uint32_t local_offset; // start offset of the block in this log file
+    uint32_t local_offset; // start offset of the block (including log_block_header) in this log file
 };
 
 // each log file has a log_file_header stored at the beginning of the first block's data content
@@ -283,6 +283,9 @@ public:
 
 protected:
     // thread-safe
+    // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
+    // can switch file only when create_new_log_if_needed = true;
+    // return pair: the first is target file to write; the second is the global offset to start write
     std::pair<log_file_ptr, int64_t> mark_new_offset(size_t size, bool create_new_log_if_needed);
     // thread-safe
     int64_t get_global_offset() const { zauto_lock l(_lock); return _global_end_offset;  }
@@ -316,6 +319,7 @@ private:
     // returns ERR_OK if create succeed
     // Preconditions:
     // - _pending_write == nullptr (because we need create new pending buffer to write file header)
+    // - _lock.locked()
     error_code create_new_log_file();
 
 protected:

@@ -154,16 +154,14 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         dassert(mu->data.header.log_offset == invalid_offset, "");
         dassert(mu->log_task() == nullptr, "");
-
         mu->log_task() = _stub->_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
             std::bind(&replica::on_append_log_completed, this, mu,
                       std::placeholders::_1,
                       std::placeholders::_2),
-                      gpid_to_thread_hash(get_gpid())
+            gpid_to_thread_hash(get_gpid())
             );
-
         dassert(nullptr != mu->log_task(), "");
     }
 
@@ -351,6 +349,7 @@ void replica::on_prepare(dsn_message_t request)
         return;
     }
 
+    dassert(mu->data.header.log_offset == invalid_offset, "");
     dassert(mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
@@ -360,6 +359,7 @@ void replica::on_prepare(dsn_message_t request)
                   std::placeholders::_2),
         gpid_to_thread_hash(get_gpid())
         );
+    dassert(nullptr != mu->log_task(), "");
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
@@ -420,12 +420,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     // write local private log if necessary
     if (err == ERR_OK && status() != partition_status::PS_ERROR)
     {
-        _private_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            nullptr,
-            nullptr,
-            gpid_to_thread_hash(get_gpid())
-            );
+        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
     }
 }
 

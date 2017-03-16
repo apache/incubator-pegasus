@@ -615,12 +615,12 @@ void replica::on_learn_reply(
 
                 // write to shared log with no callback, the later 2pc ensures that logs
                 // are written to the disk
-                _stub->_log->append(mu, LPC_WRITE_REPLICATION_LOG, this, nullptr);
+                _stub->_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
 
                 // because shared log are written without callback, need to manully
                 // set flag and write mutations to private log
                 mu->set_logged();
-                _private_log->append(mu, LPC_WRITE_REPLICATION_LOG, this, nullptr);                
+                _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
 
                 // then we prepare, it is possible that a committed mutation exists in learner's prepare log,
                 // but with DIFFERENT ballot. Reference https://github.com/imzhenyu/rDSN/issues/496

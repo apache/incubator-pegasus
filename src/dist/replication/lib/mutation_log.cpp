@@ -82,7 +82,6 @@ using namespace ::dsn::service;
 
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
-    //printf("%lld: %lld\n", d, mu->data.header.log_offset);
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
@@ -144,9 +143,9 @@ void mutation_log_shared::flush_internal(int max_count)
 }
 
 
-void mutation_log_shared::write_pending_mutations(bool release_lock)
+void mutation_log_shared::write_pending_mutations(bool release_lock_required)
 {
-    dassert(release_lock, "lock must be hold at this point");
+    dassert(release_lock_required, "lock must be hold at this point");
     dassert(!_is_writing.load(std::memory_order_relaxed), "");
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "");
@@ -156,10 +155,10 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     _is_writing.store(true, std::memory_order_release);
 
     // move or reset pending variables
-    auto blk = std::move(_pending_write);
-    auto pwu = std::move(_pending_write_callbacks);
-    auto pmu = std::move(_pending_write_mutations);
-    auto soffset = _pending_write_start_offset;
+    std::shared_ptr<log_block> blk = std::move(_pending_write);
+    std::shared_ptr<callbacks> pwu = std::move(_pending_write_callbacks);
+    std::shared_ptr<mutations> pmu = std::move(_pending_write_mutations);
+    int64_t start_offset = _pending_write_start_offset;
     _pending_write_start_offset = 0;
 
     // seperate commit_log_block from within the lock
@@ -167,15 +166,15 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
 
     pr.first->commit_log_block(
         *blk,
-        soffset,
-        LPC_WRITE_REPLICATION_LOG_SHARED,
+        start_offset,
+        LPC_WRITE_REPLICATION_LOG_COMMON,
         this,
         [this,
         lf = pr.first,
         block = blk,
         callbacks = std::move(pwu),
         mutations = std::move(pmu)
-        ](error_code err, size_t sz) mutable
+        ] (error_code err, size_t sz) mutable
         {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
@@ -190,7 +189,12 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
                     block->size()
                 );
 
-                dassert(hdr->length + sizeof(log_block_header) == sz, "");
+                dassert(sz == sizeof(log_block_header) + hdr->length,
+                    "log write size must equal to (header size + data size): %d vs (%d + %d)",
+                    (int)sz,
+                    (int)sizeof(log_block_header),
+                    hdr->length
+                );
 
                 if (_force_flush)
                 {
@@ -200,6 +204,10 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
                     lf->flush();
                 }
             }
+            else
+            {
+                derror("write shared log failed, err = %s", err.to_string());
+            }
 
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
@@ -207,12 +215,13 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
             _is_writing.store(false, std::memory_order_relaxed);
 
             // notify the callbacks
+            // ATTENTION: callback may be called before this code block executed done.
             for (auto& c : *callbacks)
             {
                 c->enqueue_aio(err, sz);
             }
 
-            // start to write if possible
+            // start to write next if possible
             if (err == ERR_OK)
             {
                 _slock.lock();
@@ -257,7 +266,6 @@ void mutation_log_shared::write_pending_mutations(bool release_lock)
     
     // write mutation to pending buffer
     mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
-    //printf("%lld: %lld\n", d, mu->data.header.log_offset);
     mu->write_to([this](blob bb)
     {
         _pending_write->add(bb);
@@ -380,9 +388,9 @@ void mutation_log_private::init_states()
     _pending_write_max_decree = 0;
 }
 
-void mutation_log_private::write_pending_mutations(bool release_lock)
+void mutation_log_private::write_pending_mutations(bool release_lock_required)
 {
-    dassert(release_lock, "lock must be hold at this point");
+    dassert(release_lock_required, "lock must be hold at this point");
     dassert(!_is_writing.load(std::memory_order_relaxed), "");
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "");
@@ -394,12 +402,12 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
     update_max_decree(_private_gpid, _pending_write_max_decree);
 
     // move or reset pending variables
-    auto blk = std::move(_pending_write);
+    std::shared_ptr<log_block> blk = std::move(_pending_write);
     _issued_write_mutations = _pending_write_mutations;
-    auto pwu = std::move(_pending_write_mutations);
-    auto soffset = _pending_write_start_offset;
+    std::shared_ptr<mutations> pwu = std::move(_pending_write_mutations);
+    int64_t start_offset = _pending_write_start_offset;
     _pending_write_start_offset = 0;
-    auto max_commit = _pending_write_max_commit;
+    decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 
@@ -408,15 +416,15 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
 
     pr.first->commit_log_block(
         *blk,
-        soffset,
-        LPC_WRITE_REPLICATION_LOG_PRIVATE,
+        start_offset,
+        LPC_WRITE_REPLICATION_LOG_COMMON,
         this,
         [this, 
         lf = pr.first,
         block = blk,
-        max_commit,
-        mutations = std::move(pwu)
-        ](error_code err, size_t sz) mutable
+        mutations = std::move(pwu),
+        max_commit
+        ] (error_code err, size_t sz) mutable
         {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
@@ -431,7 +439,12 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                     block->size()
                     );
 
-                dassert(hdr->length + sizeof(log_block_header) == sz, "");
+                dassert(sz == sizeof(log_block_header) + hdr->length,
+                    "log write size must equal to (header size + data size): %d vs (%d + %d)",
+                    (int)sz,
+                    (int)sizeof(log_block_header),
+                    hdr->length
+                );
 
                 // flush to ensure that there is no gap between private log and in-memory buffer
                 // so that we can get all mutations in learning process.
@@ -442,6 +455,10 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
                 // update _private_max_commit_on_disk after writen into log file done
                 update_max_commit_on_disk(max_commit);
             }
+            else
+            {
+                derror("write private log failed, err = %s", err.to_string());
+            }
 
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
             // because the following callbacks may run before "block" released, which may cause
@@ -451,7 +468,6 @@ void mutation_log_private::write_pending_mutations(bool release_lock)
             // notify error when necessary
             if (err != ERR_OK)
             {
-                derror("write private replication log failed, err = %s", err.to_string());
                 if (_io_error_callback)
                 {
                     _io_error_callback(err);
@@ -810,30 +826,36 @@ error_code mutation_log::create_new_log_file()
         header_len = logf->write_file_header(temp_writer, _shared_log_info_map);
     }
 
-    auto blk = logf->prepare_log_block();
+    log_block* blk = logf->prepare_log_block();
     blk->add(temp_writer.get_buffer());
     _global_end_offset += blk->size();
 
-    logf->commit_log_block(*blk, _current_log_file->start_offset(), LPC_WRITE_REPLICATION_LOG, this,
-        [this, blk, logf](::dsn::error_code err, size_t sz) 
+    logf->commit_log_block(
+        *blk,
+        _current_log_file->start_offset(),
+        LPC_WRITE_REPLICATION_LOG_COMMON,
+        this,
+        [this, blk, logf] (::dsn::error_code err, size_t sz)
         {
-            delete blk; 
+            delete blk;
             if (ERR_OK != err)
             {
-                derror("write file header of %s failed, err = %s", 
-                    logf->path().c_str(), err.to_string());
-
-                if (this->_io_error_callback)
+                derror("write mutation log file header failed, file = %s, err = %s",
+                       logf->path().c_str(), err.to_string());
+                if (_io_error_callback)
                 {
                     _io_error_callback(err);
+                }
+                else
+                {
+                    dassert(false, "unhandled error");
                 }
             }
         },
         0
         );
     
-    dassert(_global_end_offset == _current_log_file->start_offset() + sizeof(log_block_header) + header_len, 
-        "");
+    dassert(_global_end_offset == _current_log_file->start_offset() + sizeof(log_block_header) + header_len, "");
     return ERR_OK;
 }
 
@@ -878,11 +900,15 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size, bool
             _switch_file_hint = false;
         }
     }
+    else
+    {
+        dassert(_current_log_file != nullptr, "");
+    }
 
-    int64_t offset = _global_end_offset;
+    int64_t write_start_offset = _global_end_offset;
     _global_end_offset += size;
 
-    return std::make_pair(_current_log_file, offset);
+    return std::make_pair(_current_log_file, write_start_offset);
 }
 
 /*static*/ error_code mutation_log::replay(
