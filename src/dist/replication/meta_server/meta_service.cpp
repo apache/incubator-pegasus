@@ -38,6 +38,8 @@
 
 #include <dsn/utility/factory_store.h>
 #include <dsn/dist/meta_state_service.h>
+#include <algorithm> // for std::remove_if
+#include <cctype> // for ::isspace
 
 #include "meta_service.h"
 #include "server_state.h"
@@ -489,6 +491,7 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
     response.keys.push_back("primary_meta_server");
     response.values.push_back(_failure_detector->get_primary().to_string());
     std::string zk_hosts = dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
+    zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
     response.keys.push_back("zookeeper_hosts");
     response.values.push_back(zk_hosts);
     response.keys.push_back("zookeeper_root");
