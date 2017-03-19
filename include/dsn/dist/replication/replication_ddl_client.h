@@ -51,7 +51,7 @@ public:
 
     dsn::error_code recall_app(int32_t app_id, const std::string& new_app_name);
 
-    dsn::error_code list_apps(const dsn::app_status::type status, const std::string& file_name);
+    dsn::error_code list_apps(const dsn::app_status::type status, bool show_all, bool detailed, const std::string& file_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status, std::vector< ::dsn::app_info>& apps);
 

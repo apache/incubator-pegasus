@@ -173,7 +173,7 @@ int main(int argc, char** argv)
             if(s == dsn::app_status::AS_INVALID)
                 usage(argv[0]);
         }
-        dsn::error_code err = client.list_apps(s, out_file);
+        dsn::error_code err = client.list_apps(s, true, false, out_file);
         if(err != dsn::ERR_OK)
             std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
     }

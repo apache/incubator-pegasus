@@ -252,7 +252,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, const std::string& file_name)
+dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status, bool show_all, bool detailed, const std::string& file_name)
 {
     std::vector< ::dsn::app_info> apps;
     auto r = list_apps(status, apps);
@@ -283,9 +283,14 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(20) << std::left << "settings"
         << std::setw(20) << std::left << "drop_expire_time"
         << std::endl;
+    int available_app_count = 0;
     for(int i = 0; i < apps.size(); i++)
     {
         dsn::app_info info = apps[i];
+        if (!show_all && info.status != app_status::AS_AVAILABLE)
+        {
+            continue;
+        }
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
         std::string settings = "{";
@@ -302,7 +307,11 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             settings = "{}";
         }
         std::string drop_expire_time = "-";
-        if (info.status == app_status::type::AS_DROPPED && info.expire_second > 0)
+        if (info.status == app_status::AS_AVAILABLE)
+        {
+            available_app_count++;
+        }
+        else if (info.status == app_status::AS_DROPPED && info.expire_second > 0)
         {
             char buf[20];
             dsn::utils::time_ms_to_date_time((uint64_t)info.expire_second * 1000, buf, 20);
@@ -320,6 +329,67 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             << std::endl;
     }
     out << std::endl << std::flush;
+
+    if (detailed && available_app_count > 0)
+    {
+        out << "[App Healthy Info]" << std::endl;
+        out << std::setw(10) << std::left << "app_id"
+            << std::setw(20) << std::left << "app_name"
+            << std::setw(20) << std::left << "partition_count"
+            << std::setw(20) << std::left << "fully_healthy_num"
+            << std::setw(20) << std::left << "partly_healthy_num"
+            << std::setw(20) << std::left << "unhealthy_num"
+            << std::setw(20) << std::left << "is_app_healthy"
+            << std::endl;
+        for (auto& info : apps)
+        {
+            if (info.status != app_status::AS_AVAILABLE)
+            {
+                continue;
+            }
+            int32_t app_id;
+            int32_t partition_count;
+            std::vector<partition_configuration> partitions;
+            r = list_app(info.app_name, app_id, partition_count, partitions);
+            if(r != dsn::ERR_OK)
+            {
+                derror("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
+                return r;
+            }
+            dassert(info.app_id == app_id, "");
+            dassert(info.partition_count == partition_count, "");
+            int fully_healthy = 0;
+            int partly_healthy = 0;
+            for(int i = 0; i < partitions.size(); i++)
+            {
+                const dsn::partition_configuration& p = partitions[i];
+                int replica_count = 0;
+                if (!p.primary.is_invalid())
+                {
+                    replica_count++;
+                }
+                replica_count += p.secondaries.size();
+                if (!p.primary.is_invalid())
+                {
+                    if (replica_count >= p.max_replica_count)
+                        fully_healthy++;
+                    else if (replica_count >= 2)
+                        partly_healthy++;
+                }
+            }
+            int unhealthy = info.partition_count - fully_healthy - partly_healthy;
+            out << std::setw(10) << std::left << info.app_id
+                << std::setw(20) << std::left << info.app_name
+                << std::setw(20) << std::left << info.partition_count
+                << std::setw(20) << std::left << fully_healthy
+                << std::setw(20) << std::left << partly_healthy
+                << std::setw(20) << std::left << unhealthy
+                << std::setw(20) << std::left << (unhealthy > 0 ? "false" :"true")
+                << std::endl;
+        }
+        out << std::endl << std::flush;
+    }
+
     return dsn::ERR_OK;
 }
 

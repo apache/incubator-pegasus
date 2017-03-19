@@ -349,7 +349,6 @@ void replica::on_prepare(dsn_message_t request)
         return;
     }
 
-    dassert(mu->data.header.log_offset == invalid_offset, "");
     dassert(mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
