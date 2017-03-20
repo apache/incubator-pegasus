@@ -409,13 +409,12 @@ void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address>& se
     ::dsn::utils::split_args(server_list.c_str(), lv, ',');
     for (auto& s : lv)
     {
-        // name:port
-        auto pos1 = s.find_first_of(':');
-        if (pos1 != std::string::npos)
+        ::dsn::rpc_address addr;
+        if (!addr.from_string_ipv4(s.c_str()))
         {
-            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
-            servers.push_back(ep);
+            dassert(false, "invalid address '%s' specified in config [%s].%s", s.c_str(), section, key);
         }
+        servers.push_back(addr);
     }
     dassert(servers.size() > 0, "no meta server specified in config [%s].%s", section, key);
 }

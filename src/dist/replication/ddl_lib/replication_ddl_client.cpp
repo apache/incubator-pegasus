@@ -40,16 +40,18 @@
 
 namespace dsn{ namespace replication{
 
-replication_ddl_client::replication_ddl_client(const dsn::rpc_address& meta_server)
-    : _meta_server(meta_server)
-{
-}
-
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers)
 {
-    _meta_server.assign_group(dsn_group_build("meta-server"));
+    _meta_server.assign_group(dsn_group_build("meta-servers"));
     for (auto& m : meta_servers)
+    {
         dsn_group_add(_meta_server.group_handle(), m.c_addr());
+    }
+}
+
+replication_ddl_client::~replication_ddl_client()
+{
+    dsn_group_destroy(_meta_server.group_handle());
 }
 
 dsn::error_code replication_ddl_client::wait_app_ready(const std::string& app_name, int partition_count, int max_replica_count)

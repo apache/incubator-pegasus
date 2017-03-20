@@ -523,11 +523,17 @@ extern DSN_API const char*   dsn_address_to_string(dsn_address_t addr);
 /*! build URI address from a string URL, must be destroyed later using \ref dsn_uri_destroy */
 extern DSN_API dsn_uri_t     dsn_uri_build(const char* url);
 
+/*! build URI address from another, must be destroyed later using \ref dsn_uri_destroy */
+extern DSN_API dsn_uri_t     dsn_uri_clone(dsn_uri_t uri);
+
 /*! destroy a URI address */
 extern DSN_API void          dsn_uri_destroy(dsn_uri_t uri);
 
 /*! build a group address with a name, must be destroyed later using \ref dsn_group_destroy */
 extern DSN_API dsn_group_t   dsn_group_build(const char* name);
+
+/*! clone a group address from another, must be destroyed later using \ref dsn_group_destroy */
+extern DSN_API dsn_group_t   dsn_group_clone(dsn_group_t g);
 
 /*! get the RPC address count contained in the group address */
 extern DSN_API int           dsn_group_count(dsn_group_t g);

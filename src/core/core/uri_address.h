@@ -56,6 +56,13 @@ namespace dsn
          */
         rpc_uri_address(const char* uri);
 
+        /**
+         * Copy constructor.
+         */
+        rpc_uri_address(const rpc_uri_address& other);
+
+        rpc_uri_address& operator=(const rpc_uri_address& other);
+
         ~rpc_uri_address();
         
         /**

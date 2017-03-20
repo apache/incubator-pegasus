@@ -55,6 +55,7 @@ namespace dsn
             : partition_resolver(meta_server, app_path),
             _app_id(-1), _app_partition_count(-1), _app_is_stateful(true)
         {
+            dassert(meta_server.type() != HOST_TYPE_URI, "can not use uri address here");
         }
 
         void partition_resolver_simple::resolve(
@@ -115,7 +116,6 @@ namespace dsn
         partition_resolver_simple::~partition_resolver_simple()
         {
             clear_all_pending_requests();
-            dsn_group_destroy(_meta_server.group_handle());
         }
 
         void partition_resolver_simple::clear_all_pending_requests()

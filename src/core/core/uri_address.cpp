@@ -90,7 +90,7 @@ namespace dsn
     {
         std::shared_ptr<uri_resolver> ret = nullptr;
         auto pr = uri->get_uri_components();
-        if (pr.second.length() == 0)
+        if (pr.first.length() == 0)
             return ret;
         
         {
@@ -132,19 +132,34 @@ namespace dsn
     rpc_uri_address::rpc_uri_address(const char * uri)
         : _uri(uri)
     {
-        _uri_address.assign_uri(this);
         auto r1 = task::get_current_rpc()->uri_resolver_mgr()->get(this);
         if (r1.get())
         {
             _resolver = r1->get_app_resolver(get_uri_components().second.c_str());
         }
+        _uri_address.assign_uri(this);
+    }
+
+    rpc_uri_address::rpc_uri_address(const rpc_uri_address& other)
+    {
+        _resolver = other._resolver;
+        _uri = other._uri;
+        _uri_address.assign_uri(this);
+    }
+
+    rpc_uri_address& rpc_uri_address::operator=(const rpc_uri_address& other)
+    {
+        _resolver = other._resolver;
+        _uri = other._uri;
+        _uri_address.assign_uri(this);
+        return *this;
     }
 
     rpc_uri_address::~rpc_uri_address()
     {
         _resolver = nullptr;
     }
-    
+
     std::pair<std::string, std::string> rpc_uri_address::get_uri_components()
     {
         auto it = _uri.find("://");
@@ -201,6 +216,8 @@ namespace dsn
         // create on demand
         if (rv == nullptr)
         {
+            // here we can pass _meta_server to partition_resolver without clone,
+            // because the lift time of uri_resolver covers that of partition_resolver.
             rv = utils::factory_store<dist::partition_resolver>::create(
                 _factory.c_str(), ::dsn::PROVIDER_TYPE_MAIN, _meta_server, app
                 );

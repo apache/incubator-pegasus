@@ -44,6 +44,7 @@
 # include <cstring> // for strcmp()
 # include <string>
 # include <cstdlib>
+# include <cstdint>
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
 # include <thrift/protocol/TProtocol.h>
@@ -77,6 +78,7 @@ namespace dsn
         rpc_address(dsn_address_t addr);
         rpc_address& operator=(dsn_address_t addr);
 
+        rpc_address clone() const;
         const char* to_string() const;
         std::string to_std_string() const;
         bool from_string_ipv4(const char* s);
@@ -238,6 +240,26 @@ namespace dsn
         _addr.u.value = 0;
     }
 
+    inline rpc_address rpc_address::clone() const
+    {
+        rpc_address addr;
+        switch (_addr.u.v4.type)
+        {
+        case HOST_TYPE_IPV4:
+            addr = this->c_addr();
+            break;
+        case HOST_TYPE_URI:
+            addr.assign_uri(dsn_uri_clone(this->uri_handle()));
+            break;
+        case HOST_TYPE_GROUP:
+            addr.assign_group(dsn_group_clone(this->group_handle()));
+            break;
+        default:
+            break;
+        }
+        return addr;
+    }
+
     inline const char* rpc_address::to_string() const
     {
         return dsn_address_to_string(_addr);
@@ -257,7 +279,13 @@ namespace dsn
         else
         {
             auto host = str.substr(0, pos);
-            auto port = atoi(str.substr(pos + 1).c_str());
+            auto port_str = str.substr(pos + 1);
+            char* p = nullptr;
+            long port = ::strtol(port_str.data(), &p, 10);
+            if (*p != 0) // bad string
+                return false;
+            if (port <= 0 || port > UINT16_MAX) // out of range
+                return false;
             assign_ipv4(host.c_str(), (uint16_t)port);
             return true;
         }

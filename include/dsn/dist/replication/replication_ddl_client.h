@@ -42,8 +42,8 @@ namespace dsn{ namespace replication{
 class replication_ddl_client : public clientlet
 {
 public:
-    replication_ddl_client(const dsn::rpc_address& meta_server);
     replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
+    virtual ~replication_ddl_client();
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count, const std::map<std::string, std::string>& envs, bool is_stateless);
 

@@ -243,8 +243,13 @@ DSN_API dsn_address_t dsn_address_build_uri(
 
 DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with release later
 {
-    auto g = new ::dsn::rpc_group_address(name);
-    return g;
+    return new ::dsn::rpc_group_address(name);
+}
+
+DSN_API dsn_group_t dsn_group_clone(dsn_group_t g) // must be paired with release later
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    return new ::dsn::rpc_group_address(*grp);
 }
 
 DSN_API int dsn_group_count(dsn_group_t g)
@@ -321,6 +326,12 @@ DSN_API void dsn_group_destroy(dsn_group_t g)
 DSN_API dsn_uri_t dsn_uri_build(const char* url) // must be paired with destroy later
 {
     return (dsn_uri_t)new ::dsn::rpc_uri_address(url);
+}
+
+DSN_API dsn_uri_t dsn_uri_clone(dsn_uri_t uri) // must be paired with destroy later
+{
+    auto u = (::dsn::rpc_uri_address*)(uri);
+    return (dsn_uri_t)new ::dsn::rpc_uri_address(*u);
 }
 
 DSN_API void dsn_uri_destroy(dsn_uri_t uri)

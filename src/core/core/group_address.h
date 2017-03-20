@@ -45,6 +45,8 @@ namespace dsn
     {
     public:
         rpc_group_address(const char* name);
+        rpc_group_address(const rpc_group_address& other);
+        rpc_group_address& operator=(const rpc_group_address& other);
         bool add(rpc_address addr);
         void set_leader(rpc_address addr);
         bool remove(rpc_address addr);
@@ -87,8 +89,29 @@ namespace dsn
         _group_address.assign_group(handle());
     }
 
+    inline rpc_group_address::rpc_group_address(const rpc_group_address& other)
+    {
+        _name = other._name;
+        _leader_index = other._leader_index;
+        _update_leader_automatically = other._update_leader_automatically;
+        _members = other._members;
+        _group_address.assign_group(handle());
+    }
+
+    inline rpc_group_address& rpc_group_address::operator=(const rpc_group_address& other)
+    {
+        _name = other._name;
+        _leader_index = other._leader_index;
+        _update_leader_automatically = other._update_leader_automatically;
+        _members = other._members;
+        _group_address.assign_group(handle());
+        return *this;
+    }
+
     inline bool rpc_group_address::add(rpc_address addr)
     {
+        dassert(addr.type() == HOST_TYPE_IPV4, "rpc group address member must be ipv4");
+
         alw_t l(_lock);
         if (_members.end() == std::find(_members.begin(), _members.end(), addr))
         {
@@ -96,7 +119,9 @@ namespace dsn
             return true;
         }
         else
+        {
             return false;
+        }
     }
 
     inline void rpc_group_address::leader_forward() 
@@ -115,6 +140,7 @@ namespace dsn
         }
         else
         {
+            dassert(addr.type() == HOST_TYPE_IPV4, "rpc group address member must be ipv4");
             for (int i = 0; i < (int)_members.size(); i++)
             {
                 if (_members[i] == addr)

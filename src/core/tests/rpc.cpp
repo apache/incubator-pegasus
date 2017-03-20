@@ -47,10 +47,12 @@
 
 typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
 
-static ::dsn::rpc_address build_group() {
+static ::dsn::rpc_address build_group()
+{
     ::dsn::rpc_address server_group;
     server_group.assign_group(dsn_group_build("server_group.test"));
-    for (uint16_t p = TEST_PORT_BEGIN; p<=TEST_PORT_END; ++p) {
+    for (uint16_t p = TEST_PORT_BEGIN; p<=TEST_PORT_END; ++p)
+    {
         dsn_group_add(server_group.group_handle(), ::dsn::rpc_address("localhost", p).c_addr());
     }
 
@@ -58,7 +60,8 @@ static ::dsn::rpc_address build_group() {
     return server_group;
 }
 
-static void destroy_group(::dsn::rpc_address group) {
+static void destroy_group(::dsn::rpc_address group)
+{
     dsn_group_destroy(group.group_handle());
 }
 

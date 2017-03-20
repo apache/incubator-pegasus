@@ -54,6 +54,10 @@ simple_kv_client_app::simple_kv_client_app(dsn_gpid gpid)
 simple_kv_client_app::~simple_kv_client_app()
 {
     stop();
+    if (_meta_server_group.group_handle())
+    {
+        dsn_group_destroy(_meta_server_group.group_handle());
+    }
 }
 
 ::dsn::error_code simple_kv_client_app::start(int argc, char** argv)
