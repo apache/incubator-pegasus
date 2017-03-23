@@ -161,8 +161,7 @@ TEST(core, rpc_group_address)
     rpc_group_address g("test_group");
     rpc_address addr("127.0.0.1", 8080);
     rpc_address invalid_addr;
-    rpc_address uri_addr;
-    uri_addr.assign_uri((dsn_uri_t)(uintptr_t)"http://localhost:8080/");
+    rpc_address addr2("127.0.0.1", 8081);
 
     ASSERT_EQ(std::string("test_group"), g.name());
     rpc_address t;
@@ -187,7 +186,7 @@ TEST(core, rpc_group_address)
     ASSERT_EQ(addr, g.random_member());
     ASSERT_EQ(addr, g.next(addr));
     ASSERT_EQ(addr, g.next(invalid_addr));
-    ASSERT_EQ(addr, g.next(uri_addr));
+    ASSERT_EQ(addr, g.next(addr2));
     ASSERT_EQ(invalid_addr, g.leader());
     ASSERT_EQ(addr, g.possible_leader());
 
@@ -199,47 +198,47 @@ TEST(core, rpc_group_address)
     ASSERT_EQ(addr, g.leader());
     ASSERT_EQ(addr, g.possible_leader());
 
-    // { addr, uri_addr* }
-    g.set_leader(uri_addr);
+    // { addr, addr2* }
+    g.set_leader(addr2);
     ASSERT_TRUE(g.contains(addr));
-    ASSERT_TRUE(g.contains(uri_addr));
+    ASSERT_TRUE(g.contains(addr2));
     ASSERT_EQ(2u, g.members().size());
     ASSERT_EQ(addr, g.members().at(0));
-    ASSERT_EQ(uri_addr, g.members().at(1));
-    ASSERT_EQ(uri_addr, g.leader());
-    ASSERT_EQ(uri_addr, g.possible_leader());
-    ASSERT_EQ(addr, g.next(uri_addr));
-    ASSERT_EQ(uri_addr, g.next(addr));
+    ASSERT_EQ(addr2, g.members().at(1));
+    ASSERT_EQ(addr2, g.leader());
+    ASSERT_EQ(addr2, g.possible_leader());
+    ASSERT_EQ(addr, g.next(addr2));
+    ASSERT_EQ(addr2, g.next(addr));
 
-    // { addr, uri_addr }
+    // { addr, addr2 }
     g.set_leader(invalid_addr);
     ASSERT_TRUE(g.contains(addr));
-    ASSERT_TRUE(g.contains(uri_addr));
+    ASSERT_TRUE(g.contains(addr2));
     ASSERT_EQ(2u, g.members().size());
     ASSERT_EQ(addr, g.members().at(0));
-    ASSERT_EQ(uri_addr, g.members().at(1));
+    ASSERT_EQ(addr2, g.members().at(1));
     ASSERT_EQ(invalid_addr, g.leader());
 
-    // { addr*, uri_addr }
+    // { addr*, addr2 }
     g.set_leader(addr);
     ASSERT_TRUE(g.contains(addr));
-    ASSERT_TRUE(g.contains(uri_addr));
+    ASSERT_TRUE(g.contains(addr2));
     ASSERT_EQ(2u, g.members().size());
     ASSERT_EQ(addr, g.members().at(0));
-    ASSERT_EQ(uri_addr, g.members().at(1));
+    ASSERT_EQ(addr2, g.members().at(1));
     ASSERT_EQ(addr, g.leader());
 
     // { uri_addr }
     ASSERT_TRUE(g.remove(addr));
     ASSERT_FALSE(g.contains(addr));
-    ASSERT_TRUE(g.contains(uri_addr));
+    ASSERT_TRUE(g.contains(addr2));
     ASSERT_EQ(1u, g.members().size());
-    ASSERT_EQ(uri_addr, g.members().at(0));
+    ASSERT_EQ(addr2, g.members().at(0));
     ASSERT_EQ(invalid_addr, g.leader());
 
     // { }
-    ASSERT_TRUE(g.remove(uri_addr));
-    ASSERT_FALSE(g.contains(uri_addr));
+    ASSERT_TRUE(g.remove(addr2));
+    ASSERT_FALSE(g.contains(addr2));
     ASSERT_EQ(0u, g.members().size());
     ASSERT_EQ(invalid_addr, g.leader());
 }
@@ -249,8 +248,7 @@ TEST(core, dsn_group)
     dsn_group_t g = dsn_group_build("test_group");
     rpc_address addr("127.0.0.1", 8080);
     rpc_address invalid_addr;
-    rpc_address uri_addr;
-    uri_addr.assign_uri((dsn_uri_t)(uintptr_t)"http://localhost:8080/");
+    rpc_address addr2("127.0.0.1", 8081);
 
     // { }
     ASSERT_EQ(invalid_addr.c_addr(), dsn_group_get_leader(g));
@@ -267,15 +265,15 @@ TEST(core, dsn_group)
     ASSERT_EQ(addr.c_addr(), dsn_group_get_leader(g));
     ASSERT_TRUE(dsn_group_is_leader(g, addr.c_addr()));
 
-    // { addr*, uri_addr }
-    ASSERT_TRUE(dsn_group_add(g, uri_addr.c_addr()));
-    ASSERT_EQ(uri_addr.c_addr(), dsn_group_next(g, addr.c_addr()));
-    ASSERT_EQ(addr.c_addr(), dsn_group_next(g, uri_addr.c_addr()));
+    // { addr*, addr2 }
+    ASSERT_TRUE(dsn_group_add(g, addr2.c_addr()));
+    ASSERT_EQ(addr2.c_addr(), dsn_group_next(g, addr.c_addr()));
+    ASSERT_EQ(addr.c_addr(), dsn_group_next(g, addr2.c_addr()));
 
-    // { uri_addr }
+    // { addr2 }
     ASSERT_TRUE(dsn_group_remove(g, addr.c_addr()));
     ASSERT_EQ(invalid_addr.c_addr(), dsn_group_get_leader(g));
-    ASSERT_EQ(uri_addr.c_addr(), dsn_group_next(g, addr.c_addr()));
+    ASSERT_EQ(addr2.c_addr(), dsn_group_next(g, addr.c_addr()));
 
     dsn_group_destroy(g);
 }

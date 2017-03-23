@@ -75,36 +75,27 @@ GTEST_API_ int main(int argc, char **argv)
         return g_test_ret;
     }
 
-    /*
-    // run out-rDSN tests in Main thread
-    dsn_mimic_app("client", 1);
-    std::cout << "=========================================================== " << std::endl;
-    std::cout << "================== run in Main thread ===================== " << std::endl;
-    std::cout << "=========================================================== " << std::endl;
-    exec_tests();
-    if (g_test_ret != 0)
+    if (strcmp("simulator", dsn_config_get_value_string("core", "tool", "simulator", "")) != 0)
     {
-        return g_test_ret;
+        // run out-rDSN tests in other threads
+        std::cout << "=========================================================== " << std::endl;
+        std::cout << "================== run in non-rDSN threads ================ " << std::endl;
+        std::cout << "=========================================================== " << std::endl;
+        std::thread t([]()
+        {
+            dsn_mimic_app("client", 1);
+            exec_tests();
+        });
+        t.join();
+        if (g_test_ret != 0)
+        {
+    #ifndef ENABLE_GCOV
+            dsn_exit(g_test_ret);
+    #endif
+            return g_test_ret;
+        }
     }
-    */
 
-    // run out-rDSN tests in other threads
-    std::cout << "=========================================================== " << std::endl;
-    std::cout << "================== run in non-rDSN threads ================ " << std::endl;
-    std::cout << "=========================================================== " << std::endl;
-    std::thread t([](){
-        dsn_mimic_app("client", 1);
-        exec_tests();
-    });
-    t.join();
-    if (g_test_ret != 0)
-    {
-#ifndef ENABLE_GCOV
-        dsn_exit(g_test_ret);
-#endif
-        return g_test_ret;
-    }
-    
     // exit without any destruction
 #ifndef ENABLE_GCOV
     dsn_exit(0);

@@ -1733,78 +1733,44 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
     configuration_update_response response;
     response.err = ERR_IO_PENDING;
 
-    dassert(app != nullptr, "");
-    auto iter = _config_type_VALUES_TO_NAMES.find(cfg_request->type);
-    if (iter == _config_type_VALUES_TO_NAMES.end())
-    {
-        ddebug("recv update configuration, type(%d), request(%s)", cfg_request->type, boost::lexical_cast<std::string>(*cfg_request).c_str());
-    }
-    else
-    {
-        ddebug("recv update configuration, type(%s), request(%s)", iter->second, boost::lexical_cast<std::string>(*cfg_request).c_str());
-    }
+    dassert(app != nullptr, "get get app for app id(%d)", gpid.get_app_id());
+    dassert(app->is_stateful, "don't support stateless apps currently, id(%d)", gpid.get_app_id());
+    ddebug("recv update configuration, request(%s)", boost::lexical_cast<std::string>(*cfg_request).c_str());
 
-    if (app->is_stateful && is_partition_config_equal(pc, cfg_request->config))
+    if (is_partition_config_equal(pc, cfg_request->config))
     {
         ddebug("duplicated update request for gpid(%d.%d), ballot: %" PRId64 "", gpid.get_app_id(), gpid.get_partition_index(), pc.ballot);
         response.err = ERR_OK;
-        response.config = cfg_request->config;
+        //
+        // NOTICE:
+        //    if a replica server resend a update-request,
+        //    the meta has update the last_drops, and we should reply with new last_drops
+        //
+        response.config = pc;
+    }
+    else if (pc.ballot+1 != cfg_request->config.ballot)
+    {
+        ddebug("update configuration for gpid(%d.%d) reject coz ballot not match, request ballot: %" PRId64 ", meta ballot: %" PRId64 "",
+               gpid.get_app_id(),
+               gpid.get_partition_index(),
+               cfg_request->config.ballot,
+               pc.ballot);
+        response.err = ERR_INVALID_VERSION;
+        response.config = pc;
     }
     else if (config_status::pending_remote_sync == cc.stage)
     {
-        std::stringstream ss;
-        ss << *cfg_request;
-        ddebug("another request is syncing with remote storage, ignore current request(%s)", ss.str().c_str());
+        ddebug("another request is syncing with remote storage, ignore current request, gpid(%d.%d), request ballot(%" PRId64 ")",
+            gpid.get_app_id(),
+            gpid.get_partition_index(),
+            cfg_request->config.ballot);
         //we don't reply the replica server, expect it to retry
         dsn_msg_release_ref(msg);
         return;
     }
-    else if (app->is_stateful)
-    {
-        if (pc.ballot+1 != cfg_request->config.ballot)
-        {
-            ddebug("update configuration for gpid(%d.%d) reject coz ballot not match, request ballot: %" PRId64 ", meta ballot: %" PRId64 "",
-                   gpid.get_app_id(), gpid.get_partition_index(), cfg_request->config.ballot, pc.ballot);
-            response.err = ERR_INVALID_VERSION;
-            response.config = pc;
-        }
-        else
-        {
-            maintain_drops(cfg_request->config.last_drops, cfg_request->node, cfg_request->type);
-        }
-    }
     else
     {
-        partition_configuration_stateless pcs(pc);
-        partition_configuration_stateless request_pcs(cfg_request->config);
-        if (cfg_request->config.ballot != pc.ballot)
-        {
-            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
-                cfg_request->node.to_string(), pc.pid.get_app_id(), pc.pid.get_partition_index(), cfg_request->config.ballot, pc.ballot);
-            response.err = ERR_INVALID_VERSION;
-            response.config = pc;
-        }
-        else
-        {
-            if (config_type::CT_REMOVE == cfg_request->type)
-            {
-                // removed already
-                if (!pcs.is_host(cfg_request->host_node) || !pcs.is_worker(cfg_request->node))
-                {
-                    response.err = ERR_OK;
-                    response.config = pc;
-                }
-            }
-            else
-            {
-                // added already
-                if (pcs.is_host(cfg_request->host_node))
-                {
-                    response.err = ERR_OK;
-                    response.config = pc;
-                }
-            }
-        }
+        maintain_drops(cfg_request->config.last_drops, cfg_request->node, cfg_request->type);
     }
 
     if (response.err != ERR_IO_PENDING)

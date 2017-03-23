@@ -167,7 +167,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
     pr.first->commit_log_block(
         *blk,
         start_offset,
-        LPC_WRITE_REPLICATION_LOG_COMMON,
+        LPC_WRITE_REPLICATION_LOG_SHARED,
         this,
         [this,
         lf = pr.first,
@@ -417,7 +417,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     pr.first->commit_log_block(
         *blk,
         start_offset,
-        LPC_WRITE_REPLICATION_LOG_COMMON,
+        LPC_WRITE_REPLICATION_LOG_PRIVATE,
         this,
         [this, 
         lf = pr.first,
