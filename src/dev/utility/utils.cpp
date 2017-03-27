@@ -196,7 +196,7 @@ namespace dsn {
             struct tm tmp;
             auto ret = localtime_r(&t, &tmp);
             sprintf(str, "%04d-%02d-%02d %02d:%02d:%02d.%03u",
-                    ret->tm_year + 1900, ret ->tm_mon, ret->tm_mday,
+                    ret->tm_year + 1900, ret->tm_mon + 1, ret->tm_mday,
                     ret->tm_hour, ret->tm_min, ret->tm_sec,
                     static_cast<uint32_t>(ts_ms % 1000));
         }

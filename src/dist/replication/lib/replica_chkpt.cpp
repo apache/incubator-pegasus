@@ -86,7 +86,11 @@ namespace dsn {
         {
             // only applicable to primary and secondary replicas
             if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY)
+            {
+                ddebug("%s: ignore checkpoint for status = %s, is_emergency = %s",
+                       name(), enum_to_string(status()), (is_emergency ? "true" : "false"));
                 return;
+            }
 
             //// no need to checkpoint
             //if (_app->is_delta_state_learning_supported())

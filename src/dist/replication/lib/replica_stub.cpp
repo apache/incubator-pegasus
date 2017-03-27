@@ -1323,16 +1323,18 @@ void replica_stub::on_gc()
                 plog->flush_once();
 
                 ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit_on_disk());
-                ddebug("gc_shared: gc condition for %s, garbage_max_decree = %" PRId64 ", "
+                ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64 ", "
                        "last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
-                       r->name(), ri.max_decree, r->last_durable_decree(), plog->max_commit_on_disk());
+                       r->name(), enum_to_string(r->status()),
+                       ri.max_decree, r->last_durable_decree(), plog->max_commit_on_disk());
             }
             else
             {
                 ri.max_decree = r->last_durable_decree();
-                ddebug("gc_shared: gc condition for %s, garbage_max_decree = %" PRId64 ", "
+                ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64 ", "
                        "last_durable_decree = %" PRId64 "",
-                       r->name(), ri.max_decree, r->last_durable_decree());
+                       r->name(), enum_to_string(r->status()),
+                       ri.max_decree, r->last_durable_decree());
             }
             ri.valid_start_offset = r->get_app()->init_info().init_offset_in_shared_log;
             gc_condition[it->first] = ri;
@@ -1587,6 +1589,8 @@ void replica_stub::close_replica(replica_ptr r)
         _closing_replicas.erase(r->get_gpid());
         _closed_replicas.emplace(r_info.pid, std::make_pair(std::move(a_info), std::move(r_info)));
     }
+
+    ddebug("%s: replica closed", r->name());
 }
 
 void replica_stub::add_replica(replica_ptr r)
