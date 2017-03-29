@@ -98,7 +98,7 @@ public:
     //
     void on_prepare(dsn_message_t request);    
     void on_learn(dsn_message_t msg);
-    void on_learn_completion_notification(const group_check_response& report);
+    void on_learn_completion_notification(const group_check_response& report, /*out*/ learn_notify_response& response);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);

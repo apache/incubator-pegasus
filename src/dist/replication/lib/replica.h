@@ -97,7 +97,8 @@ public:
     //
     void on_prepare(dsn_message_t request);    
     void on_learn(dsn_message_t msg, const learn_request& request);
-    void on_learn_completion_notification(const group_check_response& report);
+    void on_learn_completion_notification(const group_check_response& report, /*out*/ learn_notify_response& response);
+    void on_learn_completion_notification_reply(error_code err, group_check_response&& report, learn_notify_response&& resp);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
@@ -169,7 +170,7 @@ private:
     void on_copy_remote_state_completed(error_code err, size_t size, learn_request&& req, learn_response&& resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err, bool is_local_error);
-    void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
+    error_code handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state& state);
         

@@ -90,7 +90,7 @@ void replica::handle_remote_failure(partition_status::type st, ::dsn::rpc_addres
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         {
-            ddebug("%s: remove learner %s", name(), node.to_string());
+            ddebug("%s: remove learner %s for remote failure", name(), node.to_string());
             // potential secondary failure does not lead to ballot change
             // therefore, it is possible to have multiple exec here
             _primary_states.learners.erase(node);

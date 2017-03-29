@@ -37,6 +37,11 @@
 # include "mutation_log.h"
 # include "replica.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "mutation"
+
 namespace dsn { namespace replication {
 
 std::atomic<uint64_t> mutation::s_tid(0);

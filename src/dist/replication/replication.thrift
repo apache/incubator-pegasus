@@ -138,6 +138,13 @@ struct learn_response
     8:string                base_local_dir; // base dir of files on learnee
 }
 
+struct learn_notify_response
+{
+    1:dsn.gpid pid;
+    2:dsn.error_code        err; // error code
+    3:i64                   signature; // learning signature
+}
+
 struct group_check_request
 {
     1:dsn.layer2.app_info          app;
@@ -417,7 +424,7 @@ service replica_s
     prepare_ack prepare(1:prepare_msg request);
     void config_proposal(1:configuration_update_request proposal);
     learn_response learn(1:learn_request request);
-    void learn_completion_notification(1:group_check_response report);
+    learn_notify_response learn_completion_notification(1:group_check_response report);
     void add_learner(1:group_check_request request);
     void remove(1:replica_configuration request);
     group_check_response group_check(1:group_check_request request);

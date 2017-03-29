@@ -19,6 +19,7 @@ namespace dsn { namespace replication {
     GENERATED_TYPE_SERIALIZATION(learn_state, THRIFT)
     GENERATED_TYPE_SERIALIZATION(learn_request, THRIFT)
     GENERATED_TYPE_SERIALIZATION(learn_response, THRIFT)
+    GENERATED_TYPE_SERIALIZATION(learn_notify_response, THRIFT)
     GENERATED_TYPE_SERIALIZATION(group_check_request, THRIFT)
     GENERATED_TYPE_SERIALIZATION(group_check_response, THRIFT)
     GENERATED_TYPE_SERIALIZATION(node_info, THRIFT)

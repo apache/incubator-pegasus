@@ -1,0 +1,13 @@
+Case Classification:
+  000~099: nomal operation
+  100~199: RPC fault/failure between replica servers
+  200~299: AIO fault/failure in replica servers
+  300~399: RPC fault/failure between replica server and meta server
+  400~499: mixed fault/failure of above
+  500~599: test cases of failure detector module
+  600~699: regression testing
+
+Run case:
+  ./run.sh <case-id>
+for example:
+  ./run.sh 000

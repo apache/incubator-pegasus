@@ -133,6 +133,8 @@ class learn_request;
 
 class learn_response;
 
+class learn_notify_response;
+
 class group_check_request;
 
 class group_check_response;
@@ -1002,6 +1004,66 @@ class learn_response {
 void swap(learn_response &a, learn_response &b);
 
 inline std::ostream& operator<<(std::ostream& out, const learn_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _learn_notify_response__isset {
+  _learn_notify_response__isset() : pid(false), err(false), signature(false) {}
+  bool pid :1;
+  bool err :1;
+  bool signature :1;
+} _learn_notify_response__isset;
+
+class learn_notify_response {
+ public:
+
+  learn_notify_response(const learn_notify_response&);
+  learn_notify_response(learn_notify_response&&);
+  learn_notify_response& operator=(const learn_notify_response&);
+  learn_notify_response& operator=(learn_notify_response&&);
+  learn_notify_response() : signature(0) {
+  }
+
+  virtual ~learn_notify_response() throw();
+   ::dsn::gpid pid;
+   ::dsn::error_code err;
+  int64_t signature;
+
+  _learn_notify_response__isset __isset;
+
+  void __set_pid(const  ::dsn::gpid& val);
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_signature(const int64_t val);
+
+  bool operator == (const learn_notify_response & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(err == rhs.err))
+      return false;
+    if (!(signature == rhs.signature))
+      return false;
+    return true;
+  }
+  bool operator != (const learn_notify_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const learn_notify_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(learn_notify_response &a, learn_notify_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const learn_notify_response& obj)
 {
   obj.printTo(out);
   return out;

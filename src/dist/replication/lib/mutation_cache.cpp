@@ -36,6 +36,11 @@
 #include "mutation_cache.h"
 #include "mutation.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "mutation_cache"
+
 namespace dsn { namespace replication {
 
 mutation_cache::mutation_cache(decree init_decree, int max_count)

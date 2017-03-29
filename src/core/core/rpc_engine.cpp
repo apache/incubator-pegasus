@@ -1052,7 +1052,7 @@ namespace dsn {
 
         // when a message doesn't need to reply, we don't do the on_rpc_reply hooks to avoid mistakes
         // for example, the profiler may be mistakenly calculated
-        if (s==nullptr && response->to_address.is_invalid())
+        if (s == nullptr && response->to_address.is_invalid())
         {
             dinfo("rpc reply %s is dropped (invalid to-address), trace_id = %016" PRIx64,
                   response->header->rpc_name,
@@ -1065,7 +1065,7 @@ namespace dsn {
 
         bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
 
-        // connetion oriented network, we have bound session
+        // connection oriented network, we have bound session
         if (s != nullptr)
         {
             // not forwarded, we can use the original rpc session

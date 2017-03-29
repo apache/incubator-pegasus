@@ -282,8 +282,16 @@ void replica::on_prepare(dsn_message_t request)
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_version)
         {
-            init_learn(rconfig.learner_signature);
-            // no need response as rpc is already gone
+            derror(
+                "%s: mutation %s on_prepare failed as unmatched learning signature, state = %s, "
+                "old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _potential_secondary_states.learning_version,
+                rconfig.learner_signature
+                );
+            handle_learning_error(ERR_INVALID_STATE, false);
+            ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
         }
 
@@ -296,8 +304,7 @@ void replica::on_prepare(dsn_message_t request)
                 enum_to_string(status()),
                 enum_to_string(_potential_secondary_states.learning_status)
                 );
-
-            // no need response as rpc is already gone
+            ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
         }
     }

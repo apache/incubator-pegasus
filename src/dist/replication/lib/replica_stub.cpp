@@ -810,16 +810,18 @@ void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*ou
     }
 }
 
-void replica_stub::on_learn_completion_notification(const group_check_response& report)
+void replica_stub::on_learn_completion_notification(const group_check_response& report, /*out*/ learn_notify_response& response)
 {
+    response.pid = report.pid;
+    response.signature = report.learner_signature;
     replica_ptr rep = get_replica(report.pid);
     if (rep != nullptr)
     {
-        rep->on_learn_completion_notification(report);
+        rep->on_learn_completion_notification(report, response);
     }
     else
     {
-        report.err.end_tracking();
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 

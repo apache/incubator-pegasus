@@ -94,7 +94,7 @@ void replica::init_learn(uint64_t signature)
                 name(), _potential_secondary_states.learning_version, signature
                 );
             return;
-        }   
+        }
 
         _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
@@ -917,7 +917,18 @@ void replica::on_learn_remote_state_completed(error_code err)
     check_hashed_access();
 
     if (partition_status::PS_POTENTIAL_SECONDARY != status())
+    {
+        dwarn(
+            "%s: on_learn_remote_state_completed[%016" PRIx64 "]: err = %s, learn_duration = %" PRIu64 " ms, "
+            "the learner status is not PS_POTENTIAL_SECONDARY, but %s, ignore",
+            name(),
+            _potential_secondary_states.learning_version,
+            err.to_string(),
+            _potential_secondary_states.duration_ms(),
+            enum_to_string(status())
+            );
         return;
+    }
 
     ddebug(
         "%s: on_learn_remote_state_completed[%016" PRIx64 "]: err = %s, learn_duration = %" PRIu64 " ms, local_committed_decree = %" PRId64 ", "
@@ -960,18 +971,39 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
     update_local_configuration_with_no_ballot_change(is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
 }
 
-void replica::handle_learning_succeeded_on_primary(
+error_code replica::handle_learning_succeeded_on_primary(
     ::dsn::rpc_address node, 
     uint64_t learn_signature
     )
 {
     auto it = _primary_states.learners.find(node);
-    if (it != _primary_states.learners.end()
-        && it->second.signature == (int64_t)learn_signature
-        )
+    if (it == _primary_states.learners.end())
     {
-        upgrade_to_secondary_on_primary(node);
-    }   
+        derror(
+            "%s: handle_learning_succeeded_on_primary[%016" PRIx64 "]: learner = %s, "
+            "learner not found on primary, return ERR_LEARNER_NOT_FOUND",
+            name(),
+            learn_signature,
+            node.to_string()
+            );
+        return ERR_LEARNER_NOT_FOUND;
+    }
+
+    if (it->second.signature != (int64_t)learn_signature)
+    {
+        derror(
+            "%s: handle_learning_succeeded_on_primary[%016" PRIx64 "]: learner = %s, "
+            "signature not matched, current signature on primary is [%016" PRIx64 "], return ERR_INVALID_STATE",
+            name(),
+            learn_signature,
+            node.to_string(),
+            it->second.signature
+            );
+        return ERR_INVALID_STATE;
+    }
+
+    upgrade_to_secondary_on_primary(node);
+    return ERR_OK;
 }
 
 void replica::notify_learn_completion()
@@ -997,11 +1029,16 @@ void replica::notify_learn_completion()
         enum_to_string(_potential_secondary_states.learning_status)
         );
 
-    rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETION_NOTIFY, 
-        report, gpid_to_thread_hash(get_gpid()));
+    _potential_secondary_states.completion_notify_task =
+        rpc::create_message(RPC_LEARN_COMPLETION_NOTIFY, report, std::chrono::milliseconds(0), gpid_to_thread_hash(get_gpid()))
+        .call(_config.primary, this, [this, report = std::move(report)](error_code err, learn_notify_response&& resp) mutable
+        {
+            on_learn_completion_notification_reply(err, std::move(report), std::move(resp));
+        }
+        );
 }
 
-void replica::on_learn_completion_notification(const group_check_response& report)
+void replica::on_learn_completion_notification(const group_check_response& report, /*out*/ learn_notify_response& response)
 {
     check_hashed_access();
 
@@ -1014,16 +1051,92 @@ void replica::on_learn_completion_notification(const group_check_response& repor
 
     if (status() != partition_status::PS_PRIMARY)
     {
-        dwarn(
-            "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, this replica is not primary, but %s, ignore",
-            name(), report.learner_signature, report.node.to_string(), enum_to_string(status())
+        response.err = (partition_status::PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE;
+        derror(
+            "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, this replica is not primary, but %s, reply %s",
+            name(), report.learner_signature, report.node.to_string(), enum_to_string(status()), response.err.to_string()
             );
+    }
+    else if (report.learner_status_ != learner_status::LearningSucceeded)
+    {
+        response.err = ERR_INVALID_STATE;
+        derror(
+            "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, "
+            "learner_status is not LearningSucceeded, but %s, reply ERR_INVALID_STATE",
+            name(), report.learner_signature, report.node.to_string(), enum_to_string(report.learner_status_)
+            );
+    }
+    else
+    {
+        response.err = handle_learning_succeeded_on_primary(report.node, report.learner_signature);
+        if (response.err != ERR_OK)
+        {
+            derror(
+                "%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, "
+                "handle learning succeeded on primary failed, reply %s",
+                name(), report.learner_signature, report.node.to_string(), response.err.to_string()
+                );
+        }
+    }
+}
+
+void replica::on_learn_completion_notification_reply(error_code err, group_check_response&& report, learn_notify_response&& resp)
+{
+    check_hashed_access();
+
+    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
+    dassert(_potential_secondary_states.learning_status == learner_status::LearningSucceeded, "");
+    dassert(report.learner_signature == (int64_t)_potential_secondary_states.learning_version, "");
+
+    if (err != ERR_OK)
+    {
+        handle_learning_error(err, false);
         return;
     }
 
-    if (report.learner_status_ == learner_status::LearningSucceeded)
+    if (resp.signature != (int64_t)_potential_secondary_states.learning_version)
     {
-        handle_learning_succeeded_on_primary(report.node, report.learner_signature);
+        derror(
+            "%s: on_learn_completion_notification_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
+            "signature not matched, current signature on primary is [%016" PRIx64 "]",
+            name(), report.learner_signature, _config.primary.to_string(),
+            _potential_secondary_states.duration_ms(),
+            resp.signature
+            );
+        handle_learning_error(ERR_INVALID_STATE, false);
+        return;
+    }
+
+    ddebug(
+        "%s: on_learn_completion_notification_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, response_err = %s",
+        name(), report.learner_signature, _config.primary.to_string(),
+        _potential_secondary_states.duration_ms(),
+        resp.err.to_string()
+        );
+
+    if (resp.err != ERR_OK)
+    {
+        if (resp.err == ERR_INACTIVE_STATE)
+        {
+            dwarn(
+                "%s: on_learn_completion_notification_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
+                "learnee is updating ballot, delay to start another round of learning",
+                name(), report.learner_signature, _config.primary.to_string(),
+                _potential_secondary_states.duration_ms()
+                );
+            _potential_secondary_states.learning_round_is_running = false;
+            _potential_secondary_states.delay_learning_task = tasking::create_task(
+                LPC_DELAY_LEARN,
+                this,
+                std::bind(&replica::init_learn, this, report.learner_signature),
+                gpid_to_thread_hash(get_gpid())
+                );
+            _potential_secondary_states.delay_learning_task->enqueue(std::chrono::seconds(1));
+        }
+        else
+        {
+            handle_learning_error(resp.err, false);
+        }
     }
 }
 
