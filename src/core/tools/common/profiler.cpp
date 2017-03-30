@@ -105,8 +105,12 @@ namespace dsn {
 
         static void profiler_on_task_enqueue(task* caller, task* callee)
         {
+            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
+
             if (caller != nullptr)
             {
+                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+
                 auto& prof = s_spec_profilers[caller->spec().code];
                 if (prof.collect_call_count)
                 {
@@ -125,10 +129,12 @@ namespace dsn {
 
         static void profiler_on_task_begin(task* this_)
         {
+            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+
             uint64_t& qts = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
             auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_QUEUEING_TIME_NS];
-            if(ptr !=nullptr)
+            if(ptr != nullptr)
                 ptr->set(now - qts);
             qts = now;
 
@@ -140,6 +146,8 @@ namespace dsn {
 
         static void profiler_on_task_end(task* this_)
         {
+            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+
             uint64_t qts = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
             auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_EXEC_TIME_NS];
@@ -153,6 +161,8 @@ namespace dsn {
 
         static void profiler_on_task_cancelled(task* this_)
         {
+            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+
             auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_CANCELLED];
             if (ptr != nullptr)
                 ptr->increment();
@@ -176,8 +186,12 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_aio_call(task* caller, aio_task* callee)
         {
+            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
+
             if (nullptr != caller)
             {
+                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+
                 auto& prof = s_spec_profilers[caller->spec().code];
                 if (prof.collect_call_count)
                 {
@@ -191,6 +205,8 @@ namespace dsn {
 
         static void profiler_on_aio_enqueue(aio_task* this_)
         {
+            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+
             uint64_t& ats = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
 
@@ -209,9 +225,12 @@ namespace dsn {
         {
             if (nullptr != caller)
             {
+                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+
                 auto& prof = s_spec_profilers[caller->spec().code];
                 if (prof.collect_call_count)
                 {
+                    dassert(req->local_rpc_code >= 0 && req->local_rpc_code <= dsn_task_code_max(), "local_rpc_code = %d", req->local_rpc_code);
                     prof.call_counts[req->local_rpc_code]++;
                 }
             }
@@ -225,6 +244,8 @@ namespace dsn {
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
         {
+            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
+
             uint64_t now = dsn_now_ns();
             task_ext_for_profiler::get(callee) = now;
             message_ext_for_profiler::get(callee->get_request()) = now;
@@ -242,15 +263,21 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_reply(task* caller, message_ex* msg)
         {
+            dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+
             auto& prof = s_spec_profilers[caller->spec().code];
             if (prof.collect_call_count)
             {
+                dassert(msg->local_rpc_code >= 0 && msg->local_rpc_code <= dsn_task_code_max(), "local_rpc_code = %d", msg->local_rpc_code);
                 prof.call_counts[msg->local_rpc_code]++;
             }
 
             uint64_t qts = message_ext_for_profiler::get(msg);
             uint64_t now = dsn_now_ns();
-            auto code = task_spec::get(msg->local_rpc_code)->rpc_paired_code;
+            task_spec* spec = task_spec::get(msg->local_rpc_code);
+            dassert(spec != nullptr, "task_spec cannot be null, local_rpc_code = %d", msg->local_rpc_code);
+            auto code = spec->rpc_paired_code;
+            dassert(code >= 0 && code <= dsn_task_code_max(), "spec_code = %d", code);
             auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS];
             if (ptr != nullptr)
                 ptr->set(now - qts);
@@ -258,6 +285,8 @@ namespace dsn {
 
         static void profiler_on_rpc_response_enqueue(rpc_response_task* resp)
         {
+            dassert(resp->spec().code >= 0 && resp->spec().code <= dsn_task_code_max(), "spec_code = %d", resp->spec().code);
+
             uint64_t& cts = task_ext_for_profiler::get(resp);
             uint64_t now = dsn_now_ns();
 
@@ -397,7 +426,7 @@ namespace dsn {
 
                 if (dsn_config_get_value_bool(section_name.c_str(), "profiler::queue", true,
                     "whether to profile the queuing time of a task"))
-                    s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = perf_counter::get_counter("zion", "profiler", (name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES,"latency due to waiting in the queue", true);
+                    s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = perf_counter::get_counter("zion", "profiler", (name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency due to waiting in the queue", true);
 
                 if (dsn_config_get_value_bool(section_name.c_str(), "profiler::exec", true,
                     "whether to profile the executing time of a task"))
@@ -435,7 +464,7 @@ namespace dsn {
 
                 // we don't use perf_counter_ptr but perf_counter* in ptr[xxx] to avoid unnecessary memory access cost
                 // we need to add reference so that the counters won't go
-                // release_ref should be done when the profiler exits (which never hahppens right now so we omit that for the time being)
+                // release_ref should be done when the profiler exits (which never happens right now so we omit that for the time being)
                 for (size_t j = 0; j < sizeof(s_spec_profilers[i].ptr) / sizeof(perf_counter*); j++)
                 {
                     if (s_spec_profilers[i].ptr[j] != nullptr)
