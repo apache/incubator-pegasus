@@ -268,7 +268,7 @@ namespace dsn
                 svc,
                 [cb_fwd = std::forward<TCallback>(callback)](error_code err, dsn_message_t req, dsn_message_t resp) mutable
                 {
-                    typename is_typed_rpc_callback<TCallback>::response_t response;
+                    typename is_typed_rpc_callback<TCallback>::response_t response = {};
                     if (err == ERR_OK)
                     {
                         ::dsn::unmarshall(resp, response);

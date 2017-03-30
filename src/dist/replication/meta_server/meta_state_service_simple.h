@@ -113,6 +113,7 @@ namespace dsn
                 operation(bool done, std::function<void(bool)>&&cb) : done(done), cb(move(cb)) {}
             };
 
+#pragma pack (push, 1)
             struct log_header
             {
                 int magic;
@@ -121,6 +122,7 @@ namespace dsn
                 log_header() : magic(default_magic), size(0)
                 {}
             };
+#pragma pack (pop)
 
             struct state_node
             {

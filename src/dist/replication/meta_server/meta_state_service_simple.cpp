@@ -129,8 +129,6 @@ namespace dsn
                 );
         }
 
-
-
         error_code meta_state_service_simple::create_node_internal(const std::string& node, const blob& value)
         {
             auto path = normalize_path(node);
