@@ -138,7 +138,7 @@ namespace dsn {
             virtual void   add(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual void   set(uint64_t val)
             {
-                auto idx = _tail.fetch_add(1, std::memory_order_relaxed);
+                uint64_t idx = _tail.fetch_add(1, std::memory_order_relaxed);
                 _samples[idx % MAX_QUEUE_LENGTH] = val;
             }
 
@@ -147,8 +147,6 @@ namespace dsn {
 
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {
-                if (_tail == 0)
-                    return -1.0;
                 if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT))
                 {
                     dassert(false, "send a wrong counter percentile type");
@@ -161,8 +159,8 @@ namespace dsn {
             { 
                 dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
 
-                int count = _tail.load();
-                int return_count = count >= required_sample_count ? required_sample_count : count;
+                uint64_t count = _tail.load();
+                int return_count = count >= (uint64_t)required_sample_count ? required_sample_count : count;
 
                 samples.clear();
                 int end_index = (count + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
@@ -183,7 +181,7 @@ namespace dsn {
 
             virtual uint64_t get_latest_sample() const override
             {
-                int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                int idx = (_tail.load() + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
                 return _samples[idx];
             }
 
@@ -279,10 +277,11 @@ namespace dsn {
 
             void   calc(boost::shared_ptr<compute_context>& ctx)
             {
-                if (_tail == 0)
+                uint64_t _num = _tail.load();
+                if (_num == 0)
                     return;
 
-                int tmp_num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail.load();
+                int tmp_num = _num > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _num;
                 for (int i = 0; i < tmp_num; i++)
                     ctx->tmp[i] = _samples[i];
 
@@ -333,7 +332,7 @@ namespace dsn {
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
-            std::atomic<int> _tail;
+            std::atomic<uint64_t> _tail;
             uint64_t _samples[MAX_QUEUE_LENGTH];
             uint64_t _results[COUNTER_PERCENTILE_COUNT];
             int      _counter_computation_interval_seconds;

@@ -181,14 +181,13 @@ namespace dsn {
         {
         public:
             perf_counter_number_percentile_v2_fast(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
-                : perf_counter(app, section, name, type, dsptr)
+                : perf_counter(app, section, name, type, dsptr), _tail(0)
             {
                 _results[COUNTER_PERCENTILE_50] = 0;
                 _results[COUNTER_PERCENTILE_90] = 0;
                 _results[COUNTER_PERCENTILE_95] = 0;
                 _results[COUNTER_PERCENTILE_99] = 0;
                 _results[COUNTER_PERCENTILE_999] = 0;
-                _tail = 0;
 
                 _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
                     "components.simple_perf_counter_v2_fast",
@@ -211,7 +210,7 @@ namespace dsn {
             virtual void   add(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual void   set(uint64_t val)
             {
-                auto idx = _tail++;
+                uint64_t idx = _tail++;
                 _samples[idx % MAX_QUEUE_LENGTH] = val;
             }
 
@@ -232,8 +231,8 @@ namespace dsn {
             {
                 dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
 
-                int count = _tail;
-                int return_count = count >= required_sample_count ? required_sample_count : count;
+                uint64_t count = _tail;
+                int return_count = count >= (uint64_t)required_sample_count ? required_sample_count : count;
 
                 samples.clear();
                 int end_index = (count + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
@@ -396,7 +395,7 @@ namespace dsn {
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
-            int _tail;
+            uint64_t _tail;
             uint64_t _samples[MAX_QUEUE_LENGTH];
             uint64_t _results[COUNTER_PERCENTILE_COUNT];
             int      _counter_computation_interval_seconds;

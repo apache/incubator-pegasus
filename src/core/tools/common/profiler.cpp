@@ -84,6 +84,7 @@ namespace dsn {
         typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;
 
         task_spec_profiler* s_spec_profilers = nullptr;
+        int s_task_code_max = 0;
         std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
         counter_info* counter_info_ptr[] = {
             new counter_info({ "queue.time", "qt" },            TASK_QUEUEING_TIME_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "QUEUE(ns)",       "ns"),
@@ -105,23 +106,25 @@ namespace dsn {
 
         static void profiler_on_task_enqueue(task* caller, task* callee)
         {
-            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
+            auto callee_code = callee->spec().code;
+            dassert(callee_code >= 0 && callee_code <= s_task_code_max, "code = %d", callee_code);
 
             if (caller != nullptr)
             {
-                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+                auto caller_code = caller->spec().code;
+                dassert(caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code);
 
-                auto& prof = s_spec_profilers[caller->spec().code];
+                auto& prof = s_spec_profilers[caller_code];
                 if (prof.collect_call_count)
                 {
-                    prof.call_counts[callee->spec().code]++;
+                    prof.call_counts[callee_code]++;
                 }
             }
 
             task_ext_for_profiler::get(callee) = dsn_now_ns();
             if (callee->delay_milliseconds() == 0)
             {
-                auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
+                auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE];
                 if (ptr != nullptr)
                     ptr->increment();
             }
@@ -129,16 +132,17 @@ namespace dsn {
 
         static void profiler_on_task_begin(task* this_)
         {
-            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+            auto code = this_->spec().code;
+            dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
 
             uint64_t& qts = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
-            auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_QUEUEING_TIME_NS];
+            auto ptr = s_spec_profilers[code].ptr[TASK_QUEUEING_TIME_NS];
             if(ptr != nullptr)
                 ptr->set(now - qts);
             qts = now;
 
-            ptr = s_spec_profilers[this_->spec().code].ptr[TASK_IN_QUEUE];
+            ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE];
             if (ptr != nullptr)
                 ptr->decrement();
 
@@ -146,24 +150,26 @@ namespace dsn {
 
         static void profiler_on_task_end(task* this_)
         {
-            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+            auto code = this_->spec().code;
+            dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
 
             uint64_t qts = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
-            auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_EXEC_TIME_NS];
+            auto ptr = s_spec_profilers[code].ptr[TASK_EXEC_TIME_NS];
             if (ptr != nullptr)
                 ptr->set(now - qts);
 
-            ptr = s_spec_profilers[this_->spec().code].ptr[TASK_THROUGHPUT];
+            ptr = s_spec_profilers[code].ptr[TASK_THROUGHPUT];
             if (ptr != nullptr)
                 ptr->increment();
         }
 
         static void profiler_on_task_cancelled(task* this_)
         {
-            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+            auto code = this_->spec().code;
+            dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
 
-            auto ptr = s_spec_profilers[this_->spec().code].ptr[TASK_CANCELLED];
+            auto ptr = s_spec_profilers[code].ptr[TASK_CANCELLED];
             if (ptr != nullptr)
                 ptr->increment();
         }
@@ -186,16 +192,17 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_aio_call(task* caller, aio_task* callee)
         {
-            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
-
             if (nullptr != caller)
             {
-                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+                auto caller_code = caller->spec().code;
+                dassert(caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code);
 
-                auto& prof = s_spec_profilers[caller->spec().code];
+                auto& prof = s_spec_profilers[caller_code];
                 if (prof.collect_call_count)
                 {
-                    prof.call_counts[callee->spec().code]++;
+                    auto callee_code = callee->spec().code;
+                    dassert(callee_code >= 0 && callee_code <= s_task_code_max, "code = %d", callee_code);
+                    prof.call_counts[callee_code]++;
                 }
             }
 
@@ -205,17 +212,18 @@ namespace dsn {
 
         static void profiler_on_aio_enqueue(aio_task* this_)
         {
-            dassert(this_->spec().code >= 0 && this_->spec().code <= dsn_task_code_max(), "spec_code = %d", this_->spec().code);
+            auto code = this_->spec().code;
+            dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
 
             uint64_t& ats = task_ext_for_profiler::get(this_);
             uint64_t now = dsn_now_ns();
 
-            auto ptr = s_spec_profilers[this_->spec().code].ptr[AIO_LATENCY_NS];
+            auto ptr = s_spec_profilers[code].ptr[AIO_LATENCY_NS];
             if (ptr != nullptr)
                 ptr->set(now - ats);
             ats = now;
 
-            ptr = s_spec_profilers[this_->spec().code].ptr[TASK_IN_QUEUE];
+            ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE];
             if (ptr != nullptr)
                 ptr->increment();
         }
@@ -225,12 +233,13 @@ namespace dsn {
         {
             if (nullptr != caller)
             {
-                dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+                auto caller_code = caller->spec().code;
+                dassert(caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code);
 
-                auto& prof = s_spec_profilers[caller->spec().code];
+                auto& prof = s_spec_profilers[caller_code];
                 if (prof.collect_call_count)
                 {
-                    dassert(req->local_rpc_code >= 0 && req->local_rpc_code <= dsn_task_code_max(), "local_rpc_code = %d", req->local_rpc_code);
+                    dassert(req->local_rpc_code >= 0 && req->local_rpc_code <= s_task_code_max, "code = %d", req->local_rpc_code);
                     prof.call_counts[req->local_rpc_code]++;
                 }
             }
@@ -244,13 +253,14 @@ namespace dsn {
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            dassert(callee->spec().code >= 0 && callee->spec().code <= dsn_task_code_max(), "spec_code = %d", callee->spec().code);
+            auto callee_code = callee->spec().code;
+            dassert(callee_code >= 0 && callee_code <= s_task_code_max, "code = %d", callee_code);
 
             uint64_t now = dsn_now_ns();
             task_ext_for_profiler::get(callee) = now;
             message_ext_for_profiler::get(callee->get_request()) = now;
 
-            auto ptr = s_spec_profilers[callee->spec().code].ptr[TASK_IN_QUEUE];
+            auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE];
             if (ptr != nullptr)
                 ptr->increment();
         }
@@ -263,21 +273,22 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_reply(task* caller, message_ex* msg)
         {
-            dassert(caller->spec().code >= 0 && caller->spec().code <= dsn_task_code_max(), "spec_code = %d", caller->spec().code);
+            auto caller_code = caller->spec().code;
+            dassert(caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code);
 
-            auto& prof = s_spec_profilers[caller->spec().code];
+            auto& prof = s_spec_profilers[caller_code];
             if (prof.collect_call_count)
             {
-                dassert(msg->local_rpc_code >= 0 && msg->local_rpc_code <= dsn_task_code_max(), "local_rpc_code = %d", msg->local_rpc_code);
+                dassert(msg->local_rpc_code >= 0 && msg->local_rpc_code <= s_task_code_max, "code = %d", msg->local_rpc_code);
                 prof.call_counts[msg->local_rpc_code]++;
             }
 
             uint64_t qts = message_ext_for_profiler::get(msg);
             uint64_t now = dsn_now_ns();
             task_spec* spec = task_spec::get(msg->local_rpc_code);
-            dassert(spec != nullptr, "task_spec cannot be null, local_rpc_code = %d", msg->local_rpc_code);
+            dassert(spec != nullptr, "task_spec cannot be null, code = %d", msg->local_rpc_code);
             auto code = spec->rpc_paired_code;
-            dassert(code >= 0 && code <= dsn_task_code_max(), "spec_code = %d", code);
+            dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
             auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS];
             if (ptr != nullptr)
                 ptr->set(now - qts);
@@ -285,26 +296,27 @@ namespace dsn {
 
         static void profiler_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            dassert(resp->spec().code >= 0 && resp->spec().code <= dsn_task_code_max(), "spec_code = %d", resp->spec().code);
+            auto resp_code = resp->spec().code;
+            dassert(resp_code >= 0 && resp_code <= s_task_code_max, "code = %d", resp_code);
 
             uint64_t& cts = task_ext_for_profiler::get(resp);
             uint64_t now = dsn_now_ns();
 
             if (resp->get_response() != nullptr)
             {
-                auto ptr = s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS];
+                auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS];
                 if (ptr != nullptr)
                     ptr->set(now - cts);
             }
             else
             {
-                auto ptr = s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT];
+                auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT];
                 if (ptr != nullptr)
                     ptr->increment();
             }
             cts = now;
 
-            auto ptr = s_spec_profilers[resp->spec().code].ptr[TASK_IN_QUEUE];
+            auto ptr = s_spec_profilers[resp_code].ptr[TASK_IN_QUEUE];
             if (ptr != nullptr)
                 ptr->increment();
         }
@@ -370,7 +382,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
+            for (int i = 1; i <= dsn_task_code_max() && i <= 10; i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -388,7 +400,8 @@ namespace dsn {
 
         void profiler::install(service_spec& spec)
         {
-            s_spec_profilers = new task_spec_profiler[dsn_task_code_max() + 1];
+            s_task_code_max = dsn_task_code_max();
+            s_spec_profilers = new task_spec_profiler[s_task_code_max + 1];
             task_ext_for_profiler::register_ext();
             message_ext_for_profiler::register_ext();
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
@@ -397,7 +410,7 @@ namespace dsn {
             auto collect_call_count = dsn_config_get_value_bool("task..default", "collect_call_count", true, 
                 "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
 
-            for (int i = 0; i <= dsn_task_code_max(); i++)
+            for (int i = 0; i <= s_task_code_max; i++)
             {
                 if (i == TASK_CODE_INVALID)
                     continue;
@@ -411,8 +424,8 @@ namespace dsn {
                     collect_call_count, 
                     "whether to collect how many time this kind of tasks invoke each of other kinds tasks"
                     );
-                s_spec_profilers[i].call_counts = new std::atomic<int64_t>[dsn_task_code_max() + 1];
-                std::fill(s_spec_profilers[i].call_counts, s_spec_profilers[i].call_counts + dsn_task_code_max() + 1, 0);
+                s_spec_profilers[i].call_counts = new std::atomic<int64_t>[s_task_code_max + 1];
+                std::fill(s_spec_profilers[i].call_counts, s_spec_profilers[i].call_counts + s_task_code_max + 1, 0);
 
                 s_spec_profilers[i].is_profile = dsn_config_get_value_bool(section_name.c_str(), "is_profile", profile, "whether to profile this kind of task");
 

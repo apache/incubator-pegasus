@@ -141,24 +141,19 @@ namespace dsn {
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
             {
-                double val = 0;
-                for (int i = 0; i < DIVIDE_CONTAINER; i++)
-                {
-                    val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
-                }
-
                 uint64_t now = ::dsn::utils::get_current_rdtsc();
                 double interval = (now - _last_time) / 1e9;
                 if (interval <= 0.1)
                     return _rate;
 
-                _last_time = now;
+                double val = 0;
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
                 {
-                    _val[i].store(0, std::memory_order_relaxed);
+                    val += _val[i].fetch_and(0, std::memory_order_relaxed);
                 }
 
                 _rate = val / interval;
+                _last_time = now;
                 return _rate;
             }
             virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
@@ -182,14 +177,13 @@ namespace dsn {
         {
         public:
             perf_counter_number_percentile_v2_atomic(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
-                : perf_counter(app, section, name, type, dsptr)
+                : perf_counter(app, section, name, type, dsptr), _tail(0)
             {
                 _results[COUNTER_PERCENTILE_50] = 0;
                 _results[COUNTER_PERCENTILE_90] = 0;
                 _results[COUNTER_PERCENTILE_95] = 0;
                 _results[COUNTER_PERCENTILE_99] = 0;
                 _results[COUNTER_PERCENTILE_999] = 0;
-                _tail = 0;
 
                 _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
                     "components.simple_perf_counter_v2_atomic",
@@ -212,7 +206,7 @@ namespace dsn {
             virtual void   add(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual void   set(uint64_t val)
             {
-                auto idx = _tail++;
+                uint64_t idx = _tail++;
                 _samples[idx % MAX_QUEUE_LENGTH] = val;
             }
 
@@ -232,7 +226,7 @@ namespace dsn {
             {
                 dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
 
-                int count = _tail;
+                uint64_t count = _tail;
                 int return_count = count >= required_sample_count ? required_sample_count : count;
 
                 samples.clear();
@@ -397,7 +391,7 @@ namespace dsn {
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
-            int _tail;
+            uint64_t _tail;
             uint64_t _samples[MAX_QUEUE_LENGTH];
             uint64_t _results[COUNTER_PERCENTILE_COUNT];
             int      _counter_computation_interval_seconds;
