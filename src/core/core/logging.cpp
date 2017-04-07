@@ -111,7 +111,7 @@ void dsn_log_init()
                 }
             }
             dsn_log_set_start_level(start_level);
-            return std::string("OK, current level is ") + (enum_to_string(start_level) + 10);
+            return std::string("OK, current level is ") + enum_to_string(start_level);
         }
     );
 }

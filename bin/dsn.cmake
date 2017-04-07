@@ -9,8 +9,8 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         message(STATUS "PROJ_LIB_PATH = ${PROJ_LIB_PATH}")
         message(STATUS "PROJ_BINPLACES = ${PROJ_BINPLACES}")
         message(STATUS "DO_INSTALL = ${DO_INSTALL}")
-    endif() 
-    
+    endif()
+
     if(PROJ_LANG STREQUAL "")
         message(FATAL_ERROR "Invalid project language.")
     endif()
@@ -19,7 +19,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         #"MODULE" is not used yet
         message(FATAL_ERROR "Invalid project type.")
     endif()
-    
+
     if(PROJ_NAME STREQUAL "")
         message(FATAL_ERROR "Invalid project name.")
     endif()
@@ -59,7 +59,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         if(NOT (PROJ_LIB_PATH STREQUAL ""))
             link_directories(${PROJ_LIB_PATH})
         endif()
-          
+
         if(PROJ_TYPE STREQUAL "STATIC")
             if(MSVC)
                 add_definitions(-D_LIB)
@@ -82,7 +82,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             endif()
             target_link_libraries(${PROJ_NAME} "${LINK_MODE}" ${PROJ_LIBS})
         endif()
-        
+
         if(DO_INSTALL)
             install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_DIR}")
             #if (WIN32)
@@ -90,7 +90,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             #endif()
         endif()
     endif()
-    
+
     if(PROJ_LANG STREQUAL "CS")
         #Check msbuild
         if(MSVC)
@@ -138,7 +138,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CORE_FILE} "${OUTPUT_DIRECTORY}/")
         endforeach()
     endif()
-               
+
     if(PROJ_LANG STREQUAL "JAVA")
         add_jar(${PROJ_NAME}
             SOURCES ${PROJ_SRC}
@@ -230,7 +230,7 @@ endmacro(ms_replace_compiler_flags)
 
 function(ms_check_cxx11_support)
     if(UNIX)
-        include(CheckCXXCompilerFlag)        
+        include(CheckCXXCompilerFlag)
         CHECK_CXX_COMPILER_FLAG("-std=c++1y" COMPILER_SUPPORTS_CXX11)
     else()
         if(MSVC_VERSION LESS 1700)
@@ -275,7 +275,7 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
         message(STATUS "GLOB_OPTION = ${GLOB_OPTION}")
         message(STATUS "PROJ_SRC = ${${PROJ_SRC}}")
     endif()
-    
+
     set(${PROJ_SRC} ${${PROJ_SRC}} ${TEMP_PROJ_SRC})
 endmacro(ms_find_source_files)
 
@@ -366,7 +366,7 @@ function(dsn_add_project)
     if(NOT DEFINED MY_SERIALIZATION_TYPE)
         set(MY_SERIALIZATION_TYPE "")
     endif()
-    
+
     dsn_setup_serialization()
 
     if(MY_PROJ_LANG STREQUAL "CXX")
@@ -475,7 +475,7 @@ function(dsn_setup_compiler_flags)
     if(UNIX)
         if(CMAKE_USE_PTHREADS_INIT)
             add_compile_options(-pthread)
-        endif()   
+        endif()
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             add_definitions(-D_DEBUG)
             add_definitions(-DDSN_BUILD_TYPE=Debug)
@@ -493,9 +493,11 @@ function(dsn_setup_compiler_flags)
         add_compile_options(-Wno-strict-aliasing)
         add_compile_options(-Wno-maybe-uninitialized)
         add_compile_options(-Wno-unused-result)
+        add_compile_options(-Wno-unused-variable)
+        add_compile_options(-Wno-deprecated-declarations)
     elseif(MSVC)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-        add_definitions(-DWIN32_LEAN_AND_MEAN)        
+        add_definitions(-DWIN32_LEAN_AND_MEAN)
         add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
         add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS=1)
         add_definitions(-D_WIN32_WINNT=0x0600)
@@ -512,7 +514,7 @@ macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
     if(DEFINED DSN_DEBUG_CMAKE)
         message(STATUS "BOOST_PACKAGES = ${PACKAGES}")
     endif()
-    
+
     set(Boost_USE_MULTITHREADED            ON)
     if(MSVC)#${STATIC_LINK})
         set(Boost_USE_STATIC_LIBS        ON)
@@ -541,7 +543,7 @@ function(dsn_setup_packages)
         set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     endif()
     find_package(Threads REQUIRED)
-        
+
     set(DSN_SYSTEM_LIBS "")
 
     if(UNIX AND (NOT APPLE))
@@ -645,12 +647,12 @@ function(dsn_make_source_group_by_subdir GROUP_PREFIX SOURCE_LIST)
         # IDX != 0 means that either the source file is not in ${CMAKE_CURRENT_SOURCE_DIR}
         # , or it is in the root of ${CMAKE_CURRENT_SOURCE_DIR}.
         set(GROUP_NAME "")
-		if(IDX EQUAL 0)
+        if(IDX EQUAL 0)
             #math(EXPR IDX "${IDX} + ${prefix_len}")
             string(SUBSTRING "${SRC_PATH}" "${GROUP_PREFIX_LENGTH}" -1 GROUP_NAME)
         endif()
         source_group("${GROUP_NAME}" FILES "${SRC_FILE}")
-    endforeach()    
+    endforeach()
 endfunction(dsn_make_source_group_by_subdir)
 
 function(dsn_add_pseudo_projects)
@@ -681,14 +683,14 @@ function(dsn_common_setup)
     if(NOT DEFINED DSN_BUILD_RUNTIME)
         set(DSN_BUILD_RUNTIME FALSE)
     endif()
-    
+
     message (STATUS "Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
     set(DSN_ROOT2 "$ENV{DSN_ROOT}")
     if((NOT (DSN_ROOT2 STREQUAL "")) AND (EXISTS "${DSN_ROOT2}/"))
         set(CMAKE_INSTALL_PREFIX ${DSN_ROOT2} CACHE STRING "" FORCE)
         message (STATUS "Installation directory redefined w/ ENV{DSN_ROOT}: " ${CMAKE_INSTALL_PREFIX})
     endif()
-    
+
     set(BUILD_SHARED_LIBS OFF)
     ms_check_cxx11_support()
     dsn_setup_packages()
