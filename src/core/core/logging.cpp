@@ -73,7 +73,7 @@ void dsn_log_init()
     // register command for logging
     ::dsn::register_command("flush-log",
         "flush-log - flush log to stderr or log file",
-        "flush-log - flush log to stderr or log file",
+        "flush-log",
         [](const std::vector<std::string>& args)
         {
             ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
@@ -85,8 +85,8 @@ void dsn_log_init()
         }
     );
     ::dsn::register_command("reset-log-start-level",
-        "reset-log-start-level [level_name] - reset log start level",
-        "reset-log-start-level [level_name] - reset log start level",
+        "reset-log-start-level - reset the log start level",
+        "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string>& args)
         {
             dsn_log_level_t start_level;
@@ -100,8 +100,9 @@ void dsn_log_init()
             }
             else
             {
+                std::string level_str = "LOG_LEVEL_" + args[0];
                 start_level = enum_from_string(
-                    args[0].c_str(),
+                    level_str.c_str(),
                     dsn_log_level_t::LOG_LEVEL_INVALID
                     );
                 if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID)
@@ -110,7 +111,7 @@ void dsn_log_init()
                 }
             }
             dsn_log_set_start_level(start_level);
-            return std::string("OK, current level is ") + enum_to_string(start_level);
+            return std::string("OK, current level is ") + (enum_to_string(start_level) + 10);
         }
     );
 }
