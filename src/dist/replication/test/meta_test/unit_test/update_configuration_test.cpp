@@ -69,6 +69,39 @@ public:
     }
 };
 
+class null_meta_service: public dsn::replication::meta_service
+{
+public:
+    void send_message(const dsn::rpc_address& target, dsn_message_t request)
+    {
+        ddebug("send request to %s", target.to_string());
+        dsn_msg_add_ref(request);
+        dsn_msg_release_ref(request);
+    }
+};
+
+class dummy_balancer: public dsn::replication::server_load_balancer {
+public:
+    dummy_balancer(meta_service* s): server_load_balancer(s) {}
+    virtual pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) {
+        action.type = config_type::CT_INVALID;
+        const dsn::partition_configuration& pc = *get_config(*view.apps, gpid);
+        if (!pc.primary.is_invalid() && pc.secondaries.size()==2)
+            return pc_status::healthy;
+        return pc_status::ill;
+    }
+    virtual void reconfig(meta_view view, const configuration_update_request &request) {}
+    virtual bool balance(meta_view view, migration_list &list) {
+        return false;
+    }
+    virtual bool collect_replica(meta_view view, const dsn::rpc_address &node, const replica_info &info) {
+        return false;
+    }
+    virtual bool construct_replica(meta_view view, const dsn::gpid &pid, int max_replica_count) {
+        return false;
+    }
+};
+
 void meta_service_test_app::call_update_configuration(meta_service *svc,
     std::shared_ptr<dsn::replication::configuration_update_request> &request)
 {
@@ -80,6 +113,26 @@ void meta_service_test_app::call_update_configuration(meta_service *svc,
         LPC_META_STATE_HIGH,
         nullptr,
         std::bind(&server_state::on_update_configuration, svc->_state.get(), request, fake_request),
+        server_state::sStateHash
+    );
+}
+
+void meta_service_test_app::call_config_sync(
+    meta_service *svc,
+    std::shared_ptr<configuration_query_by_node_request> &request)
+{
+    dsn_message_t fake_request = dsn_msg_create_request(RPC_CM_CONFIG_SYNC);
+    ::dsn::marshall(fake_request, *request);
+
+    dsn_message_t recvd_request = create_corresponding_receive(fake_request);
+    dsn_msg_add_ref(recvd_request);
+
+    destroy_message(fake_request);
+
+    dsn::tasking::enqueue(
+        LPC_META_STATE_HIGH,
+        nullptr,
+        std::bind(&server_state::on_config_sync, svc->_state.get(), recvd_request),
         server_state::sStateHash
     );
 }
@@ -185,6 +238,89 @@ void meta_service_test_app::update_configuration_test()
     ASSERT_TRUE(wait_state(ss, validator3, 10));
 }
 
+void meta_service_test_app::adjust_dropped_size()
+{
+    dsn::error_code ec;
+    std::shared_ptr<null_meta_service> svc(new null_meta_service());
+    svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
+    ec = svc->remote_storage_initialize();
+    ASSERT_EQ(ec, dsn::ERR_OK);
+    svc->_balancer.reset(new simple_load_balancer(svc.get()));
+
+    server_state* ss = svc->_state.get();
+    ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    dsn::app_info info;
+    info.is_stateful = true;
+    info.status = dsn::app_status::AS_CREATING;
+    info.app_id = 1; info.app_name = "simple_kv.instance0"; info.app_type = "simple_kv";
+    info.max_replica_count = 3; info.partition_count = 1;
+    std::shared_ptr<app_state> app = app_state::create(info);
+
+    ss->_all_apps.emplace(1, app);
+
+    std::vector<dsn::rpc_address> nodes;
+    generate_node_list(nodes, 10, 10);
+
+    // first, the replica is healthy, and there are 2 dropped
+    dsn::partition_configuration& pc = app->partitions[0];
+    pc.primary = nodes[0];
+    pc.secondaries = {nodes[1], nodes[2]};
+    pc.ballot = 10;
+
+    config_context& cc = *get_config_context(ss->_all_apps, pc.pid);
+    cc.dropped =
+    {
+        dropped_replica{ nodes[3], dropped_replica::INVALID_TIMESTAMP, 7, 11, 14},
+        dropped_replica{ nodes[4], 20, invalid_ballot, invalid_decree, invalid_decree},
+    };
+
+    ss->sync_apps_to_remote_storage();
+    generate_node_mapper(ss->_nodes, ss->_all_apps, nodes);
+
+    // then we receive a request for upgrade a node to secondary
+    std::shared_ptr<configuration_update_request> req = std::make_shared<configuration_update_request>();
+    req->config = pc;
+    req->config.ballot++;
+    req->config.secondaries.push_back(nodes[5]);
+    req->info = info;
+    req->node = nodes[5];
+    req->type = config_type::CT_UPGRADE_TO_SECONDARY;
+    call_update_configuration(svc.get(), req);
+
+    spin_wait_condition( [&pc](){ return pc.ballot==11; }, 10);
+
+    // then receive a config_sync request fro nodes[4], which has less data than node[3]
+    std::shared_ptr<configuration_query_by_node_request> req2 = std::make_shared<configuration_query_by_node_request>();
+    req2->__set_node(nodes[4]);
+
+    replica_info rep_info;
+    rep_info.pid = pc.pid;
+    rep_info.ballot = 6;
+    rep_info.status = partition_status::PS_ERROR;
+    rep_info.last_committed_decree = 9;
+    rep_info.last_prepared_decree = 10;
+    rep_info.last_durable_decree = 5;
+    rep_info.app_type = "pegasus";
+
+    req2->__set_stored_replicas( { rep_info } );
+    call_config_sync(svc.get(), req2);
+
+    auto status_check = [&cc, &nodes, &rep_info] {
+        if (cc.dropped.size() != 1)
+            return false;
+        dropped_replica& d = cc.dropped[0];
+        if (d.time != dropped_replica::INVALID_TIMESTAMP)
+            return false;
+        if (d.node != nodes[4])
+            return false;
+        if (d.last_committed_decree != rep_info.last_committed_decree)
+            return false;
+        return true;
+    };
+
+    spin_wait_condition( status_check, 10 );
+}
+
 static void generate_apps(app_mapper& mapper, const std::vector<dsn::rpc_address>& node_list)
 {
     mapper.clear();
@@ -283,39 +419,6 @@ void meta_service_test_app::apply_balancer_test()
 
     app_mapper_compare(backed_app, ss->_all_apps);
 }
-
-class null_meta_service: public dsn::replication::meta_service
-{
-public:
-    void send_message(const dsn::rpc_address& target, dsn_message_t request)
-    {
-        ddebug("send request to %s", target.to_string());
-        dsn_msg_add_ref(request);
-        dsn_msg_release_ref(request);
-    }
-};
-
-class dummy_balancer: public dsn::replication::server_load_balancer {
-public:
-    dummy_balancer(meta_service* s): server_load_balancer(s) {}
-    virtual pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) {
-        action.type = config_type::CT_INVALID;
-        const dsn::partition_configuration& pc = *get_config(*view.apps, gpid);
-        if (!pc.primary.is_invalid() && pc.secondaries.size()==2)
-            return pc_status::healthy;
-        return pc_status::ill;
-    }
-    virtual void reconfig(meta_view view, const configuration_update_request &request) {}
-    virtual bool balance(meta_view view, migration_list &list) {
-        return false;
-    }
-    virtual bool collect_replica(meta_view view, const dsn::rpc_address &node, const replica_info &info) {
-        return false;
-    }
-    virtual bool construct_replica(meta_view view, const dsn::gpid &pid, int max_replica_count) {
-        return false;
-    }
-};
 
 void meta_service_test_app::cannot_run_balancer_test()
 {

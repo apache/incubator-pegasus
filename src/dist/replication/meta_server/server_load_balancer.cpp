@@ -243,6 +243,9 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
             if (is_adding)
             {
                 cc->remove_from_dropped(request.node);
+                // when some replicas are added to partition_config
+                // we should try to adjust the size of drop_list
+                cc->check_size();
             }
             else
             {

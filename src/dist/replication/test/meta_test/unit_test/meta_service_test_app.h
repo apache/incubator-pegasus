@@ -58,8 +58,13 @@ public:
     void simple_lb_construct_replica();
     void json_compacity();
 
+    //test for bug found
+    void adjust_dropped_size();
+
     void call_update_configuration(dsn::replication::meta_service* svc,
         std::shared_ptr<dsn::replication::configuration_update_request>& request);
+    void call_config_sync(dsn::replication::meta_service* svc,
+        std::shared_ptr<dsn::replication::configuration_query_by_node_request>& request);
 
     template<typename TRequest>
     std::shared_ptr<reply_context> fake_rpc_call(

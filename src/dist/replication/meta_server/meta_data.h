@@ -199,6 +199,7 @@ public:
     int32_t prefered_dropped;
     //]
 public:
+    void check_size();
     void cancel_sync();
     // return true if remove ok, false if node doesn't in dropped
     bool remove_from_dropped(const dsn::rpc_address& node);
@@ -217,7 +218,6 @@ public:
     // check if dropped vector satisfied the order
     bool check_order();
 private:
-    void check_size();
     static const int MAX_REPLICA_COUNT_IN_GRROUP = 5;
 };
 
