@@ -1948,7 +1948,7 @@ error_code server_state::construct_apps(const std::vector<query_app_info_respons
         std::string old_name = app->app_name;
         while (checked_names.find(app->app_name) != checked_names.end())
         {
-            app->app_name = app->app_name + "-" + boost::lexical_cast<std::string>(app_id);
+            app->app_name = app->app_name + "__" + boost::lexical_cast<std::string>(app_id);
         }
         if (app->app_name != old_name)
         {
