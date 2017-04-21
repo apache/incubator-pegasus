@@ -322,19 +322,11 @@ static dsn::app_info create_app_info(dsn::app_status::type status, std::string a
     return info;
 }
 
-static bool app_info_eq(const dsn::app_info& info1, const dsn::app_info& info2)
-{
-    return info1.app_id == info2.app_id &&
-           info1.app_name == info2.app_name &&
-           info1.app_type == info2.app_type &&
-           info1.partition_count == info2.partition_count;
-}
-
 void meta_service_test_app::construct_apps_test()
 {
     std::vector<dsn::app_info> apps =
     {
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test_4", 2, 10),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test__4", 2, 10),
         create_app_info(dsn::app_status::AS_AVAILABLE, "test", 4, 20),
         create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
     };
@@ -357,17 +349,23 @@ void meta_service_test_app::construct_apps_test()
     std::vector<dsn::app_info> result_apps =
     {
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__1", 1, 1),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test_4__2", 2, 10),
+        create_app_info(dsn::app_status::AS_CREATING, "test__4__2", 2, 10),
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__3", 3, 1),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test__4", 4, 20),
+        create_app_info(dsn::app_status::AS_CREATING, "test__4", 4, 20),
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__5", 5, 1),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
+        create_app_info(dsn::app_status::AS_CREATING, "test", 6, 30)
     };
 
     int i=0;
     for (const auto& kv_pair: mapper)
     {
-        ASSERT_TRUE( app_info_eq(*(kv_pair.second), result_apps[i]) );
+        ASSERT_EQ(kv_pair.second->app_id, result_apps[i].app_id);
+        ASSERT_EQ(kv_pair.second->app_name, result_apps[i].app_name);
+        ASSERT_EQ(kv_pair.second->app_type, result_apps[i].app_type);
+        ASSERT_EQ(kv_pair.second->partition_count, result_apps[i].partition_count);
+        ASSERT_EQ(kv_pair.second->max_replica_count, result_apps[i].max_replica_count);
+        ASSERT_EQ(kv_pair.second->is_stateful, result_apps[i].is_stateful);
+        ASSERT_EQ(kv_pair.second->status, result_apps[i].status);
         i++;
     }
 }
