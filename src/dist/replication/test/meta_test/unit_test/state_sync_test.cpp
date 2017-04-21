@@ -334,7 +334,7 @@ void meta_service_test_app::construct_apps_test()
 {
     std::vector<dsn::app_info> apps =
     {
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4", 2, 10),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test_4", 2, 10),
         create_app_info(dsn::app_status::AS_AVAILABLE, "test", 4, 20),
         create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
     };
@@ -357,9 +357,9 @@ void meta_service_test_app::construct_apps_test()
     std::vector<dsn::app_info> result_apps =
     {
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__1", 1, 1),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4-2", 2, 10),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test_4__2", 2, 10),
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__3", 3, 1),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test-4", 4, 20),
+        create_app_info(dsn::app_status::AS_AVAILABLE, "test__4", 4, 20),
         create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__5", 5, 1),
         create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)
     };
