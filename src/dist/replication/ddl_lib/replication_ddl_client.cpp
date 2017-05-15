@@ -275,9 +275,16 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     }
     std::ostream out(buf);
 
+    size_t max_app_name_size = 20;
+    for(int i = 0; i < apps.size(); i++)
+    {
+        dsn::app_info info = apps[i];
+        max_app_name_size = std::max(max_app_name_size, info.app_name.size() + 2);
+    }
+
     out << std::setw(10) << std::left << "app_id"
         << std::setw(20) << std::left << "status"
-        << std::setw(20) << std::left << "app_name"
+        << std::setw(max_app_name_size) << std::left << "app_name"
         << std::setw(20) << std::left << "app_type"
         << std::setw(20) << std::left << "partition_count"
         << std::setw(20) << std::left << "replica_count"
@@ -321,7 +328,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         }
         out << std::setw(10) << std::left << info.app_id
             << std::setw(20) << std::left << status_str
-            << std::setw(20) << std::left << info.app_name
+            << std::setw(max_app_name_size) << std::left << info.app_name
             << std::setw(20) << std::left << info.app_type
             << std::setw(20) << std::left << info.partition_count
             << std::setw(20) << std::left << info.max_replica_count
@@ -336,7 +343,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     {
         out << "[App Healthy Info]" << std::endl;
         out << std::setw(10) << std::left << "app_id"
-            << std::setw(20) << std::left << "app_name"
+            << std::setw(max_app_name_size) << std::left << "app_name"
             << std::setw(20) << std::left << "partition_count"
             << std::setw(20) << std::left << "fully_healthy_num"
             << std::setw(20) << std::left << "partly_healthy_num"
@@ -381,7 +388,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             }
             int unhealthy = info.partition_count - fully_healthy - partly_healthy;
             out << std::setw(10) << std::left << info.app_id
-                << std::setw(20) << std::left << info.app_name
+                << std::setw(max_app_name_size) << std::left << info.app_name
                 << std::setw(20) << std::left << info.partition_count
                 << std::setw(20) << std::left << fully_healthy
                 << std::setw(20) << std::left << partly_healthy
