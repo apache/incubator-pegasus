@@ -133,6 +133,13 @@ void meta_options::initialize()
         false,
         "whether to recover from replica server when no apps in remote storage"
         );
+
+    max_replicas_in_group = dsn_config_get_value_uint64(
+        "meta_server",
+        "max_replicas_in_group",
+        4,
+        "max replicas(alive & dead) in a group"
+        );
 }
 
 }}

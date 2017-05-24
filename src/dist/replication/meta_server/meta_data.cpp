@@ -49,6 +49,7 @@ void when_update_replicas(config_type::type t, const std::function<void (bool)> 
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
+    case config_type::CT_DROP_PARTITION:
         func(false);
         break;
     default:
@@ -81,6 +82,7 @@ void maintain_drops(std::vector<rpc_address>& drops, const rpc_address& node, co
     when_update_replicas(t, action);
 }
 
+int config_context::MAX_REPLICA_COUNT_IN_GRROUP = 4;
 void config_context::cancel_sync()
 {
     if (config_status::pending_remote_sync == stage)

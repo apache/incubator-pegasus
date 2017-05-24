@@ -1581,7 +1581,8 @@ void server_state::drop_partition(std::shared_ptr<app_state>& app, int pidx)
     partition_configuration& pc = app->partitions[pidx];
     config_context& cc = app->helpers->contexts[pidx];
 
-    std::shared_ptr<configuration_update_request> req = std::make_shared<configuration_update_request>();
+    std::shared_ptr<configuration_update_request> req =
+            std::make_shared<configuration_update_request>();
     configuration_update_request& request = *req;
 
     request.info = *app;
@@ -1590,11 +1591,16 @@ void server_state::drop_partition(std::shared_ptr<app_state>& app, int pidx)
 
     request.config = pc;
     for (auto& node : pc.secondaries)
-        request.config.last_drops.push_back(node);
+    {
+        maintain_drops(request.config.last_drops, node, request.type);
+    }
     if (!pc.primary.is_invalid())
-        request.config.last_drops.push_back(pc.primary);
+    {
+        maintain_drops(request.config.last_drops, pc.primary, request.type);
+    }
     request.config.primary.set_invalid();
     request.config.secondaries.clear();
+
     dassert((pc.partition_flags & pc_flags::dropped) == 0, "");
     request.config.partition_flags |= pc_flags::dropped;
 

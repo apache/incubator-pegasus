@@ -58,6 +58,7 @@ public:
     meta_function_level::type meta_function_level_on_start;
     bool recover_from_replica_server;
     
+    int32_t max_replicas_in_group;
 public:
     void initialize();
 

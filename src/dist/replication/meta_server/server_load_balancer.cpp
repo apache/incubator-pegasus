@@ -474,7 +474,23 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
         }
         else
         {
-            derror("we don't take any decision for %d.%d, administrator can assign a pirmary manually by shell", gpid.get_app_id(), gpid.get_partition_index());
+            derror("we don't take any decision for %d.%d, "
+                   "administrator can assign a pirmary manually by shell",
+                   gpid.get_app_id(), gpid.get_partition_index());
+            for (int i=0; i<cc.dropped.size(); ++i)
+            {
+                const dropped_replica& dr = cc.dropped[i];
+                ddebug("gpid(%d.%d)'s cc: node(%s), time(%lld), ballot(%lld), cd(%lld), pd(%lld)",
+                       gpid.get_app_id(), gpid.get_partition_index(),
+                       dr.node.to_string(), dr.time, dr.ballot,
+                       dr.last_committed_decree, dr.last_prepared_decree);
+            }
+            for (int i=0; i<pc.last_drops.size(); ++i)
+            {
+                ddebug("gpid(%d.%d)'s pc: node(%s)",
+                       gpid.get_app_id(), gpid.get_partition_index(),
+                       pc.last_drops[i].to_string());
+            }
             action.node.set_invalid();
         }
         result = pc_status::dead;

@@ -217,8 +217,10 @@ public:
 
     // check if dropped vector satisfied the order
     bool check_order();
-private:
-    static const int MAX_REPLICA_COUNT_IN_GRROUP = 5;
+public:
+    // intialize to 4 statically.
+    // and will be set by load-balancer module
+    static int MAX_REPLICA_COUNT_IN_GRROUP;
 };
 
 struct partition_configuration_stateless
