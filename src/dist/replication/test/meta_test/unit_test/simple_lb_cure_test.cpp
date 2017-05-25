@@ -652,7 +652,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[1], 6, 1, 1, 2},
             dropped_replica {node_list[2], 7, 1, 1, 2},
             dropped_replica {node_list[3], 8, 1, 1, 2},
-            dropped_replica {node_list[4], 9, 1, 1, 2}
         };
         rep.ballot = 10;
         rep.last_prepared_decree = 10;
@@ -667,7 +666,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[0], 5, 1, 1, 2},
             dropped_replica {node_list[1], 6, 1, 1, 2},
             dropped_replica {node_list[2], 7, 1, 1, 2},
-            dropped_replica {node_list[3], 8, 1, 1, 2}
         };
         rep.ballot = 10;
         rep.last_durable_decree = 6;
@@ -676,8 +674,8 @@ void meta_service_test_app::simple_lb_collect_replica()
 
         ASSERT_TRUE( simple_lb.collect_replica(view, node_list[4], rep) );
         dropped_replica& d = cc.dropped.front();
-        ASSERT_EQ(rep.ballot, rep.ballot);
-        ASSERT_EQ(rep.last_prepared_decree, d.last_prepared_decree);
+        ASSERT_EQ(d.ballot, rep.ballot);
+        ASSERT_EQ(d.last_prepared_decree, rep.last_prepared_decree);
     }
 
     {
@@ -689,7 +687,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
             dropped_replica {node_list[2], 7, 1, 1, 5},
             dropped_replica {node_list[3], 8, 1, 1, 5},
-            dropped_replica {node_list[4], 9, 1, 1, 5}
         };
 
         rep.ballot = 1;
@@ -706,7 +703,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
             dropped_replica {node_list[2], 7, 1, 1, 6},
-            dropped_replica {node_list[4], 9, 1, 1, 6}
         };
 
         rep.ballot = 1;
@@ -728,7 +724,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
             dropped_replica {node_list[2], 7, 1, 1, 6},
             dropped_replica {node_list[3], 8, 1, 1, 6},
-            dropped_replica {node_list[4], 9, 1, 1, 6}
         };
 
         rep.ballot = 2;
@@ -777,7 +772,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
             dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
             dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}
         };
 
         rep.ballot = 1;
@@ -795,7 +789,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
             dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
             dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}
         };
 
         rep.ballot = 3;
@@ -809,7 +802,6 @@ void meta_service_test_app::simple_lb_collect_replica()
             dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
             dropped_replica {node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 6, 8},
             dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}
         };
 
         ASSERT_TRUE( vec_equal(result_dropped, cc.dropped) );
@@ -820,7 +812,6 @@ void meta_service_test_app::simple_lb_collect_replica()
         CLEAR_ALL;
         cc.dropped =
         {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
             dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
             dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
             dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
@@ -834,7 +825,6 @@ void meta_service_test_app::simple_lb_collect_replica()
 
         std::vector<dropped_replica> result_dropped =
         {
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
             dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
             dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
             dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8},
@@ -913,7 +903,6 @@ void meta_service_test_app::simple_lb_construct_replica()
         CLEAR_ALL;
         cc.dropped =
         {
-            dropped_replica{ node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12},
             dropped_replica{ node_list[1], dropped_replica::INVALID_TIMESTAMP, 6, 10, 12},
             dropped_replica{ node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 10, 12},
             dropped_replica{ node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
@@ -925,7 +914,7 @@ void meta_service_test_app::simple_lb_construct_replica()
 
         std::vector<dsn::rpc_address> nodes = {node_list[2], node_list[3]};
         ASSERT_EQ(nodes, pc.last_drops);
-        ASSERT_EQ(4, cc.dropped.size());
+        ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(3, cc.prefered_dropped);
     }
 
