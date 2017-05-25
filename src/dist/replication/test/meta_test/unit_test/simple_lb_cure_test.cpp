@@ -915,7 +915,7 @@ void meta_service_test_app::simple_lb_construct_replica()
         std::vector<dsn::rpc_address> nodes = {node_list[2], node_list[3]};
         ASSERT_EQ(nodes, pc.last_drops);
         ASSERT_EQ(3, cc.dropped.size());
-        ASSERT_EQ(3, cc.prefered_dropped);
+        ASSERT_EQ(2, cc.prefered_dropped);
     }
 
     // have multiple node, two have same ballots
