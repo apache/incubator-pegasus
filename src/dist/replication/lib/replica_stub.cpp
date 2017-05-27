@@ -39,6 +39,7 @@
 #include "mutation_log.h"
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
+#include <dsn/tool-api/command.h>
 #include "replication_app_base.h"
 #include <vector>
 #include <deque>
@@ -55,7 +56,7 @@ using namespace dsn::service;
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serverlet("replica_stub"), _replicas_lock(true), /*_cli_replica_stub_json_state_handle(nullptr), */_cli_kill_partition(nullptr)
+    : serverlet("replica_stub"), _replicas_lock(true), /*_cli_replica_stub_json_state_handle(nullptr), */_cli_kill_partition(nullptr), _deny_client(false)
 {    
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -562,6 +563,11 @@ replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(const gpid
 
 void replica_stub::on_client_write(gpid gpid, dsn_message_t request)
 {
+    if (_deny_client)
+    {
+        // ignore and do not reply
+        return;
+    }
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -575,6 +581,11 @@ void replica_stub::on_client_write(gpid gpid, dsn_message_t request)
 
 void replica_stub::on_client_read(gpid gpid, dsn_message_t request)
 {
+    if (_deny_client)
+    {
+        // ignore and do not reply
+        return;
+    }
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -1680,6 +1691,32 @@ void replica_stub::open_service()
         {
             std::string* s = (std::string*)reply.context;
             delete s;
+        }
+    );
+
+    ::dsn::register_command("deny-client",
+        "deny-client - if deny client read & write request",
+        "deny-client <true|false>",
+        [this](const std::vector<std::string>& args)
+        {
+            if (args.empty())
+            {
+                return _deny_client ? "true" : "false";
+            }
+            std::string arg = args[0];
+            if (arg != "true" && arg != "false")
+            {
+                return "ERROR: invalid arguments";
+            }
+            if (arg == "true")
+            {
+                _deny_client = true;
+            }
+            else
+            {
+                _deny_client = false;
+            }
+            return "OK";
         }
     );
 }

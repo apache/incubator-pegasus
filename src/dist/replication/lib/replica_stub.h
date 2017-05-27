@@ -209,6 +209,7 @@ private:
     //cli handle, for deregister cli command
     //dsn_handle_t    _cli_replica_stub_json_state_handle;
     dsn_handle_t    _cli_kill_partition;
+    bool            _deny_client;
 
     // performance counters
     perf_counter_    _counter_replicas_count;
