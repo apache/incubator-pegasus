@@ -499,7 +499,7 @@ namespace dsn {
 
             extern bool get_current_directory(std::string& path);
 
-            extern bool last_write_time(std::string& path, time_t& tm);
+            extern bool last_write_time(const std::string& path, time_t& tm);
 
             extern error_code get_process_image_path(int pid, std::string& path);
 

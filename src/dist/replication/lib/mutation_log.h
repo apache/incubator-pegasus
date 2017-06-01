@@ -227,11 +227,17 @@ public:
     //
 
     // garbage collection for private log, returns removed file count.
-    // remove log files if satisfy:
+    // can remove log files if satisfy all the conditions:
+    //  - the file is not the current log file
+    //  - the file is not covered by reserve_max_size or reserve_max_time
     //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
-    //  - the current log file is excluded
+    // that means, should reserve files if satisfy one of the conditions:
+    //  - the file is the current log file
+    //  - the file is covered by both reserve_max_size and reserve_max_time
+    //  - file.max_decree > "durable_decree" && file.end_offset > "valid_start_offset"
     // thread safe
-    int garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset);
+    int garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset,
+                           int64_t reserve_max_size, int64_t reserve_max_time);
 
     // garbage collection for shared log, returns reserved file count.
     // `prevent_gc_replicas' will store replicas which prevent the smallest log file to be deleted.
@@ -583,6 +589,10 @@ public:
     // if the file header is valid
     bool is_right_header() const;
     
+    // set & get last write time, used for gc
+    void set_last_write_time(uint64_t last_write_time) { _last_write_time = last_write_time; }
+    uint64_t last_write_time() const { return _last_write_time; }
+
 private:
     // make private, user should create log_file through open_read() or open_write()
     log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, bool is_read);
@@ -598,6 +608,7 @@ private:
     std::string      _path; // file path
     int              _index; // file index
     log_file_header  _header; // file header
+    uint64_t         _last_write_time; // seconds from epoch time
 
     // this data is used for garbage collection, and is part of file header.
     // for read, the value is read from file header.

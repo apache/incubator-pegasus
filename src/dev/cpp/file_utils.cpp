@@ -984,7 +984,7 @@ out_error:
                 return succ;
             }
 
-            bool last_write_time(std::string& path, time_t& tm)
+            bool last_write_time(const std::string& path, time_t& tm)
             {
                 struct stat_ st;
                 std::string npath;

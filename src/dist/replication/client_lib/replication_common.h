@@ -91,6 +91,8 @@ public:
     int32_t log_private_file_size_mb;
     int32_t log_private_batch_buffer_kb;
     int32_t log_private_batch_buffer_count;
+    int32_t log_private_reserve_max_size_mb;
+    int32_t log_private_reserve_max_time_seconds;
 
     int32_t log_shared_file_size_mb;
     int32_t log_shared_file_count_limit;

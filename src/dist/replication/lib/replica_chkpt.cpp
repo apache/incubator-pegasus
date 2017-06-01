@@ -72,7 +72,9 @@ namespace dsn {
             _private_log->garbage_collection(
                 get_gpid(),
                 _app->last_durable_decree(),
-                _app->init_info().init_offset_in_private_log
+                _app->init_info().init_offset_in_private_log,
+                (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
+                (int64_t)_options->log_private_reserve_max_time_seconds
             );
 
             if (partition_status::PS_PRIMARY == status())

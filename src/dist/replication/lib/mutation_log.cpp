@@ -1363,7 +1363,46 @@ void mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state&
     }
 }
 
-int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset)
+// return true if the file is covered by both reserve_max_size and reserve_max_time
+static bool should_reserve_file(log_file_ptr log, int64_t already_reserved_size,
+                                int64_t reserve_max_size, int64_t reserve_max_time)
+{
+    if (reserve_max_size == 0 || reserve_max_time == 0)
+        return false;
+
+    int64_t file_size = log->end_offset() - log->start_offset();
+    if (already_reserved_size + file_size > reserve_max_size)
+    {
+        // already exceed size limit, should not reserve
+        return false;
+    }
+
+    uint64_t file_last_write_time = log->last_write_time();
+    if (file_last_write_time == 0)
+    {
+        time_t tm;
+        if (!dsn::utils::filesystem::last_write_time(log->path(), tm))
+        {
+            // get file last write time failed, reserve it for safety
+            dwarn("get last write time of file %s failed", log->path().c_str());
+            return true;
+        }
+        file_last_write_time = (uint64_t)tm;
+        log->set_last_write_time(file_last_write_time);
+    }
+    uint64_t current_time = dsn_now_ms() /1000;
+    if (file_last_write_time + reserve_max_time < current_time)
+    {
+        // already exceed time limit, should not reserve
+        return false;
+    }
+
+    // not exceed size and time limit, reserve it
+    return true;
+}
+
+int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t valid_start_offset,
+                                     int64_t reserve_max_size, int64_t reserve_max_time)
 {
     dassert(_is_private, "this method is only valid for private log");
 
@@ -1393,14 +1432,21 @@ int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t v
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
     std::map<int, log_file_ptr>::reverse_iterator mark_it;
+    int64_t already_reserved_size = 0;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it)
     {
         log_file_ptr log = mark_it->second;
         dassert(mark_it->first == log->index(), "");
         // currently, "max_decree" is the max decree covered by this log.
 
-        // skip current file
+        // reserve current file
         if (current_file_index == log->index())
+        {
+            // not break, go to update max decree
+        }
+
+        // reserve if the file is covered by both reserve_max_size and reserve_max_time
+        else if (should_reserve_file(log, already_reserved_size, reserve_max_size, reserve_max_time))
         {
             // not break, go to update max decree
         }
@@ -1438,6 +1484,7 @@ int mutation_log::garbage_collection(gpid gpid, decree durable_decree, int64_t v
         auto it3 = max_decrees.find(gpid);
         dassert(it3 != max_decrees.end(), "impossible for private logs");
         max_decree = it3->second.max_decree;
+        already_reserved_size += log->end_offset() - log->start_offset();
     }
 
     if (mark_it == files.rend())
@@ -2062,6 +2109,7 @@ log_file::log_file(
     _path = path;
     _index = index;
     _crc32 = 0;
+    _last_write_time = 0;
     memset(&_header, 0, sizeof(_header));
 
     if (is_read)

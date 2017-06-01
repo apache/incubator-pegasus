@@ -99,7 +99,7 @@ TEST(replication, mutation_log_learn)
         // gc
         time_tic = clock.now();
         decree durable_decree = lp;
-        mlog->garbage_collection(gpid, durable_decree, 0);
+        mlog->garbage_collection(gpid, durable_decree, 0, 0, 0);
         mlog->close();
         time_toc = clock.now();
         std::cout << "learn_point[" << lp << "]: gc time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
