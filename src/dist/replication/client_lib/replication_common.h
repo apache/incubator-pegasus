@@ -57,6 +57,7 @@ public:
     std::string slog_dir;
     std::vector<std::string> data_dirs;
 
+    bool    deny_client_on_start;
     bool    delay_for_fd_timeout_on_start;
     bool    verbose_log_on_commit;
     bool    empty_write_disabled;

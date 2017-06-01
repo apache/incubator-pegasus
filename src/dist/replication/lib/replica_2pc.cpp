@@ -72,7 +72,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
         return;
     }
 
-    dinfo("%s: got write reqeust from %s", name(), dsn_address_to_string(dsn_msg_from_address(request)));
+    dinfo("%s: got write request from %s", name(), dsn_address_to_string(dsn_msg_from_address(request)));
     auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu)
     {

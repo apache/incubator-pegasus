@@ -109,6 +109,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
     ddebug("meta_servers = %s", oss.str().c_str());
 
+    _deny_client = _options.deny_client_on_start;
+
     // clear dirs if need
     if (clear)
     {
@@ -180,7 +182,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     uint64_t start_time = dsn_now_ms();
     for (auto& dir : dir_list)
     {
-        if (dir.length() >= 4 && dir.substr(dir.length() - 4) == ".err")
+        if (dir.length() >= 4 && (dir.substr(dir.length() - 4) == ".err" || dir.substr(dir.length() - 4) == ".bak"))
         {
             ddebug("ignore dir %s", dir.c_str());
             continue;
@@ -1240,15 +1242,15 @@ void replica_stub::response_client_error(gpid gpid, bool is_read, dsn_message_t 
 
     if (error == ERR_OK)
     {
-        dinfo("%d.%d@%s: reply client %s, err = %s",
+        dinfo("%d.%d@%s: reply client %s to %s, err = %s",
               gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(),
-              is_read ? "read" : "write", error.to_string());
+              is_read ? "read" : "write", dsn_address_to_string(dsn_msg_from_address(request)), error.to_string());
     }
     else
     {
-        derror("%d.%d@%s: reply client %s, err = %s",
+        derror("%d.%d@%s: reply client %s to %s, err = %s",
                gpid.get_app_id(), gpid.get_partition_index(), _primary_address.to_string(),
-               is_read ? "read" : "write", error.to_string());
+               is_read ? "read" : "write", dsn_address_to_string(dsn_msg_from_address(request)), error.to_string());
     }
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }

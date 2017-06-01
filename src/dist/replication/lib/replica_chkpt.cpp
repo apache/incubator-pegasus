@@ -350,7 +350,7 @@ namespace dsn {
                        "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
                        name(), _app->last_committed_decree(), _app->last_durable_decree());
             }
-            else
+            else if (err != ERR_NO_NEED_OPERATE)
             {
                 derror("%s: call app.sync_checkpoint() failed, err = %s", name(), err.to_string());
             }

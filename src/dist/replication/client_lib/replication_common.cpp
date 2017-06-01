@@ -44,6 +44,7 @@ namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
+    deny_client_on_start = false;
     delay_for_fd_timeout_on_start = false;
     verbose_log_on_commit = false;
     empty_write_disabled = false;
@@ -140,6 +141,12 @@ void replication_options::initialize()
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
     }
 
+    deny_client_on_start =
+        dsn_config_get_value_bool("replication",
+        "deny_client_on_start",
+        deny_client_on_start,
+        "whether to deny client read and write requests when starting the server, default is false"
+        );
     delay_for_fd_timeout_on_start =
         dsn_config_get_value_bool("replication",
         "delay_for_fd_timeout_on_start",

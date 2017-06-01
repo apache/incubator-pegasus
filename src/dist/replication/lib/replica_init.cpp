@@ -148,6 +148,12 @@ error_code replica::initialize_on_load()
         return nullptr;
     }
 
+    if (info.app_type != app_type)
+    {
+        derror("unmatched app type %s for %s", info.app_type.c_str(), path.c_str());
+        return nullptr;
+    }
+
     replica* rep = new replica(stub, gpid, info, dir);
     
     err = rep->initialize_on_load();
