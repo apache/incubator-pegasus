@@ -104,6 +104,7 @@ void config_context::check_size()
     while ( replica_count(*config_owner) + dropped.size() > MAX_REPLICA_COUNT_IN_GRROUP)
     {
         dropped.erase(dropped.begin());
+        prefered_dropped = (int)dropped.size() - 1;
     }
 }
 
@@ -113,7 +114,7 @@ bool config_context::remove_from_dropped(const rpc_address &node)
     if (iter != dropped.end())
     {
         dropped.erase(iter);
-        prefered_dropped = dropped.size() - 1;
+        prefered_dropped = (int)dropped.size() - 1;
         return true;
     }
     return false;
@@ -126,7 +127,6 @@ bool config_context::record_drop_history(const rpc_address &node)
         return false;
     dropped.emplace_back( dropped_replica{node, dsn_now_ms(), invalid_ballot, invalid_decree, invalid_decree} );
     check_size();
-    prefered_dropped = dropped.size() - 1;
     return true;
 }
 
@@ -148,7 +148,6 @@ int config_context::collect_drop_replica(const rpc_address &node, const replica_
 
     dropped.emplace(iter, current);
     check_size();
-    prefered_dropped = dropped.size() - 1;
 
     iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d){ return d.node == node; });
     if (iter == dropped.end())

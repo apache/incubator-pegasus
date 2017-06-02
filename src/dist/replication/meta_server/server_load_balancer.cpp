@@ -531,7 +531,13 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
 
     if (is_emergency)
     {
-        dassert(cc.prefered_dropped < (int)(cc.dropped.size()), "prefered_dropped(%d) may not updated when drop_list(size %d) update", cc.prefered_dropped, cc.dropped.size());
+        if (cc.prefered_dropped >= cc.dropped.size())
+        {
+            derror("prefered_dropped(%d) may not updated when drop_list(size %d) update",
+                   cc.prefered_dropped, cc.dropped.size());
+            cc.prefered_dropped = (int)cc.dropped.size()-1;
+        }
+
         while (cc.prefered_dropped >= 0)
         {
             dropped_replica& server = cc.dropped[cc.prefered_dropped--];
@@ -716,7 +722,7 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
             iter->last_prepared_decree);
     }
 
-    cc.prefered_dropped = drop_list.size() - 1;
+    cc.prefered_dropped = (int)drop_list.size() - 1;
     return true;
 }
 

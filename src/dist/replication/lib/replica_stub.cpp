@@ -1696,7 +1696,12 @@ void replica_stub::open_service()
         }
     );
 
-    ::dsn::register_command("deny-client",
+    dsn_app_info info;
+    dsn_get_current_app_info(&info);
+    std::string command(info.name);
+    command += ".deny-client";
+
+    ::dsn::register_command(command.c_str(),
         "deny-client - if deny client read & write request",
         "deny-client <true|false>",
         [this](const std::vector<std::string>& args)
