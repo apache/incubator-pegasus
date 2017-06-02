@@ -35,6 +35,8 @@
 
 #include "replication_common.h"
 
+#include <fstream>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -136,9 +138,77 @@ void replication_options::initialize()
             dir = utils::filesystem::path_combine(dir, app_name);
         }
     }
-    for (auto& dir : dirs)
+
+    std::string black_list_file = dsn_config_get_value_string(
+                "replication",
+                "data_dirs_black_list_file",
+                "/home/work/.pegasus_data_dirs_black_list",
+                "replica directory black list file"
+                );
+    std::vector<std::string> black_list;
+    if (!black_list_file.empty() && dsn::utils::filesystem::file_exists(black_list_file))
     {
-        data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+        ddebug("data_dirs_black_list_file[%s] found, apply it", black_list_file.c_str());
+
+        std::ifstream file(black_list_file);
+        if (!file)
+        {
+            dassert(false, "open data_dirs_black_list_file failed: %s", black_list_file.c_str());
+        }
+
+        std::string str;
+        int count = 0;
+        while (std::getline(file, str))
+        {
+            std::string str2 = dsn::utils::trim_string((char*)str.c_str());
+            if (str2.empty())
+                continue;
+            if (str2.back() != '/')
+                str2.append("/");
+            black_list.push_back(str2);
+            count++;
+            ddebug("black_list[%d] = [%s]", count, str2.c_str());
+            str.clear();
+        }
+    }
+    else
+    {
+        ddebug("data_dirs_black_list_file[%s] not found, ignore it", black_list_file.c_str());
+    }
+
+    int dir_count = 0;
+    for (std::string& dir : dirs)
+    {
+        bool in_black_list = false;
+        if (!black_list.empty())
+        {
+            std::string dir2 = dir;
+            if (dir2.back() != '/')
+                dir2.append("/");
+            for (std::string& black : black_list)
+            {
+                if (dir2.find(black) == 0)
+                {
+                    in_black_list = true;
+                    break;
+                }
+            }
+        }
+
+        if (in_black_list)
+        {
+            dwarn("replica data dir %s is in black list, ignore it", dir.c_str());
+        }
+        else
+        {
+            ddebug("data_dirs[%d] = %s", dir_count++, dir.c_str());
+            data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+        }
+    }
+
+    if (data_dirs.empty())
+    {
+        dassert(false, "no replica data dir found, maybe not set or excluded by black list");
     }
 
     deny_client_on_start =
