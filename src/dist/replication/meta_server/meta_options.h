@@ -40,16 +40,24 @@
 
 namespace dsn { namespace replication {
 
+class fd_suboptions
+{
+public:
+    std::string distributed_lock_service_type;
+    std::vector<std::string> distributed_lock_service_args;
+
+    uint64_t stable_rs_min_running_seconds;
+    int32_t max_succssive_unstable_restart;
+};
+
 class meta_options
 {
 public:
     std::string cluster_root;
     std::string meta_state_service_type;
-    std::string distributed_lock_service_type;
     std::string server_load_balancer_type;
 
     std::vector<std::string> meta_state_service_args;
-    std::vector<std::string> distributed_lock_service_args;
 
     uint64_t replica_assign_delay_ms_for_dropouts;
     uint64_t node_live_percentage_threshold_for_update;
@@ -59,6 +67,8 @@ public:
     bool recover_from_replica_server;
     
     int32_t max_replicas_in_group;
+
+    fd_suboptions _fd_opts;
 public:
     void initialize();
 

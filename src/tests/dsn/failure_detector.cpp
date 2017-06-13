@@ -1,5 +1,7 @@
 #include "meta_server_failure_detector.h"
+#include "meta_options.h"
 #include "replica_stub.h"
+
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <vector>
@@ -88,7 +90,7 @@ private:
     std::function<void (const std::vector<rpc_address>&)> _disconnected_cb;
     volatile bool _response_ping_switch;
 
-protected:
+public:
     virtual void on_ping(const beacon_msg &beacon, ::dsn::rpc_replier<beacon_ack> &reply) override
     {
         if (_response_ping_switch)
@@ -111,7 +113,6 @@ protected:
         if (_connected_cb)
             _connected_cb(node);
     }
-public:
     master_fd_test(): meta_server_failure_detector(rpc_address(), false)
     {
         _response_ping_switch = true;
@@ -185,7 +186,11 @@ public:
 
     error_code start(int, char **) override
     {
+        _opts.stable_rs_min_running_seconds = 10;
+        _opts.max_succssive_unstable_restart = 10;
+
         _master_fd = new master_fd_test();
+        _master_fd->set_options(&_opts);
         _master_fd->start(1, 1, 4, 5);
         ++started_apps;
 
@@ -200,6 +205,7 @@ public:
     master_fd_test* fd() { return _master_fd; }
 private:
     master_fd_test* _master_fd;
+    replication::fd_suboptions _opts;
 };
 
 bool spin_wait_condition(const std::function<bool ()>& pred, int seconds)
@@ -560,4 +566,123 @@ TEST(fd, worker_died_when_switch_master)
     /* then stop the worker*/
     worker->fd()->toggle_send_ping(false);
     ASSERT_TRUE( spin_wait_condition( [&wait_count]{ return wait_count==0; }, 20 ) );
+}
+
+dsn_message_t create_fake_rpc_response()
+{
+    dsn_message_t req = dsn_msg_create_received_request(RPC_MASTER_CONFIG,
+                                                        DSF_THRIFT_BINARY,
+                                                        nullptr,
+                                                        0);
+    dsn_message_t response = dsn_msg_create_response(req);
+    dsn_msg_add_ref(req);
+    dsn_msg_release_ref(req);
+    return response;
+}
+
+TEST(fd, update_stability)
+{
+    test_worker* worker;
+    std::vector<test_master*> masters;
+    ASSERT_TRUE( get_worker_and_master(worker, masters) );
+    clear(worker, masters);
+
+    master_group_set_leader(masters, 0);
+    master_fd_test* fd = masters[0]->fd();
+    fd->toggle_response_ping(true);
+
+    replication::fd_suboptions opts;
+    opts.stable_rs_min_running_seconds = 5;
+    opts.max_succssive_unstable_restart = 2;
+    fd->set_options(&opts);
+
+    replication::meta_server_failure_detector::stability_map* smap =
+            fd->get_stability_map_for_test();
+    smap->clear();
+
+    dsn::rpc_replier<beacon_ack> r(create_fake_rpc_response());
+    beacon_msg msg;
+    msg.from_addr = rpc_address("localhost", 123);
+    msg.to_addr = rpc_address("localhost", MPORT_START);
+    msg.time = dsn_now_ms();
+    msg.__isset.start_time = true;
+    msg.start_time = 1000;
+
+    // first on ping
+    fd->on_ping(msg, r);
+    ASSERT_EQ(1, smap->size());
+    ASSERT_NE(smap->end(), smap->find(msg.from_addr));
+
+    replication::meta_server_failure_detector::worker_stability& ws =
+            smap->find(msg.from_addr)->second;
+    ASSERT_EQ(0, ws.unstable_restart_count);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // unstably restart and resend ping
+    msg.start_time += 4000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(1, ws.unstable_restart_count);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // upstably restart and resend ping again, the node's ping will be ignored
+    msg.start_time += 4000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(2, ws.unstable_restart_count);
+    ASSERT_FALSE(r.is_empty());
+
+    // stably restart, the meta stability & unstable_count will be reset
+    msg.start_time += 10000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(0, ws.unstable_restart_count);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // unstably restart, unstable-count++
+    msg.start_time += 4000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(1, ws.unstable_restart_count);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // not restart, unstable-count will be reset
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(0, ws.unstable_restart_count);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // old message, will be ignored
+    msg.start_time -= 4000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time+4000, ws.last_start_time_ms);
+    ASSERT_EQ(0, ws.unstable_restart_count);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // unstable restart, unstable-count++
+    msg.start_time += 8000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(1, ws.unstable_restart_count);
+    ASSERT_TRUE(r.is_empty());
+    r = dsn::rpc_replier<beacon_ack>(create_fake_rpc_response());
+
+    // unstable restart, unstable-count++, node's ping will be ignored
+    msg.start_time += 4000;
+    fd->on_ping(msg, r);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(2, ws.unstable_restart_count);
+    ASSERT_FALSE(r.is_empty());
+
+    // reset stat
+    fd->reset_stability_stat(msg.from_addr);
+    ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
+    ASSERT_EQ(0, ws.unstable_restart_count);
 }

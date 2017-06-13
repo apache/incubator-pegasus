@@ -923,6 +923,12 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
     return ::dsn::service_engine::instance().env()->random64(min, max);
 }
 
+static uint64_t s_runtime_init_time_ms;
+DSN_API uint64_t dsn_runtime_init_time_ms()
+{
+    return s_runtime_init_time_ms;
+}
+
 //------------------------------------------------------------------------------
 //
 // system
@@ -1176,6 +1182,13 @@ extern void dsn_core_init();
 
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list)
 {
+    s_runtime_init_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
+    char buff[32];
+    dsn::utils::time_ms_to_string(s_runtime_init_time_ms, buff);
+    ddebug("runtime_init_time_ms = %" PRIu64 " (%s)", s_runtime_init_time_ms, buff);
+
     dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 

@@ -49,11 +49,6 @@ void meta_options::initialize()
 {
     cluster_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta state service on remote");
 
-    distributed_lock_service_type = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_type",
-        "distributed_lock_service_simple",
-        "dist lock provider");
     meta_state_service_type = dsn_config_get_value_string(
         "meta_server",
         "meta_state_service_type",
@@ -74,14 +69,6 @@ void meta_options::initialize()
         "meta_state_service provider parameters"
         );
     utils::split_args(meta_state_service_parameters, meta_state_service_args);
-
-    const char* distributed_lock_service_parameters = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_parameters",
-        "",
-        "distributed_lock_service provider parameters"
-        );
-    utils::split_args(distributed_lock_service_parameters, distributed_lock_service_args);
 
     replica_assign_delay_ms_for_dropouts = dsn_config_get_value_uint64(
         "meta_server",
@@ -139,6 +126,34 @@ void meta_options::initialize()
         "max_replicas_in_group",
         4,
         "max replicas(alive & dead) in a group"
+        );
+
+    _fd_opts.distributed_lock_service_type = dsn_config_get_value_string(
+        "meta_server",
+        "distributed_lock_service_type",
+        "distributed_lock_service_simple",
+        "dist lock provider");
+    const char* distributed_lock_service_parameters = dsn_config_get_value_string(
+        "meta_server",
+        "distributed_lock_service_parameters",
+        "",
+        "distributed_lock_service provider parameters"
+        );
+    utils::split_args(distributed_lock_service_parameters, _fd_opts.distributed_lock_service_args);
+
+    _fd_opts.stable_rs_min_running_seconds = dsn_config_get_value_uint64(
+        "meta_server",
+        "stable_rs_min_running_seconds",
+        600,
+        "min running seconds for a stable replica server"
+        );
+
+    _fd_opts.max_succssive_unstable_restart = dsn_config_get_value_uint64(
+        "meta_server",
+        "max_succssive_unstable_restart",
+        5,
+        "meta server will treat an rs unstable so as to reject it's beacons "
+        "if its succssively restarting count exceeds this value"
         );
 }
 

@@ -70,7 +70,11 @@ namespace dsn {
                 uint32_t size;
                 rpc_replier<copy_response> replier;
 
-                callback_para(const rpc_replier<copy_response>& r) : hfile(nullptr), offset(0), size(0), replier(r){}
+                callback_para(rpc_replier<copy_response>&& r) :
+                    hfile(nullptr),
+                    offset(0),
+                    size(0),
+                    replier( std::move(r) ){}
             };
 
             struct file_handle_info_on_server
@@ -82,7 +86,7 @@ namespace dsn {
                 file_handle_info_on_server() : file_handle(nullptr), file_access_count(0), last_access_time(0) {}
             };
 
-            void internal_read_callback(error_code err, size_t sz, callback_para cp);
+            void internal_read_callback(error_code err, size_t sz, callback_para& cp);
 
             void close_file();
 

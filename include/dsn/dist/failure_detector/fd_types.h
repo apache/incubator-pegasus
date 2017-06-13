@@ -27,10 +27,11 @@ class beacon_ack;
 class config_master_message;
 
 typedef struct _beacon_msg__isset {
-  _beacon_msg__isset() : time(false), from_addr(false), to_addr(false) {}
+  _beacon_msg__isset() : time(false), from_addr(false), to_addr(false), start_time(false) {}
   bool time :1;
   bool from_addr :1;
   bool to_addr :1;
+  bool start_time :1;
 } _beacon_msg__isset;
 
 class beacon_msg {
@@ -40,13 +41,14 @@ class beacon_msg {
   beacon_msg(beacon_msg&&);
   beacon_msg& operator=(const beacon_msg&);
   beacon_msg& operator=(beacon_msg&&);
-  beacon_msg() : time(0) {
+  beacon_msg() : time(0), start_time(0) {
   }
 
   virtual ~beacon_msg() throw();
   int64_t time;
    ::dsn::rpc_address from_addr;
    ::dsn::rpc_address to_addr;
+  int64_t start_time;
 
   _beacon_msg__isset __isset;
 
@@ -56,6 +58,8 @@ class beacon_msg {
 
   void __set_to_addr(const  ::dsn::rpc_address& val);
 
+  void __set_start_time(const int64_t val);
+
   bool operator == (const beacon_msg & rhs) const
   {
     if (!(time == rhs.time))
@@ -63,6 +67,10 @@ class beacon_msg {
     if (!(from_addr == rhs.from_addr))
       return false;
     if (!(to_addr == rhs.to_addr))
+      return false;
+    if (__isset.start_time != rhs.__isset.start_time)
+      return false;
+    else if (__isset.start_time && !(start_time == rhs.start_time))
       return false;
     return true;
   }

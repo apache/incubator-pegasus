@@ -63,7 +63,8 @@ public:
     const meta_options& get_meta_options() const { return _meta_opts; }
     dist::meta_state_service* get_remote_storage() { return _storage.get(); }
     server_load_balancer* get_balancer() { return _balancer.get(); }
-    meta_function_level::type get_function_level() {
+    meta_function_level::type get_function_level()
+    {
         meta_function_level::type level = _function_level.load();
         if (level > meta_function_level::fl_freezed && check_freeze())
             level = meta_function_level::fl_freezed;
@@ -110,10 +111,10 @@ private:
 
     // common routines
     // ret:
-    //   1. the meta is primary
-    //   0. meta isn't primary, and rpc-msg can forward to others
-    //  -1. meta isn't primary, and rpc-msg can't forward to others
-    int check_primary(dsn_message_t req);
+    //   1. the meta is leader
+    //   0. meta isn't leader, and rpc-msg can forward to others
+    //  -1. meta isn't leader, and rpc-msg can't forward to others
+    int check_leader(dsn_message_t req);
     error_code remote_storage_initialize();
     bool check_freeze() const;
 private:

@@ -531,7 +531,7 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
 
     if (is_emergency)
     {
-        if (cc.prefered_dropped >= cc.dropped.size())
+        if (cc.prefered_dropped >= (int)cc.dropped.size())
         {
             derror("prefered_dropped(%d) may not updated when drop_list(size %d) update",
                    cc.prefered_dropped, cc.dropped.size());

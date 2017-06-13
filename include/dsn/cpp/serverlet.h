@@ -63,11 +63,28 @@ namespace dsn
         {
             _response = response;
         }
-
-        rpc_replier(const rpc_replier& r)
+        rpc_replier(rpc_replier &&r)
         {
             _response = r._response;
+            r._response = nullptr;
         }
+        rpc_replier& operator = (rpc_replier&& r)
+        {
+            release();
+            _response = r._response;
+            r._response = nullptr;
+            return *this;
+        }
+
+        ~rpc_replier()
+        {
+            release();
+        }
+
+        rpc_replier(const rpc_replier& r) = delete;
+        rpc_replier(rpc_replier& r) = delete;
+        rpc_replier& operator = (const rpc_replier& r) = delete;
+        rpc_replier& operator = (rpc_replier& r) = delete;
 
         void operator () (const TResponse& resp)
         {
@@ -75,6 +92,7 @@ namespace dsn
             {
                 ::dsn::marshall(_response, resp);
                 dsn_rpc_reply(_response);
+                _response = nullptr;
             }
         }
 
@@ -84,6 +102,15 @@ namespace dsn
         }
 
     private:
+        void release()
+        {
+            if (_response != nullptr)
+            {
+                dsn_msg_add_ref(_response);
+                dsn_msg_release_ref(_response);
+                _response = nullptr;
+            }
+        }
         dsn_message_t _response;
     };
 

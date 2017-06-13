@@ -94,7 +94,7 @@ namespace dsn {
                     if (!meta->is_started())
                         return nullptr;
 
-                    if (meta->_service->_failure_detector->is_primary())
+                    if (meta->_service->_failure_detector->get_leader(nullptr))
                         return meta;
                 }
                 return nullptr;

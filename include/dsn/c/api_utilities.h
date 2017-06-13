@@ -298,8 +298,8 @@ extern DSN_API void                  dsn_coredump();
 
 /*@}*/
 
-#define dpropagate_false(exp) if (!(exp)) return false
-#define dpropagate_false_logged(exp, level, ...) do {\
+#define dverify(exp) if (!(exp)) return false
+#define dverify_logged(exp, level, ...) do {\
     if (!(exp)) {\
         dlog(level, __TITLE__, __VA_ARGS__);\
         return false;\

@@ -253,7 +253,7 @@ error_code meta_service::start()
     register_rpc_handlers();
     
     _failure_detector->acquire_leader_lock();
-    dassert(_failure_detector->is_primary(), "must be primary at this point");
+    dassert(_failure_detector->get_leader(nullptr), "must be primary at this point");
     ddebug("%s got the primary lock, start to recover server state from remote storage", primary_address().to_string());
 
     _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
@@ -349,45 +349,36 @@ void meta_service::register_rpc_handlers()
         );
 }
 
-int meta_service::check_primary(dsn_message_t req)
+int meta_service::check_leader(dsn_message_t req)
 {
-    if (!_failure_detector->is_primary())
+    dsn::rpc_address leader;
+    if (!_failure_detector->get_leader(&leader))
     {
         dsn_msg_options_t options;
         dsn_msg_get_options(req, &options);
         if (!options.context.u.is_forward_supported)
             return -1;
 
-        auto primary = _failure_detector->get_primary();
-        dinfo("primary address: %s", primary.to_string());
-        if (!primary.is_invalid())
+        dinfo("leader address: %s", leader.to_string());
+        if (!leader.is_invalid())
         {
-            // it is possible that now primary == primary_address()
-            // due to the non-atomic is_primary() and get_primary() above
-            if (primary != primary_address())
-            {
-                dsn_rpc_forward(req, primary.c_addr());
-                return 0;
-            }
-            else
-            {
-                return 1;
-            }
+            dsn_rpc_forward(req, leader.c_addr());
+            return 0;
         }
         else
         {
             return -1;
         }
     }
-
     return 1;
 }
 
 #define RPC_CHECK_STATUS(dsn_msg, response_struct)\
     dinfo("rpc %s called", __FUNCTION__);\
-    int result = check_primary(dsn_msg);\
+    int result = check_leader(dsn_msg);\
     if (result == 0) return;\
-    if (result == -1 || !_started) {\
+    if (result == -1 || !_started)\
+    {\
         if (result == -1)\
             response_struct.err = ERR_FORWARD_TO_OTHERS;\
         else if (_recovering)\
@@ -487,9 +478,10 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
             oss << ",";
         oss << _opts.meta_servers[i].to_string();
     }
+
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
-    response.values.push_back(_failure_detector->get_primary().to_string());
+    response.values.push_back(primary_address().to_std_string());
     std::string zk_hosts = dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
     zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
     response.keys.push_back("zookeeper_hosts");
@@ -622,7 +614,7 @@ void meta_service::on_start_recovery(dsn_message_t req)
 {
     configuration_recovery_response response;
     ddebug("got start recovery request, start to do recovery");
-    int result = check_primary(req);
+    int result = check_leader(req);
     if (result == 0) // request has been forwarded to others
     {
         return;

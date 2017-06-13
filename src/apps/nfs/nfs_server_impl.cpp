@@ -86,7 +86,7 @@ namespace dsn {
                 return;
             }
 
-            callback_para cp(reply);
+            callback_para cp(std::move(reply));
             cp.bb = blob(dsn::make_shared_array<char>(_opts.nfs_copy_block_bytes), _opts.nfs_copy_block_bytes);
             cp.dst_dir = std::move(request.dst_dir);
             cp.file_path = std::move(file_path);
@@ -102,14 +102,14 @@ namespace dsn {
                 request.offset,
                 LPC_NFS_READ,
                 this,
-                [this, cp_cap = std::move(cp)] (error_code err, int sz)
+                [this, cp_cap = std::move(cp)] (error_code err, int sz) mutable
                 {
-                    internal_read_callback(err, sz, std::move(cp_cap));
+                    internal_read_callback(err, sz, cp_cap);
                 }
                 );
         }
 
-        void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callback_para cp)
+        void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callback_para &cp)
         {
             {
                 zauto_lock l(_handles_map_lock);

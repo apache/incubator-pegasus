@@ -30,6 +30,11 @@ void beacon_msg::__set_to_addr(const  ::dsn::rpc_address& val) {
   this->to_addr = val;
 }
 
+void beacon_msg::__set_start_time(const int64_t val) {
+  this->start_time = val;
+__isset.start_time = true;
+}
+
 uint32_t beacon_msg::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -75,6 +80,14 @@ uint32_t beacon_msg::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->start_time);
+          this->__isset.start_time = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -104,6 +117,11 @@ uint32_t beacon_msg::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += this->to_addr.write(oprot);
   xfer += oprot->writeFieldEnd();
 
+  if (this->__isset.start_time) {
+    xfer += oprot->writeFieldBegin("start_time", ::apache::thrift::protocol::T_I64, 4);
+    xfer += oprot->writeI64(this->start_time);
+    xfer += oprot->writeFieldEnd();
+  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -114,6 +132,7 @@ void swap(beacon_msg &a, beacon_msg &b) {
   swap(a.time, b.time);
   swap(a.from_addr, b.from_addr);
   swap(a.to_addr, b.to_addr);
+  swap(a.start_time, b.start_time);
   swap(a.__isset, b.__isset);
 }
 
@@ -121,18 +140,21 @@ beacon_msg::beacon_msg(const beacon_msg& other0) {
   time = other0.time;
   from_addr = other0.from_addr;
   to_addr = other0.to_addr;
+  start_time = other0.start_time;
   __isset = other0.__isset;
 }
 beacon_msg::beacon_msg( beacon_msg&& other1) {
   time = std::move(other1.time);
   from_addr = std::move(other1.from_addr);
   to_addr = std::move(other1.to_addr);
+  start_time = std::move(other1.start_time);
   __isset = std::move(other1.__isset);
 }
 beacon_msg& beacon_msg::operator=(const beacon_msg& other2) {
   time = other2.time;
   from_addr = other2.from_addr;
   to_addr = other2.to_addr;
+  start_time = other2.start_time;
   __isset = other2.__isset;
   return *this;
 }
@@ -140,6 +162,7 @@ beacon_msg& beacon_msg::operator=(beacon_msg&& other3) {
   time = std::move(other3.time);
   from_addr = std::move(other3.from_addr);
   to_addr = std::move(other3.to_addr);
+  start_time = std::move(other3.start_time);
   __isset = std::move(other3.__isset);
   return *this;
 }
@@ -149,6 +172,7 @@ void beacon_msg::printTo(std::ostream& out) const {
   out << "time=" << to_string(time);
   out << ", " << "from_addr=" << to_string(from_addr);
   out << ", " << "to_addr=" << to_string(to_addr);
+  out << ", " << "start_time="; (__isset.start_time ? (out << to_string(start_time)) : (out << "<null>"));
   out << ")";
 }
 

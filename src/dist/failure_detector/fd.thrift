@@ -7,6 +7,7 @@ struct beacon_msg
     1: i64 time;
     2: dsn.rpc_address from_addr;
     3: dsn.rpc_address to_addr;
+    4: optional i64 start_time;
 }
 
 struct beacon_ack
