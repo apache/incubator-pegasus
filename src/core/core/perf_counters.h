@@ -62,16 +62,12 @@ public:
 
     // full_name = perf_counter::build_full_name(...);
     perf_counter_ptr get_counter(const char* full_name);
-    perf_counter_ptr get_counter(uint64_t index);
     bool remove_counter(const char* full_name);
     
     void register_factory(perf_counter::factory factory);
     static std::string list_counter(const std::vector<std::string>& args);
     static std::string get_counter_value(const std::vector<std::string>& args);
     static std::string get_counter_sample(const std::vector<std::string>& args);
-    static std::string get_counter_value_i(const std::vector<std::string>& args);
-    static std::string get_counter_sample_i(const std::vector<std::string>& args);
-    static std::string get_counter_index(const std::vector<std::string>& args);
 
     typedef std::map<std::string, perf_counter_ptr > all_counters;
 
@@ -80,10 +76,6 @@ private:
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;
     perf_counter::factory      _factory;
-
-    uint64_t                   _max_counter_count;
-    perf_counter               **_quick_counters;
-    std::queue<uint64_t>       _quick_counters_empty_slots;
 };
 
 } // end namespace dsn::utils
