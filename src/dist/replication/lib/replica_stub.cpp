@@ -63,7 +63,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
     _failure_detector = nullptr;
     _state = NS_Disconnected;
     _log = nullptr;
-    _create_time_ms = now_ms();
     install_perf_counters();
 }
 
@@ -411,9 +410,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     {
         uint64_t now_time_ms = now_ms();
         uint64_t delay_time_ms = (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
-        if (now_time_ms < _create_time_ms + delay_time_ms)
+        if (now_time_ms < dsn_runtime_init_time_ms() + delay_time_ms)
         {
-            uint64_t delay = _create_time_ms + delay_time_ms - now_time_ms;
+            uint64_t delay = dsn_runtime_init_time_ms() + delay_time_ms - now_time_ms;
             ddebug("delay for %" PRIu64 "ms to make failure detector timeout", delay);
             tasking::enqueue(
                 LPC_REPLICA_SERVER_DELAY_START,

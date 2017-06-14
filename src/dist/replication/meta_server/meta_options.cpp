@@ -100,7 +100,7 @@ void meta_options::initialize()
     const char* level_str = dsn_config_get_value_string(
         "meta_server",
         "meta_function_level_on_start",
-        "lively",
+        "steady",
         "meta function level on start"
         );
     std::string level = std::string("fl_") + level_str;

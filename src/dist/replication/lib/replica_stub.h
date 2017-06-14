@@ -190,7 +190,6 @@ private:
     closed_replicas             _closed_replicas;
 
     mutation_log_ptr            _log;
-    uint64_t                    _create_time_ms;
     ::dsn::rpc_address          _primary_address;
 
     ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;

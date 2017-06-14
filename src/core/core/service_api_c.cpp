@@ -1185,9 +1185,9 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     s_runtime_init_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-    char buff[32];
-    dsn::utils::time_ms_to_string(s_runtime_init_time_ms, buff);
-    ddebug("runtime_init_time_ms = %" PRIu64 " (%s)", s_runtime_init_time_ms, buff);
+    char init_time_buf[32];
+    dsn::utils::time_ms_to_string(dsn_runtime_init_time_ms(), init_time_buf);
+    ddebug("dsn_runtime_init_time_ms = %" PRIu64 " (%s)", dsn_runtime_init_time_ms(), init_time_buf);
 
     dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
@@ -1289,6 +1289,11 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     // init logging    
     dsn_log_init();
+
+# ifndef _WIN32
+    ddebug("init rdsn runtime, pid = %d, dsn_runtime_init_time_ms = %" PRIu64 " (%s)",
+           (int)getpid(), dsn_runtime_init_time_ms(), init_time_buf);
+# endif
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it)
