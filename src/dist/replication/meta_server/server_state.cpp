@@ -2245,6 +2245,45 @@ bool server_state::can_run_balancer()
     return true;
 }
 
+void server_state::update_partition_perf_counter()
+{
+    auto func = [this](const std::shared_ptr<app_state>& app)
+    {
+        int dead=0;
+        int unwritable_ill=0;
+        int writable_ill=0;
+        for (unsigned int i=0; i!=app->partition_count; ++i)
+        {
+            partition_configuration& pc = app->partitions[i];
+            if (pc.primary.is_invalid())
+            {
+                if (pc.secondaries.empty())
+                    dead++;
+                else
+                    unwritable_ill++;
+            }
+            else
+            {
+                int n = replica_count(pc);
+                if (n < _meta_svc->get_options().mutation_2pc_min_replica_count)
+                {
+                    unwritable_ill++;
+                }
+                else if (n < pc.max_replica_count)
+                {
+                    writable_ill++;
+                }
+            }
+        }
+        app->helpers->writable_ill_partitions.set(writable_ill);
+        app->helpers->unwritable_ill_partitions.set(unwritable_ill);
+        app->helpers->dead_partitions.set(dead);
+        return true;
+    };
+
+    for_each_available_app(_all_apps, func);
+}
+
 bool server_state::check_all_partitions()
 {
     int unhealthy_partitions = 0;
@@ -2253,10 +2292,12 @@ bool server_state::check_all_partitions()
 
     zauto_write_lock l(_lock);
 
+    update_partition_perf_counter();
     // first the cure stage
     if (level <= meta_function_level::fl_freezed)
     {
-        dwarn("service is in level(%s), don't do any cure or balancer actions", _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+        dwarn("service is in level(%s), don't do any cure or balancer actions",
+              _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
     }
     for (auto& app_pair: _exist_apps)
@@ -2273,7 +2314,10 @@ bool server_state::check_all_partitions()
             {
                 configuration_proposal_action action;
                 pc_status s = _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, pc.pid, action);
-                dinfo("gpid(%d.%d) is in status(%s)", pc.pid.get_app_id(), pc.pid.get_partition_index(), enum_to_string(s));
+                dinfo("gpid(%d.%d) is in status(%s)",
+                      pc.pid.get_app_id(),
+                      pc.pid.get_partition_index(),
+                      enum_to_string(s));
                 if (pc_status::healthy != s)
                 {
                     unhealthy_partitions++;
@@ -2290,13 +2334,17 @@ bool server_state::check_all_partitions()
     // then the balancer stage
     if (level <= meta_function_level::fl_steady)
     {
-        ddebug("don't do replica migration coz meta server is in level(%s)", _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+        ddebug("don't do replica migration coz meta server is in level(%s)",
+               _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
     }
 
     if (unhealthy_partitions != 0)
     {
-        ddebug("don't do replica migration coz %d of %d partitions aren't healthy", unhealthy_partitions, total_partitions);
+        ddebug("don't do replica migration coz %d of %d partitions aren't healthy",
+               unhealthy_partitions,
+               total_partitions
+               );
         return false;
     }
 
@@ -2311,7 +2359,10 @@ bool server_state::check_all_partitions()
         _meta_svc->get_balancer()->apply_balancer({&_all_apps, &_nodes}, _temporary_list);
         if (_replica_migration_subscriber)
             _replica_migration_subscriber(_temporary_list);
-        tasking::enqueue(LPC_META_STATE_NORMAL, _meta_svc, std::bind(&meta_service::balancer_run, _meta_svc));
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         _meta_svc,
+                         std::bind(&meta_service::balancer_run, _meta_svc)
+                         );
         return false;
     }
     return true;

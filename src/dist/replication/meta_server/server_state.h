@@ -146,6 +146,9 @@ private:
     bool spin_wait_staging(int timeout_seconds = -1);
     bool can_run_balancer();
 
+    // user should lock it first
+    void update_partition_perf_counter();
+
     error_code dump_app_states(const char* local_path, const std::function<app_state* ()>& iterator);
     error_code sync_apps_from_remote_storage();
     // sync local state to remote storage,
@@ -251,6 +254,7 @@ private:
 
     dsn_handle_t                                        _cli_json_state_handle;
     dsn_handle_t                                        _cli_dump_handle;
+
 public:
     void json_state(std::stringstream& out) const;
     static void static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);

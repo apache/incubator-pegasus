@@ -46,6 +46,7 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>
+#include <dsn/cpp/perf_counter_.h>
 
 namespace dsn { namespace replication {
 
@@ -251,6 +252,10 @@ public:
     std::atomic_int partitions_in_progress;
     std::vector<config_context> contexts;
     dsn_message_t pending_response;
+
+    perf_counter_ writable_ill_partitions;
+    perf_counter_ unwritable_ill_partitions;
+    perf_counter_ dead_partitions;
 public:
     app_state_helper(): owner(nullptr), partitions_in_progress(0)
     {

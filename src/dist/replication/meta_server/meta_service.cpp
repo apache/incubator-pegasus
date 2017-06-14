@@ -73,6 +73,17 @@ meta_service::meta_service():
             _function_level.store(meta_function_level::fl_steady);
         }
     }
+
+    _disconnect_qps.init("eon.meta_service",
+                         "disconnect_qps",
+                         COUNTER_TYPE_RATE,
+                         "disconnect qps for replica nodes"
+                         );
+    _unalive_nodes_count.init("eon.meta_service",
+                              "unalive_nodes",
+                              COUNTER_TYPE_NUMBER,
+                              "currently unalive nodes"
+                              );
 }
 
 meta_service::~meta_service()
@@ -143,9 +154,13 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
         }
     }
 
-    if (!_started)
-        return;
+    _disconnect_qps.add( is_alive?0:nodes.size() );
+    _unalive_nodes_count.set( _dead_set.size() );
 
+    if (!_started)
+    {
+        return;
+    }
     for (const rpc_address& address: nodes) {
         tasking::enqueue(
             LPC_META_STATE_HIGH,

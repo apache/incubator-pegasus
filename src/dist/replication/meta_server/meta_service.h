@@ -39,6 +39,8 @@
 
 #include <dsn/cpp/serverlet.h>
 #include <dsn/dist/meta_state_service.h>
+#include <dsn/cpp/perf_counter_.h>
+
 #include "replication_common.h"
 #include "meta_options.h"
 
@@ -143,6 +145,9 @@ private:
     std::atomic<meta_function_level::type> _function_level;
 
     std::string _cluster_root;
+
+    perf_counter_ _disconnect_qps;
+    perf_counter_ _unalive_nodes_count;
 };
 
 }}
