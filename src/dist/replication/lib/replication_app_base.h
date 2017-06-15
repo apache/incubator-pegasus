@@ -213,11 +213,6 @@ private:
     replica*    _replica;
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;
-    
-    perf_counter_ _app_commit_throughput;
-    perf_counter_ _app_commit_latency;
-    perf_counter_ _app_commit_decree;
-    perf_counter_ _app_req_throughput;
 };
 
 //------------------ inline implementation ---------------------

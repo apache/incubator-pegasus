@@ -202,34 +202,12 @@ const char* replication_app_base::replica_name() const
 
 void replication_app_base::install_perf_counters()
 {
-    std::stringstream ss;
-    
-    gpid pid = _replica->get_gpid();
-    char gpid_name[128];
-    memset(gpid_name, 0, sizeof(gpid_name));
-    snprintf(gpid_name, 127, "%d.%d", pid.get_app_id(), pid.get_partition_index());
-    ss << "commit_qps@" << gpid_name;
-    _app_commit_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
-
-    ss.clear();
-    ss.str("");
-    ss << "latency(ns)@" << gpid_name;
-    _app_commit_latency.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
-
-    ss.clear();
-    ss.str("");
-    ss << "decree@" << gpid_name;
-    _app_commit_decree.init("eon.app", ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
-
-    ss.clear();
-    ss.str("");
-    ss << "req_qps@" << gpid_name;
-    _app_req_throughput.init("eon.app", ss.str().c_str(), COUNTER_TYPE_RATE, "request throughput for current app");
+    // TODO: add custom perfcounters for replication_app_base
 }
 
 void replication_app_base::reset_counters_after_learning()
 {
-    _app_commit_decree.set(last_committed_decree());
+    // TODO: add custom perfcounters for replication_app_base
 }
 
 error_code replication_app_base::open_internal(replica* r)
@@ -247,8 +225,6 @@ error_code replication_app_base::open_internal(replica* r)
 
         std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
         err = _info.load(info_path.c_str());
-
-        _app_commit_decree.add(last_committed_decree());
 
         if (last_durable_decree() < _info.init_durable_decree)
         {
@@ -569,10 +545,6 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
     }
 
     _replica->update_commit_statistics(1);
-    _app_commit_decree.increment();
-    _app_commit_throughput.add(1);
-    _app_commit_latency.set(latency);
-    _app_req_throughput.add(request_count);
 
     return ERR_OK;
 }

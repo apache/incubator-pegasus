@@ -51,6 +51,13 @@ namespace dsn
             _h = nullptr;
         }
 
+        perf_counter_(const perf_counter_& other) = delete;
+        perf_counter_(perf_counter_& other) = delete;
+        perf_counter_(perf_counter_&& other) = delete;
+        perf_counter_& operator = (const perf_counter_& other) = delete;
+        perf_counter_& operator = (perf_counter_& other) = delete;
+        perf_counter_& operator = (perf_counter_&& other) = delete;
+
         void init(const char* section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
         {
             _h = dsn_perf_counter_create(section, name, type, dsptr);
@@ -62,6 +69,7 @@ namespace dsn
                 dsn_perf_counter_remove(_h);
         }
 
+        dsn_handle_t get_handle() { return _h; }
         // make sure they are called after init above
         void   increment() { dsn_perf_counter_increment(_h); }
         void   decrement()  { dsn_perf_counter_decrement(_h); }

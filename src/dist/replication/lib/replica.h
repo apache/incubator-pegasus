@@ -254,9 +254,7 @@ private:
     bool                        _is_initializing; //when initializing, switching to primary need to update ballot
 
     // perf counters
-    perf_counter_               _counter_commit_latency;
     perf_counter_               _counter_private_log_size;
-
 };
 
 }} // namespace

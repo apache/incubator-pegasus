@@ -63,7 +63,9 @@ DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
 {
     auto sptr = reinterpret_cast<dsn::perf_counter*>(handle);
     if (dsn::perf_counters::instance().remove_counter(sptr->full_name()))
+    {
         sptr->release_ref();
+    }
     else
     {
         dwarn("cannot remove counter %s as it is not found in our repo", sptr->full_name());

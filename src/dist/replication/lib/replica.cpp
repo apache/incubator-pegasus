@@ -62,10 +62,6 @@ replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char*
     _config.pid = gpid;
 
     std::stringstream ss;
-    ss << "2pc.latency(ns)" << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
-    _counter_commit_latency.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
-
-    ss.str("");
     ss << "private_log_size(MB)" << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
     _counter_private_log_size.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
 }
@@ -325,8 +321,6 @@ void replica::execute_mutation(mutation_ptr& mu)
     }
     
     dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
-
-    _counter_commit_latency.set(dsn_now_ns() - mu->create_ts_ns());
 
     if (err != ERR_OK)
     {
