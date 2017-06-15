@@ -259,6 +259,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
         _pending_write.reset(log_file::prepare_log_block());
         _pending_write_mutations.reset(new mutations());
         _pending_write_start_offset = mark_new_offset(0, true).second;
+        _pending_write_start_time_ms = dsn_now_ms();
     }
 
     // save mu for pinning buffer
@@ -278,7 +279,8 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
     // start to write if possible
     if (!_is_writing.load(std::memory_order_acquire)
         && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes 
-            || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
+            || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count
+            || flush_interval_expired())
         )
     {
         write_pending_mutations(true);
@@ -384,6 +386,7 @@ void mutation_log_private::init_states()
     _pending_write = nullptr;
     _pending_write_mutations = nullptr;
     _pending_write_start_offset = 0;
+    _pending_write_start_time_ms = 0;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -407,6 +410,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     std::shared_ptr<mutations> pwu = std::move(_pending_write_mutations);
     int64_t start_offset = _pending_write_start_offset;
     _pending_write_start_offset = 0;
+    _pending_write_start_time_ms = 0;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -481,7 +485,8 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
                 if (!_is_writing.load(std::memory_order_acquire)
                     && _pending_write
                     && (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes
-                        || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count)
+                        || static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count
+                        || flush_interval_expired())
                     )
                 {
                     write_pending_mutations(true);

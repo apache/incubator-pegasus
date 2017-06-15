@@ -219,7 +219,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 get_gpid(),
                 this,
                 _options->log_private_batch_buffer_kb * 1024,
-                _options->log_private_batch_buffer_count
+                _options->log_private_batch_buffer_count,
+                _options->log_private_batch_buffer_flush_interval_ms
                 );
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
@@ -334,7 +335,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 get_gpid(),
                 this,
                 _options->log_private_batch_buffer_kb * 1024,
-                _options->log_private_batch_buffer_count
+                _options->log_private_batch_buffer_count,
+                _options->log_private_batch_buffer_flush_interval_ms
                 );
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
@@ -464,6 +466,8 @@ void replica::set_inactive_state_transient(bool t)
 {
     if (status() == partition_status::PS_INACTIVE)
     {
+        ddebug("set inactive_is_transient from %s to %s",
+               _inactive_is_transient ? "true" : "false", t ? "true" : "false");
         _inactive_is_transient = t;
     }
 }
