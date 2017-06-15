@@ -450,9 +450,10 @@ message_ex* message_ex::create_response()
     hdr.body_length = 0;
     hdr.context.u.is_request = false;
 
-    task_spec* sp = task_spec::get(local_rpc_code);
-    msg->local_rpc_code = sp->rpc_paired_code;
-    strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
+    task_spec* request_sp = task_spec::get(local_rpc_code);
+    task_spec* response_sp = task_spec::get(request_sp->rpc_paired_code);
+    msg->local_rpc_code = response_sp->code;
+    strncpy(hdr.rpc_name, response_sp->name.c_str(), sizeof(hdr.rpc_name));
     hdr.rpc_code.local_code = msg->local_rpc_code;
     hdr.rpc_code.local_hash = s_local_hash;
 
@@ -465,7 +466,7 @@ message_ex* message_ex::create_response()
     msg->hdr_format = hdr_format;
 
     // join point
-    sp->on_rpc_create_response.execute(this, msg);
+    request_sp->on_rpc_create_response.execute(this, msg);
 
     return msg;
 }
