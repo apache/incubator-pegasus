@@ -325,8 +325,8 @@ mutation_queue::mutation_queue(gpid gpid, int max_concurrent_op /*= 2*/, bool ba
 {
     std::stringstream ss;
     ss << "running_2pc(Count)@" << gpid.get_app_id() << "." << gpid.get_partition_index();
-    _current_op_counter.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
-    _current_op_counter.set(0);
+    //_current_op_counter.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
+    //_current_op_counter.set(0);
     
     _current_op_count = 0;
     _pending_mutation = nullptr;
@@ -369,7 +369,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
         auto ret = _pending_mutation;
         _pending_mutation = nullptr;
         _current_op_count++;
-        _current_op_counter.increment();
+        //_current_op_counter.increment();
         return ret;
     }
 
@@ -393,13 +393,13 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
         auto ret = _pending_mutation;
         _pending_mutation = nullptr;
         _current_op_count++;
-        _current_op_counter.increment();
+        //_current_op_counter.increment();
         return ret;
     }
     else
     {
         _current_op_count++;
-        _current_op_counter.increment();
+        //_current_op_counter.increment();
         return unlink_next_workload();
     }
 }
@@ -407,7 +407,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
 mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
     _current_op_count = current_running_count;
-    _current_op_counter.set((uint64_t)current_running_count);
+    //_current_op_counter.set((uint64_t)current_running_count);
 
     if (_current_op_count >= _max_concurrent_op)
         return nullptr;
@@ -420,7 +420,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
             auto ret = _pending_mutation;
             _pending_mutation = nullptr;
             _current_op_count++;
-            _current_op_counter.increment();
+            //_current_op_counter.increment();
             return ret;
         }
         else
@@ -433,7 +433,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
     else
     {
         _current_op_count++;
-        _current_op_counter.increment();
+        //_current_op_counter.increment();
         return unlink_next_workload();
     }
 }

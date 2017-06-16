@@ -180,7 +180,7 @@ private:
     mutation_ptr    _pending_mutation;
     slist<mutation> _hdr;
 
-    perf_counter_  _current_op_counter;
+    //perf_counter_  _current_op_counter;
 };
 
 // ---------------------- inline implementation ----------------------------

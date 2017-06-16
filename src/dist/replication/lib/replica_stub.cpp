@@ -82,7 +82,6 @@ void replica_stub::install_perf_counters()
     _counter_replicas_learning_success_latency.init("eon.replica_stub", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
     _counter_replicas_learning_count.init("eon.replica_stub", "replicas.learning(Count)", COUNTER_TYPE_NUMBER, "total learning count");
 
-    std::stringstream ss;
     _counter_shared_log_size.init("eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }
 
