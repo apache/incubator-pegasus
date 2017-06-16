@@ -850,6 +850,9 @@ void replica::on_copy_remote_state_completed(
             }
         }
 
+        // reset prepare list to make it catch with app
+        _prepare_list->reset(_app->last_committed_decree());
+
         ddebug(
             "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64 " ms, apply checkpoint/log done, err = %s, "
             "app_committed_decree = (%" PRId64 " => %" PRId64 "), app_durable_decree = (%" PRId64 " => %" PRId64 "), "

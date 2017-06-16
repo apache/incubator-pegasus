@@ -1,0 +1,88 @@
+# inject on_rpc_reply of RPC_LEARN_ACK
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+# wait until r1 becomes primary
+config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+# add secondary r2
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r2
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+# write data 
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+client:begin_write:id=11,key=k11,value=v11,timeout=0
+
+# wait write data done
+state:{{r1,pri,2,11},{r2,sec,2,11}}
+
+# add secondary r3
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+# r3 start to learn
+wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r3
+state:{{r1,pri,2,11},{r2,sec,2,11},{r3,pot,2,0}}
+
+# learn LT_APP
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+state:{{r1,pri,2,11},{r2,sec,2,11},{r3,pot,2,11}}
+
+# start another round of learn
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+
+# inject LEARN_ACK
+inject:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+
+# wait LEARN_ACK timeout, change to inactive
+state:{{r1,pri,2,11},{r2,sec,2,11},{r3,ina,2,11}}
+
+# downgrade r2 to inactive
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r2
+config:{3,r1,[]}
+state:{{r1,pri,3,11},{r2,sec,2,11},{r3,ina,2,11}}
+inject:on_rpc_call:rpc_name=RPC_GROUP_CHECK,from=r1,to=r3
+
+# downgrade r1 to inactive
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r1
+config:{4,-,[]}
+state:{{r1,ina,4,11},{r2,sec,2,11},{r3,ina,2,11}}
+
+# assign primary to r3
+client:replica_config:receiver=r3,type=assign_primary,node=r3
+config:{5,r3,[]}
+state:{{r1,ina,4,11},{r2,sec,2,11},{r3,pri,5,11}}
+
+# add secondary r1
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r3
+set:disable_load_balance=1
+
+wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r3,to=r1
+config:{6,r3,[r1]}
+state:{{r1,sec,6,11},{r2,sec,2,11},{r3,pri,6,11}}
+
+# start write again
+client:begin_write:id=12,key=k12,value=v12,timeout=0
+client:end_write:id=12,err=ERR_OK,resp=0
+

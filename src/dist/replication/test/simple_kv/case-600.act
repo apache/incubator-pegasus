@@ -70,7 +70,7 @@ modify:on_rpc_response_enqueue:node=r3,task_code=RPC_LEARN_ACK,delay=10,rpc_name
 
 # write new data before RPC_LEARN_ACK processed by learner
 client:begin_write:id=12,key=k12,value=v12,timeout=0
-state:{{r1,pri,2,12},{r2,sec,2,11},{r3,pot,2,0}}
+state:{{r1,pri,2,12},{r2,sec,2,11},{r3,pot,2,11}}
 client:end_write:id=12,err=err_ok,resp=0
 
 # process RPC_LEARN_ACK
