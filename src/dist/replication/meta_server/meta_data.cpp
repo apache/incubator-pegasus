@@ -108,9 +108,19 @@ void config_context::check_size()
     }
 }
 
+std::vector<dropped_replica>::iterator config_context::find_from_dropped(
+        const rpc_address &node)
+{
+    return std::find_if(dropped.begin(), dropped.end(),
+                        [&node](const dropped_replica& r)
+                        {
+                            return r.node == node;
+                        });
+}
+
 bool config_context::remove_from_dropped(const rpc_address &node)
 {
-    auto iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d) { return d.node==node; });
+    auto iter = find_from_dropped(node);
     if (iter != dropped.end())
     {
         dropped.erase(iter);
@@ -122,7 +132,7 @@ bool config_context::remove_from_dropped(const rpc_address &node)
 
 bool config_context::record_drop_history(const rpc_address &node)
 {
-    auto iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d) { return d.node==node; });
+    auto iter = find_from_dropped(node);
     if (iter != dropped.end())
         return false;
     dropped.emplace_back( dropped_replica{node, dsn_now_ms(), invalid_ballot, invalid_decree, invalid_decree} );
@@ -133,14 +143,20 @@ bool config_context::record_drop_history(const rpc_address &node)
 int config_context::collect_drop_replica(const rpc_address &node, const replica_info &info)
 {
     bool in_dropped = false;
-    auto iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d) { return d.node==node; });
+    auto iter = find_from_dropped(node);
     if (iter != dropped.end())
     {
         in_dropped = true;
         dropped.erase(iter);
     }
 
-    dropped_replica current = {node, dropped_replica::INVALID_TIMESTAMP, info.ballot, info.last_committed_decree, info.last_prepared_decree};
+    dropped_replica current = {
+        node,
+        dropped_replica::INVALID_TIMESTAMP,
+        info.ballot,
+        info.last_committed_decree,
+        info.last_prepared_decree
+    };
     auto cmp = [](const dropped_replica& d1, const dropped_replica& d2) {
         return dropped_cmp(d1, d2) < 0;
     };
@@ -149,7 +165,7 @@ int config_context::collect_drop_replica(const rpc_address &node, const replica_
     dropped.emplace(iter, current);
     check_size();
 
-    iter = std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica& d){ return d.node == node; });
+    iter = find_from_dropped(node);
     if (iter == dropped.end())
     {
         dassert(!in_dropped, "adjust position of existing node(%s) failed, this is a bug, partition(%d.%d)",

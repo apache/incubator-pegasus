@@ -202,6 +202,8 @@ public:
 public:
     void check_size();
     void cancel_sync();
+    std::vector<dropped_replica>::iterator find_from_dropped(const dsn::rpc_address& node);
+
     // return true if remove ok, false if node doesn't in dropped
     bool remove_from_dropped(const dsn::rpc_address& node);
 

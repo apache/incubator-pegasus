@@ -128,7 +128,7 @@ void meta_service_test_app::simple_lb_cure_test()
 
 #define CONDITION_CHECK( cond ) ASSERT_TRUE(spin_wait_condition(cond, 20))
 
-    std::cerr << "Case1: upgrade secondary to primary, and message lost" << std::endl;
+    std::cerr << "Case: upgrade secondary to primary, and message lost" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
@@ -155,7 +155,13 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -178,13 +184,19 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.primary == last_addr;} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case2: upgrade secondary to primary, and the candidate died" << std::endl;
+    std::cerr << "Case: upgrade secondary to primary, and the candidate died" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
@@ -212,7 +224,12 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions,
+                                        state),
+                              server_state::sStateHash
+                              );
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -235,13 +252,18 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions,
+                                        state),
+                              server_state::sStateHash
+                              );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return !pc.primary.is_invalid() && pc.primary!=last_addr;} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case3: add secondary, and the message lost" << std::endl;
+    std::cerr << "Case: add secondary, and the message lost" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -268,7 +290,13 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -290,13 +318,19 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case4: add secondary, but the primary is removing another" << std::endl;
+    std::cerr << "Case: add secondary, but the primary is removing another" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -329,13 +363,19 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.secondaries.size()==2; } );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case5: add secondary, and the added secondary is dead" << std::endl;
+    std::cerr << "Case: add secondary, and the added secondary is dead" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -363,7 +403,13 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
@@ -387,13 +433,19 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case6: add secondary, and the primary is dead" << std::endl;
+    std::cerr << "Case: add secondary, and the primary is dead" << std::endl;
     //initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
@@ -421,13 +473,18 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.primary==nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case7: recover from DDD state, some replicas don't in config_context::dropped" << std::endl;
     state->_nodes.clear();
     pc.primary.set_invalid();
     pc.secondaries.clear();
@@ -435,11 +492,6 @@ void meta_service_test_app::simple_lb_cure_test()
     pc.ballot = 4;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
-    cc.dropped =
-    {
-        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
-        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}
-    };
 
     svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
     {
@@ -458,38 +510,168 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    std::cerr << "Case: recover from DDD state, nodes[1] isn't alive"
+              << std::endl;
+    svc->set_node_state({nodes[1]}, false);
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+    };
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK( [&]{ return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    std::cerr << "Case8: recover from DDD state, all in dropped, ballot-decree info are not full" << std::endl;
+    std::cerr << "Case: recover from DDD state, nodes[2] is not in dropped" << std::endl;
+    svc->set_node_state({nodes[1]}, true);
     cc.dropped =
     {
-        dropped_replica{nodes[0], 12234, -1, -1, -1},
-        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}
     };
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&]{ return pc.primary.is_invalid(); } );
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    std::cerr << "Case9: recover from DDD state, select primary from config_context::dropped" << std::endl;
+    std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica"
+              << std::endl;
     cc.dropped =
     {
-        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 4, 2, 2},
-        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 2, 3},
-        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[2], 500, -1, -1, -1}
     };
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL, nullptr, std::bind(&server_state::check_all_partitions, state), server_state::sStateHash);
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD state, larger ballot not match with larger decree"
+              << std::endl;
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 0, 1},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 0, 1, 1},
+    };
+
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD state, committed decree less than meta's"
+              << std::endl;
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 10, 15},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 15, 15},
+    };
+    pc.last_committed_decree = 20;
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD state, select primary from config_context::dropped"
+              << std::endl;
+    cc.dropped =
+    {
+        dropped_replica{nodes[0], 12344, -1, -1, -1},
+        dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
+    };
+    pc.last_committed_decree = 2;
+
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK( [&]{ return pc.primary==nodes[2]; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD state, only one primary" << std::endl;
+    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
+    {
+        dsn_message_t recv_request = create_corresponding_receive(req);
+        cur_ptr update_req = std::make_shared<configuration_update_request>();
+        ::dsn::unmarshall(recv_request, *update_req);
+        destroy_message(recv_request);
+
+        EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
+        EXPECT_EQ(update_req->node, nodes[0]);
+        EXPECT_EQ(target, nodes[0]);
+
+        svc->set_filter(default_filter);
+        apply_update_request(*update_req);
+        proposal_sent = true;
+        return update_req;
+    });
+
+    pc.primary.set_invalid();
+    pc.secondaries.clear();
+    pc.last_drops = { nodes[0] };
+    state->_nodes.clear();
+    pc.ballot = 1;
+    state->initialize_node_state();
+    svc->set_node_state({nodes[0], nodes[1], nodes[2]}, true);
+
+    t = dsn::tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                nullptr,
+                std::bind(&server_state::check_all_partitions,
+                          state),
+                server_state::sStateHash
+                );
+    t->wait();
+    PROPOSAL_FLAG_CHECK;
+    CONDITION_CHECK( [&]{ return pc.primary==nodes[0]; });
 }
 
 static void check_nodes_loads(node_mapper& nodes)
