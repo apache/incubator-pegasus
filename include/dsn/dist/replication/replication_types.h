@@ -1656,8 +1656,9 @@ inline std::ostream& operator<<(std::ostream& out, const configuration_create_ap
 }
 
 typedef struct _drop_app_options__isset {
-  _drop_app_options__isset() : success_if_not_exist(false) {}
+  _drop_app_options__isset() : success_if_not_exist(false), reserve_seconds(false) {}
   bool success_if_not_exist :1;
+  bool reserve_seconds :1;
 } _drop_app_options__isset;
 
 class drop_app_options {
@@ -1667,19 +1668,26 @@ class drop_app_options {
   drop_app_options(drop_app_options&&);
   drop_app_options& operator=(const drop_app_options&);
   drop_app_options& operator=(drop_app_options&&);
-  drop_app_options() : success_if_not_exist(0) {
+  drop_app_options() : success_if_not_exist(0), reserve_seconds(0) {
   }
 
   virtual ~drop_app_options() throw();
   bool success_if_not_exist;
+  int64_t reserve_seconds;
 
   _drop_app_options__isset __isset;
 
   void __set_success_if_not_exist(const bool val);
 
+  void __set_reserve_seconds(const int64_t val);
+
   bool operator == (const drop_app_options & rhs) const
   {
     if (!(success_if_not_exist == rhs.success_if_not_exist))
+      return false;
+    if (__isset.reserve_seconds != rhs.__isset.reserve_seconds)
+      return false;
+    else if (__isset.reserve_seconds && !(reserve_seconds == rhs.reserve_seconds))
       return false;
     return true;
   }

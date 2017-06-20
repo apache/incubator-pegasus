@@ -1316,7 +1316,9 @@ void mutation_log::update_max_commit_on_disk_no_lock(decree d)
 void mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state& state) const
 {
     dassert(_is_private, "this method is only valid for private logs");
-    dassert(_private_gpid == gpid, "replica gpid does not match");
+    dassert(_private_gpid == gpid, "replica gpid does not match, (%d.%d) VS (%d.%d)",
+            _private_gpid.get_app_id(), _private_gpid.get_partition_index(),
+            gpid.get_app_id(), gpid.get_partition_index());
 
     binary_writer temp_writer;
     if (get_learn_state_in_memory(start, temp_writer))

@@ -51,7 +51,8 @@ public:
                                int replica_count,
                                const std::map<std::string, std::string>& envs, bool is_stateless);
 
-    dsn::error_code drop_app(const std::string& app_name);
+    // reserve_seconds == 0 means use default value in configuration 'hold_seconds_for_dropped_app'
+    dsn::error_code drop_app(const std::string& app_name, int reserve_seconds);
 
     dsn::error_code recall_app(int32_t app_id, const std::string& new_app_name);
 

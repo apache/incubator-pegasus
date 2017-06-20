@@ -3760,6 +3760,11 @@ void drop_app_options::__set_success_if_not_exist(const bool val) {
   this->success_if_not_exist = val;
 }
 
+void drop_app_options::__set_reserve_seconds(const int64_t val) {
+  this->reserve_seconds = val;
+__isset.reserve_seconds = true;
+}
+
 uint32_t drop_app_options::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -3789,6 +3794,14 @@ uint32_t drop_app_options::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->reserve_seconds);
+          this->__isset.reserve_seconds = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -3810,6 +3823,11 @@ uint32_t drop_app_options::write(::apache::thrift::protocol::TProtocol* oprot) c
   xfer += oprot->writeBool(this->success_if_not_exist);
   xfer += oprot->writeFieldEnd();
 
+  if (this->__isset.reserve_seconds) {
+    xfer += oprot->writeFieldBegin("reserve_seconds", ::apache::thrift::protocol::T_I64, 2);
+    xfer += oprot->writeI64(this->reserve_seconds);
+    xfer += oprot->writeFieldEnd();
+  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -3818,24 +3836,29 @@ uint32_t drop_app_options::write(::apache::thrift::protocol::TProtocol* oprot) c
 void swap(drop_app_options &a, drop_app_options &b) {
   using ::std::swap;
   swap(a.success_if_not_exist, b.success_if_not_exist);
+  swap(a.reserve_seconds, b.reserve_seconds);
   swap(a.__isset, b.__isset);
 }
 
 drop_app_options::drop_app_options(const drop_app_options& other132) {
   success_if_not_exist = other132.success_if_not_exist;
+  reserve_seconds = other132.reserve_seconds;
   __isset = other132.__isset;
 }
 drop_app_options::drop_app_options( drop_app_options&& other133) {
   success_if_not_exist = std::move(other133.success_if_not_exist);
+  reserve_seconds = std::move(other133.reserve_seconds);
   __isset = std::move(other133.__isset);
 }
 drop_app_options& drop_app_options::operator=(const drop_app_options& other134) {
   success_if_not_exist = other134.success_if_not_exist;
+  reserve_seconds = other134.reserve_seconds;
   __isset = other134.__isset;
   return *this;
 }
 drop_app_options& drop_app_options::operator=(drop_app_options&& other135) {
   success_if_not_exist = std::move(other135.success_if_not_exist);
+  reserve_seconds = std::move(other135.reserve_seconds);
   __isset = std::move(other135.__isset);
   return *this;
 }
@@ -3843,6 +3866,7 @@ void drop_app_options::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "drop_app_options(";
   out << "success_if_not_exist=" << to_string(success_if_not_exist);
+  out << ", " << "reserve_seconds="; (__isset.reserve_seconds ? (out << to_string(reserve_seconds)) : (out << "<null>"));
   out << ")";
 }
 

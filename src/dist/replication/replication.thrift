@@ -244,6 +244,7 @@ struct configuration_create_app_request
 struct drop_app_options
 {
     1:bool             success_if_not_exist;
+    2:optional i64     reserve_seconds;
 }
 
 struct configuration_drop_app_request

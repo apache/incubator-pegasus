@@ -171,7 +171,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string& app_name, 
     return error;
 }
 
-dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
+dsn::error_code replication_ddl_client::drop_app(const std::string& app_name, int reserve_seconds)
 {
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
@@ -179,6 +179,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string& app_name)
     std::shared_ptr<configuration_drop_app_request> req(new configuration_drop_app_request());
     req->app_name = app_name;
     req->options.success_if_not_exist = true;
+    req->options.__set_reserve_seconds(reserve_seconds);
 
     auto resp_task = request_meta<configuration_drop_app_request>(
             RPC_CM_DROP_APP,

@@ -1138,7 +1138,7 @@ void server_state::drop_app(dsn_message_t msg)
         zauto_write_lock l(_lock);
         app = get_app(request.app_name);
         if (nullptr == app) {
-            response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
+            response.err = request.options.success_if_not_exist ? ERR_OK : ERR_APP_NOT_EXIST;
         }
         else {
             switch (app->status)
@@ -1146,7 +1146,14 @@ void server_state::drop_app(dsn_message_t msg)
             case app_status::AS_AVAILABLE:
                 do_dropping = true;
                 app->status = app_status::AS_DROPPING;
-                app->expire_second = dsn_now_ms() / 1000 + _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
+                if (request.options.__isset.reserve_seconds && request.options.reserve_seconds > 0)
+                {
+                    app->expire_second = dsn_now_ms() / 1000 + request.options.reserve_seconds;
+                }
+                else
+                {
+                    app->expire_second = dsn_now_ms() / 1000 + _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
+                }
                 app->helpers->pending_response = msg;
                 dassert(app->helpers->partitions_in_progress.load() == 0, "partition_in_progress_cnt = %d",
                         app->helpers->partitions_in_progress.load());

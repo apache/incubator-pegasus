@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     else if(command == "drop_app") {
         if(app_name.empty())
             usage(argv[0]);
-        dsn::error_code err = client.drop_app(app_name);
+        dsn::error_code err = client.drop_app(app_name, 0);
         if(err == dsn::ERR_OK)
             std::cout << "drop app:" << app_name << " succeed" << std::endl;
         else if (err == dsn::ERR_IO_PENDING)
