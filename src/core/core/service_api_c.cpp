@@ -106,7 +106,7 @@ public:
     error_code_mgr()
     {
         auto err = register_id("ERR_OK"); // make sure ERR_OK is always registered first
-        dassert(0 == err, "");
+        dassert(0 == err, "register_id failed, err = %d", err);
     }
 };
 
@@ -189,7 +189,7 @@ DSN_API dsn_task_code_t dsn_task_code_register(
 DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, dsn_task_priority_t *ppri, dsn_threadpool_code_t *ppool)
 {
     auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "");
+    dassert(sp != nullptr, "task code = %d", code);
     if (ptype) *ptype = sp->type;
     if (ppri) *ppri = sp->priority;
     if (ppool) *ppool = sp->pool_code;
@@ -198,14 +198,14 @@ DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, d
 DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn_threadpool_code_t pool)
 {
     auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "");
+    dassert(sp != nullptr, "task code = %d", code);
     sp->pool_code = pool;
 }
 
 DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri)
 {
     auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "");
+    dassert(sp != nullptr, "task code = %d", code);
     sp->priority = pri;
 }
 
@@ -687,7 +687,8 @@ DSN_API dsn_task_t dsn_rpc_create_response_task_ex(dsn_message_t request, dsn_rp
 DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
-    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
+    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "invalid task_type, type = %s",
+            enum_to_string(task->spec().type));
     
     auto msg = task->get_request();
     msg->server_address = server;
@@ -740,7 +741,8 @@ DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
-    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
+    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "invalid task_type, type = %s",
+            enum_to_string(task->spec().type));
     auto msg = task->get_response();
     if (nullptr != msg)
     {
@@ -754,8 +756,8 @@ DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
 DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_message_t response)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
-    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
-
+    dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "invalid task_type, type = %s",
+            enum_to_string(task->spec().type));
     auto resp = ((::dsn::message_ex*)response);
     task->enqueue(err, resp);
 }
@@ -895,14 +897,16 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
 DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task)
 {
     ::dsn::task* task = (::dsn::task*)cb_task;
-    dassert(task->spec().type == TASK_TYPE_AIO, "");
+    dassert(task->spec().type == TASK_TYPE_AIO, "invalid task_type, type = %s",
+            enum_to_string(task->spec().type));
     return ((::dsn::aio_task*)task)->get_transferred_size();
 }
 
 DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t size)
 {
     ::dsn::task* task = (::dsn::task*)cb_task;
-    dassert(task->spec().type == TASK_TYPE_AIO, "");
+    dassert(task->spec().type == TASK_TYPE_AIO, "invalid task_type, type = %s",
+            enum_to_string(task->spec().type));
 
     ((::dsn::aio_task*)task)->enqueue(err, size);
 }

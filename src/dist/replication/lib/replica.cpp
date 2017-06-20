@@ -221,8 +221,10 @@ void replica::response_client_message(bool is_read, dsn_message_t request, error
 void replica::check_state_completeness()
 {
     /* prepare commit durable */
-    dassert(max_prepared_decree() >= last_committed_decree(), "");
-    dassert(last_committed_decree() >= last_durable_decree(), "");
+    dassert(max_prepared_decree() >= last_committed_decree(), "%" PRId64 " VS %" PRId64 "",
+            max_prepared_decree(), last_committed_decree());
+    dassert(last_committed_decree() >= last_durable_decree(), "%" PRId64 " VS %" PRId64 "",
+            last_committed_decree(), last_durable_decree());
 
     /*
     auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_shared_log);
@@ -276,7 +278,8 @@ void replica::execute_mutation(mutation_ptr& mu)
         if (!_secondary_states.checkpoint_is_running)
         {
             check_state_completeness();
-            dassert (_app->last_committed_decree() + 1 == d, "");
+            dassert (_app->last_committed_decree() + 1 == d, "%" PRId64 " VS %" PRId64 "",
+                     _app->last_committed_decree() + 1, d);
             err = _app->write_internal(mu);
         }
         else
@@ -290,14 +293,15 @@ void replica::execute_mutation(mutation_ptr& mu)
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
-            dassert(_private_log != nullptr, "");          
+            dassert(_private_log != nullptr, "");
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         if (_potential_secondary_states.learning_status == learner_status::LearningSucceeded ||
             _potential_secondary_states.learning_status == learner_status::LearningWithPrepareTransient)
         {
-            dassert(_app->last_committed_decree() + 1 == d, "");
+            dassert(_app->last_committed_decree() + 1 == d, "%" PRId64 " VS %" PRId64 "",
+                    _app->last_committed_decree() + 1, d);
             err = _app->write_internal(mu);
         }
         else
@@ -317,7 +321,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert(false, "");
+        dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
     }
     
     dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());

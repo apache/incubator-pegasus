@@ -162,7 +162,7 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
-        dassert (false, "");
+        dassert (false, "invalid partition_status, status = %s", enum_to_string(st));
         return false;
     }
 }

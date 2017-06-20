@@ -64,7 +64,7 @@ static const char* states[] = {
 
 static inline const char* string_state(lock_state state)
 {
-    dassert(state<lock_state::state_count, "");
+    dassert(state < lock_state::state_count, "state = %d", (int)(state));
     return states[state];
 }
 

@@ -422,7 +422,8 @@ namespace dsn
                     {
                         for (auto& req : reqs2)
                         {
-                            dassert(req->partition_index == -1, "");
+                            dassert(req->partition_index == -1, "invalid partition_index, index = %d",
+                                    req->partition_index);
                             req->partition_index = get_partition_index(_app_partition_count, req->partition_hash);
                         }
                     }

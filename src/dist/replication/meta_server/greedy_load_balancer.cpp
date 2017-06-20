@@ -172,7 +172,8 @@ void greedy_load_balancer::copy_secondary_per_app(const std::shared_ptr<app_stat
     while (true)
     {
         int min_id = *pri_queue.begin(), max_id = *pri_queue.rbegin();
-        dassert(future_partitions[min_id]<=replicas_low, "");
+        dassert(future_partitions[min_id] <= replicas_low, "%d VS %d",
+                future_partitions[min_id], replicas_low);
         if (future_partitions[max_id]-future_partitions[min_id] <= 1)
             break;
 
@@ -351,7 +352,8 @@ void greedy_load_balancer::primary_balancer_per_app(const std::shared_ptr<app_st
             for (auto& target: pc.secondaries)
             {
                 auto i = address_id.find(target);
-                dassert(i!=address_id.end(), "");
+                dassert(i != address_id.end(), "invalid secondary address, address = %s",
+                        target.to_string());
                 network[from][i->second]++;
             }
             return true;
@@ -431,7 +433,8 @@ void greedy_load_balancer::primary_balancer_globally()
                     if (used_primaries[id].find(pid) != used_primaries[id].end())
                         continue;
                     const partition_configuration& pc = app->partitions[pid.get_partition_index()];
-                    dassert(pc.primary==address_vec[id], "");
+                    dassert(pc.primary == address_vec[id], "invalid primary address, %s VS %s",
+                            pc.primary.to_string(), address_vec[id].to_string());
                     for (const dsn::rpc_address& addr: pc.secondaries)
                     {
                         int id2 = address_id[addr];

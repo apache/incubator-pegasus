@@ -58,7 +58,7 @@ static bool build_client_network_confs(
     const char* keys[128];
     int kcapacity = 128;
     int kcount = dsn_config_get_all_keys(section, keys, &kcapacity);
-    dassert(kcount <= 128, "");
+    dassert(kcount <= 128, "kcount = %d", kcount);
 
     for (int i = 0; i < kcapacity; i++)
     {
@@ -140,7 +140,7 @@ static bool build_server_network_confs(
     const char* keys[128];
     int kcapacity = 128;
     int kcount = dsn_config_get_all_keys(section, keys, &kcapacity);
-    dassert(kcount <= 128, "");
+    dassert(kcount <= 128, "kcount = %d", kcount);
 
     for (int i = 0; i < kcapacity; i++)
     {

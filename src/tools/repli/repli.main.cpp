@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     if (slen != -1)
     {
-       dassert(slen < 4906, "");
+       dassert(slen < 4906, "invalid slen, slen = %d", slen);
        buf[slen] = 0;
 
        std::string dir = dsn::utils::filesystem::remove_file_name(buf);

@@ -210,7 +210,10 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         err = _app->open_internal(this);
         if (err == ERR_OK)
         {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
+            dassert(_app->last_committed_decree() == _app->last_durable_decree(),
+                    "invalid app state, %" PRId64 " VS %" PRId64 "",
+                    _app->last_committed_decree(), _app->last_durable_decree()
+                    );
             _prepare_list->reset(_app->last_committed_decree());
 
             _private_log = new mutation_log_private(
@@ -457,7 +460,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 
     // prepare
     error_code err = _prepare_list->prepare(mu, partition_status::PS_INACTIVE);
-    dassert (err == ERR_OK, "");
+    dassert (err == ERR_OK, "prepare failed, err = %s", err.to_string());
 
     return true;
 }

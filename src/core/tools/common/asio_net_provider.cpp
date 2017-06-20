@@ -153,7 +153,7 @@ namespace dsn {
             auto lcount = parser->get_buffer_count_on_send(request);
             std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
             auto rcount = parser->get_buffers_on_send(request, bufs.get());
-            dassert(lcount >= rcount, "");
+            dassert(lcount >= rcount, "%d VS %d", lcount, rcount);
 
             size_t tlen = 0, offset = 0;
             for (int i = 0; i < rcount; i ++)

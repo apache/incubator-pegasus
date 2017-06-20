@@ -85,7 +85,8 @@ error_code mutation_cache::put(mutation_ptr& mu)
     mutation_ptr& old = _array[idx];
     if (old != nullptr)
     {
-        dassert (old->data.header.ballot <= mu->data.header.ballot, "");
+        dassert (old->data.header.ballot <= mu->data.header.ballot, "%" PRId64 " VS %" PRId64 "",
+                 old->data.header.ballot, mu->data.header.ballot);
     }
 
     _array[idx] = mu;

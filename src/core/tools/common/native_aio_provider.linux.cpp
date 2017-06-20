@@ -139,7 +139,7 @@ namespace dsn {
                 ret = io_getevents(_ctx, 1, 1, events, NULL);
                 if (ret > 0) // should be 1
                 {
-                    dassert(ret == 1, "");
+                    dassert(ret == 1, "io_getevents returns %d", ret);
                     struct iocb *io = events[0].obj;
                     complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
                 }

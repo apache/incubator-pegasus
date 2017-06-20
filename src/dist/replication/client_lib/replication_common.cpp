@@ -460,7 +460,8 @@ void replication_options::initialize()
 
 void replication_options::sanity_check()
 {
-    dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "");
+    dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "%d VS %d",
+             max_mutation_count_in_prepare_list, staleness_for_commit);
 }
    
 /*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList)

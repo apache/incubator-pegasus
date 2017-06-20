@@ -305,10 +305,10 @@ error_code server_state::restore_from_local_storage(const char* local_path)
     }
 
     blob data;
-    dassert(file->read_next_buffer(data)==1, "read format header fail");
+    dassert(file->read_next_buffer(data) == 1, "read format header fail");
     _all_apps.clear();
 
-    dassert(memcmp(data.data(), "binary", 6)==0, "");
+    dassert(memcmp(data.data(), "binary", 6) == 0, "");
     while (true)
     {
         int ans = file->read_next_buffer(data);
@@ -338,7 +338,8 @@ error_code server_state::restore_from_local_storage(const char* local_path)
             iter.second->status = app_status::AS_CREATING;
         else
         {
-            dassert(iter.second->status == app_status::AS_DROPPED, "");
+            dassert(iter.second->status == app_status::AS_DROPPED, "invalid app_status, status = %s",
+                    enum_to_string(iter.second->status));
             iter.second->status = app_status::AS_DROPPING;
         }
     }
@@ -379,7 +380,8 @@ error_code server_state::initialize_default_apps()
 
             dassert(default_app.app_name.length() > 0, "'[%s] app_name' not specified", s);
             dassert(default_app.app_type.length() > 0, "'[%s] app_type' not specified", s);
-            dassert(default_app.partition_count > 0, "");
+            dassert(default_app.partition_count > 0, "partition_count should > 0, partition_count = %d",
+                    default_app.partition_count);
             std::shared_ptr<app_state> app = app_state::create(default_app);
             _all_apps.emplace(app->app_id, app);
         }
@@ -402,7 +404,8 @@ error_code server_state::sync_apps_to_remote_storage()
     {
         if (kv_pair.second->status == app_status::AS_CREATING)
         {
-            dassert(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(), "");
+            dassert(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(),
+                    "invalid app name, name = %s", kv_pair.second->app_name.c_str());
             _exist_apps.emplace(kv_pair.second->app_name, kv_pair.second);
         }
     }
@@ -649,7 +652,8 @@ void server_state::initialize_node_state()
             }
             for (auto& ep: pc.secondaries)
             {
-                dassert(!ep.is_invalid(), "");
+                dassert(!ep.is_invalid(), "invalid secondary address, addr = %s",
+                        ep.to_string());
                 node_state* ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -727,7 +731,7 @@ void server_state::query_configuration_by_node(const configuration_query_by_node
             [&, this](const gpid& pid)
             {
                 std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                dassert(app != nullptr, "");
+                dassert(app != nullptr, "invalid app_id, app_id = %d", pid.get_app_id());
                 response.partitions[i].info = *app;
                 response.partitions[i].host_node = request.node;
                 response.partitions[i].config = app->partitions[pid.get_partition_index()];
@@ -770,7 +774,7 @@ void server_state::on_config_sync(dsn_message_t msg)
                 [&, this](const gpid& pid)
                 {
                     std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                    dassert(app != nullptr, "");
+                    dassert(app != nullptr, "invalid app_id, app_id = %d", pid.get_app_id());
                     config_context& cc = app->helpers->contexts[pid.get_partition_index()];
 
                     // config sync need the newest data to keep the perfect FD,
@@ -1144,7 +1148,8 @@ void server_state::drop_app(dsn_message_t msg)
                 app->status = app_status::AS_DROPPING;
                 app->expire_second = dsn_now_ms() / 1000 + _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
                 app->helpers->pending_response = msg;
-                dassert(app->helpers->partitions_in_progress.load() == 0, "");
+                dassert(app->helpers->partitions_in_progress.load() == 0, "partition_in_progress_cnt = %d",
+                        app->helpers->partitions_in_progress.load());
                 app->helpers->partitions_in_progress.store(app->partition_count);
 
                 break;
@@ -1156,7 +1161,7 @@ void server_state::drop_app(dsn_message_t msg)
                 response.err = ERR_BUSY_DROPPING;
                 break;
             default:
-                dassert(false, "invalid app status");
+                dassert(false, "invalid app status, status = %s", ::dsn::enum_to_string(app->status));
                 break;
             }
         }
@@ -1235,7 +1240,8 @@ void server_state::recall_app(dsn_message_t msg)
                     do_recalling = true;
                     target_app->app_name = new_app_name;
                     target_app->status = app_status::AS_RECALLING;
-                    dassert(target_app->helpers->partitions_in_progress.load()==0, "");
+                    dassert(target_app->helpers->partitions_in_progress.load()==0, "partition_in_progress_cnt = %d",
+                            target_app->helpers->partitions_in_progress.load());
                     target_app->helpers->partitions_in_progress.store(target_app->partition_count);
                     target_app->helpers->pending_response = msg;
 
@@ -1299,15 +1305,18 @@ void server_state::request_check(const partition_configuration &old, const confi
 
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        dassert(old.primary != request.node, "");
+        dassert(old.primary != request.node, "%s VS %s",
+                old.primary.to_string(), request.node.to_string());
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        dassert(old.primary != request.node, "");
+        dassert(old.primary != request.node, "%s VS %s",
+                old.primary.to_string(), request.node.to_string());
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        dassert(old.primary == request.node, "");
+        dassert(old.primary == request.node, "%s VS %s",
+                old.primary.to_string(), request.node.to_string());
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
@@ -1315,12 +1324,14 @@ void server_state::request_check(const partition_configuration &old, const confi
         dassert(old.primary == request.node || std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
-        dassert(old.primary != request.node, "");
+        dassert(old.primary != request.node, " %s VS %s",
+                old.primary.to_string(), request.node.to_string());
         dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
-        dassert(old.primary==new_config.primary, "");
-        dassert(old.secondaries==new_config.secondaries, "");
+        dassert(old.primary == new_config.primary, "%s VS %s",
+                old.primary.to_string(), new_config.primary.to_string());
+        dassert(old.secondaries == new_config.secondaries, "");
         break;
     default:
         break;
@@ -1343,7 +1354,8 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
         if (config_request->type != config_type::CT_DROP_PARTITION)
         {
             ns = get_node_state(_nodes, config_request->node, false);
-            dassert(ns != nullptr, "");
+            dassert(ns != nullptr, "invalid node address, address = %s",
+                    config_request->node.to_string());
         }
     #ifndef NDEBUG
         request_check(old_cfg, *config_request);
@@ -1390,7 +1402,8 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
     }
     else
     {
-        dassert(old_cfg.ballot == new_cfg.ballot, "");
+        dassert(old_cfg.ballot == new_cfg.ballot, "invalid ballot, %" PRId64 " VS %" PRId64 "",
+                old_cfg.ballot, new_cfg.ballot);
 
         new_cfg = old_cfg;
         partition_configuration_stateless pcs(new_cfg);
@@ -1417,7 +1430,8 @@ void server_state::update_configuration_locally(app_state& app, std::shared_ptr<
         }
 
         auto it = _nodes.find(config_request->host_node);
-        dassert(it != _nodes.end(), "");
+        dassert(it != _nodes.end(), "invalid node address, address = %s",
+                config_request->host_node.to_string());
         if (config_type::CT_REMOVE == config_request->type)
         {
             it->second.remove_partition(gpid, false);
@@ -1706,7 +1720,8 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state>& app, in
             break;
         }
     }
-    dassert(!req->node.is_invalid(), "");
+    dassert(!req->node.is_invalid(), "invalid node address, address = %s",
+            req->node.to_string());
     //remove host_node & node from secondaries/last_drops, as it will be sync to remote storage
     for (++i; i<pc.secondaries.size(); ++i)
     {
@@ -1786,7 +1801,8 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
     }
     else
     {
-        dassert(config_status::not_pending==cc.stage || config_status::pending_proposal==cc.stage, "");
+        dassert(config_status::not_pending==cc.stage || config_status::pending_proposal==cc.stage,
+                "invalid config status, cc.stage = %s", enum_to_string(cc.stage));
         cc.stage = config_status::pending_remote_sync;
         cc.pending_sync_request = cfg_request;
         cc.msg = msg;
@@ -1812,7 +1828,8 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state>& app, int p
             }
             else
             {
-                dassert(false, "");
+                dassert(false, "no primary/secondary on this node, node address = %s",
+                        address.to_string());
             }
         }
     }
@@ -1840,7 +1857,8 @@ void server_state::on_change_node_state(rpc_address node, bool is_alive)
             ns.for_each_partition([&, this](const dsn::gpid& pid)
             {
                 std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                dassert(app != nullptr && app->status!=app_status::AS_DROPPED, "");
+                dassert(app != nullptr && app->status != app_status::AS_DROPPED,
+                        "invalid app, app_id = %d", pid.get_app_id());
                 on_partition_node_dead(app, pid.get_partition_index(), node);
                 return true;
             });
@@ -1889,7 +1907,7 @@ error_code server_state::construct_apps(const std::vector<query_app_info_respons
 
         for (const app_info& info: query_resp.apps)
         {
-            dassert(info.app_id >= 1, "");
+            dassert(info.app_id >= 1, "invalid app_id, app_id = %d", info.app_id);
             auto iter = _all_apps.find(info.app_id);
             if (iter == _all_apps.end())
             {
@@ -1949,7 +1967,7 @@ error_code server_state::construct_apps(const std::vector<query_app_info_respons
     std::map<std::string, int32_t> checked_names;
     for (int app_id = max_app_id; app_id >= 1; --app_id)
     {
-        dassert(_all_apps.find(app_id) != _all_apps.end(), "");
+        dassert(_all_apps.find(app_id) != _all_apps.end(), "invalid app_id, app_id = %d", app_id);
         std::shared_ptr<app_state>& app = _all_apps[app_id];
         std::string old_name = app->app_name;
         while (checked_names.find(app->app_name) != checked_names.end())
@@ -2004,7 +2022,8 @@ error_code server_state::construct_partitions(const std::vector<query_replica_in
     for (auto& app_kv: _all_apps)
     {
         std::shared_ptr<app_state>& app = app_kv.second;
-        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING, "");
+        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
+                "invalid app status, status = %s", enum_to_string(app->status));
         if (app->status == app_status::AS_DROPPING)
         {
             ddebug("ignore constructing partitions for dropping app(%d)", app->app_id);
@@ -2371,7 +2390,8 @@ bool server_state::check_all_partitions()
 void server_state::check_consistency(const dsn::gpid& gpid)
 {
     auto iter = _all_apps.find(gpid.get_app_id());
-    dassert(iter!=_all_apps.end(), "");
+    dassert(iter != _all_apps.end(), "invalid gpid(%d.%d)",
+            gpid.get_app_id(), gpid.get_partition_index());
 
     app_state& app = *(iter->second);
     partition_configuration& config = app.partitions[gpid.get_partition_index()];
@@ -2381,32 +2401,50 @@ void server_state::check_consistency(const dsn::gpid& gpid)
         if (config.primary.is_invalid() == false)
         {
             auto it = _nodes.find(config.primary);
-            dassert(it != _nodes.end(), "");
-            dassert(it->second.served_as(gpid) == partition_status::PS_PRIMARY, "");
+            dassert(it != _nodes.end(), "invalid primary address, address = %s",
+                    config.primary.to_string());
+            dassert(it->second.served_as(gpid) == partition_status::PS_PRIMARY,
+                    "node should serve as PS_PRIMARY, but status = %s",
+                    dsn::enum_to_string(it->second.served_as(gpid))
+                    );
 
             auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
-            dassert(it2 == config.last_drops.end(), "");
+            dassert(it2 == config.last_drops.end(),
+                    "primary shouldn't appear in last_drops, address = %s",
+                    config.primary.to_string()
+                    );
         }
     
         for (auto& ep : config.secondaries)
         {
             auto it = _nodes.find(ep);
-            dassert(it != _nodes.end(), "");
-            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY, "");
+            dassert(it != _nodes.end(), "invalid secondary address, address = %s",
+                    ep.to_string());
+            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY,
+                    "node should serve as PS_SECONDARY, but status = %s",
+                    dsn::enum_to_string(it->second.served_as(gpid))
+                    );
 
             auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
-            dassert(it2 == config.last_drops.end(), "");
+            dassert(it2 == config.last_drops.end(),
+                    "secondary shouldn't appear in last_drops, address = %s",
+                    ep.to_string()
+                    );
         }
     }
     else
     {
         partition_configuration_stateless pcs(config);
-        dassert(pcs.hosts().size() == pcs.workers().size(), "");
+        dassert(pcs.hosts().size() == pcs.workers().size(), "%d VS %d",
+                pcs.hosts().size(), pcs.workers().size());
         for (auto& ep : pcs.hosts())
         {
             auto it = _nodes.find(ep);
-            dassert(it != _nodes.end(), "");
-            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY, "");
+            dassert(it != _nodes.end(), "invalid host, address = %s", ep.to_string());
+            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY,
+                    "node should serve as PS_SECONDARY, but status = %s",
+                    dsn::enum_to_string(it->second.served_as(gpid))
+                    );
         }
     }
 }

@@ -359,7 +359,8 @@ bool node_state::for_each_primary(app_id id, const std::function<bool (const gpi
         return false;
     for (const gpid& pid: *pri)
     {
-        dassert(id == pid.get_app_id(), "");
+        dassert(id == pid.get_app_id(), "invalid gpid(%d.%d), app_id must be %d",
+                pid.get_app_id(), pid.get_partition_index(), id);
         if (!f(pid))
             return false;
     }

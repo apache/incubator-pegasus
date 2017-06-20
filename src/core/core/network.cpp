@@ -192,8 +192,10 @@ namespace dsn
         auto n = _messages.next();
         int bcount = 0;
 
-        dbg_dassert(0 == _sending_buffers.size(), "");
-        dbg_dassert(0 == _sending_msgs.size(), "");
+        dbg_dassert(0 == _sending_buffers.size(), "sending_buffers should be empty, but size = %d",
+                    (int)_sending_buffers.size());
+        dbg_dassert(0 == _sending_msgs.size(), "sending_msgs should be empty, but size = %d",
+                    (int)_sending_msgs.size());
 
         while (n != &_messages)
         {
@@ -206,7 +208,7 @@ namespace dsn
 
             _sending_buffers.resize(bcount + lcount);
             auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
-            dassert(lcount >= rcount, "");
+            dassert(lcount >= rcount, "%d VS %d", lcount, rcount);
             if (lcount != rcount)
                 _sending_buffers.resize(bcount + rcount);
             bcount += rcount;

@@ -353,7 +353,9 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
         } while (current_wk);
         
 
-        dassert(ptr == (char*)bb.data() + bb.length(), "");
+        dassert(ptr == (char*)bb.data() + bb.length(),
+                "ptr = %" PRIu64 ", bb.data() = %" PRIu64 ", bb.length = %u",
+                (uint64_t)(ptr), (uint64_t)(bb.data()), bb.length());
 
         // setup io task
         auto new_task = new batch_write_io_task(

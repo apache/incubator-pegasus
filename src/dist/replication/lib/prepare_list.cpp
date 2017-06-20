@@ -82,7 +82,8 @@ void prepare_list::truncate(decree init_decree)
 error_code prepare_list::prepare(mutation_ptr& mu, partition_status::type status)
 {
     decree d = mu->data.header.decree;
-    dassert (d > last_committed_decree(), "");
+    dassert (d > last_committed_decree(), "%" PRId64 " VS %" PRId64 "",
+             d, last_committed_decree());
 
     error_code err;
     switch (status)
@@ -105,7 +106,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status::type status
             pop_min();
         }
         err = mutation_cache::put(mu);
-        dassert (err == ERR_OK, "");
+        dassert (err == ERR_OK, "mutation_cache::put failed, err = %s", err.to_string());
         return err;
 
     //// delayed commit - only when capacity is an issue
@@ -141,11 +142,11 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status::type status
             pop_min();
         }
         err = mutation_cache::put(mu);
-        dassert (err == ERR_OK, "");
+        dassert (err == ERR_OK, "mutation_cache::put failed, err = %s", err.to_string());
         return err;
 
     default:
-        dassert (false, "");
+        dassert (false, "invalid partition_status, status = %s", enum_to_string(status));
         return 0;
     }
 }

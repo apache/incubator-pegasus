@@ -70,7 +70,7 @@ const char* partition_status_to_short_string(partition_status::type s)
     case partition_status::PS_INVALID:
         return "inv";
     default:
-        dassert(false, "");
+        dassert(false, "invalid partition_status, status = %s", ::dsn::enum_to_string(s));
         return "";
     }
 }
@@ -253,7 +253,8 @@ std::string state_snapshot::diff_string(const state_snapshot& other) const
         }
         else
         {
-            dassert(oth_it->first == cur_it->first, "");
+            dassert(oth_it->first == cur_it->first, "invalid replica_id, %s VS %s",
+                    oth_it->first.to_string().c_str(), cur_it->first.to_string().c_str());
             if (oth_it->second != cur_it->second)
             {
                 oss << chg_mark << cur_it->second.to_string()

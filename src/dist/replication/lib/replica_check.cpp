@@ -186,7 +186,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert (false, "");
+        dassert (false, "invalid partition_status, status = %s", enum_to_string(status()));
     }
     
     response.pid = get_gpid();
@@ -214,7 +214,7 @@ void replica::on_group_check_reply(error_code err, const std::shared_ptr<group_c
     }
 
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
-    dassert (r == 1, "");
+    dassert (r == 1, "invalid node address, address = %s", req->node.to_string());
 
     if (err != ERR_OK)
     {

@@ -127,7 +127,7 @@ void replica::init_learn(uint64_t signature)
                         for (auto d = _app->last_committed_decree() + 1; d <= c; d++)
                         {
                             auto mu = _prepare_list->get_mutation_by_decree(d);
-                            dassert(nullptr != mu, "");
+                            dassert(nullptr != mu, "mutation must not be nullptr, decree = %" PRId64 "", d);
                             auto err = _app->write_internal(mu);
                             if (ERR_OK != err)
                             {
@@ -174,7 +174,9 @@ void replica::init_learn(uint64_t signature)
         case learner_status::LearningWithoutPrepare:
             break;
         default:
-            dassert (false, "");
+            dassert (false, "invalid learner_status, status = %s",
+                     enum_to_string(_potential_secondary_states.learning_status)
+                     );
         }
     }
         
@@ -274,10 +276,12 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         local_committed_decree = last_committed_decree();
     }
 
-    dassert(request.last_committed_decree_in_app <= local_committed_decree, "");
+    dassert(request.last_committed_decree_in_app <= local_committed_decree, "%" PRId64 " VS %" PRId64 "",
+            request.last_committed_decree_in_app, local_committed_decree);
 
     decree learn_start_decree = request.last_committed_decree_in_app + 1;
-    dassert(learn_start_decree <= local_committed_decree + 1, "");
+    dassert(learn_start_decree <= local_committed_decree + 1, "%" PRId64 " VS %" PRId64 "",
+            learn_start_decree, local_committed_decree + 1);
     bool delayed_replay_prepare_list = false;
 
     ddebug(
@@ -341,7 +345,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         for (decree d = learn_start_decree; d < response.prepare_start_decree; d++)
         {
             auto mu = _prepare_list->get_mutation_by_decree(d);
-            dassert(mu != nullptr, "");
+            dassert(mu != nullptr, "mutation must not be nullptr, decree = %" PRId64 "", d);
             mu->write_to(writer, nullptr);
             count++;
         }
@@ -442,8 +446,14 @@ void replica::on_learn_reply(
 {
     check_hashed_access();
 
-    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
-    dassert(req.signature == (int64_t)_potential_secondary_states.learning_version, "");
+    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
+            "invalid partition status, status = %s",
+            enum_to_string(status())
+            );
+    dassert(req.signature == (int64_t)_potential_secondary_states.learning_version,
+            "invalid learn signature, %" PRId64 " VS %" PRId64 "",
+            req.signature, (int64_t)_potential_secondary_states.learning_version
+            );
 
     if (err != ERR_OK)
     {
@@ -575,9 +585,13 @@ void replica::on_learn_reply(
 
     if (resp.prepare_start_decree != invalid_decree)
     {
-        dassert(resp.type == learn_type::LT_CACHE, "");
+        dassert(resp.type == learn_type::LT_CACHE, "invalid learn_type, type = %s",
+                enum_to_string(resp.type) );
         dassert(resp.state.files.size() == 0, "");
-        dassert(_potential_secondary_states.learning_status == learner_status::LearningWithoutPrepare, "");
+        dassert(_potential_secondary_states.learning_status == learner_status::LearningWithoutPrepare,
+                "invalid learning_status, status = %s",
+                enum_to_string(_potential_secondary_states.learning_status)
+                );
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepareTransient;
 
         // reset log positions for later mutations
@@ -656,7 +670,10 @@ void replica::on_learn_reply(
 
         // further states are synced using 2pc, and we must commit now as those later 2pc messages thinks they should
         _prepare_list->commit(resp.prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);        
-        dassert(_prepare_list->last_committed_decree() == _app->last_committed_decree(), "");
+        dassert(_prepare_list->last_committed_decree() == _app->last_committed_decree(),
+                "last_committed_decree of prepare_list and app isn't equal, %" PRId64 " VS %" PRId64 "",
+                _prepare_list->last_committed_decree(), _app->last_committed_decree()
+                );
         dassert(resp.state.files.size() == 0, "");
 
         // all state is complete
@@ -769,11 +786,13 @@ void replica::on_copy_remote_state_completed(
     }
     else if (_potential_secondary_states.learning_status == learner_status::LearningWithPrepare)
     {
-        dassert(resp.type == learn_type::LT_CACHE, "");
+        dassert(resp.type == learn_type::LT_CACHE, "invalid learn_type, type = %s",
+                enum_to_string(resp.type) );
     }
     else
     {
-        dassert(resp.type == learn_type::LT_APP || resp.type == learn_type::LT_LOG, "");
+        dassert(resp.type == learn_type::LT_APP || resp.type == learn_type::LT_LOG, "invalid learn_type, type = %s",
+                enum_to_string(resp.type) );
 
         learn_state lstate;
         lstate.from_decree_excluded = resp.state.from_decree_excluded;
@@ -795,10 +814,16 @@ void replica::on_copy_remote_state_completed(
             {
                 _app->reset_counters_after_learning();
 
-                dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
+                dassert(_app->last_committed_decree() >= _app->last_durable_decree(),
+                        "invalid app state, %" PRId64 " VS %" PRId64 "",
+                        _app->last_committed_decree(), _app->last_durable_decree()
+                        );
                 // because if the original _app->last_committed_decree > resp.last_committed_decree,
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
-                dassert(_app->last_committed_decree() <= resp.last_committed_decree, "");
+                dassert(_app->last_committed_decree() <= resp.last_committed_decree,
+                        "invalid app state, %" PRId64 " VS %" PRId64 "",
+                        _app->last_committed_decree(), resp.last_committed_decree
+                        );
                 ddebug(
                     "%s: on_copy_remote_state_completed[%016" PRIx64 "]: learner = %s, learn_duration = %" PRIu64 " ms, "
                     "checkpoint duration = %" PRIu64 " ns, apply checkpoint succeed, app_committed_decree = %" PRId64,
@@ -891,7 +916,8 @@ void replica::on_copy_remote_state_completed(
         
         if (err == ERR_OK)
         {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
+            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "%" PRId64 " VS %" PRId64 "",
+                    _app->last_committed_decree(), _app->last_durable_decree() );
         }
 
         if (err == ERR_NO_NEED_OPERATE)
@@ -1087,9 +1113,16 @@ void replica::on_learn_completion_notification_reply(error_code err, group_check
 {
     check_hashed_access();
 
-    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
-    dassert(_potential_secondary_states.learning_status == learner_status::LearningSucceeded, "");
-    dassert(report.learner_signature == (int64_t)_potential_secondary_states.learning_version, "");
+    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "invalid partition_status, status = %s",
+            enum_to_string(status()) );
+    dassert(_potential_secondary_states.learning_status == learner_status::LearningSucceeded,
+            "invalid learner_status, status = %s",
+            enum_to_string(_potential_secondary_states.learning_status)
+            );
+    dassert(report.learner_signature == (int64_t)_potential_secondary_states.learning_version,
+            "%" PRId64 " VS %" PRId64 "",
+            report.learner_signature, (int64_t)_potential_secondary_states.learning_version
+            );
 
     if (err != ERR_OK)
     {
@@ -1161,7 +1194,8 @@ void replica::on_add_learner(const group_check_request& request)
         if (!update_local_configuration(request.config, true))
             return;
 
-        dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "");
+        dassert(partition_status::PS_POTENTIAL_SECONDARY == status(), "invalid partition_status, status = %s",
+                enum_to_string(status()) );
         init_learn(request.config.learner_signature);
     }
 }

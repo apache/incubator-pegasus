@@ -107,13 +107,14 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         remove(proposal);
         break;
     default:
-        dassert (false, "");
+        dassert (false, "invalid config_type, type = %s", enum_to_string(proposal.type));
     }
 }
 
 void replica::assign_primary(configuration_update_request& proposal)
 {
-    dassert(proposal.node == _stub->_primary_address, "");
+    dassert(proposal.node == _stub->_primary_address, "%s VS %s",
+            proposal.node.to_string(), _stub->_primary_address.to_string());
 
     if (status() == partition_status::PS_PRIMARY)
     {
@@ -151,9 +152,17 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         return;
     }
 
-    dassert (proposal.config.ballot == get_ballot(), "");
-    dassert (proposal.config.pid == _primary_states.membership.pid, "");
-    dassert (proposal.config.primary == _primary_states.membership.primary, "");
+    dassert (proposal.config.ballot == get_ballot(), "invalid ballot, %" PRId64 " VS %" PRId64 "",
+             proposal.config.ballot, get_ballot());
+    dassert (proposal.config.pid == _primary_states.membership.pid, "(%d.%d) VS (%d.%d)",
+             proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(),
+             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index()
+             );
+    dassert (proposal.config.primary == _primary_states.membership.primary,
+             "%s VS %s",
+             proposal.config.primary.to_string(),
+             _primary_states.membership.primary.to_string()
+             );
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "");
@@ -183,7 +192,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
         }
         else
         {
-            dassert(false, "");
+            dassert(false, "invalid config_type, type = %s", enum_to_string(proposal.type));
         }
     }
 
@@ -240,10 +249,18 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.pid == _primary_states.membership.pid, "");
-    dassert (proposal.config.primary == _primary_states.membership.primary, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid,
+             "(%d.%d) VS (%d.%d)",
+             proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(),
+             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index()
+             );
+    dassert (proposal.config.primary == _primary_states.membership.primary, "%s VS %s",
+             proposal.config.primary.to_string(),
+             _primary_states.membership.primary.to_string()
+             );
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
-    dassert (proposal.node == proposal.config.primary, "");
+    dassert (proposal.node == proposal.config.primary, "%s VS %s",
+             proposal.node.to_string(), proposal.config.primary.to_string());
 
     proposal.config.primary.set_invalid();
     proposal.config.secondaries.push_back(proposal.node);
@@ -257,8 +274,14 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.pid == _primary_states.membership.pid, "");
-    dassert (proposal.config.primary == _primary_states.membership.primary, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "(%d.%d) VS (%d.%d)",
+             proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(),
+             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index()
+             );
+    dassert (proposal.config.primary == _primary_states.membership.primary, "%s VS %s",
+             proposal.config.primary.to_string(),
+             _primary_states.membership.primary.to_string()
+             );
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
     if (proposal.node == proposal.config.primary)
@@ -268,7 +291,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     else
     {
         auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
-        dassert (rt, "");
+        dassert (rt, "remove node failed, node = %s", proposal.node.to_string());
     }
 
     update_configuration_on_meta_server(config_type::CT_DOWNGRADE_TO_INACTIVE, proposal.node, proposal.config);
@@ -279,8 +302,14 @@ void replica::remove(configuration_update_request& proposal)
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert (proposal.config.pid == _primary_states.membership.pid, "");
-    dassert (proposal.config.primary == _primary_states.membership.primary, "");
+    dassert (proposal.config.pid == _primary_states.membership.pid, "(%d.%d) VS (%d.%d)",
+             proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(),
+             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index()
+             );
+    dassert (proposal.config.primary == _primary_states.membership.primary, "%s VS %s",
+             proposal.config.primary.to_string(),
+             _primary_states.membership.primary.to_string()
+             );
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
     auto st = _primary_states.get_node_status(proposal.node);
@@ -288,13 +317,14 @@ void replica::remove(configuration_update_request& proposal)
     switch (st)
     {
     case partition_status::PS_PRIMARY:
-        dassert (proposal.config.primary == proposal.node, "");
+        dassert (proposal.config.primary == proposal.node, "%s VS %s",
+                 proposal.config.primary.to_string(), proposal.node.to_string());
         proposal.config.primary.set_invalid();
         break;
     case partition_status::PS_SECONDARY:
         {
-        auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
-        dassert (rt, "");
+            auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
+            dassert (rt, "remove_node failed, node = %s", proposal.node.to_string());
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
@@ -329,7 +359,8 @@ void replica::on_remove(const replica_configuration& request)
         return;
     }
 
-    dassert (request.status == partition_status::PS_INACTIVE, "");
+    dassert (request.status == partition_status::PS_INACTIVE, "invalid partition_status, status = %s",
+             enum_to_string(request.status));
     update_local_configuration(request);
 }
 
@@ -340,12 +371,15 @@ void replica::update_configuration_on_meta_server(config_type::type type, ::dsn:
     if (type == config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT)
     {
         dassert(status() == partition_status::PS_INACTIVE && _inactive_is_transient && _is_initializing, "");
-        dassert(newConfig.primary == node, "");
+        dassert(newConfig.primary == node, "%s VS %s",
+                newConfig.primary.to_string(), node.to_string());
     }
     else if (type != config_type::CT_ASSIGN_PRIMARY && type != config_type::CT_UPGRADE_TO_PRIMARY)
     {
-        dassert (status() == partition_status::PS_PRIMARY, "");
-        dassert (newConfig.ballot == _primary_states.membership.ballot, "");
+        dassert (status() == partition_status::PS_PRIMARY, "partition status must be primary, status = %s",
+                 enum_to_string(status()));
+        dassert (newConfig.ballot == _primary_states.membership.ballot, "invalid ballot, %" PRId64 " VS %" PRId64 "",
+                 newConfig.ballot, _primary_states.membership.ballot);
     }
 
     // disable 2pc during reconfiguration
@@ -462,8 +496,12 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     // post-update work items?
     if (resp.err == ERR_OK)
     {        
-        dassert (req->config.pid == resp.config.pid, "");
-        dassert (req->config.primary == resp.config.primary, "");
+        dassert (req->config.pid == resp.config.pid, "(%d.%d) VS (%d.%d)",
+                 req->config.pid.get_app_id(), req->config.pid.get_partition_index(),
+                 resp.config.pid.get_app_id(), resp.config.pid.get_partition_index()
+                 );
+        dassert (req->config.primary == resp.config.primary, "%s VS %s",
+                 req->config.primary.to_string(), resp.config.primary.to_string());
         dassert (req->config.secondaries == resp.config.secondaries, "");
 
         switch (req->type)
@@ -491,7 +529,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             _is_initializing = false;
             break;
         default:
-            dassert (false, "");
+            dassert (false, "invalid config_type, type = %s", enum_to_string(req->type));
         }
     }
     
@@ -501,7 +539,8 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
 
 bool replica::update_configuration(const partition_configuration& config)
 {
-    dassert (config.ballot >= get_ballot(), "");
+    dassert (config.ballot >= get_ballot(), "invalid ballot, %" PRId64 " VS %" PRId64 "",
+             config.ballot, get_ballot());
     
     replica_configuration rconfig;
     replica_helper::get_replica_config(config, _stub->_primary_address, rconfig);
@@ -546,8 +585,12 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds, 
 bool replica::update_local_configuration(const replica_configuration& config, bool same_ballot/* = false*/)
 {
     dassert(config.ballot > get_ballot()
-        || (same_ballot && config.ballot == get_ballot()), "");
-    dassert (config.pid == get_gpid(), "");
+        || (same_ballot && config.ballot == get_ballot()), "invalid ballot, %" PRId64 " VS %" PRId64 "",
+            config.ballot, get_ballot());
+    dassert (config.pid == get_gpid(), "(%d.%d) VS (%d.%d)",
+             config.pid.get_app_id(), config.pid.get_partition_index(),
+             get_gpid().get_app_id(), get_gpid().get_partition_index()
+             );
 
     partition_status::type old_status = status();
     ballot old_ballot = get_ballot();
@@ -642,7 +685,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     uint64_t oldTs = _last_config_change_time_ms;
     _config = config;
     _last_config_change_time_ms = now_ms();
-    dassert (max_prepared_decree() >= last_committed_decree(), "");
+    dassert (max_prepared_decree() >= last_committed_decree(), "%" PRId64 " VS %" PRId64 "",
+             max_prepared_decree(), last_committed_decree());
     
     switch (old_status)
     {

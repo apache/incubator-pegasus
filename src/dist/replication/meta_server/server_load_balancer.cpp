@@ -94,16 +94,16 @@ void newly_partitions::newly_add_partition(int32_t app_id)
 void newly_partitions::newly_remove_primary(int32_t app_id)
 {
     auto iter = primaries.find(app_id);
-    dassert(iter!=primaries.end(), "");
-    dassert(iter->second>0, "");
+    dassert(iter != primaries.end(), "invalid app_id, app_id = %d", app_id);
+    dassert(iter->second > 0, "invalid primary count, cnt = %d", iter->second);
     if (0 == (--iter->second))
     {
         primaries.erase(iter);
     }
 
     auto iter2 = partitions.find(app_id);
-    dassert(iter2 != partitions.end(), "");
-    dassert(iter2->second > 0, "");
+    dassert(iter2 != partitions.end(), "invalid app_id, app_id = %d", app_id);
+    dassert(iter2->second > 0, "invalid partition count, cnt = %d", iter2->second);
     if (0 == (--iter2->second))
     {
         partitions.erase(iter2);
@@ -113,8 +113,8 @@ void newly_partitions::newly_remove_primary(int32_t app_id)
 void newly_partitions::newly_remove_partition(int32_t app_id)
 {
     auto iter = partitions.find(app_id);
-    dassert(iter != partitions.end(), "");
-    dassert(iter->second>0, "");
+    dassert(iter != partitions.end(), "invalid app_id, app_id = %d", app_id);
+    dassert(iter->second > 0, "invalid partition count, cnt = %d", iter->second);
     if ((--iter->second) == 0)
     {
         partitions.erase(iter);
@@ -159,7 +159,7 @@ int server_load_balancer::suggest_alive_time(config_type::type t)
         // default 900 seconds for add secondary
         return 900;
     default:
-        dassert(false, "");
+        dassert(false, "invalid config_type, type = %s", ::dsn::enum_to_string(t));
         return 0;
     }
 }
@@ -264,7 +264,7 @@ void simple_load_balancer::reset_proposal(meta_view &view, const dsn::gpid &gpid
 
     configuration_proposal_action& act = cc->lb_actions.acts.front();
     newly_partitions* np = get_newly_partitions(*(view.nodes), act.node);
-    if (np==nullptr)
+    if (np == nullptr)
     {
         ddebug("can't get the newly_partitions extension structure for node(%s), the node may dead and may be removed",
             act.node.to_string());
@@ -357,7 +357,8 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
         for (int i=0; i<pc.secondaries.size(); ++i)
         {
             node_state* ns = get_node_state(*(view.nodes), pc.secondaries[i], false);
-            dassert(ns!=nullptr, "");
+            dassert(ns != nullptr, "invalid secondary address, address = %s",
+                    pc.secondaries[i].to_string());
             if (!ns->alive())
                 continue;
 
@@ -598,7 +599,8 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
             dropped_replica& server = *iter;
             if (is_node_alive(*view.nodes, server.node))
             {
-                dassert(!server.node.is_invalid(), "");
+                dassert(!server.node.is_invalid(), "invalid server address, address = %s",
+                        server.node.to_string());
                 action.node = server.node;
                 action.period_ts = 90;
                 break;
@@ -635,7 +637,7 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view& view, const dsn:
         action.target = pc.primary;
 
         newly_partitions* np = get_newly_partitions(*(view.nodes), action.node);
-        dassert(np!=nullptr, "");
+        dassert(np != nullptr, "");
         np->newly_add_partition(gpid.get_app_id());
 
         action.period_ts += (dsn_now_ms()/1000);
@@ -718,8 +720,9 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
     partition_configuration& pc = *get_config(*view.apps, pid);
     config_context& cc = *get_config_context(*view.apps, pid);
 
-    dassert(replica_count(pc)==0, "");
-    dassert(max_replica_count>0, "max replica count is %d, should be at lease 1", max_replica_count);
+    dassert(replica_count(pc) == 0, "replica count of gpid(%d.%d) must be 0",
+            pid.get_app_id(), pid.get_partition_index());
+    dassert(max_replica_count > 0, "max replica count is %d, should be at lease 1", max_replica_count);
 
     std::vector<dropped_replica>& drop_list = cc.dropped;
     if (drop_list.empty())
@@ -730,7 +733,10 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
 
     //treat last server in drop_list as the primary
     dropped_replica& server = drop_list.back();
-    dassert(server.time == dropped_replica::INVALID_TIMESTAMP, "");
+    dassert(server.time == dropped_replica::INVALID_TIMESTAMP,
+            "the drop time of server must be INVALID_TIMESTAMP, address = %s",
+            server.node.to_string()
+            );
     pc.primary = server.node;
     pc.ballot = server.ballot;
     pc.partition_flags = 0;
@@ -748,7 +754,8 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
 
     // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the only primary dead
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    dassert(pc.last_drops.empty(), "");
+    dassert(pc.last_drops.empty(), "last_drops of partition(%d.%d) must be empty",
+            pid.get_app_id(), pid.get_partition_index());
     for (auto iter=drop_list.rbegin(); iter!=drop_list.rend(); ++iter)
     {
         if (pc.last_drops.size()+1 >= max_replica_count)

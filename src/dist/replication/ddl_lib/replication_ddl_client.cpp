@@ -365,8 +365,9 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 derror("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
                 return r;
             }
-            dassert(info.app_id == app_id, "");
-            dassert(info.partition_count == partition_count, "");
+            dassert(info.app_id == app_id, "invalid app_id, %d VS %d", info.app_id, app_id);
+            dassert(info.partition_count == partition_count, "invalid partition_count, %d VS %d",
+                    info.partition_count, partition_count);
             int fully_healthy = 0;
             int partly_healthy = 0;
             for(int i = 0; i < partitions.size(); i++)

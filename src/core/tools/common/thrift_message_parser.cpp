@@ -145,11 +145,11 @@ namespace dsn
         while (dsn_size > 0 && dsn_buf_count < buffers.size())
         {
             blob& buf = buffers[dsn_buf_count];
-            dassert(dsn_size >= buf.length(), "");
+            dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
             dsn_size -= buf.length();
             ++dsn_buf_count;
         }
-        dassert(dsn_size == 0, "");
+        dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
 
         // put header_bb and end_bb at the end
         buffers.resize(dsn_buf_count);
@@ -176,7 +176,7 @@ namespace dsn
         while (dsn_size > 0 && dsn_buf_count < msg_buffers.size())
         {
             blob& buf = msg_buffers[dsn_buf_count];
-            dassert(dsn_size >= buf.length(), "");
+            dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
             dsn_size -= buf.length();
             ++dsn_buf_count;
 
@@ -190,7 +190,7 @@ namespace dsn
             offset = 0;
             ++i;
         }
-        dassert(dsn_size == 0, "");
+        dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
         dassert(dsn_buf_count + 2 == msg_buffers.size(), "must have 2 more blob at the end");
 
         // set header

@@ -170,7 +170,8 @@ namespace dsn {
             // secondary can start checkpint in the long running thread pool
             else
             {
-                dassert(partition_status::PS_SECONDARY == status(), "");
+                dassert(partition_status::PS_SECONDARY == status(), "invalid partition_status, status = %s",
+                        enum_to_string(status()));
 
                 // only one running instance
                 if (!_secondary_states.checkpoint_is_running)
@@ -427,7 +428,7 @@ namespace dsn {
                     for (auto d = _app->last_committed_decree() + 1; d <= c; d++)
                     {
                         auto mu = _prepare_list->get_mutation_by_decree(d);
-                        dassert(nullptr != mu, "");
+                        dassert(nullptr != mu, "invalid mutation, decree = %" PRId64, d);
                         err = _app->write_internal(mu);
                         if (ERR_OK != err)
                         {

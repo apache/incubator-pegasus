@@ -361,7 +361,8 @@ message_ex* message_ex::copy(bool clone_content, bool copy_for_receive)
             i+=bb.length();
             ptr+=bb.length();
         }
-        dassert(i==total_length, "");
+        dassert(i == total_length, "%d VS %d, rpc_name = %s",
+                i, total_length, msg->header->rpc_name);
 
         auto data = dsn::blob(recv_buffer, total_length);
         

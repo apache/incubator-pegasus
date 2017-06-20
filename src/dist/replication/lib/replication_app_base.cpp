@@ -340,7 +340,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
         {
             dwarn("%s: call app.prepare_get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %s, need = %d",
                   _replica->name(), capacity, occupied);
-            dassert(occupied > capacity, "");
+            dassert(occupied > capacity, "occupied = %d, capacity = %d", occupied, capacity);
             capacity = occupied;
             buffer = dsn_transient_malloc(capacity);
             err = _callbacks.calls.prepare_get_checkpoint(_app_context_callbacks, buffer, capacity, &occupied);
@@ -384,7 +384,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
         {
             dwarn("%s: call app.get_checkpoint() returns ERR_CAPACITY_EXCEEDED, capacity = %d, need = %d",
                   _replica->name(), capacity, need_size);
-            dassert(need_size > capacity, "");
+            dassert(need_size > capacity, "need_size = %d, capacity = %d", need_size, capacity);
             capacity = need_size;
             buffer = dsn_transient_malloc(capacity);
             lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
@@ -448,8 +448,14 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
 
 ::dsn::error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
-    dassert(mu->data.header.decree == last_committed_decree() + 1, "");
-    dassert(mu->data.updates.size() == mu->client_requests.size(), "");
+    dassert(mu->data.header.decree == last_committed_decree() + 1,
+            "invalid mutation decree, decree = %" PRId64 " VS %" PRId64 "",
+            mu->data.header.decree, last_committed_decree() + 1
+            );
+    dassert(mu->data.updates.size() == mu->client_requests.size(),
+            "invalid mutation size, %d VS %d",
+            (int)mu->data.updates.size(), (int)mu->client_requests.size()
+            );
     dassert(mu->data.updates.size() > 0, "");
 
     int request_count = static_cast<int>(mu->client_requests.size());

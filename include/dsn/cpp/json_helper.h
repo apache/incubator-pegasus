@@ -145,7 +145,7 @@ public:
 public:
     string_tokenizer(const char* b, unsigned offset, unsigned len): buffer(b), pos(offset), length(len)
     {
-        dassert(pos<length, "");
+        dassert(pos < length, "%u vs %u", pos, length);
     }
     string_tokenizer(const dsn::blob& source, unsigned from): string_tokenizer(source.data(), from, source.length()) {}
     string_tokenizer(const dsn::blob& source): string_tokenizer(source.data(), 0, source.length()) {}
@@ -160,7 +160,7 @@ public:
             ++pos, ++j;
         if (token[j]!=0)
         {
-            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+            dassert(false, "invalid buffer:%s at pos %u", buffer, pos);
         }
     }
     void expect_token(char token)
@@ -170,7 +170,7 @@ public:
             ++pos;
         else
         {
-            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+            dassert(false, "invalid buffer:%s at pos %u", buffer, pos);
         }
     }
     bool verify_token(char token)
@@ -196,7 +196,7 @@ public:
             return;
         else
         {
-            dassert(false, "invalid buffer:%s at pos %d", buffer, pos);
+            dassert(false, "invalid buffer:%s at pos %u", buffer, pos);
         }
     }
     void walk_until_json_splitter()

@@ -183,7 +183,11 @@ namespace dsn {
                 _buffer_occupied = rb.length();
             }
             
-            dassert (read_next + _buffer_occupied <= _buffer.length(), "");
+            dassert (read_next + _buffer_occupied <= _buffer.length(), "%u(%u + %u) VS %u",
+                     read_next + _buffer_occupied,
+                     read_next, _buffer_occupied,
+                     _buffer.length()
+                     );
         }
 
         return (char*)(_buffer.data() + _buffer_occupied);
