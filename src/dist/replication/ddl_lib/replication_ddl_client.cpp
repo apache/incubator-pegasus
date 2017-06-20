@@ -781,16 +781,31 @@ dsn::error_code replication_ddl_client::send_balancer_proposal(const configurati
     return resp.err;
 }
 
-dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_address> &replica_nodes, int wait_seconds,
-                                                    bool skip_bad_nodes, bool skip_lost_partitions)
+dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_address> &replica_nodes,
+                                                    int wait_seconds, bool skip_bad_nodes,
+                                                    bool skip_lost_partitions, const std::string& outfile)
 {
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if (!outfile.empty())
+    {
+        of.open(outfile);
+        buf = of.rdbuf();
+    }
+    else
+    {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
     std::shared_ptr<configuration_recovery_request> req = std::make_shared<configuration_recovery_request>();
     req->recovery_set.clear();
     for (const dsn::rpc_address& node: replica_nodes)
     {
         if (std::find(req->recovery_set.begin(), req->recovery_set.end(), node) != req->recovery_set.end())
         {
-            std::cout << "duplicate replica node " << node.to_string() << ", just ingore it" << std::endl;
+            out << "duplicate replica node " << node.to_string() << ", just ingore it" << std::endl;
         }
         else
         {
@@ -799,22 +814,22 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     }
     if (req->recovery_set.empty())
     {
-        std::cout << "node set for recovery it empty" << std::endl;
+        out << "node set for recovery it empty" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
     req->skip_bad_nodes = skip_bad_nodes;
     req->skip_lost_partitions = skip_lost_partitions;
 
-    std::cout << "Wait seconds: " << wait_seconds << std::endl;
-    std::cout << "Skip bad nodes: " << (skip_bad_nodes ? "true" : "false") << std::endl;
-    std::cout << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
-    std::cout << "Node list:" << std::endl;
-    std::cout << "=============================" << std::endl;
+    out << "Wait seconds: " << wait_seconds << std::endl;
+    out << "Skip bad nodes: " << (skip_bad_nodes ? "true" : "false") << std::endl;
+    out << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
+    out << "Node list:" << std::endl;
+    out << "=============================" << std::endl;
     for (auto& node : req->recovery_set)
     {
-        std::cout << node.to_string() << std::endl;
+        out << node.to_string() << std::endl;
     }
-    std::cout << "=============================" << std::endl;
+    out << "=============================" << std::endl;
 
     auto response_task = request_meta<configuration_recovery_request>(RPC_CM_START_RECOVERY, req, wait_seconds*1000);
     bool wait_done = false;
@@ -824,24 +839,24 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
         if (wait_done)
             break;
         else
-            std::cout << "Wait recovery for " << i << " seconds" << std::endl;
+            out << "Wait recovery for " << i << " seconds" << std::endl;
     }
 
     if (!wait_done || response_task->response() == NULL)
     {
-        std::cout << "Wait recovery failed, administrator should check the meta for progress" << std::endl;
+        out << "Wait recovery failed, administrator should check the meta for progress" << std::endl;
         return dsn::ERR_TIMEOUT;
     }
     else
     {
         configuration_recovery_response resp;
         dsn::unmarshall(response_task->response(), resp);
-        std::cout << "Recover result: " << resp.err.to_string() << std::endl;
+        out << "Recover result: " << resp.err.to_string() << std::endl;
         if (!resp.hint_message.empty())
         {
-            std::cout << "=============================" << std::endl;
-            std::cout << resp.hint_message;
-            std::cout << "=============================" << std::endl;
+            out << "=============================" << std::endl;
+            out << resp.hint_message;
+            out << "=============================" << std::endl;
         }
         return resp.err;
     }

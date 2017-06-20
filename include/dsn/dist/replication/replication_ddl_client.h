@@ -94,7 +94,8 @@ public:
     dsn::error_code do_recovery(const std::vector<dsn::rpc_address>& replica_nodes,
                                 int wait_seconds,
                                 bool skip_bad_nodes,
-                                bool skip_lost_partitions);
+                                bool skip_lost_partitions,
+                                const std::string& outfile);
 private:
     bool static valid_app_char(int c);
 
