@@ -48,7 +48,73 @@
 
 namespace dsn { namespace replication {
 
-error_code replica_init_info::load(const char* file)
+error_code replica_init_info::load(const std::string& dir)
+{
+    std::string old_info_path = utils::filesystem::path_combine(dir, ".info");
+    std::string new_info_path = utils::filesystem::path_combine(dir, ".init-info");
+    std::string load_path;
+    error_code err;
+    if (utils::filesystem::path_exists(new_info_path))
+    {
+        load_path = new_info_path;
+        err = load_json(new_info_path.c_str());
+    }
+    else
+    {
+        load_path = old_info_path;
+        err = load_binary(old_info_path.c_str());
+    }
+
+    if (err == ERR_OK)
+    {
+        ddebug("load replica_init_info from %s succeed: %s", load_path.c_str(), to_string().c_str());
+        if (load_path == old_info_path)
+        {
+            // change replica_init_info file from old to new
+            err = store_json(new_info_path.c_str());
+            if (err == ERR_OK)
+            {
+                ddebug("change replica_init_info file from %s to %s succeed",
+                       old_info_path.c_str(), new_info_path.c_str());
+                utils::filesystem::remove_path(old_info_path);
+            }
+            else
+            {
+                derror("change replica_init_info file from %s to %s failed, err = %s",
+                       old_info_path.c_str(), new_info_path.c_str(), err.to_string());
+            }
+        }
+    }
+    else
+    {
+        derror("load replica_init_info from %s failed, err = %s", load_path.c_str(), err.to_string());
+    }
+
+    return err;
+}
+
+error_code replica_init_info::store(const std::string& dir)
+{
+    std::string new_info_path = utils::filesystem::path_combine(dir, ".init-info");
+    error_code err = store_json(new_info_path.c_str());
+    if (err == ERR_OK)
+    {
+        ddebug("store replica_init_info to %s succeed: %s", new_info_path.c_str(), to_string().c_str());
+        std::string old_info_path = utils::filesystem::path_combine(dir, ".info");
+        if (utils::filesystem::file_exists(old_info_path))
+        {
+            utils::filesystem::remove_path(old_info_path);
+        }
+    }
+    else
+    {
+        derror("store replica_init_info to %s failed, err = %s", new_info_path.c_str(), err.to_string());
+    }
+
+    return err;
+}
+
+error_code replica_init_info::load_binary(const char* file)
 {
     std::ifstream is(file, std::ios::binary);
     if (!is.is_open())
@@ -81,7 +147,7 @@ error_code replica_init_info::load(const char* file)
     return ERR_OK;
 }
 
-error_code replica_init_info::store(const char* file)
+error_code replica_init_info::store_binary(const char* file)
 {
     std::string ffile = std::string(file);
     std::string tmp_file = ffile + ".tmp";
@@ -109,6 +175,71 @@ error_code replica_init_info::store(const char* file)
     return ERR_OK;
 }
 
+error_code replica_init_info::load_json(const char* file)
+{
+    std::ifstream is(file, std::ios::binary);
+    if (!is.is_open())
+    {
+        derror("open file %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    int64_t sz = 0;
+    if (!::dsn::utils::filesystem::file_size(std::string(file), sz))
+    {
+        derror("get file size of %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(sz));
+    is.read((char*)buffer.get(), sz);
+    if (is.bad())
+    {
+        derror("read file %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+    is.close();
+
+    if (!dsn::json::json_forwarder<replica_init_info>::decode(blob(buffer, sz), *this))
+    {
+        derror("decode json from file %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    return ERR_OK;
+}
+
+error_code replica_init_info::store_json(const char* file)
+{
+    std::string ffile = std::string(file);
+    std::string tmp_file = ffile + ".tmp";
+
+    std::ofstream os(tmp_file.c_str(), (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
+    if (!os.is_open())
+    {
+        derror("open file %s failed", tmp_file.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    dsn::blob bb = dsn::json::json_forwarder<replica_init_info>::encode(*this);
+    os.write((const char*)bb.data(), (std::streamsize)bb.length());
+    if (os.bad())
+    {
+        derror("write file %s failed", tmp_file.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+    os.close();
+
+    if (!utils::filesystem::rename_path(tmp_file, ffile))
+    {
+        derror("move file from %s to %s failed", tmp_file.c_str(), ffile.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    return ERR_OK;
+}
+
+
 std::string replica_init_info::to_string()
 {
     std::ostringstream oss;
@@ -131,6 +262,7 @@ error_code replica_app_info::load(const char* file)
     int64_t sz = 0;
     if (!::dsn::utils::filesystem::file_size(std::string(file), sz))
     {
+        derror("get file size of %s failed", file);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -176,6 +308,7 @@ error_code replica_app_info::store(const char* file)
 
     if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
+        derror("move file from %s to %s failed", tmp_file.c_str(), ffile.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
     else
@@ -223,11 +356,16 @@ error_code replication_app_base::open_internal(replica* r)
     {
         _last_committed_decree = last_durable_decree();
 
-        std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
-        err = _info.load(info_path.c_str());
-
-        if (last_durable_decree() < _info.init_durable_decree)
+        err = _info.load(r->dir());
+        if (err != ERR_OK)
         {
+            derror("%s: load replica_init_info failed, err = %s", r->name(), err.to_string());
+        }
+
+        if (err == ERR_OK && last_durable_decree() < _info.init_durable_decree)
+        {
+            derror("%s: replica data is not complete coz last_durable_decree(" PRId64 ") >= init_durable_decree(" PRId64 ")",
+                   r->name(), last_durable_decree(), _info.init_durable_decree);
             err = ERR_INCOMPLETE_DATA;
         }
     }
@@ -362,7 +500,7 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
 
 ::dsn::error_code replication_app_base::get_checkpoint(int64_t learn_start, const ::dsn::blob& learn_request, learn_state& state)
 {
-    int capacity = 4096;
+    int capacity = 1024 * 1024;
     void* buffer = dsn_transient_malloc(capacity);
     dsn_app_learn_state* lstate = reinterpret_cast<dsn_app_learn_state*>(buffer);
 
@@ -568,16 +706,12 @@ error_code replication_app_base::open_new_internal(replica* r, int64_t shared_lo
     _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
-    std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
-    auto err = _info.store(info_path.c_str());
-    if (err == ERR_OK)
-    {
-        ddebug("%s: store replica_init_info succeed: %s", r->name(), _info.to_string().c_str());
-    }
-    else
+    error_code err = _info.store(r->dir());
+    if (err != ERR_OK)
     {
         derror("%s: store replica_init_info failed, err = %s", r->name(), err.to_string());
     }
+
     return err;
 }
 

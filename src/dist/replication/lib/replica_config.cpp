@@ -156,16 +156,15 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
              proposal.config.ballot, get_ballot());
     dassert (proposal.config.pid == _primary_states.membership.pid, "(%d.%d) VS (%d.%d)",
              proposal.config.pid.get_app_id(), proposal.config.pid.get_partition_index(),
-             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index()
-             );
-    dassert (proposal.config.primary == _primary_states.membership.primary,
-             "%s VS %s",
-             proposal.config.primary.to_string(),
-             _primary_states.membership.primary.to_string()
-             );
-    dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
-    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY), "");
-    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "");
+             _primary_states.membership.pid.get_app_id(), _primary_states.membership.pid.get_partition_index());
+    dassert (proposal.config.primary == _primary_states.membership.primary, "%s VS %s",
+             proposal.config.primary.to_string(), _primary_states.membership.primary.to_string());
+    dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "count(%d) VS count(%d)",
+             (int)proposal.config.secondaries.size(), (int)_primary_states.membership.secondaries.size());
+    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY), "node = %s",
+             proposal.node.to_string());
+    dassert (!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY), "node = %s",
+             proposal.node.to_string());
 
     int potential_secondaries_count = _primary_states.membership.secondaries.size() + _primary_states.learners.size();
     if (potential_secondaries_count >= _primary_states.membership.max_replica_count - 1)
@@ -827,7 +826,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     ddebug(
-        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration = %" PRIu64 " ms",
+        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration = %" PRIu64 " ms, %s",
         name(),
         enum_to_string(old_status),
         old_ballot,
@@ -837,7 +836,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         _prepare_list->last_committed_decree(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),
-        _last_config_change_time_ms - oldTs
+        _last_config_change_time_ms - oldTs,
+        boost::lexical_cast<std::string>(_config).c_str()
         );
 
     if (status() != old_status)

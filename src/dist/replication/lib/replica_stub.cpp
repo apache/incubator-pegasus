@@ -1354,12 +1354,39 @@ void replica_stub::on_gc()
         }
 
         std::set<gpid> prevent_gc_replicas;
-        int reserved_log_count = _log->garbage_collection(gc_condition, prevent_gc_replicas);
-        if (reserved_log_count > _options.log_shared_file_count_limit)
+        int reserved_log_count = _log->garbage_collection(
+                    gc_condition, _options.log_shared_file_count_limit, prevent_gc_replicas);
+        if (reserved_log_count > _options.log_shared_file_count_limit * 2)
         {
             ddebug("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
-                   "limit = %d, reserved_log_count = %d, prevent_gc_replica_count = %d",
-                   _options.log_shared_file_count_limit, reserved_log_count, (int)prevent_gc_replicas.size());
+                   "file_count_limit = %d, reserved_log_count = %d, trigger all replicas to do checkpoint",
+                   _options.log_shared_file_count_limit, reserved_log_count);
+            for (auto it = rs.begin(); it != rs.end(); ++it)
+            {
+                tasking::enqueue(
+                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                    this,
+                    std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
+                    gpid_to_thread_hash(it->first),
+                    std::chrono::milliseconds(dsn_random32(0, 3000)) // delay random to avoid write compete
+                    );
+            }
+        }
+        else if (reserved_log_count > _options.log_shared_file_count_limit)
+        {
+            std::ostringstream oss;
+            int c = 0;
+            for (auto& i : prevent_gc_replicas)
+            {
+                if (c != 0) oss << ", ";
+                oss << i.get_app_id() << "." << i.get_partition_index();
+                c++;
+            }
+            ddebug("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
+                   "file_count_limit = %d, reserved_log_count = %d, prevent_gc_replica_count = %d, "
+                   "trigger them to do checkpoint: { %s }",
+                   _options.log_shared_file_count_limit, reserved_log_count,
+                   (int)prevent_gc_replicas.size(), oss.str().c_str());
             zauto_lock l(_replicas_lock);
             for (auto& id : prevent_gc_replicas)
             {

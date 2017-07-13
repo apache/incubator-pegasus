@@ -41,6 +41,7 @@
 // 
 
 # include <dsn/cpp/serverlet.h>
+# include <dsn/cpp/json_helper.h>
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
@@ -60,12 +61,18 @@ public:
     decree  init_durable_decree;
     int64_t init_offset_in_shared_log;
     int64_t init_offset_in_private_log;
+    DEFINE_JSON_SERIALIZATION(init_ballot, init_durable_decree, init_offset_in_shared_log, init_offset_in_private_log)
 
 public:
     replica_init_info() { memset((void*)this, 0, sizeof(*this)); }
-    error_code load(const char* file);
-    error_code store(const char* file);
+    error_code load(const std::string& dir);
+    error_code store(const std::string& dir);
     std::string to_string();
+private:
+    error_code load_binary(const char* file);
+    error_code store_binary(const char* file);
+    error_code load_json(const char* file);
+    error_code store_json(const char* file);
 };
 
 class replica_app_info

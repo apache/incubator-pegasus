@@ -209,7 +209,7 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 
 void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
 {
-    ddebug("%s[%s] %sconnected", is_master ? "master":"worker", node.to_string(), is_connected ? "" : "dis");
+    ddebug("%s %sconnected: %s", is_master ? "master":"worker", is_connected ? "" : "dis", node.to_string());
 }
 
 /*

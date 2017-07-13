@@ -240,7 +240,8 @@ public:
                            int64_t reserve_max_size, int64_t reserve_max_time);
 
     // garbage collection for shared log, returns reserved file count.
-    // `prevent_gc_replicas' will store replicas which prevent the smallest log file to be deleted.
+    // `prevent_gc_replicas' will store replicas which prevent log files out of `file_count_limit'
+    // to be deleted.
     // remove log files if satisfy:
     //  - for each replica "r":
     //         r is not in file.max_decree
@@ -248,12 +249,14 @@ public:
     //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
     //  - the current log file should not be removed
     // thread safe
-    int garbage_collection(const replica_log_info_map& gc_condition, std::set<gpid>& prevent_gc_replicas);
+    int garbage_collection(const replica_log_info_map& gc_condition, int file_count_limit,
+                           std::set<gpid>& prevent_gc_replicas);
 
     //
-    //  when this is a private log, log files are learned by remote replicas
+    // when this is a private log, log files are learned by remote replicas
+    // return true if private log surely covers the learning range
     //
-    void get_learn_state(gpid gpid, decree start, /*out*/ learn_state& state) const;
+    bool get_learn_state(gpid gpid, decree start, /*out*/ learn_state& state) const;
 
     //
     //  other inquiry routines
@@ -286,6 +289,7 @@ public:
     int64_t size() const { return _global_end_offset - _global_start_offset; }
 
     void hint_switch_file() { _switch_file_hint = true; }
+    void demand_switch_file() { _switch_file_demand = true; }
 
 protected:
     // thread-safe
@@ -347,6 +351,7 @@ private:
     mutable zlock                  _lock;
     bool                           _is_opened;
     bool                           _switch_file_hint;
+    bool                           _switch_file_demand;
     
     // logs
     int                            _last_file_index; // new log file index = _last_file_index + 1

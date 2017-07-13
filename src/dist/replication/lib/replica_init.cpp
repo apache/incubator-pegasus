@@ -172,7 +172,7 @@ error_code replica::initialize_on_load()
         // clear work on failure
         if (dsn::utils::filesystem::directory_exists(dir))
         {
-            char rename_dir[256];
+            char rename_dir[1024];
             sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
             if (dsn::utils::filesystem::rename_path(dir, rename_dir))
             {
