@@ -1679,8 +1679,8 @@ void replica_stub::open_service()
 
     _cli_kill_partition = dsn_cli_app_register(
         "kill_partition",
-        "kill_partition app_id partition_index",
         "kill partition with its global partition id",
+        "kill_partition app_id partition_index",
         (void*)this,
         [](void *context, int argc, const char **argv, dsn_cli_reply *reply)
         {
@@ -1696,34 +1696,73 @@ void replica_stub::open_service()
 
     dsn_app_info info;
     dsn_get_current_app_info(&info);
-    std::string command(info.name);
-    command += ".deny-client";
+    {
+        std::string command(info.name);
+        command += ".deny-client";
+        std::string help1(command);
+        help1 += " - control if deny client read & write request";
+        std::string help2(command);
+        help1 += " <true|false>";
+        ::dsn::register_command(command.c_str(),
+            help1.c_str(), help2.c_str(),
+            [this](const std::vector<std::string>& args)
+            {
+                if (args.empty())
+                {
+                    return _deny_client ? "true" : "false";
+                }
+                std::string arg = args[0];
+                if (arg != "true" && arg != "false")
+                {
+                    return "ERROR: invalid arguments";
+                }
+                if (arg == "true")
+                {
+                    _deny_client = true;
+                }
+                else
+                {
+                    _deny_client = false;
+                }
+                ddebug("set deny_client to %s by remote command", _deny_client ? "true" : "false");
+                return "OK";
+            }
+        );
+    }
+    {
+        std::string command(info.name);
+        command += ".trigger-checkpoint";
+        std::string help1(command);
+        help1 += " - trigger all replicas to do checkpoint";
+        std::string help2(command);
+        help1 += "";
+        ::dsn::register_command(command.c_str(),
+            help1.c_str(), help2.c_str(),
+            [this](const std::vector<std::string>& args)
+            {
+                ddebug("start to trigger checkpoint by remote command");
 
-    ::dsn::register_command(command.c_str(),
-        "deny-client - if deny client read & write request",
-        "deny-client <true|false>",
-        [this](const std::vector<std::string>& args)
-        {
-            if (args.empty())
-            {
-                return _deny_client ? "true" : "false";
+                replicas rs;
+                {
+                    zauto_lock l(_replicas_lock);
+                    rs = _replicas;
+                }
+
+                for (auto it = rs.begin(); it != rs.end(); ++it)
+                {
+                    tasking::enqueue(
+                        LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                        this,
+                        std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
+                        gpid_to_thread_hash(it->first),
+                        std::chrono::milliseconds(dsn_random32(0, 3000)) // delay random to avoid write compete
+                        );
+                }
+
+                return "OK";
             }
-            std::string arg = args[0];
-            if (arg != "true" && arg != "false")
-            {
-                return "ERROR: invalid arguments";
-            }
-            if (arg == "true")
-            {
-                _deny_client = true;
-            }
-            else
-            {
-                _deny_client = false;
-            }
-            return "OK";
-        }
-    );
+        );
+    }
 }
 
 void replica_stub::close()
