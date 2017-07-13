@@ -500,7 +500,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view& view, const dsn::g
                 {
                     int64_t larger_cd = std::max(previous_dead.last_committed_decree,
                                                  recent_dead.last_committed_decree);
-                    if ( larger_cd >= pc.last_committed_decree )
+                    if ( larger_cd + 10 >= pc.last_committed_decree )
                     {
                         action.node = (previous_dead.ballot <= recent_dead.ballot)?nodes[1]:nodes[0];
                         ddebug("%s: select %s as a new primary", gpid_name, action.node.to_string());

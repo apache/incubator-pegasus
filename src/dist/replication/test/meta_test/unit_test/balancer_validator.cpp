@@ -191,8 +191,9 @@ void meta_service_test_app::balancer_validator()
     app_mapper apps;
     node_mapper nodes;
 
-    simple_load_balancer slb(nullptr);
-    greedy_load_balancer glb(nullptr);
+    meta_service svc;
+    simple_load_balancer slb(&svc);
+    greedy_load_balancer glb(&svc);
     std::vector<server_load_balancer*> lbs = { &slb, &glb };
 
     for (int i=0; i<lbs.size(); ++i)

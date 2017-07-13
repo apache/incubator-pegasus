@@ -601,7 +601,7 @@ void meta_service_test_app::simple_lb_cure_test()
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 10, 15},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 15, 15},
     };
-    pc.last_committed_decree = 20;
+    pc.last_committed_decree = 30;
     t = dsn::tasking::enqueue(
                 LPC_META_STATE_NORMAL,
                 nullptr,
@@ -698,7 +698,8 @@ void meta_service_test_app::simple_lb_balanced_cure()
 
     app_mapper app;
     node_mapper nodes;
-    simple_load_balancer simple_lb(nullptr);
+    meta_service svc;
+    simple_load_balancer simple_lb(&svc);
 
     dsn::app_info info;
     info.app_id = 1; info.is_stateful = true;
@@ -783,7 +784,8 @@ void meta_service_test_app::simple_lb_collect_replica()
     dsn::partition_configuration& pc = *get_config(app, rep.pid);
     config_context& cc = *get_config_context(app, rep.pid);
 
-    simple_load_balancer simple_lb(nullptr);
+    meta_service svc;
+    simple_load_balancer simple_lb(&svc);
 
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
@@ -1040,7 +1042,8 @@ void meta_service_test_app::simple_lb_construct_replica()
     dsn::partition_configuration& pc = *get_config(app, rep.pid);
     config_context& cc = *get_config_context(app, rep.pid);
 
-    simple_load_balancer simple_lb(nullptr);
+    meta_service svc;
+    simple_load_balancer simple_lb(&svc);
 
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
