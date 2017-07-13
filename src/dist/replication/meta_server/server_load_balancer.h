@@ -91,9 +91,9 @@ public:
     //
     virtual bool construct_replica(meta_view view, const gpid& pid, int max_replica_count) = 0;
 
-    static void register_proposals(meta_view view, const configuration_balancer_request& req, configuration_balancer_response& resp);
-    static void apply_balancer(meta_view view, const migration_list& ml);
-    static int suggest_alive_time(config_type::type t);
+    void register_proposals(meta_view view, const configuration_balancer_request& req, configuration_balancer_response& resp);
+    void apply_balancer(meta_view view, const migration_list& ml);
+    int suggest_alive_time(config_type::type t);
 
 public:
     typedef std::function<bool (const rpc_address& addr1, const rpc_address& addr2)> node_comparator;

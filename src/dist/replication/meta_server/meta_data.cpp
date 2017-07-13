@@ -136,6 +136,7 @@ bool config_context::record_drop_history(const rpc_address &node)
     if (iter != dropped.end())
         return false;
     dropped.emplace_back( dropped_replica{node, dsn_now_ms(), invalid_ballot, invalid_decree, invalid_decree} );
+    prefered_dropped = (int)dropped.size() - 1;
     check_size();
     return true;
 }
@@ -144,15 +145,18 @@ int config_context::collect_drop_replica(const rpc_address &node, const replica_
 {
     bool in_dropped = false;
     auto iter = find_from_dropped(node);
+    uint64_t last_drop_time = dropped_replica::INVALID_TIMESTAMP;
     if (iter != dropped.end())
     {
         in_dropped = true;
+        last_drop_time = iter->time;
         dropped.erase(iter);
+        prefered_dropped = (int)dropped.size() - 1;
     }
 
     dropped_replica current = {
         node,
-        dropped_replica::INVALID_TIMESTAMP,
+        last_drop_time,
         info.ballot,
         info.last_committed_decree,
         info.last_prepared_decree
@@ -163,6 +167,7 @@ int config_context::collect_drop_replica(const rpc_address &node, const replica_
     iter = std::lower_bound(dropped.begin(), dropped.end(), current, cmp);
 
     dropped.emplace(iter, current);
+    prefered_dropped = (int)dropped.size() - 1;
     check_size();
 
     iter = find_from_dropped(node);

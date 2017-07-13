@@ -68,7 +68,12 @@ public:
     
     int32_t max_replicas_in_group;
 
+    bool add_secondary_enable_flow_control;
+    int32_t add_secondary_max_count_for_one_node;
+    int32_t add_secondary_proposal_alive_time_seconds;
+
     fd_suboptions _fd_opts;
+
 public:
     void initialize();
 

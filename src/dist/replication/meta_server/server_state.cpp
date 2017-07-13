@@ -249,7 +249,7 @@ error_code server_state::dump_from_remote_storage(const char *local_path, bool s
     if (sync_immediately) {
         ec=sync_apps_from_remote_storage();
         if (ec == ERR_OBJECT_NOT_FOUND) {
-            dwarn("remote storage is empty, just stop the dump");
+            ddebug("remote storage is empty, just stop the dump");
             return ERR_OK;
         }
         else if (ec != ERR_OK){
@@ -762,7 +762,7 @@ void server_state::on_config_sync(dsn_message_t msg)
         node_state* ns = get_node_state(_nodes, request.node, false);
         if (ns == nullptr)
         {
-            dwarn("node(%s) not found in meta server", request.node.to_string());
+            ddebug("node(%s) not found in meta server", request.node.to_string());
             response.err = ERR_OBJECT_NOT_FOUND;
         }
         else
@@ -823,7 +823,7 @@ void server_state::on_config_sync(dsn_message_t msg)
                 {
                     if (app->expire_second == 0)
                     {
-                        dwarn("gpid(%d.%d) on node(%s) is of dropped table, but expire second is not specified, do not delete it for safety reason",
+                        ddebug("gpid(%d.%d) on node(%s) is of dropped table, but expire second is not specified, do not delete it for safety reason",
                             rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string());
                     }
                     else if (has_seconds_expired(app->expire_second))
@@ -831,7 +831,7 @@ void server_state::on_config_sync(dsn_message_t msg)
                         // can delete replica only when expire second is explicitely specified and expired.
                         if (level <= meta_function_level::fl_steady)
                         {
-                            dwarn("gpid(%d.%d) on node(%s) is of dropped and expired table, but current function level is %s, do not delete it for safety reason",
+                            ddebug("gpid(%d.%d) on node(%s) is of dropped and expired table, but current function level is %s, do not delete it for safety reason",
                                 rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string(),
                                 _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         }
@@ -850,7 +850,7 @@ void server_state::on_config_sync(dsn_message_t msg)
                     {
                         if (level <= meta_function_level::fl_steady)
                         {
-                            dwarn("gpid(%d.%d) on node(%s) is useless, but current function level is %s, do not delete it for safety reason",
+                            ddebug("gpid(%d.%d) on node(%s) is useless, but current function level is %s, do not delete it for safety reason",
                                 rep.pid.get_app_id(), rep.pid.get_partition_index(), request.node.to_string(),
                                 _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         }
@@ -1284,12 +1284,13 @@ void server_state::list_apps(const configuration_list_apps_request& request, con
 
 void server_state::send_proposal(rpc_address target, const configuration_update_request &proposal)
 {
-    ddebug("send proposal %s of %s, gpid(%d.%d), current ballot = %" PRId64,
+    ddebug("send proposal %s for gpid(%d.%d), ballot = %" PRId64 ", target = %s, node = %s",
         ::dsn::enum_to_string(proposal.type),
-        proposal.node.to_string(),
         proposal.config.pid.get_app_id(),
         proposal.config.pid.get_partition_index(),
-        proposal.config.ballot
+        proposal.config.ballot,
+        target.to_string(),
+        proposal.node.to_string()
         );
     dsn_message_t msg = dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, gpid_to_thread_hash(proposal.config.pid));
     ::marshall(msg, proposal);
@@ -1476,7 +1477,7 @@ task_ptr server_state::update_configuration_on_remote(std::shared_ptr<configurat
     meta_function_level::type l = _meta_svc->get_function_level();
     if (l <= meta_function_level::fl_blind)
     {
-        dwarn("ignore update configuration on remote due to level is %s", _meta_function_level_VALUES_TO_NAMES.find(l)->second);
+        ddebug("ignore update configuration on remote due to level is %s", _meta_function_level_VALUES_TO_NAMES.find(l)->second);
         //NOTICE: pending_sync_task need to be reassigned
         return tasking::enqueue(LPC_META_STATE_HIGH, nullptr, [this, config_request]() mutable
         {
@@ -1545,10 +1546,18 @@ void server_state::on_update_configuration_on_remote_reply(error_code ec, std::s
             _meta_svc->get_balancer()->cure({ &_all_apps, &_nodes }, gpid, action);
             if (action.type != config_type::CT_INVALID)
             {
-                config_request->type = action.type;
-                config_request->node = action.node;
-                config_request->info = *app;
-                send_proposal(action.target, *config_request);
+                if (_meta_svc->get_meta_options().add_secondary_enable_flow_control
+                        && (action.type == config_type::CT_ADD_SECONDARY || action.type == config_type::CT_ADD_SECONDARY_FOR_LB))
+                {
+                    // ignore adding secondary is add_secondary_enable_flow_control = true
+                }
+                else
+                {
+                    config_request->type = action.type;
+                    config_request->node = action.node;
+                    config_request->info = *app;
+                    send_proposal(action.target, *config_request);
+                }
             }
         }
     }
@@ -1763,7 +1772,15 @@ void server_state::on_update_configuration(std::shared_ptr<configuration_update_
 
     dassert(app != nullptr, "get get app for app id(%d)", gpid.get_app_id());
     dassert(app->is_stateful, "don't support stateless apps currently, id(%d)", gpid.get_app_id());
-    ddebug("recv update configuration, request(%s)", boost::lexical_cast<std::string>(*cfg_request).c_str());
+    auto find_name = _config_type_VALUES_TO_NAMES.find(cfg_request->type);
+    if (find_name != _config_type_VALUES_TO_NAMES.end())
+    {
+        ddebug("recv update config request: type(%s), %s", find_name->second, boost::lexical_cast<std::string>(*cfg_request).c_str());
+    }
+    else
+    {
+        ddebug("recv update config request: type(%d), %s", cfg_request->type, boost::lexical_cast<std::string>(*cfg_request).c_str());
+    }
 
     if (is_partition_config_equal(pc, cfg_request->config))
     {
@@ -1830,8 +1847,8 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state>& app, int p
                 downgrade_secondary_to_inactive(app, pidx, address);
             else if(is_secondary(pc, address))
             {
-                dwarn("gpid(%d.%d) secondary(%s) is down, ignored it due to no primary for this partition available",
-                    pc.pid.get_app_id(), pc.pid.get_partition_index(), address.to_string());
+                ddebug("gpid(%d.%d): secondary(%s) is down, ignored it due to no primary for this partition available",
+                       pc.pid.get_app_id(), pc.pid.get_partition_index(), address.to_string());
             }
             else
             {
@@ -1855,7 +1872,7 @@ void server_state::on_change_node_state(rpc_address node, bool is_alive)
         auto iter = _nodes.find(node);
         if (iter == _nodes.end())
         {
-            dwarn("node(%s) doesn't exist in the node state, just ignore", node.to_string());
+            ddebug("node(%s) doesn't exist in the node state, just ignore", node.to_string());
         }
         else
         {
@@ -2322,16 +2339,29 @@ bool server_state::check_all_partitions()
     // first the cure stage
     if (level <= meta_function_level::fl_freezed)
     {
-        dwarn("service is in level(%s), don't do any cure or balancer actions",
+        ddebug("service is in level(%s), don't do any cure or balancer actions",
               _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
     }
+    ddebug("start to check all partitions, add_secondary_enable_flow_control = %s, add_secondary_max_count_for_one_node = %d",
+           _meta_svc->get_meta_options().add_secondary_enable_flow_control ? "true" : "false",
+           _meta_svc->get_meta_options().add_secondary_max_count_for_one_node
+           );
+    int send_proposal_count = 0;
+    std::vector<configuration_proposal_action> add_secondary_actions;
+    std::vector<gpid> add_secondary_gpids;
+    std::vector<bool> add_secondary_proposed;
+    std::map<rpc_address, int> add_secondary_running_nodes; // node --> running_count
     for (auto& app_pair: _exist_apps)
     {
         std::shared_ptr<app_state>& app = app_pair.second;
         if (app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING)
+        {
+            ddebug("ignore app(%s)(%d) because it's status is %s",
+                   app->app_name.c_str(), app->app_id, ::dsn::enum_to_string(app->status));
             continue;
-        for (unsigned int i=0; i!=app->partition_count; ++i)
+        }
+        for (unsigned int i = 0; i != app->partition_count; ++i)
         {
             partition_configuration& pc = app->partitions[i];
             config_context& cc = app->helpers->contexts[i];
@@ -2349,13 +2379,93 @@ bool server_state::check_all_partitions()
                     unhealthy_partitions++;
                     if (action.type != config_type::CT_INVALID)
                     {
-                        send_proposal(action, pc, *app);
+                        if (action.type == config_type::CT_ADD_SECONDARY || action.type == config_type::CT_ADD_SECONDARY_FOR_LB)
+                        {
+                            add_secondary_actions.push_back(std::move(action));
+                            add_secondary_gpids.push_back(pc.pid);
+                            add_secondary_proposed.push_back(false);
+                        }
+                        else
+                        {
+                            send_proposal(action, pc, *app);
+                            send_proposal_count++;
+                        }
                     }
                 }
+            }
+            else
+            {
+                ddebug("ignore gpid(%d.%d) as it's stage is pending_remote_sync",
+                       pc.pid.get_app_id(),
+                       pc.pid.get_partition_index()
+                       );
             }
         }
         total_partitions += app->partition_count;
     }
+
+    // assign secondary for urgent
+    for (int i = 0; i < add_secondary_actions.size(); ++i)
+    {
+        gpid& pid = add_secondary_gpids[i];
+        partition_configuration& pc = *get_config(_all_apps, pid);
+        if (!add_secondary_proposed[i] && pc.secondaries.empty())
+        {
+            configuration_proposal_action& action = add_secondary_actions[i];
+            if (_meta_svc->get_meta_options().add_secondary_enable_flow_control
+                    && add_secondary_running_nodes[action.node] >= _meta_svc->get_meta_options().add_secondary_max_count_for_one_node)
+            {
+                // ignore
+                continue;
+            }
+            std::shared_ptr<app_state> app = get_app(pid.get_app_id());
+            send_proposal(action, pc, *app);
+            send_proposal_count++;
+            add_secondary_proposed[i] = true;
+            add_secondary_running_nodes[action.node]++;
+        }
+    }
+
+    // assign secondary for all
+    for (int i = 0; i < add_secondary_actions.size(); ++i)
+    {
+        if (!add_secondary_proposed[i])
+        {
+            configuration_proposal_action& action = add_secondary_actions[i];
+            gpid pid = add_secondary_gpids[i];
+            partition_configuration& pc = *get_config(_all_apps, pid);
+            if (_meta_svc->get_meta_options().add_secondary_enable_flow_control
+                    && add_secondary_running_nodes[action.node] >= _meta_svc->get_meta_options().add_secondary_max_count_for_one_node)
+            {
+                ddebug("do not send %s proposal for gpid(%d.%d) for flow control reason, target = %s, node = %s",
+                       ::dsn::enum_to_string(action.type), pc.pid.get_app_id(), pc.pid.get_partition_index(),
+                       action.target.to_string(), action.node.to_string());
+                continue;
+            }
+            std::shared_ptr<app_state> app = get_app(pid.get_app_id());
+            send_proposal(action, pc, *app);
+            send_proposal_count++;
+            add_secondary_proposed[i] = true;
+            add_secondary_running_nodes[action.node]++;
+        }
+    }
+
+    int ignored_add_secondary_count = 0;
+    int add_secondary_count = 0;
+    for (int i = 0; i < add_secondary_actions.size(); ++i)
+    {
+        if (!add_secondary_proposed[i])
+        {
+            ignored_add_secondary_count++;
+        }
+        else
+        {
+            add_secondary_count++;
+        }
+    }
+
+    ddebug("check all partitions done, send_proposal_count = %d, add_secondary_count = %d, ignored_add_secondary_count = %d",
+           send_proposal_count, add_secondary_count, ignored_add_secondary_count);
 
     // then the balancer stage
     if (level <= meta_function_level::fl_steady)
@@ -2376,10 +2486,11 @@ bool server_state::check_all_partitions()
 
     if (!can_run_balancer())
     {
+        ddebug("don't do replica migration coz can_run_balancer() returns false");
         return false;
     }
 
-    dinfo("try to do replica migration");
+    ddebug("try to do replica migration");
     if (_meta_svc->get_balancer()->balance({&_all_apps, &_nodes}, _temporary_list))
     {
         _meta_svc->get_balancer()->apply_balancer({&_all_apps, &_nodes}, _temporary_list);

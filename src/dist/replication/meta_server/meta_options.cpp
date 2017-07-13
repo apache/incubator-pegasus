@@ -128,6 +128,25 @@ void meta_options::initialize()
         "max replicas(alive & dead) in a group"
         );
 
+    add_secondary_enable_flow_control = dsn_config_get_value_bool(
+        "meta_server",
+        "add_secondary_enable_flow_control",
+        false,
+        "enable flow control for add secondary proposal"
+        );
+    add_secondary_max_count_for_one_node = dsn_config_get_value_uint64(
+        "meta_server",
+        "add_secondary_max_count_for_one_node",
+        10,
+        "add secondary max count for one node when flow control enabled"
+        );
+    add_secondary_proposal_alive_time_seconds = dsn_config_get_value_uint64(
+        "meta_server",
+        "add_secondary_proposal_alive_time_seconds",
+        900,
+        "add secondary proposal alive time in seconds"
+        );
+
     _fd_opts.distributed_lock_service_type = dsn_config_get_value_string(
         "meta_server",
         "distributed_lock_service_type",

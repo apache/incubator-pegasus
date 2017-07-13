@@ -38,6 +38,7 @@
 
 #include <dsn/utility/factory_store.h>
 #include <dsn/dist/meta_state_service.h>
+#include <dsn/tool-api/command.h>
 #include <algorithm> // for std::remove_if
 #include <cctype> // for ::isspace
 
@@ -144,11 +145,13 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
 {
     for (auto& node: nodes)
     {
-        if (is_alive) {
+        if (is_alive)
+        {
             _alive_set.insert(node);
             _dead_set.erase(node);
         }
-        else {
+        else
+        {
             _alive_set.erase(node);
             _dead_set.insert(node);
         }
@@ -161,7 +164,8 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
     {
         return;
     }
-    for (const rpc_address& address: nodes) {
+    for (const rpc_address& address: nodes)
+    {
         tasking::enqueue(
             LPC_META_STATE_HIGH,
             nullptr,
@@ -288,9 +292,11 @@ error_code meta_service::start()
         }
         derror("initialize server state from remote storage failed, err = %s, retry ...", err.to_string());
     }
+
     _state->register_cli_commands();
 
     start_service();
+
     ddebug("start meta_service succeed");
     return ERR_OK;
 }
