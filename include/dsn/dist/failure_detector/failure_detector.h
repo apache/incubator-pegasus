@@ -200,8 +200,9 @@ private:
     master_map _masters;
     worker_map _workers;
 
-    uint32_t _beacon_interval_milliseconds;
     uint32_t _check_interval_milliseconds;
+    uint32_t _beacon_interval_milliseconds;
+    uint32_t _beacon_timeout_milliseconds;
     uint32_t _lease_milliseconds;
     uint32_t _grace_milliseconds;
     bool _is_started;

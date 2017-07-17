@@ -54,6 +54,7 @@ replication_options::replication_options()
 
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
+    prepare_decree_gap_for_debug_logging = 10000;
 
     batch_write_disabled = false;
     staleness_for_commit = 10;
@@ -74,10 +75,10 @@ replication_options::replication_options()
     gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
 
     fd_disabled = false;
-    fd_check_interval_seconds = 5;
+    fd_check_interval_seconds = 2;
     fd_beacon_interval_seconds = 3;
-    fd_lease_seconds = 10;
-    fd_grace_seconds = 15;
+    fd_lease_seconds = 9;
+    fd_grace_seconds = 10;
 
     log_private_file_size_mb = 32;
     log_private_batch_buffer_kb = 512;
@@ -225,6 +226,11 @@ void replication_options::initialize()
         "prepare_timeout_ms_for_potential_secondaries",
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit");
+    prepare_decree_gap_for_debug_logging = (int)dsn_config_get_value_uint64(
+        "replication",
+        "prepare_decree_gap_for_debug_logging",
+        prepare_decree_gap_for_debug_logging,
+        "if greater than 0, then print debug log every decree gap of preparing");
 
     batch_write_disabled =
         dsn_config_get_value_bool("replication",

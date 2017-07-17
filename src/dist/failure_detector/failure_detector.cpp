@@ -65,6 +65,9 @@ error_code failure_detector::start(uint32_t check_interval_seconds,
 {
     _check_interval_milliseconds = check_interval_seconds * 1000;
     _beacon_interval_milliseconds = beacon_interval_seconds * 1000;
+    // here we set beacon timeout less than beacon interval in order to switch master
+    // immediately once the last beacon fails, to make failure detection more robust.
+    _beacon_timeout_milliseconds = _beacon_interval_milliseconds * 2 / 3;
     _lease_milliseconds = lease_seconds * 1000;
     _grace_milliseconds = grace_seconds * 1000;
 
@@ -388,7 +391,10 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     // now the ack is applicable
 
     if (err != ERR_OK) {
-        dwarn("ping master(%s) failed, err=%s", node.to_string(), err.to_string());
+        dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
+              node.to_string(),
+              _beacon_timeout_milliseconds,
+              err.to_string());
         return true;
     }
 
@@ -518,7 +524,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
                              end_ping(err, std::move(resp), nullptr);
                          }
                      },
-                     std::chrono::milliseconds(_check_interval_milliseconds));
+                     std::chrono::milliseconds(_beacon_timeout_milliseconds));
 }
 }
 } // end namespace

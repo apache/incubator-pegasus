@@ -64,6 +64,7 @@ public:
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
+    int32_t prepare_decree_gap_for_debug_logging;
 
     bool batch_write_disabled;
     int32_t staleness_for_commit;

@@ -94,8 +94,9 @@ void replica::init_prepare(mutation_ptr &mu)
     dsn_log_level_t level = LOG_LEVEL_INFORMATION;
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
-        // print a debug log per 1024 decrees
-        if ((mu->get_decree() & 0x3ff) == 0)
+        // print a debug log if necessary
+        if (_options->prepare_decree_gap_for_debug_logging > 0 &&
+            mu->get_decree() % _options->prepare_decree_gap_for_debug_logging == 0)
             level = LOG_LEVEL_DEBUG;
         mu->set_timestamp(get_uniq_timestamp());
     } else {
