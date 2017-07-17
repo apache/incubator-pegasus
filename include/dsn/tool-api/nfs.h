@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,68 +33,68 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
-# include <string>
-# include <dsn/utility/utils.h>
-# include <dsn/tool-api/task.h>
+#include <dsn/service_api_c.h>
+#include <string>
+#include <dsn/utility/utils.h>
+#include <dsn/tool-api/task.h>
 
 namespace dsn {
 
-    /*!
-    @addtogroup tool-api-providers
-    @{
-    */
+/*!
+@addtogroup tool-api-providers
+@{
+*/
 
-    struct remote_copy_request
+struct remote_copy_request
+{
+    ::dsn::rpc_address source;
+    std::string source_dir;
+    std::vector<std::string> files;
+    std::string dest_dir;
+    bool overwrite;
+};
+
+struct remote_copy_response
+{
+};
+
+DSN_API extern void marshall(::dsn::binary_writer &writer, const remote_copy_request &val);
+
+DSN_API extern void unmarshall(::dsn::binary_reader &reader, /*out*/ remote_copy_request &val);
+
+class service_node;
+class task_worker_pool;
+class task_queue;
+
+class nfs_node
+{
+public:
+    template <typename T>
+    static nfs_node *create(service_node *node)
     {
-        ::dsn::rpc_address   source;
-        std::string source_dir;
-        std::vector<std::string> files;
-        std::string dest_dir;
-        bool        overwrite;
-    };
+        return new T(node);
+    }
 
-    struct remote_copy_response
-    {
+    typedef nfs_node *(*factory)(service_node *);
 
-    };
+public:
+    nfs_node(service_node *node) : _node(node) {}
 
-    DSN_API extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
+    virtual ~nfs_node() {}
 
-    DSN_API extern void unmarshall(::dsn::binary_reader& reader, /*out*/ remote_copy_request& val);
-    
-    class service_node;
-    class task_worker_pool;
-    class task_queue;
+    virtual ::dsn::error_code start(io_modifer &ctx) = 0;
 
-    class nfs_node
-    {
-    public:
-        template <typename T> static nfs_node* create(service_node* node)
-        {
-            return new T(node);
-        }
+    virtual error_code stop() = 0;
 
-        typedef nfs_node* (*factory)(service_node*);
+    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) = 0;
 
-    public:
-        nfs_node(service_node* node) : _node(node) {}
+    service_node *node() { return _node; }
 
-        virtual ~nfs_node() {}
+protected:
+    service_node *_node;
+};
 
-        virtual ::dsn::error_code start(io_modifer& ctx) = 0;
-
-        virtual error_code stop() = 0;
-
-        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
-        
-        service_node* node() { return _node; }
-
-    protected:
-        service_node* _node;
-    };
-
-    /*@}*/
+/*@}*/
 }

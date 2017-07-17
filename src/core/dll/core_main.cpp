@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,40 +33,40 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/service_api_c.h>
+#include <dsn/utility/ports.h>
 
-# include <dsn/service_api_c.h>
-# include <dsn/utility/ports.h>
+#include <dsn/tool/simulator.h>
+#include <dsn/tool/nativerun.h>
+#include <dsn/tool/fastrun.h>
+#include <dsn/toollet/tracer.h>
+#include <dsn/toollet/profiler.h>
+#include <dsn/toollet/fault_injector.h>
+#include <dsn/toollet/explorer.h>
 
-# include <dsn/tool/simulator.h>
-# include <dsn/tool/nativerun.h>
-# include <dsn/tool/fastrun.h>
-# include <dsn/toollet/tracer.h>
-# include <dsn/toollet/profiler.h>
-# include <dsn/toollet/fault_injector.h>
-# include <dsn/toollet/explorer.h>
+#include <dsn/tool/providers.common.h>
+#include <dsn/tool/providers.hpc.h>
+#include <dsn/tool/nfs.h>
+#include <dsn/utility/singleton.h>
 
-# include <dsn/tool/providers.common.h>
-# include <dsn/tool/providers.hpc.h>
-# include <dsn/tool/nfs.h>
-# include <dsn/utility/singleton.h>
-
-# include <dsn/dist/dist.providers.common.h>
+#include <dsn/dist/dist.providers.common.h>
 
 //# include <dsn/thrift_helper.h>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "core.main"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "core.main"
 
 void dsn_core_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();
-    dsn::tools::register_component_provider< ::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
+    dsn::tools::register_component_provider<::dsn::service::nfs_node_simple>(
+        "dsn::service::nfs_node_simple");
 
-    //dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
+    // dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -85,23 +85,21 @@ void dsn_core_init()
 // global checker implementation
 //
 void sys_init_for_add_global_checker();
-class global_checker_store : public ::dsn::utils::singleton< global_checker_store >
+class global_checker_store : public ::dsn::utils::singleton<global_checker_store>
 {
 public:
     struct global_checker
     {
-        std::string        name;
+        std::string name;
         dsn_checker_create create;
-        dsn_checker_apply  apply;
+        dsn_checker_apply apply;
     };
 
 public:
     global_checker_store()
     {
-        ::dsn::tools::sys_init_after_app_created.put_back(
-            sys_init_for_add_global_checker,
-            "checkers.install"
-            );
+        ::dsn::tools::sys_init_after_app_created.put_back(sys_init_for_add_global_checker,
+                                                          "checkers.install");
     }
 
     std::list<global_checker> checkers;
@@ -109,17 +107,16 @@ public:
 
 void sys_init_for_add_global_checker()
 {
-    auto t = dynamic_cast<dsn::tools::simulator*>(::dsn::tools::get_current_tool());
-    if (t != nullptr)
-    {
-        for (auto& c : global_checker_store::instance().checkers)
-        {
+    auto t = dynamic_cast<dsn::tools::simulator *>(::dsn::tools::get_current_tool());
+    if (t != nullptr) {
+        for (auto &c : global_checker_store::instance().checkers) {
             t->add_checker(c.name.c_str(), c.create, c.apply);
         }
     }
 }
 
-DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+DSN_API void
+dsn_register_app_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply)
 {
     global_checker_store::global_checker ck;
     ck.name = name;
@@ -129,22 +126,20 @@ DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create creat
     global_checker_store::instance().checkers.push_back(ck);
 }
 
-# if defined(__linux__)
-# include <dsn/version.h>
-# include <dsn/git_commit.h>
+#if defined(__linux__)
+#include <dsn/version.h>
+#include <dsn/git_commit.h>
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
-static char const rcsid[] = "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
-# if defined(DSN_BUILD_TYPE)
-        " " STR(DSN_BUILD_TYPE)
-# endif
+static char const rcsid[] =
+    "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
+#if defined(DSN_BUILD_TYPE)
+    " " STR(DSN_BUILD_TYPE)
+#endif
         ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
-# if defined(DSN_BUILD_HOSTNAME)
-        ", built on " STR(DSN_BUILD_HOSTNAME)
-# endif
-        ", built at " __DATE__ " " __TIME__ " $";
-const char* dsn_rcsid()
-{
-    return rcsid;
-}
-# endif
+#if defined(DSN_BUILD_HOSTNAME)
+            ", built on " STR(DSN_BUILD_HOSTNAME)
+#endif
+                ", built at " __DATE__ " " __TIME__ " $";
+const char *dsn_rcsid() { return rcsid; }
+#endif

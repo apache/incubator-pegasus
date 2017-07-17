@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,21 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
 #pragma once
 
-# if defined(DSN_IN_CORE)
-# if defined(_WIN32)
-# define DSN_API __declspec(dllexport)
-# else
-# define DSN_API __attribute__((visibility("default")))
-# endif
-# else
-# if defined(_WIN32)
-# define DSN_API __declspec(dllimport)
-# else
-# define DSN_API
-# endif
-# endif
-
+#if defined(DSN_IN_CORE)
+#if defined(_WIN32)
+#define DSN_API __declspec(dllexport)
+#else
+#define DSN_API __attribute__((visibility("default")))
+#endif
+#else
+#if defined(_WIN32)
+#define DSN_API __declspec(dllimport)
+#else
+#define DSN_API
+#endif
+#endif

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/ext/hpc-locks/sema.h>
-# include <gtest/gtest.h>
-# include <thread>
+#include <dsn/ext/hpc-locks/sema.h>
+#include <gtest/gtest.h>
+#include <thread>
 
 TEST(core, Semaphore)
 {
@@ -110,4 +110,3 @@ TEST(core, LightweightSemaphore)
     t1.join();
     t2.join();
 }
-

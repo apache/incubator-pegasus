@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,34 +34,35 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/task_queue.h>
-# include <dsn/utility/utils.h>
+#include <dsn/tool-api/task_queue.h>
+#include <dsn/utility/utils.h>
 
 namespace dsn {
 
 class admission_controller
 {
 public:
-    template <typename T> static admission_controller* create(task_queue* q, const char* args);
-    typedef admission_controller* (*factory)(task_queue*, const char*);
+    template <typename T>
+    static admission_controller *create(task_queue *q, const char *args);
+    typedef admission_controller *(*factory)(task_queue *, const char *);
 
 public:
-    admission_controller(task_queue* q, std::vector<std::string>& sargs) : _queue(q) {}
+    admission_controller(task_queue *q, std::vector<std::string> &sargs) : _queue(q) {}
     virtual ~admission_controller() {}
-    
-    virtual bool is_task_accepted(task* task) = 0;
-        
-    task_queue* bound_queue() const { return _queue; }
-    
+
+    virtual bool is_task_accepted(task *task) = 0;
+
+    task_queue *bound_queue() const { return _queue; }
+
 private:
-    task_queue* _queue;
+    task_queue *_queue;
 };
 
 // ----------------- inline implementation -----------------
-template <typename T> 
-admission_controller* admission_controller::create(task_queue* q, const char* args)
+template <typename T>
+admission_controller *admission_controller::create(task_queue *q, const char *args)
 {
     std::vector<std::string> sargs;
     dsn::utils::split_args(args, sargs, ' ');

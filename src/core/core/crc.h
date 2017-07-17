@@ -1,85 +1,72 @@
-# pragma once
+#pragma once
 
-# include <cstdint>
+#include <cstdint>
 
-namespace dsn { namespace utils {
+namespace dsn {
+namespace utils {
 
-template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
+template <typename uintxx_t, uintxx_t uPoly>
+struct crc_generator
 {
     typedef uintxx_t uint;
-    static const uintxx_t MSB = ((uintxx_t) 1) << (8 * sizeof (uintxx_t) - 1);
+    static const uintxx_t MSB = ((uintxx_t)1) << (8 * sizeof(uintxx_t) - 1);
     static const uintxx_t POLY = uPoly;
-    static       uintxx_t _crc_table[256];
-    static       uintxx_t _uX2N[64];
-
+    static uintxx_t _crc_table[256];
+    static uintxx_t _uX2N[64];
 
     //
     // compute CRC
     //
-    static
-    uintxx_t
-    compute (
-        const void *pSrc,
-        size_t      uSize,
-        uintxx_t      uCrc
-    )
+    static uintxx_t compute(const void *pSrc, size_t uSize, uintxx_t uCrc)
     {
-        const uint8_t *pData = (const uint8_t *) pSrc;
-        size_t       uBytes;
+        const uint8_t *pData = (const uint8_t *)pSrc;
+        size_t uBytes;
 
         uCrc = ~uCrc;
 
-        while (uSize > 15)
-        {
+        while (uSize > 15) {
             uBytes = 0x80000000u;
             if (uBytes > uSize)
                 uBytes = uSize;
             uSize -= uBytes;
 
-            for (; uBytes > 15; uBytes -= 16, pData += 16)
-            {
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 0])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 1])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 2])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 3])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 4])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 5])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 6])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 7])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 8])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[ 9])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[10])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[11])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[12])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[13])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[14])] ^ (uCrc >> 8);
-                uCrc = _crc_table[(uint8_t) (uCrc ^ pData[15])] ^ (uCrc >> 8);
+            for (; uBytes > 15; uBytes -= 16, pData += 16) {
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[0])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[1])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[2])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[3])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[4])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[5])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[6])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[7])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[8])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[9])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[10])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[11])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[12])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[13])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[14])] ^ (uCrc >> 8);
+                uCrc = _crc_table[(uint8_t)(uCrc ^ pData[15])] ^ (uCrc >> 8);
             }
 
             uSize += uBytes;
         }
 
         for (uBytes = uSize; uBytes > 0; uBytes -= 1, pData += 1)
-            uCrc = _crc_table[(uint8_t) (uCrc ^ pData[0])] ^ (uCrc >> 8);
+            uCrc = _crc_table[(uint8_t)(uCrc ^ pData[0])] ^ (uCrc >> 8);
 
         uCrc = ~uCrc;
 
         return (uCrc);
     };
 
-
-
     //
     // Returns (a * b) mod POLY.
-    // "a" and "b" are represented in "reversed" order -- LSB is x**(XX-1) coefficient, MSB is x^0 coefficient.
+    // "a" and "b" are represented in "reversed" order -- LSB is x**(XX-1) coefficient, MSB is x^0
+    // coefficient.
     // "POLY" is represented in the same manner except for omitted x**XX coefficient
     //
-    static
-    uintxx_t
-    MulPoly (
-        uintxx_t a,
-        uintxx_t b
-    )
+    static uintxx_t MulPoly(uintxx_t a, uintxx_t b)
     {
         uintxx_t r;
 
@@ -87,8 +74,7 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
             return (0);
 
         r = 0;
-        do
-        {
+        do {
             if (a & MSB)
                 r ^= b;
 
@@ -98,48 +84,36 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
                 b >>= 1;
 
             a <<= 1;
-        }
-        while (a != 0);
-                        
+        } while (a != 0);
+
         return (r);
     };
-
 
     //
     // Returns (x ** (8*uSize)) mod POLY
     //
-    static
-    uintxx_t
-    ComputeX_N (uint64_t uSize)
+    static uintxx_t ComputeX_N(uint64_t uSize)
     {
         size_t i;
         uintxx_t r;
 
-        r = MSB;    // r = 1
-        for (i = 0; uSize != 0; uSize >>= 1, i += 1)
-        {
+        r = MSB; // r = 1
+        for (i = 0; uSize != 0; uSize >>= 1, i += 1) {
             if (uSize & 1)
-                r = MulPoly (r, _uX2N[i]);
+                r = MulPoly(r, _uX2N[i]);
         }
 
         return (r);
     };
 
-
     //
     // Allows to change initial CRC value
     //
-    static
-    uintxx_t
-    ConvertInitialCrc (
-        uintxx_t uNew,
-        uintxx_t uOld,
-        uintxx_t uCrc,
-        size_t uSize
-    )
+    static uintxx_t ConvertInitialCrc(uintxx_t uNew, uintxx_t uOld, uintxx_t uCrc, size_t uSize)
     {
         //
-        // CRC (A, uSize, uCrc) = (uCrc * x**uSize + A * x**XX) mod POLY (let's forget about double NOTs of uCrc)
+        // CRC (A, uSize, uCrc) = (uCrc * x**uSize + A * x**XX) mod POLY (let's forget about double
+        // NOTs of uCrc)
         //
         // we know uCrc(uOld) = (uOld * x**uSize + A * x**XX) mod POLY; we need to compute
         // uCrc(uNew) = (uNew * x**uSize + A * x**XX) mod POLY
@@ -148,13 +122,12 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         //
 
         uNew ^= uOld;
-        uOld  = ComputeX_N (uSize);
-        uOld  = MulPoly (uOld, uNew);
+        uOld = ComputeX_N(uSize);
+        uOld = MulPoly(uOld, uNew);
         uCrc ^= uOld;
 
         return (uCrc);
     };
-
 
     //
     // Given
@@ -165,20 +138,17 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
     //      uFinalCrcAB = ComputeCrc (AB, uSizeA + uSizeB, uInitialCrcAB)
     // without touching A and B
     //
-    // NB: uSizeA and/or uSizeB may be 0s (this trick may be used to "recompute" CRC for another initial value)
+    // NB: uSizeA and/or uSizeB may be 0s (this trick may be used to "recompute" CRC for another
+    // initial value)
     //
 
-    static
-    uintxx_t
-    concatenate (
-        uintxx_t uInitialCrcAB,
-        uintxx_t uInitialCrcA,
-        uintxx_t uFinalCrcA,
-        uint64_t uSizeA,
-        uintxx_t uInitialCrcB,
-        uintxx_t uFinalCrcB,
-        uint64_t uSizeB
-    )
+    static uintxx_t concatenate(uintxx_t uInitialCrcAB,
+                                uintxx_t uInitialCrcA,
+                                uintxx_t uFinalCrcA,
+                                uint64_t uSizeA,
+                                uintxx_t uInitialCrcB,
+                                uintxx_t uFinalCrcB,
+                                uint64_t uSizeB)
     {
         uintxx_t uX_nA, uX_nB, uFinalCrcAB;
 
@@ -189,20 +159,20 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         //
         // first, convert CRC's to canonical values getting rid of double bitwise NOT around uCrc
         //
-        uInitialCrcAB   = ~uInitialCrcAB;
-        uInitialCrcA    = ~uInitialCrcA;
-        uFinalCrcA      = ~uFinalCrcA;
-        uInitialCrcB    = ~uInitialCrcB;
-        uFinalCrcB      = ~uFinalCrcB;
+        uInitialCrcAB = ~uInitialCrcAB;
+        uInitialCrcA = ~uInitialCrcA;
+        uFinalCrcA = ~uFinalCrcA;
+        uInitialCrcB = ~uInitialCrcB;
+        uFinalCrcB = ~uFinalCrcB;
 
         //
         // convert uFinalCrcX into canonical form, so that
         //      uFinalCrcX = (X * x**XX) mod POLY
         //
-        uX_nA = ComputeX_N (uSizeA);
-        uFinalCrcA ^= MulPoly (uX_nA, uInitialCrcA);
-        uX_nB = ComputeX_N (uSizeB);
-        uFinalCrcB ^= MulPoly (uX_nB, uInitialCrcB);
+        uX_nA = ComputeX_N(uSizeA);
+        uFinalCrcA ^= MulPoly(uX_nA, uInitialCrcA);
+        uX_nB = ComputeX_N(uSizeB);
+        uFinalCrcB ^= MulPoly(uX_nB, uInitialCrcB);
 
         //
         // we know
@@ -215,7 +185,7 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         //                  = uFinalCrcB + (uFinalCrcA * x**uSizeB) mod POLY
         //
 
-        uFinalCrcAB = uFinalCrcB ^ MulPoly (uFinalCrcA, uX_nB);
+        uFinalCrcAB = uFinalCrcB ^ MulPoly(uFinalCrcA, uX_nB);
 
         //
         // Finally, adjust initial value; we have
@@ -224,7 +194,7 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         //      uFinalCrcAB = (UInitialCrcAB * x**(uSizeA + uSizeB) + AB * x**XX) mod POLY
         //
 
-        uFinalCrcAB ^= MulPoly (uInitialCrcAB, MulPoly (uX_nA, uX_nB));
+        uFinalCrcAB ^= MulPoly(uInitialCrcAB, MulPoly(uX_nA, uX_nB));
 
         // convert back to double NOT
         uFinalCrcAB = ~uFinalCrcAB;
@@ -232,25 +202,18 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         return (uFinalCrcAB);
     };
 
-
-    static
-    void
-    InitializeTables (
-        void
-    )
+    static void InitializeTables(void)
     {
         size_t i, j;
         uintxx_t k;
 
         _uX2N[0] = MSB >> 8;
-        for (i = 1; i < sizeof (_uX2N) / sizeof (_uX2N[0]); ++i)
-            _uX2N[i] = MulPoly (_uX2N[i-1], _uX2N[i-1]);
+        for (i = 1; i < sizeof(_uX2N) / sizeof(_uX2N[0]); ++i)
+            _uX2N[i] = MulPoly(_uX2N[i - 1], _uX2N[i - 1]);
 
-        for (i = 0; i < 256; ++i)
-        {
-            k = (uintxx_t) i;
-            for (j = 0; j < 8; ++j)
-            {
+        for (i = 0; i < 256; ++i) {
+            k = (uintxx_t)i;
+            for (j = 0; j < 8; ++j) {
                 if (k & 1)
                     k = (k >> 1) ^ POLY;
                 else
@@ -260,55 +223,57 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
         }
     }
 
-    static
-    void
-    PrintTables (
-        char *pTypeName,
-        char *pClassName
-    )
+    static void PrintTables(char *pTypeName, char *pClassName)
     {
         size_t i, w;
 
-        InitializeTables ();
+        InitializeTables();
 
-        printf ("%s %s::_uX2N[sizeof (%s::_uX2N) / sizeof (%s::_uX2N[0])] = {", pTypeName, pClassName, pClassName, pClassName);
-        for (i = w = 0; i < sizeof (_uX2N) / sizeof (_uX2N[0]); ++i)
-        {
+        printf("%s %s::_uX2N[sizeof (%s::_uX2N) / sizeof (%s::_uX2N[0])] = {",
+               pTypeName,
+               pClassName,
+               pClassName,
+               pClassName);
+        for (i = w = 0; i < sizeof(_uX2N) / sizeof(_uX2N[0]); ++i) {
             if (i != 0)
-                printf (",");
+                printf(",");
             if (w == 0)
-                printf ("\n   ");
-            printf (" 0x%0*llx", static_cast<int> (sizeof (uintxx_t) * 2), (uint64_t) _uX2N[i]);
-            w = (w + sizeof (uintxx_t)) & 31;
+                printf("\n   ");
+            printf(" 0x%0*llx", static_cast<int>(sizeof(uintxx_t) * 2), (uint64_t)_uX2N[i]);
+            w = (w + sizeof(uintxx_t)) & 31;
         }
-        printf ("\n};\n\n");
+        printf("\n};\n\n");
 
-        printf ("%s %s::_crc_table[sizeof (%s::_crc_table) / sizeof (%s::_crc_table[0])] = {", pTypeName, pClassName, pClassName, pClassName);
-        for (i = w = 0; i < sizeof (_crc_table) / sizeof (_crc_table[0]); ++i)
-        {
+        printf("%s %s::_crc_table[sizeof (%s::_crc_table) / sizeof (%s::_crc_table[0])] = {",
+               pTypeName,
+               pClassName,
+               pClassName,
+               pClassName);
+        for (i = w = 0; i < sizeof(_crc_table) / sizeof(_crc_table[0]); ++i) {
             if (i != 0)
-                printf (",");
+                printf(",");
             if (w == 0)
-                printf ("\n   ");
-            printf (" 0x%0*llx", static_cast<int> (sizeof (uintxx_t) * 2), (uint64_t) _crc_table[i]);
-            w = (w + sizeof (uintxx_t)) & 31;
+                printf("\n   ");
+            printf(" 0x%0*llx", static_cast<int>(sizeof(uintxx_t) * 2), (uint64_t)_crc_table[i]);
+            w = (w + sizeof(uintxx_t)) & 31;
         }
-        printf ("\n};\n\n");
+        printf("\n};\n\n");
     };
 };
 
 #define BIT64(n) (1ull << (63 - (n)))
-#define crc64_POLY ( \
-    BIT64(63) + BIT64(61) + BIT64(59) + BIT64(58) + BIT64(56) + BIT64(55) + BIT64(52) + BIT64(49) + BIT64(48) + BIT64(47) + \
-    BIT64(46) + BIT64(44) + BIT64(41) + BIT64(37) + BIT64(36) + BIT64(34) + BIT64(32) + BIT64(31) + BIT64(28) + BIT64(26) + BIT64(23) + \
-    BIT64(22) + BIT64(19) + BIT64(16) + BIT64(13) + BIT64(12) + BIT64(10) + BIT64( 9) + BIT64( 6) + BIT64( 4) + BIT64( 3) + BIT64( 0) \
-)
+#define crc64_POLY                                                                                 \
+    (BIT64(63) + BIT64(61) + BIT64(59) + BIT64(58) + BIT64(56) + BIT64(55) + BIT64(52) +           \
+     BIT64(49) + BIT64(48) + BIT64(47) + BIT64(46) + BIT64(44) + BIT64(41) + BIT64(37) +           \
+     BIT64(36) + BIT64(34) + BIT64(32) + BIT64(31) + BIT64(28) + BIT64(26) + BIT64(23) +           \
+     BIT64(22) + BIT64(19) + BIT64(16) + BIT64(13) + BIT64(12) + BIT64(10) + BIT64(9) + BIT64(6) + \
+     BIT64(4) + BIT64(3) + BIT64(0))
 
 #define BIT32(n) (1u << (31 - (n)))
-#define crc32_POLY ( \
-    BIT32(28) + BIT32(27) + BIT32(26) + BIT32(25) + BIT32(23) + BIT32(22) + BIT32(20) + BIT32(19) + \
-    BIT32(18) + BIT32(14) + BIT32(13) + BIT32(11) + BIT32(10) + BIT32( 9) + BIT32( 8) + BIT32( 6) + BIT32(0) \
-)
+#define crc32_POLY                                                                                 \
+    (BIT32(28) + BIT32(27) + BIT32(26) + BIT32(25) + BIT32(23) + BIT32(22) + BIT32(20) +           \
+     BIT32(19) + BIT32(18) + BIT32(14) + BIT32(13) + BIT32(11) + BIT32(10) + BIT32(9) + BIT32(8) + \
+     BIT32(6) + BIT32(0))
 
 typedef crc_generator<uint32_t, crc32_POLY> crc32;
 typedef crc_generator<uint64_t, crc64_POLY> crc64;
@@ -316,8 +281,8 @@ typedef crc_generator<uint64_t, crc64_POLY> crc64;
 extern crc32 PdiCrc32;
 extern crc64 PdiCrc64;
 
-template<>
-uint32_t crc32::_uX2N[sizeof (crc32::_uX2N) / sizeof (crc32::_uX2N[0])] = {
+template <>
+uint32_t crc32::_uX2N[sizeof(crc32::_uX2N) / sizeof(crc32::_uX2N[0])] = {
     0x00800000, 0x00008000, 0x82f63b78, 0x6ea2d55c, 0x18b8ea18, 0x510ac59a, 0xb82be955, 0xb8fdb1e7,
     0x88e56f72, 0x74c360a4, 0xe4172b16, 0x0d65762a, 0x35d73a62, 0x28461564, 0xbf455269, 0xe2ea32dc,
     0xfe7740e6, 0xf946610b, 0x3c204f8f, 0x538586e3, 0x59726915, 0x734d5309, 0xbc1ac763, 0x7d0722cc,
@@ -325,11 +290,10 @@ uint32_t crc32::_uX2N[sizeof (crc32::_uX2N) / sizeof (crc32::_uX2N[0])] = {
     0x00008000, 0x82f63b78, 0x6ea2d55c, 0x18b8ea18, 0x510ac59a, 0xb82be955, 0xb8fdb1e7, 0x88e56f72,
     0x74c360a4, 0xe4172b16, 0x0d65762a, 0x35d73a62, 0x28461564, 0xbf455269, 0xe2ea32dc, 0xfe7740e6,
     0xf946610b, 0x3c204f8f, 0x538586e3, 0x59726915, 0x734d5309, 0xbc1ac763, 0x7d0722cc, 0xd289cabe,
-    0xe94ca9bc, 0x05b74f3f, 0xa51e1f42, 0x40000000, 0x20000000, 0x08000000, 0x00800000, 0x00008000
-};
+    0xe94ca9bc, 0x05b74f3f, 0xa51e1f42, 0x40000000, 0x20000000, 0x08000000, 0x00800000, 0x00008000};
 
-template<>
-uint32_t crc32::_crc_table[sizeof (crc32::_crc_table) / sizeof (crc32::_crc_table[0])] = {
+template <>
+uint32_t crc32::_crc_table[sizeof(crc32::_crc_table) / sizeof(crc32::_crc_table[0])] = {
     0x00000000, 0xf26b8303, 0xe13b70f7, 0x1350f3f4, 0xc79a971f, 0x35f1141c, 0x26a1e7e8, 0xd4ca64eb,
     0x8ad958cf, 0x78b2dbcc, 0x6be22838, 0x9989ab3b, 0x4d43cfd0, 0xbf284cd3, 0xac78bf27, 0x5e133c24,
     0x105ec76f, 0xe235446c, 0xf165b798, 0x030e349b, 0xd7c45070, 0x25afd373, 0x36ff2087, 0xc494a384,
@@ -361,11 +325,10 @@ uint32_t crc32::_crc_table[sizeof (crc32::_crc_table) / sizeof (crc32::_crc_tabl
     0xe330a81a, 0x115b2b19, 0x020bd8ed, 0xf0605bee, 0x24aa3f05, 0xd6c1bc06, 0xc5914ff2, 0x37faccf1,
     0x69e9f0d5, 0x9b8273d6, 0x88d28022, 0x7ab90321, 0xae7367ca, 0x5c18e4c9, 0x4f48173d, 0xbd23943e,
     0xf36e6f75, 0x0105ec76, 0x12551f82, 0xe03e9c81, 0x34f4f86a, 0xc69f7b69, 0xd5cf889d, 0x27a40b9e,
-    0x79b737ba, 0x8bdcb4b9, 0x988c474d, 0x6ae7c44e, 0xbe2da0a5, 0x4c4623a6, 0x5f16d052, 0xad7d5351
-};
+    0x79b737ba, 0x8bdcb4b9, 0x988c474d, 0x6ae7c44e, 0xbe2da0a5, 0x4c4623a6, 0x5f16d052, 0xad7d5351};
 
-template<>
-uint64_t crc64::_uX2N[sizeof (crc64::_uX2N) / sizeof (crc64::_uX2N[0])] = {
+template <>
+uint64_t crc64::_uX2N[sizeof(crc64::_uX2N) / sizeof(crc64::_uX2N[0])] = {
     0x0080000000000000, 0x0000800000000000, 0x0000000080000000, 0x9a6c9329ac4bc9b5,
     0x10f4bb0f129310d6, 0x70f05dcea2ebd226, 0x311211205672822d, 0x2fc297db0f46c96e,
     0xca4d536fabf7da84, 0xfb4cdc3b379ee6ed, 0xea261148df25140a, 0x59ccb2c07aa6c9b4,
@@ -381,11 +344,10 @@ uint64_t crc64::_uX2N[sizeof (crc64::_uX2N) / sizeof (crc64::_uX2N[0])] = {
     0x9e23cd058204ca91, 0x9b8992c57a0aed82, 0xb2c0afb84609b6ff, 0x2f7160553a5ea018,
     0x3cd378b5c99f2722, 0x814054ad61a3b058, 0xbf766189fce806d8, 0x85a5e898ac49f86f,
     0x34830d11bc84f346, 0x9644d95b173c8c1c, 0x150401ac9ac759b1, 0xebe1f7f46fb00eba,
-    0x8ee4ce0c2e2bd662, 0x4000000000000000, 0x2000000000000000, 0x0800000000000000
-};
+    0x8ee4ce0c2e2bd662, 0x4000000000000000, 0x2000000000000000, 0x0800000000000000};
 
-template<>
-uint64_t crc64::_crc_table[sizeof (crc64::_crc_table) / sizeof (crc64::_crc_table[0])] = {
+template <>
+uint64_t crc64::_crc_table[sizeof(crc64::_crc_table) / sizeof(crc64::_crc_table[0])] = {
     0x0000000000000000, 0x7f6ef0c830358979, 0xfedde190606b12f2, 0x81b31158505e9b8b,
     0xc962e5739841b68f, 0xb60c15bba8743ff6, 0x37bf04e3f82aa47d, 0x48d1f42bc81f2d04,
     0xa61cecb46814fe75, 0xd9721c7c5821770c, 0x58c10d24087fec87, 0x27affdec384a65fe,
@@ -449,13 +411,11 @@ uint64_t crc64::_crc_table[sizeof (crc64::_crc_table) / sizeof (crc64::_crc_tabl
     0xc41748d84fe75459, 0xbb79b8107fd2dd20, 0x3acaa9482f8c46ab, 0x45a459801fb9cfd2,
     0x0d75adabd7a6e2d6, 0x721b5d63e7936baf, 0xf3a84c3bb7cdf024, 0x8cc6bcf387f8795d,
     0x620ba46c27f3aa2c, 0x1d6554a417c62355, 0x9cd645fc4798b8de, 0xe3b8b53477ad31a7,
-    0xab69411fbfb21ca3, 0xd407b1d78f8795da, 0x55b4a08fdfd90e51, 0x2ada5047efec8728
-};
-
+    0xab69411fbfb21ca3, 0xd407b1d78f8795da, 0x55b4a08fdfd90e51, 0x2ada5047efec8728};
 
 #undef crc32_POLY
 #undef crc64_POLY
 #undef BIT64
 #undef BIT32
-
-} } // end namespace
+}
+} // end namespace

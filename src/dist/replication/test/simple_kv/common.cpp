@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,30 +33,31 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "common.h"
-# include "checker.h"
+#include "common.h"
+#include "checker.h"
 
-# include <dsn/utility/utils.h>
+#include <dsn/utility/utils.h>
 
-# include <sstream>
-# include <boost/lexical_cast.hpp>
+#include <sstream>
+#include <boost/lexical_cast.hpp>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "simple_kv.common"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "simple_kv.common"
 
-namespace dsn { namespace replication { namespace test {
+namespace dsn {
+namespace replication {
+namespace test {
 
 std::string g_case_input("case-000.act");
 gpid g_default_gpid(1, 0);
 bool g_done = false;
 bool g_fail = false;
 
-const char* partition_status_to_short_string(partition_status::type s)
+const char *partition_status_to_short_string(partition_status::type s)
 {
-    switch(s)
-    {
+    switch (s) {
     case partition_status::PS_INACTIVE:
         return "ina";
     case partition_status::PS_ERROR:
@@ -75,28 +76,36 @@ const char* partition_status_to_short_string(partition_status::type s)
     }
 }
 
-partition_status::type partition_status_from_short_string(const std::string& str)
+partition_status::type partition_status_from_short_string(const std::string &str)
 {
-    if (str == "ina") return partition_status::PS_INACTIVE;
-    if (str == "err") return partition_status::PS_ERROR;
-    if (str == "pri") return partition_status::PS_PRIMARY;
-    if (str == "sec") return partition_status::PS_SECONDARY;
-    if (str == "pot") return partition_status::PS_POTENTIAL_SECONDARY;
-    if (str == "inv") return partition_status::PS_INVALID;
+    if (str == "ina")
+        return partition_status::PS_INACTIVE;
+    if (str == "err")
+        return partition_status::PS_ERROR;
+    if (str == "pri")
+        return partition_status::PS_PRIMARY;
+    if (str == "sec")
+        return partition_status::PS_SECONDARY;
+    if (str == "pot")
+        return partition_status::PS_POTENTIAL_SECONDARY;
+    if (str == "inv")
+        return partition_status::PS_INVALID;
     dassert(false, "");
     return partition_status::PS_INVALID;
 }
 
 std::string address_to_node(rpc_address addr)
 {
-    if (addr.is_invalid()) return "-";
+    if (addr.is_invalid())
+        return "-";
     dassert(test_checker::s_inited, "");
     return test_checker::fast_instance().address_to_node_name(addr);
 }
 
-rpc_address node_to_address(const std::string& name)
+rpc_address node_to_address(const std::string &name)
 {
-    if (name == "-") return rpc_address();
+    if (name == "-")
+        return rpc_address();
     dassert(test_checker::s_inited, "");
     return test_checker::fast_instance().node_name_to_address(name);
 }
@@ -108,7 +117,7 @@ std::string gpid_to_string(gpid gpid)
     return oss.str();
 }
 
-bool gpid_from_string(const std::string& str, gpid& gpid)
+bool gpid_from_string(const std::string &str, gpid &gpid)
 {
     size_t pos = str.find('.');
     if (pos == std::string::npos)
@@ -129,7 +138,7 @@ std::string replica_id::to_string() const
     return oss.str();
 }
 
-bool replica_id::from_string(const std::string& str)
+bool replica_id::from_string(const std::string &str)
 {
     if (str.empty())
         return false;
@@ -151,11 +160,8 @@ bool replica_id::from_string(const std::string& str)
 std::string replica_state::to_string() const
 {
     std::stringstream oss;
-    oss << "{"
-        << id.to_string() << ","
-        << partition_status_to_short_string(status) << ","
-        << ballot << ","
-        << last_committed_decree;
+    oss << "{" << id.to_string() << "," << partition_status_to_short_string(status) << "," << ballot
+        << "," << last_committed_decree;
     if (last_durable_decree != -1)
         oss << "," << last_durable_decree;
     oss << "}";
@@ -163,11 +169,11 @@ std::string replica_state::to_string() const
 }
 
 //{r3,sec,3,0} or {r3,sec,3,1,0}
-bool replica_state::from_string(const std::string& str)
+bool replica_state::from_string(const std::string &str)
 {
-    if (str.size() < 2 || str[0] != '{' || str[str.size()-1] != '}')
+    if (str.size() < 2 || str[0] != '{' || str[str.size() - 1] != '}')
         return false;
-    std::string s = str.substr(1, str.size()-2);
+    std::string s = str.substr(1, str.size() - 2);
     std::vector<std::string> splits;
     dsn::utils::split_args(s.c_str(), splits, ',');
     if (splits.size() != 4 && splits.size() != 5)
@@ -187,9 +193,8 @@ std::string state_snapshot::to_string() const
     std::stringstream oss;
     oss << "{";
     int i = 0;
-    for (auto& kv : state_map)
-    {
-        const replica_state& s = kv.second;
+    for (auto &kv : state_map) {
+        const replica_state &s = kv.second;
         if (i != 0)
             oss << ",";
         oss << s.to_string();
@@ -200,21 +205,20 @@ std::string state_snapshot::to_string() const
 }
 
 //{{r1,pri,3,0},{r2,sec,3,0},{r3,sec,3,0}}
-bool state_snapshot::from_string(const std::string& str)
+bool state_snapshot::from_string(const std::string &str)
 {
-    if (str.size() < 2 || str[0] != '{' || str[str.size()-1] != '}')
+    if (str.size() < 2 || str[0] != '{' || str[str.size() - 1] != '}')
         return false;
     state_map.clear();
-    std::string s = str.substr(1, str.size()-2);
+    std::string s = str.substr(1, str.size() - 2);
     std::vector<std::string> splits;
     dsn::utils::split_args(s.c_str(), splits, '{');
-    for (std::string& i : splits)
-    {
+    for (std::string &i : splits) {
         if (i.empty())
             continue;
-        if (i[i.size()-1] == ',')
-            i.resize(i.size()-1);
-        std::string x = "{"+i;
+        if (i[i.size() - 1] == ',')
+            i.resize(i.size() - 1);
+        std::string x = "{" + i;
         replica_state v;
         if (!v.from_string(x))
             return false;
@@ -225,56 +229,47 @@ bool state_snapshot::from_string(const std::string& str)
     return true;
 }
 
-std::string state_snapshot::diff_string(const state_snapshot& other) const
+std::string state_snapshot::diff_string(const state_snapshot &other) const
 {
-    auto& oth = other.state_map;
-    auto& cur = this->state_map;
+    auto &oth = other.state_map;
+    auto &cur = this->state_map;
 
-    const char* add_mark = "  + ";
-    const char* del_mark = "  - ";
-    const char* chg_mark = "  x ";
-    const char* unc_mark = "    ";
+    const char *add_mark = "  + ";
+    const char *del_mark = "  - ";
+    const char *chg_mark = "  x ";
+    const char *unc_mark = "    ";
 
     auto oth_it = oth.begin();
     auto cur_it = cur.begin();
     std::stringstream oss;
     oss << "{" << std::endl;
-    while (oth_it != oth.end() && cur_it != cur.end())
-    {
-        if (oth_it->first < cur_it->first)
-        {
+    while (oth_it != oth.end() && cur_it != cur.end()) {
+        if (oth_it->first < cur_it->first) {
             oss << del_mark << oth_it->second.to_string() << std::endl;
             ++oth_it;
-        }
-        else if (cur_it->first < oth_it->first)
-        {
+        } else if (cur_it->first < oth_it->first) {
             oss << add_mark << cur_it->second.to_string() << std::endl;
             ++cur_it;
-        }
-        else
-        {
-            dassert(oth_it->first == cur_it->first, "invalid replica_id, %s VS %s",
-                    oth_it->first.to_string().c_str(), cur_it->first.to_string().c_str());
-            if (oth_it->second != cur_it->second)
-            {
+        } else {
+            dassert(oth_it->first == cur_it->first,
+                    "invalid replica_id, %s VS %s",
+                    oth_it->first.to_string().c_str(),
+                    cur_it->first.to_string().c_str());
+            if (oth_it->second != cur_it->second) {
                 oss << chg_mark << cur_it->second.to_string()
-                          << " <= " << oth_it->second.to_string() << std::endl;
-            }
-            else
-            {
+                    << " <= " << oth_it->second.to_string() << std::endl;
+            } else {
                 oss << unc_mark << cur_it->second.to_string() << std::endl;
             }
             ++oth_it;
             ++cur_it;
         }
     }
-    while (oth_it != oth.end())
-    {
+    while (oth_it != oth.end()) {
         oss << del_mark << oth_it->second.to_string() << std::endl;
         ++oth_it;
     }
-    while (cur_it != cur.end())
-    {
+    while (cur_it != cur.end()) {
         oss << add_mark << cur_it->second.to_string() << std::endl;
         ++cur_it;
     }
@@ -290,10 +285,8 @@ std::string parti_config::to_string() const
 #ifdef ENABLE_GPID
         << gpid_to_string(gpid) << ","
 #endif
-        << ballot << ","
-        << primary << ",[";
-    for (size_t i = 0; i < secondaries.size(); ++i)
-    {
+        << ballot << "," << primary << ",[";
+    for (size_t i = 0; i < secondaries.size(); ++i) {
         if (i != 0)
             oss << ",";
         oss << secondaries[i];
@@ -303,18 +296,17 @@ std::string parti_config::to_string() const
 }
 
 //{3,r1,[r2,r3],0}
-bool parti_config::from_string(const std::string& str)
+bool parti_config::from_string(const std::string &str)
 {
-    if (str.size() < 2 || str[0] != '{' || str[str.size()-1] != '}')
+    if (str.size() < 2 || str[0] != '{' || str[str.size() - 1] != '}')
         return false;
-    std::string s = str.substr(1, str.size()-2);
+    std::string s = str.substr(1, str.size() - 2);
     // replace ',' in [] to ';'
     size_t pos1 = s.find('[');
     size_t pos2 = s.find(']');
     if (pos1 == std::string::npos || pos2 == std::string::npos || pos1 > pos2)
         return false;
-    for (size_t i = pos1 + 1; i < pos2; ++i)
-    {
+    for (size_t i = pos1 + 1; i < pos2; ++i) {
         if (s[i] == ',')
             s[i] = ';';
     }
@@ -332,24 +324,24 @@ bool parti_config::from_string(const std::string& str)
     primary = splits[i++];
     // secondaries
     std::string sec = splits[i++];
-    if (sec.size() < 2 || sec[0] != '[' || sec[sec.size()-1] != ']')
+    if (sec.size() < 2 || sec[0] != '[' || sec[sec.size() - 1] != ']')
         return false;
-    dsn::utils::split_args(sec.substr(1, sec.size()-2).c_str(), secondaries, ';');
+    dsn::utils::split_args(sec.substr(1, sec.size() - 2).c_str(), secondaries, ';');
     std::sort(secondaries.begin(), secondaries.end());
     if (i != splits.size())
         return false;
     return true;
 }
 
-void parti_config::convert_from(const partition_configuration& c)
+void parti_config::convert_from(const partition_configuration &c)
 {
     pid = c.pid;
     ballot = c.ballot;
     primary = address_to_node(c.primary);
-    for (auto& s : c.secondaries)
+    for (auto &s : c.secondaries)
         secondaries.push_back(address_to_node(s));
     std::sort(secondaries.begin(), secondaries.end());
 }
-
-}}}
-
+}
+}
+}

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,18 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
-namespace dsn { namespace replication { namespace test {
+namespace dsn {
+namespace replication {
+namespace test {
 
 class test_injector : public dsn::tools::toollet
 {
 public:
-    test_injector(const char* name);
-    virtual void install(service_spec& spec);
+    test_injector(const char *name);
+    virtual void install(service_spec &spec);
 };
-
-}}}
-
+}
+}
+}

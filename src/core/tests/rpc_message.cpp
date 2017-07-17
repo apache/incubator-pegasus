@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/rpc_message.h>
-# include <../core/transient_memory.h>
-# include <gtest/gtest.h>
+#include <dsn/tool-api/rpc_message.h>
+#include <../core/transient_memory.h>
+#include <gtest/gtest.h>
 
 using namespace ::dsn;
 
@@ -56,10 +56,10 @@ TEST(core, message_ex)
 
     { // create_request
         uint64_t next_id = message_ex::new_id() + 1;
-        message_ex* m = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1, 2);
+        message_ex *m = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1, 2);
         ASSERT_EQ(0, m->get_count());
 
-        message_header& h = *m->header;
+        message_header &h = *m->header;
         ASSERT_EQ(0, h.hdr_version);
         ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
@@ -84,14 +84,14 @@ TEST(core, message_ex)
     }
 
     { // create_response
-        message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
+        message_ex *request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
         request->header->from_address = rpc_address("127.0.0.1", 8080);
         request->to_address = rpc_address("127.0.0.1", 9090);
         request->header->trace_id = 123456;
 
-        message_ex* response = request->create_response();
+        message_ex *response = request->create_response();
 
-        message_header& h = *response->header;
+        message_header &h = *response->header;
         ASSERT_EQ(0, h.hdr_version);
         ASSERT_EQ(sizeof(message_header), h.hdr_length);
         ASSERT_EQ(CRC_INVALID, h.hdr_crc32);
@@ -117,11 +117,11 @@ TEST(core, message_ex)
     }
 
     { // write
-        message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
-        const char* data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
+        message_ex *request = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
+        const char *data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
         size_t data_size = strlen(data);
 
-        void* ptr;
+        void *ptr;
         size_t sz;
 
         request->write_next(&ptr, &sz, data_size);
@@ -129,7 +129,7 @@ TEST(core, message_ex)
         request->write_commit(data_size);
         ASSERT_EQ(1u, request->buffers.size());
         ASSERT_EQ(ptr, request->rw_ptr(0));
-        ASSERT_EQ((void*)((char*)ptr + 10), request->rw_ptr(10));
+        ASSERT_EQ((void *)((char *)ptr + 10), request->rw_ptr(10));
         ASSERT_EQ(nullptr, request->rw_ptr(data_size));
 
         tls_trans_mem_alloc(1024); // reset tls buffer
@@ -139,7 +139,7 @@ TEST(core, message_ex)
         request->write_commit(data_size);
         ASSERT_EQ(2u, request->buffers.size());
         ASSERT_EQ(ptr, request->rw_ptr(data_size));
-        ASSERT_EQ((void*)((char*)ptr + 10), request->rw_ptr(data_size + 10));
+        ASSERT_EQ((void *)((char *)ptr + 10), request->rw_ptr(data_size + 10));
         ASSERT_EQ(nullptr, request->rw_ptr(data_size + data_size));
 
         request->add_ref();
@@ -147,11 +147,11 @@ TEST(core, message_ex)
     }
 
     { // read
-        message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
-        const char* data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
+        message_ex *request = message_ex::create_request(RPC_CODE_FOR_TEST, 100, 1);
+        const char *data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
         size_t data_size = strlen(data);
 
-        void* ptr;
+        void *ptr;
         size_t sz;
 
         request->write_next(&ptr, &sz, data_size);
@@ -159,14 +159,14 @@ TEST(core, message_ex)
         request->write_commit(data_size);
 
         ASSERT_EQ(1u, request->buffers.size());
-        message_ex* receive = message_ex::create_receive_message(request->buffers[0]);
+        message_ex *receive = message_ex::create_receive_message(request->buffers[0]);
         ASSERT_EQ(1u, receive->buffers.size());
 
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), receive->header->rpc_name);
 
         ASSERT_TRUE(receive->read_next(&ptr, &sz));
         ASSERT_EQ(data_size, sz);
-        ASSERT_EQ(std::string(data), std::string((const char*)ptr, sz));
+        ASSERT_EQ(std::string(data), std::string((const char *)ptr, sz));
         receive->read_commit(sz);
 
         ASSERT_FALSE(receive->read_next(&ptr, &sz));
@@ -186,7 +186,7 @@ TEST(core, message_ex)
         opts.gpid.value = 333;
 
         dsn_msg_set_options(request, &opts, DSN_MSGM_CONTEXT | DSN_MSGM_VNID);
-        message_ex* m = (message_ex*)request;
+        message_ex *m = (message_ex *)request;
         m->header->from_address = rpc_address("127.0.0.1", 8080);
         m->to_address = rpc_address("127.0.0.1", 9090);
 
@@ -200,10 +200,10 @@ TEST(core, message_ex)
         ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_from_address(request)));
         ASSERT_EQ(rpc_address("127.0.0.1", 9090), rpc_address(dsn_msg_to_address(request)));
 
-        const char* data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
+        const char *data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
         size_t data_size = strlen(data);
 
-        void* ptr;
+        void *ptr;
         size_t sz;
 
         dsn_msg_write_next(request, &ptr, &sz, data_size);
@@ -213,9 +213,9 @@ TEST(core, message_ex)
         ASSERT_EQ(data_size, dsn_msg_body_size(request));
 
         ptr = dsn_msg_rw_ptr(request, 0);
-        ASSERT_EQ(std::string(data), std::string((const char*)ptr, data_size));
+        ASSERT_EQ(std::string(data), std::string((const char *)ptr, data_size));
         ptr = dsn_msg_rw_ptr(request, 10);
-        ASSERT_EQ(std::string(data + 10), std::string((const char*)ptr, data_size - 10));
+        ASSERT_EQ(std::string(data + 10), std::string((const char *)ptr, data_size - 10));
         ptr = dsn_msg_rw_ptr(request, data_size);
         ASSERT_EQ(nullptr, ptr);
 
@@ -230,7 +230,7 @@ TEST(core, message_ex)
 
         dsn_msg_read_next(receive, &ptr, &sz);
         ASSERT_EQ(data_size, sz);
-        ASSERT_EQ(std::string(data), std::string((const char*)ptr, sz));
+        ASSERT_EQ(std::string(data), std::string((const char *)ptr, sz));
         dsn_msg_read_commit(receive, sz);
 
         dsn_msg_add_ref(receive);
@@ -243,4 +243,3 @@ TEST(core, message_ex)
         dsn_msg_release_ref(request);
     }
 }
-

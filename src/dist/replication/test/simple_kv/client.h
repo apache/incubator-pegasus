@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include "simple_kv.client.h"
+#include "simple_kv.client.h"
 
-namespace dsn { namespace replication { namespace test {
+namespace dsn {
+namespace replication {
+namespace test {
 
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
@@ -45,19 +47,22 @@ public:
     simple_kv_client_app(dsn_gpid gpid);
     virtual ~simple_kv_client_app();
 
-    virtual ::dsn::error_code start(int argc, char** argv) override;
+    virtual ::dsn::error_code start(int argc, char **argv) override;
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
     void run();
 
-    void begin_read(int id, const std::string& key, int timeout_ms);
-    void begin_write(int id,const std::string& key,const std::string& value, int timeout_ms);
-    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node);
+    void begin_read(int id, const std::string &key, int timeout_ms);
+    void begin_write(int id, const std::string &key, const std::string &value, int timeout_ms);
+    void send_config_to_meta(const rpc_address &receiver,
+                             dsn::replication::config_type::type type,
+                             const rpc_address &node);
+
 private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;
     url_host_address _service_addr;
 };
-
-}}}
-
+}
+}
+}

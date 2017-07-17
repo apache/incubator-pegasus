@@ -20,7 +20,7 @@ using namespace dsn::replication;
 #undef ASSERT_EQ
 #endif
 
-#define ASSERT_EQ(left, right) dassert( (left)==(right), "")
+#define ASSERT_EQ(left, right) dassert((left) == (right), "")
 
 #ifdef ASSERT_TRUE
 #undef ASSERT_TRUE
@@ -33,13 +33,14 @@ using namespace dsn::replication;
 #endif
 #define ASSERT_FALSE(exp) dassert(!(exp), "")
 
-static void generate_apps(/*out*/app_mapper& mapper, const std::vector<dsn::rpc_address>& node_list, int apps_count)
+static void generate_apps(/*out*/ app_mapper &mapper,
+                          const std::vector<dsn::rpc_address> &node_list,
+                          int apps_count)
 {
     mapper.clear();
 
     dsn::app_info info;
-    for (int i=1; i<=apps_count; ++i)
-    {
+    for (int i = 1; i <= apps_count; ++i) {
         info.status = dsn::app_status::AS_AVAILABLE;
         info.app_id = i;
         info.is_stateful = true;
@@ -55,20 +56,22 @@ static void generate_apps(/*out*/app_mapper& mapper, const std::vector<dsn::rpc_
     }
 }
 
-static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& nodes, ::dsn::partition_configuration& pc)
+static void check_cure(server_load_balancer *lb,
+                       app_mapper &apps,
+                       node_mapper &nodes,
+                       ::dsn::partition_configuration &pc)
 {
     pc_status ps = pc_status::invalid;
-    node_state* ns;
+    node_state *ns;
 
     configuration_proposal_action act;
-    while (ps != pc_status::healthy)
-    {
+    while (ps != pc_status::healthy) {
         ps = lb->cure({&apps, &nodes}, pc.pid, act);
         if (act.type == config_type::CT_INVALID)
             break;
         switch (act.type) {
         case config_type::CT_ASSIGN_PRIMARY:
-            ASSERT_TRUE(pc.primary.is_invalid() && pc.secondaries.size()==0);
+            ASSERT_TRUE(pc.primary.is_invalid() && pc.secondaries.size() == 0);
             ASSERT_EQ(act.node, act.target);
             ASSERT_TRUE(nodes.find(act.node) != nodes.end());
 
@@ -80,7 +83,7 @@ static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& 
         case config_type::CT_ADD_SECONDARY:
             ASSERT_FALSE(is_member(pc, act.node));
             ASSERT_EQ(pc.primary, act.target);
-            ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
+            ASSERT_TRUE(nodes.find(act.node) != nodes.end());
             pc.secondaries.push_back(act.node);
             ns = &nodes[act.node];
             ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
@@ -93,7 +96,7 @@ static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& 
         }
     }
 
-    //test upgrade to primary
+    // test upgrade to primary
     ASSERT_EQ(nodes[pc.primary].served_as(pc.pid), partition_status::PS_PRIMARY);
     nodes[pc.primary].remove_partition(pc.pid, true);
     pc.primary.set_invalid();
@@ -102,8 +105,8 @@ static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& 
     ASSERT_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
     ASSERT_TRUE(pc.primary.is_invalid());
     ASSERT_EQ(act.node, act.target);
-    ASSERT_TRUE( is_secondary(pc, act.node) );
-    ASSERT_TRUE(nodes.find(act.node)!=nodes.end());
+    ASSERT_TRUE(is_secondary(pc, act.node));
+    ASSERT_TRUE(nodes.find(act.node) != nodes.end());
 
     ns = &nodes[act.node];
     pc.primary = act.node;
@@ -113,21 +116,23 @@ static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& 
     ns->put_partition(pc.pid, true);
 }
 
-//static void verbose_nodes(const node_mapper& nodes)
+// static void verbose_nodes(const node_mapper& nodes)
 //{
 //    std::cout << "------------" << std::endl;
 //    for (const auto& n: nodes)
 //    {
 //        const node_state& ns = n.second;
-//        printf("node: %s\ntotal_primaries: %d, total_secondaries: %d\n", n.first.to_string(), ns.primary_count(), ns.partition_count());
+//        printf("node: %s\ntotal_primaries: %d, total_secondaries: %d\n", n.first.to_string(),
+//        ns.primary_count(), ns.partition_count());
 //        for (int i=1; i<=2; ++i)
 //        {
-//            printf("app %d primaries: %d, app %d partitions: %d\n", i, ns.primary_count(i), i, ns.partition_count(i));
+//            printf("app %d primaries: %d, app %d partitions: %d\n", i, ns.primary_count(i), i,
+//            ns.partition_count(i));
 //        }
 //    }
 //}
 //
-//static void verbose_app_node(const node_mapper& nodes)
+// static void verbose_app_node(const node_mapper& nodes)
 //{
 //    printf("Total_Pri: ");
 //    for (const auto& n: nodes)
@@ -168,7 +173,7 @@ static void check_cure(server_load_balancer* lb, app_mapper& apps, node_mapper& 
 //    printf("\n");
 //}
 
-//static void verbose_app(const std::shared_ptr<app_state>& app)
+// static void verbose_app(const std::shared_ptr<app_state>& app)
 //{
 //    std::cout << app->app_name << " " << app->app_id << " " << app->partition_count << std::endl;
 //    for (int i=0; i<app->partition_count; ++i)
@@ -194,66 +199,63 @@ void meta_service_test_app::balancer_validator()
     meta_service svc;
     simple_load_balancer slb(&svc);
     greedy_load_balancer glb(&svc);
-    std::vector<server_load_balancer*> lbs = { &slb, &glb };
+    std::vector<server_load_balancer *> lbs = {&slb, &glb};
 
-    for (int i=0; i<lbs.size(); ++i)
-    {
+    for (int i = 0; i < lbs.size(); ++i) {
         std::cerr << "the " << i << "th balancer" << std::endl;
-        server_load_balancer* lb = lbs[i];
+        server_load_balancer *lb = lbs[i];
 
         generate_apps(apps, node_list, 5);
         generate_node_mapper(nodes, apps, node_list);
         migration_list ml;
 
-        for (auto& iter: nodes)
-        {
+        for (auto &iter : nodes) {
             dinfo("node(%s) have %d primaries, %d partitions",
-                iter.first.to_string(),
-                iter.second.primary_count(),
-                iter.second.partition_count());
+                  iter.first.to_string(),
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
         }
 
-        //iterate 1000 times
-        for (int i=0; i<1000000 && lb->balance({&apps, &nodes}, ml); ++i) {
+        // iterate 1000 times
+        for (int i = 0; i < 1000000 && lb->balance({&apps, &nodes}, ml); ++i) {
             dinfo("the %dth round of balancer", i);
             migration_check_and_apply(apps, nodes, ml);
         }
 
-        for (auto& iter: nodes)
-        {
+        for (auto &iter : nodes) {
             dinfo("node(%s) have %d primaries, %d partitions",
-                iter.first.to_string(),
-                iter.second.primary_count(),
-                iter.second.partition_count());
+                  iter.first.to_string(),
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
         }
 
-        std::shared_ptr<app_state>& the_app = apps[1];
-        for (::dsn::partition_configuration& pc: the_app->partitions)
-        {
+        std::shared_ptr<app_state> &the_app = apps[1];
+        for (::dsn::partition_configuration &pc : the_app->partitions) {
             ASSERT_FALSE(pc.primary.is_invalid());
-            ASSERT_TRUE(pc.secondaries.size() >= pc.max_replica_count-1);
+            ASSERT_TRUE(pc.secondaries.size() >= pc.max_replica_count - 1);
         }
 
-        //now test the cure
-        ::dsn::partition_configuration& pc = the_app->partitions[0];
+        // now test the cure
+        ::dsn::partition_configuration &pc = the_app->partitions[0];
         nodes[pc.primary].remove_partition(pc.pid, false);
-        for (const dsn::rpc_address& addr: pc.secondaries)
+        for (const dsn::rpc_address &addr : pc.secondaries)
             nodes[addr].remove_partition(pc.pid, false);
         pc.primary.set_invalid();
         pc.secondaries.clear();
 
-        //cure test
+        // cure test
         check_cure(lb, apps, nodes, pc);
     }
 }
 
-dsn::rpc_address get_rpc_address(const std::string& ip_port)
+dsn::rpc_address get_rpc_address(const std::string &ip_port)
 {
     int splitter = ip_port.find_first_of(':');
-    return rpc_address(ip_port.substr(0, splitter).c_str(), boost::lexical_cast<int>(ip_port.substr(splitter+1)));
+    return rpc_address(ip_port.substr(0, splitter).c_str(),
+                       boost::lexical_cast<int>(ip_port.substr(splitter + 1)));
 }
 
-static void load_apps_and_nodes(const char* file, app_mapper& apps, node_mapper& nodes)
+static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper &nodes)
 {
     apps.clear();
     nodes.clear();
@@ -264,16 +266,14 @@ static void load_apps_and_nodes(const char* file, app_mapper& apps, node_mapper&
 
     std::string ip_port;
     std::vector<dsn::rpc_address> node_list;
-    for (int i=0; i<total_nodes; ++i)
-    {
+    for (int i = 0; i < total_nodes; ++i) {
         infile >> ip_port;
         node_list.push_back(get_rpc_address(ip_port));
     }
 
     int total_apps;
     infile >> total_apps;
-    for (int i=0; i<total_apps; ++i)
-    {
+    for (int i = 0; i < total_apps; ++i) {
         app_info info;
         infile >> info.app_id >> info.partition_count;
         info.app_name = "test_app_" + boost::lexical_cast<std::string>(info.app_id);
@@ -284,14 +284,12 @@ static void load_apps_and_nodes(const char* file, app_mapper& apps, node_mapper&
 
         std::shared_ptr<app_state> app(new app_state(info));
         apps[info.app_id] = app;
-        for (int j=0; j<info.partition_count; ++j)
-        {
+        for (int j = 0; j < info.partition_count; ++j) {
             int n;
             infile >> n;
             infile >> ip_port;
             app->partitions[j].primary = get_rpc_address(ip_port);
-            for (int k=1; k<n; ++k)
-            {
+            for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
                 app->partitions[j].secondaries.push_back(get_rpc_address(ip_port));
             }
@@ -303,26 +301,20 @@ static void load_apps_and_nodes(const char* file, app_mapper& apps, node_mapper&
 
 void meta_service_test_app::balance_config_file()
 {
-    const char* suits[] = {
-        "suite1",
-        "suite2",
-        nullptr
-    };
+    const char *suits[] = {"suite1", "suite2", nullptr};
 
     app_mapper apps;
     node_mapper nodes;
 
-    for (int i=0; suits[i]; ++i)
-    {
+    for (int i = 0; suits[i]; ++i) {
         load_apps_and_nodes(suits[i], apps, nodes);
 
         greedy_load_balancer greedy_lb(nullptr);
-        server_load_balancer* lb = &greedy_lb;
+        server_load_balancer *lb = &greedy_lb;
         migration_list ml;
 
-        //iterate 1000 times
-        for (int i=0; i<1000 && lb->balance({&apps, &nodes}, ml); ++i)
-        {
+        // iterate 1000 times
+        for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
             dinfo("the %dth round of balancer", i);
             migration_check_and_apply(apps, nodes, ml);
         }

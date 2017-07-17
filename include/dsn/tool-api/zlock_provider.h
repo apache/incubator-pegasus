@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,13 +35,15 @@
 
 #pragma once
 
-# include <dsn/utility/extensible_object.h>
+#include <dsn/utility/extensible_object.h>
 
-namespace dsn { namespace service {
+namespace dsn {
+namespace service {
 class zlock;
 class zrwlock_nr;
 class zsemaphore;
-}}
+}
+}
 
 namespace dsn {
 
@@ -66,16 +68,21 @@ public:
 class lock_provider : public ilock, public extensible_object<lock_provider, 4>
 {
 public:
-    template <typename T> static lock_provider* create(lock_provider* inner_provider)
+    template <typename T>
+    static lock_provider *create(lock_provider *inner_provider)
     {
         return new T(inner_provider);
     }
-    typedef lock_provider*  (*factory)(lock_provider*);
+    typedef lock_provider *(*factory)(lock_provider *);
 
 public:
-    lock_provider(lock_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~lock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
-    lock_provider* get_inner_provider() const { return _inner_provider; }
+    lock_provider(lock_provider *inner_provider) { _inner_provider = inner_provider; }
+    virtual ~lock_provider()
+    {
+        if (nullptr != _inner_provider)
+            delete _inner_provider;
+    }
+    lock_provider *get_inner_provider() const { return _inner_provider; }
 
 private:
     lock_provider *_inner_provider;
@@ -87,17 +94,22 @@ private:
 class lock_nr_provider : public ilock, public extensible_object<lock_nr_provider, 4>
 {
 public:
-    template <typename T> static lock_nr_provider* create(lock_nr_provider* inner_provider)
+    template <typename T>
+    static lock_nr_provider *create(lock_nr_provider *inner_provider)
     {
         return new T(inner_provider);
     }
 
-    typedef lock_nr_provider* (*factory)(lock_nr_provider*);
+    typedef lock_nr_provider *(*factory)(lock_nr_provider *);
 
 public:
-    lock_nr_provider(lock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~lock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
-    lock_nr_provider* get_inner_provider() const { return _inner_provider; }
+    lock_nr_provider(lock_nr_provider *inner_provider) { _inner_provider = inner_provider; }
+    virtual ~lock_nr_provider()
+    {
+        if (nullptr != _inner_provider)
+            delete _inner_provider;
+    }
+    lock_nr_provider *get_inner_provider() const { return _inner_provider; }
 
 private:
     lock_nr_provider *_inner_provider;
@@ -109,16 +121,21 @@ private:
 class rwlock_nr_provider : public extensible_object<rwlock_nr_provider, 4>
 {
 public:
-    template <typename T> static rwlock_nr_provider* create(rwlock_nr_provider* inner_provider)
+    template <typename T>
+    static rwlock_nr_provider *create(rwlock_nr_provider *inner_provider)
     {
         return new T(inner_provider);
     }
 
-    typedef rwlock_nr_provider* (*factory)(rwlock_nr_provider*);
+    typedef rwlock_nr_provider *(*factory)(rwlock_nr_provider *);
 
 public:
-    rwlock_nr_provider(rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~rwlock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
+    rwlock_nr_provider(rwlock_nr_provider *inner_provider) { _inner_provider = inner_provider; }
+    virtual ~rwlock_nr_provider()
+    {
+        if (nullptr != _inner_provider)
+            delete _inner_provider;
+    }
 
     virtual void lock_read() = 0;
     virtual void unlock_read() = 0;
@@ -128,34 +145,42 @@ public:
     virtual void unlock_write() = 0;
     virtual bool try_lock_write() = 0;
 
-    rwlock_nr_provider* get_inner_provider() const { return _inner_provider; }
+    rwlock_nr_provider *get_inner_provider() const { return _inner_provider; }
 
 private:
     rwlock_nr_provider *_inner_provider;
 };
 
 /*!
- semaphore 
+ semaphore
 */
 class semaphore_provider : public extensible_object<semaphore_provider, 4>
 {
 public:
-    template <typename T> static semaphore_provider* create(int initCount, semaphore_provider* inner_provider)
+    template <typename T>
+    static semaphore_provider *create(int initCount, semaphore_provider *inner_provider)
     {
         return new T(initCount, inner_provider);
     }
 
-    typedef semaphore_provider* (*factory)(int, semaphore_provider*);
+    typedef semaphore_provider *(*factory)(int, semaphore_provider *);
 
-public:  
-    semaphore_provider(int initial_count, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~semaphore_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
+public:
+    semaphore_provider(int initial_count, semaphore_provider *inner_provider)
+    {
+        _inner_provider = inner_provider;
+    }
+    virtual ~semaphore_provider()
+    {
+        if (nullptr != _inner_provider)
+            delete _inner_provider;
+    }
 
 public:
     virtual void signal(int count) = 0;
     virtual bool wait(int timeout_milliseconds = TIME_MS_MAX) = 0;
-    
-    semaphore_provider* get_inner_provider() const { return _inner_provider; }
+
+    semaphore_provider *get_inner_provider() const { return _inner_provider; }
 
 private:
     semaphore_provider *_inner_provider;

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/cpp/address.h>
-# include "../core/group_address.h"
-# include <gtest/gtest.h>
+#include <dsn/cpp/address.h>
+#include "../core/group_address.h"
+#include <gtest/gtest.h>
 
 using namespace ::dsn;
 
@@ -49,21 +49,21 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
     return ip;
 }
 
-static inline bool operator == (dsn_address_t l, dsn_address_t r)
+static inline bool operator==(dsn_address_t l, dsn_address_t r)
 {
     if (l.u.v4.type != r.u.v4.type)
         return false;
 
-    switch (l.u.v4.type)
-    {
-        case HOST_TYPE_IPV4:
-            return l.u.v4.ip == r.u.v4.ip && l.u.v4.port == r.u.v4.port;
-        case HOST_TYPE_URI:
-            return strcmp((const char*)(uintptr_t)l.u.uri.uri, (const char*)(uintptr_t)r.u.uri.uri) == 0;
-        case HOST_TYPE_GROUP:
-            return l.u.group.group == r.u.group.group;
-        default:
-            return true;
+    switch (l.u.v4.type) {
+    case HOST_TYPE_IPV4:
+        return l.u.v4.ip == r.u.v4.ip && l.u.v4.port == r.u.v4.port;
+    case HOST_TYPE_URI:
+        return strcmp((const char *)(uintptr_t)l.u.uri.uri, (const char *)(uintptr_t)r.u.uri.uri) ==
+               0;
+    case HOST_TYPE_GROUP:
+        return l.u.group.group == r.u.group.group;
+    default:
+        return true;
     }
 }
 
@@ -95,7 +95,7 @@ TEST(core, dsn_address_to_string)
     }
 
     {
-        const char* uri = "http://localhost:8080/";
+        const char *uri = "http://localhost:8080/";
         dsn_address_t addr;
         addr.u.uri.type = HOST_TYPE_URI;
         addr.u.uri.uri = (uintptr_t)uri;
@@ -103,7 +103,7 @@ TEST(core, dsn_address_to_string)
     }
 
     {
-        const char* name = "test_group";
+        const char *name = "test_group";
         dsn_group_t g = dsn_group_build(name);
         dsn_address_t addr;
         addr.u.group.type = HOST_TYPE_GROUP;
@@ -133,20 +133,19 @@ TEST(core, dsn_address_build)
     }
 
     {
-        const char* uri = "http://localhost:8080/";
+        const char *uri = "http://localhost:8080/";
         dsn_uri_t u = dsn_uri_build(uri);
 
         dsn_address_t addr;
         addr.u.uri.type = HOST_TYPE_URI;
         addr.u.uri.uri = (uintptr_t)u;
 
-        
         ASSERT_EQ(addr, dsn_address_build_uri(u));
         dsn_uri_destroy(u);
     }
 
     {
-        const char* name = "test_group";
+        const char *name = "test_group";
         dsn_group_t g = dsn_group_build(name);
         dsn_address_t addr;
         addr.u.group.type = HOST_TYPE_GROUP;

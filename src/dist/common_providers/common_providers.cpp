@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,31 +32,24 @@
  *     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# include "partition_resolver_simple.h"
-# include <dsn/utility/factory_store.h>
+#include "partition_resolver_simple.h"
+#include <dsn/utility/factory_store.h>
 
-# include <dsn/dist/replication/replication.types.h>
+#include <dsn/dist/replication/replication.types.h>
 
-namespace dsn
+namespace dsn {
+namespace dist {
+static bool register_component_provider(const char *name,
+                                        ::dsn::dist::partition_resolver::factory f)
 {
-    namespace dist
-    {
-        static bool register_component_provider(
-            const char* name,
-            ::dsn::dist::partition_resolver::factory f)
-        {
-            return dsn::utils::factory_store< ::dsn::dist::partition_resolver>::register_factory(
-                name,
-                f,
-                PROVIDER_TYPE_MAIN);
-        }
+    return dsn::utils::factory_store<::dsn::dist::partition_resolver>::register_factory(
+        name, f, PROVIDER_TYPE_MAIN);
+}
 
-        void register_common_providers()
-        {
-            register_component_provider(
-                "partition_resolver_simple",
-                partition_resolver::create< partition_resolver_simple>
-                );
-        }
-    }
+void register_common_providers()
+{
+    register_component_provider("partition_resolver_simple",
+                                partition_resolver::create<partition_resolver_simple>);
+}
+}
 }

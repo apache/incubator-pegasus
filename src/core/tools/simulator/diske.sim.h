@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,15 +47,16 @@
 #include "../common/native_aio_provider.posix.h"
 #endif
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 class sim_aio_provider : public NATIVE_AIO_PROVIDER
 {
 public:
-    sim_aio_provider(disk_engine* disk, aio_provider* inner_provider);
+    sim_aio_provider(disk_engine *disk, aio_provider *inner_provider);
     ~sim_aio_provider(void);
 
-    virtual void    aio(aio_task* aio) override;
+    virtual void aio(aio_task *aio) override;
 };
-
-}} // end namespace
+}
+} // end namespace

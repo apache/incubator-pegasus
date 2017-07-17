@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,26 +35,26 @@
 
 #pragma once
 
-# include <dsn/cpp/service_app.h>
-# include <vector>
+#include <dsn/cpp/service_app.h>
+#include <vector>
 
 extern bool g_done;
 
 namespace dsn {
-    namespace service {
+namespace service {
 
-        class repli_app : public service_app
-        {
-        public:
-            repli_app(dsn_gpid gpid);
-            virtual ::dsn::error_code start(int argc, char** argv);
-            virtual ::dsn::error_code stop(bool cleanup = false);
+class repli_app : public service_app
+{
+public:
+    repli_app(dsn_gpid gpid);
+    virtual ::dsn::error_code start(int argc, char **argv);
+    virtual ::dsn::error_code stop(bool cleanup = false);
 
-            static void set_args(int argc, char** argv);
-            static void usage();
+    static void set_args(int argc, char **argv);
+    static void usage();
 
-        private:
-            static std::vector<std::string> s_args;
-        };
-    }
+private:
+    static std::vector<std::string> s_args;
+};
+}
 }

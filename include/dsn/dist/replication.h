@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,28 +35,24 @@
 
 #pragma once
 
-# include <dsn/service_api_cpp.h>
-# include <dsn/dist/replication/replication.types.h>
-# include <dsn/dist/replication/replication_other_types.h>
-# include <dsn/dist/replication/replication.codes.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/replication/replication.types.h>
+#include <dsn/dist/replication/replication_other_types.h>
+#include <dsn/dist/replication/replication.codes.h>
 
-namespace dsn
-{
-    namespace replication 
-    {
-        inline int gpid_to_thread_hash(gpid gpid)
-        {
-            return dsn_gpid_to_thread_hash(gpid.raw());
-        }
-    }
+namespace dsn {
+namespace replication {
+inline int gpid_to_thread_hash(gpid gpid) { return dsn_gpid_to_thread_hash(gpid.raw()); }
+}
 }
 
-namespace std
+namespace std {
+template <>
+struct hash<::dsn::gpid>
 {
-    template<>
-    struct hash< ::dsn::gpid> {
-        size_t operator()(const ::dsn::gpid &gpid) const {
-            return static_cast<std::size_t>(::dsn::replication::gpid_to_thread_hash(gpid));
-        }
-    };
+    size_t operator()(const ::dsn::gpid &gpid) const
+    {
+        return static_cast<std::size_t>(::dsn::replication::gpid_to_thread_hash(gpid));
+    }
+};
 }

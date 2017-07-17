@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,39 +33,42 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "checker.h"
-# include "injector.h"
-# include "case.h"
-# include "client.h"
-# include "simple_kv.server.impl.h"
+#include "checker.h"
+#include "injector.h"
+#include "case.h"
+#include "client.h"
+#include "simple_kv.server.impl.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "simple_kv.main"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "simple_kv.main"
 
 void dsn_app_registration_simple_kv()
 {
     // register simple-kv type here
 
     // register services
-    dsn_task_code_register("RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
-    dsn_task_code_register("RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
-    dsn::register_layer2_framework< ::dsn::replication::replication_service_app>("replica", DSN_APP_MASK_FRAMEWORK);
+    dsn_task_code_register(
+        "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
+    dsn_task_code_register(
+        "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
+    dsn::register_layer2_framework<::dsn::replication::replication_service_app>(
+        "replica", DSN_APP_MASK_FRAMEWORK);
 
     dsn::register_app<dsn::service::meta_service_app>("meta");
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
-    dsn::register_app_with_type_1_replication_support< ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
-    //dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
+    dsn::register_app_with_type_1_replication_support<
+        ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
+    // dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
 
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");
     dsn::replication::test::install_checkers();
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-    if (argc != 3)
-    {
+    if (argc != 3) {
         std::cerr << "USGAE: " << argv[0] << " <config-file> <case-input>" << std::endl;
         std::cerr << " e.g.: " << argv[0] << " case-000.ini case-000.act" << std::endl;
         return -1;
@@ -78,8 +81,7 @@ int main(int argc, char** argv)
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);
 
-    while (!dsn::replication::test::g_done)
-    {
+    while (!dsn::replication::test::g_done) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
@@ -87,8 +89,7 @@ int main(int argc, char** argv)
 
     dsn::replication::test::test_checker::instance().exit();
 
-    if (dsn::replication::test::g_fail)
-    {
+    if (dsn::replication::test::g_fail) {
 #ifndef ENABLE_GCOV
         dsn_exit(-1);
 #endif
@@ -100,4 +101,3 @@ int main(int argc, char** argv)
 #endif
     return 0;
 }
-

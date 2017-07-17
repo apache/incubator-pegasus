@@ -37,8 +37,8 @@
 #include <dsn/cpp/auto_codes.h>
 
 namespace dsn {
-    namespace dist {
-        DEFINE_ERR_CODE(ERR_WIN_DEPLOY_FAILED)
-        DEFINE_ERR_CODE(ERR_WIN_UNDEPLOY_FAILED)
-    }
+namespace dist {
+DEFINE_ERR_CODE(ERR_WIN_DEPLOY_FAILED)
+DEFINE_ERR_CODE(ERR_WIN_UNDEPLOY_FAILED)
+}
 }

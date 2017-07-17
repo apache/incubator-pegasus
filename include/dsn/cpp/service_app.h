@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,96 +33,93 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
-# include <dsn/cpp/auto_codes.h>
-# include <dsn/cpp/address.h>
-# include <vector>
-# include <string>
+#include <dsn/service_api_c.h>
+#include <dsn/cpp/auto_codes.h>
+#include <dsn/cpp/address.h>
+#include <vector>
+#include <string>
 
-namespace dsn 
+namespace dsn {
+/*!
+@addtogroup app-model
+@{
+*/
+
+class service_app
 {
-    /*!
-    @addtogroup app-model
-    @{
-    */
+public:
+    service_app(dsn_gpid gpid) : _started(false), _gpid(gpid) {}
 
-    class service_app
+    virtual ~service_app(void) {}
+
+    virtual ::dsn::error_code start(int argc, char **argv) = 0;
+
+    virtual ::dsn::error_code stop(bool cleanup = false) = 0;
+
+    //
+    // inquery routines
+    //
+    bool is_started() const { return _started; }
+
+    ::dsn::rpc_address primary_address() const { return _address; }
+
+    const std::string &name() const { return _name; }
+
+    dsn_gpid get_gpid() const { return _gpid; }
+
+private:
+    bool _started;
+    ::dsn::rpc_address _address;
+    std::string _name;
+    dsn_gpid _gpid;
+
+public:
+    template <typename TServiceApp>
+    static void *app_create(const char * /*tname*/, dsn_gpid gpid)
     {
-    public:
-        service_app(dsn_gpid gpid) 
-            : _started(false), _gpid(gpid) { }
-
-        virtual ~service_app(void) {}
-
-        virtual ::dsn::error_code start(int argc, char** argv) = 0;
-
-        virtual ::dsn::error_code stop(bool cleanup = false) = 0;
-
-        //
-        // inquery routines
-        //
-        bool is_started() const { return _started; }
-
-        ::dsn::rpc_address primary_address() const { return _address; }
-
-        const std::string& name() const { return _name; }
-
-        dsn_gpid get_gpid() const { return _gpid; }
-        
-    private:
-        bool               _started;
-        ::dsn::rpc_address _address;
-        std::string        _name;
-        dsn_gpid           _gpid;
-
-    public:
-        template<typename TServiceApp>
-        static void* app_create(const char* /*tname*/, dsn_gpid gpid)
-        {
-            auto svc =  new TServiceApp(gpid);
-            return (void*)(dynamic_cast<service_app*>(svc));
-        }
-
-        static dsn_error_t app_start(void* app, int argc, char** argv)
-        {
-            service_app* sapp = (service_app*)app;
-            sapp->_address = dsn_primary_address();
-            sapp->_name = std::string(argv[0]);
-
-            auto r = sapp->start(argc, argv);
-            if (r == ::dsn::ERR_OK)
-            {
-                sapp->_started = true;
-            }
-            return r;
-        }
-
-        static dsn_error_t app_destroy(void* app, bool cleanup)
-        {
-            service_app* sapp = (service_app*)(app);
-            auto err = sapp->stop(cleanup);
-            if (ERR_OK == err) sapp->_started = false;
-            return err;
-        }
-    };
-
-    /*! C++ wrapper of the \ref dsn_register_app function*/
-    template<typename TServiceApp>
-    void register_app(const char* type_name)
-    {
-        dsn_app app;
-        memset(&app, 0, sizeof(app));
-        app.mask = DSN_APP_MASK_APP;
-        strncpy(app.type_name, type_name, sizeof(app.type_name));
-        app.layer1.create = service_app::app_create<TServiceApp>;
-        app.layer1.start = service_app::app_start;
-        app.layer1.destroy = service_app::app_destroy;
-
-        dsn_register_app(&app);
+        auto svc = new TServiceApp(gpid);
+        return (void *)(dynamic_cast<service_app *>(svc));
     }
 
-    /*@}*/
-} // end namespace dsn::service
+    static dsn_error_t app_start(void *app, int argc, char **argv)
+    {
+        service_app *sapp = (service_app *)app;
+        sapp->_address = dsn_primary_address();
+        sapp->_name = std::string(argv[0]);
 
+        auto r = sapp->start(argc, argv);
+        if (r == ::dsn::ERR_OK) {
+            sapp->_started = true;
+        }
+        return r;
+    }
+
+    static dsn_error_t app_destroy(void *app, bool cleanup)
+    {
+        service_app *sapp = (service_app *)(app);
+        auto err = sapp->stop(cleanup);
+        if (ERR_OK == err)
+            sapp->_started = false;
+        return err;
+    }
+};
+
+/*! C++ wrapper of the \ref dsn_register_app function*/
+template <typename TServiceApp>
+void register_app(const char *type_name)
+{
+    dsn_app app;
+    memset(&app, 0, sizeof(app));
+    app.mask = DSN_APP_MASK_APP;
+    strncpy(app.type_name, type_name, sizeof(app.type_name));
+    app.layer1.create = service_app::app_create<TServiceApp>;
+    app.layer1.start = service_app::app_start;
+    app.layer1.destroy = service_app::app_destroy;
+
+    dsn_register_app(&app);
+}
+
+/*@}*/
+} // end namespace dsn::service

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,14 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/perf_counter.h>
-# include <dsn/utility/singleton.h>
-# include <dsn/utility/synchronize.h>
-# include <map>
-# include <sstream>
-# include <queue>
+#include <dsn/tool-api/perf_counter.h>
+#include <dsn/utility/singleton.h>
+#include <dsn/utility/synchronize.h>
+#include <map>
+#include <sstream>
+#include <queue>
 
 namespace dsn {
 
@@ -50,32 +50,29 @@ public:
     perf_counters(void);
     ~perf_counters(void);
 
-    perf_counter_ptr get_counter(
-                    const char* app,
-                    const char *section, 
-                    const char *name, 
-                    dsn_perf_counter_type_t flags, 
-                    const char *dsptr,
-                    bool create_if_not_exist = false
-                    );
-
+    perf_counter_ptr get_counter(const char *app,
+                                 const char *section,
+                                 const char *name,
+                                 dsn_perf_counter_type_t flags,
+                                 const char *dsptr,
+                                 bool create_if_not_exist = false);
 
     // full_name = perf_counter::build_full_name(...);
-    perf_counter_ptr get_counter(const char* full_name);
-    bool remove_counter(const char* full_name);
-    
-    void register_factory(perf_counter::factory factory);
-    static std::string list_counter(const std::vector<std::string>& args);
-    static std::string get_counter_value(const std::vector<std::string>& args);
-    static std::string get_counter_sample(const std::vector<std::string>& args);
+    perf_counter_ptr get_counter(const char *full_name);
+    bool remove_counter(const char *full_name);
 
-    typedef std::map<std::string, perf_counter_ptr > all_counters;
+    void register_factory(perf_counter::factory factory);
+    static std::string list_counter(const std::vector<std::string> &args);
+    static std::string get_counter_value(const std::vector<std::string> &args);
+    static std::string get_counter_sample(const std::vector<std::string> &args);
+
+    typedef std::map<std::string, perf_counter_ptr> all_counters;
 
 private:
-    std::string list_counter_internal(const std::vector<std::string>& args);
-    mutable utils::rw_lock_nr  _lock;
-    all_counters               _counters;
-    perf_counter::factory      _factory;
+    std::string list_counter_internal(const std::vector<std::string> &args);
+    mutable utils::rw_lock_nr _lock;
+    all_counters _counters;
+    perf_counter::factory _factory;
 };
 
 } // end namespace dsn::utils

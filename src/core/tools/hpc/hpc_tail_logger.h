@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,36 +35,38 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
-# include <unordered_set>
+#include <dsn/tool_api.h>
+#include <unordered_set>
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        class hpc_tail_logger : public logging_provider
-        {
-        public:
-            hpc_tail_logger(const char* log_dir);
-            virtual ~hpc_tail_logger(void);
+class hpc_tail_logger : public logging_provider
+{
+public:
+    hpc_tail_logger(const char *log_dir);
+    virtual ~hpc_tail_logger(void);
 
-            virtual void dsn_logv(const char *file,
-                const char *function,
-                const int line,
-                dsn_log_level_t log_level,
-                const char* title,
-                const char *fmt,
-                va_list args
-                );
+    virtual void dsn_logv(const char *file,
+                          const char *function,
+                          const int line,
+                          dsn_log_level_t log_level,
+                          const char *title,
+                          const char *fmt,
+                          va_list args);
 
-            virtual void flush();
+    virtual void flush();
 
-        private:
-            std::string search(const char* keyword, int back_seconds, int back_start_seconds, std::unordered_set<int>& target_threads);
-            void hpc_tail_logs_dumpper();
+private:
+    std::string search(const char *keyword,
+                       int back_seconds,
+                       int back_start_seconds,
+                       std::unordered_set<int> &target_threads);
+    void hpc_tail_logs_dumpper();
 
-        private:
-            int _per_thread_buffer_bytes;
-            std::string _log_dir;
-        };
-    }
+private:
+    int _per_thread_buffer_bytes;
+    std::string _log_dir;
+};
+}
 }

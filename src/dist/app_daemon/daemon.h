@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,29 +33,26 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/cpp/service_app.h>
+#include <dsn/cpp/service_app.h>
 
-namespace dsn 
+namespace dsn {
+namespace dist {
+class daemon_s_service;
+
+class daemon : public ::dsn::service_app
 {
-    namespace dist 
-    {
-        class daemon_s_service;
+public:
+    daemon(dsn_gpid gpid);
+    ~daemon();
 
-        class daemon :
-            public ::dsn::service_app
-        {
-        public:
-            daemon(dsn_gpid gpid);
-            ~daemon();
+    virtual ::dsn::error_code start(int argc, char **argv) override;
 
-            virtual ::dsn::error_code start(int argc, char** argv) override;
+    virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-            virtual ::dsn::error_code stop(bool cleanup = false) override;
-
-        private:
-            std::unique_ptr<daemon_s_service> _daemon_s_svc;
-        };
-    }
+private:
+    std::unique_ptr<daemon_s_service> _daemon_s_svc;
+};
+}
 }

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,20 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 // apps
-# include "echo.app.example.h"
+#include "echo.app.example.h"
 
 static void dsn_app_registration_echo()
 {
     // register all possible service apps
-    dsn::register_app< ::dsn::example::echo_server_app>("server");
-    dsn::register_app< ::dsn::example::echo_client_app>("client");
-    dsn::register_app< ::dsn::example::echo_perf_test_client_app>("client.perf.echo");
+    dsn::register_app<::dsn::example::echo_server_app>("server");
+    dsn::register_app<::dsn::example::echo_client_app>("client");
+    dsn::register_app<::dsn::example::echo_perf_test_client_app>("client.perf.echo");
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     dsn_app_registration_echo();
-    
+
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);
 

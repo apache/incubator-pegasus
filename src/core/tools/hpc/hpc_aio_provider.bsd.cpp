@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,36 +33,37 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
 
-# if defined(__APPLE__) || defined(__FreeBSD__)
+#include "hpc_aio_provider.h"
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <aio.h>
+#include <stdio.h>
+#include "mix_all_io_looper.h"
 
-# include "hpc_aio_provider.h"
-# include <fcntl.h>
-# include <sys/types.h>
-# include <sys/stat.h>
-# include <aio.h>
-# include <stdio.h>
-# include "mix_all_io_looper.h"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "aio.provider.hpc"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "aio.provider.hpc"
-
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 struct posix_disk_aio_context : public disk_aio
 {
     struct aiocb cb;
-    aio_task* tsk;
-    hpc_aio_provider* this_;
-    utils::notify_event* evt;
+    aio_task *tsk;
+    hpc_aio_provider *this_;
+    utils::notify_event *evt;
     error_code err;
     uint32_t bytes;
 };
 
 #ifndef io_prep_pread
-static inline void io_prep_pread(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
+static inline void
+io_prep_pread(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
 {
     memset(iocb, 0, sizeof(*iocb));
     iocb->aio_fildes = fd;
@@ -75,7 +76,8 @@ static inline void io_prep_pread(struct aiocb *iocb, int fd, void *buf, size_t c
 #endif
 
 #ifndef io_prep_pwrite
-static inline void io_prep_pwrite(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
+static inline void
+io_prep_pwrite(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
 {
     memset(iocb, 0, sizeof(*iocb));
     iocb->aio_fildes = fd;
@@ -87,37 +89,29 @@ static inline void io_prep_pwrite(struct aiocb *iocb, int fd, void *buf, size_t 
 }
 #endif
 
-hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
+hpc_aio_provider::hpc_aio_provider(disk_engine *disk, aio_provider *inner_provider)
     : aio_provider(disk, inner_provider)
 {
-    _callback = [this](
-        int native_error,
-        uint32_t io_size,
-        uintptr_t lolp_or_events
-        )
-    {
-        struct kevent* e;
-        struct aiocb* io;
+    _callback = [this](int native_error, uint32_t io_size, uintptr_t lolp_or_events) {
+        struct kevent *e;
+        struct aiocb *io;
         int bytes;
         int err;
 
-        e = (struct kevent*)lolp_or_events;
-        if (e->filter != EVFILT_AIO)
-        {
+        e = (struct kevent *)lolp_or_events;
+        if (e->filter != EVFILT_AIO) {
             derror("Non-aio filter invokes the aio callback! e->filter = %hd", e->filter);
             return;
         }
 
-        io = (struct aiocb*)(e->ident);
+        io = (struct aiocb *)(e->ident);
         err = aio_error(io);
-        if (err == EINPROGRESS)
-        {
+        if (err == EINPROGRESS) {
             return;
         }
 
         bytes = aio_return(io);
-        if (bytes == -1)
-        {
+        if (bytes == -1) {
             err = errno;
         }
 
@@ -127,29 +121,24 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     _looper = nullptr;
 }
 
-void hpc_aio_provider::start(io_modifer& ctx)
+void hpc_aio_provider::start(io_modifer &ctx)
 {
     _looper = get_io_looper(node(), ctx.queue, ctx.mode);
 }
 
-hpc_aio_provider::~hpc_aio_provider()
-{
-}
+hpc_aio_provider::~hpc_aio_provider() {}
 
-dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
+dsn_handle_t hpc_aio_provider::open(const char *file_name, int oflag, int pmode)
 {
     // No need to bind handle since EVFILT_AIO is registered when aio_* is called.
-    return  (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
+    return (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
 }
 
 error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
-    if (::close((int)(uintptr_t)(fh)) == 0)
-    {
+    if (::close((int)(uintptr_t)(fh)) == 0) {
         return ERR_OK;
-    }
-    else
-    {
+    } else {
         derror("close file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -157,53 +146,58 @@ error_code hpc_aio_provider::close(dsn_handle_t fh)
 
 error_code hpc_aio_provider::flush(dsn_handle_t fh)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
-    {
+    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0) {
         return ERR_OK;
-    }
-    else
-    {
+    } else {
         derror("flush file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
 }
 
-disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
+disk_aio *hpc_aio_provider::prepare_aio_context(aio_task *tsk)
 {
     auto r = new posix_disk_aio_context;
-    bzero((char*)&r->cb, sizeof(r->cb));
+    bzero((char *)&r->cb, sizeof(r->cb));
     r->tsk = tsk;
     r->evt = nullptr;
     return r;
 }
 
-void hpc_aio_provider::aio(aio_task* aio_tsk)
+void hpc_aio_provider::aio(aio_task *aio_tsk)
 {
     auto err = aio_internal(aio_tsk, true);
     err.end_tracking();
 }
 
-error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
+error_code hpc_aio_provider::aio_internal(aio_task *aio_tsk,
+                                          bool async,
+                                          /*out*/ uint32_t *pbytes /*= nullptr*/)
 {
     auto aio = (posix_disk_aio_context *)aio_tsk->aio();
     int r = 0;
 
     aio->this_ = this;
 
-    if (!async)
-    {
+    if (!async) {
         aio->evt = new utils::notify_event();
         aio->err = ERR_OK;
         aio->bytes = 0;
     }
 
-    switch (aio->type)
-    {
+    switch (aio->type) {
     case AIO_Read:
-        io_prep_pread(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
+        io_prep_pread(&aio->cb,
+                      static_cast<int>((ssize_t)aio->file),
+                      aio->buffer,
+                      aio->buffer_size,
+                      aio->file_offset);
         break;
     case AIO_Write:
-        io_prep_pwrite(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
+        io_prep_pwrite(&aio->cb,
+                       static_cast<int>((ssize_t)aio->file),
+                       aio->buffer,
+                       aio->buffer_size,
+                       aio->file_offset);
         break;
     default:
         dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
@@ -217,35 +211,27 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
 
     r = (aio->type == AIO_Read) ? aio_read(&aio->cb) : aio_write(&aio->cb);
-    if (r != 0)
-    {
+    if (r != 0) {
         derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
-            " aio kernel module by running 'sudo kldload aio'.", errno, strerror(errno));
+               " aio kernel module by running 'sudo kldload aio'.",
+               errno,
+               strerror(errno));
 
-        if (async)
-        {
+        if (async) {
             complete_io(aio_tsk, ERR_FILE_OPERATION_FAILED, 0);
-        }
-        else
-        {
+        } else {
             delete aio->evt;
             aio->evt = nullptr;
         }
         return ERR_FILE_OPERATION_FAILED;
-    }
-    else
-    {
-        if (async)
-        {
+    } else {
+        if (async) {
             return ERR_IO_PENDING;
-        }
-        else
-        {
+        } else {
             aio->evt->wait();
             delete aio->evt;
             aio->evt = nullptr;
-            if (pbytes != nullptr)
-            {
+            if (pbytes != nullptr) {
                 *pbytes = aio->bytes;
             }
             return aio->err;
@@ -253,34 +239,28 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     }
 }
 
-void hpc_aio_provider::complete_aio(struct aiocb* io, int bytes, int err)
+void hpc_aio_provider::complete_aio(struct aiocb *io, int bytes, int err)
 {
-    posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
+    posix_disk_aio_context *ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
     error_code ec;
 
-    if (err != 0)
-    {
+    if (err != 0) {
         derror("aio error, err = %s", strerror(err));
         ec = ERR_FILE_OPERATION_FAILED;
-    }
-    else
-    {
+    } else {
         dassert(bytes >= 0, "bytes = %d.", bytes);
         ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
     }
 
-    if (!ctx->evt)
-    {
-        aio_task* aio(ctx->tsk);
+    if (!ctx->evt) {
+        aio_task *aio(ctx->tsk);
         ctx->this_->complete_io(aio, ec, bytes);
-    }
-    else
-    {
+    } else {
         ctx->err = ec;
         ctx->bytes = bytes;
         ctx->evt->notify();
     }
 }
-
-}} // end namespace dsn::tools
+}
+} // end namespace dsn::tools
 #endif

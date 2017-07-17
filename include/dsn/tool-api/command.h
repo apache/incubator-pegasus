@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,28 +34,25 @@
  */
 #pragma once
 
-# include <string>
-# include <vector>
-# include <functional>
-# include <dsn/utility/dlib.h>
+#include <string>
+#include <vector>
+#include <functional>
+#include <dsn/utility/dlib.h>
 
 namespace dsn {
-    
-    typedef std::function<std::string(const std::vector<std::string>&)> command_handler;
 
-    extern DSN_API void* register_command(
-        const std::vector<const char*>& commands, // commands, e.g., {"help", "Help", "HELP", "h", "H"}
-        const char* help_one_line,
-        const char* help_long,
-        command_handler handler
-        );
+typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
 
-    extern DSN_API void* register_command(
-        const char* command, // commands, e.g., "help"
-        const char* help_one_line,
-        const char* help_long,
-        command_handler handler
-        );
+extern DSN_API void *register_command(
+    const std::vector<const char *> &commands, // commands, e.g., {"help", "Help", "HELP", "h", "H"}
+    const char *help_one_line,
+    const char *help_long,
+    command_handler handler);
 
-    DSN_API void deregister_command(void* cli_handle);
+extern DSN_API void *register_command(const char *command, // commands, e.g., "help"
+                                      const char *help_one_line,
+                                      const char *help_long,
+                                      command_handler handler);
+
+DSN_API void deregister_command(void *cli_handle);
 }

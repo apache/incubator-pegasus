@@ -33,20 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "repli.app.h"
-# include <dsn/utility/utils.h>
-# include <iostream>
-# include <thread>
-# if !defined (_WIN32)
-# include "unistd.h"
-# endif
+#include "repli.app.h"
+#include <dsn/utility/utils.h>
+#include <iostream>
+#include <thread>
+#if !defined(_WIN32)
+#include "unistd.h"
+#endif
 
 bool g_done = false;
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-    if (argc < 2)
-    {
+    if (argc < 2) {
         std::cerr << "USAGE: " << argv[0] << " <command> <params...>" << std::endl;
         dsn::service::repli_app::usage();
         return -1;
@@ -56,21 +55,19 @@ int main(int argc, char** argv)
     char buf[4096];
     int slen;
 
-# if defined(_WIN32)
+#if defined(_WIN32)
     slen = ::GetModuleFileNameA(NULL, buf, sizeof(buf));
-# else
+#else
     slen = readlink("/proc/self/exe", buf, sizeof(buf));
-# endif
+#endif
 
-    if (slen != -1)
-    {
-       dassert(slen < 4906, "invalid slen, slen = %d", slen);
-       buf[slen] = 0;
+    if (slen != -1) {
+        dassert(slen < 4906, "invalid slen, slen = %d", slen);
+        buf[slen] = 0;
 
-       std::string dir = dsn::utils::filesystem::remove_file_name(buf);
+        std::string dir = dsn::utils::filesystem::remove_file_name(buf);
         conf = dir + "/config.ini";
-        if (!dsn::utils::filesystem::file_exists(conf))
-        {
+        if (!dsn::utils::filesystem::file_exists(conf)) {
             std::cerr << "ERROR: config file not found: " << conf << std::endl;
             dsn::service::repli_app::usage();
             return -1;
@@ -78,15 +75,14 @@ int main(int argc, char** argv)
     }
 
     // register all possible service apps
-    dsn::register_app< ::dsn::service::repli_app>("repli");
+    dsn::register_app<::dsn::service::repli_app>("repli");
 
     dsn::service::repli_app::set_args(argc - 1, argv + 1);
 
     // specify what services and tools will run in config file, then run
     dsn_run_config(conf.c_str(), false);
 
-    while (!g_done)
-    {
+    while (!g_done) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 

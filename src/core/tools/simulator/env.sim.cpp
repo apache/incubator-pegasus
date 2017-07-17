@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,37 +36,39 @@
 #include "env.sim.h"
 #include "scheduler.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "env.provider.simulator"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "env.provider.simulator"
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 /*static*/ int sim_env_provider::_seed;
 
-uint64_t sim_env_provider::now_ns() const
+uint64_t sim_env_provider::now_ns() const { return scheduler::instance().now_ns(); }
+
+void sim_env_provider::on_worker_start(task_worker *worker)
 {
-    return scheduler::instance().now_ns();
+    set_thread_local_random_seed(
+        (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
+        worker->index());
 }
 
-void sim_env_provider::on_worker_start(task_worker* worker)
-{
-    set_thread_local_random_seed((_seed + worker->index() + worker->index()*worker->pool_spec().pool_code) ^ worker->index());
-}
-
-sim_env_provider::sim_env_provider(env_provider* inner_provider)
-    : env_provider(inner_provider)
+sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(inner_provider)
 {
     task_worker::on_start.put_front(on_worker_start, "sim_env_provider::on_worker_start");
 
-    _seed = (int)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed for the simulator, 0 for random random seed");
-    if (_seed == 0)
-    {
+    _seed =
+        (int)dsn_config_get_value_uint64("tools.simulator",
+                                         "random_seed",
+                                         0,
+                                         "random seed for the simulator, 0 for random random seed");
+    if (_seed == 0) {
         _seed = std::random_device{}();
     }
 
     derror("simulation.random seed for this round is %d", _seed);
 }
-
-}} // end namespace
+}
+} // end namespace

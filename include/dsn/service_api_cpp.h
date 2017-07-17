@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,18 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
+#include <dsn/service_api_c.h>
 //# include <dsn/utility/ports.h>
-# include <dsn/cpp/auto_codes.h>
-# include <dsn/cpp/config_helper.h>
-# include <dsn/cpp/serialization.h>
-# include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
-# include <dsn/cpp/rpc_stream.h>
-# include <dsn/cpp/zlocks.h>
-# include <dsn/cpp/clientlet.h>
-# include <dsn/cpp/serverlet.h>
-# include <dsn/cpp/service_app.h>
-# include <dsn/cpp/address.h>
-# include <dsn/cpp/perf_test_helper.h>
+#include <dsn/cpp/auto_codes.h>
+#include <dsn/cpp/config_helper.h>
+#include <dsn/cpp/serialization.h>
+#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
+#include <dsn/cpp/rpc_stream.h>
+#include <dsn/cpp/zlocks.h>
+#include <dsn/cpp/clientlet.h>
+#include <dsn/cpp/serverlet.h>
+#include <dsn/cpp/service_app.h>
+#include <dsn/cpp/address.h>
+#include <dsn/cpp/perf_test_helper.h>

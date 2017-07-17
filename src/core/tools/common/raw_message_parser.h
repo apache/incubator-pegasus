@@ -44,19 +44,19 @@ namespace dsn {
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_RAW)
 
 class rpc_session;
-class raw_message_parser: public message_parser
+class raw_message_parser : public message_parser
 {
-private:    
-    static void notify_rpc_session_disconnected(rpc_session* sp);
+private:
+    static void notify_rpc_session_disconnected(rpc_session *sp);
 
 public:
     raw_message_parser();
     virtual ~raw_message_parser() {}
     virtual void reset() override;
-    virtual message_ex* get_message_on_receive(message_reader *reader, /*out*/int &read_next) override;
+    virtual message_ex *get_message_on_receive(message_reader *reader,
+                                               /*out*/ int &read_next) override;
     virtual int get_buffer_count_on_send(message_ex *msg) override;
-    virtual int get_buffers_on_send(message_ex *msg, /*out*/send_buf *buffers) override;
+    virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
 };
-
 }
 #endif // RAW_MESSAGE_PARSER_H

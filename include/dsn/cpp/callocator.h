@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,84 +33,67 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
+#include <dsn/service_api_c.h>
 
 namespace dsn {
 
-    typedef void* (*t_allocate)(uint32_t);
-    typedef void  (*t_deallocate)(void*);
+typedef void *(*t_allocate)(uint32_t);
+typedef void (*t_deallocate)(void *);
 
-    template <t_allocate a, t_deallocate d>
-    class callocator_object
+template <t_allocate a, t_deallocate d>
+class callocator_object
+{
+public:
+    void *operator new(size_t size) { return a(uint32_t(size)); }
+
+    void operator delete(void *p) { d(p); }
+
+    void *operator new[](size_t size) { return a((uint32_t)size); }
+
+    void operator delete[](void *p) { d(p); }
+};
+
+typedef callocator_object<dsn_transient_malloc, dsn_transient_free> transient_object;
+
+template <typename T, t_allocate a, t_deallocate d>
+class callocator
+{
+public:
+    typedef T value_type;
+    typedef size_t size_type;
+    typedef const T *const_pointer;
+
+    template <typename _Tp1>
+    struct rebind
     {
-    public:
-        void* operator new(size_t size)
-        {
-            return a(uint32_t(size));
-        }
-
-        void operator delete(void* p)
-        {
-            d(p);
-        }
-
-        void* operator new[](size_t size)
-        {
-            return a((uint32_t)size);
-        }
-
-        void operator delete[](void* p)
-        {
-            d(p);
-        }
+        typedef callocator<_Tp1, a, d> other;
     };
 
-    typedef callocator_object<dsn_transient_malloc, dsn_transient_free> transient_object;
+    static T *allocate(size_type n) { return static_cast<T *>(a(uint32_t(n * sizeof(T)))); }
 
-    template <typename T, t_allocate a, t_deallocate d>
-    class callocator
+    static void deallocate(T *p, size_type n) { d(p); }
+
+    callocator() throw() {}
+    template <typename U>
+    callocator(const callocator<U, a, d> &ac) throw()
     {
-    public:
-        typedef T value_type;
-        typedef size_t size_type;
-        typedef const T* const_pointer;
-
-        template<typename _Tp1>
-        struct rebind
-        {
-            typedef callocator<_Tp1, a, d> other;
-        };
-
-        static T* allocate(size_type n)
-        {
-            return static_cast<T*>(a(uint32_t(n * sizeof(T))));
-        }
-
-        static void deallocate(T* p, size_type n)
-        {
-            d(p);
-        }
-
-        callocator() throw()  {}
-        template<typename U>
-        callocator(const callocator<U, a, d> &ac) throw(){ }
-        ~callocator() throw() { }
-    };
-
-    template<typename T>
-    using transient_allocator = callocator<T, dsn_transient_malloc, dsn_transient_free>;
-
-
-    template <class T, class U>
-    bool operator==(const transient_allocator<T>&, const transient_allocator<U>&)
-    {
-        return true;
     }
-    template <class T, class U>
-    bool operator!=(const transient_allocator<T>&, const transient_allocator<U>&)
-    {
-        return false;
-    }
+    ~callocator() throw() {}
+};
+
+template <typename T>
+using transient_allocator = callocator<T, dsn_transient_malloc, dsn_transient_free>;
+
+template <class T, class U>
+bool operator==(const transient_allocator<T> &, const transient_allocator<U> &)
+{
+    return true;
+}
+template <class T, class U>
+bool operator!=(const transient_allocator<T> &, const transient_allocator<U> &)
+{
+    return false;
+}
 }

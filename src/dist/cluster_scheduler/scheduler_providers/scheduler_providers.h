@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
  *
  * Revision history:
  *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
- *   
+ *
  */
 #pragma once
 
@@ -42,7 +42,7 @@
 #include "windows_cluster_scheduler.h"
 
 namespace dsn {
-    namespace dist{
-        extern void register_cluster_scheduler_providers();
-    }
+namespace dist {
+extern void register_cluster_scheduler_providers();
+}
 }

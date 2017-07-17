@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,48 +35,52 @@
 
 #pragma once
 
-# include <dsn/dist/failure_detector.h>
-# include <dsn/cpp/zlocks.h>
+#include <dsn/dist/failure_detector.h>
+#include <dsn/cpp/zlocks.h>
 
-namespace dsn { 
-    namespace dist {
+namespace dsn {
+namespace dist {
 
-        class slave_failure_detector_with_multimaster  : public dsn::fd::failure_detector
-        {
-        public:
-            slave_failure_detector_with_multimaster(
-                std::vector< ::dsn::rpc_address>& meta_servers,
-                std::function<void()>&& master_disconnected_callback,
-                std::function<void()>&& master_connected_callback
-                );
-            ~slave_failure_detector_with_multimaster(void);
+class slave_failure_detector_with_multimaster : public dsn::fd::failure_detector
+{
+public:
+    slave_failure_detector_with_multimaster(std::vector<::dsn::rpc_address> &meta_servers,
+                                            std::function<void()> &&master_disconnected_callback,
+                                            std::function<void()> &&master_connected_callback);
+    ~slave_failure_detector_with_multimaster(void);
 
-            virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context);
+    virtual void end_ping(::dsn::error_code err, const fd::beacon_ack &ack, void *context);
 
-             // client side
-            virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes );
-            virtual void on_master_connected( ::dsn::rpc_address node);
+    // client side
+    virtual void on_master_disconnected(const std::vector<::dsn::rpc_address> &nodes);
+    virtual void on_master_connected(::dsn::rpc_address node);
 
-            // server side
-            virtual void on_worker_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) { dassert (false, "invalid execution flow"); }
-            virtual void on_worker_connected( ::dsn::rpc_address node )  { dassert (false, "invalid execution flow"); }
-
-            ::dsn::rpc_address current_server_contact() const;
-            ::dsn::rpc_address get_servers() const  { return _meta_servers; }
-
-            void set_leader_for_test(dsn::rpc_address meta);
-        private:
-            dsn::rpc_address         _meta_servers;
-            std::function<void()>    _master_disconnected_callback;
-            std::function<void()>    _master_connected_callback;
-        };
-
-        //------------------ inline implementation --------------------------------
-        inline ::dsn::rpc_address slave_failure_detector_with_multimaster::current_server_contact() const
-        {
-            service::zauto_lock l(failure_detector::_lock);
-            return dsn_group_get_leader(_meta_servers.group_handle()); 
-        }
+    // server side
+    virtual void on_worker_disconnected(const std::vector<::dsn::rpc_address> &nodes)
+    {
+        dassert(false, "invalid execution flow");
     }
-} // end namespace
+    virtual void on_worker_connected(::dsn::rpc_address node)
+    {
+        dassert(false, "invalid execution flow");
+    }
 
+    ::dsn::rpc_address current_server_contact() const;
+    ::dsn::rpc_address get_servers() const { return _meta_servers; }
+
+    void set_leader_for_test(dsn::rpc_address meta);
+
+private:
+    dsn::rpc_address _meta_servers;
+    std::function<void()> _master_disconnected_callback;
+    std::function<void()> _master_connected_callback;
+};
+
+//------------------ inline implementation --------------------------------
+inline ::dsn::rpc_address slave_failure_detector_with_multimaster::current_server_contact() const
+{
+    service::zauto_lock l(failure_detector::_lock);
+    return dsn_group_get_leader(_meta_servers.group_handle());
+}
+}
+} // end namespace

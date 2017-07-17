@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,16 +33,24 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include <dsn/service_api_cpp.h>
-# include "simple_kv.types.h"
+#pragma once
+#include <dsn/service_api_cpp.h>
+#include "simple_kv.types.h"
 
-namespace dsn { namespace replication { namespace application { 
-    // define your own thread pool using DEFINE_THREAD_POOL_CODE(xxx)
-    // define RPC task code for service 'simple_kv'
-    DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_READ, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-    DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-    DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-    // test timer task code
-    DEFINE_TASK_CODE(LPC_SIMPLE_KV_TEST_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-} } } 
+namespace dsn {
+namespace replication {
+namespace application {
+// define your own thread pool using DEFINE_THREAD_POOL_CODE(xxx)
+// define RPC task code for service 'simple_kv'
+DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_READ, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
+                     TASK_PRIORITY_COMMON,
+                     ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
+                     TASK_PRIORITY_COMMON,
+                     ::dsn::THREAD_POOL_DEFAULT)
+// test timer task code
+DEFINE_TASK_CODE(LPC_SIMPLE_KV_TEST_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+}
+}
+}

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,47 +33,44 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/task.h>
+#include <dsn/tool-api/task.h>
 
-namespace dsn 
+namespace dsn {
+class service_node;
+
+/*!
+@addtogroup tool-api-providers
+@{
+*/
+/*!
+  timer service schedules the input tasks at specified timepoint
+*/
+class timer_service
 {
-    class service_node;
-
-    /*!
-    @addtogroup tool-api-providers
-    @{
-    */
-    /*!
-      timer service schedules the input tasks at specified timepoint
-    */
-    class timer_service
+public:
+    template <typename T>
+    static timer_service *create(service_node *node, timer_service *inner_provider)
     {
-    public:
-        template <typename T> static timer_service* create(service_node* node, timer_service* inner_provider)
-        {
-            return new T(node, inner_provider);
-        }
+        return new T(node, inner_provider);
+    }
 
-        typedef timer_service*  (*factory)(service_node*, timer_service*);
+    typedef timer_service *(*factory)(service_node *, timer_service *);
 
-    public:
-        timer_service(service_node* node, timer_service* inner_provider)
-        {
-            _node = node;
-        }
+public:
+    timer_service(service_node *node, timer_service *inner_provider) { _node = node; }
 
-        virtual void start(io_modifer& ctx) = 0;
+    virtual void start(io_modifer &ctx) = 0;
 
-        // after milliseconds, the provider should call task->enqueue()        
-        virtual void add_timer(task* task) = 0;
+    // after milliseconds, the provider should call task->enqueue()
+    virtual void add_timer(task *task) = 0;
 
-        // inquery
-        service_node* node() const { return _node; }
+    // inquery
+    service_node *node() const { return _node; }
 
-    private:
-        service_node* _node;
-    };
-    /*@}*/
+private:
+    service_node *_node;
+};
+/*@}*/
 } // end namespace

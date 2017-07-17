@@ -32,67 +32,55 @@
 *     2/1/2016, ykwd, first version
 */
 
-# pragma once
+#pragma once
 
-# include <dsn/dist/cluster_scheduler.h>
-# include <unordered_map>
-# include "machine_pool_mgr.h"
+#include <dsn/dist/cluster_scheduler.h>
+#include <unordered_map>
+#include "machine_pool_mgr.h"
 
 using namespace ::dsn::service;
 
-namespace dsn
+namespace dsn {
+namespace dist {
+DEFINE_TASK_CODE(LPC_WIN_CREATE, TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
+DEFINE_TASK_CODE(LPC_WIN_DELETE, TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
+
+class windows_cluster_scheduler : public cluster_scheduler, public clientlet
 {
-    namespace dist
+public:
+    windows_cluster_scheduler();
+    virtual error_code initialize() override;
+
+    virtual void schedule(std::shared_ptr<deployment_unit> &unit) override;
+
+    void unschedule(std::shared_ptr<deployment_unit> &unit) override;
+
+    virtual cluster_type::type type() const override
     {
-        DEFINE_TASK_CODE(LPC_WIN_CREATE, TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
-        DEFINE_TASK_CODE(LPC_WIN_DELETE, TASK_PRIORITY_COMMON, THREAD_POOL_SCHEDULER_LONG)
-
-        class windows_cluster_scheduler
-            : public cluster_scheduler, public clientlet
-        {
-        public:
-            windows_cluster_scheduler();
-            virtual error_code initialize() override;
-
-            virtual void schedule(
-                std::shared_ptr<deployment_unit>& unit
-                ) override;
-
-            void unschedule(
-                std::shared_ptr<deployment_unit>& unit
-                )override;
-
-            virtual cluster_type::type type() const override
-            {
-                return cluster_type::cstype_bare_medal_windows;
-            }
-
-        private:
-            zlock                       _lock;
-            std::unordered_map<std::string, std::shared_ptr<deployment_unit> > _deploy_map;
-            std::unordered_map<std::string, std::vector<std::string> > _machine_map;
-            machine_pool_mgr            _mgr;
-            std::string                 _default_remote_package_directory;
-
-            void run_apps(
-                std::string& name, 
-                std::function<void(error_code, rpc_address)>& deployment_callback, 
-                std::string& local_package_directory, std::string& remote_package_directory
-                );
-
-            void stop_apps(
-                std::string& name, 
-                std::function<void(error_code, const std::string&)>& deployment_callback, 
-                std::string& local_package_directory, std::string& remote_package_directory
-                );
-            
-            error_code allocate_machine(
-                std::string& name, 
-                std::string& ldir, 
-                /* out */ std::vector<std::string>& assign_list,
-                /* out */ std::string& service_url
-                );
-        };
-
+        return cluster_type::cstype_bare_medal_windows;
     }
+
+private:
+    zlock _lock;
+    std::unordered_map<std::string, std::shared_ptr<deployment_unit>> _deploy_map;
+    std::unordered_map<std::string, std::vector<std::string>> _machine_map;
+    machine_pool_mgr _mgr;
+    std::string _default_remote_package_directory;
+
+    void run_apps(std::string &name,
+                  std::function<void(error_code, rpc_address)> &deployment_callback,
+                  std::string &local_package_directory,
+                  std::string &remote_package_directory);
+
+    void stop_apps(std::string &name,
+                   std::function<void(error_code, const std::string &)> &deployment_callback,
+                   std::string &local_package_directory,
+                   std::string &remote_package_directory);
+
+    error_code allocate_machine(std::string &name,
+                                std::string &ldir,
+                                /* out */ std::vector<std::string> &assign_list,
+                                /* out */ std::string &service_url);
+};
+}
 }

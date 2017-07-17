@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,28 +33,25 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include "simple_kv.client.2.h"
-# include "simple_kv.client.perf.h"
-# include "simple_kv.server.h"
+#pragma once
+#include "simple_kv.client.2.h"
+#include "simple_kv.client.perf.h"
+#include "simple_kv.server.h"
 
-# define TRANSPARENT_LAYER2_CLIENT
+#define TRANSPARENT_LAYER2_CLIENT
 
-namespace dsn { namespace replication { namespace application { 
+namespace dsn {
+namespace replication {
+namespace application {
 // client app example
-class simple_kv_client_app : 
-    public ::dsn::service_app,
-    public virtual ::dsn::clientlet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
-    
-    ~simple_kv_client_app() 
-    {
-        stop();
-    }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    ~simple_kv_client_app() { stop(); }
+
+    virtual ::dsn::error_code start(int argc, char **argv)
     {
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -63,7 +60,8 @@ public:
         _server = url_host_address(argv[1]);
         _simple_kv_client.reset(new simple_kv_client2(_server));
 
-        _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER, this, [this] {on_test_timer(); }, std::chrono::seconds(1));
+        _timer = ::dsn::tasking::enqueue_timer(
+            LPC_SIMPLE_KV_TEST_TIMER, this, [this] { on_test_timer(); }, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -81,7 +79,7 @@ public:
         // test for service simple_kv        using namespace svc_simple_kv;
         {
             std::string req = "hello";
-            //sync:
+            // sync:
             error_code err;
             std::string resp;
             std::tie(err, resp) = _simple_kv_client->read_sync(req);
@@ -89,35 +87,34 @@ public:
             if (ERR_OK == err)
                 std::cout << ", read result: " << resp;
             std::cout << std::endl;
-            //async: 
+            // async:
             //_simple_kv_client->read(req, empty_callback);
-
         }
         {
             kv_pair req;
             req.key = "hello";
             req.value = "world";
-            //sync:
+            // sync:
             error_code err;
             int32_t resp;
             std::tie(err, resp) = _simple_kv_client->write_sync(req);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, return " << err.to_string() << std::endl;
-            //async: 
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, return " << err.to_string()
+                      << std::endl;
+            // async:
             //_simple_kv_client->write(req, empty_callback);
-
         }
         {
             kv_pair req;
             req.key = "hello";
             req.value = "world";
-            //sync:
+            // sync:
             error_code err;
             int32_t resp;
             std::tie(err, resp) = _simple_kv_client->append_sync(req);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string() << std::endl;
-            //async: 
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string()
+                      << std::endl;
+            // async:
             //_simple_kv_client->append(req, empty_callback);
-
         }
     }
 
@@ -127,19 +124,14 @@ private:
     std::unique_ptr<simple_kv_client2> _simple_kv_client;
 };
 
-class simple_kv_perf_test_client_app : 
-    public ::dsn::service_app,
-    public virtual ::dsn::clientlet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_perf_test_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
-    ~simple_kv_perf_test_client_app()
-    {
-        stop();
-    }
+    ~simple_kv_perf_test_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char **argv)
     {
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -159,9 +151,10 @@ public:
 
         return ::dsn::ERR_OK;
     }
-    
+
 private:
     std::unique_ptr<simple_kv_perf_test_client> _simple_kv_client;
 };
-
-} } } 
+}
+}
+}

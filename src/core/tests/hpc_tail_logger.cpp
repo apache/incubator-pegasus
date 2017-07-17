@@ -58,10 +58,10 @@ TEST(tools_hpc, tail_logger_cb)
 {
     std::string output;
     bool ret = dsn::command_manager::instance().run_command("tail-log", output);
-    if(!ret)
+    if (!ret)
         return;
 
-    EXPECT_TRUE(strcmp(output.c_str(), "invalid arguments for tail-log command") == 0 );
+    EXPECT_TRUE(strcmp(output.c_str(), "invalid arguments for tail-log command") == 0);
 
     std::ostringstream in;
     in << "tail-log 12345 4 1 " << dsn::utils::get_current_tid();
@@ -74,9 +74,8 @@ TEST(tools_hpc, tail_logger_cb)
     EXPECT_TRUE(strstr(output.c_str(), "In total (1) log entries are found between") != nullptr);
     dsn::command_manager::instance().run_command("tail-log-dump", output);
 
-    ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
-    if (logger != nullptr)
-    {
+    ::dsn::logging_provider *logger = ::dsn::service_engine::fast_instance().logging();
+    if (logger != nullptr) {
         logger->flush();
     }
 }

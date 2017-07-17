@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,21 +33,33 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/utility/utils.h>
-# include <gtest/gtest.h>
-# include <dsn/cpp/serialization.h>
+#include <dsn/utility/utils.h>
+#include <gtest/gtest.h>
+#include <dsn/cpp/serialization.h>
 
-# include "idl_test.types.h"
+#include "idl_test.types.h"
 
-# include <iostream>
-# include <vector>
-# include "stdlib.h"
+#include <iostream>
+#include <vector>
+#include "stdlib.h"
 
 //#define DSN_IDL_TESTS_DEBUG
 
-enum Language {lang_cpp, lang_csharp};
-enum IDL{idl_protobuf, idl_thrift};
-enum Format{format_binary, format_json};
+enum Language
+{
+    lang_cpp,
+    lang_csharp
+};
+enum IDL
+{
+    idl_protobuf,
+    idl_thrift
+};
+enum Format
+{
+    format_binary,
+    format_json
+};
 
 std::string DSN_ROOT;
 std::string RESOURCE_ROOT;
@@ -59,17 +71,14 @@ std::string file(const std::string &val)
     return nval;
 }
 
-std::string file(const char* val)
-{
-    return file(std::string(val));
-}
+std::string file(const char *val) { return file(std::string(val)); }
 
-std::string combine(const std::string &dir, const char* sub)
+std::string combine(const std::string &dir, const char *sub)
 {
     return dsn::utils::filesystem::path_combine(file(dir), file(sub));
 }
 
-std::string combine(const std::string &dir,const std::string &sub)
+std::string combine(const std::string &dir, const std::string &sub)
 {
     return dsn::utils::filesystem::path_combine(file(dir), file(sub));
 }
@@ -85,7 +94,7 @@ void execute(std::string cmd, bool &result)
     result = result && ret;
 }
 
-void copy_file(const std::string& src, const std::string& dst, bool &result)
+void copy_file(const std::string &src, const std::string &dst, bool &result)
 {
 #ifdef _WIN32
     std::string cmd = std::string("copy /Y ");
@@ -96,13 +105,13 @@ void copy_file(const std::string& src, const std::string& dst, bool &result)
     execute(cmd, result);
 }
 
-void create_dir(const char* dir, bool &result)
+void create_dir(const char *dir, bool &result)
 {
     bool ret = dsn::utils::filesystem::create_directory(file(dir));
     result = result && ret;
 }
 
-void rm_dir(const char* dir, bool &result)
+void rm_dir(const char *dir, bool &result)
 {
 #ifdef _WIN32
     std::string cmd = std::string("rd /S /Q ") + file(dir);
@@ -120,19 +129,21 @@ void cmake(Language lang, bool &result)
     cmake_cmd += std::string(" -DCMAKE_GENERATOR_PLATFORM=x64");
 #endif
     execute(cmake_cmd, result);
-    if (lang == lang_cpp)
-    {
+    if (lang == lang_cpp) {
 #ifdef _WIN32
         execute(std::string("msbuild ") + file("builder/counter.sln"), result);
-        execute(file("builder/bin/counter/Debug/counter.exe") + " " + file("builder/bin/counter/config.ini"), result);
+        execute(file("builder/bin/counter/Debug/counter.exe") + " " +
+                    file("builder/bin/counter/config.ini"),
+                result);
 #else
         execute(std::string("cd builder && make "), result);
-        execute(file("builder/bin/counter/counter") + " " + file("builder/bin/counter/config.ini"), result);
+        execute(file("builder/bin/counter/counter") + " " + file("builder/bin/counter/config.ini"),
+                result);
 #endif
-    }
-    else
-    {
-        execute(file("builder/bin/counter/counter.exe") + " " + file("builder/bin/counter/config.ini"), result);
+    } else {
+        execute(file("builder/bin/counter/counter.exe") + " " +
+                    file("builder/bin/counter/config.ini"),
+                result);
     }
 }
 
@@ -144,26 +155,20 @@ bool test_code_generation(Language lang, IDL idl, Format format)
 #else
     std::string codegen_bash("bin/dsn.cg.sh");
 #endif
-    std::string codegen_cmd = combine(DSN_ROOT, codegen_bash)\
-        + std::string(" counter.")\
-        + (idl == idl_protobuf ? "proto" : "thrift")\
-        + (lang == lang_cpp ? " cpp" : " csharp")\
-        + " src "\
-        + (format == format_binary ? "binary" : "json")\
-        + " single";
+    std::string codegen_cmd = combine(DSN_ROOT, codegen_bash) + std::string(" counter.") +
+                              (idl == idl_protobuf ? "proto" : "thrift") +
+                              (lang == lang_cpp ? " cpp" : " csharp") + " src " +
+                              (format == format_binary ? "binary" : "json") + " single";
     create_dir("src", result);
     execute(codegen_cmd, result);
     std::vector<std::string> src_files;
     std::string src_root(lang == lang_cpp ? "repo/cpp" : "repo/csharp");
-    if (lang == lang_cpp)
-    {
+    if (lang == lang_cpp) {
         src_files.push_back("counter.main.cpp");
-    } else
-    {
+    } else {
         src_files.push_back("counter.main.cs");
     }
-    for (auto i : src_files)
-    {
+    for (auto i : src_files) {
         copy_file(combine(combine(RESOURCE_ROOT, src_root), i), file("src"), result);
     }
     cmake(lang, result);
@@ -173,32 +178,25 @@ bool test_code_generation(Language lang, IDL idl, Format format)
     return result;
 }
 
-template<typename T>
+template <typename T>
 void thrift_basic_type_serialization_checker(std::vector<T> &data, Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
-    for (const T& i : data)
-    {
+    for (const T &i : data) {
         T input = i;
         dsn::blob b(buf, 0, bufsize);
         dsn::binary_writer writer(b);
-        if (fmt == format_binary)
-        {
+        if (fmt == format_binary) {
             dsn::marshall_thrift_binary(writer, input);
-        }
-        else
-        {
+        } else {
             dsn::marshall_thrift_json(writer, input);
         }
         dsn::binary_reader reader(b);
         T output;
-        if (fmt == format_binary)
-        {
+        if (fmt == format_binary) {
             dsn::unmarshall_thrift_binary(reader, output);
-        }
-        else
-        {
+        } else {
             dsn::unmarshall_thrift_json(reader, output);
         }
         EXPECT_TRUE(input == output);
@@ -209,24 +207,44 @@ void test_thrift_basic_type_serialization(Format fmt)
     std::vector<bool> data_bool_t{true, false};
     thrift_basic_type_serialization_checker(data_bool_t, fmt);
 
-    std::vector<int8_t> data_int8_t{std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), 0, 1 , -1, 13, -13};
+    std::vector<int8_t> data_int8_t{
+        std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), 0, 1, -1, 13, -13};
     thrift_basic_type_serialization_checker(data_int8_t, fmt);
 
-    std::vector<int16_t> data_int16_t{std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), 0, 1 , -1, 13, -13};
+    std::vector<int16_t> data_int16_t{std::numeric_limits<int16_t>::min(),
+                                      std::numeric_limits<int16_t>::max(),
+                                      0,
+                                      1,
+                                      -1,
+                                      13,
+                                      -13};
     thrift_basic_type_serialization_checker(data_int16_t, fmt);
 
-    std::vector<int32_t> data_int32_t{std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), 0, 1 , -1, 13, -13};
+    std::vector<int32_t> data_int32_t{std::numeric_limits<int32_t>::min(),
+                                      std::numeric_limits<int32_t>::max(),
+                                      0,
+                                      1,
+                                      -1,
+                                      13,
+                                      -13};
     thrift_basic_type_serialization_checker(data_int32_t, fmt);
 
-    std::vector<int64_t> data_int64_t{std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), 0, 1 , -1, 13, -13};
+    std::vector<int64_t> data_int64_t{std::numeric_limits<int64_t>::min(),
+                                      std::numeric_limits<int64_t>::max(),
+                                      0,
+                                      1,
+                                      -1,
+                                      13,
+                                      -13};
     thrift_basic_type_serialization_checker(data_int32_t, fmt);
 
-    std::vector<std::string> data_string_t{std::string("hello"), std::string("world"), std::string("")};
+    std::vector<std::string> data_string_t{
+        std::string("hello"), std::string("world"), std::string("")};
     thrift_basic_type_serialization_checker(data_string_t, fmt);
 
-    //TODO:: test double type
+    // TODO:: test double type
 
-    std::vector<std::vector<int32_t> > data_vec_int32_t{data_int32_t, std::vector<int32_t>()};
+    std::vector<std::vector<int32_t>> data_vec_int32_t{data_int32_t, std::vector<int32_t>()};
     thrift_basic_type_serialization_checker(data_vec_int32_t, fmt);
 
     std::map<int, std::string> m1;
@@ -234,32 +252,27 @@ void test_thrift_basic_type_serialization(Format fmt)
     m1[233] = "world";
     m1[-22] = "";
     std::map<int, std::string> m2;
-    std::vector<std::map<int, std::string> > data_map_int32_str_t{m1, m2};
+    std::vector<std::map<int, std::string>> data_map_int32_str_t{m1, m2};
     thrift_basic_type_serialization_checker(data_map_int32_str_t, fmt);
 }
 
-void check_thrift_generated_type_serialization(const dsn::idl::test::test_thrift_item &input, Format fmt)
+void check_thrift_generated_type_serialization(const dsn::idl::test::test_thrift_item &input,
+                                               Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
     dsn::blob b(buf, 0, bufsize);
     dsn::binary_writer writer(b);
-    if (fmt == format_binary)
-    {
+    if (fmt == format_binary) {
         dsn::marshall_thrift_binary(writer, input);
-    }
-    else
-    {
+    } else {
         dsn::marshall_thrift_json(writer, input);
     }
     dsn::binary_reader reader(b);
     dsn::idl::test::test_thrift_item output;
-    if (fmt == format_binary)
-    {
+    if (fmt == format_binary) {
         dsn::unmarshall_thrift_binary(reader, output);
-    }
-    else
-    {
+    } else {
         dsn::unmarshall_thrift_json(reader, output);
     }
     EXPECT_EQ(input.bool_item, output.bool_item);
@@ -293,43 +306,35 @@ void test_thrift_generated_type_serialization(Format fmt)
     item.i64_item = std::numeric_limits<int64_t>::max();
     item.double_item = 123.321;
     item.string_item = "hello world";
-    for (int i = 0; i < container_n; i++)
-    {
+    for (int i = 0; i < container_n; i++) {
         item.list_i32_item.push_back(i);
     }
-    for (int i = 0; i < container_n; i++)
-    {
+    for (int i = 0; i < container_n; i++) {
         item.set_i32_item.insert(item.set_i32_item.begin(), i + 1);
     }
-    for (int i = 0; i < container_n; i++)
-    {
+    for (int i = 0; i < container_n; i++) {
         item.map_i32_item[i] = i * 2;
     }
     check_thrift_generated_type_serialization(item, fmt);
 }
 
-void check_protobuf_generated_type_serialization(const dsn::idl::test::test_protobuf_item &input, Format fmt)
+void check_protobuf_generated_type_serialization(const dsn::idl::test::test_protobuf_item &input,
+                                                 Format fmt)
 {
     const int bufsize = 2000;
     char buf[bufsize];
     dsn::blob b(buf, 0, bufsize);
     dsn::binary_writer writer(b);
-    if (fmt == format_binary)
-    {
+    if (fmt == format_binary) {
         dsn::marshall_protobuf_binary(writer, input);
-    }
-    else
-    {
+    } else {
         dsn::marshall_protobuf_json(writer, input);
     }
     dsn::binary_reader reader(b);
     dsn::idl::test::test_protobuf_item output;
-    if (fmt == format_binary)
-    {
+    if (fmt == format_binary) {
         dsn::unmarshall_protobuf_binary(reader, output);
-    }
-    else
-    {
+    } else {
         dsn::unmarshall_protobuf_json(reader, output);
     }
     EXPECT_EQ(input.bool_item(), output.bool_item());
@@ -340,16 +345,13 @@ void check_protobuf_generated_type_serialization(const dsn::idl::test::test_prot
     EXPECT_EQ(input.string_item(), output.string_item());
     EXPECT_FLOAT_EQ(input.float_item(), output.float_item());
     EXPECT_DOUBLE_EQ(input.double_item(), output.double_item());
-    for (int i = 0; i < input.repeated_int32_item_size(); i++)
-    {
-        EXPECT_EQ(input.repeated_int32_item().Get(i) , output.repeated_int32_item().Get(i));
+    for (int i = 0; i < input.repeated_int32_item_size(); i++) {
+        EXPECT_EQ(input.repeated_int32_item().Get(i), output.repeated_int32_item().Get(i));
     }
     EXPECT_EQ(input.map_int32_item_size(), output.map_int32_item_size());
-    for (auto i = input.map_int32_item().begin(); i != input.map_int32_item().end(); i++)
-    {
+    for (auto i = input.map_int32_item().begin(); i != input.map_int32_item().end(); i++) {
         EXPECT_TRUE(output.map_int32_item().find(i->first) != output.map_int32_item().end());
-        if (output.map_int32_item().find(i->first) != output.map_int32_item().end())
-        {
+        if (output.map_int32_item().find(i->first) != output.map_int32_item().end()) {
             EXPECT_EQ(i->second, output.map_int32_item().at(i->first));
         }
     }
@@ -370,12 +372,10 @@ void test_protobuf_generated_type_serialization(Format fmt)
     item.set_float_item(123.321);
     item.set_double_item(1234.4321);
     item.set_string_item("hello world");
-    for (int i = 0; i < container_n; i++)
-    {
+    for (int i = 0; i < container_n; i++) {
         item.add_repeated_int32_item(i);
     }
-    for (int i = 0; i < container_n; i++)
-    {
+    for (int i = 0; i < container_n; i++) {
         auto mp = item.mutable_map_int32_item();
         (*mp)[i] = 2 * i;
     }
@@ -390,8 +390,7 @@ bool prepare()
     idl_files.push_back("repo/counter.proto.annotations");
     idl_files.push_back("repo/counter.thrift");
     idl_files.push_back("repo/counter.thrift.annotations");
-    for (auto i : idl_files)
-    {
+    for (auto i : idl_files) {
         copy_file(combine(RESOURCE_ROOT, i), file("./"), ret);
     }
     return ret;
@@ -481,8 +480,7 @@ TEST(TEST_THRIFT_HELPER, CSHARP_JSON)
 
 GTEST_API_ int main(int argc, char **argv)
 {
-    if (argc < 3)
-    {
+    if (argc < 3) {
         std::cout << "invalid parameters" << std::endl;
         return 1;
     }
@@ -490,8 +488,7 @@ GTEST_API_ int main(int argc, char **argv)
     // RESOURCE_ROOT is the path where directory "repo" exists
     DSN_ROOT = std::string(argv[1]);
     RESOURCE_ROOT = std::string(argv[2]);
-    if (!prepare())
-    {
+    if (!prepare()) {
         return 1;
     }
     ::testing::InitGoogleTest(&argc, argv);

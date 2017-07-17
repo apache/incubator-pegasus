@@ -48,7 +48,8 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/cpp/perf_counter_.h>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 enum class config_status
 {
@@ -59,9 +60,9 @@ enum class config_status
 };
 
 ENUM_BEGIN(config_status, config_status::invalid_status)
-    ENUM_REG(config_status::not_pending)
-    ENUM_REG(config_status::pending_proposal)
-    ENUM_REG(config_status::pending_remote_sync)
+ENUM_REG(config_status::not_pending)
+ENUM_REG(config_status::pending_proposal)
+ENUM_REG(config_status::pending_remote_sync)
 ENUM_END(config_status)
 
 enum class pc_status
@@ -73,9 +74,9 @@ enum class pc_status
 };
 
 ENUM_BEGIN(pc_status, pc_status::invalid)
-    ENUM_REG(pc_status::healthy)
-    ENUM_REG(pc_status::ill)
-    ENUM_REG(pc_status::dead)
+ENUM_REG(pc_status::healthy)
+ENUM_REG(pc_status::ill)
+ENUM_REG(pc_status::dead)
 ENUM_END(pc_status)
 
 class pc_flags
@@ -93,8 +94,9 @@ public:
     // to store a expire timestamp, but a rpc_sender use this field
     // to suggest a ttl period
     std::vector<configuration_proposal_action> acts;
+
 public:
-    proposal_actions(): from_balancer(false) {}
+    proposal_actions() : from_balancer(false) {}
     void clear()
     {
         from_balancer = false;
@@ -106,7 +108,7 @@ public:
             return;
         acts.erase(acts.begin());
     }
-    void assign_cure_proposal(const configuration_proposal_action& act)
+    void assign_cure_proposal(const configuration_proposal_action &act)
     {
         from_balancer = false;
         acts.clear();
@@ -151,23 +153,19 @@ struct dropped_replica
 //   0 => equal
 //   negtive => d1 smaller than d2
 //   positive => d1 larger than d2
-inline int dropped_cmp(const dropped_replica& d1, const dropped_replica& d2)
+inline int dropped_cmp(const dropped_replica &d1, const dropped_replica &d2)
 {
-    if (d1.time != d2.time)
-    {
-        return (d1.time < d2.time) ? -1: 1;
+    if (d1.time != d2.time) {
+        return (d1.time < d2.time) ? -1 : 1;
     }
-    if (d1.ballot != d2.ballot)
-    {
-        return d1.ballot < d2.ballot ? -1: 1;
+    if (d1.ballot != d2.ballot) {
+        return d1.ballot < d2.ballot ? -1 : 1;
     }
-    if (d1.last_committed_decree != d2.last_committed_decree)
-    {
-        return d1.last_committed_decree < d2.last_committed_decree ? -1: 1;
+    if (d1.last_committed_decree != d2.last_committed_decree) {
+        return d1.last_committed_decree < d2.last_committed_decree ? -1 : 1;
     }
-    if (d1.last_prepared_decree != d2.last_prepared_decree)
-    {
-        return d1.last_prepared_decree < d2.last_prepared_decree ? -1: 1;
+    if (d1.last_prepared_decree != d2.last_prepared_decree) {
+        return d1.last_prepared_decree < d2.last_prepared_decree ? -1 : 1;
     }
     return 0;
 }
@@ -175,16 +173,16 @@ inline int dropped_cmp(const dropped_replica& d1, const dropped_replica& d2)
 class config_context
 {
 public:
-    partition_configuration* config_owner;
+    partition_configuration *config_owner;
     config_status stage;
-    //for server state's update config management
+    // for server state's update config management
     //[
     task_ptr pending_sync_task;
     std::shared_ptr<configuration_update_request> pending_sync_request;
     dsn_message_t msg;
     //]
 
-    //for load balancer's decision
+    // for load balancer's decision
     //[
     proposal_actions lb_actions;
     std::vector<dropped_replica> dropped;
@@ -201,24 +199,25 @@ public:
 public:
     void check_size();
     void cancel_sync();
-    std::vector<dropped_replica>::iterator find_from_dropped(const dsn::rpc_address& node);
+    std::vector<dropped_replica>::iterator find_from_dropped(const dsn::rpc_address &node);
 
     // return true if remove ok, false if node doesn't in dropped
-    bool remove_from_dropped(const dsn::rpc_address& node);
+    bool remove_from_dropped(const dsn::rpc_address &node);
 
     // put recently downgraded node to dropped
     // return true if put ok, false if the node has been in dropped
-    bool record_drop_history(const dsn::rpc_address& node);
+    bool record_drop_history(const dsn::rpc_address &node);
 
     // Notice: please make sure whether node is actually an inactive or a serving replica
     // ret:
     //   1 => node has been in the dropped
     //   0 => insert the info to the dropped
     //  -1 => info is too staled to insert
-    int collect_drop_replica(const dsn::rpc_address& node, const replica_info& info);
+    int collect_drop_replica(const dsn::rpc_address &node, const replica_info &info);
 
     // check if dropped vector satisfied the order
     bool check_order();
+
 public:
     // intialize to 4 statically.
     // and will be set by load-balancer module
@@ -227,29 +226,28 @@ public:
 
 struct partition_configuration_stateless
 {
-    partition_configuration& config;
-    partition_configuration_stateless(partition_configuration& pc): config(pc) {}
-    std::vector<dsn::rpc_address>& workers() { return config.last_drops; }
-    std::vector<dsn::rpc_address>& hosts() { return config.secondaries; }
-    bool is_host(const rpc_address& node) const
+    partition_configuration &config;
+    partition_configuration_stateless(partition_configuration &pc) : config(pc) {}
+    std::vector<dsn::rpc_address> &workers() { return config.last_drops; }
+    std::vector<dsn::rpc_address> &hosts() { return config.secondaries; }
+    bool is_host(const rpc_address &node) const
     {
-        return std::find(config.secondaries.begin(), config.secondaries.end(), node)!=config.secondaries.end();
+        return std::find(config.secondaries.begin(), config.secondaries.end(), node) !=
+               config.secondaries.end();
     }
-    bool is_worker(const rpc_address& node) const
+    bool is_worker(const rpc_address &node) const
     {
-        return std::find(config.last_drops.begin(), config.last_drops.end(), node)!=config.last_drops.end();
+        return std::find(config.last_drops.begin(), config.last_drops.end(), node) !=
+               config.last_drops.end();
     }
-    bool is_member(const rpc_address& node) const
-    {
-        return is_host(node) || is_worker(node);
-    }
+    bool is_member(const rpc_address &node) const { return is_host(node) || is_worker(node); }
 };
 
 class app_state;
 class app_state_helper
 {
 public:
-    app_state* owner;
+    app_state *owner;
     std::atomic_int partitions_in_progress;
     std::vector<config_context> contexts;
     dsn_message_t pending_response;
@@ -257,8 +255,9 @@ public:
     perf_counter_ writable_ill_partitions;
     perf_counter_ unwritable_ill_partitions;
     perf_counter_ dead_partitions;
+
 public:
-    app_state_helper(): owner(nullptr), partitions_in_progress(0)
+    app_state_helper() : owner(nullptr), partitions_in_progress(0)
     {
         contexts.clear();
         pending_response = nullptr;
@@ -266,24 +265,25 @@ public:
     void on_init_partitions();
     void clear_proposals()
     {
-        for (config_context& cc: contexts)
-        {
+        for (config_context &cc : contexts) {
             cc.lb_actions.clear();
         }
     }
 };
 
-class app_state: public app_info
+class app_state : public app_info
 {
 protected:
     std::string log_name;
+
 public:
-    app_state(const app_info& info);
+    app_state(const app_info &info);
+
 public:
-    const char* get_logname() const { return log_name.c_str();  }
-    std::shared_ptr<app_state_helper>    helpers;
+    const char *get_logname() const { return log_name.c_str(); }
+    std::shared_ptr<app_state_helper> helpers;
     std::vector<partition_configuration> partitions;
-    static std::shared_ptr<app_state> create(const app_info& info);
+    static std::shared_ptr<app_state> create(const app_info &info);
     dsn::blob to_json(app_status::type temp_status)
     {
         app_info another = *this;
@@ -296,26 +296,26 @@ public:
 typedef std::set<dsn::gpid> partition_set;
 typedef std::map<app_id, std::shared_ptr<app_state>> app_mapper;
 
-class node_state: public extensible_object<node_state, 4>
+class node_state : public extensible_object<node_state, 4>
 {
 private:
-    //partitions
+    // partitions
     std::map<int32_t, partition_set> app_primaries;
     std::map<int32_t, partition_set> app_partitions;
     unsigned total_primaries;
     unsigned total_partitions;
 
-    //status
+    // status
     bool is_alive;
     dsn::rpc_address address;
 
-    const partition_set* get_partitions(app_id id, bool only_primary) const;
-    partition_set* get_partitions(app_id id, bool only_primary, bool create_new);
+    const partition_set *get_partitions(app_id id, bool only_primary) const;
+    partition_set *get_partitions(app_id id, bool only_primary, bool create_new);
 
 public:
     node_state();
-    const partition_set* partitions(app_id id, bool only_primary) const;
-    partition_set* partitions(app_id id, bool only_primary);
+    const partition_set *partitions(app_id id, bool only_primary) const;
+    partition_set *partitions(app_id id, bool only_primary);
 
     unsigned primary_count(app_id id) const;
     unsigned secondary_count(app_id id) const { return partition_count(id) - primary_count(id); }
@@ -325,34 +325,33 @@ public:
     unsigned secondary_count() const { return total_partitions - total_primaries; }
     unsigned partition_count() const { return total_partitions; }
 
-    partition_status::type served_as(const gpid& pid) const;
+    partition_status::type served_as(const gpid &pid) const;
 
     bool alive() const { return is_alive; }
     void set_alive(bool alive) { is_alive = alive; }
     dsn::rpc_address addr() const { return address; }
-    void set_addr(const dsn::rpc_address& addr) { address = addr; }
+    void set_addr(const dsn::rpc_address &addr) { address = addr; }
 
-    void put_partition(const dsn::gpid& pid, bool is_primary);
-    void remove_partition(const dsn::gpid& pid, bool only_primary);
+    void put_partition(const dsn::gpid &pid, bool is_primary);
+    void remove_partition(const dsn::gpid &pid, bool only_primary);
 
-    bool for_each_partition(const std::function<bool (const dsn::gpid& pid)>& f) const;
-    bool for_each_primary(app_id id, const std::function<bool (const dsn::gpid& pid)>& f) const;
+    bool for_each_partition(const std::function<bool(const dsn::gpid &pid)> &f) const;
+    bool for_each_primary(app_id id, const std::function<bool(const dsn::gpid &pid)> &f) const;
 };
 
 typedef std::unordered_map<rpc_address, node_state> node_mapper;
-typedef std::map<dsn::gpid, std::shared_ptr<configuration_balancer_request> > migration_list;
+typedef std::map<dsn::gpid, std::shared_ptr<configuration_balancer_request>> migration_list;
 
 struct meta_view
 {
-    app_mapper* apps;
-    node_mapper* nodes;
+    app_mapper *apps;
+    node_mapper *nodes;
 };
 
-inline node_state* get_node_state(node_mapper& nodes, rpc_address addr, bool create_new)
+inline node_state *get_node_state(node_mapper &nodes, rpc_address addr, bool create_new)
 {
-    node_state* ns;
-    if (nodes.find(addr) == nodes.end())
-    {
+    node_state *ns;
+    if (nodes.find(addr) == nodes.end()) {
         if (!create_new)
             return nullptr;
         ns = &nodes[addr];
@@ -362,7 +361,7 @@ inline node_state* get_node_state(node_mapper& nodes, rpc_address addr, bool cre
     return ns;
 }
 
-inline bool is_node_alive(const node_mapper& nodes, rpc_address addr)
+inline bool is_node_alive(const node_mapper &nodes, rpc_address addr)
 {
     auto iter = nodes.find(addr);
     if (iter == nodes.end())
@@ -370,90 +369,90 @@ inline bool is_node_alive(const node_mapper& nodes, rpc_address addr)
     return iter->second.alive();
 }
 
-inline const partition_configuration* get_config(const app_mapper& apps, const dsn::gpid& gpid)
+inline const partition_configuration *get_config(const app_mapper &apps, const dsn::gpid &gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter==apps.end() || iter->second->status==app_status::AS_DROPPED)
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->partitions[gpid.get_partition_index()]);
 }
 
-inline partition_configuration* get_config(app_mapper& apps, const dsn::gpid& gpid)
+inline partition_configuration *get_config(app_mapper &apps, const dsn::gpid &gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter==apps.end() || iter->second->status==app_status::AS_DROPPED)
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->partitions[gpid.get_partition_index()]);
 }
 
-inline const config_context* get_config_context(const app_mapper& apps, const dsn::gpid& gpid)
+inline const config_context *get_config_context(const app_mapper &apps, const dsn::gpid &gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end() || iter->second->status==app_status::AS_DROPPED)
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
 }
 
-inline config_context* get_config_context(app_mapper& apps, const dsn::gpid& gpid)
+inline config_context *get_config_context(app_mapper &apps, const dsn::gpid &gpid)
 {
     auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end() || iter->second->status==app_status::AS_DROPPED)
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
     return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
 }
 
-inline int replica_count(const partition_configuration& pc)
+inline int replica_count(const partition_configuration &pc)
 {
-    int ans = (pc.primary.is_invalid())?0:1;
+    int ans = (pc.primary.is_invalid()) ? 0 : 1;
     return ans + pc.secondaries.size();
 }
 
-inline void for_each_available_app(const app_mapper& apps, const std::function<bool (const std::shared_ptr<app_state>&)>& action)
+inline void
+for_each_available_app(const app_mapper &apps,
+                       const std::function<bool(const std::shared_ptr<app_state> &)> &action)
 {
-    for (const auto& p: apps)
-    {
-        if (p.second->status == app_status::AS_AVAILABLE)
-        {
+    for (const auto &p : apps) {
+        if (p.second->status == app_status::AS_AVAILABLE) {
             if (!action(p.second))
                 break;
         }
     }
 }
 
-inline int count_partitions(const app_mapper& apps)
+inline int count_partitions(const app_mapper &apps)
 {
     int result = 0;
-    for (auto iter: apps)
+    for (auto iter : apps)
         if (iter.second->status == app_status::AS_AVAILABLE)
             result += iter.second->partition_count;
     return result;
 }
 
-void when_update_replicas(config_type::type t, const std::function<void (bool)>& func);
-void maintain_drops(/*inout*/std::vector<dsn::rpc_address>& drops, const dsn::rpc_address& node, config_type::type t);
+void when_update_replicas(config_type::type t, const std::function<void(bool)> &func);
+void maintain_drops(/*inout*/ std::vector<dsn::rpc_address> &drops,
+                    const dsn::rpc_address &node,
+                    config_type::type t);
 
-inline bool has_seconds_expired(uint64_t second_ts)
-{
-    return second_ts*1000 < dsn_now_ms();
-}
+inline bool has_seconds_expired(uint64_t second_ts) { return second_ts * 1000 < dsn_now_ms(); }
 
 inline bool has_milliseconds_expired(uint64_t milliseconds_ts)
 {
     return milliseconds_ts < dsn_now_ms();
 }
-
-}}
-
-namespace dsn { namespace json {
-
-inline void json_encode(std::stringstream &out, const replication::app_state& state)
-{
-    json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info&)state);
+}
 }
 
-inline void json_decode(dsn::json::string_tokenizer &in, replication::app_state& state)
+namespace dsn {
+namespace json {
+
+inline void json_encode(std::stringstream &out, const replication::app_state &state)
 {
-    json_forwarder<dsn::app_info>::decode(in, (dsn::app_info&)state);
+    json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info &)state);
 }
 
-}}
+inline void json_decode(dsn::json::string_tokenizer &in, replication::app_state &state)
+{
+    json_forwarder<dsn::app_info>::decode(in, (dsn::app_info &)state);
+}
+}
+}

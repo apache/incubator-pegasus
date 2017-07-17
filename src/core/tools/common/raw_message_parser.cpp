@@ -46,13 +46,12 @@ namespace dsn {
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-//static
+// static
 void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
 {
-    if (!sp->is_client())
-    {
-        message_ex* special_msg = message_ex::create_receive_message_with_standalone_header(blob());
-        dsn::message_header* header = special_msg->header;
+    if (!sp->is_client()) {
+        message_ex *special_msg = message_ex::create_receive_message_with_standalone_header(blob());
+        dsn::message_header *header = special_msg->header;
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
         header->from_address = sp->remote_address();
@@ -69,38 +68,36 @@ raw_message_parser::raw_message_parser()
 {
     bool hooked = false;
     static std::atomic_bool s_handler_hooked(false);
-    if (s_handler_hooked.compare_exchange_strong(hooked, true))
-    {
-        ddebug("join point on_rpc_session_disconnected registered to notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT");
+    if (s_handler_hooked.compare_exchange_strong(hooked, true)) {
+        ddebug("join point on_rpc_session_disconnected registered to notify disconnect with "
+               "RPC_CALL_RAW_SESSION_DISCONNECT");
         rpc_session::on_rpc_session_disconnected.put_back(
-            raw_message_parser::notify_rpc_session_disconnected, 
-            "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT"
-        );
+            raw_message_parser::notify_rpc_session_disconnected,
+            "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT");
     }
 }
 
 void raw_message_parser::reset() {}
 
-message_ex* raw_message_parser::get_message_on_receive(message_reader* reader, /*out*/int& read_next)
+message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
+                                                       /*out*/ int &read_next)
 {
-    if (reader->_buffer_occupied == 0)
-    {
+    if (reader->_buffer_occupied == 0) {
         if (reader->_buffer.length() > 0)
             read_next = reader->_buffer.length();
         else
             read_next = reader->_buffer_block_size;
         return nullptr;
-    }
-    else
-    {
+    } else {
         auto msg_length = reader->_buffer_occupied;
         dsn::blob msg_blob = reader->_buffer.range(0, msg_length);
-        message_ex* new_message = message_ex::create_receive_message_with_standalone_header(msg_blob);
-        message_header* header = new_message->header;
+        message_ex *new_message =
+            message_ex::create_receive_message_with_standalone_header(msg_blob);
+        message_header *header = new_message->header;
 
         header->hdr_length = sizeof(*header);
         header->body_length = msg_length;
-        strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", DSN_MAX_TASK_CODE_NAME_LENGTH);        
+        strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", DSN_MAX_TASK_CODE_NAME_LENGTH);
         header->gpid.value = 0;
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
@@ -116,29 +113,23 @@ message_ex* raw_message_parser::get_message_on_receive(message_reader* reader, /
     }
 }
 
-int raw_message_parser::get_buffer_count_on_send(message_ex *msg)
-{
-    return msg->buffers.size();
-}
+int raw_message_parser::get_buffer_count_on_send(message_ex *msg) { return msg->buffers.size(); }
 
 int raw_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
 {
-    //we must skip the message header
+    // we must skip the message header
     unsigned int offset = sizeof(message_header);
-    int i=0;
-    for (blob& buf : msg->buffers)
-    {
-        if (offset >= buf.length())
-        {
+    int i = 0;
+    for (blob &buf : msg->buffers) {
+        if (offset >= buf.length()) {
             offset -= buf.length();
             continue;
         }
-        buffers[i].buf = (void*)(buf.data() + offset);
+        buffers[i].buf = (void *)(buf.data() + offset);
         buffers[i].sz = buf.length() - offset;
         offset = 0;
         ++i;
     }
     return i;
 }
-
 }

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,20 +32,20 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# pragma once
-# include "echo.client.h"
-# include "echo.client.perf.h"
-# include "echo.server.h"
+#pragma once
+#include "echo.client.h"
+#include "echo.client.perf.h"
+#include "echo.server.h"
 
-namespace dsn { namespace example { 
+namespace dsn {
+namespace example {
 // server app example
-class echo_server_app : 
-    public ::dsn::service_app
+class echo_server_app : public ::dsn::service_app
 {
 public:
     echo_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char **argv)
     {
         _echo_svc.open_service();
         return ::dsn::ERR_OK;
@@ -62,33 +62,29 @@ private:
 };
 
 // client app example
-class echo_client_app : 
-    public ::dsn::service_app, 
-    public virtual ::dsn::clientlet
+class echo_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     echo_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
-    
-    ~echo_client_app() 
-    {
-        stop();
-    }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    ~echo_client_app() { stop(); }
+
+    virtual ::dsn::error_code start(int argc, char **argv)
     {
         if (argc < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
         _echo_client.reset(new echo_client(_server));
-        _timer = ::dsn::tasking::enqueue_timer(LPC_ECHO_TEST_TIMER, this, [this]{on_test_timer();}, std::chrono::seconds(1));
+        _timer = ::dsn::tasking::enqueue_timer(
+            LPC_ECHO_TEST_TIMER, this, [this] { on_test_timer(); }, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
     virtual ::dsn::error_code stop(bool cleanup = false)
     {
         _timer->cancel(true);
- 
+
         _echo_client.reset();
 
         return ::dsn::ERR_OK;
@@ -98,39 +94,30 @@ public:
     {
         // test for service 'echo'
         {
-            //sync:
+            // sync:
             auto result = _echo_client->ping_sync({});
-            std::cout << "call RPC_ECHO_ECHO_PING end, return " << result.first.to_string() << std::endl;
-            //async: 
+            std::cout << "call RPC_ECHO_ECHO_PING end, return " << result.first.to_string()
+                      << std::endl;
+            // async:
             //_echo_client->begin_ping(req);
-           
         }
     }
 
 private:
     ::dsn::task_ptr _timer;
     ::dsn::rpc_address _server;
-    
+
     std::unique_ptr<echo_client> _echo_client;
 };
 
-class echo_perf_test_client_app :
-    public ::dsn::service_app, 
-    public virtual ::dsn::clientlet
+class echo_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    echo_perf_test_client_app(dsn_gpid gpid)
-        : ::dsn::service_app(gpid)
-    {
-        _echo_client = nullptr;
-    }
+    echo_perf_test_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) { _echo_client = nullptr; }
 
-    ~echo_perf_test_client_app()
-    {
-        stop();
-    }
+    ~echo_perf_test_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char **argv)
     {
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -144,18 +131,17 @@ public:
 
     virtual ::dsn::error_code stop(bool cleanup = false)
     {
-        if (_echo_client != nullptr)
-        {
+        if (_echo_client != nullptr) {
             delete _echo_client;
             _echo_client = nullptr;
         }
 
         return ::dsn::ERR_OK;
     }
-    
+
 private:
     echo_perf_test_client *_echo_client;
     ::dsn::rpc_address _server;
 };
-
-} } 
+}
+}

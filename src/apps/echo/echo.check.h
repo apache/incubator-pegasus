@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,21 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool/global_checker.h>
+#include <dsn/tool/global_checker.h>
 
-namespace dsn { namespace example {  
+namespace dsn {
+namespace example {
 
-class echo_checker 
-    : public ::dsn::tools::checker
+class echo_checker : public ::dsn::tools::checker
 {
 public:
-    echo_checker(const char* name, dsn_app_info* info, int count)
-          : ::dsn::tools::checker(name, info, count)
+    echo_checker(const char *name, dsn_app_info *info, int count)
+        : ::dsn::tools::checker(name, info, count)
     {
-        for (auto& app : _apps)
-        {
+        for (auto &app : _apps) {
             // TODO: identify your own type of service apps
-            //if (0 == strcmp(app.second.type, "meta"))
+            // if (0 == strcmp(app.second.type, "meta"))
             //{
             //    _meta_servers.push_back((meta_service_app*)app.second.app_context_ptr);
             //}
@@ -57,7 +56,7 @@ public:
     virtual void check() override
     {
         // nothing to check
-        //if (_meta_servers.size() == 0)
+        // if (_meta_servers.size() == 0)
         //    return;
 
         // check all invariances
@@ -73,14 +72,15 @@ public:
             auto ep = r->primary_address();
             if (!meta->_service->_failure_detector->is_worker_connected(ep))
             {
-                dassert(!r->_stub->is_connected(), "when meta server says a replica is dead, it must be dead");
+                dassert(!r->_stub->is_connected(), "when meta server says a replica is dead, it must
+        be dead");
             }
         }
         */
     }
 
 private:
-    //std::vector<meta_service_app*>        _meta_servers;
+    // std::vector<meta_service_app*>        _meta_servers;
 };
-
-} } 
+}
+}

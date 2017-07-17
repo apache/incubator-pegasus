@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,20 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/utility/join_point.h>
-# include <dsn/service_api_c.h>
+#include <dsn/utility/join_point.h>
+#include <dsn/service_api_c.h>
 
-namespace dsn
-{
+namespace dsn {
 
-join_point_base::join_point_base(const char* name)
+join_point_base::join_point_base(const char *name)
 {
     _name = std::string(name);
     _hdr.next = _hdr.prev = &_hdr;
     _hdr.name = "";
 }
 
-bool join_point_base::put_front(void* fn, const char* name, bool is_native)
+bool join_point_base::put_front(void *fn, const char *name, bool is_native)
 {
     auto e = new_entry(fn, name, is_native);
     auto e1 = _hdr.next;
@@ -59,7 +58,7 @@ bool join_point_base::put_front(void* fn, const char* name, bool is_native)
     return true;
 }
 
-bool join_point_base::put_back(void* fn, const char* name, bool is_native)
+bool join_point_base::put_back(void *fn, const char *name, bool is_native)
 {
     auto e = new_entry(fn, name, is_native);
     auto e1 = _hdr.prev;
@@ -72,12 +71,11 @@ bool join_point_base::put_back(void* fn, const char* name, bool is_native)
     return true;
 }
 
-bool join_point_base::put_before(const char* base, void* fn, const char* name, bool is_native)
+bool join_point_base::put_before(const char *base, void *fn, const char *name, bool is_native)
 {
     auto e0 = get_by_name(base);
-    if (e0 == nullptr)
-    {
-        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
+    if (e0 == nullptr) {
+        dassert(false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
     }
 
@@ -88,16 +86,15 @@ bool join_point_base::put_before(const char* base, void* fn, const char* name, b
     e->next = e0;
     e0->prev = e;
     e->prev = e1;
-    
+
     return true;
 }
 
-bool join_point_base::put_after(const char* base, void* fn, const char* name, bool is_native)
+bool join_point_base::put_after(const char *base, void *fn, const char *name, bool is_native)
 {
     auto e0 = get_by_name(base);
-    if (e0 == nullptr)
-    {
-        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
+    if (e0 == nullptr) {
+        dassert(false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
     }
 
@@ -108,32 +105,28 @@ bool join_point_base::put_after(const char* base, void* fn, const char* name, bo
     e->prev = e0;
     e0->next = e;
     e->next = e1;
-    
+
     return true;
 }
 
-bool join_point_base::put_replace(const char* base, void* fn, const char* name)
+bool join_point_base::put_replace(const char *base, void *fn, const char *name)
 {
     auto e0 = get_by_name(base);
-    if (e0 == nullptr)
-    {
-        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
+    if (e0 == nullptr) {
+        dassert(false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
-    }
-    else
-    {
+    } else {
         e0->func = fn;
         e0->name = name;
         return true;
     }
 }
 
-bool join_point_base::remove(const char* name)
+bool join_point_base::remove(const char *name)
 {
     auto e0 = get_by_name(name);
-    if (e0 == nullptr)
-    {
-        dassert (false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+    if (e0 == nullptr) {
+        dassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -143,7 +136,8 @@ bool join_point_base::remove(const char* name)
     return true;
 }
 
-join_point_base::advice_entry* join_point_base::new_entry(void* fn, const char* name, bool is_native)
+join_point_base::advice_entry *
+join_point_base::new_entry(void *fn, const char *name, bool is_native)
 {
     auto e = new advice_entry();
     e->name = std::string(name);
@@ -153,11 +147,10 @@ join_point_base::advice_entry* join_point_base::new_entry(void* fn, const char* 
     return e;
 }
 
-join_point_base::advice_entry* join_point_base::get_by_name(const char* name)
+join_point_base::advice_entry *join_point_base::get_by_name(const char *name)
 {
     auto p = _hdr.next;
-    while (p != &_hdr)
-    {
+    while (p != &_hdr) {
         if (strcmp(name, p->name.c_str()) == 0)
             return p;
 

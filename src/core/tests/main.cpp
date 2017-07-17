@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,11 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <iostream>
-# include "gtest/gtest.h"
-# include "test_utils.h"
+#include <iostream>
+#include "gtest/gtest.h"
+#include "test_utils.h"
 
-# include "hpc_aio_provider_for_test.h"
+#include "hpc_aio_provider_for_test.h"
 
 extern void task_engine_module_init();
 extern void command_manager_module_init();
@@ -45,11 +45,12 @@ extern void command_manager_module_init();
 int g_test_count = 0;
 int g_test_ret = 0;
 
-GTEST_API_ int main(int argc, char **argv) 
+GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>("dsn::test::hpc_aio_provider_for_test");
+    dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>(
+        "dsn::test::hpc_aio_provider_for_test");
 
     // register all tools
     task_engine_module_init();
@@ -57,48 +58,43 @@ GTEST_API_ int main(int argc, char **argv)
 
     // register all possible services
     dsn::register_app<test_client>("test");
-    
+
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, false);
 
     // run in-rDSN tests
-    while (g_test_count == 0)
-    {
+    while (g_test_count == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    if (g_test_ret != 0)
-    {
+    if (g_test_ret != 0) {
 #ifndef ENABLE_GCOV
         dsn_exit(g_test_ret);
 #endif
         return g_test_ret;
     }
 
-    if (strcmp("simulator", dsn_config_get_value_string("core", "tool", "simulator", "")) != 0)
-    {
+    if (strcmp("simulator", dsn_config_get_value_string("core", "tool", "simulator", "")) != 0) {
         // run out-rDSN tests in other threads
         std::cout << "=========================================================== " << std::endl;
         std::cout << "================== run in non-rDSN threads ================ " << std::endl;
         std::cout << "=========================================================== " << std::endl;
-        std::thread t([]()
-        {
+        std::thread t([]() {
             dsn_mimic_app("client", 1);
             exec_tests();
         });
         t.join();
-        if (g_test_ret != 0)
-        {
-    #ifndef ENABLE_GCOV
+        if (g_test_ret != 0) {
+#ifndef ENABLE_GCOV
             dsn_exit(g_test_ret);
-    #endif
+#endif
             return g_test_ret;
         }
     }
 
-    // exit without any destruction
+// exit without any destruction
 #ifndef ENABLE_GCOV
     dsn_exit(0);
 #endif
-    return 0;    
+    return 0;
 }

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,30 +33,25 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/env_provider.h>
-# include <dsn/utility/utils.h>
-# include <chrono>
+#include <dsn/tool-api/env_provider.h>
+#include <dsn/utility/utils.h>
+#include <chrono>
 
 namespace dsn {
 
 //------------ env_provider ---------------
 __thread unsigned int env_provider__tls_magic;
-__thread std::ranlux48_base* env_provider__rng;
+__thread std::ranlux48_base *env_provider__rng;
 
-env_provider::env_provider(env_provider* inner_provider)
-{
-}
+env_provider::env_provider(env_provider *inner_provider) {}
 
-uint64_t env_provider::now_ns() const 
-{
-    return utils::get_current_physical_time_ns(); 
-}
+uint64_t env_provider::now_ns() const { return utils::get_current_physical_time_ns(); }
 
 void env_provider::set_thread_local_random_seed(int s)
 {
-    if (env_provider__tls_magic != 0xdeadbeef)
-    {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
+    if (env_provider__tls_magic != 0xdeadbeef) {
+        env_provider__rng =
+            new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
         env_provider__tls_magic = 0xdeadbeef;
     }
 
@@ -66,9 +61,9 @@ void env_provider::set_thread_local_random_seed(int s)
 uint64_t env_provider::random64(uint64_t min, uint64_t max)
 {
     dassert(min <= max, "invalid random range");
-    if (env_provider__tls_magic != 0xdeadbeef)
-    {
-        env_provider__rng = new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
+    if (env_provider__tls_magic != 0xdeadbeef) {
+        env_provider__rng =
+            new std::remove_pointer<decltype(env_provider__rng)>::type(std::random_device{}());
         env_provider__tls_magic = 0xdeadbeef;
     }
     return std::uniform_int_distribution<uint64_t>{min, max}(*env_provider__rng);

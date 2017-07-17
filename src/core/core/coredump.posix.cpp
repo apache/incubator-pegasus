@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,66 +33,63 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#ifndef _WIN32
 
-# ifndef _WIN32
+#include "coredump.h"
+#include <dsn/tool_api.h>
+#include <sys/types.h>
+#include <signal.h>
 
-# include "coredump.h"
-# include <dsn/tool_api.h>
-# include <sys/types.h>
-# include <signal.h>
-
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "coredump"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "coredump"
 
 namespace dsn {
-    namespace utils {
+namespace utils {
 
-        static std::string s_dump_dir;
-        static void handle_core_dump(int);
-        static void handle_term(int);
+static std::string s_dump_dir;
+static void handle_core_dump(int);
+static void handle_term(int);
 
-        void coredump::init(const char* dump_dir)
-        {
-            s_dump_dir = dump_dir;
+void coredump::init(const char *dump_dir)
+{
+    s_dump_dir = dump_dir;
 
-            signal(SIGSEGV, handle_core_dump);
-            signal(SIGTERM, handle_term);
-        }
-
-        void coredump::write()
-        {
-            // TODO: not implemented
-            //
-
-            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
-        }
-
-        static void handle_core_dump(int signal_id)
-        {
-            printf("got signal id: %d\n", signal_id);
-            fflush(stdout);
-            /*
-             * firstly we must set the sig_handler to default,
-             * to prevent the possible inifinite loop
-             * for example: an sigsegv in the coredump::write()
-             */
-            if (signal_id == SIGSEGV)
-            {
-                signal(SIGSEGV, SIG_DFL);
-            }
-            coredump::write();
-        }
-
-        static void handle_term(int signal_id)
-        {
-            printf("got signal id: %d\n", signal_id);
-            fflush(stdout);
-            dsn_exit(0);
-        }
-    }
+    signal(SIGSEGV, handle_core_dump);
+    signal(SIGTERM, handle_term);
 }
 
-# endif
+void coredump::write()
+{
+    // TODO: not implemented
+    //
 
+    ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
+}
+
+static void handle_core_dump(int signal_id)
+{
+    printf("got signal id: %d\n", signal_id);
+    fflush(stdout);
+    /*
+     * firstly we must set the sig_handler to default,
+     * to prevent the possible inifinite loop
+     * for example: an sigsegv in the coredump::write()
+     */
+    if (signal_id == SIGSEGV) {
+        signal(SIGSEGV, SIG_DFL);
+    }
+    coredump::write();
+}
+
+static void handle_term(int signal_id)
+{
+    printf("got signal id: %d\n", signal_id);
+    fflush(stdout);
+    dsn_exit(0);
+}
+}
+}
+
+#endif

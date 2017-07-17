@@ -37,7 +37,8 @@
 #include <dsn/cpp/auto_codes.h>
 
 #include "zookeeper_error.h"
-namespace dsn { namespace dist {
+namespace dsn {
+namespace dist {
 
 error_code from_zerror(int zerr)
 {
@@ -55,5 +56,5 @@ error_code from_zerror(int zerr)
         return ERR_INCONSISTENT_STATE;
     return ERR_ZOOKEEPER_OPERATION;
 }
-
-}}
+}
+}

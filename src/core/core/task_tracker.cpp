@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,149 +33,130 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/task_tracker.h>
-# include <dsn/tool-api/task.h>
-# include <dsn/tool_api.h>
+#include <dsn/tool-api/task_tracker.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/tool_api.h>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "task_tracker"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "task_tracker"
 
-namespace dsn 
+namespace dsn {
+
+task_tracker::task_tracker(int task_bucket_count) : _task_bucket_count(task_bucket_count)
 {
+    _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
+    _outstanding_tasks = new dlink[_task_bucket_count];
+}
 
-    task_tracker::task_tracker(int task_bucket_count)
-        : _task_bucket_count(task_bucket_count)
+task_tracker::~task_tracker()
+{
+    cancel_outstanding_tasks();
+
+    delete[] _outstanding_tasks;
+    delete[] _outstanding_tasks_lock;
+}
+
+// TODO:
+// hack for wait/cancel inside spin locks
+struct tls_tracker_hack
+{
+    unsigned int magic;
+    bool is_simulator;
+
+    bool under_simulation()
     {
-        _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
-        _outstanding_tasks = new dlink[_task_bucket_count];
-    }
-
-    task_tracker::~task_tracker()
-    {
-        cancel_outstanding_tasks();
-
-        delete[] _outstanding_tasks;
-        delete[] _outstanding_tasks_lock;
-    }
-
-    // TODO:
-    // hack for wait/cancel inside spin locks
-    struct tls_tracker_hack
-    {
-        unsigned int  magic;
-        bool is_simulator;
-
-        bool under_simulation()
-        {
-            if (magic != 0xdeadbeef)
-            {
-                is_simulator = (dsn::tools::get_current_tool()->name() == "simulator");
-                magic = 0xdeadbeef;
-            }
-            return is_simulator;
+        if (magic != 0xdeadbeef) {
+            is_simulator = (dsn::tools::get_current_tool()->name() == "simulator");
+            magic = 0xdeadbeef;
         }
-    };
+        return is_simulator;
+    }
+};
 
-    static __thread tls_tracker_hack s_hack;
+static __thread tls_tracker_hack s_hack;
 
-    void task_tracker::wait_outstanding_tasks()
-    {
-        for (int i = 0; i < _task_bucket_count; i++)
-        {
-            while (true)
+void task_tracker::wait_outstanding_tasks()
+{
+    for (int i = 0; i < _task_bucket_count; i++) {
+        while (true) {
+            trackable_task::owner_delete_state prepare_state;
+            trackable_task *tcm;
+
             {
-                trackable_task::owner_delete_state prepare_state;
-                trackable_task *tcm;
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                auto n = _outstanding_tasks[i].next();
+                if (n != &_outstanding_tasks[i]) {
+                    tcm = CONTAINING_RECORD(n, trackable_task, _dl);
 
-                {
-                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
-                    auto n = _outstanding_tasks[i].next();
-                    if (n != &_outstanding_tasks[i])
-                    {
-                        tcm = CONTAINING_RECORD(n, trackable_task, _dl);
+                    // try to get the lock
+                    prepare_state = tcm->owner_delete_prepare();
+                } else
+                    break; // assuming nobody is putting tasks into it anymore
+            }
 
-                        // try to get the lock
-                        prepare_state = tcm->owner_delete_prepare();
-                    }
-                    else
-                        break; // assuming nobody is putting tasks into it anymore
+            task *tsk;
+            switch (prepare_state) {
+            // tracker get the lock
+            case trackable_task::OWNER_DELETE_NOT_LOCKED:
+                if (s_hack.under_simulation()) {
+                    tsk = (task *)(tcm->_task);
+                    tsk->add_ref(); // released after delete commit
+                    tcm->owner_delete_commit();
+
+                    tsk->wait();        // wait outside the delete spin lock
+                    tsk->release_ref(); // added before delete commit
+                } else {
+                    dsn_task_wait(tcm->_task);
+                    tcm->owner_delete_commit();
                 }
-
-                task* tsk;
-                switch (prepare_state)
-                {
-                // tracker get the lock
-                case trackable_task::OWNER_DELETE_NOT_LOCKED:
-                    if (s_hack.under_simulation())
-                    {
-                        tsk = (task*)(tcm->_task);
-                        tsk->add_ref();    // released after delete commit           
-                        tcm->owner_delete_commit();
-
-                        tsk->wait(); // wait outside the delete spin lock
-                        tsk->release_ref(); // added before delete commit
-                    }
-                    else
-                    {
-                        dsn_task_wait(tcm->_task);
-                        tcm->owner_delete_commit();
-                    }
-                    break;
-                case trackable_task::OWNER_DELETE_LOCKED:
-                case trackable_task::OWNER_DELETE_FINISHED:
-                    break;
-                }
+                break;
+            case trackable_task::OWNER_DELETE_LOCKED:
+            case trackable_task::OWNER_DELETE_FINISHED:
+                break;
             }
         }
     }
+}
 
-    void task_tracker::cancel_outstanding_tasks()
-    {
-        for (int i = 0; i < _task_bucket_count; i++)
-        {
-            while (true)
+void task_tracker::cancel_outstanding_tasks()
+{
+    for (int i = 0; i < _task_bucket_count; i++) {
+        while (true) {
+            trackable_task::owner_delete_state prepare_state;
+            trackable_task *tcm;
+
             {
-                trackable_task::owner_delete_state prepare_state;
-                trackable_task *tcm;
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                auto n = _outstanding_tasks[i].next();
+                if (n != &_outstanding_tasks[i]) {
+                    tcm = CONTAINING_RECORD(n, trackable_task, _dl);
+                    prepare_state = tcm->owner_delete_prepare();
+                } else
+                    break; // assuming nobody is putting tasks into it anymore
+            }
 
-                {
-                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
-                    auto n = _outstanding_tasks[i].next();
-                    if (n != &_outstanding_tasks[i])
-                    {
-                        tcm = CONTAINING_RECORD(n, trackable_task, _dl);
-                        prepare_state = tcm->owner_delete_prepare();
-                    }
-                    else
-                        break; // assuming nobody is putting tasks into it anymore
+            task *tsk;
+            switch (prepare_state) {
+            case trackable_task::OWNER_DELETE_NOT_LOCKED:
+                if (s_hack.under_simulation()) {
+                    tsk = (task *)(tcm->_task);
+                    tsk->add_ref(); // released after delete commit
+                    tcm->owner_delete_commit();
+
+                    tsk->cancel(true);  // cancel outside the delete spin lock
+                    tsk->release_ref(); // added before delete commit
+                } else {
+                    dsn_task_cancel(tcm->_task, true);
+                    tcm->owner_delete_commit();
                 }
-
-                task* tsk;
-                switch (prepare_state)
-                {
-                case trackable_task::OWNER_DELETE_NOT_LOCKED:
-                    if (s_hack.under_simulation())
-                    {
-                        tsk = (task*)(tcm->_task);
-                        tsk->add_ref();    // released after delete commit           
-                        tcm->owner_delete_commit();
-
-                        tsk->cancel(true); // cancel outside the delete spin lock
-                        tsk->release_ref(); // added before delete commit
-                    }
-                    else
-                    {
-                        dsn_task_cancel(tcm->_task, true);
-                        tcm->owner_delete_commit();
-                    }
-                    break;
-                case trackable_task::OWNER_DELETE_LOCKED:
-                case trackable_task::OWNER_DELETE_FINISHED:
-                    break;
-                }
+                break;
+            case trackable_task::OWNER_DELETE_LOCKED:
+            case trackable_task::OWNER_DELETE_FINISHED:
+                break;
             }
         }
     }
+}
 }

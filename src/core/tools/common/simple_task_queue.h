@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,38 +35,38 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
-# include <dsn/utility/priority_queue.h>
-# include <boost/asio.hpp>
+#include <dsn/tool_api.h>
+#include <dsn/utility/priority_queue.h>
+#include <boost/asio.hpp>
 
 namespace dsn {
-    namespace tools {
-        class simple_task_queue : public task_queue
-        {
-        public:
-            simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+namespace tools {
+class simple_task_queue : public task_queue
+{
+public:
+    simple_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
 
-            virtual void     enqueue(task* task) override;
-            virtual task*    dequeue(/*inout*/int& batch_size) override;
+    virtual void enqueue(task *task) override;
+    virtual task *dequeue(/*inout*/ int &batch_size) override;
 
-        private:
-            typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;
-            tqueue _samples;
-        };
+private:
+    typedef utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT> tqueue;
+    tqueue _samples;
+};
 
-        class simple_timer_service : public timer_service
-        {
-        public:
-            simple_timer_service(service_node* node, timer_service* inner_provider);
+class simple_timer_service : public timer_service
+{
+public:
+    simple_timer_service(service_node *node, timer_service *inner_provider);
 
-            // after milliseconds, the provider should call task->enqueue()        
-            virtual void add_timer(task* task) override;
+    // after milliseconds, the provider should call task->enqueue()
+    virtual void add_timer(task *task) override;
 
-            virtual void start(io_modifer& ctx) override;
+    virtual void start(io_modifer &ctx) override;
 
-        private:
-            boost::asio::io_service      _ios;
-            std::shared_ptr<std::thread> _worker;
-        };
-    }
+private:
+    boost::asio::io_service _ios;
+    std::shared_ptr<std::thread> _worker;
+};
+}
 }

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,38 +33,33 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include "simple_kv.client.2.h"
+#pragma once
+#include "simple_kv.client.2.h"
 
-namespace dsn { namespace replication { namespace application {  
+namespace dsn {
+namespace replication {
+namespace application {
 
- 
-class simple_kv_perf_test_client 
-    : public simple_kv_client2, 
-      public ::dsn::service::perf_client_helper 
+class simple_kv_perf_test_client : public simple_kv_client2,
+                                   public ::dsn::service::perf_client_helper
 {
 public:
     using simple_kv_client2::simple_kv_client2;
-    
-    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
+
+    virtual void
+    send_one(int payload_bytes, int key_space_size, const std::vector<double> &ratios) override
     {
         auto prob = (double)dsn_random32(0, 1000) / 1000.0;
-        if (0) {}
-        else if (prob <= ratios[0])
-        {
+        if (0) {
+        } else if (prob <= ratios[0]) {
             send_one_read(payload_bytes, key_space_size);
-        }
-        else if (prob <= ratios[1])
-        {
+        } else if (prob <= ratios[1]) {
             send_one_write(payload_bytes, key_space_size);
-        }
-        else if (prob <= ratios[2])
-        {
+        } else if (prob <= ratios[2]) {
             send_one_append(payload_bytes, key_space_size);
+        } else { /* nothing to do */
         }
-        else { /* nothing to do */ }
     }
-    
 
     void send_one_read(int payload_bytes, int key_space_size)
     {
@@ -72,16 +67,14 @@ public:
         std::stringstream ss;
         ss << "key." << rs << "." << std::string(payload_bytes, 'x');
 
-        read(
-            ss.str(),
-            [this, context = prepare_send_one()](error_code err, std::string&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout, 0, rs
-            );
+        read(ss.str(),
+             [ this, context = prepare_send_one() ](error_code err, std::string && resp) {
+                 end_send_one(context, err);
+             },
+             _timeout,
+             0,
+             rs);
     }
-
 
     void send_one_write(int payload_bytes, int key_space_size)
     {
@@ -89,34 +82,32 @@ public:
         std::stringstream ss;
         ss << "key." << rs;
 
-        kv_pair req = { ss.str(),  std::string(payload_bytes, 'x') };
-        write(
-            req,
-            [this, context = prepare_send_one()](error_code err, int32_t&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout, 0, rs
-            );
+        kv_pair req = {ss.str(), std::string(payload_bytes, 'x')};
+        write(req,
+              [ this, context = prepare_send_one() ](error_code err, int32_t && resp) {
+                  end_send_one(context, err);
+              },
+              _timeout,
+              0,
+              rs);
     }
-
 
     void send_one_append(int payload_bytes, int key_space_size)
     {
         auto rs = random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs;
-        kv_pair req = { ss.str(), std::string(payload_bytes, 'x') };;
-        append(
-            req,
-            [this, context = prepare_send_one()](error_code err, int32_t&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout, 0, rs
-            );
+        kv_pair req = {ss.str(), std::string(payload_bytes, 'x')};
+        ;
+        append(req,
+               [ this, context = prepare_send_one() ](error_code err, int32_t && resp) {
+                   end_send_one(context, err);
+               },
+               _timeout,
+               0,
+               rs);
     }
-
 };
-
-} } } 
+}
+}
+}

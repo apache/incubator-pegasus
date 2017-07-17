@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,12 +35,12 @@
 
 #pragma once
 
-
 #include "../client_lib/replication_common.h"
 #include <vector>
 #include <atomic>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class mutation_cache
 {
@@ -48,28 +48,27 @@ public:
     mutation_cache(decree init_decree, int max_count);
     ~mutation_cache();
 
-    error_code   put(mutation_ptr& mu);
+    error_code put(mutation_ptr &mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
     mutation_ptr remove_mutation_by_decree(decree decree);
-    void         reset(decree init_decree, bool clear_mutations);
+    void reset(decree init_decree, bool clear_mutations);
 
-    decree  min_decree() const { return _start_decree; } 
-    decree  max_decree() const { return _end_decree; }
-    int     count() const { return _interval; }
-    int     capacity() const { return _max_count; }
+    decree min_decree() const { return _start_decree; }
+    decree max_decree() const { return _end_decree; }
+    int count() const { return _interval; }
+    int capacity() const { return _max_count; }
 
 private:
     std::vector<mutation_ptr> _array;
-    int          _max_count;
-    
-    int          _interval;
+    int _max_count;
 
-    int          _start_idx;
-    int          _end_idx;
-    decree       _start_decree;
-    std::atomic<decree>  _end_decree;
+    int _interval;
+
+    int _start_idx;
+    int _end_idx;
+    decree _start_decree;
+    std::atomic<decree> _end_decree;
 };
-
-}} // namespace
-
+}
+} // namespace

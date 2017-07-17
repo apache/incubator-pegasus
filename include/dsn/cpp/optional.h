@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,90 +35,69 @@
 
 #pragma once
 
-namespace dsn
+namespace dsn {
+struct none_placeholder_t
 {
-struct none_placeholder_t {};
+};
 constexpr none_placeholder_t none{};
 
-template<typename T>
+template <typename T>
 class optional
 {
     bool _is_some;
     char _data_placeholder[sizeof(T)];
-   
+
 public:
     optional() : _is_some(false) {}
     /*implicit*/ optional(none_placeholder_t) : optional() {}
-    /*implicit*/ optional(const optional& that) : _is_some(true)
+    /*implicit*/ optional(const optional &that) : _is_some(true)
     {
-        new (_data_placeholder) T{ reinterpret_cast<const T&>(that._data_placeholder) };
+        new (_data_placeholder) T{reinterpret_cast<const T &>(that._data_placeholder)};
     }
 
-    /*implicit*/ optional(optional&& that) : _is_some(true)
+    /*implicit*/ optional(optional &&that) : _is_some(true)
     {
-        new (_data_placeholder) T{ std::move(reinterpret_cast<T&&>(that._data_placeholder)) };
+        new (_data_placeholder) T{std::move(reinterpret_cast<T &&>(that._data_placeholder))};
         that.reset();
     }
-    template<typename ...Args>
-    /*implicit*/ optional(Args&& ... args) : _is_some(true)
+    template <typename... Args>
+    /*implicit*/ optional(Args &&... args) : _is_some(true)
     {
-        new (_data_placeholder) T{ std::forward<Args>(args)... };
+        new (_data_placeholder) T{std::forward<Args>(args)...};
     }
 
-    //please use explicit reset
-    optional& operator = (const optional& that) = delete;
+    // please use explicit reset
+    optional &operator=(const optional &that) = delete;
 
-    bool is_some() const
+    bool is_some() const { return _is_some; }
+    bool is_none() const { return !_is_some; }
+    const T &unwrap_or(const T &def) const
     {
-        return _is_some;
-    }
-    bool is_none() const
-    {
-        return !_is_some;
-    }
-    const T& unwrap_or(const T& def) const
-    {
-        if (_is_some)
-        {
+        if (_is_some) {
             return unwrap();
-        }
-        else
-        {
+        } else {
             return def;
         }
     }
-    T& unwrap()
-    {
-        return reinterpret_cast<T&>(_data_placeholder);
-    }
-    const T& unwrap() const
-    {
-        return reinterpret_cast<const T&>(_data_placeholder);
-    }
+    T &unwrap() { return reinterpret_cast<T &>(_data_placeholder); }
+    const T &unwrap() const { return reinterpret_cast<const T &>(_data_placeholder); }
     void reset()
     {
-        if (_is_some)
-        {
-            reinterpret_cast<T*>(_data_placeholder)->~T();
+        if (_is_some) {
+            reinterpret_cast<T *>(_data_placeholder)->~T();
             _is_some = false;
         }
     }
-    template<typename ...Args>
-    void reset(Args&& ... args)
+    template <typename... Args>
+    void reset(Args &&... args)
     {
-        if (_is_some)
-        {
-            reinterpret_cast<T*>(_data_placeholder)->~T();
-        }
-        else
-        {
+        if (_is_some) {
+            reinterpret_cast<T *>(_data_placeholder)->~T();
+        } else {
             _is_some = true;
         }
-        new (_data_placeholder) T{ std::forward<Args>(args)... };
+        new (_data_placeholder) T{std::forward<Args>(args)...};
     }
-    ~optional()
-    {
-        reset();
-    }
+    ~optional() { reset(); }
 };
 }

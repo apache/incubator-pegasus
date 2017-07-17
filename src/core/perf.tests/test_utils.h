@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,12 +33,11 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#pragma once
 
-# pragma once
-
-# include <dsn/service_api_cpp.h>
-# include <dsn/tool-api/task.h>
-# include <dsn/tool-api/task_worker.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/task_worker.h>
 
 using namespace ::dsn;
 
@@ -55,78 +54,72 @@ DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_
 extern int g_test_count;
 
 inline int exec_tests()
-{    
+{
     auto ret = RUN_ALL_TESTS();
     g_test_count++;
     return ret;
 }
 
-class test_client :
-    public ::dsn::serverlet<test_client>,
-    public ::dsn::service_app    
+class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_app
 {
 public:
     test_client(dsn_gpid gpid)
         : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
     {
-
     }
 
-    void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
+    void on_rpc_test(const int &test_id, ::dsn::rpc_replier<std::string> &replier)
     {
         std::string r = dsn_get_app_data_dir();
         replier(std::move(r));
     }
 
-    void on_rpc_string_test(dsn_message_t message) {
+    void on_rpc_string_test(dsn_message_t message)
+    {
         std::string command;
         ::dsn::unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
-                next_addr.assign_ipv4(next_addr.ip(), next_addr.port()+1);
+                next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
                 dsn_rpc_forward(message, next_addr.c_addr());
-            }
-            else {
+            } else {
                 reply(message, std::string(next_addr.to_string()));
             }
-        }
-        else if (command == "expect_no_reply") {
+        } else if (command == "expect_no_reply") {
             if (dsn::service_app::primary_address().port() == TEST_PORT_END)
                 reply(message, std::string(dsn::service_app::primary_address().to_string()));
-        }
-        else if (command.substr(0, 5) == "echo ") {
+        } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));
-        }
-        else {
+        } else {
             derror("unknown command");
         }
     }
 
-    ::dsn::error_code start(int argc, char** argv)
+    ::dsn::error_code start(int argc, char **argv)
     {
         // server
-        if (argc == 1)
-        {
+        if (argc == 1) {
             register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
-            register_rpc_handler(RPC_TEST_STRING_COMMAND, "rpc.test.string.command", &test_client::on_rpc_string_test);
+            register_rpc_handler(RPC_TEST_STRING_COMMAND,
+                                 "rpc.test.string.command",
+                                 &test_client::on_rpc_string_test);
         }
 
         // client
-        else
-        {
-            std::cout << "=========================================================== " << std::endl;
-            std::cout << "================== run in rDSN threads ==================== " << std::endl;
-            std::cout << "=========================================================== " << std::endl;
+        else {
+            std::cout << "=========================================================== "
+                      << std::endl;
+            std::cout << "================== run in rDSN threads ==================== "
+                      << std::endl;
+            std::cout << "=========================================================== "
+                      << std::endl;
             exec_tests();
         }
-        
+
         return ::dsn::ERR_OK;
     }
 
-    ::dsn::error_code stop(bool cleanup = false)
-    {
-        return ERR_OK;
-    }
+    ::dsn::error_code stop(bool cleanup = false) { return ERR_OK; }
 };

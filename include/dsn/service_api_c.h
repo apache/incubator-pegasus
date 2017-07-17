@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@
  *     this file define the C Service API in rDSN
  *
  * ------------------------------------------------------------------------------
- * 
+ *
  *  The service system call API for Zion
  * -------------------------------------------
  *  Summary:
@@ -60,7 +60,7 @@
  *  (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
  *      internal tools are possible - replay, model checking, replication, ...,
  *      AND, it is still OK to call other DETERMINISTIC APIs for applications.
- * 
+ *
  * ------------------------------------------------------------------------------
  *
  * Revision history:
@@ -70,34 +70,33 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once 
+#pragma once
 
 // common data structures and macros
-# include <dsn/c/api_common.h>
+#include <dsn/c/api_common.h>
 
 // rDSN uses event-driven programming model, and
 // this file defines the task(i.e., event) abstraction and related
-# include <dsn/c/api_task.h>
+#include <dsn/c/api_task.h>
 
-// service API for app/framework development, 
+// service API for app/framework development,
 // including threading/tasking, thread synchronization,
 // RPC, asynchronous file IO, environment, etc.
-# include <dsn/c/api_layer1.h>
+#include <dsn/c/api_layer1.h>
 
 // application/framework model in rDSN
-# include <dsn/c/app_model.h>
+#include <dsn/c/app_model.h>
 
 // while most development and operation tools
 // in rDSN are app transparent, some are app
 // specific, which requires developers write
 // certain app-specific logic to enable them.
-# include <dsn/c/app_tools.h>
+#include <dsn/c/app_tools.h>
 
 // some useful utility functions provided by rDSN,
 // such as logging, performance counter, checksum,
 // command line interface registration and invocation,
 // etc.
-# include <dsn/c/api_utilities.h>
+#include <dsn/c/api_utilities.h>
 
-
-# include <dsn/c/api_layer2.h>
+#include <dsn/c/api_layer2.h>

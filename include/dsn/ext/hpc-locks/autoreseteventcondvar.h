@@ -10,7 +10,6 @@
 #include <mutex>
 #include <condition_variable>
 
-
 //---------------------------------------------------------
 // AutoResetEventCondVar
 //---------------------------------------------------------
@@ -36,10 +35,10 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         int oldStatus = m_status;
         if (oldStatus == 1)
-            return;        // Event object is already signaled.
+            return; // Event object is already signaled.
         m_status++;
         if (oldStatus < 0)
-            m_condition.notify_one();    // Release one waiting thread.
+            m_condition.notify_one(); // Release one waiting thread.
     }
 
     void wait()
@@ -48,12 +47,10 @@ public:
         int oldStatus = m_status;
         m_status--;
         assert(oldStatus <= 1);
-        if (oldStatus < 1)
-        {
+        if (oldStatus < 1) {
             m_condition.wait(lock);
         }
     }
 };
-
 
 #endif // __MCPPT_AUTO_RESET_EVENT_COND_VAR_H__

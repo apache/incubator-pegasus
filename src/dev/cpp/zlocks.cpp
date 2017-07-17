@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,55 +33,49 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/cpp/zlocks.h>
+#include <dsn/cpp/zlocks.h>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "zlock"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "zlock"
 
-namespace dsn { namespace service {
+namespace dsn {
+namespace service {
 
 //------------------------------- event ----------------------------------
 
-zevent::zevent(bool manualReset, bool initState/* = false*/)
+zevent::zevent(bool manualReset, bool initState /* = false*/)
 {
     _manualReset = manualReset;
     _signaled = initState;
-    if (_signaled)
-    {
+    if (_signaled) {
         _sema.signal();
     }
 }
 
-zevent::~zevent()
-{
-}
+zevent::~zevent() {}
 
 void zevent::set()
 {
     bool nonsignaled = false;
-    if (std::atomic_compare_exchange_strong(&_signaled, &nonsignaled, true))
-    {
+    if (std::atomic_compare_exchange_strong(&_signaled, &nonsignaled, true)) {
         _sema.signal();
     }
 }
 
 void zevent::reset()
 {
-    if (_manualReset)
-    {
+    if (_manualReset) {
         bool signaled = true;
-        if (std::atomic_compare_exchange_strong(&_signaled, &signaled, false))
-        {
+        if (std::atomic_compare_exchange_strong(&_signaled, &signaled, false)) {
         }
     }
 }
 
 bool zevent::wait(int timeout_milliseconds)
 {
-    if (_manualReset)
-    {
+    if (_manualReset) {
         if (std::atomic_load(&_signaled))
             return true;
 
@@ -89,8 +83,7 @@ bool zevent::wait(int timeout_milliseconds)
         return std::atomic_load(&_signaled);
     }
 
-    else
-    {
+    else {
         bool signaled = true;
         if (std::atomic_compare_exchange_strong(&_signaled, &signaled, false))
             return true;
@@ -99,5 +92,5 @@ bool zevent::wait(int timeout_milliseconds)
         return std::atomic_compare_exchange_strong(&_signaled, &signaled, false);
     }
 }
-
-}} // end namespace dsn::service
+}
+} // end namespace dsn::service

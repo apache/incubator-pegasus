@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-# include <dsn/tool-api/aio_provider.h>
-# include <gtest/gtest.h>
-# include <dsn/service_api_cpp.h>
-# include "test_utils.h"
+#include <dsn/tool-api/aio_provider.h>
+#include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
+#include "test_utils.h"
 
 using namespace ::dsn;
 
@@ -46,42 +45,41 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER
 TEST(core, aio)
 {
     // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
-    if (task::get_current_disk() == nullptr) return;
+    if (task::get_current_disk() == nullptr)
+        return;
 
-    const char* buffer = "hello, world";
+    const char *buffer = "hello, world";
     int len = (int)strlen(buffer);
 
     // write
     auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
-    
+
     std::list<task_ptr> tasks;
     uint64_t offset = 0;
 
     // new write
-    for (int i = 0; i < 100; i++)
-    {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+    for (int i = 0; i < 100; i++) {
+        auto t =
+            ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
 
-    for (auto& t : tasks)
-    {
+    for (auto &t : tasks) {
         t->wait();
     }
 
-    // overwrite 
+    // overwrite
     offset = 0;
     tasks.clear();
-    for (int i = 0; i < 100; i++)
-    {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+    for (int i = 0; i < 100; i++) {
+        auto t =
+            ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
 
-    for (auto& t : tasks)
-    {
+    for (auto &t : tasks) {
         t->wait();
         EXPECT_TRUE(t->io_size() == (size_t)len);
     }
@@ -89,18 +87,16 @@ TEST(core, aio)
     // vector write
     tasks.clear();
     std::unique_ptr<dsn_file_buffer_t[]> buffers(new dsn_file_buffer_t[100]);
-    for (int i = 0; i < 10; i ++)
-    {
-        buffers[i].buffer = reinterpret_cast<void*>(const_cast<char*>(buffer));
+    for (int i = 0; i < 10; i++) {
+        buffers[i].buffer = reinterpret_cast<void *>(const_cast<char *>(buffer));
         buffers[i].size = len;
     }
-    for (int i = 0; i < 10; i ++)
-    {
-        tasks.push_back(::dsn::file::write_vector(fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback));
+    for (int i = 0; i < 10; i++) {
+        tasks.push_back(::dsn::file::write_vector(
+            fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback));
         offset += 10 * len;
     }
-    for (auto& t : tasks)
-    {
+    for (auto &t : tasks) {
         t->wait();
         EXPECT_TRUE(t->io_size() == 10 * len);
     }
@@ -108,21 +104,20 @@ TEST(core, aio)
     EXPECT_TRUE(err == ERR_OK);
 
     // read
-    char* buffer2 = (char*)alloca((size_t)len);
+    char *buffer2 = (char *)alloca((size_t)len);
     fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
 
     // concurrent read
     offset = 0;
     tasks.clear();
-    for (int i = 0; i < 100; i++)
-    {
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+    for (int i = 0; i < 100; i++) {
+        auto t =
+            ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         tasks.push_back(t);
         offset += len;
     }
 
-    for (auto& t : tasks)
-    {
+    for (auto &t : tasks) {
         t->wait();
         EXPECT_TRUE(t->io_size() == (size_t)len);
     }
@@ -130,10 +125,10 @@ TEST(core, aio)
     // sequential read
     offset = 0;
     tasks.clear();
-    for (int i = 0; i < 200; i++)
-    {
+    for (int i = 0; i < 200; i++) {
         buffer2[0] = 'x';
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+        auto t =
+            ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
         offset += len;
 
         t->wait();
@@ -150,7 +145,8 @@ TEST(core, aio)
 TEST(core, aio_share)
 {
     // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
-    if (task::get_current_disk() == nullptr) return;
+    if (task::get_current_disk() == nullptr)
+        return;
 
     auto fp = dsn_file_open("tmp", O_WRONLY | O_CREAT | O_BINARY, 0666);
     EXPECT_TRUE(fp != nullptr);
@@ -167,40 +163,41 @@ TEST(core, aio_share)
 TEST(core, operation_failed)
 {
     // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
-    if (task::get_current_disk() == nullptr) return;
+    if (task::get_current_disk() == nullptr)
+        return;
 
     auto fp = dsn_file_open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
-    ::dsn::error_code* err = new ::dsn::error_code;
-    size_t* count = new size_t;
+    ::dsn::error_code *err = new ::dsn::error_code;
+    size_t *count = new size_t;
     auto io_callback = [err, count](::dsn::error_code e, size_t n) {
         *err = e;
         *count = n;
     };
 
-    fp = dsn_file_open("tmp_test_file", O_WRONLY|O_CREAT|O_BINARY, 0666);
+    fp = dsn_file_open("tmp_test_file", O_WRONLY | O_CREAT | O_BINARY, 0666);
     EXPECT_TRUE(fp != nullptr);
     char buffer[512];
-    const char* str = "hello file";
+    const char *str = "hello file";
     auto t = ::dsn::file::write(fp, str, strlen(str), 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
-    EXPECT_TRUE(*err == ERR_OK && *count==strlen(str));
+    EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
 
     t = ::dsn::file::read(fp, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_FILE_OPERATION_FAILED);
 
-    auto fp2 = dsn_file_open("tmp_test_file", O_RDONLY|O_BINARY, 0);
+    auto fp2 = dsn_file_open("tmp_test_file", O_RDONLY | O_BINARY, 0);
     EXPECT_TRUE(fp2 != nullptr);
 
     t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
-    EXPECT_TRUE(*err == ERR_OK && *count==strlen(str));
+    EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
 
     t = ::dsn::file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
-    EXPECT_TRUE(*err == ERR_OK && *count==5);
+    EXPECT_TRUE(*err == ERR_OK && *count == 5);
 
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();

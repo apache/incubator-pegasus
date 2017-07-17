@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,17 +26,17 @@
 
 /*
  * Description:
- *     define the interface for disk operation provider 
+ *     define the interface for disk operation provider
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/task.h>
-# include <dsn/utility/dlib.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/utility/dlib.h>
 
 namespace dsn {
 
@@ -45,11 +45,11 @@ class service_node;
 class task_worker_pool;
 class task_queue;
 
-# if defined(_WIN32)
-# define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)0)
-# else
-# define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)-1)
-# endif
+#if defined(_WIN32)
+#define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)0)
+#else
+#define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)-1)
+#endif
 
 /*!
 @addtogroup tool-api-providers
@@ -61,35 +61,35 @@ class task_queue;
 class aio_provider
 {
 public:
-    template <typename T> static aio_provider* create(disk_engine* disk, aio_provider* inner_provider)
+    template <typename T>
+    static aio_provider *create(disk_engine *disk, aio_provider *inner_provider)
     {
         return new T(disk, inner_provider);
     }
 
-    typedef aio_provider* (*factory)(disk_engine*, aio_provider*);
+    typedef aio_provider *(*factory)(disk_engine *, aio_provider *);
 
 public:
-    DSN_API aio_provider(disk_engine* disk, aio_provider* inner_provider);
+    DSN_API aio_provider(disk_engine *disk, aio_provider *inner_provider);
     virtual ~aio_provider() {}
-    DSN_API service_node* node() const;
+    DSN_API service_node *node() const;
 
     // return DSN_INVALID_FILE_HANDLE if failed
-    virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
-    virtual error_code   close(dsn_handle_t fh) = 0;
-    virtual error_code   flush(dsn_handle_t fh) = 0;
-    virtual void         aio(aio_task* aio) = 0;
-    virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
+    virtual dsn_handle_t open(const char *file_name, int flag, int pmode) = 0;
+    virtual error_code close(dsn_handle_t fh) = 0;
+    virtual error_code flush(dsn_handle_t fh) = 0;
+    virtual void aio(aio_task *aio) = 0;
+    virtual disk_aio *prepare_aio_context(aio_task *) = 0;
 
-    virtual void start(io_modifer& ctx) = 0;
+    virtual void start(io_modifer &ctx) = 0;
 
 protected:
-    DSN_API void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
+    DSN_API void
+    complete_io(aio_task *aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
     disk_engine *_engine;
 };
 
 /*@}*/
-} // end namespace 
-
-
+} // end namespace

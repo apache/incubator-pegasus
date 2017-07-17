@@ -12,7 +12,6 @@
 #include <dsn/utility/utils.h>
 #include <dsn/ext/hpc-locks/sema.h>
 
-
 //---------------------------------------------------------
 // NonRecursiveBenaphore
 //---------------------------------------------------------
@@ -27,8 +26,7 @@ public:
 
     void lock()
     {
-        if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0)
-        {
+        if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0) {
             m_sema.wait();
         }
     }
@@ -45,13 +43,11 @@ public:
     {
         int oldCount = m_contentionCount.fetch_sub(1, std::memory_order_release);
         assert(oldCount > 0);
-        if (oldCount > 1)
-        {
+        if (oldCount > 1) {
             m_sema.signal();
         }
     }
 };
-
 
 //---------------------------------------------------------
 // RecursiveBenaphore
@@ -65,9 +61,7 @@ private:
     DefaultSemaphoreType m_sema;
 
 public:
-    RecursiveBenaphore()
-    : m_contentionCount(0)
-    , m_recursion(0)
+    RecursiveBenaphore() : m_contentionCount(0), m_recursion(0)
     {
         m_owner = ::dsn::utils::get_invalid_tid();
     }
@@ -75,8 +69,7 @@ public:
     void lock()
     {
         auto tid = ::dsn::utils::get_current_tid();
-        if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0)
-        {
+        if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0) {
             if (tid != m_owner.load(std::memory_order_relaxed))
                 m_sema.wait();
         }
@@ -84,17 +77,14 @@ public:
         m_owner.store(tid, std::memory_order_relaxed);
         m_recursion++;
     }
- 
+
     bool tryLock()
     {
         auto tid = ::dsn::utils::get_current_tid();
-        if (m_owner.load(std::memory_order_relaxed) == tid)
-        {
+        if (m_owner.load(std::memory_order_relaxed) == tid) {
             // Already inside the lock
             m_contentionCount.fetch_add(1, std::memory_order_relaxed);
-        }
-        else
-        {
+        } else {
             if (m_contentionCount.load(std::memory_order_relaxed) != 0)
                 return false;
             int expected = 0;
@@ -116,14 +106,12 @@ public:
         int recur = --m_recursion;
         if (recur == 0)
             m_owner.store(::dsn::utils::get_invalid_tid(), std::memory_order_relaxed);
-        if (m_contentionCount.fetch_sub(1, std::memory_order_release) > 1)
-        {
+        if (m_contentionCount.fetch_sub(1, std::memory_order_release) > 1) {
             if (recur == 0)
                 m_sema.signal();
         }
         //--- We are now outside the lock ---
     }
 };
-
 
 #endif // __CPP11OM_BENAPHORE_H__

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,33 +34,37 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_cpp.h>
-# include <dsn/dist/error_code.h>
-# include <string>
-# include <functional>
-# include <memory>
-# include <algorithm>
-# include "meta_data.h"
-# include "meta_service.h"
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/error_code.h>
+#include <string>
+#include <functional>
+#include <memory>
+#include <algorithm>
+#include "meta_data.h"
+#include "meta_service.h"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class server_load_balancer
 {
 public:
-    template <typename T> static server_load_balancer* create(meta_service* svc)
+    template <typename T>
+    static server_load_balancer *create(meta_service *svc)
     {
         return new T(svc);
     }
-    typedef server_load_balancer* (*factory)(meta_service* svc);
+    typedef server_load_balancer *(*factory)(meta_service *svc);
+
 public:
-    server_load_balancer(meta_service* svc): _svc(svc) {}
+    server_load_balancer(meta_service *svc) : _svc(svc) {}
     virtual ~server_load_balancer() {}
 
-    virtual void reconfig(meta_view view, const configuration_update_request& request) = 0;
-    virtual pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action/*out*/) = 0;
+    virtual void reconfig(meta_view view, const configuration_update_request &request) = 0;
+    virtual pc_status
+    cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action /*out*/) = 0;
 
     //
     // Make balancer according to current meta-view
@@ -69,7 +73,7 @@ public:
     // ret:
     //   if any balancer proposal is generated, return true. Or-else, false
     //
-    virtual bool balance(meta_view view, migration_list& list) = 0;
+    virtual bool balance(meta_view view, migration_list &list) = 0;
 
     //
     // When replica infos are collected from replica servers, meta-server
@@ -81,7 +85,8 @@ public:
     //   return true if the replica is accepted as an useful replica. Or-else false.
     //   WARNING: if false is returned, the replica on node may be garbage-collected
     //
-    virtual bool collect_replica(meta_view view, const dsn::rpc_address& node, const replica_info& info) = 0;
+    virtual bool
+    collect_replica(meta_view view, const dsn::rpc_address &node, const replica_info &info) = 0;
 
     //
     // Try to construct a replica-group by current replica-infos of a gpid
@@ -89,47 +94,49 @@ public:
     //   if construct the replica successfully, return true.
     //   Notice: as long as we can construct something from current infos, we treat it as a success
     //
-    virtual bool construct_replica(meta_view view, const gpid& pid, int max_replica_count) = 0;
+    virtual bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) = 0;
 
-    void register_proposals(meta_view view, const configuration_balancer_request& req, configuration_balancer_response& resp);
-    void apply_balancer(meta_view view, const migration_list& ml);
+    void register_proposals(meta_view view,
+                            const configuration_balancer_request &req,
+                            configuration_balancer_response &resp);
+    void apply_balancer(meta_view view, const migration_list &ml);
     int suggest_alive_time(config_type::type t);
 
 public:
-    typedef std::function<bool (const rpc_address& addr1, const rpc_address& addr2)> node_comparator;
-    typedef std::function<bool (const node_state& ns)> node_filter;
-    static void sort_node(const node_mapper& nodes, const node_comparator& cmp, const node_filter& filter, std::vector<rpc_address>& result)
+    typedef std::function<bool(const rpc_address &addr1, const rpc_address &addr2)> node_comparator;
+    typedef std::function<bool(const node_state &ns)> node_filter;
+    static void sort_node(const node_mapper &nodes,
+                          const node_comparator &cmp,
+                          const node_filter &filter,
+                          std::vector<rpc_address> &result)
     {
         result.clear();
         result.reserve(nodes.size());
-        for (auto& iter: nodes)
-        {
-            if (filter(iter.second))
-            {
+        for (auto &iter : nodes) {
+            if (filter(iter.second)) {
                 result.push_back(iter.first);
             }
         }
         std::sort(result.begin(), result.end(), cmp);
     }
 
-    static void sort_alive_nodes(const node_mapper& nodes, const node_comparator& cmp, std::vector<rpc_address>& sorted_node)
+    static void sort_alive_nodes(const node_mapper &nodes,
+                                 const node_comparator &cmp,
+                                 std::vector<rpc_address> &sorted_node)
     {
         sorted_node.clear();
         sorted_node.reserve(nodes.size());
-        for (auto& iter: nodes)
-        {
-            if (!iter.first.is_invalid() && iter.second.alive())
-            {
+        for (auto &iter : nodes) {
+            if (!iter.first.is_invalid() && iter.second.alive()) {
                 sorted_node.push_back(iter.first);
             }
         }
         std::sort(sorted_node.begin(), sorted_node.end(), cmp);
     }
 
-    static node_comparator primary_comparator(const node_mapper& nodes)
+    static node_comparator primary_comparator(const node_mapper &nodes)
     {
-        return [&nodes](const rpc_address& r1, const rpc_address& r2)
-        {
+        return [&nodes](const rpc_address &r1, const rpc_address &r2) {
             int p1 = nodes.find(r1)->second.primary_count();
             int p2 = nodes.find(r2)->second.primary_count();
             if (p1 != p2)
@@ -138,10 +145,9 @@ public:
         };
     }
 
-    static node_comparator partition_comparator(const node_mapper& nodes)
+    static node_comparator partition_comparator(const node_mapper &nodes)
     {
-        return [&nodes](const rpc_address& r1, const rpc_address& r2)
-        {
+        return [&nodes](const rpc_address &r1, const rpc_address &r2) {
             int p1 = nodes.find(r1)->second.partition_count();
             int p2 = nodes.find(r2)->second.partition_count();
             if (p1 != p2)
@@ -151,49 +157,49 @@ public:
     }
 
 protected:
-    meta_service* _svc;
+    meta_service *_svc;
 };
 
-class simple_load_balancer: public server_load_balancer
+class simple_load_balancer : public server_load_balancer
 {
 public:
-    simple_load_balancer(meta_service* svc): server_load_balancer(svc)
+    simple_load_balancer(meta_service *svc) : server_load_balancer(svc)
     {
-        if (svc != nullptr)
-        {
+        if (svc != nullptr) {
             mutation_2pc_min_replica_count = svc->get_options().mutation_2pc_min_replica_count;
             replica_assign_delay_ms_for_dropouts =
                 svc->get_meta_options().replica_assign_delay_ms_for_dropouts;
             config_context::MAX_REPLICA_COUNT_IN_GRROUP =
                 svc->get_meta_options().max_replicas_in_group;
-        }
-        else
-        {
+        } else {
             mutation_2pc_min_replica_count = 0;
             replica_assign_delay_ms_for_dropouts = 0;
         }
     }
-    bool balance(meta_view, migration_list& list) override
+    bool balance(meta_view, migration_list &list) override
     {
         list.clear();
         return false;
     }
 
-    void reconfig(meta_view view, const configuration_update_request& request) override;
-    pc_status cure(meta_view view, const dsn::gpid& gpid, configuration_proposal_action& action) override;
-    bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info) override;
+    void reconfig(meta_view view, const configuration_update_request &request) override;
+    pc_status
+    cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) override;
+    bool
+    collect_replica(meta_view view, const rpc_address &node, const replica_info &info) override;
     bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) override;
 
 protected:
-    void reset_proposal(meta_view& view, const dsn::gpid& gpid);
-    bool from_proposals(meta_view& view, const dsn::gpid& gpid, configuration_proposal_action& action);
+    void reset_proposal(meta_view &view, const dsn::gpid &gpid);
+    bool
+    from_proposals(meta_view &view, const dsn::gpid &gpid, configuration_proposal_action &action);
 
-    pc_status on_missing_primary(meta_view& view, const dsn::gpid& gpid);
-    pc_status on_missing_secondary(meta_view& view, const dsn::gpid& gpid);
-    pc_status on_redundant_secondary(meta_view& view, const dsn::gpid& gpid);
+    pc_status on_missing_primary(meta_view &view, const dsn::gpid &gpid);
+    pc_status on_missing_secondary(meta_view &view, const dsn::gpid &gpid);
+    pc_status on_redundant_secondary(meta_view &view, const dsn::gpid &gpid);
 
     int32_t mutation_2pc_min_replica_count;
     uint64_t replica_assign_delay_ms_for_dropouts;
 };
-
-}}
+}
+}

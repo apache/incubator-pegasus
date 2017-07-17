@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-# include <dsn/utility/utils.h>
-# include <dsn/utility/link.h>
-# include <dsn/utility/autoref_ptr.h>
-# include <gtest/gtest.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/link.h>
+#include <dsn/utility/autoref_ptr.h>
+#include <gtest/gtest.h>
 
 using namespace ::dsn;
 using namespace ::dsn::utils;
@@ -54,8 +53,7 @@ TEST(core, get_last_component)
 TEST(core, crc)
 {
     char buffer[24];
-    for (int i = 0; i < sizeof(buffer) / sizeof(char); i++)
-    {
+    for (int i = 0; i < sizeof(buffer) / sizeof(char); i++) {
         buffer[i] = dsn_random32(0, 200);
     }
 
@@ -80,7 +78,6 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
-
 TEST(core, split_args)
 {
     std::string value = "a ,b, c ";
@@ -104,7 +101,7 @@ TEST(core, split_args)
 TEST(core, trim_string)
 {
     std::string value = " x x x x ";
-    auto r = trim_string((char*)value.c_str());
+    auto r = trim_string((char *)value.c_str());
     EXPECT_EQ(std::string(r), "x x x x");
 }
 
@@ -117,9 +114,8 @@ TEST(core, dlink)
         links[i].insert_before(&hdr);
 
     int count = 0;
-    dlink* p = hdr.next();
-    while (p != &hdr)
-    {
+    dlink *p = hdr.next();
+    while (p != &hdr) {
         count++;
         p = p->next();
     }
@@ -127,8 +123,7 @@ TEST(core, dlink)
     EXPECT_EQ(count, 10);
 
     p = hdr.next();
-    while (p != &hdr)
-    {
+    while (p != &hdr) {
         auto p1 = p;
         p = p->next();
         p1->remove();
@@ -139,21 +134,12 @@ TEST(core, dlink)
     EXPECT_TRUE(count == 0);
 }
 
-
-
 class foo : public ::dsn::ref_counter
 {
 public:
-    foo(int &count)
-        : _count(count)
-    {
-        _count++;
-    }
+    foo(int &count) : _count(count) { _count++; }
 
-    ~foo()
-    {
-        _count--;
-    }
+    ~foo() { _count--; }
 
 private:
     int &_count;
@@ -212,11 +198,8 @@ TEST(core, ref_ptr)
     xs.clear();
     EXPECT_TRUE(count == 0);
 
-
     foo_ptr z = new foo(count);
     EXPECT_TRUE(count == 1);
     z = std::move(foo_ptr());
     EXPECT_TRUE(count == 0);
 }
-
-

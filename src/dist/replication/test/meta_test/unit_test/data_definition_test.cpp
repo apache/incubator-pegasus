@@ -20,20 +20,20 @@ dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
     return dsn_msg_copy(request_msg, true, true);
 }
 
-class fake_receiver_meta_service: public meta_service
+class fake_receiver_meta_service : public meta_service
 {
 public:
-    fake_receiver_meta_service(): meta_service() {}
+    fake_receiver_meta_service() : meta_service() {}
     virtual ~fake_receiver_meta_service() {}
     virtual void reply_message(dsn_message_t request, dsn_message_t response) override
     {
         uint64_t ptr;
         dsn::unmarshall(request, ptr);
-        reply_context* ctx = reinterpret_cast<reply_context*>(ptr);
+        reply_context *ctx = reinterpret_cast<reply_context *>(ptr);
         ctx->response = create_corresponding_receive(response);
         dsn_msg_add_ref(ctx->response);
 
-        //release the response
+        // release the response
         dsn_msg_add_ref(response);
         dsn_msg_release_ref(response);
 
@@ -41,34 +41,26 @@ public:
     }
 };
 
-#define fake_create_app(state, request_data) \
-    fake_rpc_call(RPC_CM_CREATE_APP, \
-        LPC_META_STATE_NORMAL, \
-        state, \
-        &server_state::create_app, \
-        request_data)
+#define fake_create_app(state, request_data)                                                       \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_CREATE_APP, LPC_META_STATE_NORMAL, state, &server_state::create_app, request_data)
 
-#define fake_drop_app(state, request_data) \
-    fake_rpc_call(RPC_CM_DROP_APP, \
-        LPC_META_STATE_NORMAL, \
-        state, \
-        &server_state::drop_app, \
-        request_data)
+#define fake_drop_app(state, request_data)                                                         \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_DROP_APP, LPC_META_STATE_NORMAL, state, &server_state::drop_app, request_data)
 
-#define fake_recall_app(state, request_data) \
-    fake_rpc_call(RPC_CM_RECALL_APP, \
-        LPC_META_STATE_NORMAL, \
-        state, \
-        &server_state::recall_app, \
-        request_data)
+#define fake_recall_app(state, request_data)                                                       \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_RECALL_APP, LPC_META_STATE_NORMAL, state, &server_state::recall_app, request_data)
 
-#define fake_wait_rpc(context, response_data) do {\
-    context->e.wait();\
-    unmarshall(context->response, response_data);\
-    dsn_msg_release_ref(context->response);\
-} while(0)
+#define fake_wait_rpc(context, response_data)                                                      \
+    do {                                                                                           \
+        context->e.wait();                                                                         \
+        unmarshall(context->response, response_data);                                              \
+        dsn_msg_release_ref(context->response);                                                    \
+    } while (0)
 
-inline void test_logger(const char* str)
+inline void test_logger(const char *str)
 {
     fprintf(stderr, "%s", str);
     fprintf(stderr, "\n");
@@ -79,24 +71,24 @@ inline void test_logger(const char* str)
 // this test is run by fault-injector enabled. And in fault injector, the remote-storage visit task
 // is delayed. So we expect all successive rpc-requests are handled before a remote-storage visit.
 //
-#define clear_test_state()\
-    nodes->clear();\
-    for (partition_configuration& pc : default_app->partitions)\
-    {\
-        pc.primary.set_invalid();\
-        pc.secondaries.clear();\
-        pc.last_drops.clear();\
+#define clear_test_state()                                                                         \
+    nodes->clear();                                                                                \
+    for (partition_configuration & pc : default_app->partitions) {                                 \
+        pc.primary.set_invalid();                                                                  \
+        pc.secondaries.clear();                                                                    \
+        pc.last_drops.clear();                                                                     \
     }
 
 void meta_service_test_app::data_definition_op_test()
 {
-    std::shared_ptr<fake_receiver_meta_service> svc = std::make_shared<fake_receiver_meta_service>();
+    std::shared_ptr<fake_receiver_meta_service> svc =
+        std::make_shared<fake_receiver_meta_service>();
     dsn::error_code ec = svc->remote_storage_initialize();
     ASSERT_EQ(ec, dsn::ERR_OK);
 
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
     svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));
-    server_state* state = svc->_state.get();
+    server_state *state = svc->_state.get();
 
     state->initialize(svc.get(), svc->_cluster_root + "/apps");
     ec = state->initialize_data_structure();
@@ -104,7 +96,7 @@ void meta_service_test_app::data_definition_op_test()
 
     svc->_started = true;
 
-    app_mapper* apps = state->get_meta_view().apps;
+    app_mapper *apps = state->get_meta_view().apps;
 
     std::vector<rpc_address> server_nodes;
     generate_node_list(server_nodes, 5, 10);
@@ -117,7 +109,7 @@ void meta_service_test_app::data_definition_op_test()
     const std::string test_app2_name = "test_app2";
     const std::string test_app2_recalled_name = "test_app2_recalled";
 
-    //normal create app
+    // normal create app
     create_request.app_name = test_app2_name;
     create_request.options.app_type = "simple_kv";
     create_request.options.partition_count = 0;
@@ -149,7 +141,7 @@ void meta_service_test_app::data_definition_op_test()
         fake_wait_rpc(result, create_response);
         ASSERT_EQ(create_response.err, dsn::ERR_OK);
         ASSERT_EQ(create_response.appid, 2);
-        //first wait the table to create
+        // first wait the table to create
         ASSERT_TRUE(state->spin_wait_staging(30));
         last_app_id = create_response.appid;
     }
@@ -171,18 +163,17 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_EQ(create_response.err, dsn::ERR_INVALID_PARAMETERS);
     }
 
-    //initialize the app
+    // initialize the app
     std::shared_ptr<app_state> newly_app = (*apps)[2];
-    ASSERT_TRUE(newly_app!=nullptr);
-    ASSERT_TRUE(newly_app->app_name==test_app2_name);
+    ASSERT_TRUE(newly_app != nullptr);
+    ASSERT_TRUE(newly_app->app_name == test_app2_name);
     generate_app(newly_app, server_nodes);
-    for (auto& pc : newly_app->partitions)
-    {
+    for (auto &pc : newly_app->partitions) {
         ASSERT_FALSE(pc.primary.is_invalid());
-        ASSERT_FALSE( (pc.partition_flags & pc_flags::dropped) );
+        ASSERT_FALSE((pc.partition_flags & pc_flags::dropped));
     }
 
-    //drop current app
+    // drop current app
     configuration_drop_app_request drop_request;
     configuration_drop_app_response drop_response;
     {
@@ -190,15 +181,14 @@ void meta_service_test_app::data_definition_op_test()
         drop_request.options.success_if_not_exist = false;
 
         std::vector<int64_t> old_ballots;
-        for (auto& pc: newly_app->partitions)
-        {
+        for (auto &pc : newly_app->partitions) {
             old_ballots.push_back(pc.ballot);
         }
 
         result = fake_drop_app(state, drop_request);
-        //a drop request immediately after the first request
+        // a drop request immediately after the first request
         result2 = fake_drop_app(state, drop_request);
-        //try to create a app with same name when it is dropping
+        // try to create a app with same name when it is dropping
         result3 = fake_create_app(state, create_request);
 
         test_logger("Test: normal drop table");
@@ -215,11 +205,10 @@ void meta_service_test_app::data_definition_op_test()
 
         ASSERT_TRUE(state->spin_wait_staging(20));
         test_logger("Test all rpelicas in every partitions is removed");
-        for (auto& pc : newly_app->partitions)
-        {
+        for (auto &pc : newly_app->partitions) {
             ASSERT_EQ(0, replica_count(pc));
-            ASSERT_TRUE( (pc.partition_flags & pc_flags::dropped) );
-            ASSERT_EQ(old_ballots[pc.pid.get_partition_index()]+1, pc.ballot);
+            ASSERT_TRUE((pc.partition_flags & pc_flags::dropped));
+            ASSERT_EQ(old_ballots[pc.pid.get_partition_index()] + 1, pc.ballot);
         }
     }
 
@@ -232,7 +221,7 @@ void meta_service_test_app::data_definition_op_test()
     }
 
     {
-        //now let's recreating the app with the same name
+        // now let's recreating the app with the same name
         result = fake_create_app(state, create_request);
         create_request.options.success_if_exist = true;
         result2 = fake_create_app(state, create_request);
@@ -250,16 +239,15 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_TRUE(state->spin_wait_staging(30));
 
         newly_app = (*apps)[last_app_id];
-        ASSERT_TRUE(newly_app!=nullptr);
-        ASSERT_TRUE(newly_app->app_name==test_app2_name);
-        for (auto& pc : newly_app->partitions)
-        {
-            ASSERT_FALSE( (pc.partition_flags & pc_flags::dropped) );
+        ASSERT_TRUE(newly_app != nullptr);
+        ASSERT_TRUE(newly_app->app_name == test_app2_name);
+        for (auto &pc : newly_app->partitions) {
+            ASSERT_FALSE((pc.partition_flags & pc_flags::dropped));
         }
     }
 
     // here the app state is like this
-    // app_id_1, simple_kv.instance0 <- created by default, 
+    // app_id_1, simple_kv.instance0 <- created by default,
     // from 2 to last_app_id-1, test_app2_name, dropped
     // last_app_id, test_app2_name, created
     // then test recalling
@@ -308,11 +296,10 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_TRUE(state->spin_wait_staging(30));
 
         newly_app = (*apps)[2];
-        ASSERT_TRUE(newly_app!=nullptr);
-        ASSERT_TRUE(newly_app->app_name==test_app2_recalled_name);
-        for (auto& pc : newly_app->partitions)
-        {
-            ASSERT_FALSE( (pc.partition_flags & pc_flags::dropped) );
+        ASSERT_TRUE(newly_app != nullptr);
+        ASSERT_TRUE(newly_app->app_name == test_app2_recalled_name);
+        for (auto &pc : newly_app->partitions) {
+            ASSERT_FALSE((pc.partition_flags & pc_flags::dropped));
         }
     }
     {
@@ -340,8 +327,8 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_EQ(recall_response.err, dsn::ERR_BUSY_DROPPING);
     }
     {
-        //after the previous test, the app with id 2 is still dropped
-        //let's recall it again
+        // after the previous test, the app with id 2 is still dropped
+        // let's recall it again
         recall_request.app_id = 2;
         recall_request.new_app_name = "";
 
@@ -380,15 +367,11 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_EQ(list_response.err, dsn::ERR_OK);
         ASSERT_EQ(list_response.infos.size(), 3);
 
-        for (dsn::app_info& info : list_response.infos)
-        {
-            if (info.app_id == 2)
-            {
+        for (dsn::app_info &info : list_response.infos) {
+            if (info.app_id == 2) {
                 ASSERT_EQ(info.app_name, test_app2_recalled_name);
                 ASSERT_EQ(info.status, dsn::app_status::AS_AVAILABLE);
-            }
-            else if (info.app_id == last_app_id)
-            {
+            } else if (info.app_id == last_app_id) {
                 ASSERT_EQ(info.app_name, test_app2_name);
                 ASSERT_EQ(info.status, dsn::app_status::AS_AVAILABLE);
             }

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,13 +33,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/c/api_common.h>
+#include <dsn/c/api_common.h>
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif
+#endif
 
 /*!
 @defgroup service-api-utilities Utility Service API
@@ -47,12 +47,12 @@ extern "C" {
 
  Commonly used utility API for building distributed systems.
 */
-    
+
 /*!
 @defgroup error-t Error Code
 @ingroup service-api-utilities
 
- Error code registration and translation between string and integer. 
+ Error code registration and translation between string and integer.
 
  See \ref error_code for more details.
  @{
@@ -63,11 +63,11 @@ register error code
 
 \param name error code in string format
 
-\return interger value representing this error.  
+\return interger value representing this error.
 
  For the same input string, rDSN returns the same interger error code.
 */
-extern DSN_API dsn_error_t           dsn_error_register(const char* name);
+extern DSN_API dsn_error_t dsn_error_register(const char *name);
 
 /*!
  translate interger error code to a string
@@ -76,7 +76,7 @@ extern DSN_API dsn_error_t           dsn_error_register(const char* name);
 
  \return string format of the error code
  */
-extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
+extern DSN_API const char *dsn_error_to_string(dsn_error_t err);
 
 /*!
  parse string error code into integer code
@@ -86,7 +86,7 @@ extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
 
  \return integer format of error code
  */
-extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_error_t default_err);
+extern DSN_API dsn_error_t dsn_error_from_string(const char *s, dsn_error_t default_err);
 /*@}*/
 
 /*!
@@ -105,33 +105,32 @@ extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_er
 
  \return null if it fails, else execution response
  */
-extern DSN_API const char* dsn_cli_run(const char* command_line);
+extern DSN_API const char *dsn_cli_run(const char *command_line);
 
 /*!
  free memory occupied by cli response
 
  \param command_output result from \ref dsn_cli_run
  */
-extern DSN_API void        dsn_cli_free(const char* command_output);
+extern DSN_API void dsn_cli_free(const char *command_output);
 
 /*! cli response definition */
 typedef struct dsn_cli_reply
 {
-    const char* message;  ///< zero-ended reply message
-    uint64_t size;        ///< message_size
-    void* context;        ///< context for free_handler
+    const char *message; ///< zero-ended reply message
+    uint64_t size;       ///< message_size
+    void *context;       ///< context for free_handler
 } dsn_cli_reply;
 
 /*! cli request handler definition */
-typedef void(*dsn_cli_handler)(
-    void* context,              ///< context registered by \ref dsn_cli_register
-    int argc,                   ///< argument count
-    const char** argv,          ///< arguments
-    /*out*/dsn_cli_reply* reply ///< reply message
-    );
+typedef void (*dsn_cli_handler)(void *context,     ///< context registered by \ref dsn_cli_register
+                                int argc,          ///< argument count
+                                const char **argv, ///< arguments
+                                /*out*/ dsn_cli_reply *reply ///< reply message
+                                );
 
 /*! cli response resource gc handler definition */
-typedef void(*dsn_cli_free_handler)(dsn_cli_reply reply);
+typedef void (*dsn_cli_free_handler)(dsn_cli_reply reply);
 
 /*!
  register a customized cli command handler
@@ -145,32 +144,29 @@ typedef void(*dsn_cli_free_handler)(dsn_cli_reply reply);
 
  \return the handle of this registered command
  */
-extern DSN_API dsn_handle_t dsn_cli_register(
-                            const char* command,
-                            const char* help_one_line,
-                            const char* help_long,
-                            void* context,
-                            dsn_cli_handler cmd_handler,
-                            dsn_cli_free_handler output_freer
-                            );
+extern DSN_API dsn_handle_t dsn_cli_register(const char *command,
+                                             const char *help_one_line,
+                                             const char *help_long,
+                                             void *context,
+                                             dsn_cli_handler cmd_handler,
+                                             dsn_cli_free_handler output_freer);
 
 /*!
  same as \ref dsn_cli_register, except that the command
  name is auto-augmented by rDSN as $app_full_name.$command
  */
-extern DSN_API dsn_handle_t dsn_cli_app_register(
-                            const char* command,
-                            const char* help_one_line,
-                            const char* help_long,
-                            void* context,
-                            dsn_cli_handler cmd_handler,
-                            dsn_cli_free_handler output_freer
-                            );
+extern DSN_API dsn_handle_t dsn_cli_app_register(const char *command,
+                                                 const char *help_one_line,
+                                                 const char *help_long,
+                                                 void *context,
+                                                 dsn_cli_handler cmd_handler,
+                                                 dsn_cli_free_handler output_freer);
 
 /*!
  remove a cli handler
 
- \param cli_handle handle of the cli returned from \ref dsn_cli_register or \ref dsn_cli_app_register
+ \param cli_handle handle of the cli returned from \ref dsn_cli_register or \ref
+ dsn_cli_app_register
  */
 extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
 /*@}*/
@@ -184,42 +180,32 @@ extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
 @{
 */
 
-extern DSN_API const char*           dsn_config_get_value_string(
-                                        const char* section,       ///< [section]
-                                        const char* key,           ///< key = value
-                                        const char* default_value, ///< if [section] key is not present
-                                        const char* dsptr          ///< what it is for, as help-info in config
-                                        );
-extern DSN_API bool                  dsn_config_get_value_bool(
-                                        const char* section, 
-                                        const char* key, 
-                                        bool default_value, 
-                                        const char* dsptr
-                                        );
-extern DSN_API uint64_t              dsn_config_get_value_uint64(
-                                        const char* section, 
-                                        const char* key, 
-                                        uint64_t default_value, 
-                                        const char* dsptr
-                                        );
-extern DSN_API double                dsn_config_get_value_double(
-                                        const char* section, 
-                                        const char* key, 
-                                        double default_value, 
-                                        const char* dsptr
-                                        );
+extern DSN_API const char *
+dsn_config_get_value_string(const char *section,       ///< [section]
+                            const char *key,           ///< key = value
+                            const char *default_value, ///< if [section] key is not present
+                            const char *dsptr          ///< what it is for, as help-info in config
+                            );
+extern DSN_API bool dsn_config_get_value_bool(const char *section,
+                                              const char *key,
+                                              bool default_value,
+                                              const char *dsptr);
+extern DSN_API uint64_t dsn_config_get_value_uint64(const char *section,
+                                                    const char *key,
+                                                    uint64_t default_value,
+                                                    const char *dsptr);
+extern DSN_API double dsn_config_get_value_double(const char *section,
+                                                  const char *key,
+                                                  double default_value,
+                                                  const char *dsptr);
 // return all section count (may greater than buffer_count)
-extern DSN_API int                   dsn_config_get_all_sections(
-                                        const char** buffers, 
-                                        /*inout*/ int* buffer_count
-                                        );
+extern DSN_API int dsn_config_get_all_sections(const char **buffers,
+                                               /*inout*/ int *buffer_count);
 // return all key count (may greater than buffer_count)
-extern DSN_API int                   dsn_config_get_all_keys(
-                                        const char* section, 
-                                        const char** buffers, 
-                                        /*inout*/ int* buffer_count
-                                        );
-extern DSN_API void                  dsn_config_dump(const char* file);
+extern DSN_API int dsn_config_get_all_keys(const char *section,
+                                           const char **buffers,
+                                           /*inout*/ int *buffer_count);
+extern DSN_API void dsn_config_dump(const char *file);
 /*@}*/
 
 /*!
@@ -234,8 +220,7 @@ extern DSN_API void                  dsn_config_dump(const char* file);
 @{
 */
 
-typedef enum dsn_log_level_t
-{
+typedef enum dsn_log_level_t {
     LOG_LEVEL_INFORMATION,
     LOG_LEVEL_DEBUG,
     LOG_LEVEL_WARNING,
@@ -246,73 +231,78 @@ typedef enum dsn_log_level_t
 } dsn_log_level_t;
 
 // logs with level smaller than this start_level will not be logged
-extern DSN_API dsn_log_level_t       dsn_log_start_level;
-extern DSN_API dsn_log_level_t       dsn_log_get_start_level();
-extern DSN_API void                  dsn_log_set_start_level(dsn_log_level_t level);
-extern DSN_API void                  dsn_logv(
-                                        const char *file, 
-                                        const char *function, 
-                                        const int line, 
-                                        dsn_log_level_t log_level, 
-                                        const char* title, 
-                                        const char* fmt, 
-                                        va_list args
-                                        );
-extern DSN_API void                  dsn_logf(
-                                        const char *file, 
-                                        const char *function, 
-                                        const int line, 
-                                        dsn_log_level_t log_level, 
-                                        const char* title, 
-                                        const char* fmt, 
-                                        ...
-                                        );
-extern DSN_API void                  dsn_log(
-                                        const char *file, 
-                                        const char *function, 
-                                        const int line, 
-                                        dsn_log_level_t log_level,
-                                        const char* title
-                                        );
-extern DSN_API void                  dsn_coredump();
+extern DSN_API dsn_log_level_t dsn_log_start_level;
+extern DSN_API dsn_log_level_t dsn_log_get_start_level();
+extern DSN_API void dsn_log_set_start_level(dsn_log_level_t level);
+extern DSN_API void dsn_logv(const char *file,
+                             const char *function,
+                             const int line,
+                             dsn_log_level_t log_level,
+                             const char *title,
+                             const char *fmt,
+                             va_list args);
+extern DSN_API void dsn_logf(const char *file,
+                             const char *function,
+                             const int line,
+                             dsn_log_level_t log_level,
+                             const char *title,
+                             const char *fmt,
+                             ...);
+extern DSN_API void dsn_log(const char *file,
+                            const char *function,
+                            const int line,
+                            dsn_log_level_t log_level,
+                            const char *title);
+extern DSN_API void dsn_coredump();
 
-
-#define dlog(level, title, ...) do {if (level >= dsn_log_start_level) \
-        dsn_logf(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__); } while(false)
-#define dinfo(...)  dlog(LOG_LEVEL_INFORMATION, __TITLE__, __VA_ARGS__)
+#define dlog(level, title, ...)                                                                    \
+    do {                                                                                           \
+        if (level >= dsn_log_start_level)                                                          \
+            dsn_logf(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__);                 \
+    } while (false)
+#define dinfo(...) dlog(LOG_LEVEL_INFORMATION, __TITLE__, __VA_ARGS__)
 #define ddebug(...) dlog(LOG_LEVEL_DEBUG, __TITLE__, __VA_ARGS__)
-#define dwarn(...)  dlog(LOG_LEVEL_WARNING, __TITLE__, __VA_ARGS__)
+#define dwarn(...) dlog(LOG_LEVEL_WARNING, __TITLE__, __VA_ARGS__)
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
-#define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, __FILE__, "assertion expression: "#x); \
-            dlog(LOG_LEVEL_FATAL, __FILE__, __VA_ARGS__);  \
-            dsn_coredump();       \
-                } } while (false)
+#define dassert(x, ...)                                                                            \
+    do {                                                                                           \
+        if (!(x)) {                                                                                \
+            dlog(LOG_LEVEL_FATAL, __FILE__, "assertion expression: " #x);                          \
+            dlog(LOG_LEVEL_FATAL, __FILE__, __VA_ARGS__);                                          \
+            dsn_coredump();                                                                        \
+        }                                                                                          \
+    } while (false)
 
 #ifndef NDEBUG
 #define dbg_dassert dassert
 #else
-#define dbg_dassert(x, ...) 
+#define dbg_dassert(x, ...)
 #endif
 
 /*@}*/
 
-#define dverify(exp) if (!(exp)) return false
-#define dverify_logged(exp, level, ...) do {\
-    if (!(exp)) {\
-        dlog(level, __TITLE__, __VA_ARGS__);\
-        return false;\
-    }\
-}while(0)
+#define dverify(exp)                                                                               \
+    if (!(exp))                                                                                    \
+    return false
+#define dverify_logged(exp, level, ...)                                                            \
+    do {                                                                                           \
+        if (!(exp)) {                                                                              \
+            dlog(level, __TITLE__, __VA_ARGS__);                                                   \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
 
-#define dstop_on_false(exp) if(!(exp)) return
-#define dstop_on_false_logged(exp, level, ...) do {\
-    if (!(exp)) {\
-        dlog(level, __TITLE__, __VA_ARGS__);\
-        return;\
-    }\
-} while (0)
+#define dstop_on_false(exp)                                                                        \
+    if (!(exp))                                                                                    \
+    return
+#define dstop_on_false_logged(exp, level, ...)                                                     \
+    do {                                                                                           \
+        if (!(exp)) {                                                                              \
+            dlog(level, __TITLE__, __VA_ARGS__);                                                   \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
 
 /*!
 @defgroup checksum Checksum
@@ -322,7 +312,7 @@ Checksum
 
 @{
 */
-extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc);
+extern DSN_API uint32_t dsn_crc32_compute(const void *ptr, size_t size, uint32_t init_crc);
 
 //
 // Given
@@ -333,17 +323,15 @@ extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t s
 //      x##y_crc = dsn_crc32_compute (x##y, x_size + y_size, xy_init);
 // without touching A and B
 //
-extern DSN_API uint32_t              dsn_crc32_concatenate(
-                                        uint32_t xy_init, 
-                                        uint32_t x_init,
-                                        uint32_t x_final, 
-                                        size_t   x_size, 
-                                        uint32_t y_init, 
-                                        uint32_t y_final, 
-                                        size_t   y_size
-                                        );
+extern DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init,
+                                              uint32_t x_init,
+                                              uint32_t x_final,
+                                              size_t x_size,
+                                              uint32_t y_init,
+                                              uint32_t y_final,
+                                              size_t y_size);
 
-extern DSN_API uint64_t               dsn_crc64_compute(const void* ptr, size_t size, uint64_t init_crc);
+extern DSN_API uint64_t dsn_crc64_compute(const void *ptr, size_t size, uint64_t init_crc);
 
 //
 // Given
@@ -355,16 +343,14 @@ extern DSN_API uint64_t               dsn_crc64_compute(const void* ptr, size_t 
 // without touching A and B
 //
 
-extern DSN_API uint64_t              dsn_crc64_concatenate(
-                                        uint32_t xy_init,
-                                        uint64_t x_init,
-                                        uint64_t x_final,
-                                        size_t x_size,
-                                        uint64_t y_init,
-                                        uint64_t y_final,
-                                        size_t y_size);
+extern DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init,
+                                              uint64_t x_init,
+                                              uint64_t x_final,
+                                              size_t x_size,
+                                              uint64_t y_init,
+                                              uint64_t y_final,
+                                              size_t y_size);
 /*@}*/
-
 
 /*!
 @defgroup perf-counter Performance Counters
@@ -372,13 +358,12 @@ extern DSN_API uint64_t              dsn_crc64_concatenate(
 
 Performance Counters
 
-Note developers can plug into rDSN their own performance counter 
+Note developers can plug into rDSN their own performance counter
 implementation, so as to integrate rDSN performance counters into
 their own cluster operation systems.
 @{
 */
-typedef enum dsn_perf_counter_type_t
-{
+typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,
     COUNTER_TYPE_RATE,
     COUNTER_TYPE_NUMBER_PERCENTILES,
@@ -386,8 +371,7 @@ typedef enum dsn_perf_counter_type_t
     COUNTER_TYPE_COUNT
 } dsn_perf_counter_type_t;
 
-typedef enum dsn_perf_counter_percentile_type_t
-{
+typedef enum dsn_perf_counter_percentile_type_t {
     COUNTER_PERCENTILE_50,
     COUNTER_PERCENTILE_90,
     COUNTER_PERCENTILE_95,
@@ -398,7 +382,10 @@ typedef enum dsn_perf_counter_percentile_type_t
     COUNTER_PERCENTILE_INVALID
 } dsn_perf_counter_percentile_type_t;
 
-extern DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* name, dsn_perf_counter_type_t type, const char* description);
+extern DSN_API dsn_handle_t dsn_perf_counter_create(const char *section,
+                                                    const char *name,
+                                                    dsn_perf_counter_type_t type,
+                                                    const char *description);
 extern DSN_API void dsn_perf_counter_remove(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_increment(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
@@ -406,7 +393,8 @@ extern DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val);
 extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
 extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
 extern DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle);
-extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
+extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle,
+                                                      dsn_perf_counter_percentile_type_t type);
 /*@}*/
 
 /*!
@@ -419,13 +407,13 @@ Memory Management
 */
 
 /*! high-performance malloc for transient objects, i.e., their life-time is short */
-extern DSN_API void*         dsn_transient_malloc(uint32_t size);
+extern DSN_API void *dsn_transient_malloc(uint32_t size);
 
 /*! high-performance free for transient objects, paired with \ref dsn_transient_malloc */
-extern DSN_API void          dsn_transient_free(void* ptr);
+extern DSN_API void dsn_transient_free(void *ptr);
 
 /*@}*/
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 }
-# endif
+#endif

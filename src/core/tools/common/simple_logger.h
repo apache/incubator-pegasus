@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,71 +33,66 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool_api.h>
-# include <thread>
-# include <cstdio>
+#include <dsn/tool_api.h>
+#include <thread>
+#include <cstdio>
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
+class screen_logger : public logging_provider
+{
+public:
+    screen_logger(const char *log_dir);
+    virtual ~screen_logger(void);
 
-        class screen_logger : public logging_provider
-        {
-        public:
-            screen_logger(const char* log_dir);
-            virtual ~screen_logger(void);
+    virtual void dsn_logv(const char *file,
+                          const char *function,
+                          const int line,
+                          dsn_log_level_t log_level,
+                          const char *title,
+                          const char *fmt,
+                          va_list args);
 
-            virtual void dsn_logv(const char *file,
-                const char *function,
-                const int line,
-                dsn_log_level_t log_level,
-                const char* title,
-                const char *fmt,
-                va_list args
-                );
+    virtual void flush();
 
-            virtual void flush();
+private:
+    ::dsn::utils::ex_lock_nr _lock;
+    bool _short_header;
+};
 
-        private:
-            ::dsn::utils::ex_lock_nr _lock;
-            bool _short_header;
-        };
+class simple_logger : public logging_provider
+{
+public:
+    simple_logger(const char *log_dir);
+    virtual ~simple_logger(void);
 
+    virtual void dsn_logv(const char *file,
+                          const char *function,
+                          const int line,
+                          dsn_log_level_t log_level,
+                          const char *title,
+                          const char *fmt,
+                          va_list args);
 
-        class simple_logger : public logging_provider
-        {
-        public:
-            simple_logger(const char* log_dir);
-            virtual ~simple_logger(void);
+    virtual void flush();
 
-            virtual void dsn_logv(const char *file,
-                const char *function,
-                const int line,
-                dsn_log_level_t log_level,
-                const char* title,
-                const char *fmt,
-                va_list args
-                );
+private:
+    void create_log_file();
 
-            virtual void flush();
-
-        private:
-            void create_log_file();
-
-        private:
-            std::string _log_dir;
-            ::dsn::utils::ex_lock_nr _lock;
-            FILE* _log;
-            int _start_index;
-            int _index;
-            int _lines;
-            bool _short_header;
-            bool _fast_flush;
-            dsn_log_level_t _stderr_start_level;
-            int _max_number_of_log_files_on_disk;
-        };
-
-    }
+private:
+    std::string _log_dir;
+    ::dsn::utils::ex_lock_nr _lock;
+    FILE *_log;
+    int _start_index;
+    int _index;
+    int _lines;
+    bool _short_header;
+    bool _fast_flush;
+    dsn_log_level_t _stderr_start_level;
+    int _max_number_of_log_files_on_disk;
+};
+}
 }

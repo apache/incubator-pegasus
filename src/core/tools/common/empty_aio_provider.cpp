@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,44 +33,32 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-# include "empty_aio_provider.h"
+#include "empty_aio_provider.h"
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        empty_aio_provider::empty_aio_provider(disk_engine* disk, aio_provider* inner_provider)
-            : aio_provider(disk, inner_provider)
-        {
-        }
+empty_aio_provider::empty_aio_provider(disk_engine *disk, aio_provider *inner_provider)
+    : aio_provider(disk, inner_provider)
+{
+}
 
-        empty_aio_provider::~empty_aio_provider()
-        {
-        }
+empty_aio_provider::~empty_aio_provider() {}
 
-        dsn_handle_t empty_aio_provider::open(const char* file_name, int flag, int pmode)
-        {
-            return (dsn_handle_t)(size_t)(1);
-        }
+dsn_handle_t empty_aio_provider::open(const char *file_name, int flag, int pmode)
+{
+    return (dsn_handle_t)(size_t)(1);
+}
 
-        error_code empty_aio_provider::close(dsn_handle_t fh)
-        {
-            return ERR_OK;
-        }
+error_code empty_aio_provider::close(dsn_handle_t fh) { return ERR_OK; }
 
-        error_code empty_aio_provider::flush(dsn_handle_t fh)
-        {
-            return ERR_OK;
-        }
+error_code empty_aio_provider::flush(dsn_handle_t fh) { return ERR_OK; }
 
-        void empty_aio_provider::aio(aio_task* aio)
-        {
-            complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
-        }
+void empty_aio_provider::aio(aio_task *aio)
+{
+    complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
+}
 
-        disk_aio* empty_aio_provider::prepare_aio_context(aio_task* tsk)
-        {
-            return new disk_aio();
-        }
-    }
+disk_aio *empty_aio_provider::prepare_aio_context(aio_task *tsk) { return new disk_aio(); }
+}
 }

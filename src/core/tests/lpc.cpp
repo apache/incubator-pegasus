@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,29 +33,25 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-# include <dsn/tool-api/aio_provider.h>
-# include <gtest/gtest.h>
-# include <dsn/service_api_cpp.h>
-# include "test_utils.h"
+#include <dsn/tool-api/aio_provider.h>
+#include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
+#include "test_utils.h"
 
 DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
-void on_lpc_test(void* p)
+void on_lpc_test(void *p)
 {
-    std::string& result = *(std::string*)p;
+    std::string &result = *(std::string *)p;
     result = ::dsn::task::get_current_worker()->name();
 }
 
-void on_lpc_test2(void* p)
-{
-
-}
+void on_lpc_test2(void *p) {}
 
 TEST(core, lpc)
 {
     std::string result;
-    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void*)&result, 1);
+    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void *)&result, 1);
     dsn_task_add_ref(t);
     dsn_task_call(t, 0);
     dsn_task_wait(t);

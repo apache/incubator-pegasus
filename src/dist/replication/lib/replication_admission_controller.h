@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,21 +39,20 @@
 using namespace dsn::service;
 #include <dsn/dist/replication.h>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-class replication_admission_controller :
-    public admission_controller
+class replication_admission_controller : public admission_controller
 {
 public:
-    replication_admission_controller(task_queue* q, std::vector<std::string>& sargs);
+    replication_admission_controller(task_queue *q, std::vector<std::string> &sargs);
     virtual ~replication_admission_controller();
 
 private:
-    virtual bool is_task_accepted(task* task);
-    virtual int  get_system_utilization();
+    virtual bool is_task_accepted(task *task);
+    virtual int get_system_utilization();
 
 private:
-
 };
-
-}} // end namespace
+}
+} // end namespace

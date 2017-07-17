@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,44 +35,48 @@
 
 #pragma once
 
-# include <dsn/tool-api/command.h>
-# include <dsn/utility/synchronize.h>
-# include <dsn/utility/singleton.h>
-# include <dsn/tool-api/rpc_message.h>
-# include <map>
+#include <dsn/tool-api/command.h>
+#include <dsn/utility/synchronize.h>
+#include <dsn/utility/singleton.h>
+#include <dsn/tool-api/rpc_message.h>
+#include <map>
 
 namespace dsn {
 
-    class command_manager : public ::dsn::utils::singleton<command_manager>
+class command_manager : public ::dsn::utils::singleton<command_manager>
+{
+public:
+    command_manager();
+
+    dsn_handle_t register_command(const std::vector<const char *> &commands,
+                                  const char *help_one_line,
+                                  const char *help_long,
+                                  command_handler handler);
+    void deregister_command(dsn_handle_t handle);
+    bool run_command(const std::string &cmdline, /*out*/ std::string &output);
+    void run_console();
+    void start_local_cli();
+    void start_remote_cli();
+    void on_remote_cli(dsn_message_t req);
+    void set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address);
+
+private:
+    bool run_command(const std::string &cmd,
+                     const std::vector<std::string> &args,
+                     /*out*/ std::string &output);
+
+private:
+    struct command
     {
-    public:
-        command_manager();
-
-        dsn_handle_t register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler);
-        void deregister_command(dsn_handle_t handle);
-        bool run_command(const std::string& cmdline, /*out*/ std::string& output);
-        void run_console();
-        void start_local_cli();
-        void start_remote_cli();
-        void on_remote_cli(dsn_message_t req);
-        void set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address);
-
-    private:
-        bool run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output);
-
-    private:
-        struct command
-        {
-            dsn::rpc_address address;
-            std::vector<const char*> commands;
-            std::string     help_short;
-            std::string     help_long;
-            command_handler handler;
-        };
-
-        ::dsn::utils::rw_lock_nr        _lock;
-        std::map<std::string, command*> _handlers;
-        std::vector<command*>           _commands;
+        dsn::rpc_address address;
+        std::vector<const char *> commands;
+        std::string help_short;
+        std::string help_long;
+        command_handler handler;
     };
 
+    ::dsn::utils::rw_lock_nr _lock;
+    std::map<std::string, command *> _handlers;
+    std::vector<command *> _commands;
+};
 }

@@ -1,33 +1,27 @@
 // apps
-# include "counter.app.example.h"
+#include "counter.app.example.h"
 
 #ifdef _WIN32
-# include <windows.h>
+#include <windows.h>
 
-void mysleep()
-{
-    Sleep(3000);
-}
+void mysleep() { Sleep(3000); }
 #else
 #include <unistd.h>
 
-void mysleep()
-{
-    sleep(3);
-}
+void mysleep() { sleep(3); }
 #endif
 
 void dsn_app_registration_counter()
 {
     // register all possible service apps
-    dsn::register_app< ::dsn::example::counter_server_app>("server");
-    dsn::register_app< ::dsn::example::counter_client_app>("client");
-    dsn::register_app< ::dsn::example::counter_perf_test_client_app>("client.perf.counter");
+    dsn::register_app<::dsn::example::counter_server_app>("server");
+    dsn::register_app<::dsn::example::counter_client_app>("client");
+    dsn::register_app<::dsn::example::counter_perf_test_client_app>("client.perf.counter");
 }
 
-# ifndef DSN_RUN_USE_SVCHOST
+#ifndef DSN_RUN_USE_SVCHOST
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     dsn_app_registration_counter();
 
@@ -36,12 +30,12 @@ int main(int argc, char** argv)
     dsn_exit(0);
 }
 
-# else
+#else
 
-# include <dsn/internal/module_int.cpp.h>
+#include <dsn/internal/module_int.cpp.h>
 
 MODULE_INIT_BEGIN
-    dsn_app_registration_counter();
+dsn_app_registration_counter();
 MODULE_INIT_END
 
-# endif
+#endif

@@ -33,18 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <iostream>
-# include <fstream>
-# include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <cstdio>
 
-# include <dsn/tool-api/aio_provider.h>
-# include <gtest/gtest.h>
-# include <dsn/service_api_cpp.h>
-# include <dsn/service_api_c.h>
-# include <dsn/tool-api/task.h>
-# include "../core/disk_engine.h"
-# include "test_utils.h"
-# include "../tools/hpc/hpc_aio_provider.h"
+#include <dsn/tool-api/aio_provider.h>
+#include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/service_api_c.h>
+#include <dsn/tool-api/task.h>
+#include "../core/disk_engine.h"
+#include "test_utils.h"
+#include "../tools/hpc/hpc_aio_provider.h"
 
 using namespace ::dsn;
 
@@ -52,7 +52,7 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER
 
 TEST(tools_hpc, aio)
 {
-    if(nullptr == task::get_current_disk())
+    if (nullptr == task::get_current_disk())
         return;
 
     std::remove("test_hpc_aio.tmp"); // delete file
@@ -67,9 +67,9 @@ TEST(tools_hpc, aio)
     dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
-    ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
-    callback->aio()->buffer = (char*)buffer;
+    ::dsn::aio_task *callback((::dsn::aio_task *)cb);
+    callback->set_tracker((dsn::task_tracker *)tracker);
+    callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
     callback->aio()->file = file;
@@ -84,7 +84,7 @@ TEST(tools_hpc, aio)
 
     dsn_task_release_ref(cb);
 
-    //read from file
+    // read from file
     char buffer_read[11];
     buffer_read[10] = '\0';
     file = dsn_file_open("test_hpc_aio.tmp", O_RDWR | O_CREAT, 0666);
@@ -92,9 +92,9 @@ TEST(tools_hpc, aio)
     cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
-    ::dsn::aio_task* callback_read((::dsn::aio_task*)cb);
-    callback_read->set_tracker((dsn::task_tracker*)tracker);
-    callback_read->aio()->buffer = (char*)buffer_read;
+    ::dsn::aio_task *callback_read((::dsn::aio_task *)cb);
+    callback_read->set_tracker((dsn::task_tracker *)tracker);
+    callback_read->aio()->buffer = (char *)buffer_read;
     callback_read->aio()->buffer_size = count;
     callback_read->aio()->engine = nullptr;
     callback_read->aio()->file = file;
@@ -110,18 +110,18 @@ TEST(tools_hpc, aio)
 
     dsn_task_release_ref(cb);
 
-    //invalid operation
+    // invalid operation
 }
 
 TEST(tools_hpc, aio_create)
 {
-    ::dsn::tools::hpc_aio_provider* p = new tools::hpc_aio_provider(nullptr, nullptr);
+    ::dsn::tools::hpc_aio_provider *p = new tools::hpc_aio_provider(nullptr, nullptr);
     delete p;
 }
 
 TEST(tools_hpc, aio_invalid_type)
 {
-    if(nullptr == task::get_current_disk())
+    if (nullptr == task::get_current_disk())
         return;
 
     std::remove("test_hpc_aio2.tmp"); // delete file
@@ -136,16 +136,15 @@ TEST(tools_hpc, aio_invalid_type)
     dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
-    ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
-    callback->aio()->buffer = (char*)buffer;
+    ::dsn::aio_task *callback((::dsn::aio_task *)cb);
+    callback->set_tracker((dsn::task_tracker *)tracker);
+    callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
     callback->aio()->file = file;
     callback->aio()->file_offset = 0;
     callback->aio()->type = ::dsn::AIO_Invalid;
     ::dsn::task::get_current_disk()->write(callback);
-
 
     dsn_task_wait(callback);
 

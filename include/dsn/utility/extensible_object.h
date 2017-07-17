@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,37 +33,37 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/utility/utils.h>
-# include <vector>
-# include <atomic>
-# include <cassert>
+#include <dsn/utility/utils.h>
+#include <vector>
+#include <atomic>
+#include <cassert>
 
 namespace dsn {
 /*!
 @addtogroup tool-api-providers
 @{
 */
-typedef void (*extension_deletor)(void*);
-typedef void*(*extension_creator)(void*);
+typedef void (*extension_deletor)(void *);
+typedef void *(*extension_creator)(void *);
 
 class extensible
 {
 public:
-    extensible(uint64_t* ptr, uint32_t count)
+    extensible(uint64_t *ptr, uint32_t count)
     {
         _ptr = ptr;
         _count = count;
     }
-        
+
     void set_extension(uint32_t id, uint64_t data)
     {
         assert(id < _count);
         _ptr[id] = data;
     }
 
-    uint64_t& get_extension(uint32_t id)
+    uint64_t &get_extension(uint32_t id)
     {
         assert(id < _count);
         return _ptr[id];
@@ -71,7 +71,7 @@ public:
 
 private:
     uint64_t *_ptr;
-    uint32_t  _count;
+    uint32_t _count;
 };
 
 template <typename T, const int MAX_EXTENSION_COUNT>
@@ -82,33 +82,29 @@ public:
     static const uint64_t INVALID_VALUE = 0x0ULL;
 
 public:
-    extensible_object()
-        : extensible(_extensions, MAX_EXTENSION_COUNT)
+    extensible_object() : extensible(_extensions, MAX_EXTENSION_COUNT)
     {
-        memset((void*)_extensions, 0, sizeof(_extensions));
+        memset((void *)_extensions, 0, sizeof(_extensions));
     }
 
     ~extensible_object()
     {
         int maxId = static_cast<int>(get_extension_count());
 
-        for (int i = 0; i < maxId; i++)
-        {
-            if (_extensions[i] != extensible_object::INVALID_VALUE && s_extensionDeletors[i] != nullptr)
-            {
-                s_extensionDeletors[i]((void*)_extensions[i]);
+        for (int i = 0; i < maxId; i++) {
+            if (_extensions[i] != extensible_object::INVALID_VALUE &&
+                s_extensionDeletors[i] != nullptr) {
+                s_extensionDeletors[i]((void *)_extensions[i]);
             }
         }
     }
 
-    void copy_to(extensible_object<T, MAX_EXTENSION_COUNT>& r)
+    void copy_to(extensible_object<T, MAX_EXTENSION_COUNT> &r)
     {
         int maxId = static_cast<int>(get_extension_count());
 
-        for (int i = 0; i < maxId; i++)
-        {
-            if (s_extensionDeletors[i] == nullptr)
-            {
+        for (int i = 0; i < maxId; i++) {
+            if (s_extensionDeletors[i] == nullptr) {
                 r._extensions[i] = _extensions[i];
             }
         }
@@ -117,26 +113,20 @@ public:
     static uint32_t register_extension(extension_deletor deletor = nullptr)
     {
         int idx = s_nextExtensionIndex++;
-        if (idx < MAX_EXTENSION_COUNT)
-        {
+        if (idx < MAX_EXTENSION_COUNT) {
             s_extensionDeletors[idx] = deletor;
-        }
-        else
-        {
+        } else {
             idx = INVALID_SLOT;
             assert(!"allocate extension failed, not enough slots available");
         }
         return idx;
     }
 
-    static uint32_t get_extension_count()
-    {
-        return s_nextExtensionIndex.load();
-    }
-    
+    static uint32_t get_extension_count() { return s_nextExtensionIndex.load(); }
+
 private:
-    uint64_t                     _extensions[MAX_EXTENSION_COUNT];
-    static extension_deletor     s_extensionDeletors[MAX_EXTENSION_COUNT];
+    uint64_t _extensions[MAX_EXTENSION_COUNT];
+    static extension_deletor s_extensionDeletors[MAX_EXTENSION_COUNT];
     static std::atomic<uint32_t> s_nextExtensionIndex;
 };
 
@@ -144,7 +134,7 @@ private:
 ExtensionHelper
 
 steps to use an ExtensionHelper
-- implement an ExtensionHelper class, e.g. 
+- implement an ExtensionHelper class, e.g.
     class F : public ExtensionHelper<F, T>, make sure T is an extension_object.
 - add extra information as member fields of class F.
 - invoke F::register() at system initialization
@@ -162,18 +152,12 @@ public:
         return s_slotIdx;
     }
 
-    static uint64_t& get(TExtensibleObject* ctx)
-    {
-        return ctx->get_extension(s_slotIdx);
-    }
+    static uint64_t &get(TExtensibleObject *ctx) { return ctx->get_extension(s_slotIdx); }
 
-    static void set(TExtensibleObject* ctx, uint64_t ext)
-    {
-        ctx->set_extension(s_slotIdx, ext);
-    }
-    
+    static void set(TExtensibleObject *ctx, uint64_t ext) { ctx->set_extension(s_slotIdx, ext); }
+
 private:
-    static uint32_t           s_slotIdx;
+    static uint32_t s_slotIdx;
 };
 
 template <typename TExtension, typename TExtensibleObject>
@@ -195,61 +179,63 @@ public:
         return s_slotIdx;
     }
 
-    static TExtension* get(TExtensibleObject* ctx)
+    static TExtension *get(TExtensibleObject *ctx)
     {
-        uint64_t& val = ctx->get_extension(s_slotIdx);
-        return (TExtension*)val;
+        uint64_t &val = ctx->get_extension(s_slotIdx);
+        return (TExtension *)val;
     }
 
-    static void set(TExtensibleObject* ctx, TExtension* ext)
+    static void set(TExtensibleObject *ctx, TExtension *ext)
     {
         ctx->set_extension(s_slotIdx, (uint64_t)ext);
     }
 
-    static TExtension* get_inited(TExtensibleObject* ctx)
+    static TExtension *get_inited(TExtensibleObject *ctx)
     {
-        uint64_t& val = ctx->get_extension(s_slotIdx);
+        uint64_t &val = ctx->get_extension(s_slotIdx);
         if (val != TExtensibleObject::INVALID_VALUE)
-            return (TExtension*)val;
+            return (TExtension *)val;
 
-        if (s_creator == nullptr)
-        {
-            TExtension* obj = new TExtension();
+        if (s_creator == nullptr) {
+            TExtension *obj = new TExtension();
             val = (uint64_t)obj;
-        }
-        else
-        {
+        } else {
             val = (uint64_t)s_creator(ctx);
         }
 
-        return (TExtension*)val;
+        return (TExtension *)val;
     }
 
-    static void clear(TExtensibleObject* ctx)
+    static void clear(TExtensibleObject *ctx)
     {
-        uint64_t& val = ctx->get_extension(s_slotIdx);
-        if (val != TExtensibleObject::INVALID_VALUE)
-        {
-            s_deletor ((TExtension*)val);
+        uint64_t &val = ctx->get_extension(s_slotIdx);
+        if (val != TExtensibleObject::INVALID_VALUE) {
+            s_deletor((TExtension *)val);
             val = TExtensibleObject::INVALID_VALUE;
         }
     }
 
 private:
-    static uint32_t          s_slotIdx;
+    static uint32_t s_slotIdx;
     static extension_deletor s_deletor;
     static extension_creator s_creator;
 };
 
-
 //--- inline implementation -----------
-template <typename T, const int MAX_EXTENSION_COUNT> extension_deletor extensible_object<T, MAX_EXTENSION_COUNT>::s_extensionDeletors[MAX_EXTENSION_COUNT];
-template <typename T, const int MAX_EXTENSION_COUNT> std::atomic<uint32_t> extensible_object<T, MAX_EXTENSION_COUNT>::s_nextExtensionIndex(0);
+template <typename T, const int MAX_EXTENSION_COUNT>
+extension_deletor
+    extensible_object<T, MAX_EXTENSION_COUNT>::s_extensionDeletors[MAX_EXTENSION_COUNT];
+template <typename T, const int MAX_EXTENSION_COUNT>
+std::atomic<uint32_t> extensible_object<T, MAX_EXTENSION_COUNT>::s_nextExtensionIndex(0);
 
-template <typename TPlaceholder, typename TExtensibleObject> uint32_t uint64_extension_helper<TPlaceholder, TExtensibleObject>::s_slotIdx = 0;
+template <typename TPlaceholder, typename TExtensibleObject>
+uint32_t uint64_extension_helper<TPlaceholder, TExtensibleObject>::s_slotIdx = 0;
 
-template <typename TExtension, typename TExtensibleObject> uint32_t object_extension_helper<TExtension, TExtensibleObject>::s_slotIdx = 0;
-template <typename TExtension, typename TExtensibleObject> extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_deletor = nullptr;
-template <typename TExtension, typename TExtensibleObject> extension_creator object_extension_helper<TExtension, TExtensibleObject>::s_creator = nullptr;
+template <typename TExtension, typename TExtensibleObject>
+uint32_t object_extension_helper<TExtension, TExtensibleObject>::s_slotIdx = 0;
+template <typename TExtension, typename TExtensibleObject>
+extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_deletor = nullptr;
+template <typename TExtension, typename TExtensibleObject>
+extension_creator object_extension_helper<TExtension, TExtensibleObject>::s_creator = nullptr;
 /*@}*/
 } // end namespace dsn

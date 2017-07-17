@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,129 +33,121 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include "hpc_task_queue.h"
+#include <boost/function_output_iterator.hpp>
 
-# include "hpc_task_queue.h"
-# include <boost/function_output_iterator.hpp>
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "task.queue.hpc"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "task.queue.hpc"
-
-namespace dsn 
+namespace dsn {
+namespace tools {
+hpc_task_queue::hpc_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
+    : task_queue(pool, index, inner_provider)
 {
-    namespace tools 
+}
+
+void hpc_task_queue::enqueue(task *task)
+{
+    dassert(task->next == nullptr, "task is not alone");
     {
-        hpc_task_queue::hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-            : task_queue(pool, index, inner_provider)
-        {
-        }
-        
-        void hpc_task_queue::enqueue(task* task)
-        {
-            dassert(task->next == nullptr, "task is not alone");
-            {
-                utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
-                _tasks.add(task);
-            }
-            _cond.notify_one();
-        }
-
-        task* hpc_task_queue::dequeue(/*inout*/int& batch_size)
-        {
-            task* t;
-            
-            _lock.lock();
-            _cond.wait(_lock, [=]{ return !_tasks.is_empty(); });
-            t = _tasks.pop_batch(batch_size);
-            _lock.unlock();
-
-            return t;
-        }
-
-
-        hpc_task_priority_queue::hpc_task_priority_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-            : task_queue(pool, index, inner_provider)
-        {
-        }
-
-        void hpc_task_priority_queue::enqueue(task* task)
-        {
-            dassert(task->next == nullptr, "task is not alone");
-            auto idx = static_cast<int>(task->spec().priority);
-            {
-                utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock[idx]);
-                _tasks[idx].add(task);
-            }
-
-            _sema.signal();
-        }
-
-        task* hpc_task_priority_queue::dequeue(/*inout*/int& batch_size)
-        {
-            task* t = nullptr;
-
-            _sema.wait();
-
-            for (auto i = TASK_PRIORITY_COUNT - 1; i >= 0; --i)
-            {
-                _lock[i].lock();
-                t = _tasks[i].pop_one();
-                _lock[i].unlock();
-
-                if (t)
-                    break;
-            }
-
-            batch_size = 1;
-            dassert(t != nullptr, "returned task cannot be null");
-            return t;
-        }
-
-        hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider): task_queue(pool, index, inner_provider)
-        {
-        }
-
-        void hpc_concurrent_task_queue::enqueue(task* task)
-        {
-            _queues[task->spec().priority].q.enqueue(task);
-            _sema.signal(1);
-        }
-        task* hpc_concurrent_task_queue::dequeue(int& batch_size)
-        {
-            batch_size = _sema.waitMany(batch_size);
-            if (batch_size == 0)
-            {
-                return nullptr;
-            }
-            task* head = nullptr, * last = nullptr;
-            auto out = boost::make_function_output_iterator(
-                [&head, &last] (task* in)
-                {
-                    if (last)
-                    {
-                        last->next = in;
-                    }
-                    else
-                    {
-                        head = in;
-                    }
- 
-                    last = in;
-                    last->next = nullptr;
-                });
-            auto count = batch_size;
-            do {
-                for (auto& qs : _queues)
-                {
-                    count -= qs.q.try_dequeue_bulk(out, count);
-                    if (count == 0)
-                    {
-                        break;
-                    }
-                }
-            } while (count != 0);
-            return head;
-        }
+        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        _tasks.add(task);
     }
+    _cond.notify_one();
+}
+
+task *hpc_task_queue::dequeue(/*inout*/ int &batch_size)
+{
+    task *t;
+
+    _lock.lock();
+    _cond.wait(_lock, [=] { return !_tasks.is_empty(); });
+    t = _tasks.pop_batch(batch_size);
+    _lock.unlock();
+
+    return t;
+}
+
+hpc_task_priority_queue::hpc_task_priority_queue(task_worker_pool *pool,
+                                                 int index,
+                                                 task_queue *inner_provider)
+    : task_queue(pool, index, inner_provider)
+{
+}
+
+void hpc_task_priority_queue::enqueue(task *task)
+{
+    dassert(task->next == nullptr, "task is not alone");
+    auto idx = static_cast<int>(task->spec().priority);
+    {
+        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock[idx]);
+        _tasks[idx].add(task);
+    }
+
+    _sema.signal();
+}
+
+task *hpc_task_priority_queue::dequeue(/*inout*/ int &batch_size)
+{
+    task *t = nullptr;
+
+    _sema.wait();
+
+    for (auto i = TASK_PRIORITY_COUNT - 1; i >= 0; --i) {
+        _lock[i].lock();
+        t = _tasks[i].pop_one();
+        _lock[i].unlock();
+
+        if (t)
+            break;
+    }
+
+    batch_size = 1;
+    dassert(t != nullptr, "returned task cannot be null");
+    return t;
+}
+
+hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool *pool,
+                                                     int index,
+                                                     task_queue *inner_provider)
+    : task_queue(pool, index, inner_provider)
+{
+}
+
+void hpc_concurrent_task_queue::enqueue(task *task)
+{
+    _queues[task->spec().priority].q.enqueue(task);
+    _sema.signal(1);
+}
+task *hpc_concurrent_task_queue::dequeue(int &batch_size)
+{
+    batch_size = _sema.waitMany(batch_size);
+    if (batch_size == 0) {
+        return nullptr;
+    }
+    task *head = nullptr, *last = nullptr;
+    auto out = boost::make_function_output_iterator([&head, &last](task *in) {
+        if (last) {
+            last->next = in;
+        } else {
+            head = in;
+        }
+
+        last = in;
+        last->next = nullptr;
+    });
+    auto count = batch_size;
+    do {
+        for (auto &qs : _queues) {
+            count -= qs.q.try_dequeue_bulk(out, count);
+            if (count == 0) {
+                break;
+            }
+        }
+    } while (count != 0);
+    return head;
+}
+}
 }

@@ -38,9 +38,9 @@
 
 namespace dsn {
 template <typename T>
-struct function_traits
-    : public function_traits<decltype(&T::operator())>
-{};
+struct function_traits : public function_traits<decltype(&T::operator())>
+{
+};
 template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType(Args...)>
 {
@@ -51,57 +51,72 @@ struct function_traits<ReturnType(Args...)>
 };
 
 template <typename ReturnType, typename... Args>
-struct function_traits<ReturnType(*)(Args...)>
-    : public function_traits<ReturnType(Args...)>
-{};
-
-template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType(ClassType::*)(Args...)>
-    : public function_traits<ReturnType(Args...)>
+struct function_traits<ReturnType (*)(Args...)> : public function_traits<ReturnType(Args...)>
 {
-    typedef ClassType& owner_type;
 };
 
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType(ClassType::*)(Args...) const>
+struct function_traits<ReturnType (ClassType::*)(Args...)>
     : public function_traits<ReturnType(Args...)>
 {
-    typedef const ClassType& owner_type;
+    typedef ClassType &owner_type;
 };
 
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType(ClassType::*)(Args...) volatile>
+struct function_traits<ReturnType (ClassType::*)(Args...) const>
     : public function_traits<ReturnType(Args...)>
 {
-    typedef volatile ClassType& owner_type;
+    typedef const ClassType &owner_type;
 };
 
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType(ClassType::*)(Args...) const volatile>
+struct function_traits<ReturnType (ClassType::*)(Args...) volatile>
     : public function_traits<ReturnType(Args...)>
 {
-    typedef const volatile ClassType& owner_type;
+    typedef volatile ClassType &owner_type;
+};
+
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType (ClassType::*)(Args...) const volatile>
+    : public function_traits<ReturnType(Args...)>
+{
+    typedef const volatile ClassType &owner_type;
 };
 
 template <typename FunctionType>
-struct function_traits<std::function<FunctionType>>
-    : public function_traits<FunctionType>
-{};
+struct function_traits<std::function<FunctionType>> : public function_traits<FunctionType>
+{
+};
 template <typename T>
-struct function_traits<T&> : public function_traits<T> {};
+struct function_traits<T &> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<const T&> : public function_traits<T> {};
+struct function_traits<const T &> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<volatile T&> : public function_traits<T> {};
+struct function_traits<volatile T &> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<const volatile T&> : public function_traits<T> {};
+struct function_traits<const volatile T &> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<T&&> : public function_traits<T> {};
+struct function_traits<T &&> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<const T&&> : public function_traits<T> {};
+struct function_traits<const T &&> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<volatile T&&> : public function_traits<T> {};
+struct function_traits<volatile T &&> : public function_traits<T>
+{
+};
 template <typename T>
-struct function_traits<const volatile T&&> : public function_traits<T> {};
-
+struct function_traits<const volatile T &&> : public function_traits<T>
+{
+};
 }

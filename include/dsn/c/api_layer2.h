@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,23 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/c/api_layer1.h>
+#include <dsn/c/api_layer1.h>
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif
+#endif
 
 /*!
  @defgroup framework-api Framework APIs
  @ingroup service-api-c
-    
+
   APIs used by frameworks
-  
+
  @{
  */
- 
+
 /*!
 Creates framework hosted application.
 
@@ -61,13 +61,11 @@ Creates framework hosted application.
 
 \return error code: ERR_OK, ERR_SERVICE_ALREADY_EXIST (app_context is also valid)
 */
-extern DSN_API dsn_error_t dsn_hosted_app_create(
-    const char* type,
-    dsn_gpid gpid, 
-    const char* data_dir,
-    /*our*/ void** app_context_for_downcalls, 
-    /*out*/void** app_context_for_callbacks
-    );
+extern DSN_API dsn_error_t dsn_hosted_app_create(const char *type,
+                                                 dsn_gpid gpid,
+                                                 const char *data_dir,
+                                                 /*our*/ void **app_context_for_downcalls,
+                                                 /*out*/ void **app_context_for_callbacks);
 
 /*!
 start framework hosted application.
@@ -76,7 +74,9 @@ start framework hosted application.
 \param argc same convention with traditional main
 \param argv same convention with traditional main
 */
-extern DSN_API dsn_error_t dsn_hosted_app_start(void* app_context_for_downcalls, int argc, char** argv);
+extern DSN_API dsn_error_t dsn_hosted_app_start(void *app_context_for_downcalls,
+                                                int argc,
+                                                char **argv);
 
 /*!
 destroy framework hosted application.
@@ -84,7 +84,7 @@ destroy framework hosted application.
 \param app_context_for_downcalls see \ref dsn_hosted_app_create
 \param cleanup clean up the state of given application
 */
-extern DSN_API dsn_error_t dsn_hosted_app_destroy(void* app_context_for_downcalls, bool cleanup);
+extern DSN_API dsn_error_t dsn_hosted_app_destroy(void *app_context_for_downcalls, bool cleanup);
 
 /*!
 send an RPC request to a local application and execute
@@ -93,10 +93,12 @@ send an RPC request to a local application and execute
 \param msg the RPC request
 \param exec_inline whether to execute the RPC handler within this call or not
 */
-extern DSN_API void        dsn_hosted_app_commit_rpc_request(void* app_context_for_downcalls, dsn_message_t msg, bool exec_inline);
+extern DSN_API void dsn_hosted_app_commit_rpc_request(void *app_context_for_downcalls,
+                                                      dsn_message_t msg,
+                                                      bool exec_inline);
 
 /*@}*/
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 }
-# endif
+#endif

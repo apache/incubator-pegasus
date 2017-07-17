@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,35 +40,44 @@
 #include <dsn/cpp/json_helper.h>
 #include "replication_app_base.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "replica"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-replica::replica(replica_stub* stub, gpid gpid, const app_info& app, const char* dir)
-    : serverlet<replica>("replica"), 
-    _app_info(app),
-    _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
+replica::replica(replica_stub *stub, gpid gpid, const app_info &app, const char *dir)
+    : serverlet<replica>("replica"),
+      _app_info(app),
+      _primary_states(
+          gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert(_app_info.app_type != "", "");
     dassert(stub != nullptr, "");
     _stub = stub;
     _dir = dir;
-    sprintf(_name, "%d.%d@%s", gpid.get_app_id(), gpid.get_partition_index(), stub->_primary_address.to_string());
+    sprintf(_name,
+            "%d.%d@%s",
+            gpid.get_app_id(),
+            gpid.get_partition_index(),
+            stub->_primary_address.to_string());
     _options = &stub->options();
     init_state();
     _config.pid = gpid;
 
     std::stringstream ss;
-    ss << "private_log_size(MB)" << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
-    _counter_private_log_size.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
+    ss << "private_log_size(MB)"
+       << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
+    _counter_private_log_size.init(
+        "eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
 }
 
-//void replica::json_state(std::stringstream& out) const
+// void replica::json_state(std::stringstream& out) const
 //{
-//    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
+//    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(),
+//    _app->last_durable_decree());
 //}
 
 void replica::update_commit_statistics(int count)
@@ -84,15 +93,10 @@ void replica::init_state()
 
     _inactive_is_transient = false;
     _is_initializing = false;
-    _prepare_list = new prepare_list(
-        0, 
-        _options->max_mutation_count_in_prepare_list,
-        std::bind(
-            &replica::execute_mutation,
-            this,
-            std::placeholders::_1
-            )
-    );
+    _prepare_list =
+        new prepare_list(0,
+                         _options->max_mutation_count_in_prepare_list,
+                         std::bind(&replica::execute_mutation, this, std::placeholders::_1));
 
     _config.ballot = 0;
     _config.pid.set_app_id(0);
@@ -109,8 +113,7 @@ replica::~replica(void)
 {
     close();
 
-    if (nullptr != _prepare_list)
-    {
+    if (nullptr != _prepare_list) {
         delete _prepare_list;
         _prepare_list = nullptr;
     }
@@ -119,11 +122,10 @@ replica::~replica(void)
 }
 
 void replica::on_client_read(task_code code, dsn_message_t request)
-{    
-    if (status() == partition_status::PS_INACTIVE || status() == partition_status::PS_POTENTIAL_SECONDARY)
-    {
-        derror("%s: invalid status: partition_status=%s",
-               name(), enum_to_string(status()));
+{
+    if (status() == partition_status::PS_INACTIVE ||
+        status() == partition_status::PS_POTENTIAL_SECONDARY) {
+        derror("%s: invalid status: partition_status=%s", name(), enum_to_string(status()));
         response_client_message(true, request, ERR_INVALID_STATE);
         return;
     }
@@ -131,54 +133,53 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     if (status() != partition_status::PS_PRIMARY ||
 
         // a small window where the state is not the latest yet
-        last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
-    {
-        if (status() != partition_status::PS_PRIMARY)
-        {
-            derror("%s: invalid status: partition_status=%s",
-                   name(), enum_to_string(status()));
+        last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
+        if (status() != partition_status::PS_PRIMARY) {
+            derror("%s: invalid status: partition_status=%s", name(), enum_to_string(status()));
             response_client_message(true, request, ERR_INVALID_STATE);
             return;
         }
 
-        if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
-        {
-            derror("%s: last_committed_decree(%" PRId64 ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
-                   name(), last_committed_decree(), _primary_states.last_prepare_decree_on_new_primary);
+        if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
+            derror("%s: last_committed_decree(%" PRId64
+                   ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
+                   name(),
+                   last_committed_decree(),
+                   _primary_states.last_prepare_decree_on_new_primary);
             response_client_message(true, request, ERR_INVALID_STATE);
             return;
         }
     }
 
-    dassert (_app != nullptr, "");
+    dassert(_app != nullptr, "");
 
     dsn_hosted_app_commit_rpc_request(_app->app_context(), request, true);
 }
 
 void replica::response_client_message(bool is_read, dsn_message_t request, error_code error)
 {
-    if (nullptr == request)
-    {
+    if (nullptr == request) {
         error.end_tracking();
         return;
-    }   
-
-    if (error == ERR_OK)
-    {
-        dinfo("%s: reply client %s to %s, err = %s",
-              name(), is_read ? "read" : "write",
-              dsn_address_to_string(dsn_msg_from_address(request)), error.to_string());
     }
-    else
-    {
+
+    if (error == ERR_OK) {
+        dinfo("%s: reply client %s to %s, err = %s",
+              name(),
+              is_read ? "read" : "write",
+              dsn_address_to_string(dsn_msg_from_address(request)),
+              error.to_string());
+    } else {
         derror("%s: reply client %s to %s, err = %s",
-               name(), is_read ? "read" : "write",
-               dsn_address_to_string(dsn_msg_from_address(request)), error.to_string());
+               name(),
+               is_read ? "read" : "write",
+               dsn_address_to_string(dsn_msg_from_address(request)),
+               error.to_string());
     }
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
-//error_code replica::check_and_fix_private_log_completeness()
+// error_code replica::check_and_fix_private_log_completeness()
 //{
 //    error_code err = ERR_OK;
 //
@@ -207,89 +208,89 @@ void replica::response_client_message(bool is_read, dsn_message_t request, error
 //                );
 //        }
 //    }
-//    
+//
 //    if (ERR_INCOMPLETE_DATA == err)
 //    {
 //        _private_log->close(true);
 //        _private_log->open(nullptr);
 //        _private_log->set_private(get_gpid(), _app->last_durable_decree());
 //    }
-//    
+//
 //    return err;
 //}
 
 void replica::check_state_completeness()
 {
     /* prepare commit durable */
-    dassert(max_prepared_decree() >= last_committed_decree(), "%" PRId64 " VS %" PRId64 "",
-            max_prepared_decree(), last_committed_decree());
-    dassert(last_committed_decree() >= last_durable_decree(), "%" PRId64 " VS %" PRId64 "",
-            last_committed_decree(), last_durable_decree());
+    dassert(max_prepared_decree() >= last_committed_decree(),
+            "%" PRId64 " VS %" PRId64 "",
+            max_prepared_decree(),
+            last_committed_decree());
+    dassert(last_committed_decree() >= last_durable_decree(),
+            "%" PRId64 " VS %" PRId64 "",
+            last_committed_decree(),
+            last_durable_decree());
 
     /*
-    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_shared_log);
+    auto mind = _stub->_log->max_gced_decree(get_gpid(),
+    _app->init_info().init_offset_in_shared_log);
     dassert(mind <= last_durable_decree(), "%" PRId64 " VS %" PRId64, mind, last_durable_decree());
 
     if (_private_log != nullptr)
-    {   
-        auto mind = _private_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_private_log);
-        dassert(mind <= last_durable_decree(), "%" PRId64 " VS %" PRId64, mind, last_durable_decree());
+    {
+        auto mind = _private_log->max_gced_decree(get_gpid(),
+    _app->init_info().init_offset_in_private_log);
+        dassert(mind <= last_durable_decree(), "%" PRId64 " VS %" PRId64, mind,
+    last_durable_decree());
     }
     */
 }
 
-void replica::execute_mutation(mutation_ptr& mu)
+void replica::execute_mutation(mutation_ptr &mu)
 {
     dinfo("%s: execute mutation %s: request_count = %u",
-        name(), 
-        mu->name(), 
-        static_cast<int>(mu->client_requests.size())
-        );
+          name(),
+          mu->name(),
+          static_cast<int>(mu->client_requests.size()));
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
 
-    switch (status())
-    {
+    switch (status()) {
     case partition_status::PS_INACTIVE:
-        if (_app->last_committed_decree() + 1 == d)
-        {
+        if (_app->last_committed_decree() + 1 == d) {
             err = _app->write_internal(mu);
-        }
-        else
-        {
-            dinfo(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                name(), mu->name(),
-                enum_to_string(status()),
-                _app->last_committed_decree()
-                );
+        } else {
+            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                  name(),
+                  mu->name(),
+                  enum_to_string(status()),
+                  _app->last_committed_decree());
         }
         break;
-    case partition_status::PS_PRIMARY:
-        {
-            check_state_completeness();
-            dassert(_app->last_committed_decree() + 1 == d, "app commit: %" PRId64 ", mutation decree: %" PRId64 "", _app->last_committed_decree(), d);
-            err = _app->write_internal(mu);
-        }
-        break;
+    case partition_status::PS_PRIMARY: {
+        check_state_completeness();
+        dassert(_app->last_committed_decree() + 1 == d,
+                "app commit: %" PRId64 ", mutation decree: %" PRId64 "",
+                _app->last_committed_decree(),
+                d);
+        err = _app->write_internal(mu);
+    } break;
 
     case partition_status::PS_SECONDARY:
-        if (!_secondary_states.checkpoint_is_running)
-        {
+        if (!_secondary_states.checkpoint_is_running) {
             check_state_completeness();
-            dassert (_app->last_committed_decree() + 1 == d, "%" PRId64 " VS %" PRId64 "",
-                     _app->last_committed_decree() + 1, d);
+            dassert(_app->last_committed_decree() + 1 == d,
+                    "%" PRId64 " VS %" PRId64 "",
+                    _app->last_committed_decree() + 1,
+                    d);
             err = _app->write_internal(mu);
-        }
-        else
-        {
-            dinfo(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                name(), mu->name(),
-                enum_to_string(status()),
-                _app->last_committed_decree()
-                );
+        } else {
+            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                  name(),
+                  mu->name(),
+                  enum_to_string(status()),
+                  _app->last_committed_decree());
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
@@ -298,24 +299,23 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         if (_potential_secondary_states.learning_status == learner_status::LearningSucceeded ||
-            _potential_secondary_states.learning_status == learner_status::LearningWithPrepareTransient)
-        {
-            dassert(_app->last_committed_decree() + 1 == d, "%" PRId64 " VS %" PRId64 "",
-                    _app->last_committed_decree() + 1, d);
+            _potential_secondary_states.learning_status ==
+                learner_status::LearningWithPrepareTransient) {
+            dassert(_app->last_committed_decree() + 1 == d,
+                    "%" PRId64 " VS %" PRId64 "",
+                    _app->last_committed_decree() + 1,
+                    d);
             err = _app->write_internal(mu);
-        }
-        else
-        {
+        } else {
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
             // catch-up will be done later after the checkpoint task is finished
 
-            dinfo(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                name(), mu->name(),
-                enum_to_string(status()),
-                _app->last_committed_decree()
-                );
+            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                  name(),
+                  mu->name(),
+                  enum_to_string(status()),
+                  _app->last_committed_decree());
         }
         break;
     case partition_status::PS_ERROR:
@@ -323,22 +323,19 @@ void replica::execute_mutation(mutation_ptr& mu)
     default:
         dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
     }
-    
-    dinfo("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
 
-    if (err != ERR_OK)
-    {
+    dinfo(
+        "TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+
+    if (err != ERR_OK) {
         handle_local_failure(err);
     }
 
-    if (status() == partition_status::PS_PRIMARY)
-    {
+    if (status() == partition_status::PS_PRIMARY) {
         mutation_ptr next = _primary_states.write_queue.check_possible_work(
-            static_cast<int>(_prepare_list->max_decree() - d)
-            );
+            static_cast<int>(_prepare_list->max_decree() - d));
 
-        if (next)
-        {
+        if (next) {
             init_prepare(next);
         }
     }
@@ -354,7 +351,7 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
-bool replica::group_configuration(/*out*/ partition_configuration& config) const
+bool replica::group_configuration(/*out*/ partition_configuration &config) const
 {
     if (partition_status::PS_PRIMARY != status())
         return false;
@@ -369,13 +366,9 @@ decree replica::last_prepared_decree() const
 {
     ballot lastBallot = 0;
     decree start = last_committed_decree();
-    while (true)
-    {
+    while (true) {
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
-        if (mu == nullptr 
-            || mu->data.header.ballot < lastBallot 
-            || !mu->is_logged()
-            )
+        if (mu == nullptr || mu->data.header.ballot < lastBallot || !mu->is_logged())
             break;
 
         start++;
@@ -386,16 +379,12 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
-    dassert(
-        status() == partition_status::PS_ERROR ||
-        status() == partition_status::PS_INACTIVE,
-        "%s: invalid state %s when calling replica::close",
-        name(),
-        enum_to_string(status())
-        );
+    dassert(status() == partition_status::PS_ERROR || status() == partition_status::PS_INACTIVE,
+            "%s: invalid state %s when calling replica::close",
+            name(),
+            enum_to_string(status()));
 
-    if (nullptr != _checkpoint_timer)
-    {
+    if (nullptr != _checkpoint_timer) {
         _checkpoint_timer->cancel(true);
         _checkpoint_timer = nullptr;
     }
@@ -403,33 +392,30 @@ void replica::close()
     cleanup_preparing_mutations(true);
     dassert(_primary_states.is_cleaned(), "primary context is not cleared");
 
-    if (partition_status::PS_INACTIVE == status())
-    {
+    if (partition_status::PS_INACTIVE == status()) {
         dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
-        dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
+        dassert(_potential_secondary_states.is_cleaned(),
+                "potential secondary context is not cleared");
     }
 
     // for partition_status::PS_ERROR, context cleanup is done here as they may block
-    else
-    {
+    else {
         bool r = _secondary_states.cleanup(true);
         dassert(r, "secondary context is not cleared");
-        
+
         r = _potential_secondary_states.cleanup(true);
         dassert(r, "potential secondary context is not cleared");
     }
-    
-    if (_private_log != nullptr)
-    {
+
+    if (_private_log != nullptr) {
         _private_log->close();
         _private_log = nullptr;
     }
 
-    if (_app != nullptr)
-    {
+    if (_app != nullptr) {
         ::dsn::error_code err = _app->close(false);
         err.end_tracking();
     }
 }
-
-}} // namespace
+}
+} // namespace

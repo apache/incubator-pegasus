@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,119 +33,98 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/utility/singleton.h>
-# include <vector>
-# include <cassert>
+#include <dsn/utility/singleton.h>
+#include <vector>
+#include <cassert>
 
-namespace dsn
-{
+namespace dsn {
 #define DELAY_COUNT 6
-    const double s_default_delay_points[DELAY_COUNT] = { 1.0, 1.2, 1.4, 1.6, 1.8, 2.0 };
-    const int    s_default_delay[DELAY_COUNT] = { 0, 0, 1, 2, 5, 10 }; // millieseconds
+const double s_default_delay_points[DELAY_COUNT] = {1.0, 1.2, 1.4, 1.6, 1.8, 2.0};
+const int s_default_delay[DELAY_COUNT] = {0, 0, 1, 2, 5, 10}; // millieseconds
 
-    class exp_delay
+class exp_delay
+{
+public:
+    exp_delay()
     {
-    public:
-        exp_delay()
-        {
-            memcpy((void*)_delay, (const void*)s_default_delay, sizeof(_delay));
-            _threshold = 0x0fffffff;
-        }
+        memcpy((void *)_delay, (const void *)s_default_delay, sizeof(_delay));
+        _threshold = 0x0fffffff;
+    }
 
-        void initialize(const std::vector<int>& delays, int threshold)
-        {
-            assert((int)delays.size() == DELAY_COUNT);
-            
-            int i = 0;
-            for (auto& d : delays)
-            {
-                _delay[i++] = d;
-            }
-            _threshold = threshold;
-        }
-
-        void initialize(int threshold)
-        {
-            _threshold = threshold;
-        }
-
-        inline int delay(int value)
-        {
-            if (value >= _threshold)
-            {
-                double f = (double)value / (double)_threshold;
-                int delay_milliseconds;
-
-                if (f < s_default_delay_points[DELAY_COUNT - 1])
-                {
-                    int idx = static_cast<int>((f - 1.0) / 0.2);
-                    delay_milliseconds = _delay[idx];
-                }
-                else
-                {
-                    delay_milliseconds = _delay[DELAY_COUNT - 1];
-                }
-
-                return delay_milliseconds;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
-    private:
-        int    _delay[DELAY_COUNT];
-        int    _threshold;
-    };
-
-    class shared_exp_delay
+    void initialize(const std::vector<int> &delays, int threshold)
     {
-    public:
-        shared_exp_delay()
-        {
-            memcpy((void*)_delay, (const void*)s_default_delay, sizeof(_delay));
+        assert((int)delays.size() == DELAY_COUNT);
+
+        int i = 0;
+        for (auto &d : delays) {
+            _delay[i++] = d;
         }
+        _threshold = threshold;
+    }
 
-        void initialize(const std::vector<int>& delays)
-        {
-            assert((int)delays.size() == DELAY_COUNT);
+    void initialize(int threshold) { _threshold = threshold; }
 
-            int i = 0;
-            for (auto& d : delays)
-            {
-                _delay[i++] = d;
+    inline int delay(int value)
+    {
+        if (value >= _threshold) {
+            double f = (double)value / (double)_threshold;
+            int delay_milliseconds;
+
+            if (f < s_default_delay_points[DELAY_COUNT - 1]) {
+                int idx = static_cast<int>((f - 1.0) / 0.2);
+                delay_milliseconds = _delay[idx];
+            } else {
+                delay_milliseconds = _delay[DELAY_COUNT - 1];
             }
+
+            return delay_milliseconds;
+        } else {
+            return 0;
         }
+    }
 
-        inline int delay(int value, int threshold)
-        {
-            if (value >= threshold)
-            {
-                double f = (double)value / (double)threshold;
-                int delay_milliseconds;
+private:
+    int _delay[DELAY_COUNT];
+    int _threshold;
+};
 
-                if (f < s_default_delay_points[DELAY_COUNT - 1])
-                {
-                    int idx = static_cast<int>((f - 1.0) / 0.2);
-                    delay_milliseconds = _delay[idx];
-                }
-                else
-                {
-                    delay_milliseconds = _delay[DELAY_COUNT - 1];
-                }
+class shared_exp_delay
+{
+public:
+    shared_exp_delay() { memcpy((void *)_delay, (const void *)s_default_delay, sizeof(_delay)); }
 
-                return delay_milliseconds;
-            }
-            else
-            {
-                return 0;
-            }
+    void initialize(const std::vector<int> &delays)
+    {
+        assert((int)delays.size() == DELAY_COUNT);
+
+        int i = 0;
+        for (auto &d : delays) {
+            _delay[i++] = d;
         }
+    }
 
-    private:
-        int    _delay[DELAY_COUNT];
-    };
+    inline int delay(int value, int threshold)
+    {
+        if (value >= threshold) {
+            double f = (double)value / (double)threshold;
+            int delay_milliseconds;
+
+            if (f < s_default_delay_points[DELAY_COUNT - 1]) {
+                int idx = static_cast<int>((f - 1.0) / 0.2);
+                delay_milliseconds = _delay[idx];
+            } else {
+                delay_milliseconds = _delay[DELAY_COUNT - 1];
+            }
+
+            return delay_milliseconds;
+        } else {
+            return 0;
+        }
+    }
+
+private:
+    int _delay[DELAY_COUNT];
+};
 }

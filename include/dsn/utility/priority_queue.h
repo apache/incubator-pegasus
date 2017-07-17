@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,17 +35,18 @@
 
 #pragma once
 
-# include <queue>
-# include <cassert>
-# include <dsn/utility/synchronize.h>
+#include <queue>
+#include <cassert>
+#include <dsn/utility/synchronize.h>
 
-namespace dsn { namespace utils {
+namespace dsn {
+namespace utils {
 
-template<typename T, int priority_count, typename TQueue = std::queue<T>>
+template <typename T, int priority_count, typename TQueue = std::queue<T>>
 class priority_queue
 {
-public:    
-    priority_queue(const std::string& name)
+public:
+    priority_queue(const std::string &name)
     {
         _name = name;
         _count = 0;
@@ -55,7 +56,7 @@ public:
     {
         assert(priority >= 0 && priority < priority_count); // "wrong priority");
 
-        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
         {
             _items[priority].push(obj);
             return ++_count;
@@ -64,26 +65,29 @@ public:
 
     virtual T dequeue()
     {
-        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
         long ct = 0;
         return dequeue_impl(ct);
     }
 
-    virtual T dequeue(/*out*/ long& ct)
+    virtual T dequeue(/*out*/ long &ct)
     {
-        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
         return dequeue_impl(ct);
     }
-    
-    const std::string& get_name() const { return _name;}
 
-    long count() const { auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
+    const std::string &get_name() const { return _name; }
+
+    long count() const
+    {
+        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        return _count;
+    }
 
 protected:
-    T dequeue_impl(/*out*/ long& ct, bool pop = true)
+    T dequeue_impl(/*out*/ long &ct, bool pop = true)
     {
-        if (_count == 0)
-        {
+        if (_count == 0) {
             ct = 0;
             return nullptr;
         }
@@ -91,10 +95,8 @@ protected:
         ct = --_count;
 
         int index = priority_count - 1;
-        for (; index >= 0; index--)
-        {
-            if (_items[index].size() > 0)
-            {
+        for (; index >= 0; index--) {
+            if (_items[index].size() > 0) {
                 break;
             }
         }
@@ -106,40 +108,39 @@ protected:
     }
 
 protected:
-    std::string   _name;
-    TQueue        _items[priority_count];
-    long          _count;
+    std::string _name;
+    TQueue _items[priority_count];
+    long _count;
     mutable utils::ex_lock_nr_spin _lock;
 };
 
-template<typename T, int priority_count, typename TQueue = std::queue<T>>
+template <typename T, int priority_count, typename TQueue = std::queue<T>>
 class blocking_priority_queue : public priority_queue<T, priority_count, TQueue>
 {
 public:
-    blocking_priority_queue(const std::string& name)
+    blocking_priority_queue(const std::string &name)
         : priority_queue<T, priority_count, TQueue>(name)
     {
     }
 
     virtual long enqueue(T obj, uint32_t priority)
-    { 
+    {
         auto r = priority_queue<T, priority_count, TQueue>::enqueue(obj, priority);
         _sema.signal();
         return r;
     }
 
-    virtual T dequeue(/*out*/ long& ct, int millieseconds = 0xffffffff)
+    virtual T dequeue(/*out*/ long &ct, int millieseconds = 0xffffffff)
     {
-        if (!_sema.wait(millieseconds))
-        {
+        if (!_sema.wait(millieseconds)) {
             ct = 0;
             return nullptr;
         }
         return priority_queue<T, priority_count, TQueue>::dequeue(ct);
     }
-    
+
 private:
     semaphore _sema;
 };
-
-}} // end namespace
+}
+} // end namespace

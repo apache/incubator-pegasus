@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,75 +37,70 @@
 
 #include <dsn/tool_api.h>
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
-    class sim_network_provider;
-    class sim_client_session : public rpc_session
+class sim_network_provider;
+class sim_client_session : public rpc_session
+{
+public:
+    sim_client_session(sim_network_provider &net,
+                       ::dsn::rpc_address remote_addr,
+                       message_parser_ptr &parser);
+
+    virtual void connect();
+
+    virtual void send(uint64_t signature) override;
+
+    virtual void do_read(int sz) override {}
+
+    virtual void close_on_fault_injection() override {}
+};
+
+class sim_server_session : public rpc_session
+{
+public:
+    sim_server_session(sim_network_provider &net,
+                       ::dsn::rpc_address remote_addr,
+                       rpc_session_ptr &client,
+                       message_parser_ptr &parser);
+
+    virtual void send(uint64_t signature) override;
+
+    virtual void connect() {}
+
+    virtual void do_read(int sz) override {}
+
+    virtual void close_on_fault_injection() override {}
+
+private:
+    rpc_session_ptr _client;
+};
+
+class sim_network_provider : public connection_oriented_network
+{
+public:
+    sim_network_provider(rpc_engine *rpc, network *inner_provider);
+    ~sim_network_provider(void) {}
+
+    virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer &ctx);
+
+    virtual ::dsn::rpc_address address() { return _address; }
+
+    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
     {
-    public:
-        sim_client_session(
-            sim_network_provider& net, 
-            ::dsn::rpc_address remote_addr, 
-            message_parser_ptr& parser
-            );
+        message_parser_ptr parser(new_message_parser(_client_hdr_format));
+        return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
+    }
 
-        virtual void connect();
-        
-        virtual void send(uint64_t signature) override;
+    uint32_t net_delay_milliseconds() const;
 
-        virtual void do_read(int sz) override {}
+private:
+    ::dsn::rpc_address _address;
+    uint32_t _min_message_delay_microseconds;
+    uint32_t _max_message_delay_microseconds;
+};
 
-        virtual void close_on_fault_injection() override {}
-    };
-
-    class sim_server_session : public rpc_session
-    {
-    public:
-        sim_server_session(
-            sim_network_provider& net, 
-            ::dsn::rpc_address remote_addr, 
-            rpc_session_ptr& client, 
-            message_parser_ptr& parser
-            );
-
-        virtual void send(uint64_t signature) override;
-
-        virtual void connect() {}
-
-        virtual void do_read(int sz) override {}
-
-        virtual void close_on_fault_injection() override {}
-
-    private:
-        rpc_session_ptr _client;
-    };
-
-    class sim_network_provider : public connection_oriented_network
-    {
-    public:
-        sim_network_provider(rpc_engine* rpc, network* inner_provider);
-        ~sim_network_provider(void) {}
-
-        virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
-    
-        virtual ::dsn::rpc_address address() { return _address; }
-
-        virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
-        {
-            message_parser_ptr parser(new_message_parser(_client_hdr_format));
-            return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
-        }
-
-        uint32_t net_delay_milliseconds() const;
-
-    private:
-        ::dsn::rpc_address    _address;
-        uint32_t     _min_message_delay_microseconds;
-        uint32_t     _max_message_delay_microseconds;
-    };
-        
-    //------------- inline implementations -------------
-
-
-}} // end namespace
-
+//------------- inline implementations -------------
+}
+} // end namespace

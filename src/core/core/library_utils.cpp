@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,76 +33,72 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/utility/utils.h>
-# include <dsn/utility/singleton.h>
-# include <sys/types.h>
-# include <sys/stat.h>
-# include <random>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/singleton.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <random>
 
-# if defined(__linux__)
-# include <sys/syscall.h>
-# include <dlfcn.h> 
-# elif defined(__FreeBSD__)
-# include <sys/thr.h>
-# include <dlfcn.h> 
-# elif defined(__APPLE__)
-# include <pthread.h>
-# include <dlfcn.h> 
-# endif
+#if defined(__linux__)
+#include <sys/syscall.h>
+#include <dlfcn.h>
+#elif defined(__FreeBSD__)
+#include <sys/thr.h>
+#include <dlfcn.h>
+#elif defined(__APPLE__)
+#include <pthread.h>
+#include <dlfcn.h>
+#endif
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "dsn.utils"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "dsn.utils"
 
 namespace dsn {
-    namespace utils {
+namespace utils {
 
-
-        dsn_handle_t load_dynamic_library(const char* module)
-        {
-            std::string module_name(module);
-# if defined(_WIN32)
-            module_name += ".dll";
-            auto hmod = ::LoadLibraryA(module_name.c_str());
-            if (hmod == NULL)
-            {
-                derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
-            }            
-# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            module_name = "lib" + module_name + ".so";
-            auto hmod = dlopen(module_name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
-            if (nullptr == hmod)
-            {
-                derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
-            }
-# else
-# error not implemented yet
-# endif 
-            return (dsn_handle_t)(hmod);
-        }
-
-        dsn_handle_t load_symbol(dsn_handle_t hmodule, const char* symbol)
-        {
-# if defined(_WIN32)
-            return (dsn_handle_t)::GetProcAddress((HMODULE)hmodule, (LPCSTR)symbol);
-# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            return (dsn_handle_t)dlsym((void*)hmodule, symbol);
-# else
-# error not implemented yet
-# endif 
-        }
-
-        void unload_dynamic_library(dsn_handle_t hmodule)
-        {
-# if defined(_WIN32)
-            ::CloseHandle((HMODULE)hmodule);
-# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            dlclose((void*)hmodule);
-# else
-# error not implemented yet
-# endif
-        }
+dsn_handle_t load_dynamic_library(const char *module)
+{
+    std::string module_name(module);
+#if defined(_WIN32)
+    module_name += ".dll";
+    auto hmod = ::LoadLibraryA(module_name.c_str());
+    if (hmod == NULL) {
+        derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
     }
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+    module_name = "lib" + module_name + ".so";
+    auto hmod = dlopen(module_name.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    if (nullptr == hmod) {
+        derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
+    }
+#else
+#error not implemented yet
+#endif
+    return (dsn_handle_t)(hmod);
 }
 
+dsn_handle_t load_symbol(dsn_handle_t hmodule, const char *symbol)
+{
+#if defined(_WIN32)
+    return (dsn_handle_t)::GetProcAddress((HMODULE)hmodule, (LPCSTR)symbol);
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+    return (dsn_handle_t)dlsym((void *)hmodule, symbol);
+#else
+#error not implemented yet
+#endif
+}
+
+void unload_dynamic_library(dsn_handle_t hmodule)
+{
+#if defined(_WIN32)
+    ::CloseHandle((HMODULE)hmodule);
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+    dlclose((void *)hmodule);
+#else
+#error not implemented yet
+#endif
+}
+}
+}

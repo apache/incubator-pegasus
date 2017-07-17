@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,50 +35,45 @@
 
 #pragma once
 
-# include <dsn/tool-api/rpc_message.h>
-# include <dsn/utility/priority_queue.h>
-# include <dsn/tool-api/message_parser.h>
-# include <boost/asio.hpp>
-# include "asio_net_provider.h"
+#include <dsn/tool-api/rpc_message.h>
+#include <dsn/utility/priority_queue.h>
+#include <dsn/tool-api/message_parser.h>
+#include <boost/asio.hpp>
+#include "asio_net_provider.h"
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        class asio_rpc_session : public rpc_session
-        {
-        public:
-            asio_rpc_session(
-                asio_network_provider& net,
-                ::dsn::rpc_address remote_addr,
-                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                message_parser_ptr& parser,
-                bool is_client
-                );
-            virtual ~asio_rpc_session();
-            virtual void send(uint64_t signature) override { return write(signature); }
-            virtual void close_on_fault_injection() override {
-                safe_close();
-            }
+class asio_rpc_session : public rpc_session
+{
+public:
+    asio_rpc_session(asio_network_provider &net,
+                     ::dsn::rpc_address remote_addr,
+                     std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
+                     message_parser_ptr &parser,
+                     bool is_client);
+    virtual ~asio_rpc_session();
+    virtual void send(uint64_t signature) override { return write(signature); }
+    virtual void close_on_fault_injection() override { safe_close(); }
 
-        public:
-            virtual void connect() override;            
-            
-        private:
-            virtual void do_read(int read_next) override;
-            void write(uint64_t signature);
-            void on_failure(bool is_write = false);
-            void set_options();  
-            void on_message_read(message_ex* msg)
-            {
-                if (!on_recv_message(msg, 0))
-                {
-                    on_failure(false);
-                }
-            }
-            void safe_close();
+public:
+    virtual void connect() override;
 
-        private:
-            std::shared_ptr<boost::asio::ip::tcp::socket> _socket;            
-        };
+private:
+    virtual void do_read(int read_next) override;
+    void write(uint64_t signature);
+    void on_failure(bool is_write = false);
+    void set_options();
+    void on_message_read(message_ex *msg)
+    {
+        if (!on_recv_message(msg, 0)) {
+            on_failure(false);
+        }
     }
+    void safe_close();
+
+private:
+    std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
+};
+}
 }

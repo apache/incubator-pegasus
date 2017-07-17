@@ -1,20 +1,17 @@
-# pragma once
+#pragma once
 
-# include "deploy_svc.client.h"
+#include "deploy_svc.client.h"
 
-namespace dsn { namespace dist { 
-class deploy_svc_perf_test_client
-    : public deploy_svc_client,
-      public ::dsn::service::perf_client_helper
+namespace dsn {
+namespace dist {
+class deploy_svc_perf_test_client : public deploy_svc_client,
+                                    public ::dsn::service::perf_client_helper
 {
 public:
-    deploy_svc_perf_test_client(
-        ::dsn::rpc_address server)
-        : deploy_svc_client(server)
-    {
-    }
+    deploy_svc_perf_test_client(::dsn::rpc_address server) : deploy_svc_client(server) {}
 
-    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
+    virtual void
+    send_one(int payload_bytes, int key_space_size, const std::vector<double> &ratios) override
     {
         return;
     }
@@ -27,14 +24,11 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        deploy(
-            req,
-            [this, context = prepare_send_one()](error_code err, deploy_info&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout
-            );
+        deploy(req,
+               [ this, context = prepare_send_one() ](error_code err, deploy_info && resp) {
+                   end_send_one(context, err);
+               },
+               _timeout);
     }
 
     void send_one_undeploy(int payload_bytes, int key_space_size)
@@ -45,14 +39,11 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        undeploy(
-            req,
-            [this, context = prepare_send_one()](error_code err, ::dsn::error_code&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout
-            );
+        undeploy(req,
+                 [ this, context = prepare_send_one() ](error_code err, ::dsn::error_code && resp) {
+                     end_send_one(context, err);
+                 },
+                 _timeout);
     }
 
     void send_one_get_service_list(int payload_bytes, int key_space_size)
@@ -65,12 +56,10 @@ public:
         // req = ss.str();
         get_service_list(
             req,
-            [this, context = prepare_send_one()](error_code err, deploy_info_list&& resp)
-            {
+            [ this, context = prepare_send_one() ](error_code err, deploy_info_list && resp) {
                 end_send_one(context, err);
             },
-            _timeout
-            );
+            _timeout);
     }
 
     void send_one_get_service_info(int payload_bytes, int key_space_size)
@@ -81,14 +70,10 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        get_service_info(
-            req,
-            [this, context = prepare_send_one()](error_code err, deploy_info&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout
-            );
+        get_service_info(req,
+                         [ this, context = prepare_send_one() ](
+                             error_code err, deploy_info && resp) { end_send_one(context, err); },
+                         _timeout);
     }
 
     void send_one_get_cluster_list(int payload_bytes, int key_space_size)
@@ -99,15 +84,11 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        get_cluster_list(
-            req,
-            [this, context = prepare_send_one()](error_code err, cluster_list&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout
-            );
+        get_cluster_list(req,
+                         [ this, context = prepare_send_one() ](
+                             error_code err, cluster_list && resp) { end_send_one(context, err); },
+                         _timeout);
     }
 };
-
-} } 
+}
+}

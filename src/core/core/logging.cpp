@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,20 +34,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/service_api_c.h>
-# include <dsn/tool-api/command.h>
-# include <dsn/tool-api/logging_provider.h>
-# include <dsn/tool_api.h>
-# include "service_engine.h"
-# include <dsn/cpp/auto_codes.h>
+#include <dsn/service_api_c.h>
+#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/logging_provider.h>
+#include <dsn/tool_api.h>
+#include "service_engine.h"
+#include <dsn/cpp/auto_codes.h>
 
 DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
-    ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
-    if (logger != nullptr)
-    {
+    ::dsn::logging_provider *logger = ::dsn::service_engine::fast_instance().logging();
+    if (logger != nullptr) {
         logger->flush();
     }
 }
@@ -55,93 +54,89 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
 void dsn_log_init()
 {
     dsn_log_start_level = enum_from_string(
-        dsn_config_get_value_string("core", "logging_start_level", enum_to_string(dsn_log_start_level),
-            "logs with level below this will not be logged"),
-        dsn_log_level_t::LOG_LEVEL_INVALID
-        );
+        dsn_config_get_value_string("core",
+                                    "logging_start_level",
+                                    enum_to_string(dsn_log_start_level),
+                                    "logs with level below this will not be logged"),
+        dsn_log_level_t::LOG_LEVEL_INVALID);
 
-    dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID, "invalid [core] logging_start_level specified");
+    dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID,
+            "invalid [core] logging_start_level specified");
 
     // register log flush on exit
-    bool logging_flush_on_exit = dsn_config_get_value_bool("core", "logging_flush_on_exit",
-        true, "flush log when exit system");
-    if (logging_flush_on_exit)
-    {
+    bool logging_flush_on_exit = dsn_config_get_value_bool(
+        "core", "logging_flush_on_exit", true, "flush log when exit system");
+    if (logging_flush_on_exit) {
         ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
     }
 
     // register command for logging
     ::dsn::register_command("flush-log",
-        "flush-log - flush log to stderr or log file",
-        "flush-log",
-        [](const std::vector<std::string>& args)
-        {
-            ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
-            if (logger != nullptr)
-            {
-                logger->flush();
-            }
-            return "Flush done.";
-        }
-    );
-    ::dsn::register_command("reset-log-start-level",
+                            "flush-log - flush log to stderr or log file",
+                            "flush-log",
+                            [](const std::vector<std::string> &args) {
+                                ::dsn::logging_provider *logger =
+                                    ::dsn::service_engine::fast_instance().logging();
+                                if (logger != nullptr) {
+                                    logger->flush();
+                                }
+                                return "Flush done.";
+                            });
+    ::dsn::register_command(
+        "reset-log-start-level",
         "reset-log-start-level - reset the log start level",
         "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
-        [](const std::vector<std::string>& args)
-        {
+        [](const std::vector<std::string> &args) {
             dsn_log_level_t start_level;
-            if (args.size() == 0)
-            {
+            if (args.size() == 0) {
                 start_level = enum_from_string(
-                    dsn_config_get_value_string("core", "logging_start_level", enum_to_string(dsn_log_start_level),
-                        "logs with level below this will not be logged"),
-                    dsn_log_level_t::LOG_LEVEL_INVALID
-                    );
-            }
-            else
-            {
+                    dsn_config_get_value_string("core",
+                                                "logging_start_level",
+                                                enum_to_string(dsn_log_start_level),
+                                                "logs with level below this will not be logged"),
+                    dsn_log_level_t::LOG_LEVEL_INVALID);
+            } else {
                 std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level = enum_from_string(
-                    level_str.c_str(),
-                    dsn_log_level_t::LOG_LEVEL_INVALID
-                    );
-                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID)
-                {
+                start_level =
+                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
+                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
                     return "ERROR: invalid level '" + args[0] + "'";
                 }
             }
             dsn_log_set_start_level(start_level);
             return std::string("OK, current level is ") + enum_to_string(start_level);
-        }
-    );
+        });
 }
 
-DSN_API dsn_log_level_t dsn_log_get_start_level()
-{
-    return dsn_log_start_level;
-}
+DSN_API dsn_log_level_t dsn_log_get_start_level() { return dsn_log_start_level; }
 
-DSN_API void dsn_log_set_start_level(dsn_log_level_t level)
-{
-    dsn_log_start_level = level;
-}
+DSN_API void dsn_log_set_start_level(dsn_log_level_t level) { dsn_log_start_level = level; }
 
-DSN_API void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, va_list args)
+DSN_API void dsn_logv(const char *file,
+                      const char *function,
+                      const int line,
+                      dsn_log_level_t log_level,
+                      const char *title,
+                      const char *fmt,
+                      va_list args)
 {
-    ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
-    if (logger != nullptr)
-    {
+    ::dsn::logging_provider *logger = ::dsn::service_engine::instance().logging();
+    if (logger != nullptr) {
         logger->dsn_logv(file, function, line, log_level, title, fmt, args);
-    }
-    else
-    {
+    } else {
         printf("%s:%d:%s():", title, line, function);
         vprintf(fmt, args);
         printf("\n");
     }
 }
 
-DSN_API void dsn_logf(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, ...)
+DSN_API void dsn_logf(const char *file,
+                      const char *function,
+                      const int line,
+                      dsn_log_level_t log_level,
+                      const char *title,
+                      const char *fmt,
+                      ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -149,7 +144,11 @@ DSN_API void dsn_logf(const char *file, const char *function, const int line, ds
     va_end(ap);
 }
 
-DSN_API void dsn_log(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title)
+DSN_API void dsn_log(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *title)
 {
     dsn_logf(file, function, line, log_level, title, "");
 }

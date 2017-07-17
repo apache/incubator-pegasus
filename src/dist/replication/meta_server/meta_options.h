@@ -38,7 +38,8 @@
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication.types.h>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class fd_suboptions
 {
@@ -65,7 +66,7 @@ public:
     int32_t hold_seconds_for_dropped_app;
     meta_function_level::type meta_function_level_on_start;
     bool recover_from_replica_server;
-    
+
     int32_t max_replicas_in_group;
 
     bool add_secondary_enable_flow_control;
@@ -78,7 +79,8 @@ public:
     void initialize();
 
 public:
-    static std::string concat_path_unix_style(const std::string& prefix, const std::string& postfix);
+    static std::string concat_path_unix_style(const std::string &prefix,
+                                              const std::string &postfix);
 };
-
-}}
+}
+}

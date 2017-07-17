@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,12 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include "mutation.h"
+#include "mutation.h"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 struct remote_learner_state
 {
@@ -47,7 +48,7 @@ struct remote_learner_state
     std::string last_learn_log_file;
 };
 
-typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_map;
+typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map;
 
 class primary_context
 {
@@ -57,44 +58,48 @@ public:
           write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled),
           last_prepare_decree_on_new_primary(0),
           last_prepare_ts_ms(0)
-    {}
+    {
+    }
 
     void cleanup(bool clean_pending_mutations = true);
     bool is_cleaned();
-       
-    void reset_membership(const partition_configuration& config, bool clear_learners);
-    void get_replica_config(partition_status::type status, /*out*/ replica_configuration& config, uint64_t learner_signature = invalid_signature);
+
+    void reset_membership(const partition_configuration &config, bool clear_learners);
+    void get_replica_config(partition_status::type status,
+                            /*out*/ replica_configuration &config,
+                            uint64_t learner_signature = invalid_signature);
     bool check_exist(::dsn::rpc_address node, partition_status::type status);
     partition_status::type get_node_status(::dsn::rpc_address addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
-    
+
 public:
     // membership mgr, including learners
     partition_configuration membership;
-    node_statuses           statuses;
-    learner_map             learners;
-    uint64_t                next_learning_version;
+    node_statuses statuses;
+    learner_map learners;
+    uint64_t next_learning_version;
 
     // 2pc batching
-    mutation_queue          write_queue;
+    mutation_queue write_queue;
 
     // group check
-    dsn::task_ptr     group_check_task; // the repeated group check task of LPC_GROUP_CHECK
-                                        // calls broadcast_group_check() to check all replicas separately
-                                        // created in replica::init_group_check()
-                                        // cancelled in cleanup() when status changed from PRIMARY to others
-    node_tasks        group_check_pending_replies; // group check response tasks of RPC_GROUP_CHECK for each replica
+    dsn::task_ptr group_check_task; // the repeated group check task of LPC_GROUP_CHECK
+    // calls broadcast_group_check() to check all replicas separately
+    // created in replica::init_group_check()
+    // cancelled in cleanup() when status changed from PRIMARY to others
+    node_tasks group_check_pending_replies; // group check response tasks of RPC_GROUP_CHECK for
+                                            // each replica
 
     // reconfiguration task of RPC_CM_UPDATE_PARTITION_CONFIGURATION
-    dsn::task_ptr     reconfiguration_task;
+    dsn::task_ptr reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
-    decree       last_prepare_decree_on_new_primary; 
+    decree last_prepare_decree_on_new_primary;
 
     // copy checkpoint from secondaries ptr
-    dsn::task_ptr   checkpoint_task;
+    dsn::task_ptr checkpoint_task;
 
     uint64_t last_prepare_ts_ms;
 };
@@ -107,48 +112,49 @@ public:
     bool is_cleaned();
 
 public:
-    bool            checkpoint_is_running;
+    bool checkpoint_is_running;
     ::dsn::task_ptr checkpoint_task;
     ::dsn::task_ptr checkpoint_completed_task;
     ::dsn::task_ptr catchup_with_private_log_task;
 };
 
-class potential_secondary_context 
+class potential_secondary_context
 {
 public:
-    potential_secondary_context() :
-        learning_version(0),
-        learning_start_ts_ns(0),
-        learning_status(learner_status::LearningInvalid),
-        learning_round_is_running(false),
-        learning_start_prepare_decree(invalid_decree)
-    {}
+    potential_secondary_context()
+        : learning_version(0),
+          learning_start_ts_ns(0),
+          learning_status(learner_status::LearningInvalid),
+          learning_round_is_running(false),
+          learning_start_prepare_decree(invalid_decree)
+    {
+    }
 
     bool cleanup(bool force);
     bool is_cleaned();
     uint64_t duration_ms() const { return (dsn_now_ns() - learning_start_ts_ns) / 1000000; }
 
 public:
-    uint64_t        learning_version;
-    uint64_t        learning_start_ts_ns;
-    learner_status::type  learning_status;
-    volatile bool   learning_round_is_running;
-    decree          learning_start_prepare_decree;
+    uint64_t learning_version;
+    uint64_t learning_start_ts_ns;
+    learner_status::type learning_status;
+    volatile bool learning_round_is_running;
+    decree learning_start_prepare_decree;
 
-    ::dsn::task_ptr       delay_learning_task;
-    ::dsn::task_ptr       learning_task;
-    ::dsn::task_ptr       learn_remote_files_task;
-    ::dsn::task_ptr       learn_remote_files_completed_task;
-    ::dsn::task_ptr       catchup_with_private_log_task;
-    ::dsn::task_ptr       completion_notify_task;
+    ::dsn::task_ptr delay_learning_task;
+    ::dsn::task_ptr learning_task;
+    ::dsn::task_ptr learn_remote_files_task;
+    ::dsn::task_ptr learn_remote_files_completed_task;
+    ::dsn::task_ptr catchup_with_private_log_task;
+    ::dsn::task_ptr completion_notify_task;
 };
 
 //---------------inline impl----------------------------------------------------------------
 
 inline partition_status::type primary_context::get_node_status(::dsn::rpc_address addr) const
-{ 
+{
     auto it = statuses.find(addr);
-    return it != statuses.end()  ? it->second : partition_status::PS_INACTIVE;
+    return it != statuses.end() ? it->second : partition_status::PS_INACTIVE;
 }
-
-}} // end namespace
+}
+} // end namespace

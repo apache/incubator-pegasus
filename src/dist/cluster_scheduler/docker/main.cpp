@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,23 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "docker_scheduler.h"
+#include "docker_scheduler.h"
 
 class test_client : public ::dsn::service_app
 {
 public:
     test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
-    ::dsn::error_code start(int argc, char** argv)
+    ::dsn::error_code start(int argc, char **argv)
     {
         auto err = _docker.initialize();
         return err;
     }
 
-    ::dsn::error_code stop(bool cleanup = false)
-    {
-        return ::dsn::ERR_OK;
-    }
+    ::dsn::error_code stop(bool cleanup = false) { return ::dsn::ERR_OK; }
 
     ::dsn::dist::docker_scheduler _docker;
 };

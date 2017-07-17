@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,69 +37,67 @@
 
 #include <dsn/tool_api.h>
 
- /*!
- @defgroup fault-injector Fault Injector
- @ingroup tools-test
+/*!
+@defgroup fault-injector Fault Injector
+@ingroup tools-test
 
- Fault Injector toollet
+Fault Injector toollet
 
- This toollet injects faults to mimic various failures in production environments,
- as configed below.
+This toollet injects faults to mimic various failures in production environments,
+as configed below.
 
- <PRE>
+<PRE>
 
- [core]
+[core]
 
- toollets = fault_injector
+toollets = fault_injector
 
- [task..default]
- ; whether enable fault injection
- fault_injection_enabled = true
+[task..default]
+; whether enable fault injection
+fault_injection_enabled = true
 
- ; maximum disk operation delay (ms)
- disk_io_delay_ms_max = 12
+; maximum disk operation delay (ms)
+disk_io_delay_ms_max = 12
 
- ; miminum disk operation delay (ms)
- disk_io_delay_ms_min = 1
+; miminum disk operation delay (ms)
+disk_io_delay_ms_min = 1
 
- ; failure ratio for disk read operations
- disk_read_fail_ratio = 0.000001
+; failure ratio for disk read operations
+disk_read_fail_ratio = 0.000001
 
- ; failure ratio for disk write operations
- disk_write_fail_ratio = 0.000001
+; failure ratio for disk write operations
+disk_write_fail_ratio = 0.000001
 
- ; extra execution time delay (us) for this task
- execution_extra_delay_us_max = 0
- 
- ; maximum message delay (ms) for rpc messages
- rpc_message_delay_ms_max = 1000
+; extra execution time delay (us) for this task
+execution_extra_delay_us_max = 0
 
- ; miminum message delay (ms) for rpc messages
- rpc_message_delay_ms_min = 0
+; maximum message delay (ms) for rpc messages
+rpc_message_delay_ms_max = 1000
 
-
- ; drop ratio for rpc request messages
- rpc_request_drop_ratio = 0.000100
+; miminum message delay (ms) for rpc messages
+rpc_message_delay_ms_min = 0
 
 
- ; drop ratio for rpc response messages
- rpc_response_drop_ratio = 0.001000
+; drop ratio for rpc request messages
+rpc_request_drop_ratio = 0.000100
 
- [task.RPC_PING]
- fault_injection_enabled = false
 
- </PRE>
- */
+; drop ratio for rpc response messages
+rpc_response_drop_ratio = 0.001000
+
+[task.RPC_PING]
+fault_injection_enabled = false
+
+</PRE>
+*/
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        class fault_injector : public toollet
-        {
-        public:
-            explicit fault_injector(const char* name);
-            void install(service_spec& spec) override;
-        };
-    }
+class fault_injector : public toollet
+{
+public:
+    explicit fault_injector(const char *name);
+    void install(service_spec &spec) override;
+};
 }
-
-
+}

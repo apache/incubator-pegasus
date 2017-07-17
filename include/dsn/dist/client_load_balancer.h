@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,33 +34,30 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_cpp.h>
-# include <dsn/dist/error_code.h>
-# include <string>
-# include <functional>
-# include <memory>
-# include <dsn/dist/replication.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/error_code.h>
+#include <string>
+#include <functional>
+#include <memory>
+#include <dsn/dist/replication.h>
 
-namespace dsn
+namespace dsn {
+namespace dist {
+class client_load_balancer
 {
-    namespace dist
+public:
+    template <typename T>
+    static client_load_balancer *create()
     {
-        class client_load_balancer
-        {
-        public:
-            template <typename T> static client_load_balancer* create()
-            {
-                return new T();
-            }
-
-            typedef client_load_balancer* (*factory)();
-
-
-        public:
-            virtual rpc_address find_target(const ::dsn::partition_configuration& config) = 0;
-
-        };
+        return new T();
     }
+
+    typedef client_load_balancer *(*factory)();
+
+public:
+    virtual rpc_address find_target(const ::dsn::partition_configuration &config) = 0;
+};
+}
 }

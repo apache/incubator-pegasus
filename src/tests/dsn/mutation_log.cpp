@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,26 +32,25 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# include "mutation_log.h"
-# include <gtest/gtest.h>
-# include <cstdio>
+#include "mutation_log.h"
+#include <gtest/gtest.h>
+#include <cstdio>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
-static void copy_file(const char* from_file, const char* to_file, int64_t to_size = -1)
+static void copy_file(const char *from_file, const char *to_file, int64_t to_size = -1)
 {
     int64_t from_size;
     ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
     ASSERT_LE(to_size, from_size);
-    FILE* from = fopen(from_file, "rb");
+    FILE *from = fopen(from_file, "rb");
     ASSERT_TRUE(from != nullptr);
-    FILE* to = fopen(to_file, "wb");
+    FILE *to = fopen(to_file, "wb");
     ASSERT_TRUE(to != nullptr);
     if (to_size == -1)
         to_size = from_size;
-    if (to_size > 0)
-    {
+    if (to_size > 0) {
         std::unique_ptr<char[]> buf(new char[to_size]);
         auto n = fread(buf.get(), 1, to_size, from);
         ASSERT_EQ(to_size, n);
@@ -64,9 +63,9 @@ static void copy_file(const char* from_file, const char* to_file, int64_t to_siz
     ASSERT_EQ(0, r);
 }
 
-static void overwrite_file(const char* file, int offset, const void* buf, int size)
+static void overwrite_file(const char *file, int offset, const void *buf, int size)
 {
-    FILE* f = fopen(file, "r+b");
+    FILE *f = fopen(file, "r+b");
     ASSERT_TRUE(f != nullptr);
     int r = fseek(f, offset, SEEK_SET);
     ASSERT_EQ(0, r);
@@ -91,30 +90,21 @@ TEST(replication, log_file)
 
     // write log
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists(fpath));
-    lf = log_file::create_write(
-        ".",
-        index,
-        offset
-        );
+    lf = log_file::create_write(".", index, offset);
     ASSERT_TRUE(lf != nullptr);
     ASSERT_EQ(fpath, lf->path());
     ASSERT_EQ(index, lf->index());
     ASSERT_EQ(offset, lf->start_offset());
     ASSERT_EQ(offset, lf->end_offset());
-    for (int i = 0; i < 100; i++)
-    {
+    for (int i = 0; i < 100; i++) {
         auto writer = lf->prepare_log_block();
 
-        if (i == 0)
-        {
+        if (i == 0) {
             binary_writer temp_writer;
-            lf->write_file_header(
-                temp_writer,
-                mdecrees
-                );
+            lf->write_file_header(temp_writer, mdecrees);
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
-            log_file_header& h = lf->header();
+            log_file_header &h = lf->header();
             ASSERT_EQ(100, h.start_global_offset);
         }
 
@@ -122,9 +112,8 @@ TEST(replication, log_file)
         temp_writer.write(str);
         writer->add(temp_writer.get_buffer());
 
-        task_ptr task = lf->commit_log_block(
-            *writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
-            );
+        task_ptr task =
+            lf->commit_log_block(*writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
         task->wait();
         ASSERT_EQ(ERR_OK, task->error());
         ASSERT_EQ(writer->size(), task->io_size());
@@ -140,11 +129,7 @@ TEST(replication, log_file)
 
     // file already exist
     offset = 100;
-    lf = log_file::create_write(
-        ".",
-        index,
-        offset
-        );
+    lf = log_file::create_write(".", index, offset);
     ASSERT_TRUE(lf == nullptr);
 
     // invalid file name
@@ -252,16 +237,14 @@ TEST(replication, log_file)
 
     // read data
     lf->reset_stream();
-    for (int i = 0; i < 100; i++)
-    {
+    for (int i = 0; i < 100; i++) {
         blob bb;
         auto err = lf->read_next_log_block(bb);
         ASSERT_EQ(ERR_OK, err);
 
         binary_reader reader(bb);
 
-        if (i == 0)
-        {
+        if (i == 0) {
             lf->read_file_header(reader);
             ASSERT_TRUE(lf->is_right_header());
             ASSERT_EQ(100, lf->header().start_global_offset);
@@ -297,21 +280,12 @@ TEST(replication, mutation_log)
     utils::filesystem::create_directory(logp);
 
     // writing logs
-    mutation_log_ptr mlog = new mutation_log_private(
-        logp,
-        4,
-        gpid,
-        nullptr,
-        1024,
-        512,
-        10000
-        );
+    mutation_log_ptr mlog = new mutation_log_private(logp, 4, gpid, nullptr, 1024, 512, 10000);
 
     auto err = mlog->open(nullptr, nullptr);
     EXPECT_EQ(err, ERR_OK);
 
-    for (int i = 0; i < 1000; i++)
-    {
+    for (int i = 0; i < 1000; i++) {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = 2 + i;
@@ -320,8 +294,7 @@ TEST(replication, mutation_log)
         mu->data.header.log_offset = 0;
 
         binary_writer writer;
-        for (int j = 0; j < 100; j++)
-        {
+        for (int j = 0; j < 100; j++) {
             writer.write(str);
         }
         mu->data.updates.push_back(mutation_update());
@@ -338,40 +311,29 @@ TEST(replication, mutation_log)
     mlog->close();
 
     // reading logs
-    mlog = new mutation_log_private(
-        logp,
-        4,
-        gpid,
-        nullptr,
-        1024,
-        512,
-        10000
-        );
+    mlog = new mutation_log_private(logp, 4, gpid, nullptr, 1024, 512, 10000);
 
     int mutation_index = -1;
     mlog->open(
-        [&mutations, &mutation_index](int log_length, mutation_ptr& mu)->bool
-    {
-        mutation_ptr wmu = mutations[++mutation_index];
+        [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
+            mutation_ptr wmu = mutations[++mutation_index];
 #ifdef DSN_USE_THRIFT_SERIALIZATION
-        EXPECT_TRUE(wmu->data.header == mu->data.header);
+            EXPECT_TRUE(wmu->data.header == mu->data.header);
 #else
-        EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
-            (const void*)&mu->data.header,
-            sizeof(mu->data.header)) == 0
-            );
+            EXPECT_TRUE(memcmp((const void *)&wmu->data.header,
+                               (const void *)&mu->data.header,
+                               sizeof(mu->data.header)) == 0);
 #endif
-        EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-        EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
-        EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data.data(),
-            (const void*)mu->data.updates[0].data.data(),
-            mu->data.updates[0].data.length()) == 0
-            );
-        EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
-        EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
-        return true;
-    }, nullptr
-    );
+            EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
+            EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
+            EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),
+                               (const void *)mu->data.updates[0].data.data(),
+                               mu->data.updates[0].data.length()) == 0);
+            EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
+            EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
+            return true;
+        },
+        nullptr);
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
     mlog->close();
 

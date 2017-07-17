@@ -11,6 +11,7 @@
 
 #include <thrift/TToString.h>
 
-namespace dsn { namespace example {
-
-}} // namespace
+namespace dsn {
+namespace example {
+}
+} // namespace

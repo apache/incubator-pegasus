@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,35 +33,27 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "../core/task_engine.h"
-# include "test_utils.h"
-# include <dsn/tool_api.h>
-# include <gtest/gtest.h>
-# include <sstream>
+#include "../core/task_engine.h"
+#include "test_utils.h"
+#include <dsn/tool_api.h>
+#include <gtest/gtest.h>
+#include <sstream>
 
 using namespace ::dsn;
 
 class admission_controller_for_test : public admission_controller
 {
 public:
-    admission_controller_for_test(task_queue* q, std::vector<std::string>& sargs)
+    admission_controller_for_test(task_queue *q, std::vector<std::string> &sargs)
         : admission_controller(q, sargs), _args(sargs)
     {
     }
 
-    virtual ~admission_controller_for_test()
-    {
-    }
+    virtual ~admission_controller_for_test() {}
 
-    virtual bool is_task_accepted(task* task)
-    {
-        return true;
-    }
+    virtual bool is_task_accepted(task *task) { return true; }
 
-    const std::vector<std::string>& arguments() const
-    {
-        return _args;
-    }
+    const std::vector<std::string> &arguments() const { return _args; }
 
 private:
     std::vector<std::string> _args;
@@ -69,7 +61,8 @@ private:
 
 void task_engine_module_init()
 {
-    tools::register_component_provider<admission_controller_for_test>("dsn::tools::admission_controller_for_test");
+    tools::register_component_provider<admission_controller_for_test>(
+        "dsn::tools::admission_controller_for_test");
 }
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_1)
@@ -77,13 +70,13 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_2)
 
 TEST(core, task_engine)
 {
-    if(dsn::service_engine::fast_instance().spec().tool == "simulator")
+    if (dsn::service_engine::fast_instance().spec().tool == "simulator")
         return;
-    service_node* node = task::get_current_node2();
+    service_node *node = task::get_current_node2();
     ASSERT_NE(nullptr, node);
     ASSERT_STREQ("client", node->name());
 
-    task_engine* engine = node->computation();
+    task_engine *engine = node->computation();
     ASSERT_NE(nullptr, engine);
 
     ASSERT_TRUE(engine->is_started());
@@ -92,51 +85,48 @@ TEST(core, task_engine)
     engine->get_runtime_info("  ", args, oss);
     printf("%s\n", oss.str().c_str());
 
-    std::vector<task_worker_pool*>& pools = engine->pools();
-    for (size_t i = 0; i < pools.size(); ++i)
-    {
-        if (i == THREAD_POOL_DEFAULT ||
-            i == THREAD_POOL_TEST_SERVER ||
-            i == THREAD_POOL_FOR_TEST_1 ||
-            i == THREAD_POOL_FOR_TEST_2)
-        {
+    std::vector<task_worker_pool *> &pools = engine->pools();
+    for (size_t i = 0; i < pools.size(); ++i) {
+        if (i == THREAD_POOL_DEFAULT || i == THREAD_POOL_TEST_SERVER ||
+            i == THREAD_POOL_FOR_TEST_1 || i == THREAD_POOL_FOR_TEST_2) {
             ASSERT_NE(nullptr, pools[i]);
         }
     }
 
-    task_worker_pool* pool1 = engine->get_pool(THREAD_POOL_FOR_TEST_1);
+    task_worker_pool *pool1 = engine->get_pool(THREAD_POOL_FOR_TEST_1);
     ASSERT_NE(nullptr, pool1);
     ASSERT_EQ(pools[THREAD_POOL_FOR_TEST_1], pool1);
-    const threadpool_spec& spec1 = pool1->spec();
+    const threadpool_spec &spec1 = pool1->spec();
     ASSERT_EQ("THREAD_POOL_FOR_TEST_1", spec1.name);
     ASSERT_EQ("dsn::tools::admission_controller_for_test", spec1.admission_controller_factory_name);
     ASSERT_EQ("this is test argument", spec1.admission_controller_arguments);
     ASSERT_EQ(engine, pool1->engine());
     ASSERT_EQ(task::get_current_node2(), pool1->node());
-    std::vector<task_queue*> queues1 = pool1->queues();
+    std::vector<task_queue *> queues1 = pool1->queues();
     ASSERT_EQ(1u, queues1.size());
-    std::vector<task_worker*> workers1 = pool1->workers();
+    std::vector<task_worker *> workers1 = pool1->workers();
     ASSERT_EQ(2u, workers1.size());
-    std::vector<admission_controller*> controllers1 = pool1->controllers();
+    std::vector<admission_controller *> controllers1 = pool1->controllers();
     ASSERT_EQ(1u, controllers1.size());
-    admission_controller_for_test* c1 = dynamic_cast<admission_controller_for_test*>(controllers1[0]);
+    admission_controller_for_test *c1 =
+        dynamic_cast<admission_controller_for_test *>(controllers1[0]);
     ASSERT_NE(nullptr, c1);
-    const std::vector<std::string>& a1 = c1->arguments();
+    const std::vector<std::string> &a1 = c1->arguments();
     ASSERT_EQ(4u, a1.size());
     ASSERT_EQ("this", a1[0]);
 
-    task_worker_pool* pool2 = engine->get_pool(THREAD_POOL_FOR_TEST_2);
+    task_worker_pool *pool2 = engine->get_pool(THREAD_POOL_FOR_TEST_2);
     ASSERT_NE(nullptr, pool2);
     ASSERT_EQ(pools[THREAD_POOL_FOR_TEST_2], pool2);
-    const threadpool_spec& spec2 = pool2->spec();
+    const threadpool_spec &spec2 = pool2->spec();
     ASSERT_EQ("THREAD_POOL_FOR_TEST_2", spec2.name);
     ASSERT_EQ(engine, pool2->engine());
     ASSERT_EQ(task::get_current_node2(), pool2->node());
-    std::vector<task_queue*> queues2 = pool2->queues();
+    std::vector<task_queue *> queues2 = pool2->queues();
     ASSERT_EQ(2u, queues2.size());
-    std::vector<task_worker*> workers2 = pool2->workers();
+    std::vector<task_worker *> workers2 = pool2->workers();
     ASSERT_EQ(2u, workers2.size());
-    std::vector<admission_controller*> controllers2 = pool2->controllers();
+    std::vector<admission_controller *> controllers2 = pool2->controllers();
     ASSERT_EQ(2u, controllers2.size());
     ASSERT_EQ(nullptr, controllers2[0]);
     ASSERT_EQ(nullptr, controllers2[1]);
@@ -190,7 +180,8 @@ TEST(core, task_engine)
     ASSERT_EQ(2u, workers1.size());
     std::vector<admission_controller*> controllers1 = pool1->controllers();
     ASSERT_EQ(1u, controllers1.size());
-    admission_controller_for_test* c1 = dynamic_cast<admission_controller_for_test*>(controllers1[0]);
+    admission_controller_for_test* c1 =
+dynamic_cast<admission_controller_for_test*>(controllers1[0]);
     ASSERT_NE(nullptr, c1);
     const std::vector<std::string>& a1 = c1->arguments();
     ASSERT_EQ(4u, a1.size());
@@ -213,4 +204,3 @@ TEST(core, task_engine)
     ASSERT_EQ(nullptr, controllers2[1]);
 }
 */
-

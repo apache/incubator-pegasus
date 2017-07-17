@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,53 +38,53 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica.failover"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "replica.failover"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 void replica::handle_local_failure(error_code error)
 {
-    ddebug(
-        "%s: handle local failure error %s, status = %s",
-        name(),
-        error.to_string(),
-        enum_to_string(status())
-        );
-    
-    if (status() == partition_status::PS_PRIMARY)
-    {
+    ddebug("%s: handle local failure error %s, status = %s",
+           name(),
+           error.to_string(),
+           enum_to_string(status()));
+
+    if (status() == partition_status::PS_PRIMARY) {
         _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
     }
 
     update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status::type st, ::dsn::rpc_address node, error_code error)
-{    
-    derror(
-        "%s: handle remote failure error %s, status = %s, node = %s",
-        name(),
-        error.to_string(),
-        enum_to_string(st),
-        node.to_string()
-        );
+void replica::handle_remote_failure(partition_status::type st,
+                                    ::dsn::rpc_address node,
+                                    error_code error)
+{
+    derror("%s: handle remote failure error %s, status = %s, node = %s",
+           name(),
+           error.to_string(),
+           enum_to_string(st),
+           node.to_string());
     error.end_tracking();
 
-    dassert (status() == partition_status::PS_PRIMARY, "invalid partition_status, status = %s",
-             enum_to_string(status()) );
-    dassert (node != _stub->_primary_address, "%s VS %s",
-             node.to_string(), _stub->_primary_address.to_string());
+    dassert(status() == partition_status::PS_PRIMARY,
+            "invalid partition_status, status = %s",
+            enum_to_string(status()));
+    dassert(node != _stub->_primary_address,
+            "%s VS %s",
+            node.to_string(),
+            _stub->_primary_address.to_string());
 
-    switch (st)
-    {
+    switch (st) {
     case partition_status::PS_SECONDARY:
-        dassert (_primary_states.check_exist(node, partition_status::PS_SECONDARY),
-                 "invalid node address, address = %s, status = %s",
-                 node.to_string(), enum_to_string(st)
-                 );
+        dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
+                "invalid node address, address = %s, status = %s",
+                node.to_string(),
+                enum_to_string(st));
         {
             configuration_update_request request;
             request.node = node;
@@ -93,36 +93,34 @@ void replica::handle_remote_failure(partition_status::type st, ::dsn::rpc_addres
             downgrade_to_inactive_on_primary(request);
         }
         break;
-    case partition_status::PS_POTENTIAL_SECONDARY:
-        {
-            ddebug("%s: remove learner %s for remote failure", name(), node.to_string());
-            // potential secondary failure does not lead to ballot change
-            // therefore, it is possible to have multiple exec here
-            _primary_states.learners.erase(node);
-            _primary_states.statuses.erase(node);
-        }
-        break;
+    case partition_status::PS_POTENTIAL_SECONDARY: {
+        ddebug("%s: remove learner %s for remote failure", name(), node.to_string());
+        // potential secondary failure does not lead to ballot change
+        // therefore, it is possible to have multiple exec here
+        _primary_states.learners.erase(node);
+        _primary_states.statuses.erase(node);
+    } break;
     case partition_status::PS_INACTIVE:
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert (false, "invalid partition_status, status = %s", enum_to_string(st));
+        dassert(false, "invalid partition_status, status = %s", enum_to_string(st));
         break;
     }
 }
 
 void replica::on_meta_server_disconnected()
 {
-    ddebug( "%s: meta server disconnected", name());
+    ddebug("%s: meta server disconnected", name());
 
     auto old_status = status();
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
 
     // make sure they can be back directly
-    if (old_status == partition_status::PS_PRIMARY || old_status == partition_status::PS_SECONDARY)
-    {
+    if (old_status == partition_status::PS_PRIMARY ||
+        old_status == partition_status::PS_SECONDARY) {
         set_inactive_state_transient(true);
     }
 }
-
-}} // namespace
+}
+} // namespace

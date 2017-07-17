@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,28 +35,26 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 class simulator : public tool_app
 {
 public:
-    simulator(const char* name)
-        : tool_app(name)
-    {
-    }
+    simulator(const char *name) : tool_app(name) {}
 
-    virtual void install(service_spec& s) override;
-    
+    virtual void install(service_spec &s) override;
+
     virtual void run() override;
 
-    void add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
+    void add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply);
 
 private:
     static void on_system_exit(sys_exit_type st);
 };
 
 // ---- inline implementation ------
-
-}} // end namespace dsn::tools
+}
+} // end namespace dsn::tools

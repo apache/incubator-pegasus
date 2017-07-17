@@ -37,66 +37,67 @@
 #include <cctype>
 #include <dsn/dist/replication.h>
 
-namespace dsn{ namespace replication{
+namespace dsn {
+namespace replication {
 
 class replication_ddl_client : public clientlet
 {
 public:
-    replication_ddl_client(const std::vector<dsn::rpc_address>& meta_servers);
+    replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers);
     virtual ~replication_ddl_client();
 
-    dsn::error_code create_app(const std::string& app_name,
-                               const std::string& app_type,
+    dsn::error_code create_app(const std::string &app_name,
+                               const std::string &app_type,
                                int partition_count,
                                int replica_count,
-                               const std::map<std::string, std::string>& envs, bool is_stateless);
+                               const std::map<std::string, std::string> &envs,
+                               bool is_stateless);
 
     // reserve_seconds == 0 means use default value in configuration 'hold_seconds_for_dropped_app'
-    dsn::error_code drop_app(const std::string& app_name, int reserve_seconds);
+    dsn::error_code drop_app(const std::string &app_name, int reserve_seconds);
 
-    dsn::error_code recall_app(int32_t app_id, const std::string& new_app_name);
+    dsn::error_code recall_app(int32_t app_id, const std::string &new_app_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status,
                               bool show_all,
                               bool detailed,
-                              const std::string& file_name);
+                              const std::string &file_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status,
-                              std::vector< ::dsn::app_info>& apps);
+                              std::vector<::dsn::app_info> &apps);
 
     dsn::error_code list_nodes(const dsn::replication::node_status::type status,
                                bool detailed,
-                               const std::string& file_name);
+                               const std::string &file_name);
 
-    dsn::error_code list_nodes(
-            const dsn::replication::node_status::type status,
-            std::map<dsn::rpc_address, dsn::replication::node_status::type>& nodes);
+    dsn::error_code
+    list_nodes(const dsn::replication::node_status::type status,
+               std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes);
 
-    dsn::error_code cluster_info(const std::string& file_name);
+    dsn::error_code cluster_info(const std::string &file_name);
 
-    dsn::error_code list_app(const std::string& app_name,
-                             bool detailed,
-                             const std::string& file_name);
+    dsn::error_code
+    list_app(const std::string &app_name, bool detailed, const std::string &file_name);
 
-    dsn::error_code list_app(const std::string& app_name,
-                             int32_t& app_id,
-                             int32_t& partition_count,
-                             std::vector<partition_configuration>& partitions);
+    dsn::error_code list_app(const std::string &app_name,
+                             int32_t &app_id,
+                             int32_t &partition_count,
+                             std::vector<partition_configuration> &partitions);
 
-    dsn::replication::configuration_meta_control_response control_meta_function_level(
-            meta_function_level::type level);
+    dsn::replication::configuration_meta_control_response
+    control_meta_function_level(meta_function_level::type level);
 
-    dsn::error_code send_balancer_proposal(const configuration_balancer_request& request);
+    dsn::error_code send_balancer_proposal(const configuration_balancer_request &request);
 
-    dsn::error_code wait_app_ready(const std::string& app_name,
-                                   int partition_count,
-                                   int max_replica_count);
+    dsn::error_code
+    wait_app_ready(const std::string &app_name, int partition_count, int max_replica_count);
 
-    dsn::error_code do_recovery(const std::vector<dsn::rpc_address>& replica_nodes,
+    dsn::error_code do_recovery(const std::vector<dsn::rpc_address> &replica_nodes,
                                 int wait_seconds,
                                 bool skip_bad_nodes,
                                 bool skip_lost_partitions,
-                                const std::string& outfile);
+                                const std::string &outfile);
+
 private:
     bool static valid_app_char(int c);
 
@@ -106,35 +107,30 @@ private:
                           dsn_message_t request,
                           dsn_message_t resp);
 
-    template<typename TRequest>
-    dsn::task_ptr request_meta(
-            dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-            int timeout_milliseconds= 0,
-            int reply_thread_hash = 0
-            )
+    template <typename TRequest>
+    dsn::task_ptr request_meta(dsn_task_code_t code,
+                               std::shared_ptr<TRequest> &req,
+                               int timeout_milliseconds = 0,
+                               int reply_thread_hash = 0)
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds);
         task_ptr task = ::dsn::rpc::create_rpc_response_task(
-                    msg,
-                    nullptr,
-                    [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); },
-                    reply_thread_hash);
-        ::dsn::marshall(msg, *req);
-        rpc::call(
-            _meta_server,
             msg,
-            this,
-            [this, task] (error_code err, dsn_message_t request, dsn_message_t response)
-            {
-                end_meta_request(std::move(task), 0, err, request, response);
-            }
-         );
+            nullptr,
+            [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); },
+            reply_thread_hash);
+        ::dsn::marshall(msg, *req);
+        rpc::call(_meta_server,
+                  msg,
+                  this,
+                  [this, task](error_code err, dsn_message_t request, dsn_message_t response) {
+                      end_meta_request(std::move(task), 0, err, request, response);
+                  });
         return task;
     }
 
 private:
     dsn::rpc_address _meta_server;
 };
-
-}} //namespace
+}
+} // namespace

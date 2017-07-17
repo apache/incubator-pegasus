@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,12 +33,12 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/utility/ports.h>
-# include <dsn/utility/utils.h>
-# include <dsn/utility/dlib.h>
-# include <random>
+#include <dsn/utility/ports.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/dlib.h>
+#include <random>
 
 namespace dsn {
 /*!
@@ -48,14 +48,15 @@ namespace dsn {
 class env_provider
 {
 public:
-    template <typename T> static env_provider* create(env_provider* inner_provider)
+    template <typename T>
+    static env_provider *create(env_provider *inner_provider)
     {
         return new T(inner_provider);
     }
 
-    typedef env_provider* (*factory)(env_provider*);
+    typedef env_provider *(*factory)(env_provider *);
 
-    env_provider(env_provider* inner_provider);
+    env_provider(env_provider *inner_provider);
 
     DSN_API virtual uint64_t now_ns() const;
 

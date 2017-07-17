@@ -17,10 +17,10 @@ using namespace dsn::replication;
 
 typedef std::shared_ptr<configuration_update_request> cur_ptr;
 
-//apply request in request.type to request.config
-static void apply_update_request(/*in-out*/configuration_update_request& update_req)
+// apply request in request.type to request.config
+static void apply_update_request(/*in-out*/ configuration_update_request &update_req)
 {
-    dsn::partition_configuration& pc = update_req.config;
+    dsn::partition_configuration &pc = update_req.config;
     pc.ballot++;
 
     switch (update_req.type) {
@@ -53,8 +53,7 @@ static void apply_update_request(/*in-out*/configuration_update_request& update_
     }
 }
 
-static auto default_filter = [](const dsn::rpc_address& target, dsn_message_t request)
-{
+static auto default_filter = [](const dsn::rpc_address &target, dsn_message_t request) {
     dsn_message_t recv_request = create_corresponding_receive(request);
     cur_ptr update_req = std::make_shared<configuration_update_request>();
     ::dsn::unmarshall(recv_request, *update_req);
@@ -63,30 +62,26 @@ static auto default_filter = [](const dsn::rpc_address& target, dsn_message_t re
     return update_req;
 };
 
-class message_filter: public dsn::replication::meta_service
+class message_filter : public dsn::replication::meta_service
 {
 public:
-    typedef std::function<cur_ptr (const dsn::rpc_address& target, dsn_message_t request)> filter;
-    message_filter(meta_service_test_app* app): meta_service(), _app(app) {}
-    void set_filter(const filter& f)
-    {
-        _filter = f;
-    }
+    typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn_message_t request)> filter;
+    message_filter(meta_service_test_app *app) : meta_service(), _app(app) {}
+    void set_filter(const filter &f) { _filter = f; }
     virtual void reply_message(dsn_message_t request, dsn_message_t response) override {}
-    virtual void send_message(const dsn::rpc_address& target, dsn_message_t request) override
+    virtual void send_message(const dsn::rpc_address &target, dsn_message_t request) override
     {
-        //we expect this is a configuration_update_request proposal
+        // we expect this is a configuration_update_request proposal
         cur_ptr update_request = _filter(target, request);
         destroy_message(request);
 
-        if (update_request != nullptr)
-        {
+        if (update_request != nullptr) {
             _app->call_update_configuration(this, update_request);
         }
     }
 
 private:
-    meta_service_test_app* _app;
+    meta_service_test_app *_app;
     filter _filter;
 };
 
@@ -103,13 +98,16 @@ void meta_service_test_app::simple_lb_cure_test()
     ASSERT_EQ(ec, dsn::ERR_OK);
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
 
-    server_state* state = svc->_state.get();
+    server_state *state = svc->_state.get();
     state->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;
-    info.app_id = 1; info.app_name = "simple_kv.instance0"; info.app_type = "simple_kv";
-    info.max_replica_count = 3; info.partition_count = 1;
+    info.app_id = 1;
+    info.app_name = "simple_kv.instance0";
+    info.app_type = "simple_kv";
+    info.max_replica_count = 3;
+    info.partition_count = 1;
     std::shared_ptr<app_state> app = app_state::create(info);
     state->_all_apps.emplace(1, app);
     state->sync_apps_to_remote_storage();
@@ -119,17 +117,17 @@ void meta_service_test_app::simple_lb_cure_test()
     std::vector<dsn::rpc_address> nodes;
     generate_node_list(nodes, 4, 4);
 
-    dsn::partition_configuration& pc = app->partitions[0];
-    config_context& cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
+    dsn::partition_configuration &pc = app->partitions[0];
+    config_context &cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
 
-#define PROPOSAL_FLAG_CHECK \
-    ASSERT_TRUE(proposal_sent);\
+#define PROPOSAL_FLAG_CHECK                                                                        \
+    ASSERT_TRUE(proposal_sent);                                                                    \
     proposal_sent = false
 
-#define CONDITION_CHECK( cond ) ASSERT_TRUE(spin_wait_condition(cond, 20))
+#define CONDITION_CHECK(cond) ASSERT_TRUE(spin_wait_condition(cond, 20))
 
     std::cerr << "Case: upgrade secondary to primary, and message lost" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
     pc.secondaries = {nodes[0], nodes[1]};
@@ -139,8 +137,7 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -155,19 +152,15 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -184,20 +177,17 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.primary == last_addr;} );
+    CONDITION_CHECK([&] { return pc.primary == last_addr; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: upgrade secondary to primary, and the candidate died" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary.set_invalid();
     pc.secondaries = {nodes[0], nodes[1]};
@@ -207,8 +197,7 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject a event that node[0] is dead
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -226,16 +215,13 @@ void meta_service_test_app::simple_lb_cure_test()
 
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
                               nullptr,
-                              std::bind(&server_state::check_all_partitions,
-                                        state),
-                              server_state::sStateHash
-                              );
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -254,17 +240,15 @@ void meta_service_test_app::simple_lb_cure_test()
 
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
                               nullptr,
-                              std::bind(&server_state::check_all_partitions,
-                                        state),
-                              server_state::sStateHash
-                              );
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return !pc.primary.is_invalid() && pc.primary!=last_addr;} );
+    CONDITION_CHECK([&] { return !pc.primary.is_invalid() && pc.primary != last_addr; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: add secondary, and the message lost" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1]};
@@ -274,8 +258,7 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -290,19 +273,15 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -318,20 +297,17 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
+    CONDITION_CHECK([&] { return pc.secondaries.size() == 2 && is_secondary(pc, last_addr); });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: add secondary, but the primary is removing another" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1]};
@@ -341,8 +317,7 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject another update_request
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -363,20 +338,17 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{ return pc.secondaries.size()==2; } );
+    CONDITION_CHECK([&] { return pc.secondaries.size() == 2; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: add secondary, and the added secondary is dead" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1]};
@@ -386,15 +358,14 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject the nodes[2] dead
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_FALSE( is_secondary(pc, update_req->node) );
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         last_addr = update_req->node;
@@ -403,19 +374,15 @@ void meta_service_test_app::simple_lb_cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -423,7 +390,7 @@ void meta_service_test_app::simple_lb_cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_NE(update_req->node, last_addr);
-        EXPECT_FALSE( is_secondary(pc, update_req->node) );
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
@@ -433,20 +400,17 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{return pc.secondaries.size()==2 && is_secondary(pc, last_addr);} );
+    CONDITION_CHECK([&] { return pc.secondaries.size() == 2 && is_secondary(pc, last_addr); });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: add secondary, and the primary is dead" << std::endl;
-    //initialize
+    // initialize
     state->_nodes.clear();
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1]};
@@ -456,33 +420,29 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
-        EXPECT_FALSE( is_secondary(pc, update_req->node) );
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, pc.primary);
 
-        svc->set_node_state( {pc.primary}, false);
+        svc->set_node_state({pc.primary}, false);
         svc->set_filter(default_filter);
         proposal_sent = true;
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{ return pc.primary==nodes[1]; });
+    CONDITION_CHECK([&] { return pc.primary == nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     state->_nodes.clear();
@@ -493,8 +453,7 @@ void meta_service_test_app::simple_lb_cure_test()
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
 
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -510,135 +469,104 @@ void meta_service_test_app::simple_lb_cure_test()
         return update_req;
     });
 
-    std::cerr << "Case: recover from DDD state, nodes[1] isn't alive"
-              << std::endl;
+    std::cerr << "Case: recover from DDD state, nodes[1] isn't alive" << std::endl;
     svc->set_node_state({nodes[1]}, false);
-    cc.dropped =
-    {
+    cc.dropped = {
         dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
     };
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&]{ return pc.primary.is_invalid(); });
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: recover from DDD state, nodes[2] is not in dropped" << std::endl;
     svc->set_node_state({nodes[1]}, true);
-    cc.dropped =
-    {
-        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
-        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}
-    };
+    cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}};
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica"
               << std::endl;
-    cc.dropped =
-    {
-        dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
-        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
-        dropped_replica{nodes[2], 500, -1, -1, -1}
-    };
+    cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[2], 500, -1, -1, -1}};
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, larger ballot not match with larger decree"
               << std::endl;
-    cc.dropped =
-    {
+    cc.dropped = {
         dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 0, 1},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 0, 1, 1},
     };
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    std::cerr << "Case: recover from DDD state, committed decree less than meta's"
-              << std::endl;
-    cc.dropped =
-    {
+    std::cerr << "Case: recover from DDD state, committed decree less than meta's" << std::endl;
+    cc.dropped = {
         dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 10, 15},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 15, 15},
     };
     pc.last_committed_decree = 30;
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK( [&] { return pc.primary.is_invalid(); } );
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, select primary from config_context::dropped"
               << std::endl;
-    cc.dropped =
-    {
+    cc.dropped = {
         dropped_replica{nodes[0], 12344, -1, -1, -1},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
     };
     pc.last_committed_decree = 2;
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{ return pc.primary==nodes[2]; });
+    CONDITION_CHECK([&] { return pc.primary == nodes[2]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, only one primary" << std::endl;
-    svc->set_filter([&](const dsn::rpc_address& target, dsn_message_t req) -> cur_ptr
-    {
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
         dsn_message_t recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
@@ -656,39 +584,35 @@ void meta_service_test_app::simple_lb_cure_test()
 
     pc.primary.set_invalid();
     pc.secondaries.clear();
-    pc.last_drops = { nodes[0] };
+    pc.last_drops = {nodes[0]};
     state->_nodes.clear();
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state({nodes[0], nodes[1], nodes[2]}, true);
 
-    t = dsn::tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                nullptr,
-                std::bind(&server_state::check_all_partitions,
-                          state),
-                server_state::sStateHash
-                );
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK( [&]{ return pc.primary==nodes[0]; });
+    CONDITION_CHECK([&] { return pc.primary == nodes[0]; });
 }
 
-static void check_nodes_loads(node_mapper& nodes)
+static void check_nodes_loads(node_mapper &nodes)
 {
     unsigned int min_primaries = UINT_MAX, min_partitions = UINT_MAX;
     unsigned int max_primaries = 0, max_partitions = 0;
-    for (auto& pairs: nodes)
-    {
-        const node_state& ns = pairs.second;
+    for (auto &pairs : nodes) {
+        const node_state &ns = pairs.second;
         min_primaries = std::min(min_primaries, ns.primary_count());
         min_partitions = std::min(min_partitions, ns.partition_count());
         max_primaries = std::max(max_primaries, ns.primary_count());
         max_partitions = std::max(max_partitions, ns.partition_count());
     }
 
-    ASSERT_TRUE(max_primaries-min_primaries<=1);
-    ASSERT_TRUE(max_partitions-min_partitions<=1);
+    ASSERT_TRUE(max_primaries - min_primaries <= 1);
+    ASSERT_TRUE(max_partitions - min_partitions <= 1);
 }
 
 void meta_service_test_app::simple_lb_balanced_cure()
@@ -702,31 +626,30 @@ void meta_service_test_app::simple_lb_balanced_cure()
     simple_load_balancer simple_lb(&svc);
 
     dsn::app_info info;
-    info.app_id = 1; info.is_stateful = true;
+    info.app_id = 1;
+    info.is_stateful = true;
     info.status = dsn::app_status::AS_AVAILABLE;
-    info.app_name = "test"; info.app_type = "test";
-    info.max_replica_count = 3;info.partition_count = 1024;
+    info.app_name = "test";
+    info.app_type = "test";
+    info.max_replica_count = 3;
+    info.partition_count = 1024;
     std::shared_ptr<app_state> the_app = app_state::create(info);
 
     app.emplace(the_app->app_id, the_app);
-    for (const auto& address: node_list)
-    {
+    for (const auto &address : node_list) {
         get_node_state(nodes, address, true)->set_alive(true);
     }
 
     bool all_partitions_healthy = false;
-    while ( !all_partitions_healthy )
-    {
+    while (!all_partitions_healthy) {
         configuration_proposal_action action;
         pc_status status;
         all_partitions_healthy = true;
-        
-        for (int i=0; i!=the_app->partition_count; ++i)
-        {
-            dsn::gpid& pid = the_app->partitions[i].pid;
+
+        for (int i = 0; i != the_app->partition_count; ++i) {
+            dsn::gpid &pid = the_app->partitions[i].pid;
             status = simple_lb.cure({&app, &nodes}, pid, action);
-            if (status != pc_status::healthy)
-            {
+            if (status != pc_status::healthy) {
                 all_partitions_healthy = false;
                 proposal_action_check_and_apply(action, pid, app, nodes);
 
@@ -736,7 +659,7 @@ void meta_service_test_app::simple_lb_balanced_cure()
                 fake_request.type = action.type;
                 fake_request.node = action.node;
                 fake_request.host_node = action.node;
-                
+
                 simple_lb.reconfig({&app, &nodes}, fake_request);
                 check_nodes_loads(nodes);
             }
@@ -744,14 +667,14 @@ void meta_service_test_app::simple_lb_balanced_cure()
     }
 }
 
-static bool vec_equal(const std::vector<dropped_replica>& vec1, const std::vector<dropped_replica>& vec2)
+static bool vec_equal(const std::vector<dropped_replica> &vec1,
+                      const std::vector<dropped_replica> &vec2)
 {
     if (vec1.size() != vec2.size())
         return false;
-    for (unsigned int i=0; i!=vec1.size(); ++i)
-    {
-        const dropped_replica& ds1 = vec1[i];
-        const dropped_replica& ds2 = vec2[i];
+    for (unsigned int i = 0; i != vec1.size(); ++i) {
+        const dropped_replica &ds1 = vec1[i];
+        const dropped_replica &ds2 = vec2[i];
         if (ds1.ballot != ds2.ballot)
             return false;
         if (ds1.last_prepared_decree != ds2.last_prepared_decree)
@@ -770,9 +693,13 @@ void meta_service_test_app::simple_lb_collect_replica()
     node_mapper nodes;
 
     dsn::app_info info;
-    info.app_id = 1; info.is_stateful = true; info.status = dsn::app_status::AS_AVAILABLE;
-    info.app_name = "test"; info.app_type = "test";
-    info.max_replica_count = 3; info.partition_count = 1024;
+    info.app_id = 1;
+    info.is_stateful = true;
+    info.status = dsn::app_status::AS_AVAILABLE;
+    info.app_name = "test";
+    info.app_type = "test";
+    info.max_replica_count = 3;
+    info.partition_count = 1024;
     std::shared_ptr<app_state> the_app = app_state::create(info);
     app.emplace(the_app->app_id, the_app);
     meta_view view = {&app, &nodes};
@@ -781,8 +708,8 @@ void meta_service_test_app::simple_lb_collect_replica()
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration& pc = *get_config(app, rep.pid);
-    config_context& cc = *get_config_context(app, rep.pid);
+    dsn::partition_configuration &pc = *get_config(app, rep.pid);
+    config_context &cc = *get_config_context(app, rep.pid);
 
     meta_service svc;
     simple_load_balancer simple_lb(&svc);
@@ -790,18 +717,20 @@ void meta_service_test_app::simple_lb_collect_replica()
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
 
-#define CLEAR_REPLICA do {\
-    pc.primary.set_invalid();\
-    pc.secondaries.clear();\
-    pc.last_drops.clear();\
-} while(false)
+#define CLEAR_REPLICA                                                                              \
+    do {                                                                                           \
+        pc.primary.set_invalid();                                                                  \
+        pc.secondaries.clear();                                                                    \
+        pc.last_drops.clear();                                                                     \
+    } while (false)
 
-#define CLEAR_DROP_LIST do {\
-    cc.dropped.clear();\
-} while (false)
+#define CLEAR_DROP_LIST                                                                            \
+    do {                                                                                           \
+        cc.dropped.clear();                                                                        \
+    } while (false)
 
-#define CLEAR_ALL\
-    CLEAR_REPLICA;\
+#define CLEAR_ALL                                                                                  \
+    CLEAR_REPLICA;                                                                                 \
     CLEAR_DROP_LIST
 
     {
@@ -823,41 +752,39 @@ void meta_service_test_app::simple_lb_collect_replica()
     {
         // replica has been in the drop_list
         CLEAR_ALL;
-        cc.dropped.push_back( {node_list[0], 5, 0, 0} );
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[0], rep));
+        cc.dropped.push_back({node_list[0], 5, 0, 0});
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[0], rep));
     }
 
     {
         // drop_list all have timestamp, full
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], 5, 1, 1, 2},
-            dropped_replica {node_list[1], 6, 1, 1, 2},
-            dropped_replica {node_list[2], 7, 1, 1, 2},
-            dropped_replica {node_list[3], 8, 1, 1, 2},
+        cc.dropped = {
+            dropped_replica{node_list[0], 5, 1, 1, 2},
+            dropped_replica{node_list[1], 6, 1, 1, 2},
+            dropped_replica{node_list[2], 7, 1, 1, 2},
+            dropped_replica{node_list[3], 8, 1, 1, 2},
         };
         rep.ballot = 10;
         rep.last_prepared_decree = 10;
-        ASSERT_FALSE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_FALSE(simple_lb.collect_replica(view, node_list[5], rep));
     }
 
     {
         // drop_list all have timestamp, not full
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], 5, 1, 1, 2},
-            dropped_replica {node_list[1], 6, 1, 1, 2},
-            dropped_replica {node_list[2], 7, 1, 1, 2},
+        cc.dropped = {
+            dropped_replica{node_list[0], 5, 1, 1, 2},
+            dropped_replica{node_list[1], 6, 1, 1, 2},
+            dropped_replica{node_list[2], 7, 1, 1, 2},
         };
         rep.ballot = 10;
         rep.last_durable_decree = 6;
         rep.last_committed_decree = 8;
         rep.last_prepared_decree = 10;
 
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[4], rep) );
-        dropped_replica& d = cc.dropped.front();
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[4], rep));
+        dropped_replica &d = cc.dropped.front();
         ASSERT_EQ(d.ballot, rep.ballot);
         ASSERT_EQ(d.last_prepared_decree, rep.last_prepared_decree);
     }
@@ -865,35 +792,33 @@ void meta_service_test_app::simple_lb_collect_replica()
     {
         // drop_list mixed, full, minimal position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
-            dropped_replica {node_list[2], 7, 1, 1, 5},
-            dropped_replica {node_list[3], 8, 1, 1, 5},
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
+            dropped_replica{node_list[2], 7, 1, 1, 5},
+            dropped_replica{node_list[3], 8, 1, 1, 5},
         };
 
         rep.ballot = 1;
         rep.last_committed_decree = 3;
         rep.last_prepared_decree = 5;
-        ASSERT_FALSE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_FALSE(simple_lb.collect_replica(view, node_list[5], rep));
     }
 
     {
         // drop_list mixed, not full, minimal position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
-            dropped_replica {node_list[2], 7, 1, 1, 6},
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
+            dropped_replica{node_list[2], 7, 1, 1, 6},
         };
 
         rep.ballot = 1;
         rep.last_committed_decree = 3;
         rep.last_prepared_decree = 5;
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[5], rep) );
-        dropped_replica& d = cc.dropped.front();
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[5], rep));
+        dropped_replica &d = cc.dropped.front();
         ASSERT_EQ(d.node, node_list[5]);
         ASSERT_EQ(d.ballot, rep.ballot);
         ASSERT_EQ(d.last_prepared_decree, rep.last_prepared_decree);
@@ -902,19 +827,18 @@ void meta_service_test_app::simple_lb_collect_replica()
     {
         // drop_list mixed, full, not minimal position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
-            dropped_replica {node_list[2], 7, 1, 1, 6},
-            dropped_replica {node_list[3], 8, 1, 1, 6},
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
+            dropped_replica{node_list[2], 7, 1, 1, 6},
+            dropped_replica{node_list[3], 8, 1, 1, 6},
         };
 
         rep.ballot = 2;
         rep.last_committed_decree = 3;
         rep.last_prepared_decree = 6;
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[5], rep) );
-        dropped_replica& d = cc.dropped.front();
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[5], rep));
+        dropped_replica &d = cc.dropped.front();
         ASSERT_EQ(rep.ballot, d.ballot);
         ASSERT_EQ(rep.last_committed_decree, rep.last_committed_decree);
 
@@ -924,98 +848,85 @@ void meta_service_test_app::simple_lb_collect_replica()
     {
         // drop_list mixed, not full, not minimal position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
-            dropped_replica {node_list[2], 7, 1, 1, 6}
-        };
+        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
+                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
+                      dropped_replica{node_list[2], 7, 1, 1, 6}};
 
         rep.ballot = 3;
         rep.last_committed_decree = 1;
         rep.last_prepared_decree = 6;
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[5], rep));
 
-        std::vector<dropped_replica> result_dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
-            dropped_replica {node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 1, 6},
-            dropped_replica {node_list[2], 7, 1, 1, 6}
-        };
+        std::vector<dropped_replica> result_dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 1, 6},
+            dropped_replica{node_list[2], 7, 1, 1, 6}};
 
-        ASSERT_TRUE( vec_equal(result_dropped, cc.dropped) );
+        ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
     }
 
     {
         // drop_list no timestamp, full, minimal position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
         };
 
         rep.ballot = 1;
         rep.last_committed_decree = 7;
         rep.last_prepared_decree = 10;
-        ASSERT_FALSE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_FALSE(simple_lb.collect_replica(view, node_list[5], rep));
     }
 
     {
         // drop_list no timestamp, full, middle position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
         };
 
         rep.ballot = 3;
         rep.last_committed_decree = 6;
         rep.last_prepared_decree = 8;
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[5], rep));
 
-        std::vector<dropped_replica> result_dropped =
-        {
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica {node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 6, 8},
-            dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+        std::vector<dropped_replica> result_dropped = {
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
         };
 
-        ASSERT_TRUE( vec_equal(result_dropped, cc.dropped) );
+        ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
     }
 
     {
         // drop_list no timestamp, full, largest position
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica {node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}
-        };
+        cc.dropped = {dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
+                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
+                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+                      dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}};
 
         rep.ballot = 4;
         rep.last_committed_decree = 8;
         rep.last_prepared_decree = 8;
-        ASSERT_TRUE( simple_lb.collect_replica(view, node_list[5], rep) );
+        ASSERT_TRUE(simple_lb.collect_replica(view, node_list[5], rep));
 
-        std::vector<dropped_replica> result_dropped =
-        {
-            dropped_replica {node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica {node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica {node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8},
-            dropped_replica {node_list[5], dropped_replica::INVALID_TIMESTAMP, 4, 8, 8}
-        };
+        std::vector<dropped_replica> result_dropped = {
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+            dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 4, 8, 8}};
 
-        ASSERT_TRUE( vec_equal(result_dropped, cc.dropped) );
+        ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
     }
 #undef CLEAR_ALL
 #undef CLEAR_REPLICA
@@ -1028,9 +939,13 @@ void meta_service_test_app::simple_lb_construct_replica()
     node_mapper nodes;
 
     dsn::app_info info;
-    info.app_id = 1; info.is_stateful = true; info.status = dsn::app_status::AS_AVAILABLE;
-    info.app_name = "test"; info.app_type = "test";
-    info.max_replica_count = 3; info.partition_count = 1024;
+    info.app_id = 1;
+    info.is_stateful = true;
+    info.status = dsn::app_status::AS_AVAILABLE;
+    info.app_name = "test";
+    info.app_type = "test";
+    info.max_replica_count = 3;
+    info.partition_count = 1024;
     std::shared_ptr<app_state> the_app = app_state::create(info);
     app.emplace(the_app->app_id, the_app);
     meta_view view = {&app, &nodes};
@@ -1039,8 +954,8 @@ void meta_service_test_app::simple_lb_construct_replica()
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration& pc = *get_config(app, rep.pid);
-    config_context& cc = *get_config_context(app, rep.pid);
+    dsn::partition_configuration &pc = *get_config(app, rep.pid);
+    config_context &cc = *get_config_context(app, rep.pid);
 
     meta_service svc;
     simple_load_balancer simple_lb(&svc);
@@ -1048,18 +963,20 @@ void meta_service_test_app::simple_lb_construct_replica()
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
 
-#define CLEAR_REPLICA do {\
-    pc.primary.set_invalid();\
-    pc.secondaries.clear();\
-    pc.last_drops.clear();\
-} while(false)
+#define CLEAR_REPLICA                                                                              \
+    do {                                                                                           \
+        pc.primary.set_invalid();                                                                  \
+        pc.secondaries.clear();                                                                    \
+        pc.last_drops.clear();                                                                     \
+    } while (false)
 
-#define CLEAR_DROP_LIST do {\
-    cc.dropped.clear();\
-} while (false)
+#define CLEAR_DROP_LIST                                                                            \
+    do {                                                                                           \
+        cc.dropped.clear();                                                                        \
+    } while (false)
 
-#define CLEAR_ALL\
-    CLEAR_REPLICA;\
+#define CLEAR_ALL                                                                                  \
+    CLEAR_REPLICA;                                                                                 \
     CLEAR_DROP_LIST
 
     // drop_list is empty, can't construct replica
@@ -1072,10 +989,7 @@ void meta_service_test_app::simple_lb_construct_replica()
     // only have one node in drop_list
     {
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica{ node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}
-        };
+        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}};
         ASSERT_TRUE(simple_lb.construct_replica(view, rep.pid, 3));
         ASSERT_EQ(node_list[0], pc.primary);
         ASSERT_TRUE(pc.secondaries.empty());
@@ -1086,13 +1000,10 @@ void meta_service_test_app::simple_lb_construct_replica()
     // have multiple nodes, ballots are not same
     {
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica{ node_list[1], dropped_replica::INVALID_TIMESTAMP, 6, 10, 12},
-            dropped_replica{ node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 10, 12},
-            dropped_replica{ node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
-            dropped_replica{ node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}
-        };
+        cc.dropped = {dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 6, 10, 12},
+                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 10, 12},
+                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
+                      dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}};
         ASSERT_TRUE(simple_lb.construct_replica(view, rep.pid, 3));
         ASSERT_EQ(node_list[4], pc.primary);
         ASSERT_TRUE(pc.secondaries.empty());
@@ -1106,12 +1017,9 @@ void meta_service_test_app::simple_lb_construct_replica()
     // have multiple node, two have same ballots
     {
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica{ node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12},
-            dropped_replica{ node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 11, 12},
-            dropped_replica{ node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 12, 12}
-        };
+        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12},
+                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 11, 12},
+                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 12, 12}};
 
         ASSERT_TRUE(simple_lb.construct_replica(view, rep.pid, 3));
         ASSERT_EQ(node_list[2], pc.primary);
@@ -1126,13 +1034,10 @@ void meta_service_test_app::simple_lb_construct_replica()
     // have multiple nodes, all have same ballots
     {
         CLEAR_ALL;
-        cc.dropped =
-        {
-            dropped_replica{ node_list[0], dropped_replica::INVALID_TIMESTAMP, 7, 11, 14},
-            dropped_replica{ node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 12, 14},
-            dropped_replica{ node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 13, 14},
-            dropped_replica{ node_list[3], dropped_replica::INVALID_TIMESTAMP, 7, 14, 14}
-        };
+        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 7, 11, 14},
+                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 12, 14},
+                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 13, 14},
+                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 7, 14, 14}};
 
         ASSERT_TRUE(simple_lb.construct_replica(view, rep.pid, 3));
         ASSERT_EQ(node_list[3], pc.primary);

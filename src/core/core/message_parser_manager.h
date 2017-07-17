@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     message parser manager 
+ *     message parser manager
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
@@ -35,35 +35,39 @@
 
 #pragma once
 
-# include <dsn/tool-api/message_parser.h>
+#include <dsn/tool-api/message_parser.h>
 
-namespace dsn
+namespace dsn {
+class message_parser_manager : public utils::singleton<message_parser_manager>
 {
-    class message_parser_manager : public utils::singleton<message_parser_manager>
+public:
+    struct parser_factory_info
     {
-    public:
-        struct parser_factory_info
+        parser_factory_info()
+            : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0)
         {
-            parser_factory_info() : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0) {}
+        }
 
-            network_header_format fmt;
-            message_parser::factory factory;
-            message_parser::factory2 factory2;
-            size_t parser_size;
-        };
-
-    public:
-        message_parser_manager();
-
-        // called only during system init, thread-unsafe
-        void register_factory(network_header_format fmt, const std::vector<const char*>& signatures, message_parser::factory f, message_parser::factory2 f2, size_t sz);
-
-        message_parser* create_parser(network_header_format fmt);
-        const parser_factory_info& get(network_header_format fmt) { return _factory_vec[fmt]; }
-
-    private:
-        std::vector<parser_factory_info> _factory_vec;
+        network_header_format fmt;
+        message_parser::factory factory;
+        message_parser::factory2 factory2;
+        size_t parser_size;
     };
+
+public:
+    message_parser_manager();
+
+    // called only during system init, thread-unsafe
+    void register_factory(network_header_format fmt,
+                          const std::vector<const char *> &signatures,
+                          message_parser::factory f,
+                          message_parser::factory2 f2,
+                          size_t sz);
+
+    message_parser *create_parser(network_header_format fmt);
+    const parser_factory_info &get(network_header_format fmt) { return _factory_vec[fmt]; }
+
+private:
+    std::vector<parser_factory_info> _factory_vec;
+};
 }
-
-

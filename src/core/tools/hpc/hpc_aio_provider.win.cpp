@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,52 +33,48 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# ifdef _WIN32
+#ifdef _WIN32
 
-# include "hpc_aio_provider.h"
-# include <fcntl.h>
-# include <sys/types.h>
-# include <sys/stat.h>
-# include <io.h>
-# include <stdio.h>
-# include "mix_all_io_looper.h"
+#include "hpc_aio_provider.h"
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <io.h>
+#include <stdio.h>
+#include "mix_all_io_looper.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "aio.provider.hpc"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "aio.provider.hpc"
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 struct windows_disk_aio_context : public disk_aio
 {
     OVERLAPPED olp;
-    aio_task*  tsk;
-    utils::notify_event*  evt;
+    aio_task *tsk;
+    utils::notify_event *evt;
     error_code err;
     uint32_t bytes;
 };
 
-hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
+hpc_aio_provider::hpc_aio_provider(disk_engine *disk, aio_provider *inner_provider)
     : aio_provider(disk, inner_provider)
 {
     _looper = nullptr;
-    _callback = [this](
-        int native_error,
-        uint32_t io_size,
-        uintptr_t lolp_or_events
-        )
-    {
-        windows_disk_aio_context* ctx = CONTAINING_RECORD(lolp_or_events, windows_disk_aio_context, olp);
-        error_code err = native_error == ERROR_SUCCESS ? ERR_OK : 
-            (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF : ERR_FILE_OPERATION_FAILED);
-        if (!ctx->evt)
-        {
-            aio_task* aio(ctx->tsk);
+    _callback = [this](int native_error, uint32_t io_size, uintptr_t lolp_or_events) {
+        windows_disk_aio_context *ctx =
+            CONTAINING_RECORD(lolp_or_events, windows_disk_aio_context, olp);
+        error_code err =
+            native_error == ERROR_SUCCESS
+                ? ERR_OK
+                : (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF : ERR_FILE_OPERATION_FAILED);
+        if (!ctx->evt) {
+            aio_task *aio(ctx->tsk);
             this->complete_io(aio, err, io_size);
-        }
-        else
-        {
+        } else {
             ctx->err = err;
             ctx->bytes = io_size;
             ctx->evt->notify();
@@ -86,16 +82,14 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     };
 }
 
-void hpc_aio_provider::start(io_modifer& ctx)
+void hpc_aio_provider::start(io_modifer &ctx)
 {
     _looper = get_io_looper(node(), ctx.queue, ctx.mode);
 }
 
-hpc_aio_provider::~hpc_aio_provider()
-{
-}
+hpc_aio_provider::~hpc_aio_provider() {}
 
-dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
+dsn_handle_t hpc_aio_provider::open(const char *file_name, int oflag, int pmode)
 {
     DWORD dwDesiredAccess = 0;
     DWORD dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -109,8 +103,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
     if (oflag & _O_NOINHERIT) {
         SecurityAttributes.bInheritHandle = FALSE;
-    }
-    else {
+    } else {
         SecurityAttributes.bInheritHandle = TRUE;
     }
 
@@ -119,29 +112,25 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     */
     switch (oflag & (_O_RDONLY | _O_WRONLY | _O_RDWR)) {
 
-    case _O_RDONLY:         /* read access */
+    case _O_RDONLY: /* read access */
         dwDesiredAccess = GENERIC_READ;
         break;
-    case _O_WRONLY:         /* write access */
+    case _O_WRONLY: /* write access */
         /* giving it read access as well
         * because in append (a, not a+), we need
         * to read the BOM to determine the encoding
         * (ie. ANSI, UTF8, UTF16)
         */
-        if ((oflag & _O_APPEND)
-            && (oflag & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT)) != 0)
-        {
+        if ((oflag & _O_APPEND) && (oflag & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT)) != 0) {
             dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
-        }
-        else
-        {
+        } else {
             dwDesiredAccess = GENERIC_WRITE;
         }
         break;
-    case _O_RDWR:           /* read and write access */
+    case _O_RDWR: /* read and write access */
         dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
         break;
-    default:                /* error, bad oflag */
+    default:            /* error, bad oflag */
         _doserrno = 0L; /* not an OS error */
         derror("Invalid open flag");
     }
@@ -151,7 +140,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     */
     switch (oflag & (_O_CREAT | _O_EXCL | _O_TRUNC)) {
     case 0:
-    case _O_EXCL:                   // ignore EXCL w/o CREAT
+    case _O_EXCL: // ignore EXCL w/o CREAT
         dwCreationDisposition = OPEN_EXISTING;
         break;
 
@@ -165,7 +154,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
         break;
 
     case _O_TRUNC:
-    case _O_TRUNC | _O_EXCL:        // ignore EXCL w/o CREAT
+    case _O_TRUNC | _O_EXCL: // ignore EXCL w/o CREAT
         dwCreationDisposition = TRUNCATE_EXISTING;
         break;
 
@@ -183,28 +172,25 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     * try to open/create the file
     */
     HANDLE fileHandle = ::CreateFileA(file_name,
-        dwDesiredAccess,
-        dwShareMode,
-        &SecurityAttributes,
-        dwCreationDisposition,
-        dwFlagsAndAttributes,
-        0);
+                                      dwDesiredAccess,
+                                      dwShareMode,
+                                      &SecurityAttributes,
+                                      dwCreationDisposition,
+                                      dwFlagsAndAttributes,
+                                      0);
 
-    if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
-    {
+    if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr) {
         auto err = _looper->bind_io_handle((dsn_handle_t)fileHandle, &_callback);
-        if (err != ERR_OK)
-        {
-            dassert(false, "cannot associate file handle %s to io completion port, err = 0x%x", file_name, ::GetLastError());
+        if (err != ERR_OK) {
+            dassert(false,
+                    "cannot associate file handle %s to io completion port, err = 0x%x",
+                    file_name,
+                    ::GetLastError());
             return 0;
-        }
-        else
-        {
+        } else {
             return (dsn_handle_t)(fileHandle);
         }
-    }
-    else
-    {
+    } else {
         derror("cannot create file %s, err = 0x%x", file_name, ::GetLastError());
         return 0;
     }
@@ -214,27 +200,23 @@ error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
     if (::CloseHandle((HANDLE)(fh)))
         return ERR_OK;
-    else
-    {
+    else {
         derror("close file failed, err = 0x%x", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
-    }        
+    }
 }
 
 error_code hpc_aio_provider::flush(dsn_handle_t fh)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::FlushFileBuffers((HANDLE)(fh)))
-    {
+    if (fh == DSN_INVALID_FILE_HANDLE || ::FlushFileBuffers((HANDLE)(fh))) {
         return ERR_OK;
-    }
-    else
-    {
+    } else {
         derror("close file failed, err = 0x%x", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }
 }
 
-disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
+disk_aio *hpc_aio_provider::prepare_aio_context(aio_task *tsk)
 {
     auto r = new windows_disk_aio_context;
     ZeroMemory(&r->olp, sizeof(r->olp));
@@ -243,29 +225,29 @@ disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
     return r;
 }
 
-void hpc_aio_provider::aio(aio_task* aio_tsk)
+void hpc_aio_provider::aio(aio_task *aio_tsk)
 {
     auto err = aio_internal(aio_tsk, true);
     err.end_tracking();
 }
 
-error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
+error_code hpc_aio_provider::aio_internal(aio_task *aio_tsk,
+                                          bool async,
+                                          /*out*/ uint32_t *pbytes /*= nullptr*/)
 {
-    auto aio = (windows_disk_aio_context*)aio_tsk->aio();
+    auto aio = (windows_disk_aio_context *)aio_tsk->aio();
     BOOL r = FALSE;
 
     aio->olp.Offset = (uint32_t)aio->file_offset;
     aio->olp.OffsetHigh = (uint32_t)(aio->file_offset >> 32);
 
-    if (!async)
-    {
+    if (!async) {
         aio->evt = new utils::notify_event();
         aio->err = ERR_OK;
         aio->bytes = 0;
     }
 
-    switch (aio->type)
-    {
+    switch (aio->type) {
     case AIO_Read:
         r = ::ReadFile((HANDLE)aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
@@ -273,27 +255,24 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
         r = ::WriteFile((HANDLE)aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
-        dassert (false, "unknown aio type %u", static_cast<int>(aio->type));
+        dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
         break;
     }
 
-    if (!r)
-    {
+    if (!r) {
         int native_error = ::GetLastError();
-        
-        if (native_error != ERROR_IO_PENDING)
-        {
+
+        if (native_error != ERROR_IO_PENDING) {
             derror("file operation failed, err = %u", native_error);
 
-            error_code err = native_error == ERROR_SUCCESS ? ERR_OK :
-                (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF : ERR_FILE_OPERATION_FAILED);
+            error_code err = native_error == ERROR_SUCCESS
+                                 ? ERR_OK
+                                 : (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF
+                                                                     : ERR_FILE_OPERATION_FAILED);
 
-            if (async)
-            {
+            if (async) {
                 complete_io(aio_tsk, err, 0);
-            }
-            else
-            {
+            } else {
                 delete aio->evt;
                 aio->evt = nullptr;
             }
@@ -302,22 +281,18 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
         }
     }
 
-    if (async)
-    {
+    if (async) {
         return ERR_IO_PENDING;
-    }
-    else
-    {
+    } else {
         aio->evt->wait();
         delete aio->evt;
         aio->evt = nullptr;
-        if (pbytes != nullptr)
-        {
+        if (pbytes != nullptr) {
             *pbytes = aio->bytes;
         }
         return aio->err;
     }
 }
-
-}} // end namespace dsn::tools
+}
+} // end namespace dsn::tools
 #endif

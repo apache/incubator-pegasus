@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,28 +35,26 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
-    class node_scoper
+class node_scoper
+{
+public:
+    node_scoper(service_node *node)
     {
-    public:
-        node_scoper(service_node* node)
-        {
-            _old = tls_dsn;
-            task::set_tls_dsn_context(node, nullptr, nullptr);
-        }
+        _old = tls_dsn;
+        task::set_tls_dsn_context(node, nullptr, nullptr);
+    }
 
-        ~node_scoper()
-        {
-            tls_dsn = _old;
-        }
+    ~node_scoper() { tls_dsn = _old; }
 
-    private:
-        struct __tls_dsn__ _old;
-    };
+private:
+    struct __tls_dsn__ _old;
+};
 
 // ---- inline implementation ------
-
-}} // end namespace dsn::tools
+}
+} // end namespace dsn::tools

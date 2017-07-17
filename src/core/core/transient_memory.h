@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,31 +35,30 @@
 
 #pragma once
 
-# include <dsn/utility/ports.h>
-# include <dsn/utility/utils.h>
-# include <dsn/service_api_c.h>
+#include <dsn/utility/ports.h>
+#include <dsn/utility/utils.h>
+#include <dsn/service_api_c.h>
 
-namespace dsn 
+namespace dsn {
+typedef struct tls_transient_memory_t
 {
-    typedef struct tls_transient_memory_t
-    {
-        unsigned int          magic;
-        size_t                remain_bytes;
-        char                  block_ptr_buffer[sizeof(std::shared_ptr<char>)];
-        std::shared_ptr<char> *block;
-        char*                 next;
-        bool                  committed;
-    } tls_transient_memory_t;
+    unsigned int magic;
+    size_t remain_bytes;
+    char block_ptr_buffer[sizeof(std::shared_ptr<char>)];
+    std::shared_ptr<char> *block;
+    char *next;
+    bool committed;
+} tls_transient_memory_t;
 
-    extern __thread tls_transient_memory_t tls_trans_memory;
-    extern void tls_trans_mem_init(size_t default_per_block_bytes);
-    extern void tls_trans_mem_alloc(size_t min_size);
+extern __thread tls_transient_memory_t tls_trans_memory;
+extern void tls_trans_mem_init(size_t default_per_block_bytes);
+extern void tls_trans_mem_alloc(size_t min_size);
 
-    extern void tls_trans_mem_next(void** ptr, size_t* sz, size_t min_size);
-    extern void tls_trans_mem_commit(size_t use_size);
+extern void tls_trans_mem_next(void **ptr, size_t *sz, size_t min_size);
+extern void tls_trans_mem_commit(size_t use_size);
 
-    extern blob tls_trans_mem_alloc_blob(size_t sz);
+extern blob tls_trans_mem_alloc_blob(size_t sz);
 
-    extern void* tls_trans_malloc(size_t sz);
-    extern void tls_trans_free(void* ptr);
+extern void *tls_trans_malloc(size_t sz);
+extern void tls_trans_free(void *ptr);
 }

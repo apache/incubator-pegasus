@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,14 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <iostream>
-# include "gtest/gtest.h"
-# include <dsn/service_api_cpp.h>
+#include <iostream>
+#include "gtest/gtest.h"
+#include <dsn/service_api_cpp.h>
 
-# ifndef _WIN32
-# include <sys/types.h>
-# include <signal.h>
-# endif
+#ifndef _WIN32
+#include <sys/types.h>
+#include <signal.h>
+#endif
 
 int g_test_count = 0;
 int g_test_ret = 0;
@@ -53,29 +53,26 @@ class test_client : public ::dsn::service_app
 public:
     test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
 
-    ::dsn::error_code start(int argc, char** argv)
+    ::dsn::error_code start(int argc, char **argv)
     {
         testing::InitGoogleTest(&argc, argv);
         g_test_ret = RUN_ALL_TESTS();
         g_test_count = 1;
-/*
-        // exit without any destruction
-# if defined(_WIN32)
-        ::ExitProcess(0);
-# else
-        kill(getpid(), SIGKILL);
-# endif
-*/
+        /*
+                // exit without any destruction
+        # if defined(_WIN32)
+                ::ExitProcess(0);
+        # else
+                kill(getpid(), SIGKILL);
+        # endif
+        */
         return ::dsn::ERR_OK;
     }
 
-    ::dsn::error_code stop(bool cleanup = false)
-    {
-        return ::dsn::ERR_OK;
-    }
+    ::dsn::error_code stop(bool cleanup = false) { return ::dsn::ERR_OK; }
 };
 
-GTEST_API_ int main(int argc, char **argv) 
+GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
@@ -86,8 +83,7 @@ GTEST_API_ int main(int argc, char **argv)
 
     // specify what services and tools will run in config file, then run
     dsn_run_config("config-test.ini", false);
-    while (g_test_count == 0)
-    {
+    while (g_test_count == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 

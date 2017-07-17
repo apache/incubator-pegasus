@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,38 +33,35 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <mutex>
-# include <atomic>
+#include <mutex>
+#include <atomic>
 
-namespace dsn { namespace utils {
+namespace dsn {
+namespace utils {
 
-template<typename T>
+template <typename T>
 class singleton
 {
 public:
     singleton() {}
 
-    static T& instance()
+    static T &instance()
     {
-        if (nullptr == _instance)
-        {
-            // lock 
-            while (0 != _l.exchange(1, std::memory_order_acquire))
-            {
-                while (_l.load(std::memory_order_consume) == 1)
-                {
+        if (nullptr == _instance) {
+            // lock
+            while (0 != _l.exchange(1, std::memory_order_acquire)) {
+                while (_l.load(std::memory_order_consume) == 1) {
                 }
             }
 
             // re-check and assign
-            if (nullptr == _instance)
-            {
+            if (nullptr == _instance) {
                 auto tmp = new T();
                 std::atomic_thread_fence(std::memory_order::memory_order_seq_cst);
                 _instance = tmp;
-            }            
+            }
 
             // unlock
             _l.store(0, std::memory_order_release);
@@ -72,28 +69,24 @@ public:
         return *_instance;
     }
 
-    static T& fast_instance()
-    {
-        return *_instance;
-    }
+    static T &fast_instance() { return *_instance; }
 
-    static bool is_instance_created()
-    {
-        return nullptr != _instance;
-    }
-    
+    static bool is_instance_created() { return nullptr != _instance; }
+
 protected:
-    static T*    _instance;
+    static T *_instance;
     static std::atomic<int> _l;
-    
+
 private:
-    singleton(const singleton&);
-    singleton& operator=(const singleton&);
+    singleton(const singleton &);
+    singleton &operator=(const singleton &);
 };
 
 // ----- inline implementations -------------------------------------------------------------------
 
-template<typename T> T*  singleton<T>::_instance = 0;
-template<typename T> std::atomic<int>  singleton<T>::_l(0);
-
-}} // end namespace dsn::utils
+template <typename T>
+T *singleton<T>::_instance = 0;
+template <typename T>
+std::atomic<int> singleton<T>::_l(0);
+}
+} // end namespace dsn::utils

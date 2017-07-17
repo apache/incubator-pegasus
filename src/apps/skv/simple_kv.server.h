@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,55 +33,54 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include "simple_kv.code.definition.h"
-# include "simple_kv.types.h"
-# include <iostream>
+#pragma once
+#include "simple_kv.code.definition.h"
+#include "simple_kv.types.h"
+#include <iostream>
 
-namespace dsn { namespace replication { namespace application { 
-class simple_kv_service 
-    : public ::dsn::serverlet<simple_kv_service>
+namespace dsn {
+namespace replication {
+namespace application {
+class simple_kv_service : public ::dsn::serverlet<simple_kv_service>
 {
 public:
-    simple_kv_service()
-        : ::dsn::serverlet<simple_kv_service>("simple_kv")
-    {
-    }
-    
-    virtual ~simple_kv_service() 
-    {
-    }
+    simple_kv_service() : ::dsn::serverlet<simple_kv_service>("simple_kv") {}
+
+    virtual ~simple_kv_service() {}
 
 protected:
     // all service handlers to be implemented further
-    // RPC_SIMPLE_KV_SIMPLE_KV_READ 
-    virtual void on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply)
+    // RPC_SIMPLE_KV_SIMPLE_KV_READ
+    virtual void on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_READ ... (not implemented) " << std::endl;
         std::string resp;
         reply(resp);
     }
-    // RPC_SIMPLE_KV_SIMPLE_KV_WRITE 
-    virtual void on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
+    // RPC_SIMPLE_KV_SIMPLE_KV_WRITE
+    virtual void on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_WRITE ... (not implemented) " << std::endl;
         int32_t resp;
         reply(resp);
     }
-    // RPC_SIMPLE_KV_SIMPLE_KV_APPEND 
-    virtual void on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
+    // RPC_SIMPLE_KV_SIMPLE_KV_APPEND
+    virtual void on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_APPEND ... (not implemented) " << std::endl;
         int32_t resp;
         reply(resp);
     }
-    
+
 public:
     void open_service(dsn_gpid gpid)
     {
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", &simple_kv_service::on_read, gpid);
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", &simple_kv_service::on_write, gpid);
-        this->register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", &simple_kv_service::on_append, gpid);
+        this->register_async_rpc_handler(
+            RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", &simple_kv_service::on_read, gpid);
+        this->register_async_rpc_handler(
+            RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", &simple_kv_service::on_write, gpid);
+        this->register_async_rpc_handler(
+            RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", &simple_kv_service::on_append, gpid);
     }
 
     void close_service(dsn_gpid gpid)
@@ -91,5 +90,6 @@ public:
         this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, gpid);
     }
 };
-
-} } } 
+}
+}
+}

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,17 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include "common.h"
+#include "common.h"
 
-# include <dsn/utility/singleton.h>
-# include <dsn/tool/global_checker.h>
-# include "../../meta_server/server_state.h"
-# include <dsn/dist/replication/meta_service_app.h>
-# include <dsn/dist/replication/replication_service_app.h>
+#include <dsn/utility/singleton.h>
+#include <dsn/tool/global_checker.h>
+#include "../../meta_server/server_state.h"
+#include <dsn/dist/replication/meta_service_app.h>
+#include <dsn/dist/replication/replication_service_app.h>
 
-namespace dsn { namespace replication { namespace test {
+namespace dsn {
+namespace replication {
+namespace test {
 
 using ::dsn::service::meta_service_app;
 
@@ -55,13 +57,13 @@ public:
 public:
     test_checker();
 
-    bool init(const char* name, dsn_app_info* info, int count);
+    bool init(const char *name, dsn_app_info *info, int count);
 
     void exit();
 
     void check();
 
-    meta_service_app* meta_leader();
+    meta_service_app *meta_leader();
 
     void control_balancer(bool disable_it);
 
@@ -70,49 +72,48 @@ public:
     bool check_replica_state(int primary_count, int secondary_count, int inactive_count);
 
     std::string address_to_node_name(rpc_address addr);
-    rpc_address node_name_to_address(const std::string& name);
+    rpc_address node_name_to_address(const std::string &name);
 
-    void on_replica_state_change(::dsn::rpc_address from, const replica_configuration& new_config, bool is_closing);
+    void on_replica_state_change(::dsn::rpc_address from,
+                                 const replica_configuration &new_config,
+                                 bool is_closing);
     void on_config_change(const app_mapper &new_config);
 
-    void get_current_states(state_snapshot& states);
-    bool get_current_config(parti_config& config);
-private:
-    std::vector<dsn_app_info>             _apps;
-    std::vector<meta_service_app*>        _meta_servers;
-    std::vector<replication_service_app*> _replica_servers;
+    void get_current_states(state_snapshot &states);
+    bool get_current_config(parti_config &config);
 
-    parti_config                          _last_config;
-    state_snapshot                        _last_states;
+private:
+    std::vector<dsn_app_info> _apps;
+    std::vector<meta_service_app *> _meta_servers;
+    std::vector<replication_service_app *> _replica_servers;
+
+    parti_config _last_config;
+    state_snapshot _last_states;
 
     std::map<std::string, dsn::rpc_address> _node_to_address; // address is primary_address()
-    std::map<int, std::string>              _address_to_node; // port is enough for key
+    std::map<int, std::string> _address_to_node;              // port is enough for key
 };
 
 class wrap_checker : public dsn::tools::checker
 {
 public:
-    wrap_checker(const char* name, dsn_app_info* info, int count)
+    wrap_checker(const char *name, dsn_app_info *info, int count)
         : dsn::tools::checker(name, info, count)
     {
         _checker = &test_checker::instance();
-        if (!_checker->init(name, info, count))
-        {
+        if (!_checker->init(name, info, count)) {
             g_done = true;
             g_fail = true;
         }
     }
 
-    virtual void check() override
-    {
-        _checker->check();
-    }
+    virtual void check() override { _checker->check(); }
 
 private:
-    test_checker* _checker;
+    test_checker *_checker;
 };
 
 void install_checkers();
-
-}}}
-
+}
+}
+}

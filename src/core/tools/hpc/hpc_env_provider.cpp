@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,31 +33,27 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include "hpc_env_provider.h"
 
-# include "hpc_env_provider.h"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "env.provider.hpc"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "env.provider.hpc"
-
-namespace dsn
+namespace dsn {
+namespace tools {
+hpc_env_provider::hpc_env_provider(env_provider *inner_provider) : env_provider(inner_provider)
 {
-    namespace tools
-    {
-        hpc_env_provider::hpc_env_provider(env_provider* inner_provider)
-            : env_provider(inner_provider)
-        {
-            _ns_start = utils::get_current_physical_time_ns();
-# if defined(_WIN32)
-            ::QueryPerformanceCounter((LARGE_INTEGER*)&_tick_start);
+    _ns_start = utils::get_current_physical_time_ns();
+#if defined(_WIN32)
+    ::QueryPerformanceCounter((LARGE_INTEGER *)&_tick_start);
 
-            uint64_t freq;
-            ::QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
-            _tick_frequency_per_ns = (double)freq / 1000.0 / 1000.0 / 1000.0;
-# else
-            // TODO:
-# endif
-        }
-    }
+    uint64_t freq;
+    ::QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+    _tick_frequency_per_ns = (double)freq / 1000.0 / 1000.0 / 1000.0;
+#else
+// TODO:
+#endif
+}
+}
 }

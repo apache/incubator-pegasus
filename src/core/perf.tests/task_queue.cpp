@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,61 +43,57 @@
 #include <mutex>
 #include <condition_variable>
 
-//worker = 1
+// worker = 1
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_1);
-//worker = 1
+// worker = 1
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_2);
 DEFINE_TASK_CODE(LPC_TEST_TASK_QUEUE_1, TASK_PRIORITY_HIGH, THREAD_POOL_TEST_TASK_QUEUE_1)
 DEFINE_TASK_CODE(LPC_TEST_TASK_QUEUE_2, TASK_PRIORITY_HIGH, THREAD_POOL_TEST_TASK_QUEUE_2)
 
-struct auto_timer {
+struct auto_timer
+{
     std::string prefix;
     uint64_t delivery;
     std::chrono::steady_clock clock;
     decltype(std::chrono::steady_clock::now()) start_time;
     std::vector<task_ptr> waited_task;
-    auto_timer(const std::string& prefix, uint64_t delivery) : prefix(prefix), delivery(delivery)
+    auto_timer(const std::string &prefix, uint64_t delivery) : prefix(prefix), delivery(delivery)
     {
         start_time = clock.now();
     }
-    void wait_task(task_ptr ptask)
-    {
-        waited_task.push_back(ptask);
-    }
+    void wait_task(task_ptr ptask) { waited_task.push_back(ptask); }
     ~auto_timer()
     {
-        for (auto task : waited_task)
-        {
+        for (auto task : waited_task) {
             task->wait();
         }
         auto end_time = clock.now();
-        std::cout << prefix << "throughput = " << delivery * 1000 * 1000 / std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count() << std::endl;
+        std::cout << prefix << "throughput = "
+                  << delivery * 1000 * 1000 /
+                         std::chrono::duration_cast<std::chrono::microseconds>(end_time -
+                                                                               start_time)
+                             .count()
+                  << std::endl;
     }
 };
 
-void empty_cb(void*)
-{
-    
-}
+void empty_cb(void *) {}
 struct self_iterate_context
 {
     std::mutex mut;
     std::condition_variable cv;
     bool done = false;
-    std::vector<task_c*> tsks;
-    std::vector<task_c*>::iterator it;
+    std::vector<task_c *> tsks;
+    std::vector<task_c *>::iterator it;
 };
-void iterate_over_preallocated_tasks(void* ctx)
+void iterate_over_preallocated_tasks(void *ctx)
 {
-    auto context = reinterpret_cast<self_iterate_context*>(ctx);
-    if (context->it != context->tsks.end())
-    {
+    auto context = reinterpret_cast<self_iterate_context *>(ctx);
+    if (context->it != context->tsks.end()) {
         auto it_save = context->it;
         ++context->it;
         (*it_save)->enqueue();
-    }
-    else
-    {
+    } else {
         {
             std::lock_guard<std::mutex> _(context->mut);
             context->done = true;
@@ -108,18 +104,15 @@ void iterate_over_preallocated_tasks(void* ctx)
 
 void external_flooding(const int enqueue_time)
 {
-    std::vector<task_c*> tsks;
-    for (int i = 0; i < enqueue_time; i++)
-    {
+    std::vector<task_c *> tsks;
+    for (int i = 0; i < enqueue_time; i++) {
         auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
         tsks.push_back(tsk);
     }
     {
         auto_timer t("inter-thread flooding test:", enqueue_time);
-        for (auto tsk : tsks)
-        {
-            if (tsk == tsks.back())
-            {
+        for (auto tsk : tsks) {
+            if (tsk == tsks.back()) {
                 tsk->add_ref();
             }
             tsk->enqueue();
@@ -131,20 +124,16 @@ void external_flooding(const int enqueue_time)
 
 void self_flooding(const int enqueue_time)
 {
-    std::vector<task_c*> tsks;
-    for (int i = 0; i < enqueue_time; i++)
-    {
+    std::vector<task_c *> tsks;
+    for (int i = 0; i < enqueue_time; i++) {
         auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
         tsks.push_back(tsk);
     }
     {
         auto_timer t("self-flooding test:", enqueue_time);
-        tasking::enqueue(LPC_TEST_TASK_QUEUE_1, nullptr, [&]()
-        {
-            for (auto tsk : tsks)
-            {
-                if (tsk == tsks.back())
-                {
+        tasking::enqueue(LPC_TEST_TASK_QUEUE_1, nullptr, [&]() {
+            for (auto tsk : tsks) {
+                if (tsk == tsks.back()) {
                     tsk->add_ref();
                 }
                 tsk->enqueue();
@@ -157,16 +146,14 @@ void self_flooding(const int enqueue_time)
 }
 void external_blocking(const int enqueue_time)
 {
-    std::vector<task_c*> tsks;
-    for (int i = 0; i < enqueue_time; i++)
-    {
+    std::vector<task_c *> tsks;
+    for (int i = 0; i < enqueue_time; i++) {
         auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
         tsks.push_back(tsk);
     }
     {
         auto_timer t("inter-thread blocking test:", enqueue_time);
-        for (auto tsk : tsks)
-        {
+        for (auto tsk : tsks) {
             tsk->add_ref();
             tsk->enqueue();
             tsk->wait();
@@ -177,9 +164,9 @@ void external_blocking(const int enqueue_time)
 void self_iterating(const int enqueue_time)
 {
     self_iterate_context ctx;
-    for (int i = 0; i < enqueue_time; i++)
-    {
-        auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, iterate_over_preallocated_tasks, &ctx, nullptr);
+    for (int i = 0; i < enqueue_time; i++) {
+        auto tsk =
+            new task_c(LPC_TEST_TASK_QUEUE_1, iterate_over_preallocated_tasks, &ctx, nullptr);
         ctx.tsks.push_back(tsk);
     }
     ctx.it = ctx.tsks.begin();
@@ -187,20 +174,17 @@ void self_iterating(const int enqueue_time)
         auto_timer t("self-iterating test:", enqueue_time);
         iterate_over_preallocated_tasks(&ctx);
         std::unique_lock<std::mutex> _lk(ctx.mut);
-        ctx.cv.wait(_lk, [&] {return ctx.done;});
+        ctx.cv.wait(_lk, [&] { return ctx.done; });
     }
 }
 void tic_tock_iterating(const int enqueue_time)
 {
     self_iterate_context ctx;
-    for (int i = 0; i < enqueue_time; i++)
-    {
-        auto tsk = new task_c(
-            i % 2 == 0 ? LPC_TEST_TASK_QUEUE_1 : LPC_TEST_TASK_QUEUE_2,
-            iterate_over_preallocated_tasks,
-            &ctx,
-            nullptr
-            );
+    for (int i = 0; i < enqueue_time; i++) {
+        auto tsk = new task_c(i % 2 == 0 ? LPC_TEST_TASK_QUEUE_1 : LPC_TEST_TASK_QUEUE_2,
+                              iterate_over_preallocated_tasks,
+                              &ctx,
+                              nullptr);
         ctx.tsks.push_back(tsk);
     }
     ctx.it = ctx.tsks.begin();
@@ -208,7 +192,7 @@ void tic_tock_iterating(const int enqueue_time)
         auto_timer t("tick-tock test:", enqueue_time);
         iterate_over_preallocated_tasks(&ctx);
         std::unique_lock<std::mutex> _lk(ctx.mut);
-        ctx.cv.wait(_lk, [&] {return ctx.done;});
+        ctx.cv.wait(_lk, [&] { return ctx.done; });
     }
 }
 TEST(core, task_queue_perf_test)

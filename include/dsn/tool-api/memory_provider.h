@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,39 +33,31 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include <cstdlib>
+#pragma once
+#include <cstdlib>
 
 namespace dsn {
 
-    class memory_provider
+class memory_provider
+{
+public:
+    template <typename T>
+    static memory_provider *create()
     {
-    public:
-        template <typename T> static memory_provider* create()
-        {
-            return new T();
-        }
+        return new T();
+    }
 
-        typedef memory_provider* (*factory)();
+    typedef memory_provider *(*factory)();
 
-    public:
-        memory_provider() {}
-        
-        virtual ~memory_provider(void) { }
+public:
+    memory_provider() {}
 
-        virtual void* allocate(size_t sz) 
-        {
-            return ::malloc(sz);
-        }
+    virtual ~memory_provider(void) {}
 
-        virtual void* reallocate(void* ptr, size_t sz)
-        {
-            return ::realloc(ptr, sz);
-        }
-            
-        virtual void  deallocate(void* ptr)
-        {
-            ::free(ptr);
-        }
-    };
+    virtual void *allocate(size_t sz) { return ::malloc(sz); }
+
+    virtual void *reallocate(void *ptr, size_t sz) { return ::realloc(ptr, sz); }
+
+    virtual void deallocate(void *ptr) { ::free(ptr); }
+};
 }

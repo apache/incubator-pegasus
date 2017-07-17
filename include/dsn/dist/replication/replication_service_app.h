@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,24 +35,24 @@
 
 #pragma once
 
-# include <dsn/dist/layer2_handler.h>
-# include <dsn/dist/replication/replication_other_types.h>
+#include <dsn/dist/layer2_handler.h>
+#include <dsn/dist/replication/replication_other_types.h>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class replication_checker;
 namespace test {
-    class test_checker;
+class test_checker;
 }
-class replication_service_app :
-    public ::dsn::layer2_handler
+class replication_service_app : public ::dsn::layer2_handler
 {
 public:
     replication_service_app(dsn_gpid gpid);
 
     virtual ~replication_service_app(void);
 
-    virtual ::dsn::error_code start(int argc, char** argv) override;
+    virtual ::dsn::error_code start(int argc, char **argv) override;
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
@@ -63,10 +63,8 @@ private:
     friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
 
-    static const char* replica_service_app_info(int argc, char** argv);
-    static void replica_service_app_info_free(const char* response);
+    static const char *replica_service_app_info(int argc, char **argv);
+    static void replica_service_app_info_free(const char *response);
 };
-
-}}
-
-
+}
+}

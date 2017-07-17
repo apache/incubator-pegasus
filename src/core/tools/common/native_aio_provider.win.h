@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,36 +35,36 @@
 
 #pragma once
 
-# ifdef _WIN32
+#ifdef _WIN32
 
-# include <dsn/tool_api.h>
-# include <dsn/utility/synchronize.h>
+#include <dsn/tool_api.h>
+#include <dsn/utility/synchronize.h>
 
 namespace dsn {
-    namespace tools {
-        class native_win_aio_provider : public aio_provider
-        {
-        public:
-            native_win_aio_provider(disk_engine* disk, aio_provider* inner_provider);
-            ~native_win_aio_provider();
+namespace tools {
+class native_win_aio_provider : public aio_provider
+{
+public:
+    native_win_aio_provider(disk_engine *disk, aio_provider *inner_provider);
+    ~native_win_aio_provider();
 
-            virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
-            virtual error_code close(dsn_handle_t fh);
-            virtual error_code flush(dsn_handle_t fh);
-            virtual void    aio(aio_task* aio);            
-            virtual disk_aio* prepare_aio_context(aio_task* tsk);
-            
-            virtual void start(io_modifer& ctx) override;
+    virtual dsn_handle_t open(const char *file_name, int flag, int pmode);
+    virtual error_code close(dsn_handle_t fh);
+    virtual error_code flush(dsn_handle_t fh);
+    virtual void aio(aio_task *aio);
+    virtual disk_aio *prepare_aio_context(aio_task *tsk);
 
-        protected:
-            error_code aio_internal(aio_task* aio, bool async, /*out*/ uint32_t* pbytes = nullptr);
+    virtual void start(io_modifer &ctx) override;
 
-        private:
-            void worker();
-            std::thread *_worker_thr;
-            HANDLE       _iocp;
-        };
-    }
+protected:
+    error_code aio_internal(aio_task *aio, bool async, /*out*/ uint32_t *pbytes = nullptr);
+
+private:
+    void worker();
+    std::thread *_worker_thr;
+    HANDLE _iocp;
+};
+}
 }
 
-# endif
+#endif

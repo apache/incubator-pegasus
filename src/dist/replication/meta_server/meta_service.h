@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
 #include <memory>
 
@@ -45,13 +45,16 @@
 #include "meta_options.h"
 
 class meta_service_test_app;
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class server_state;
 class meta_server_failure_detector;
 class server_load_balancer;
 class replication_checker;
-namespace test { class test_checker; }
+namespace test {
+class test_checker;
+}
 
 class meta_service : public serverlet<meta_service>
 {
@@ -61,10 +64,10 @@ public:
 
     error_code start();
 
-    const replication_options& get_options() const { return _opts; }
-    const meta_options& get_meta_options() const { return _meta_opts; }
-    dist::meta_state_service* get_remote_storage() { return _storage.get(); }
-    server_load_balancer* get_balancer() { return _balancer.get(); }
+    const replication_options &get_options() const { return _opts; }
+    const meta_options &get_meta_options() const { return _meta_opts; }
+    dist::meta_state_service *get_remote_storage() { return _storage.get(); }
+    server_load_balancer *get_balancer() { return _balancer.get(); }
     meta_function_level::type get_function_level()
     {
         meta_function_level::type level = _function_level.load();
@@ -74,14 +77,18 @@ public:
     }
 
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
-    virtual void send_message(const rpc_address& target, dsn_message_t request) { dsn_rpc_call_one_way(target.c_addr(), request); }
+    virtual void send_message(const rpc_address &target, dsn_message_t request)
+    {
+        dsn_rpc_call_one_way(target.c_addr(), request);
+    }
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock
-    void set_node_state(const std::vector<rpc_address>& nodes_list, bool is_alive);
-    void get_node_state(/*out*/std::map<rpc_address, bool>& all_nodes);
+    void set_node_state(const std::vector<rpc_address> &nodes_list, bool is_alive);
+    void get_node_state(/*out*/ std::map<rpc_address, bool> &all_nodes);
 
     void start_service();
     void balancer_run();
+
 private:
     void register_rpc_handlers();
 
@@ -119,6 +126,7 @@ private:
     int check_leader(dsn_message_t req);
     error_code remote_storage_initialize();
     bool check_freeze() const;
+
 private:
     friend class replication_checker;
     friend class test::test_checker;
@@ -141,7 +149,7 @@ private:
 
     std::atomic_bool _started;
     std::atomic_bool _recovering;
-    //reference replication.thrift for what the meta_function_level means
+    // reference replication.thrift for what the meta_function_level means
     std::atomic<meta_function_level::type> _function_level;
 
     std::string _cluster_root;
@@ -149,5 +157,5 @@ private:
     perf_counter_ _disconnect_qps;
     perf_counter_ _unalive_nodes_count;
 };
-
-}}
+}
+}

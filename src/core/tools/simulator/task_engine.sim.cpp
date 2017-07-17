@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,56 +36,48 @@
 #include "task_engine.sim.h"
 #include "scheduler.h"
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
-void sim_timer_service::add_timer(task* task)
-{
-    scheduler::instance().add_task(task, nullptr);
-}
+void sim_timer_service::add_timer(task *task) { scheduler::instance().add_task(task, nullptr); }
 
-sim_task_queue::sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-: task_queue(pool, index, inner_provider)
+sim_task_queue::sim_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
+    : task_queue(pool, index, inner_provider)
 {
 }
 
-void sim_task_queue::enqueue(task* t)
+void sim_task_queue::enqueue(task *t)
 {
     dassert(0 == t->delay_milliseconds(), "delay time must be zero");
-    if (_tasks.size() > 0)
-    {
+    if (_tasks.size() > 0) {
         do {
             int random_pos = dsn_random32(0, 1000000);
-            auto pr = _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
-            if (pr.second) break;
+            auto pr = _tasks.insert(std::map<uint32_t, task *>::value_type(random_pos, t));
+            if (pr.second)
+                break;
         } while (true);
-    }
-    else
-    {
+    } else {
         int random_pos = dsn_random32(0, 1000000);
-        _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
+        _tasks.insert(std::map<uint32_t, task *>::value_type(random_pos, t));
     }
 
     // for scheduling
-    if (task::get_current_worker())
-    {
+    if (task::get_current_worker()) {
         scheduler::instance().wait_schedule(true, true);
     }
 }
 
-// we always return 1 or 0 task in simulator 
-task* sim_task_queue::dequeue(/*inout*/int& batch_size)
+// we always return 1 or 0 task in simulator
+task *sim_task_queue::dequeue(/*inout*/ int &batch_size)
 {
     scheduler::instance().wait_schedule(false);
 
-    if (_tasks.size() > 0)
-    {
+    if (_tasks.size() > 0) {
         auto t = _tasks.begin()->second;
         _tasks.erase(_tasks.begin());
         batch_size = 1;
         return t;
-    }
-    else
-    {
+    } else {
         batch_size = 0;
         return nullptr;
     }
@@ -94,12 +86,11 @@ task* sim_task_queue::dequeue(/*inout*/int& batch_size)
 void sim_semaphore_provider::signal(int count)
 {
     _count += count;
-    
-    while (!_wait_threads.empty() && _count > 0)
-    {
+
+    while (!_wait_threads.empty() && _count > 0) {
         --_count;
 
-        sim_worker_state* thread = _wait_threads.front();
+        sim_worker_state *thread = _wait_threads.front();
         _wait_threads.pop_front();
         thread->is_continuation_ready = true;
     }
@@ -107,47 +98,38 @@ void sim_semaphore_provider::signal(int count)
 
 bool sim_semaphore_provider::wait(int timeout_milliseconds)
 {
-    if (_count > 0)
-    {
+    if (_count > 0) {
         --_count;
         scheduler::instance().wait_schedule(true, true);
         return true;
-    }
-    else if (0 == timeout_milliseconds)
-    {
+    } else if (0 == timeout_milliseconds) {
         scheduler::instance().wait_schedule(true, true);
         return false;
-    }
-    else
-    {
+    } else {
         // wait success
-        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX || dsn_probability() <= 0.5)
-        {
+        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX ||
+            dsn_probability() <= 0.5) {
             _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
             scheduler::instance().wait_schedule(true, false);
             return true;
         }
 
         // timeout
-        else
-        {
+        else {
             scheduler::instance().wait_schedule(true, true);
             return false;
         }
     }
 }
 
-sim_lock_provider::sim_lock_provider(lock_provider* inner_provider)
-    : lock_provider(inner_provider),
-    _sema(1, nullptr)
+sim_lock_provider::sim_lock_provider(lock_provider *inner_provider)
+    : lock_provider(inner_provider), _sema(1, nullptr)
 {
     _current_holder = -1;
     _lock_depth = 0;
 }
 
-sim_lock_provider::~sim_lock_provider()
-{
-}
+sim_lock_provider::~sim_lock_provider() {}
 
 void sim_lock_provider::lock()
 {
@@ -156,8 +138,7 @@ void sim_lock_provider::lock()
         return;
 
     int ctid = ::dsn::utils::get_current_tid();
-    if (ctid == _current_holder)
-    {
+    if (ctid == _current_holder) {
         ++_lock_depth;
         return;
     }
@@ -176,15 +157,13 @@ bool sim_lock_provider::try_lock()
         return true;
 
     int ctid = ::dsn::utils::get_current_tid();
-    if (ctid == _current_holder)
-    {
+    if (ctid == _current_holder) {
         ++_lock_depth;
         return true;
     }
 
     bool r = _sema.wait(0);
-    if (r)
-    {
+    if (r) {
         dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
         _current_holder = ctid;
         ++_lock_depth;
@@ -199,29 +178,23 @@ void sim_lock_provider::unlock()
         return;
 
     dassert(::dsn::utils::get_current_tid() == _current_holder,
-        "lock must be locked must current holder");
+            "lock must be locked must current holder");
 
-    if (0 == --_lock_depth)
-    {
+    if (0 == --_lock_depth) {
         _current_holder = -1;
         _sema.signal(1);
-    }
-    else
-    {
+    } else {
     }
 }
 
-sim_lock_nr_provider::sim_lock_nr_provider(lock_nr_provider* inner_provider)
-    : lock_nr_provider(inner_provider),
-    _sema(1, nullptr)
+sim_lock_nr_provider::sim_lock_nr_provider(lock_nr_provider *inner_provider)
+    : lock_nr_provider(inner_provider), _sema(1, nullptr)
 {
     _current_holder = -1;
     _lock_depth = 0;
 }
 
-sim_lock_nr_provider::~sim_lock_nr_provider()
-{
-}
+sim_lock_nr_provider::~sim_lock_nr_provider() {}
 
 void sim_lock_nr_provider::lock()
 {
@@ -249,8 +222,7 @@ bool sim_lock_nr_provider::try_lock()
     dassert(ctid != _current_holder, "non-recursive lock, error or use recursive locks instead");
 
     bool r = _sema.wait(0);
-    if (r)
-    {
+    if (r) {
         dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
         _current_holder = ctid;
         ++_lock_depth;
@@ -265,18 +237,14 @@ void sim_lock_nr_provider::unlock()
         return;
 
     dassert(::dsn::utils::get_current_tid() == _current_holder,
-        "lock must be locked must current holder");
+            "lock must be locked must current holder");
 
-    if (0 == --_lock_depth)
-    {
+    if (0 == --_lock_depth) {
         _current_holder = -1;
         _sema.signal(1);
-    }
-    else
-    {
+    } else {
         dassert(false, "non-recursive lock, error or use recursive locks instead");
     }
 }
-
-
-}} // end namespace
+}
+} // end namespace

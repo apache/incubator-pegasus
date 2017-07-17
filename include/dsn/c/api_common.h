@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,50 +33,49 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <stdint.h>
-# include <stddef.h>
-# include <stdarg.h>
-# include <dsn/utility/dlib.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <dsn/utility/dlib.h>
 
-# ifdef __cplusplus
-# define DEFAULT(value) = value
-# define NORETURN [[noreturn]]
-# else
-# define DEFAULT(value)
-# define NORETURN 
-# include <stdbool.h>
-# endif
+#ifdef __cplusplus
+#define DEFAULT(value) = value
+#define NORETURN [[noreturn]]
+#else
+#define DEFAULT(value)
+#define NORETURN
+#include <stdbool.h>
+#endif
 
-
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif
+#endif
 
-# define DSN_MAX_TASK_CODE_NAME_LENGTH     48
-# define DSN_MAX_ERROR_CODE_NAME_LENGTH    48
-# define DSN_MAX_ADDRESS_NAME_LENGTH       48
-# define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
-# define DSN_MAX_APP_TYPE_NAME_LENGTH      32
-# define DSN_MAX_CALLBAC_COUNT             32
-# define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
-# define DSN_MAX_PATH                      1024
-# define TIME_MS_MAX                       0xffffffff
-# define CRC_INVALID                       0x0
+#define DSN_MAX_TASK_CODE_NAME_LENGTH 48
+#define DSN_MAX_ERROR_CODE_NAME_LENGTH 48
+#define DSN_MAX_ADDRESS_NAME_LENGTH 48
+#define DSN_MAX_BUFFER_COUNT_IN_MESSAGE 64
+#define DSN_MAX_APP_TYPE_NAME_LENGTH 32
+#define DSN_MAX_CALLBAC_COUNT 32
+#define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
+#define DSN_MAX_PATH 1024
+#define TIME_MS_MAX 0xffffffff
+#define CRC_INVALID 0x0
 
 struct dsn_app_info;
-typedef struct      dsn_app_info dsn_app_info; ///< rDSN app information
-typedef int         dsn_error_t;
-typedef int         dsn_task_code_t;
-typedef int         dsn_threadpool_code_t;
-typedef void*       dsn_handle_t;
-typedef void*       dsn_task_t;
-typedef void*       dsn_task_tracker_t;
-typedef void*       dsn_message_t;
-typedef void*       dsn_group_t;
-typedef void*       dsn_uri_t;
+typedef struct dsn_app_info dsn_app_info; ///< rDSN app information
+typedef int dsn_error_t;
+typedef int dsn_task_code_t;
+typedef int dsn_threadpool_code_t;
+typedef void *dsn_handle_t;
+typedef void *dsn_task_t;
+typedef void *dsn_task_tracker_t;
+typedef void *dsn_message_t;
+typedef void *dsn_group_t;
+typedef void *dsn_uri_t;
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 }
-# endif
+#endif

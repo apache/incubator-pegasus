@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,19 +39,20 @@
 #include "replica_stub.h"
 #include "replication_app_base.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica.2pc"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "replica.2pc"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 static int64_t get_uniq_timestamp()
 {
     static int64_t last = 0;
     static ::dsn::utils::ex_lock_nr_spin _lock;
     int64_t time = dsn_now_ns() / 1000;
-    ::dsn::utils::auto_lock < ::dsn::utils::ex_lock_nr_spin> l(_lock);
+    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
     last = std::max(time, last + 1);
     return last;
 }
@@ -60,111 +61,118 @@ void replica::on_client_write(task_code code, dsn_message_t request)
 {
     check_hashed_access();
 
-    if (partition_status::PS_PRIMARY != status())
-    {
+    if (partition_status::PS_PRIMARY != status()) {
         response_client_message(false, request, ERR_INVALID_STATE);
         return;
     }
 
-    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
-    {
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
+        _options->mutation_2pc_min_replica_count) {
         response_client_message(false, request, ERR_NOT_ENOUGH_MEMBER);
         return;
     }
 
-    dinfo("%s: got write request from %s", name(), dsn_address_to_string(dsn_msg_from_address(request)));
+    dinfo("%s: got write request from %s",
+          name(),
+          dsn_address_to_string(dsn_msg_from_address(request)));
     auto mu = _primary_states.write_queue.add_work(code, request, this);
-    if (mu)
-    {
+    if (mu) {
         init_prepare(mu);
     }
 }
 
-void replica::init_prepare(mutation_ptr& mu)
+void replica::init_prepare(mutation_ptr &mu)
 {
-    dassert (partition_status::PS_PRIMARY == status(), "invalid partition_status, status = %s",
-             enum_to_string(status()));
+    dassert(partition_status::PS_PRIMARY == status(),
+            "invalid partition_status, status = %s",
+            enum_to_string(status()));
 
     error_code err = ERR_OK;
     uint8_t count = 0;
     mu->data.header.last_committed_decree = last_committed_decree();
 
     dsn_log_level_t level = LOG_LEVEL_INFORMATION;
-    if (mu->data.header.decree == invalid_decree)
-    {
+    if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
-        //print a debug log per 1024 decrees
-        if ((mu->get_decree()&0x3ff) == 0)
+        // print a debug log per 1024 decrees
+        if ((mu->get_decree() & 0x3ff) == 0)
             level = LOG_LEVEL_DEBUG;
         mu->set_timestamp(get_uniq_timestamp());
-    }
-    else
-    {
+    } else {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
-    
-    dlog(level, __TITLE__, "%s: mutation %s init_prepare, mutation_tid=%" PRIu64, name(), mu->name(), mu->tid());
+
+    dlog(level,
+         __TITLE__,
+         "%s: mutation %s init_prepare, mutation_tid=%" PRIu64,
+         name(),
+         mu->name(),
+         mu->tid());
 
     // check bounded staleness
-    if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit)
-    {
+    if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
     }
- 
+
     // stop prepare if there are too few replicas
-    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
-    {
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
+        _options->mutation_2pc_min_replica_count) {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;
     }
 
-    dassert (mu->data.header.decree > last_committed_decree(), "%" PRId64 " VS %" PRId64 "",
-             mu->data.header.decree, last_committed_decree());
+    dassert(mu->data.header.decree > last_committed_decree(),
+            "%" PRId64 " VS %" PRId64 "",
+            mu->data.header.decree,
+            last_committed_decree());
 
     // local prepare
     err = _prepare_list->prepare(mu, partition_status::PS_PRIMARY);
-    if (err != ERR_OK)
-    {
+    if (err != ERR_OK) {
         goto ErrOut;
     }
-    
+
     // remote prepare
     mu->set_prepare_ts();
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
-    for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); ++it)
-    {
-        send_prepare_message(*it, partition_status::PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
+    for (auto it = _primary_states.membership.secondaries.begin();
+         it != _primary_states.membership.secondaries.end();
+         ++it) {
+        send_prepare_message(
+            *it, partition_status::PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
     }
 
     count = 0;
-    for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); ++it)
-    {
-        if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
-        {
-            send_prepare_message(it->first, partition_status::PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries, it->second.signature);
+    for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); ++it) {
+        if (it->second.prepare_start_decree != invalid_decree &&
+            mu->data.header.decree >= it->second.prepare_start_decree) {
+            send_prepare_message(it->first,
+                                 partition_status::PS_POTENTIAL_SECONDARY,
+                                 mu,
+                                 _options->prepare_timeout_ms_for_potential_secondaries,
+                                 it->second.signature);
             count++;
         }
-    }    
+    }
     mu->set_left_potential_secondary_ack_count(count);
 
-    if (mu->is_logged())
-    {
+    if (mu->is_logged()) {
         do_possible_commit_on_primary(mu);
-    }
-    else
-    {
-        dassert(mu->data.header.log_offset == invalid_offset, "invalid log offset, offset = %" PRId64,
+    } else {
+        dassert(mu->data.header.log_offset == invalid_offset,
+                "invalid log offset, offset = %" PRId64,
                 mu->data.header.log_offset);
         dassert(mu->log_task() == nullptr, "");
         mu->log_task() = _stub->_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            std::bind(&replica::on_append_log_completed, this, mu,
-                      std::placeholders::_1,
-                      std::placeholders::_2),
-            gpid_to_thread_hash(get_gpid())
-            );
+                                             LPC_WRITE_REPLICATION_LOG,
+                                             this,
+                                             std::bind(&replica::on_append_log_completed,
+                                                       this,
+                                                       mu,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2),
+                                             gpid_to_thread_hash(get_gpid()));
         dassert(nullptr != mu->log_task(), "");
     }
 
@@ -172,21 +180,20 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    for (auto& r : mu->client_requests)
-    {
+    for (auto &r : mu->client_requests) {
         response_client_message(false, r, err);
     }
     return;
 }
 
-void replica::send_prepare_message(
-    ::dsn::rpc_address addr, 
-    partition_status::type status,
-    mutation_ptr& mu, 
-    int timeout_milliseconds,
-    int64_t learn_signature)
+void replica::send_prepare_message(::dsn::rpc_address addr,
+                                   partition_status::type status,
+                                   mutation_ptr &mu,
+                                   int timeout_milliseconds,
+                                   int64_t learn_signature)
 {
-    dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_thread_hash(get_gpid()));
+    dsn_message_t msg =
+        dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_thread_hash(get_gpid()));
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig, learn_signature);
 
@@ -196,35 +203,34 @@ void replica::send_prepare_message(
         marshall(writer, rconfig, DSF_THRIFT_BINARY);
         mu->write_to(writer, msg);
     }
-    
-    mu->remote_tasks()[addr] = rpc::call(addr, msg,
-        this,
-        [=](error_code err, dsn_message_t request, dsn_message_t reply)
-        {
-            on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
-        },
-        gpid_to_thread_hash(get_gpid())
-        );
 
-    dinfo(
-        "%s: mutation %s send_prepare_message to %s as %s",  
-        name(), mu->name(),
-        addr.to_string(),
-        enum_to_string(rconfig.status)
-        );
+    mu->remote_tasks()[addr] =
+        rpc::call(addr,
+                  msg,
+                  this,
+                  [=](error_code err, dsn_message_t request, dsn_message_t reply) {
+                      on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
+                  },
+                  gpid_to_thread_hash(get_gpid()));
+
+    dinfo("%s: mutation %s send_prepare_message to %s as %s",
+          name(),
+          mu->name(),
+          addr.to_string(),
+          enum_to_string(rconfig.status));
 }
 
-void replica::do_possible_commit_on_primary(mutation_ptr& mu)
+void replica::do_possible_commit_on_primary(mutation_ptr &mu)
 {
-    dassert (_config.ballot == mu->data.header.ballot,
-             "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-             _config.ballot, mu->data.header.ballot
-             );
-    dassert (partition_status::PS_PRIMARY == status(), "invalid partition_status, status = %s",
-             enum_to_string(status()));
+    dassert(_config.ballot == mu->data.header.ballot,
+            "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
+            _config.ballot,
+            mu->data.header.ballot);
+    dassert(partition_status::PS_PRIMARY == status(),
+            "invalid partition_status, status = %s",
+            enum_to_string(status()));
 
-    if (mu->is_ready_for_commit())
-    {
+    if (mu->is_ready_for_commit()) {
         _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
     }
 }
@@ -246,100 +252,89 @@ void replica::on_prepare(dsn_message_t request)
 
     dinfo("%s: mutation %s on_prepare", name(), mu->name());
 
-    dassert(mu->data.header.pid == rconfig.pid, "(%d.%d) VS (%d.%d)",
-            mu->data.header.pid.get_app_id(), mu->data.header.pid.get_partition_index(),
-            rconfig.pid.get_app_id(), rconfig.pid.get_partition_index()
-            );
+    dassert(mu->data.header.pid == rconfig.pid,
+            "(%d.%d) VS (%d.%d)",
+            mu->data.header.pid.get_app_id(),
+            mu->data.header.pid.get_partition_index(),
+            rconfig.pid.get_app_id(),
+            rconfig.pid.get_partition_index());
     dassert(mu->data.header.ballot == rconfig.ballot,
             "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-            mu->data.header.ballot, rconfig.ballot
-            );
+            mu->data.header.ballot,
+            rconfig.ballot);
 
-    if (mu->data.header.ballot < get_ballot())
-    {
+    if (mu->data.header.ballot < get_ballot()) {
         derror("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
         // no need response because the rpc should have been cancelled on primary in this case
         return;
     }
 
     // update configuration when necessary
-    else if (rconfig.ballot > get_ballot())
-    {
-        if (!update_local_configuration(rconfig))
-        {
-            derror(
-                "%s: mutation %s on_prepare failed as update local configuration failed, state = %s",
-                name(), mu->name(),
-                enum_to_string(status())
-                );
+    else if (rconfig.ballot > get_ballot()) {
+        if (!update_local_configuration(rconfig)) {
+            derror("%s: mutation %s on_prepare failed as update local configuration failed, state "
+                   "= %s",
+                   name(),
+                   mu->name(),
+                   enum_to_string(status()));
             ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
         }
     }
 
-    if (partition_status::PS_INACTIVE == status() || partition_status::PS_ERROR == status())
-    {
-        derror(
-            "%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-            name(), mu->name(),
-            enum_to_string(status())
-            );
-        ack_prepare_message(
-            (partition_status::PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE,
-            mu
-            );
+    if (partition_status::PS_INACTIVE == status() || partition_status::PS_ERROR == status()) {
+        derror("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
+               name(),
+               mu->name(),
+               enum_to_string(status()));
+        ack_prepare_message((partition_status::PS_INACTIVE == status() && _inactive_is_transient)
+                                ? ERR_INACTIVE_STATE
+                                : ERR_INVALID_STATE,
+                            mu);
         return;
-    }
-    else if (partition_status::PS_POTENTIAL_SECONDARY == status())
-    {
+    } else if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
         // new learning process
-        if (rconfig.learner_signature != _potential_secondary_states.learning_version)
-        {
-            derror(
-                "%s: mutation %s on_prepare failed as unmatched learning signature, state = %s, "
-                "old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
-                name(), mu->name(),
-                enum_to_string(status()),
-                _potential_secondary_states.learning_version,
-                rconfig.learner_signature
-                );
+        if (rconfig.learner_signature != _potential_secondary_states.learning_version) {
+            derror("%s: mutation %s on_prepare failed as unmatched learning signature, state = %s, "
+                   "old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
+                   name(),
+                   mu->name(),
+                   enum_to_string(status()),
+                   _potential_secondary_states.learning_version,
+                   rconfig.learner_signature);
             handle_learning_error(ERR_INVALID_STATE, false);
             ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
         }
 
-        if (!(_potential_secondary_states.learning_status == learner_status::LearningWithPrepare
-            || _potential_secondary_states.learning_status == learner_status::LearningSucceeded))
-        {
-            derror(
-                "%s: mutation %s on_prepare skipped as invalid learning status, state = %s, learning_status = %s",
-                name(), mu->name(),
-                enum_to_string(status()),
-                enum_to_string(_potential_secondary_states.learning_status)
-                );
+        if (!(_potential_secondary_states.learning_status == learner_status::LearningWithPrepare ||
+              _potential_secondary_states.learning_status == learner_status::LearningSucceeded)) {
+            derror("%s: mutation %s on_prepare skipped as invalid learning status, state = %s, "
+                   "learning_status = %s",
+                   name(),
+                   mu->name(),
+                   enum_to_string(status()),
+                   enum_to_string(_potential_secondary_states.learning_status));
             ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
         }
     }
 
-    dassert (rconfig.status == status(), "invalid status, %s VS %s",
-             enum_to_string(rconfig.status), enum_to_string(status()));
-    if (decree <= last_committed_decree())
-    {
+    dassert(rconfig.status == status(),
+            "invalid status, %s VS %s",
+            enum_to_string(rconfig.status),
+            enum_to_string(status()));
+    if (decree <= last_committed_decree()) {
         ack_prepare_message(ERR_OK, mu);
         return;
     }
-    
+
     // real prepare start
     auto mu2 = _prepare_list->get_mutation_by_decree(decree);
-    if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot)
-    {
-        if (mu2->is_logged())
-        {
+    if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot) {
+        if (mu2->is_logged()) {
             ack_prepare_message(ERR_OK, mu);
-        }
-        else
-        {
+        } else {
             derror("%s: mutation %s on_prepare skipped as it is duplicate", name(), mu->name());
             // response will be unnecessary when we add retry logic in rpc engine.
             // the retried rpc will use the same id therefore it will be considered responsed
@@ -349,85 +344,77 @@ void replica::on_prepare(dsn_message_t request)
     }
 
     error_code err = _prepare_list->prepare(mu, status());
-    dassert (err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
+    dassert(err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
 
-    if (partition_status::PS_POTENTIAL_SECONDARY == status())
-    {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                 "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
-                 mu->data.header.decree,
-                 last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                 last_committed_decree(), _options->max_mutation_count_in_prepare_list
-                 );
-    }
-    else if (partition_status::PS_SECONDARY == status())
-    {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit,
-                 "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
-                 mu->data.header.decree,
-                 last_committed_decree() + _options->staleness_for_commit,
-                 last_committed_decree(), _options->staleness_for_commit
-                 );
-    }
-    else
-    {
-        derror(
-            "%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-            name(), mu->name(),
-            enum_to_string(status())
-            );
+    if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
+        dassert(mu->data.header.decree <=
+                    last_committed_decree() + _options->max_mutation_count_in_prepare_list,
+                "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
+                mu->data.header.decree,
+                last_committed_decree() + _options->max_mutation_count_in_prepare_list,
+                last_committed_decree(),
+                _options->max_mutation_count_in_prepare_list);
+    } else if (partition_status::PS_SECONDARY == status()) {
+        dassert(mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit,
+                "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
+                mu->data.header.decree,
+                last_committed_decree() + _options->staleness_for_commit,
+                last_committed_decree(),
+                _options->staleness_for_commit);
+    } else {
+        derror("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
+               name(),
+               mu->name(),
+               enum_to_string(status()));
         ack_prepare_message(ERR_INVALID_STATE, mu);
         return;
     }
 
     dassert(mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
-        LPC_WRITE_REPLICATION_LOG,
-        this,
-        std::bind(&replica::on_append_log_completed, this, mu,
-                  std::placeholders::_1,
-                  std::placeholders::_2),
-        gpid_to_thread_hash(get_gpid())
-        );
+                                         LPC_WRITE_REPLICATION_LOG,
+                                         this,
+                                         std::bind(&replica::on_append_log_completed,
+                                                   this,
+                                                   mu,
+                                                   std::placeholders::_1,
+                                                   std::placeholders::_2),
+                                         gpid_to_thread_hash(get_gpid()));
     dassert(nullptr != mu->log_task(), "");
 }
 
-void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
+void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t size)
 {
     check_hashed_access();
 
     dinfo("%s: append shared log completed for mutation %s, size = %u, err = %s",
-          name(), mu->name(), size, err.to_string());
+          name(),
+          mu->name(),
+          size,
+          err.to_string());
 
-    if (err == ERR_OK)
-    {
+    if (err == ERR_OK) {
         mu->set_logged();
-    }
-    else
-    {
+    } else {
         derror("%s: append shared log failed for mutation %s, err = %s",
-               name(), mu->name(), err.to_string());
+               name(),
+               mu->name(),
+               err.to_string());
     }
 
     // skip old mutations
-    if (mu->data.header.ballot >= get_ballot() && status() != partition_status::PS_INACTIVE)
-    {
-        switch (status())
-        {
+    if (mu->data.header.ballot >= get_ballot() && status() != partition_status::PS_INACTIVE) {
+        switch (status()) {
         case partition_status::PS_PRIMARY:
-            if (err == ERR_OK)
-            {
+            if (err == ERR_OK) {
                 do_possible_commit_on_primary(mu);
-            }
-            else
-            {
+            } else {
                 handle_local_failure(err);
             }
             break;
         case partition_status::PS_SECONDARY:
         case partition_status::PS_POTENTIAL_SECONDARY:
-            if (err != ERR_OK)
-            {
+            if (err != ERR_OK) {
                 handle_local_failure(err);
             }
             // always ack
@@ -441,20 +428,21 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
         }
     }
 
-    if (err != ERR_OK)
-    {
+    if (err != ERR_OK) {
         // mutation log failure, propagate to all replicas
         _stub->handle_log_failure(err);
     }
-   
+
     // write local private log if necessary
-    if (err == ERR_OK && status() != partition_status::PS_ERROR)
-    {
+    if (err == ERR_OK && status() != partition_status::PS_ERROR) {
         _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
     }
 }
 
-void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr, error_code err, dsn_message_t request, dsn_message_t reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
+                               error_code err,
+                               dsn_message_t request,
+                               dsn_message_t reply)
 {
     check_hashed_access();
 
@@ -464,9 +452,11 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     // skip callback for old mutations
     if (mu->data.header.ballot < get_ballot() || partition_status::PS_PRIMARY != status())
         return;
-    
-    dassert (mu->data.header.ballot == get_ballot(), "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-             mu->data.header.ballot, get_ballot());
+
+    dassert(mu->data.header.ballot == get_ballot(),
+            "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
+            mu->data.header.ballot,
+            get_ballot());
 
     ::dsn::rpc_address node = dsn_msg_to_address(request);
     partition_status::type st = _primary_states.get_node_status(node);
@@ -475,81 +465,77 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     prepare_ack resp;
 
     // handle error
-    if (err != ERR_OK)
-    {
+    if (err != ERR_OK) {
         resp.err = err;
-    }
-    else
-    {
+    } else {
         ::dsn::unmarshall(reply, resp);
     }
 
-    if (resp.err == ERR_OK)
-    {
-        dinfo(
-            "%s: mutation %s on_prepare_reply from %s, err = %s",
-            name(), mu->name(),
-            node.to_string(),
-            resp.err.to_string()
-            );
-    }
-    else
-    {
-        derror(
-            "%s: mutation %s on_prepare_reply from %s, err = %s",
-            name(), mu->name(),
-            node.to_string(),
-            resp.err.to_string()
-            );
+    if (resp.err == ERR_OK) {
+        dinfo("%s: mutation %s on_prepare_reply from %s, err = %s",
+              name(),
+              mu->name(),
+              node.to_string(),
+              resp.err.to_string());
+    } else {
+        derror("%s: mutation %s on_prepare_reply from %s, err = %s",
+               name(),
+               mu->name(),
+               node.to_string(),
+               resp.err.to_string());
     }
 
-    if (resp.err == ERR_OK)
-    {
-        dassert (resp.ballot == get_ballot(), "invalid response ballot, %" PRId64 " VS %" PRId64 "",
-                 resp.ballot, get_ballot());
-        dassert (resp.decree == mu->data.header.decree, "invalid response decree, %" PRId64 " VS %" PRId64 "",
-                 resp.decree, mu->data.header.decree);
+    if (resp.err == ERR_OK) {
+        dassert(resp.ballot == get_ballot(),
+                "invalid response ballot, %" PRId64 " VS %" PRId64 "",
+                resp.ballot,
+                get_ballot());
+        dassert(resp.decree == mu->data.header.decree,
+                "invalid response decree, %" PRId64 " VS %" PRId64 "",
+                resp.decree,
+                mu->data.header.decree);
 
-        switch (targetStatus)
-        {
+        switch (targetStatus) {
         case partition_status::PS_SECONDARY:
-            dassert (_primary_states.check_exist(node, partition_status::PS_SECONDARY),
-                     "invalid secondary node address, address = %s", node.to_string());
-            dassert (mu->left_secondary_ack_count() > 0, "%u", mu->left_secondary_ack_count());
-            if (0 == mu->decrease_left_secondary_ack_count())
-            {
+            dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
+                    "invalid secondary node address, address = %s",
+                    node.to_string());
+            dassert(mu->left_secondary_ack_count() > 0, "%u", mu->left_secondary_ack_count());
+            if (0 == mu->decrease_left_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
-            dassert (mu->left_potential_secondary_ack_count() > 0, "%u",
-                     mu->left_potential_secondary_ack_count());
-            if (0 == mu->decrease_left_potential_secondary_ack_count())
-            {
+            dassert(mu->left_potential_secondary_ack_count() > 0,
+                    "%u",
+                    mu->left_potential_secondary_ack_count());
+            if (0 == mu->decrease_left_potential_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }
             break;
         default:
-            dwarn(
-                "%s: mutation %s prepare ack skipped coz the node is now inactive", name(), mu->name()
-                );
+            dwarn("%s: mutation %s prepare ack skipped coz the node is now inactive",
+                  name(),
+                  mu->name());
             break;
         }
     }
 
     // failure handling
-    else
-    {
+    else {
         // retry for INACTIVE state when there are still time
-        if (resp.err == ERR_INACTIVE_STATE
-            && !mu->is_prepare_close_to_timeout(2, targetStatus == partition_status::PS_SECONDARY ?
-            _options->prepare_timeout_ms_for_secondaries :
-            _options->prepare_timeout_ms_for_potential_secondaries)
-            )
-        {
-            send_prepare_message(node, targetStatus, mu, targetStatus == partition_status::PS_SECONDARY ?
-                _options->prepare_timeout_ms_for_secondaries :
-                _options->prepare_timeout_ms_for_potential_secondaries);
+        if (resp.err == ERR_INACTIVE_STATE &&
+            !mu->is_prepare_close_to_timeout(
+                2,
+                targetStatus == partition_status::PS_SECONDARY
+                    ? _options->prepare_timeout_ms_for_secondaries
+                    : _options->prepare_timeout_ms_for_potential_secondaries)) {
+            send_prepare_message(node,
+                                 targetStatus,
+                                 mu,
+                                 targetStatus == partition_status::PS_SECONDARY
+                                     ? _options->prepare_timeout_ms_for_secondaries
+                                     : _options->prepare_timeout_ms_for_potential_secondaries);
             return;
         }
 
@@ -559,19 +545,18 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         handle_remote_failure(st, node, resp.err);
 
         // note targetStatus and (curent) status may diff
-        if (targetStatus == partition_status::PS_POTENTIAL_SECONDARY)
-        {
-            dassert (mu->left_potential_secondary_ack_count() > 0, "%u",
-                     mu->left_potential_secondary_ack_count());
-            if (0 == mu->decrease_left_potential_secondary_ack_count())
-            {
+        if (targetStatus == partition_status::PS_POTENTIAL_SECONDARY) {
+            dassert(mu->left_potential_secondary_ack_count() > 0,
+                    "%u",
+                    mu->left_potential_secondary_ack_count());
+            if (0 == mu->decrease_left_potential_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }
         }
     }
 }
 
-void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
+void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
 {
     prepare_ack resp;
     resp.pid = get_gpid();
@@ -580,18 +565,15 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     resp.decree = mu->data.header.decree;
 
     // for partition_status::PS_POTENTIAL_SECONDARY ONLY
-    resp.last_committed_decree_in_app = _app->last_committed_decree(); 
+    resp.last_committed_decree_in_app = _app->last_committed_decree();
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
     dassert(nullptr != mu->prepare_msg(), "");
     reply(mu->prepare_msg(), resp);
 
-    if (err == ERR_OK)
-    {
+    if (err == ERR_OK) {
         dinfo("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
-    }
-    else
-    {
+    } else {
         dwarn("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
     }
 }
@@ -601,11 +583,9 @@ void replica::cleanup_preparing_mutations(bool wait)
     decree start = last_committed_decree() + 1;
     decree end = _prepare_list->max_decree();
 
-    for (decree decree = start; decree <= end; decree++)
-    {
+    for (decree decree = start; decree <= end; decree++) {
         mutation_ptr mu = _prepare_list->get_mutation_by_decree(decree);
-        if (mu != nullptr)
-        {
+        if (mu != nullptr) {
             mu->clear_prepare_or_commit_tasks();
 
             //
@@ -618,5 +598,5 @@ void replica::cleanup_preparing_mutations(bool wait)
         }
     }
 }
-
-}} // namespace
+}
+} // namespace

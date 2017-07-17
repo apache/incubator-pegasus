@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,14 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/service_api_c.h>
-# include <dsn/tool_api.h>
-# include <dsn/tool-api/task.h>
-# include <dsn/cpp/auto_codes.h>
-# include <dsn/utility/utils.h>
-# include <gtest/gtest.h>
-# include <thread>
-# include "../core/service_engine.h"
+#include <dsn/service_api_c.h>
+#include <dsn/tool_api.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/cpp/auto_codes.h>
+#include <dsn/utility/utils.h>
+#include <gtest/gtest.h>
+#include <thread>
+#include "../core/service_engine.h"
 
 using namespace dsn;
 
@@ -53,14 +53,17 @@ TEST(core, dsn_error)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST)
 TEST(core, dsn_threadpool_code)
 {
-    ASSERT_EQ(THREAD_POOL_INVALID, dsn_threadpool_code_from_string("THREAD_POOL_NOT_EXIST", THREAD_POOL_INVALID));
+    ASSERT_EQ(THREAD_POOL_INVALID,
+              dsn_threadpool_code_from_string("THREAD_POOL_NOT_EXIST", THREAD_POOL_INVALID));
 
     ASSERT_STREQ("THREAD_POOL_DEFAULT", dsn_threadpool_code_to_string(THREAD_POOL_DEFAULT));
-    ASSERT_EQ(THREAD_POOL_DEFAULT, dsn_threadpool_code_from_string("THREAD_POOL_DEFAULT", THREAD_POOL_INVALID));
+    ASSERT_EQ(THREAD_POOL_DEFAULT,
+              dsn_threadpool_code_from_string("THREAD_POOL_DEFAULT", THREAD_POOL_INVALID));
     ASSERT_LE(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
 
     ASSERT_STREQ("THREAD_POOL_FOR_TEST", dsn_threadpool_code_to_string(THREAD_POOL_FOR_TEST));
-    ASSERT_EQ(THREAD_POOL_FOR_TEST, dsn_threadpool_code_from_string("THREAD_POOL_FOR_TEST", THREAD_POOL_INVALID));
+    ASSERT_EQ(THREAD_POOL_FOR_TEST,
+              dsn_threadpool_code_from_string("THREAD_POOL_FOR_TEST", THREAD_POOL_INVALID));
     ASSERT_LE(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
 
     ASSERT_LT(0, dsn_threadpool_get_current_tid());
@@ -75,14 +78,16 @@ TEST(core, dsn_task_code)
     dsn_task_priority_t pri;
     dsn_threadpool_code_t pool;
 
-    ASSERT_EQ(TASK_CODE_INVALID, dsn_task_code_from_string("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_INVALID,
+              dsn_task_code_from_string("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
 
     ASSERT_STREQ("TASK_TYPE_COMPUTE", dsn_task_type_to_string(TASK_TYPE_COMPUTE));
 
     ASSERT_STREQ("TASK_PRIORITY_HIGH", dsn_task_priority_to_string(TASK_PRIORITY_HIGH));
 
     ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST", dsn_task_code_to_string(TASK_CODE_COMPUTE_FOR_TEST));
-    ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_from_string("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST,
+              dsn_task_code_from_string("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
     ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_COMPUTE_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_COMPUTE, type);
@@ -90,7 +95,8 @@ TEST(core, dsn_task_code)
     ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
 
     ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn_task_code_to_string(TASK_CODE_AIO_FOR_TEST));
-    ASSERT_EQ(TASK_CODE_AIO_FOR_TEST, dsn_task_code_from_string("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_AIO_FOR_TEST,
+              dsn_task_code_from_string("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
     ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_AIO_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_AIO, type);
@@ -98,7 +104,8 @@ TEST(core, dsn_task_code)
     ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST));
-    ASSERT_EQ(TASK_CODE_RPC_FOR_TEST, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_RPC_FOR_TEST,
+              dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
     ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_REQUEST, type);
@@ -106,7 +113,8 @@ TEST(core, dsn_task_code)
     ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST_ACK));
-    ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK,
+              dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
     ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST_ACK, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, type);
@@ -130,7 +138,7 @@ TEST(core, dsn_config)
     ASSERT_EQ(1u, dsn_config_get_value_uint64("apps.client", "count", 100, "client count"));
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
-    const char* buffers[100];
+    const char *buffers[100];
     int buffer_count = 100;
     ASSERT_EQ(2, dsn_config_get_all_keys("core.test", buffers, &buffer_count));
     ASSERT_EQ(2, buffer_count);
@@ -142,21 +150,16 @@ TEST(core, dsn_config)
     ASSERT_STREQ("count", buffers[0]);
 }
 
-TEST(core, dsn_coredump)
-{
-}
+TEST(core, dsn_coredump) {}
 
-TEST(core, dsn_crc32)
-{
-}
+TEST(core, dsn_crc32) {}
 
-TEST(core, dsn_task)
-{
-}
+TEST(core, dsn_task) {}
 
 TEST(core, dsn_exlock)
 {
-    if(dsn::service_engine::fast_instance().spec().semaphore_factory_name == "dsn::tools::sim_semaphore_provider")
+    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+        "dsn::tools::sim_semaphore_provider")
         return;
     {
         dsn_handle_t l = dsn_exlock_create(false);
@@ -184,7 +187,8 @@ TEST(core, dsn_exlock)
 
 TEST(core, dsn_rwlock)
 {
-    if(dsn::service_engine::fast_instance().spec().semaphore_factory_name == "dsn::tools::sim_semaphore_provider")
+    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+        "dsn::tools::sim_semaphore_provider")
         return;
     dsn_handle_t l = dsn_rwlock_nr_create();
     ASSERT_NE(nullptr, l);
@@ -197,7 +201,8 @@ TEST(core, dsn_rwlock)
 
 TEST(core, dsn_semaphore)
 {
-    if(dsn::service_engine::fast_instance().spec().semaphore_factory_name == "dsn::tools::sim_semaphore_provider")
+    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+        "dsn::tools::sim_semaphore_provider")
         return;
     dsn_handle_t s = dsn_semaphore_create(2);
     dsn_semaphore_wait(s);
@@ -208,9 +213,7 @@ TEST(core, dsn_semaphore)
     dsn_semaphore_destroy(s);
 }
 
-TEST(core, dsn_rpc)
-{
-}
+TEST(core, dsn_rpc) {}
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -223,7 +226,8 @@ struct aio_result
 TEST(core, dsn_file)
 {
     // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
-    if (task::get_current_disk() == nullptr) return;
+    if (task::get_current_disk() == nullptr)
+        return;
 
     int64_t fin_size, fout_size;
     ASSERT_TRUE(utils::filesystem::file_size("command.txt", fin_size));
@@ -235,46 +239,43 @@ TEST(core, dsn_file)
     ASSERT_NE(nullptr, fout);
     char buffer[1024];
     uint64_t offset = 0;
-    while (true)
-    {
+    while (true) {
         aio_result rin;
         dsn_task_t tin = dsn_file_create_aio_task(LPC_AIO_TEST_READ,
-            [](dsn_error_t err, size_t sz, void* param)
-            {
-                aio_result* r = (aio_result*)param;
-                r->err = err;
-                r->sz = sz;
-            },
-            &rin, 0);
+                                                  [](dsn_error_t err, size_t sz, void *param) {
+                                                      aio_result *r = (aio_result *)param;
+                                                      r->err = err;
+                                                      r->sz = sz;
+                                                  },
+                                                  &rin,
+                                                  0);
         dsn_task_add_ref(tin);
         ASSERT_NE(nullptr, tin);
         ASSERT_EQ(1, dsn_task_get_ref(tin));
         dsn_file_read(fin, buffer, 1024, offset, tin);
         dsn_task_wait(tin);
         ASSERT_EQ(rin.err, dsn_task_error(tin));
-        if (rin.err != ERR_OK)
-        {
+        if (rin.err != ERR_OK) {
             ASSERT_EQ(ERR_HANDLE_EOF, rin.err);
             break;
         }
         ASSERT_LT(0u, rin.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tin));
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator")
-        {
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, dsn_task_get_ref(tin));
         }
         dsn_task_release_ref(tin);
 
         aio_result rout;
         dsn_task_t tout = dsn_file_create_aio_task(LPC_AIO_TEST_WRITE,
-            [](dsn_error_t err, size_t sz, void* param)
-            {
-                aio_result* r = (aio_result*)param;
-                r->err = err;
-                r->sz = sz;
-            },
-            &rout, 0);
+                                                   [](dsn_error_t err, size_t sz, void *param) {
+                                                       aio_result *r = (aio_result *)param;
+                                                       r->err = err;
+                                                       r->sz = sz;
+                                                   },
+                                                   &rout,
+                                                   0);
         dsn_task_add_ref(tout);
         ASSERT_NE(nullptr, tout);
         dsn_file_write(fout, buffer, rin.sz, offset, tout);
@@ -284,8 +285,7 @@ TEST(core, dsn_file)
         ASSERT_EQ(rin.sz, rout.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tout));
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator")
-        {
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, dsn_task_get_ref(tout));
         }
         dsn_task_release_ref(tout);
@@ -303,12 +303,13 @@ TEST(core, dsn_file)
     ASSERT_EQ(fin_size, fout_size);
 }
 
-//TODO: On windows an opened file cannot be deleted, so this test cannot pass
+// TODO: On windows an opened file cannot be deleted, so this test cannot pass
 #ifndef WIN32
 TEST(core, dsn_nfs)
 {
     // if in dsn_mimic_app() and nfs_io_mode == IOE_PER_QUEUE
-    if (task::get_current_nfs() == nullptr) return;
+    if (task::get_current_nfs() == nullptr)
+        return;
 
     utils::filesystem::remove_path("nfs_test_dir");
     utils::filesystem::remove_path("nfs_test_dir_copy");
@@ -323,28 +324,27 @@ TEST(core, dsn_nfs)
         ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
         ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
 
-        const char* files[] = { "nfs_test_file1", "nfs_test_file2", nullptr };
+        const char *files[] = {"nfs_test_file1", "nfs_test_file2", nullptr};
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                [](dsn_error_t err, size_t sz, void* param)
-                {
-                aio_result* r = (aio_result*)param;
-                r->err = err;
-                r->sz = sz;
-                },
-                &r, 0);
+                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                    aio_result *r = (aio_result *)param;
+                                                    r->err = err;
+                                                    r->sz = sz;
+                                                },
+                                                &r,
+                                                0);
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_files(dsn_address_build("localhost", 20101),
-                ".", files, "nfs_test_dir", false, t);
+        dsn_file_copy_remote_files(
+            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", false, t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator")
-        {
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, dsn_task_get_ref(t));
         }
         dsn_task_release_ref(t);
@@ -365,28 +365,27 @@ TEST(core, dsn_nfs)
         ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
         ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
 
-        const char* files[] = { "nfs_test_file1", "nfs_test_file2", nullptr };
+        const char *files[] = {"nfs_test_file1", "nfs_test_file2", nullptr};
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                [](dsn_error_t err, size_t sz, void* param)
-                {
-                aio_result* r = (aio_result*)param;
-                r->err = err;
-                r->sz = sz;
-                },
-                &r, 0);
+                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                    aio_result *r = (aio_result *)param;
+                                                    r->err = err;
+                                                    r->sz = sz;
+                                                },
+                                                &r,
+                                                0);
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_files(dsn_address_build("localhost", 20101),
-                ".", files, "nfs_test_dir", true, t);
+        dsn_file_copy_remote_files(
+            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", true, t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator")
-        {
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, dsn_task_get_ref(t));
         }
         dsn_task_release_ref(t);
@@ -397,24 +396,23 @@ TEST(core, dsn_nfs)
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                [](dsn_error_t err, size_t sz, void* param)
-                {
-                aio_result* r = (aio_result*)param;
-                r->err = err;
-                r->sz = sz;
-                },
-                &r, 0);
+                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                    aio_result *r = (aio_result *)param;
+                                                    r->err = err;
+                                                    r->sz = sz;
+                                                },
+                                                &r,
+                                                0);
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_directory(dsn_address_build("localhost", 20101),
-                "nfs_test_dir", "nfs_test_dir_copy", false, t);
+        dsn_file_copy_remote_directory(
+            dsn_address_build("localhost", 20101), "nfs_test_dir", "nfs_test_dir_copy", false, t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator")
-        {
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, dsn_task_get_ref(t));
         }
         dsn_task_release_ref(t);
@@ -441,7 +439,7 @@ TEST(core, dsn_nfs)
 
 TEST(core, dsn_env)
 {
-    if(dsn::service_engine::fast_instance().spec().tool == "simulator")
+    if (dsn::service_engine::fast_instance().spec().tool == "simulator")
         return;
     uint64_t now1 = dsn_now_ns();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -455,24 +453,22 @@ TEST(core, dsn_env)
 TEST(core, dsn_system)
 {
     ASSERT_TRUE(tools::is_engine_ready());
-    tools::tool_app* tool = tools::get_current_tool();
+    tools::tool_app *tool = tools::get_current_tool();
     ASSERT_EQ(tool->name(), dsn_config_get_value_string("core", "tool", "", ""));
 
     int app_count = 5;
     int type_count = 1;
-    if (tool->get_service_spec().enable_default_app_mimic)
-    {
+    if (tool->get_service_spec().enable_default_app_mimic) {
         app_count++;
         type_count++;
-    }   
+    }
 
     {
         dsn_app_info apps[20];
         int count = dsn_get_all_apps(apps, 20);
         ASSERT_EQ(app_count, count);
         std::map<std::string, int> type_to_count;
-        for (int i = 0; i < count; ++i)
-        {
+        for (int i = 0; i < count; ++i) {
             type_to_count[apps[i].type] += 1;
         }
 
@@ -483,4 +479,3 @@ TEST(core, dsn_system)
         ASSERT_EQ(app_count, count);
     }
 }
-

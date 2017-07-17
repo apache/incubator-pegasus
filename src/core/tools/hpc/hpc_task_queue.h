@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,56 +35,55 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
-# include <condition_variable>
-# include <concurrentqueue.h>
-# include <blockingconcurrentqueue.h>
+#include <dsn/tool_api.h>
+#include <condition_variable>
+#include <concurrentqueue.h>
+#include <blockingconcurrentqueue.h>
 
-namespace dsn 
+namespace dsn {
+namespace tools {
+class hpc_task_queue : public task_queue
 {
-    namespace tools
+public:
+    hpc_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+
+    void enqueue(task *task) override;
+    task *dequeue(/*inout*/ int &batch_size) override;
+
+private:
+    utils::ex_lock_nr_spin _lock;
+    std::condition_variable_any _cond;
+    slist<task> _tasks;
+};
+
+class hpc_task_priority_queue : public task_queue
+{
+public:
+    hpc_task_priority_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+
+    void enqueue(task *task) override;
+    task *dequeue(/*inout*/ int &batch_size) override;
+
+private:
+    utils::ex_lock_nr_spin _lock[TASK_PRIORITY_COUNT];
+    slist<task> _tasks[TASK_PRIORITY_COUNT];
+    utils::semaphore _sema;
+};
+
+class hpc_concurrent_task_queue : public task_queue
+{
+    moodycamel::details::mpmc_sema::LightweightSemaphore _sema;
+    struct queue_t
     {
-        class hpc_task_queue : public task_queue
-        {
-        public:
-            hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+        moodycamel::ConcurrentQueue<task *> q;
+    } _queues[TASK_PRIORITY_COUNT];
 
-            void     enqueue(task* task) override;
-            task*    dequeue(/*inout*/int& batch_size) override;
+public:
+    hpc_concurrent_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
 
-        private:            
-            utils::ex_lock_nr_spin        _lock;
-            std::condition_variable_any   _cond;
-            slist<task>                   _tasks;
-        };
+    void enqueue(task *task) override;
 
-        class hpc_task_priority_queue : public task_queue
-        {
-        public:
-            hpc_task_priority_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
-
-            void     enqueue(task* task) override;
-            task*    dequeue(/*inout*/int& batch_size) override;
-
-        private:
-            utils::ex_lock_nr_spin        _lock[TASK_PRIORITY_COUNT];
-            slist<task>                   _tasks[TASK_PRIORITY_COUNT];
-            utils::semaphore              _sema;
-        };
-
-        class hpc_concurrent_task_queue : public task_queue
-        {
-            moodycamel::details::mpmc_sema::LightweightSemaphore _sema;
-            struct queue_t
-            {
-                moodycamel::ConcurrentQueue<task*> q;
-            }_queues[TASK_PRIORITY_COUNT];
-        public:
-            hpc_concurrent_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
-
-            void enqueue(task* task) override;
-
-            task* dequeue(/*inout*/int& batch_size) override;
-        };
-    }
+    task *dequeue(/*inout*/ int &batch_size) override;
+};
+}
 }

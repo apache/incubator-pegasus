@@ -38,31 +38,32 @@
 #include <zookeeper.h>
 #include <stdexcept>
 
-namespace dsn { namespace dist {
+namespace dsn {
+namespace dist {
 
 zookeeper_session_mgr::zookeeper_session_mgr()
 {
     _zoo_hosts = dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
-    _timeout_ms = dsn_config_get_value_uint64("zookeeper", "timeout_ms", 30000, "zookeeper_timeout_milliseconds");
+    _timeout_ms = dsn_config_get_value_uint64(
+        "zookeeper", "timeout_ms", 30000, "zookeeper_timeout_milliseconds");
     _zoo_logfile = dsn_config_get_value_string("zookeeper", "logfile", "", "zookeeper logfile");
 
-    FILE* fp = fopen(_zoo_logfile.c_str(), "a");
+    FILE *fp = fopen(_zoo_logfile.c_str(), "a");
     if (fp != nullptr)
         zoo_set_log_stream(fp);
 }
 
-zookeeper_session* zookeeper_session_mgr::get_session(dsn_app_info* node)
+zookeeper_session *zookeeper_session_mgr::get_session(dsn_app_info *node)
 {
-    auto& store = utils::singleton_store<std::string, zookeeper_session*>::instance();
+    auto &store = utils::singleton_store<std::string, zookeeper_session *>::instance();
     std::string node_name(node->name);
-    zookeeper_session* ans = nullptr;
+    zookeeper_session *ans = nullptr;
     utils::auto_lock<utils::ex_lock_nr> l(_store_lock);
-    if (!store.get(node_name, ans))
-    {
+    if (!store.get(node_name, ans)) {
         ans = new zookeeper_session(node);
         store.put(node_name, ans);
     }
     return ans;
 }
-
-}}
+}
+}

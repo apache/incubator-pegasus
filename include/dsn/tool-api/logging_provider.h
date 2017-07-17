@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
-# include <stdarg.h>
+#include <dsn/service_api_c.h>
+#include <stdarg.h>
 
 namespace dsn {
 
@@ -47,19 +47,26 @@ namespace dsn {
 class logging_provider
 {
 public:
-    template <typename T> static logging_provider* create(const char* log_dir)
+    template <typename T>
+    static logging_provider *create(const char *log_dir)
     {
         return new T(log_dir);
     }
 
-    typedef logging_provider* (*factory)(const char*);
+    typedef logging_provider *(*factory)(const char *);
 
 public:
-    logging_provider(const char*) {}
+    logging_provider(const char *) {}
 
-    virtual ~logging_provider(void) { }
-    
-    virtual void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, va_list args) = 0;
+    virtual ~logging_provider(void) {}
+
+    virtual void dsn_logv(const char *file,
+                          const char *function,
+                          const int line,
+                          dsn_log_level_t log_level,
+                          const char *title,
+                          const char *fmt,
+                          va_list args) = 0;
 
     virtual void flush() = 0;
 };

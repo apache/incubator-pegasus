@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,23 +32,19 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# pragma once
+#pragma once
 
-# include "echo.client.h"
+#include "echo.client.h"
 
-namespace dsn { namespace example { 
-class echo_perf_test_client
-    : public echo_client,
-      public ::dsn::service::perf_client_helper
+namespace dsn {
+namespace example {
+class echo_perf_test_client : public echo_client, public ::dsn::service::perf_client_helper
 {
 public:
-    echo_perf_test_client(
-        ::dsn::rpc_address server)
-        : echo_client(server)
-    {
-    }
+    echo_perf_test_client(::dsn::rpc_address server) : echo_client(server) {}
 
-    virtual void send_one(int payload_bytes, int key_space_size, const std::vector<double>& ratios) override
+    virtual void
+    send_one(int payload_bytes, int key_space_size, const std::vector<double> &ratios) override
     {
         return send_one_ping(payload_bytes, key_space_size);
     }
@@ -61,15 +57,12 @@ public:
         // std::stringstream ss;
         // ss << "key." << rs;
         // req = ss.str();
-        ping(
-            req,
-            [this, context = prepare_send_one()](error_code err, std::string&& resp)
-            {
-                end_send_one(context, err);
-            },
-            _timeout
-            );
+        ping(req,
+             [ this, context = prepare_send_one() ](error_code err, std::string && resp) {
+                 end_send_one(context, err);
+             },
+             _timeout);
     }
 };
-
-} } 
+}
+}

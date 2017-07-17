@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,19 +33,21 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/utility/singleton.h>
-# include <vector>
+#include <dsn/utility/singleton.h>
+#include <vector>
 
-namespace dsn { namespace utils {
+namespace dsn {
+namespace utils {
 
-template<typename T, T default_value>
-class singleton_vector_store : public dsn::utils::singleton<singleton_vector_store<T, default_value>>
+template <typename T, T default_value>
+class singleton_vector_store
+    : public dsn::utils::singleton<singleton_vector_store<T, default_value>>
 {
 public:
-    singleton_vector_store(void){}
-    ~singleton_vector_store(void){}
+    singleton_vector_store(void) {}
+    ~singleton_vector_store(void) {}
 
     bool contains(int index) const
     {
@@ -65,10 +67,8 @@ public:
 
     bool put(int index, T value)
     {
-        if (index >= static_cast<int>(_contains.size()))
-        {
-            for (int i = static_cast<int>(_contains.size()); i < index; i++)
-            {
+        if (index >= static_cast<int>(_contains.size())) {
+            for (int i = static_cast<int>(_contains.size()); i < index; i++) {
                 _contains.push_back(false);
                 _values.push_back(default_value);
             }
@@ -76,11 +76,9 @@ public:
             _contains.push_back(true);
             _values.push_back(value);
             return true;
-        }
-        else if (_contains[index])
+        } else if (_contains[index])
             return false;
-        else
-        {
+        else {
             _contains[index] = true;
             _values[index] = value;
             return true;
@@ -89,7 +87,7 @@ public:
 
 private:
     std::vector<bool> _contains;
-    std::vector<T>    _values;
+    std::vector<T> _values;
 };
-
-}} // end namespace dsn::utils
+}
+} // end namespace dsn::utils

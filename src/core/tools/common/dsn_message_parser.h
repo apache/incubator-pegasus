@@ -35,34 +35,34 @@
 
 #pragma once
 
-# include <dsn/tool-api/message_parser.h>
-# include <dsn/tool-api/rpc_message.h>
-# include <dsn/utility/ports.h>
+#include <dsn/tool-api/message_parser.h>
+#include <dsn/tool-api/rpc_message.h>
+#include <dsn/utility/ports.h>
 
-namespace dsn
+namespace dsn {
+class dsn_message_parser : public message_parser
 {
-    class dsn_message_parser : public message_parser
-    {
-    public:
-        dsn_message_parser() : _header_checked(false) {}
-        virtual ~dsn_message_parser() {}
+public:
+    dsn_message_parser() : _header_checked(false) {}
+    virtual ~dsn_message_parser() {}
 
-        virtual void reset() override;
+    virtual void reset() override;
 
-        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
+    virtual message_ex *get_message_on_receive(message_reader *reader,
+                                               /*out*/ int &read_next) override;
 
-        virtual void prepare_on_send(message_ex* msg) override;
+    virtual void prepare_on_send(message_ex *msg) override;
 
-        virtual int get_buffer_count_on_send(message_ex* msg) override;
+    virtual int get_buffer_count_on_send(message_ex *msg) override;
 
-        virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+    virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
 
-    private:
-        static bool is_right_header(char* hdr);
+private:
+    static bool is_right_header(char *hdr);
 
-        static bool is_right_body(message_ex* msg);
+    static bool is_right_body(message_ex *msg);
 
-    private:
-        bool _header_checked;
-    };
+private:
+    bool _header_checked;
+};
 }

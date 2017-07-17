@@ -35,60 +35,62 @@
 
 #pragma once
 
-# include <dsn/tool-api/message_parser.h>
-# include <dsn/tool-api/rpc_message.h>
-# include <dsn/utility/ports.h>
+#include <dsn/tool-api/message_parser.h>
+#include <dsn/tool-api/rpc_message.h>
+#include <dsn/utility/ports.h>
 
-namespace dsn
+namespace dsn {
+// request header (in big-endian)
+struct thrift_message_header
 {
-    // request header (in big-endian)
-    struct thrift_message_header
-    {
-        uint32_t       hdr_type; ///< must be "THFT"
-        uint32_t       hdr_version; ///< must be 0
-        uint32_t       hdr_length; ///< must be sizeof(thrift_message_header)
-        uint32_t       hdr_crc32;
-        uint32_t       body_length;
-        uint32_t       body_crc32;
-        int32_t        app_id;
-        int32_t        partition_index;
-        int32_t        client_timeout;
-        int32_t        client_thread_hash;
-        uint64_t       client_partition_hash;
-        //------------- sizeof(thrift_message_header) = 48 ----------//
-    };
+    uint32_t hdr_type;    ///< must be "THFT"
+    uint32_t hdr_version; ///< must be 0
+    uint32_t hdr_length;  ///< must be sizeof(thrift_message_header)
+    uint32_t hdr_crc32;
+    uint32_t body_length;
+    uint32_t body_crc32;
+    int32_t app_id;
+    int32_t partition_index;
+    int32_t client_timeout;
+    int32_t client_thread_hash;
+    uint64_t client_partition_hash;
+    //------------- sizeof(thrift_message_header) = 48 ----------//
+};
 
-    // response format:
-    //     <total_len(int32)> <thrift_string> <thrift_message_begin> <body_data(bytes)> <thrift_message_end>
+// response format:
+//     <total_len(int32)> <thrift_string> <thrift_message_begin> <body_data(bytes)>
+//     <thrift_message_end>
 
-# define THRIFT_HDR_SIG (*(uint32_t*)"THFT")
+#define THRIFT_HDR_SIG (*(uint32_t *)"THFT")
 
-    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)       
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 
-    class thrift_message_parser : public message_parser
-    {
-    public:
-        thrift_message_parser() : _header_parsed(false) {}
-        virtual ~thrift_message_parser() {}
+class thrift_message_parser : public message_parser
+{
+public:
+    thrift_message_parser() : _header_parsed(false) {}
+    virtual ~thrift_message_parser() {}
 
-        virtual void reset() override;
+    virtual void reset() override;
 
-        virtual message_ex* get_message_on_receive(message_reader* reader, /*out*/ int& read_next) override;
+    virtual message_ex *get_message_on_receive(message_reader *reader,
+                                               /*out*/ int &read_next) override;
 
-        virtual void prepare_on_send(message_ex* msg) override;
+    virtual void prepare_on_send(message_ex *msg) override;
 
-        virtual int get_buffer_count_on_send(message_ex* msg) override;
+    virtual int get_buffer_count_on_send(message_ex *msg) override;
 
-        virtual int get_buffers_on_send(message_ex* msg, /*out*/ send_buf* buffers) override;
+    virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
 
-    public:
-        static void read_thrift_header(const char* buffer, /*out*/ thrift_message_header& header);
-        static bool check_thrift_header(const thrift_message_header& header);
+public:
+    static void read_thrift_header(const char *buffer, /*out*/ thrift_message_header &header);
+    static bool check_thrift_header(const thrift_message_header &header);
 
-        static dsn::message_ex* parse_message(const thrift_message_header& thrift_header, dsn::blob& message_data);
+    static dsn::message_ex *parse_message(const thrift_message_header &thrift_header,
+                                          dsn::blob &message_data);
 
-    private:
-        thrift_message_header _thrift_header;
-        bool _header_parsed;
-    };
+private:
+    thrift_message_header _thrift_header;
+    bool _header_parsed;
+};
 }

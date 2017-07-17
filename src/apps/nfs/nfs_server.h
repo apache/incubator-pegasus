@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,13 +32,13 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# pragma once
-# include <dsn/tool/nfs.h>
-# include <iostream>
+#pragma once
+#include <dsn/tool/nfs.h>
+#include <iostream>
 
-namespace dsn { namespace service { 
-class nfs_service 
-    : public ::dsn::serverlet<nfs_service>
+namespace dsn {
+namespace service {
+class nfs_service : public ::dsn::serverlet<nfs_service>
 {
 public:
     nfs_service() : ::dsn::serverlet<nfs_service>("nfs") {}
@@ -46,26 +46,28 @@ public:
 
 protected:
     // all service handlers to be implemented further
-    // RPC_NFS_NFS_COPY 
-    virtual void on_copy(const copy_request& request, ::dsn::rpc_replier<copy_response>& reply)
+    // RPC_NFS_NFS_COPY
+    virtual void on_copy(const copy_request &request, ::dsn::rpc_replier<copy_response> &reply)
     {
         std::cout << "... exec RPC_NFS_NFS_COPY ... (not implemented) " << std::endl;
         copy_response resp;
         reply(resp);
     }
-    // RPC_NFS_NFS_GET_FILE_SIZE 
-    virtual void on_get_file_size(const get_file_size_request& request, ::dsn::rpc_replier<get_file_size_response>& reply)
+    // RPC_NFS_NFS_GET_FILE_SIZE
+    virtual void on_get_file_size(const get_file_size_request &request,
+                                  ::dsn::rpc_replier<get_file_size_response> &reply)
     {
         std::cout << "... exec RPC_NFS_NFS_GET_FILE_SIZE ... (not implemented) " << std::endl;
         get_file_size_response resp;
         reply(resp);
     }
-    
+
 public:
     void open_service()
     {
         this->register_async_rpc_handler(RPC_NFS_COPY, "copy", &nfs_service::on_copy);
-        this->register_async_rpc_handler(RPC_NFS_GET_FILE_SIZE, "get_file_size", &nfs_service::on_get_file_size);
+        this->register_async_rpc_handler(
+            RPC_NFS_GET_FILE_SIZE, "get_file_size", &nfs_service::on_get_file_size);
     }
 
     void close_service()
@@ -74,5 +76,5 @@ public:
         this->unregister_rpc_handler(RPC_NFS_GET_FILE_SIZE);
     }
 };
-
-} } 
+}
+}

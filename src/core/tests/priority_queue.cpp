@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/utility/priority_queue.h>
-# include <gtest/gtest.h>
-# include <thread>
+#include <dsn/utility/priority_queue.h>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace ::dsn::utils;
 
@@ -44,11 +44,10 @@ struct queue_data
     int32_t priority;
     int32_t queue_index;
 
-    queue_data(int32_t pri, int32_t idx) :
-        priority(pri), queue_index(idx) {}
+    queue_data(int32_t pri, int32_t idx) : priority(pri), queue_index(idx) {}
 };
 
-typedef priority_queue<queue_data*, 3> my_priority_queue;
+typedef priority_queue<queue_data *, 3> my_priority_queue;
 TEST(core, priority_queue)
 {
     my_priority_queue q("my_priority_queue_name");
@@ -67,32 +66,26 @@ TEST(core, priority_queue)
     datas.push_back(queue_data(0, 3));
     datas.push_back(queue_data(2, 3));
 
-    for (int i = 0; i < datas.size(); ++i)
-    {
+    for (int i = 0; i < datas.size(); ++i) {
         ASSERT_EQ(i, q.count());
-        queue_data* d = &datas[i];
-        ASSERT_EQ(i+1, q.enqueue(d, d->priority));
-        ASSERT_EQ(i+1, q.count());
+        queue_data *d = &datas[i];
+        ASSERT_EQ(i + 1, q.enqueue(d, d->priority));
+        ASSERT_EQ(i + 1, q.count());
     }
 
     std::vector<queue_data> sort_datas(datas);
-    std::sort(sort_datas.begin(), sort_datas.end(),
-        [](const queue_data& l, const queue_data& r) {
-            return l.priority > r.priority || (l.priority == r.priority && l.queue_index < r.queue_index);
-        }
-    );
+    std::sort(sort_datas.begin(), sort_datas.end(), [](const queue_data &l, const queue_data &r) {
+        return l.priority > r.priority ||
+               (l.priority == r.priority && l.queue_index < r.queue_index);
+    });
 
     int count = sort_datas.size();
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         ASSERT_EQ(count, q.count());
-        queue_data* d = nullptr;
-        if (i % 2 == 0)
-        {
+        queue_data *d = nullptr;
+        if (i % 2 == 0) {
             d = q.dequeue();
-        }
-        else
-        {
+        } else {
             long ct;
             d = q.dequeue(ct);
             ASSERT_EQ(count - 1, ct);
@@ -104,7 +97,7 @@ TEST(core, priority_queue)
     }
 }
 
-typedef blocking_priority_queue<queue_data*, 3> my_blocking_priority_queue;
+typedef blocking_priority_queue<queue_data *, 3> my_blocking_priority_queue;
 TEST(core, blocking_priority_queue)
 {
     my_blocking_priority_queue q("my_blocking_priority_queue_name");
@@ -116,7 +109,7 @@ TEST(core, blocking_priority_queue)
     ASSERT_EQ(0, ct);
 
     ASSERT_EQ(1, q.enqueue(new queue_data(0, 10), 0));
-    queue_data* d = q.dequeue(ct, 10);
+    queue_data *d = q.dequeue(ct, 10);
     ASSERT_NE(nullptr, d);
     ASSERT_EQ(0, ct);
     ASSERT_EQ(0, d->priority);
@@ -126,8 +119,8 @@ TEST(core, blocking_priority_queue)
 
     std::thread t1([&q, &flag]() {
         long ct;
-        queue_data* d = nullptr;
-        
+        queue_data *d = nullptr;
+
         d = q.dequeue(ct, 10);
         ASSERT_EQ(nullptr, d);
         ASSERT_EQ(0, ct);

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,42 +35,42 @@
 
 #pragma once
 
-# include <boost/asio.hpp>
-# include <dsn/utility/singleton.h>
-# include <thread>
-# include <memory>
-# include <vector>
-# include <dsn/tool_api.h>
+#include <boost/asio.hpp>
+#include <dsn/utility/singleton.h>
+#include <thread>
+#include <memory>
+#include <vector>
+#include <dsn/tool_api.h>
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        // TODO: seperate this into per-node service, so we can use
-        // task::get_current_node for faster access to the nodes in all tasks
-        // coz tasks may run in io-threads when [task.xxx] allow_inline is true
-        class shared_io_service : public utils::singleton<shared_io_service>
-        {
-        public:
-            shared_io_service()
-            {
-                _io_service_worker_count = (int)dsn_config_get_value_uint64("core", "timer_service_worker_count", 1,
-                    "thread number for timer service for core itself");
-                for (int i = 0; i < _io_service_worker_count; i++)
-                {
-                    _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()
-                    {
-                        boost::asio::io_service::work work(ios);
-                        ios.run();
-                    })));
-                }
-            }
-
-            boost::asio::io_service ios;
-
-        private:
-            int                                       _io_service_worker_count;
-            std::vector<std::shared_ptr<std::thread>> _workers;
-        };
-
+// TODO: seperate this into per-node service, so we can use
+// task::get_current_node for faster access to the nodes in all tasks
+// coz tasks may run in io-threads when [task.xxx] allow_inline is true
+class shared_io_service : public utils::singleton<shared_io_service>
+{
+public:
+    shared_io_service()
+    {
+        _io_service_worker_count =
+            (int)dsn_config_get_value_uint64("core",
+                                             "timer_service_worker_count",
+                                             1,
+                                             "thread number for timer service for core itself");
+        for (int i = 0; i < _io_service_worker_count; i++) {
+            _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]() {
+                boost::asio::io_service::work work(ios);
+                ios.run();
+            })));
+        }
     }
+
+    boost::asio::io_service ios;
+
+private:
+    int _io_service_worker_count;
+    std::vector<std::shared_ptr<std::thread>> _workers;
+};
+}
 }

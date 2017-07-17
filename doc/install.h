@@ -19,7 +19,8 @@ rDSN has been built on the following platforms, and here are the quick summaries
 ```
 
 ### Windows 8.1/Server 2012 R2/10 with Visual Studio 2015.
-install [Visual Studio 2015](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx)
+install [Visual Studio
+2015](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx)
 
 install [GitHub Windows](https://windows.github.com/)
 
@@ -32,6 +33,7 @@ c:\Projects\rDSN> run.cmd build Debug .\builddbg install
 
 ***
 
-If everything is as expected, congratulations, and you are ready to try our [tutorials](\ref tutorials).
+If everything is as expected, congratulations, and you are ready to try our [tutorials](\ref
+tutorials).
 
 */

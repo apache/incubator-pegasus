@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,10 +32,10 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# include "mutation_log.h"
-# include <gtest/gtest.h>
-# include <chrono>
-# include <condition_variable>
+#include "mutation_log.h"
+#include <gtest/gtest.h>
+#include <chrono>
+#include <condition_variable>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -50,8 +50,7 @@ TEST(replication, mutation_log_learn)
     // prepare mutations
     std::vector<mutation_ptr> mutations;
     auto time_tic = clock.now();
-    for (int i = 0; i < 1000; i++)
-    {
+    for (int i = 0; i < 1000; i++) {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = i + 2;
@@ -60,9 +59,8 @@ TEST(replication, mutation_log_learn)
         mu->data.header.log_offset = 0;
 
         binary_writer writer;
-        //we want a update mutation to be ~4kByte
-        for (int j = 0; j < 300; j++)
-        {
+        // we want a update mutation to be ~4kByte
+        for (int j = 0; j < 300; j++) {
             writer.write(str);
         }
         mu->data.updates.push_back(mutation_update());
@@ -74,12 +72,13 @@ TEST(replication, mutation_log_learn)
         mutations.push_back(mu);
     }
     auto time_toc = clock.now();
-    std::cout << "prepare mutations time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+    std::cout << "prepare mutations time(us): "
+              << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+              << std::endl;
 
-    decree learn_points[] = {584,585,586, 594,595,596,604,605,606 };
+    decree learn_points[] = {584, 585, 586, 594, 595, 596, 604, 605, 606};
 
-    for (auto& lp : learn_points)
-    {
+    for (auto &lp : learn_points) {
         // prepare dir
         utils::filesystem::remove_path(logp);
         utils::filesystem::create_directory(logp);
@@ -88,13 +87,15 @@ TEST(replication, mutation_log_learn)
         time_tic = clock.now();
         mutation_log_ptr mlog = new mutation_log_private(logp, 32, gpid, nullptr, 4096, 512, 10000);
         mlog->open(nullptr, nullptr);
-        for (auto& mu : mutations)
-        {
+        for (auto &mu : mutations) {
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
         }
         mlog->flush();
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: write time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: write time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // gc
         time_tic = clock.now();
@@ -102,14 +103,20 @@ TEST(replication, mutation_log_learn)
         mlog->garbage_collection(gpid, durable_decree, 0, 0, 0);
         mlog->close();
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: gc time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: gc time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // reading logs
         time_tic = clock.now();
         mlog = new mutation_log_private(logp, 1, gpid, nullptr, 1024, 512, 10000);
-        mlog->open([](int log_length, mutation_ptr& mu)->bool{ return true; }, nullptr);
+        mlog->open([](int log_length, mutation_ptr &mu) -> bool { return true; }, nullptr);
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: read time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: read time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // learning
         time_tic = clock.now();
@@ -118,19 +125,22 @@ TEST(replication, mutation_log_learn)
         mlog->close();
         mlog = nullptr;
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: learn time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: learn time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // replaying
         time_tic = clock.now();
         int64_t offset = 0;
         std::set<decree> learned_decress;
-        mutation_log::replay(state.files,
-            [&mutations, &learned_decress, &clock](int log_length, mutation_ptr& mu)->bool
-            {
-                //wait for 5 usec mimicing mutation replay time
+        mutation_log::replay(
+            state.files,
+            [&mutations, &learned_decress, &clock](int log_length, mutation_ptr &mu) -> bool {
+                // wait for 5 usec mimicing mutation replay time
                 auto tic = clock.now();
-                while (std::chrono::duration_cast<std::chrono::microseconds>(clock.now() - tic).count() < 5)
-                {
+                while (std::chrono::duration_cast<std::chrono::microseconds>(clock.now() - tic)
+                           .count() < 5) {
                     ;
                 }
                 learned_decress.insert(mu->data.header.decree);
@@ -139,36 +149,40 @@ TEST(replication, mutation_log_learn)
 #ifdef DSN_USE_THRIFT_SERIALIZATION
                 EXPECT_TRUE(wmu->data.header == mu->data.header);
 #else
-                EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
-                    (const void*)&mu->data.header,
-                    sizeof(mu->data.header)) == 0
-                    );
+                EXPECT_TRUE(memcmp((const void *)&wmu->data.header,
+                                   (const void *)&mu->data.header,
+                                   sizeof(mu->data.header)) == 0);
 #endif
                 EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-                EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
-                EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data.data(),
-                    (const void*)mu->data.updates[0].data.data(),
-                    mu->data.updates[0].data.length()) == 0
-                    );
+                EXPECT_TRUE(wmu->data.updates[0].data.length() ==
+                            mu->data.updates[0].data.length());
+                EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),
+                                   (const void *)mu->data.updates[0].data.data(),
+                                   mu->data.updates[0].data.length()) == 0);
                 EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
 
                 return true;
             },
-            offset
-            ).end_tracking();
+            offset)
+            .end_tracking();
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: replay time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: replay time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // checking
         time_tic = clock.now();
-        for (decree s = durable_decree + 1; s < 1000; s++)
-        {
+        for (decree s = durable_decree + 1; s < 1000; s++) {
             auto it = learned_decress.find(s);
             ASSERT_TRUE(it != learned_decress.end());
         }
         time_toc = clock.now();
-        std::cout << "learn_point[" << lp << "]: check time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout
+            << "learn_point[" << lp << "]: check time(us): "
+            << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count()
+            << std::endl;
 
         // clear all
         utils::filesystem::remove_path(logp);

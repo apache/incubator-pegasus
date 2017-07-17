@@ -34,146 +34,130 @@
  */
 #include "meta_options.h"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-std::string meta_options::concat_path_unix_style(const std::string &prefix, const std::string &postfix)
+std::string meta_options::concat_path_unix_style(const std::string &prefix,
+                                                 const std::string &postfix)
 {
     size_t pos1 = prefix.size(); // last_valid_pos + 1
-    while (pos1 > 0 && prefix[pos1-1] == '/') pos1--;
+    while (pos1 > 0 && prefix[pos1 - 1] == '/')
+        pos1--;
     size_t pos2 = 0; // first non '/' position
-    while (pos2 < postfix.size() && postfix[pos2] == '/') pos2++;
+    while (pos2 < postfix.size() && postfix[pos2] == '/')
+        pos2++;
     return prefix.substr(0, pos1) + "/" + postfix.substr(pos2);
 }
 
 void meta_options::initialize()
 {
-    cluster_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta state service on remote");
+    cluster_root = dsn_config_get_value_string(
+        "meta_server", "cluster_root", "/", "cluster root of meta state service on remote");
 
-    meta_state_service_type = dsn_config_get_value_string(
-        "meta_server",
-        "meta_state_service_type",
-        "meta_state_service_simple",
-        "meta_state_service provider type"
-        );
-    server_load_balancer_type = dsn_config_get_value_string(
-        "meta_server",
-        "server_load_balancer_type",
-        "simple_load_balancer",
-        "server load balancer provider"
-        );
+    meta_state_service_type = dsn_config_get_value_string("meta_server",
+                                                          "meta_state_service_type",
+                                                          "meta_state_service_simple",
+                                                          "meta_state_service provider type");
+    server_load_balancer_type = dsn_config_get_value_string("meta_server",
+                                                            "server_load_balancer_type",
+                                                            "simple_load_balancer",
+                                                            "server load balancer provider");
 
-    const char* meta_state_service_parameters = dsn_config_get_value_string(
-        "meta_server",
-        "meta_state_service_parameters",
-        "",
-        "meta_state_service provider parameters"
-        );
+    const char *meta_state_service_parameters =
+        dsn_config_get_value_string("meta_server",
+                                    "meta_state_service_parameters",
+                                    "",
+                                    "meta_state_service provider parameters");
     utils::split_args(meta_state_service_parameters, meta_state_service_args);
 
-    replica_assign_delay_ms_for_dropouts = dsn_config_get_value_uint64(
-        "meta_server",
-        "replica_assign_delay_ms_for_dropouts",
-        300000,
-        "replica_assign_delay_ms_for_dropouts, default is 300000");
+    replica_assign_delay_ms_for_dropouts =
+        dsn_config_get_value_uint64("meta_server",
+                                    "replica_assign_delay_ms_for_dropouts",
+                                    300000,
+                                    "replica_assign_delay_ms_for_dropouts, default is 300000");
 
     node_live_percentage_threshold_for_update = dsn_config_get_value_uint64(
         "meta_server",
         "node_live_percentage_threshold_for_update",
         65,
-        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, then freeze the cluster; default is 65");
+        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, "
+        "then freeze the cluster; default is 65");
 
-    min_live_node_count_for_unfreeze = dsn_config_get_value_uint64(
-        "meta_server",
-        "min_live_node_count_for_unfreeze",
-        3,
-        "minimum live node count without which the state is freezed"
-        );
+    min_live_node_count_for_unfreeze =
+        dsn_config_get_value_uint64("meta_server",
+                                    "min_live_node_count_for_unfreeze",
+                                    3,
+                                    "minimum live node count without which the state is freezed");
 
-    hold_seconds_for_dropped_app = dsn_config_get_value_uint64(
-        "meta_server",
-        "hold_seconds_for_dropped_app",
-        604800,
-        "how long to hold data for dropped apps"
-        );
+    hold_seconds_for_dropped_app =
+        dsn_config_get_value_uint64("meta_server",
+                                    "hold_seconds_for_dropped_app",
+                                    604800,
+                                    "how long to hold data for dropped apps");
 
     meta_function_level_on_start = meta_function_level::fl_invalid;
-    const char* level_str = dsn_config_get_value_string(
-        "meta_server",
-        "meta_function_level_on_start",
-        "steady",
-        "meta function level on start"
-        );
+    const char *level_str = dsn_config_get_value_string(
+        "meta_server", "meta_function_level_on_start", "steady", "meta function level on start");
     std::string level = std::string("fl_") + level_str;
-    for (auto& kv : _meta_function_level_VALUES_TO_NAMES)
-    {
-        if (level == kv.second)
-        {
+    for (auto &kv : _meta_function_level_VALUES_TO_NAMES) {
+        if (level == kv.second) {
             meta_function_level_on_start = (meta_function_level::type)kv.first;
             break;
         }
     }
-    dassert(meta_function_level_on_start != meta_function_level::fl_invalid, "invalid function level: %s", level_str);
+    dassert(meta_function_level_on_start != meta_function_level::fl_invalid,
+            "invalid function level: %s",
+            level_str);
 
     recover_from_replica_server = dsn_config_get_value_bool(
         "meta_server",
         "recover_from_replica_server",
         false,
-        "whether to recover from replica server when no apps in remote storage"
-        );
+        "whether to recover from replica server when no apps in remote storage");
 
     max_replicas_in_group = dsn_config_get_value_uint64(
-        "meta_server",
-        "max_replicas_in_group",
-        4,
-        "max replicas(alive & dead) in a group"
-        );
+        "meta_server", "max_replicas_in_group", 4, "max replicas(alive & dead) in a group");
 
-    add_secondary_enable_flow_control = dsn_config_get_value_bool(
-        "meta_server",
-        "add_secondary_enable_flow_control",
-        false,
-        "enable flow control for add secondary proposal"
-        );
+    add_secondary_enable_flow_control =
+        dsn_config_get_value_bool("meta_server",
+                                  "add_secondary_enable_flow_control",
+                                  false,
+                                  "enable flow control for add secondary proposal");
     add_secondary_max_count_for_one_node = dsn_config_get_value_uint64(
         "meta_server",
         "add_secondary_max_count_for_one_node",
         10,
-        "add secondary max count for one node when flow control enabled"
-        );
-    add_secondary_proposal_alive_time_seconds = dsn_config_get_value_uint64(
-        "meta_server",
-        "add_secondary_proposal_alive_time_seconds",
-        900,
-        "add secondary proposal alive time in seconds"
-        );
+        "add secondary max count for one node when flow control enabled");
+    add_secondary_proposal_alive_time_seconds =
+        dsn_config_get_value_uint64("meta_server",
+                                    "add_secondary_proposal_alive_time_seconds",
+                                    900,
+                                    "add secondary proposal alive time in seconds");
 
-    _fd_opts.distributed_lock_service_type = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_type",
-        "distributed_lock_service_simple",
-        "dist lock provider");
-    const char* distributed_lock_service_parameters = dsn_config_get_value_string(
-        "meta_server",
-        "distributed_lock_service_parameters",
-        "",
-        "distributed_lock_service provider parameters"
-        );
+    _fd_opts.distributed_lock_service_type =
+        dsn_config_get_value_string("meta_server",
+                                    "distributed_lock_service_type",
+                                    "distributed_lock_service_simple",
+                                    "dist lock provider");
+    const char *distributed_lock_service_parameters =
+        dsn_config_get_value_string("meta_server",
+                                    "distributed_lock_service_parameters",
+                                    "",
+                                    "distributed_lock_service provider parameters");
     utils::split_args(distributed_lock_service_parameters, _fd_opts.distributed_lock_service_args);
 
-    _fd_opts.stable_rs_min_running_seconds = dsn_config_get_value_uint64(
-        "meta_server",
-        "stable_rs_min_running_seconds",
-        600,
-        "min running seconds for a stable replica server"
-        );
+    _fd_opts.stable_rs_min_running_seconds =
+        dsn_config_get_value_uint64("meta_server",
+                                    "stable_rs_min_running_seconds",
+                                    600,
+                                    "min running seconds for a stable replica server");
 
     _fd_opts.max_succssive_unstable_restart = dsn_config_get_value_uint64(
         "meta_server",
         "max_succssive_unstable_restart",
         5,
         "meta server will treat an rs unstable so as to reject it's beacons "
-        "if its succssively restarting count exceeds this value"
-        );
+        "if its succssively restarting count exceeds this value");
 }
-
-}}
+}
+}

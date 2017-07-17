@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,22 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/aio_provider.h>
-# include "disk_engine.h"
+#include <dsn/tool-api/aio_provider.h>
+#include "disk_engine.h"
 
 namespace dsn {
 
-aio_provider::aio_provider(disk_engine* disk, aio_provider* inner_provider)
-    : _engine(disk)
-{
-}
+aio_provider::aio_provider(disk_engine *disk, aio_provider *inner_provider) : _engine(disk) {}
 
-service_node* aio_provider::node() const
-{
-    return _engine->node();
-}
+service_node *aio_provider::node() const { return _engine->node(); }
 
-void aio_provider::complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds)
+void aio_provider::complete_io(aio_task *aio,
+                               error_code err,
+                               uint32_t bytes,
+                               int delay_milliseconds)
 {
     _engine->complete_io(aio, err, bytes, delay_milliseconds);
 }

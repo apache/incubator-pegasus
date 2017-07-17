@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,25 +32,27 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# pragma once
-# include "nfs.types.h"
+#pragma once
+#include "nfs.types.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "nfs"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "nfs"
 
-namespace dsn { namespace service { 
-    // define RPC task code for service 'nfs'
-    DEFINE_TASK_CODE_RPC(RPC_NFS_COPY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-    DEFINE_TASK_CODE_RPC(RPC_NFS_GET_FILE_SIZE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-    // test timer task code
-    DEFINE_TASK_CODE(LPC_NFS_REQUEST_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+namespace dsn {
+namespace service {
+// define RPC task code for service 'nfs'
+DEFINE_TASK_CODE_RPC(RPC_NFS_COPY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_NFS_GET_FILE_SIZE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+// test timer task code
+DEFINE_TASK_CODE(LPC_NFS_REQUEST_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-    DEFINE_TASK_CODE_AIO(LPC_NFS_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-    DEFINE_TASK_CODE(LPC_NFS_FILE_CLOSE_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_AIO(LPC_NFS_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_NFS_FILE_CLOSE_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-    DEFINE_TASK_CODE_AIO(LPC_NFS_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_AIO(LPC_NFS_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-    DEFINE_TASK_CODE_AIO(LPC_NFS_COPY_FILE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-} } 
+DEFINE_TASK_CODE_AIO(LPC_NFS_COPY_FILE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+}
+}

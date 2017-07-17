@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,28 +33,28 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/tool/simulator.h>
+#include "scheduler.h"
 
-# include <dsn/tool/simulator.h>
-# include "scheduler.h"
+#include "diske.sim.h"
+#include "env.sim.h"
+#include "task_engine.sim.h"
 
-# include "diske.sim.h"
-# include "env.sim.h"
-# include "task_engine.sim.h"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "tools.simulator"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "tools.simulator"
+namespace dsn {
+namespace tools {
 
-namespace dsn { namespace tools {
-
-void simulator::add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+void simulator::add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply)
 {
     scheduler::instance().add_checker(name, create, apply);
 }
 
-void simulator::install(service_spec& spec)
-{   
+void simulator::install(service_spec &spec)
+{
     register_component_provider<sim_aio_provider>("dsn::tools::sim_aio_provider");
     register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
@@ -92,7 +92,7 @@ void simulator::install(service_spec& spec)
 
     if (spec.perf_counter_factory_name == "")
         spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";
-    
+
     if (spec.logging_factory_name == "")
         spec.logging_factory_name = "dsn::tools::simple_logger";
 
@@ -117,9 +117,8 @@ void simulator::install(service_spec& spec)
     if (spec.nfs_factory_name == "")
         spec.nfs_factory_name = "dsn::service::nfs_node_simple";
 
-    for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it)
-    {
-        threadpool_spec& tspec = *it;
+    for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it) {
+        threadpool_spec &tspec = *it;
 
         if (tspec.worker_factory_name == "")
             tspec.worker_factory_name = ("dsn::task_worker");
@@ -133,9 +132,8 @@ void simulator::install(service_spec& spec)
 
 void simulator::on_system_exit(sys_exit_type st)
 {
-    derror("system exits, you can replay this process using random seed %d",        
-        sim_env_provider::seed()
-        );
+    derror("system exits, you can replay this process using random seed %d",
+           sim_env_provider::seed());
 }
 
 void simulator::run()
@@ -143,5 +141,5 @@ void simulator::run()
     scheduler::instance().start();
     tool_app::run();
 }
-
-}} // end namespace dsn::tools
+}
+} // end namespace dsn::tools

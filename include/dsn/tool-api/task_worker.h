@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,17 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/task_queue.h>
-# include <dsn/utility/extensible_object.h>
-# include <dsn/utility/synchronize.h>
-# include <dsn/utility/dlib.h>
-# include <dsn/tool-api/perf_counter.h>
-# include <thread>
+#include <dsn/tool-api/task_queue.h>
+#include <dsn/utility/extensible_object.h>
+#include <dsn/utility/synchronize.h>
+#include <dsn/utility/dlib.h>
+#include <dsn/tool-api/perf_counter.h>
+#include <thread>
 
 namespace dsn {
- 
+
 /*!
 @addtogroup tool-api-providers
 @{
@@ -54,15 +54,18 @@ namespace dsn {
 class task_worker : public extensible_object<task_worker, 4>
 {
 public:
-    template <typename T> static task_worker* create(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider)
+    template <typename T>
+    static task_worker *
+    create(task_worker_pool *pool, task_queue *q, int index, task_worker *inner_provider)
     {
         return new T(pool, q, index, inner_provider);
     }
 
-    typedef task_worker*  (*factory)(task_worker_pool*, task_queue*, int, task_worker*);
+    typedef task_worker *(*factory)(task_worker_pool *, task_queue *, int, task_worker *);
 
 public:
-    DSN_API task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
+    DSN_API
+    task_worker(task_worker_pool *pool, task_queue *q, int index, task_worker *inner_provider);
     DSN_API virtual ~task_worker(void);
 
     // service management
@@ -72,27 +75,27 @@ public:
     DSN_API virtual void loop(); // run tasks from _input_queue
 
     // inquery
-    const std::string& name() const { return _name; }
+    const std::string &name() const { return _name; }
     int index() const { return _index; }
     int native_tid() const { return _native_tid; }
-    task_worker_pool* pool() const { return _owner_pool; }
-    task_queue* queue() const { return _input_queue; }
-    DSN_API const threadpool_spec& pool_spec() const;
-    DSN_API static task_worker* current();
+    task_worker_pool *pool() const { return _owner_pool; }
+    task_queue *queue() const { return _input_queue; }
+    DSN_API const threadpool_spec &pool_spec() const;
+    DSN_API static task_worker *current();
 
 private:
-    task_worker_pool* _owner_pool;    
-    task_queue*       _input_queue;
-    int               _index;
-    int               _native_tid;
-    std::string       _name;
-    std::thread      *_thread;
-    bool             _is_running;
+    task_worker_pool *_owner_pool;
+    task_queue *_input_queue;
+    int _index;
+    int _native_tid;
+    std::string _name;
+    std::thread *_thread;
+    bool _is_running;
     utils::notify_event _started;
-    int              _processed_task_count;
+    int _processed_task_count;
 
 public:
-    DSN_API static void set_name(const char* name);
+    DSN_API static void set_name(const char *name);
     DSN_API static void set_priority(worker_priority_t pri);
     DSN_API static void set_affinity(uint64_t affinity);
 
@@ -104,11 +107,9 @@ public:
     @addtogroup tool-api-hooks
     @{
     */
-    DSN_API static join_point<void, task_worker*> on_start;
-    DSN_API static join_point<void, task_worker*> on_create;
+    DSN_API static join_point<void, task_worker *> on_start;
+    DSN_API static join_point<void, task_worker *> on_create;
     /*@}*/
 };
 /*@}*/
 } // end namespace
-
-

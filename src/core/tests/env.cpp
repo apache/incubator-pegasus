@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,22 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/env_provider.h>
-# include <gtest/gtest.h>
-# include "../tools/simulator/env.sim.h"
+#include <dsn/tool-api/env_provider.h>
+#include <gtest/gtest.h>
+#include "../tools/simulator/env.sim.h"
 
 using namespace ::dsn;
 
 TEST(core, env)
 {
-    uint64_t xs[] = {
-        0,
-        std::numeric_limits<uint64_t>::max() - 1,
-        0xdeadbeef
-        };
+    uint64_t xs[] = {0, std::numeric_limits<uint64_t>::max() - 1, 0xdeadbeef};
 
-    for (auto& x : xs)
-    {
+    for (auto &x : xs) {
         auto r = dsn_random64(x, x);
         EXPECT_EQ(r, x);
 
@@ -56,5 +51,3 @@ TEST(core, env)
         EXPECT_TRUE(r == x || r == (x + 1));
     }
 }
-
-

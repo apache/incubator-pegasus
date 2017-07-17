@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,27 +33,26 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#pragma once
 
-# pragma once
-
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        class empty_aio_provider : public aio_provider
-        {
-        public:
-            empty_aio_provider(disk_engine* disk, aio_provider* inner_provider);
-            ~empty_aio_provider();
+class empty_aio_provider : public aio_provider
+{
+public:
+    empty_aio_provider(disk_engine *disk, aio_provider *inner_provider);
+    ~empty_aio_provider();
 
-            virtual dsn_handle_t   open(const char* file_name, int flag, int pmode) override;
-            virtual error_code close(dsn_handle_t fh) override;
-            virtual error_code flush(dsn_handle_t fh) override;
-            virtual void       aio(aio_task* aio) override;
-            virtual disk_aio* prepare_aio_context(aio_task* tsk) override;
+    virtual dsn_handle_t open(const char *file_name, int flag, int pmode) override;
+    virtual error_code close(dsn_handle_t fh) override;
+    virtual error_code flush(dsn_handle_t fh) override;
+    virtual void aio(aio_task *aio) override;
+    virtual disk_aio *prepare_aio_context(aio_task *tsk) override;
 
-            virtual void start(io_modifer& ctx) override {}
-        };
-    }
+    virtual void start(io_modifer &ctx) override {}
+};
+}
 }

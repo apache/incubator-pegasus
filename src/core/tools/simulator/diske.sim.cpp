@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,25 +35,24 @@
 
 #include "diske.sim.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "aio_provider"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "aio_provider"
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 DEFINE_TASK_CODE(LPC_NATIVE_AIO_REDIRECT, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
-sim_aio_provider::sim_aio_provider(disk_engine* disk, aio_provider* inner_provider)
-: NATIVE_AIO_PROVIDER(disk, inner_provider)
+sim_aio_provider::sim_aio_provider(disk_engine *disk, aio_provider *inner_provider)
+    : NATIVE_AIO_PROVIDER(disk, inner_provider)
 {
 }
 
-sim_aio_provider::~sim_aio_provider(void)
-{
-}
+sim_aio_provider::~sim_aio_provider(void) {}
 
-void sim_aio_provider::aio(aio_task* aio)
+void sim_aio_provider::aio(aio_task *aio)
 {
     error_code err;
     uint32_t bytes;
@@ -61,5 +60,5 @@ void sim_aio_provider::aio(aio_task* aio)
     err = aio_internal(aio, false, &bytes);
     complete_io(aio, err, bytes, 0);
 }
-
-}} // end namespace
+}
+} // end namespace

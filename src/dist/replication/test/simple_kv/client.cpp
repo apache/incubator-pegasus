@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,18 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include "client.h"
-# include "case.h"
-# include <dsn/dist/replication/replication_other_types.h>
+#include "client.h"
+#include "case.h"
+#include <dsn/dist/replication/replication_other_types.h>
 
-# include <sstream>
+#include <sstream>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "simple_kv.client"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "simple_kv.client"
 
-namespace dsn { namespace replication { namespace test {
+namespace dsn {
+namespace replication {
+namespace test {
 
 simple_kv_client_app::simple_kv_client_app(dsn_gpid gpid)
     : ::dsn::service_app(gpid), _simple_kv_client(nullptr)
@@ -54,13 +56,12 @@ simple_kv_client_app::simple_kv_client_app(dsn_gpid gpid)
 simple_kv_client_app::~simple_kv_client_app()
 {
     stop();
-    if (_meta_server_group.group_handle())
-    {
+    if (_meta_server_group.group_handle()) {
         dsn_group_destroy(_meta_server_group.group_handle());
     }
 }
 
-::dsn::error_code simple_kv_client_app::start(int argc, char** argv)
+::dsn::error_code simple_kv_client_app::start(int argc, char **argv)
 {
     if (argc < 2)
         return ::dsn::ERR_INVALID_PARAMETERS;
@@ -69,8 +70,7 @@ simple_kv_client_app::~simple_kv_client_app()
     replica_helper::load_meta_servers(meta_servers);
 
     _meta_server_group.assign_group(dsn_group_build("meta-servers"));
-    for (auto& ms : meta_servers)
-    {
+    for (auto &ms : meta_servers) {
         dsn_group_add(_meta_server_group.group_handle(), ms.c_addr());
     }
 
@@ -78,10 +78,7 @@ simple_kv_client_app::~simple_kv_client_app()
     _service_addr = url_host_address(argv[1]);
     _simple_kv_client.reset(new simple_kv_client(_service_addr));
 
-    dsn::tasking::enqueue(
-            LPC_SIMPLE_KV_TEST,
-            this,
-            std::bind(&simple_kv_client_app::run, this));
+    dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST, this, std::bind(&simple_kv_client_app::run, this));
 
     return ::dsn::ERR_OK;
 }
@@ -103,20 +100,16 @@ void simple_kv_client_app::run()
     dsn::replication::config_type::type type;
     rpc_address node;
 
-    while (!g_done)
-    {
-        if (test_case::fast_instance().check_client_write(id, key, value, timeout_ms))
-        {
+    while (!g_done) {
+        if (test_case::fast_instance().check_client_write(id, key, value, timeout_ms)) {
             begin_write(id, key, value, timeout_ms);
             continue;
         }
-        if (test_case::fast_instance().check_replica_config(receiver, type, node) )
-        {
+        if (test_case::fast_instance().check_replica_config(receiver, type, node)) {
             send_config_to_meta(receiver, type, node);
             continue;
         }
-        if (test_case::fast_instance().check_client_read(id, key, timeout_ms))
-        {
+        if (test_case::fast_instance().check_client_read(id, key, timeout_ms)) {
             begin_read(id, key, timeout_ms);
             continue;
         }
@@ -131,33 +124,38 @@ struct write_context
     int timeout_ms;
 };
 
-void simple_kv_client_app::begin_write(int id, const std::string& key, const std::string& value, int timeout_ms)
+void simple_kv_client_app::begin_write(int id,
+                                       const std::string &key,
+                                       const std::string &value,
+                                       int timeout_ms)
 {
-    ddebug("=== on_begin_write:id=%d,key=%s,value=%s,timeout=%d", id, key.c_str(), value.c_str(), timeout_ms);
+    ddebug("=== on_begin_write:id=%d,key=%s,value=%s,timeout=%d",
+           id,
+           key.c_str(),
+           value.c_str(),
+           timeout_ms);
     std::unique_ptr<write_context> ctx(new write_context());
     ctx->id = id;
     ctx->req.key = key;
     ctx->req.value = value;
     ctx->timeout_ms = timeout_ms;
-    auto& req = ctx->req;
-    _simple_kv_client->write(
-        req,
-        [ctx_cap = std::move(ctx)](error_code err, int32_t resp)
-        {
-            test_case::fast_instance().on_end_write(ctx_cap->id, err, resp);
-        },
-        std::chrono::milliseconds(timeout_ms)
-        );
+    auto &req = ctx->req;
+    _simple_kv_client->write(req,
+                             [ctx_cap = std::move(ctx)](error_code err, int32_t resp) {
+                                 test_case::fast_instance().on_end_write(ctx_cap->id, err, resp);
+                             },
+                             std::chrono::milliseconds(timeout_ms));
 }
 
-
-void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type::type type, const rpc_address& node)
+void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
+                                               dsn::replication::config_type::type type,
+                                               const rpc_address &node)
 {
     dsn_message_t req = dsn_msg_create_request(RPC_CM_PROPOSE_BALANCER, 30000);
 
     configuration_balancer_request request;
     request.gpid = g_default_gpid;
-    request.action_list.emplace_back( configuration_proposal_action{receiver, node, type} );
+    request.action_list.emplace_back(configuration_proposal_action{receiver, node, type});
     request.__set_force(true);
 
     dsn::marshall(req, request);
@@ -172,22 +170,19 @@ struct read_context
     int timeout_ms;
 };
 
-void simple_kv_client_app::begin_read(int id, const std::string& key, int timeout_ms)
+void simple_kv_client_app::begin_read(int id, const std::string &key, int timeout_ms)
 {
     ddebug("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
     std::unique_ptr<read_context> ctx(new read_context());
     ctx->id = id;
     ctx->key = key;
     ctx->timeout_ms = timeout_ms;
-    _simple_kv_client->read(
-        key,
-        [ctx_cap = std::move(ctx)](error_code err, std::string&& resp)
-        {
-            test_case::fast_instance().on_end_read(ctx_cap->id, err, resp);
-        },
-        std::chrono::milliseconds(timeout_ms));
+    _simple_kv_client->read(key,
+                            [ctx_cap = std::move(ctx)](error_code err, std::string && resp) {
+                                test_case::fast_instance().on_end_read(ctx_cap->id, err, resp);
+                            },
+                            std::chrono::milliseconds(timeout_ms));
 }
-
-
-}}}
-
+}
+}
+}

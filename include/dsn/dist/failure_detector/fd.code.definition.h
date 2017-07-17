@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,16 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
-# include <dsn/cpp/clientlet.h>
-# include <dsn/dist/failure_detector/fd.types.h>
+#pragma once
+#include <dsn/cpp/clientlet.h>
+#include <dsn/dist/failure_detector/fd.types.h>
 
-namespace dsn { namespace fd { 
-    
-    DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
+namespace dsn {
+namespace fd {
 
-    // define RPC task code for service 'failure_detector'
-    DEFINE_TASK_CODE_RPC(RPC_FD_FAILURE_DETECTOR_PING, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-    // test timer task code
-    DEFINE_TASK_CODE(LPC_FD_TEST_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-} } 
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
+
+// define RPC task code for service 'failure_detector'
+DEFINE_TASK_CODE_RPC(RPC_FD_FAILURE_DETECTOR_PING, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+// test timer task code
+DEFINE_TASK_CODE(LPC_FD_TEST_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+}
+}

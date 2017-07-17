@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-# include <gtest/gtest.h>
-# include <dsn/service_api_cpp.h>
-# include <dsn/utility/utils.h>
-# include <fstream>
+#include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/utility/utils.h>
+#include <fstream>
 
 static void file_utils_test_setup()
 {
@@ -62,10 +61,9 @@ static void file_utils_test_get_process_image_path()
     std::string path;
     std::string imagepath;
     dsn::error_code ret;
-    //int pid;
+    // int pid;
 
-    if (!dsn::utils::filesystem::get_current_directory(imagepath))
-    {
+    if (!dsn::utils::filesystem::get_current_directory(imagepath)) {
         EXPECT_TRUE(false);
     }
 #ifdef WIN32
@@ -77,7 +75,7 @@ static void file_utils_test_get_process_image_path()
     ret = dsn::utils::filesystem::get_current_process_image_path(path);
     EXPECT_TRUE(ret == dsn::ERR_OK);
     // TODO: not always true when running dir is not where the test resides
-    //EXPECT_TRUE(path == imagepath); // e: vs E:
+    // EXPECT_TRUE(path == imagepath); // e: vs E:
 }
 
 static void file_utils_test_get_normalized_path()
@@ -85,7 +83,7 @@ static void file_utils_test_get_normalized_path()
     int ret;
     std::string path;
     std::string npath;
-    
+
     path = "\\\\?\\";
     ret = dsn::utils::filesystem::get_normalized_path(path, npath);
     EXPECT_TRUE(ret == 0);
@@ -181,7 +179,7 @@ static void file_utils_test_get_normalized_path()
     EXPECT_TRUE(npath == path);
 
     path = "\\\\";
-        ret = dsn::utils::filesystem::get_normalized_path(path, npath);
+    ret = dsn::utils::filesystem::get_normalized_path(path, npath);
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(npath == path);
 
@@ -352,8 +350,8 @@ static void file_utils_test_get_normalized_path()
     EXPECT_TRUE(npath == "/");
 #endif
 
-
-    path = "/////////////////////////////////////////////////////////////////a/////////////////b///////////";
+    path = "/////////////////////////////////////////////////////////////////a/////////////////b///"
+           "////////";
     ret = dsn::utils::filesystem::get_normalized_path(path, npath);
     EXPECT_TRUE(ret == 0);
 #ifdef _WIN32
@@ -684,8 +682,6 @@ static void file_utils_test_create()
     EXPECT_TRUE(ret);
 }
 
-
-
 static void file_utils_test_file_size()
 {
     std::string path;
@@ -902,9 +898,7 @@ static void file_utils_test_remove()
     EXPECT_FALSE(ret);
 }
 
-static void file_utils_test_cleanup()
-{
-}
+static void file_utils_test_cleanup() {}
 
 TEST(core, file_utils)
 {

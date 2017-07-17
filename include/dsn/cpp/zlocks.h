@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,11 @@
 
 #pragma once
 
-# include <dsn/service_api_c.h>
-# include <atomic>
+#include <dsn/service_api_c.h>
+#include <atomic>
 
-namespace dsn { namespace service {
+namespace dsn {
+namespace service {
 
 /*!
 @addtogroup sync-exlock
@@ -59,8 +60,8 @@ private:
 
 private:
     // no assignment operator
-    zlock& operator=(const zlock& source);
-    zlock(const zlock& source);
+    zlock &operator=(const zlock &source);
+    zlock(const zlock &source);
 };
 /*@}*/
 
@@ -74,7 +75,7 @@ public:
     zrwlock_nr() { _h = dsn_rwlock_nr_create(); }
     ~zrwlock_nr() { dsn_rwlock_nr_destroy(_h); }
 
-    void lock_read() { dsn_rwlock_nr_lock_read(_h);  }
+    void lock_read() { dsn_rwlock_nr_lock_read(_h); }
     void unlock_read() { dsn_rwlock_nr_unlock_read(_h); }
     bool try_lock_read() { return dsn_rwlock_nr_try_lock_read(_h); }
 
@@ -87,8 +88,8 @@ private:
 
 private:
     // no assignment operator
-    zrwlock_nr& operator=(const zrwlock_nr& source);
-    zrwlock_nr(const zrwlock_nr& source);
+    zrwlock_nr &operator=(const zrwlock_nr &source);
+    zrwlock_nr(const zrwlock_nr &source);
 };
 /*@}*/
 
@@ -98,22 +99,19 @@ private:
 */
 class zsemaphore
 {
-public:  
+public:
     zsemaphore(int initial_count = 0) { _h = dsn_semaphore_create(initial_count); }
     ~zsemaphore() { dsn_semaphore_destroy(_h); }
 
 public:
     virtual void signal(int count = 1) { dsn_semaphore_signal(_h, count); }
 
-    virtual bool wait(int timeout_milliseconds = TIME_MS_MAX) 
+    virtual bool wait(int timeout_milliseconds = TIME_MS_MAX)
     {
-        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX)
-        {
+        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX) {
             dsn_semaphore_wait(_h);
             return true;
-        }
-        else
-        {
+        } else {
             return dsn_semaphore_wait_timeout(_h, timeout_milliseconds);
         }
     }
@@ -123,8 +121,8 @@ private:
 
 private:
     // no assignment operator
-    zsemaphore& operator=(const zsemaphore& source);
-    zsemaphore(const zsemaphore& source);
+    zsemaphore &operator=(const zsemaphore &source);
+    zsemaphore(const zsemaphore &source);
 };
 
 class zevent
@@ -139,45 +137,45 @@ public:
     bool wait(int timeout_milliseconds = TIME_MS_MAX);
 
 private:
-    zsemaphore        _sema;
+    zsemaphore _sema;
     std::atomic<bool> _signaled;
-    bool              _manualReset;
+    bool _manualReset;
 
 private:
     // no assignment operator
-    zevent& operator=(const zevent& source);
-    zevent(const zevent& source);
+    zevent &operator=(const zevent &source);
+    zevent(const zevent &source);
 };
 /*@}*/
 
 class zauto_lock
 {
 public:
-    zauto_lock (zlock & lock) : _lock(&lock) { _lock->lock(); }
+    zauto_lock(zlock &lock) : _lock(&lock) { _lock->lock(); }
     ~zauto_lock() { _lock->unlock(); }
 
 private:
-    zlock * _lock; 
+    zlock *_lock;
 };
 
 class zauto_read_lock
 {
 public:
-    zauto_read_lock (zrwlock_nr & lock) : _lock(&lock) { _lock->lock_read(); }
+    zauto_read_lock(zrwlock_nr &lock) : _lock(&lock) { _lock->lock_read(); }
     ~zauto_read_lock() { _lock->unlock_read(); }
 
 private:
-    zrwlock_nr * _lock; 
+    zrwlock_nr *_lock;
 };
 
 class zauto_write_lock
 {
 public:
-    zauto_write_lock (zrwlock_nr & lock) : _lock(&lock) { _lock->lock_write(); }
+    zauto_write_lock(zrwlock_nr &lock) : _lock(&lock) { _lock->lock_write(); }
     ~zauto_write_lock() { _lock->unlock_write(); }
 
 private:
-    zrwlock_nr * _lock; 
+    zrwlock_nr *_lock;
 };
-
-}} // end namespace dsn::service
+}
+} // end namespace dsn::service

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,57 +33,57 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/dist/replication.h>
-# include <string>
-# include "replication_ds.h"
+#include <dsn/dist/replication.h>
+#include <string>
+#include "replication_ds.h"
 
 using namespace ::dsn::service;
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-
-typedef std::unordered_map< ::dsn::rpc_address, partition_status::type> node_statuses;
-typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
+typedef std::unordered_map<::dsn::rpc_address, partition_status::type> node_statuses;
+typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
 class replication_options
 {
 public:
-    std::vector< ::dsn::rpc_address> meta_servers;
+    std::vector<::dsn::rpc_address> meta_servers;
 
     std::string app_name;
     std::string app_dir;
     std::string slog_dir;
     std::vector<std::string> data_dirs;
 
-    bool    deny_client_on_start;
-    bool    delay_for_fd_timeout_on_start;
-    bool    verbose_log_on_commit;
-    bool    empty_write_disabled;
+    bool deny_client_on_start;
+    bool delay_for_fd_timeout_on_start;
+    bool verbose_log_on_commit;
+    bool empty_write_disabled;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
 
-    bool    batch_write_disabled;
+    bool batch_write_disabled;
     int32_t staleness_for_commit;
     int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;
 
-    bool    group_check_disabled;
+    bool group_check_disabled;
     int32_t group_check_interval_ms;
 
-    bool    checkpoint_disabled;
+    bool checkpoint_disabled;
     int32_t checkpoint_interval_seconds;
     int64_t checkpoint_min_decree_gap;
     int32_t checkpoint_max_interval_hours;
 
-    bool    gc_disabled;
+    bool gc_disabled;
     int32_t gc_interval_ms;
     int32_t gc_memory_replica_interval_ms;
     int32_t gc_disk_error_replica_interval_seconds;
 
-    bool    fd_disabled;
+    bool fd_disabled;
     int32_t fd_check_interval_seconds;
     int32_t fd_beacon_interval_seconds;
     int32_t fd_lease_seconds;
@@ -99,9 +99,9 @@ public:
     int32_t log_shared_file_size_mb;
     int32_t log_shared_file_count_limit;
     int32_t log_shared_batch_buffer_kb;
-    bool    log_shared_force_flush;
+    bool log_shared_force_flush;
 
-    bool    config_sync_disabled;
+    bool config_sync_disabled;
     int32_t config_sync_interval_ms;
 
     int32_t lb_interval_ms;
@@ -114,6 +114,5 @@ public:
 private:
     void sanity_check();
 };
-
-
-}} // namespace
+}
+} // namespace

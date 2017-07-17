@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,53 +33,48 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/service_api_c.h>
-# include <string>
-# include <vector>
+#include <dsn/service_api_c.h>
+#include <string>
+#include <vector>
 
-namespace dsn 
+namespace dsn {
+namespace tools {
+class checker
 {
-    namespace tools 
+public:
+    checker(const char *name, dsn_app_info *info, int count) : _name(name)
     {
-        class checker
-        {
-        public:
-            checker(const char* name, dsn_app_info* info, int count)
-                : _name(name)
-            {
-                _apps.resize(count);
-                for (int i = 0; i < count; i++)
-                {
-                    _apps[i] = info[i];
-                }
-            }
+        _apps.resize(count);
+        for (int i = 0; i < count; i++) {
+            _apps[i] = info[i];
+        }
+    }
 
-            virtual void check() = 0;
+    virtual void check() = 0;
 
-            const std::string& name() const { return _name; }
+    const std::string &name() const { return _name; }
 
-        protected:
-            std::vector<dsn_app_info> _apps;
+protected:
+    std::vector<dsn_app_info> _apps;
 
-        private:
-            std::string _name;
+private:
+    std::string _name;
 
-        public:
-            template<typename T> // T : public checker
-            static void* create(const char* name, dsn_app_info* info, int count)
-            {
-                auto chker = new T(name, info, count);                
-                return dynamic_cast<checker*>(chker);
-            }
+public:
+    template <typename T> // T : public checker
+    static void *create(const char *name, dsn_app_info *info, int count)
+    {
+        auto chker = new T(name, info, count);
+        return dynamic_cast<checker *>(chker);
+    }
 
-            static void apply(void* chker)
-            {
-                checker* c = (checker*)chker;
-                c->check();
-            }
-        };
-    }    
+    static void apply(void *chker)
+    {
+        checker *c = (checker *)chker;
+        c->check();
+    }
+};
+}
 } // end namespace dsn::tools
-

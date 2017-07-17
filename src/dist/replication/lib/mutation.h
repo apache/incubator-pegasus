@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,19 +33,20 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include "../client_lib/replication_common.h"
-# include <list>
-# include <atomic>
-# include <dsn/utility/link.h>
-# include <dsn/cpp/perf_counter_.h>
+#include "../client_lib/replication_common.h"
+#include <list>
+#include <atomic>
+#include <dsn/utility/link.h>
+#include <dsn/cpp/perf_counter_.h>
 
 #ifndef __linux__
-#pragma warning(disable: 4201)
+#pragma warning(disable : 4201)
 #endif
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
 class mutation : public ref_counter
 {
@@ -54,16 +55,22 @@ public:
     virtual ~mutation();
 
     // state inquery
-    const char* name() const { return _name; }
+    const char *name() const { return _name; }
     const uint64_t tid() const { return _tid; }
     bool is_logged() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
     dsn_message_t prepare_msg() { return _prepare_request; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
-    unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
-    ::dsn::task_ptr& log_task() { return _log_task; }
-    node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
-    bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms) { return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms; }
+    unsigned int left_potential_secondary_ack_count() const
+    {
+        return _left_potential_secondary_ack_count;
+    }
+    ::dsn::task_ptr &log_task() { return _log_task; }
+    node_tasks &remote_tasks() { return _prepare_or_commit_tasks; }
+    bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms)
+    {
+        return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms;
+    }
     uint64_t create_ts_ns() const { return _create_ts_ns; }
     ballot get_ballot() const { return data.header.ballot; }
     decree get_decree() const { return data.header.decree; }
@@ -72,13 +79,23 @@ public:
     void set_id(ballot b, decree c);
     void set_timestamp(int64_t timestamp);
     void add_client_request(task_code code, dsn_message_t request);
-    void copy_from(mutation_ptr& old);
-    void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
+    void copy_from(mutation_ptr &old);
+    void set_logged()
+    {
+        dassert(!is_logged(), "");
+        _not_logged = 0;
+    }
     unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
-    unsigned int decrease_left_potential_secondary_ack_count() { return --_left_potential_secondary_ack_count; }
+    unsigned int decrease_left_potential_secondary_ack_count()
+    {
+        return --_left_potential_secondary_ack_count;
+    }
     void set_left_secondary_ack_count(unsigned int count) { _left_secondary_ack_count = count; }
-    void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
-    int  clear_prepare_or_commit_tasks();
+    void set_left_potential_secondary_ack_count(unsigned int count)
+    {
+        _left_potential_secondary_ack_count = count;
+    }
+    int clear_prepare_or_commit_tasks();
     void wait_log_task() const;
     uint64_t prepare_ts_ms() const { return _prepare_ts_ms; }
     void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
@@ -88,25 +105,26 @@ public:
 
     // read & write mutation data
     //
-    // "mutation_update.code" should be marshalled as string for cross-process compatiblity, because:
+    // "mutation_update.code" should be marshalled as string for cross-process compatiblity,
+    // because:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
-    void write_to(std::function<void(const blob&)> inserter) const;
-    void write_to(binary_writer& writer, dsn_message_t to) const;
-    static mutation_ptr read_from(binary_reader& reader, dsn_message_t from);
+    void write_to(std::function<void(const blob &)> inserter) const;
+    void write_to(binary_writer &writer, dsn_message_t to) const;
+    static mutation_ptr read_from(binary_reader &reader, dsn_message_t from);
 
-    static void write_mutation_header(binary_writer& writer, const mutation_header& header);
-    static void read_mutation_header(binary_reader& reader, mutation_header& header);
+    static void write_mutation_header(binary_writer &writer, const mutation_header &header);
+    static void read_mutation_header(binary_reader &reader, mutation_header &header);
 
     // data
-    mutation_data  data;
+    mutation_data data;
 
     // user requests
     std::vector<dsn_message_t> client_requests;
 
     // used by pending mutation queue only
-    mutation*      next;
-        
+    mutation *next;
+
 private:
     union
     {
@@ -119,14 +137,14 @@ private:
         uint32_t _private0;
     };
 
-    uint64_t        _prepare_ts_ms;
+    uint64_t _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
-    node_tasks      _prepare_or_commit_tasks;
-    dsn_message_t   _prepare_request;
-    char            _name[60]; // app_id.partition_index.ballot.decree
-    int             _appro_data_bytes;
-    uint64_t        _create_ts_ns; // for profiling
-    uint64_t        _tid; // trace id, unique in process
+    node_tasks _prepare_or_commit_tasks;
+    dsn_message_t _prepare_request;
+    char _name[60]; // app_id.partition_index.ballot.decree
+    int _appro_data_bytes;
+    uint64_t _create_ts_ns; // for profiling
+    uint64_t _tid;          // trace id, unique in process
     static std::atomic<uint64_t> s_tid;
 };
 
@@ -139,16 +157,16 @@ public:
     {
         clear();
         dassert(_hdr.is_empty(),
-            "work queue is deleted when there are still %d running ops or pending work items in queue",
-            _current_op_count
-            );
+                "work queue is deleted when there are still %d running ops or pending work items "
+                "in queue",
+                _current_op_count);
     }
 
-    mutation_ptr add_work(task_code code, dsn_message_t request, replica* r);
+    mutation_ptr add_work(task_code code, dsn_message_t request, replica *r);
 
     void clear();
     // called when you want to clear the mutation_queue and want to get the remaining messages
-    void clear(std::vector<mutation_ptr>& queued_mutations);
+    void clear(std::vector<mutation_ptr> &queued_mutations);
 
     // called when the curren operation is completed or replica configuration is change,
     // which triggers further round of operations as returned
@@ -158,29 +176,25 @@ private:
     mutation_ptr unlink_next_workload()
     {
         mutation_ptr r = _hdr.pop_one();
-        if (r.get() != nullptr)
-        {
-            r->release_ref(); // added in add_work        
+        if (r.get() != nullptr) {
+            r->release_ref(); // added in add_work
             --(*_pcount);
         }
         return r;
     }
 
-    void reset_max_concurrent_ops(int max_c)
-    {
-        _max_concurrent_op = max_c;
-    }
+    void reset_max_concurrent_ops(int max_c) { _max_concurrent_op = max_c; }
 
-private:    
-    int  _current_op_count;
-    int  _max_concurrent_op;
+private:
+    int _current_op_count;
+    int _max_concurrent_op;
     bool _batch_write_disabled;
-    
-    volatile int*   _pcount;
-    mutation_ptr    _pending_mutation;
+
+    volatile int *_pcount;
+    mutation_ptr _pending_mutation;
     slist<mutation> _hdr;
 
-    //perf_counter_  _current_op_counter;
+    // perf_counter_  _current_op_counter;
 };
 
 // ---------------------- inline implementation ----------------------------
@@ -189,21 +203,19 @@ inline void mutation::set_id(ballot b, decree c)
     data.header.ballot = b;
     data.header.decree = c;
 
-    snprintf_p(_name, sizeof(_name),
-        "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
-        data.header.pid.get_app_id(),
-        data.header.pid.get_partition_index(),
-        data.header.ballot,
-        data.header.decree);
+    snprintf_p(_name,
+               sizeof(_name),
+               "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
+               data.header.pid.get_app_id(),
+               data.header.pid.get_partition_index(),
+               data.header.ballot,
+               data.header.decree);
 }
 
-inline void mutation::set_timestamp(int64_t timestamp)
-{
-    data.header.timestamp = timestamp;
+inline void mutation::set_timestamp(int64_t timestamp) { data.header.timestamp = timestamp; }
 }
-
-}} // namespace
+} // namespace
 
 #ifndef __linux__
-#pragma warning(default: 4201)
+#pragma warning(default : 4201)
 #endif

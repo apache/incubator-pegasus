@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,20 +33,30 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/service_api_c.h>
-# include <gtest/gtest.h>
-# include <iostream>
+#include <dsn/service_api_c.h>
+#include <gtest/gtest.h>
+#include <iostream>
 
 TEST(core, logging)
 {
     dsn_log_level_t level = dsn_log_get_start_level();
     std::cout << "logging start level = " << level << std::endl;
-    dsn_logf(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "test logging", "in TEST(core, logging)");
+    dsn_logf(__FILE__,
+             __FUNCTION__,
+             __LINE__,
+             dsn_log_level_t::LOG_LEVEL_DEBUG,
+             "test logging",
+             "in TEST(core, logging)");
     dsn_log(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "test logging");
 }
 
 TEST(core, logging_big_log)
 {
     std::string big_str(128000, 'x');
-    dsn_logf(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "write big str %s", big_str.c_str());
+    dsn_logf(__FILE__,
+             __FUNCTION__,
+             __LINE__,
+             dsn_log_level_t::LOG_LEVEL_DEBUG,
+             "write big str %s",
+             big_str.c_str());
 }

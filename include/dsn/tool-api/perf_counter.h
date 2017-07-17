@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,15 +33,15 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/utility/enum_helper.h>
-# include <dsn/utility/autoref_ptr.h>
-# include <dsn/utility/dlib.h>
-# include <dsn/service_api_c.h>
-# include <memory>
-# include <sstream>
-# include <vector>
+#include <dsn/utility/enum_helper.h>
+#include <dsn/utility/autoref_ptr.h>
+#include <dsn/utility/dlib.h>
+#include <dsn/service_api_c.h>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 namespace dsn {
 
@@ -50,17 +50,17 @@ namespace dsn {
 @{
 */
 ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
-    ENUM_REG(COUNTER_TYPE_NUMBER)
-    ENUM_REG(COUNTER_TYPE_RATE)
-    ENUM_REG(COUNTER_TYPE_NUMBER_PERCENTILES)
+ENUM_REG(COUNTER_TYPE_NUMBER)
+ENUM_REG(COUNTER_TYPE_RATE)
+ENUM_REG(COUNTER_TYPE_NUMBER_PERCENTILES)
 ENUM_END(dsn_perf_counter_type_t)
 
 ENUM_BEGIN(dsn_perf_counter_percentile_type_t, COUNTER_PERCENTILE_INVALID)
-    ENUM_REG(COUNTER_PERCENTILE_50)
-    ENUM_REG(COUNTER_PERCENTILE_90)
-    ENUM_REG(COUNTER_PERCENTILE_95)
-    ENUM_REG(COUNTER_PERCENTILE_99)
-    ENUM_REG(COUNTER_PERCENTILE_999)
+ENUM_REG(COUNTER_PERCENTILE_50)
+ENUM_REG(COUNTER_PERCENTILE_90)
+ENUM_REG(COUNTER_PERCENTILE_95)
+ENUM_REG(COUNTER_PERCENTILE_99)
+ENUM_REG(COUNTER_PERCENTILE_999)
 ENUM_END(dsn_perf_counter_percentile_type_t)
 
 class perf_counter;
@@ -69,27 +69,35 @@ typedef ref_ptr<perf_counter> perf_counter_ptr;
 class perf_counter : public ref_counter
 {
 public:
-    template <typename T> static perf_counter* create(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+    template <typename T>
+    static perf_counter *create(const char *app,
+                                const char *section,
+                                const char *name,
+                                dsn_perf_counter_type_t type,
+                                const char *dsptr)
     {
         return new T(app, section, name, type, dsptr);
     }
 
-    typedef perf_counter* (*factory)(const char*, const char *, const char *, dsn_perf_counter_type_t, const char *);
+    typedef perf_counter *(*factory)(
+        const char *, const char *, const char *, dsn_perf_counter_type_t, const char *);
 
 public:
-    DSN_API static perf_counter_ptr get_counter(
-        const char* app,
-        const char *section,
-        const char *name,
-        dsn_perf_counter_type_t flags,
-        const char *dsptr,
-        bool create_if_not_exist = false
-    );
+    DSN_API static perf_counter_ptr get_counter(const char *app,
+                                                const char *section,
+                                                const char *name,
+                                                dsn_perf_counter_type_t flags,
+                                                const char *dsptr,
+                                                bool create_if_not_exist = false);
 
-    DSN_API static bool remove_counter(const char* full_name);
+    DSN_API static bool remove_counter(const char *full_name);
 
 public:
-    perf_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
+    perf_counter(const char *app,
+                 const char *section,
+                 const char *name,
+                 dsn_perf_counter_type_t type,
+                 const char *dsptr)
         : _app(app), _section(section), _name(name), _dsptr(dsptr), _type(type)
     {
         build_full_name(app, section, name, _full_name);
@@ -97,31 +105,37 @@ public:
 
     virtual ~perf_counter(void) {}
 
-    virtual void   increment() = 0;
-    virtual void   decrement() = 0;
-    virtual void   add(uint64_t val) = 0;
-    virtual void   set(uint64_t val) = 0;
+    virtual void increment() = 0;
+    virtual void decrement() = 0;
+    virtual void add(uint64_t val) = 0;
+    virtual void set(uint64_t val) = 0;
     virtual double get_value() = 0;
     virtual uint64_t get_integer_value() = 0;
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
 
-    typedef std::vector<std::pair<uint64_t*, int> > samples_t;
+    typedef std::vector<std::pair<uint64_t *, int>> samples_t;
 
     // return actual sample count, must <= required_sample_count
-    virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const { return 0; }
+    virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t &samples) const
+    {
+        return 0;
+    }
 
     // return the latest sample value
     virtual uint64_t get_latest_sample() const { return 0; }
 
-    const char* full_name() const { return _full_name.c_str(); }
-    const char* app() const { return _app.c_str(); }
-    const char* section() const { return _section.c_str(); }
-    const char* name() const { return _name.c_str(); }    
-    const char* dsptr() const { return _dsptr.c_str(); }
+    const char *full_name() const { return _full_name.c_str(); }
+    const char *app() const { return _app.c_str(); }
+    const char *section() const { return _section.c_str(); }
+    const char *name() const { return _name.c_str(); }
+    const char *dsptr() const { return _dsptr.c_str(); }
     dsn_perf_counter_type_t type() const { return _type; }
 
 public:
-    static void build_full_name(const char* app, const char* section, const char* name, /*out*/ std::string& counter_name)
+    static void build_full_name(const char *app,
+                                const char *section,
+                                const char *name,
+                                /*out*/ std::string &counter_name)
     {
         std::stringstream ss;
         ss << app << "*" << section << "*" << name;

@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,34 +33,34 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool/simulator.h>
-# include <dsn/service_api_c.h>
-# include <dsn/tool/node_scoper.h>
-# include "scheduler.h"
-# include "env.sim.h"
-# include <set>
+#include <dsn/tool/simulator.h>
+#include <dsn/service_api_c.h>
+#include <dsn/tool/node_scoper.h>
+#include "scheduler.h"
+#include "env.sim.h"
+#include <set>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "simulator"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "simulator"
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
-void event_wheel::add_event(uint64_t ts, task* t)
+void event_wheel::add_event(uint64_t ts, task *t)
 {
-    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<event_entry>* evts;
+    std::vector<event_entry> *evts;
     auto itr = _events.find(ts);
     if (itr != _events.end())
         evts = itr->second;
-    else
-    {
+    else {
         evts = new std::vector<event_entry>();
         _events.insert(std::make_pair(ts, evts));
     }
-    
+
     event_entry entry;
     entry.app_task = t;
     evts->push_back(entry);
@@ -68,14 +68,13 @@ void event_wheel::add_event(uint64_t ts, task* t)
 
 void event_wheel::add_system_event(uint64_t ts, std::function<void()> t)
 {
-    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<event_entry>* evts;
+    std::vector<event_entry> *evts;
     auto itr = _events.find(ts);
     if (itr != _events.end())
         evts = itr->second;
-    else
-    {
+    else {
         evts = new std::vector<event_entry>();
         _events.insert(std::make_pair(ts, evts));
     }
@@ -86,13 +85,13 @@ void event_wheel::add_system_event(uint64_t ts, std::function<void()> t)
     evts->push_back(entry);
 }
 
-std::vector<event_entry>* event_wheel::pop_next_events(/*out*/ uint64_t& ts)
+std::vector<event_entry> *event_wheel::pop_next_events(/*out*/ uint64_t &ts)
 {
-    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<event_entry>* evts = NULL;
+    std::vector<event_entry> *evts = NULL;
     auto itr = _events.begin();
-    if (itr != _events.end()){
+    if (itr != _events.end()) {
         evts = itr->second;
         ts = itr->first;
         _events.erase(itr);
@@ -102,7 +101,7 @@ std::vector<event_entry>* event_wheel::pop_next_events(/*out*/ uint64_t& ts)
 
 void event_wheel::clear()
 {
-    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     _events.clear();
 }
 
@@ -117,72 +116,64 @@ scheduler::scheduler(void)
     _running_thread = nullptr;
     task_worker::on_create.put_back(on_task_worker_create, "simulation.on_task_worker_create");
     task_worker::on_start.put_back(on_task_worker_start, "simulation.on_task_worker_start");
-        
-    for (int i = 0; i <= dsn_task_code_max(); i++)
-    {
-        task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait, "simulation.on_task_wait");
-        task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified, "simulation.on_task_wait_notified");
+
+    for (int i = 0; i <= dsn_task_code_max(); i++) {
+        task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait,
+                                                     "simulation.on_task_wait");
+        task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified,
+                                                          "simulation.on_task_wait_notified");
     }
 
     task_ext::register_ext(task_state_ext::deletor);
     task_worker_ext::register_ext(sim_worker_state::deletor);
 }
 
-scheduler::~scheduler(void)
-{
-}
+scheduler::~scheduler(void) {}
 
-
-/*static*/ void scheduler::on_task_worker_start(task_worker* worker)
+/*static*/ void scheduler::on_task_worker_start(task_worker *worker)
 {
-    while (!scheduler::instance()._running)
-    {
+    while (!scheduler::instance()._running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
-/*static*/ void scheduler::on_task_worker_create(task_worker* worker)
+/*static*/ void scheduler::on_task_worker_create(task_worker *worker)
 {
-    auto s = task_worker_ext::get_inited(worker);    
+    auto s = task_worker_ext::get_inited(worker);
     s->worker = worker;
     s->first_time_schedule = true;
     s->in_continuation = false;
-    s->index = static_cast<int>(scheduler::instance()._threads.size());    
+    s->index = static_cast<int>(scheduler::instance()._threads.size());
     scheduler::instance()._threads.push_back(s);
 }
 
-/*static*/ void scheduler::on_task_wait(task* waitor, task* waitee, uint32_t timeout_milliseconds)
+/*static*/ void scheduler::on_task_wait(task *waitor, task *waitee, uint32_t timeout_milliseconds)
 {
     if (waitor == nullptr)
         return;
-    
-    if (waitee->state() < task_state::TASK_STATE_FINISHED)
-    {
+
+    if (waitee->state() < task_state::TASK_STATE_FINISHED) {
         auto ts = task_ext::get_inited(waitee);
         auto wks = task_worker_ext::get(task::get_current_worker());
         ts->wait_threads.push_back(wks);
 
         scheduler::instance().wait_schedule(true, false);
-    }
-    else
-    {
+    } else {
         scheduler::instance().wait_schedule(true, true);
     }
 }
 
-/*static*/ void scheduler::on_task_wait_notified(task* task)
+/*static*/ void scheduler::on_task_wait_notified(task *task)
 {
     auto ts = task_ext::get(task);
-    if (ts != nullptr)
-    {
-        for (auto& w : ts->wait_threads)
-        {
+    if (ts != nullptr) {
+        for (auto &w : ts->wait_threads) {
             w->is_continuation_ready = true;
         }
     }
 }
 
-void scheduler::add_task(task* tsk, task_queue* q)
+void scheduler::add_task(task *tsk, task_queue *q)
 {
     auto ts = task_ext::get_inited(tsk);
     ts->queue = q;
@@ -202,8 +193,7 @@ void scheduler::start()
     // init all checkers
     dsn_app_info apps[DSN_MAX_APP_COUNT_IN_SAME_PROCESS]; // maximum apps
     int count = dsn_get_all_apps(apps, DSN_MAX_APP_COUNT_IN_SAME_PROCESS);
-    for (auto& c : _checkers)
-    {
+    for (auto &c : _checkers) {
         c->checker_ptr = c->create(c->name.c_str(), apps, count);
     }
 
@@ -211,7 +201,7 @@ void scheduler::start()
     _running = true;
 }
 
-void scheduler::add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+void scheduler::add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply)
 {
     auto chker = new checker_info();
     chker->name = name;
@@ -224,8 +214,7 @@ void scheduler::add_checker(const char* name, dsn_checker_create create, dsn_che
 
 void scheduler::check()
 {
-    for (auto& c : _checkers)
-    {
+    for (auto &c : _checkers) {
         if (c->checker_ptr != nullptr)
             c->apply(c->checker_ptr);
     }
@@ -237,14 +226,11 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
     s->in_continuation = in_continue;
     s->is_continuation_ready = is_continue_ready;
 
-    if (s->first_time_schedule)
-    {
+    if (s->first_time_schedule) {
         s->first_time_schedule = false;
         if (s->index == 0)
             schedule();
-    }
-    else
-    {
+    } else {
         schedule();
     }
     s->runnable.wait();
@@ -256,26 +242,21 @@ void scheduler::schedule()
 
     check(); // check before schedule
 
-    while (true)
-    {
+    while (true) {
         // run ready workers whenever possible
         std::vector<int> ready_workers;
-        for (auto& s : _threads)
-        {
-            if ((s->in_continuation && s->is_continuation_ready)
-                || (!s->in_continuation && s->worker->queue()->count() > 0)
-                )
-            {
+        for (auto &s : _threads) {
+            if ((s->in_continuation && s->is_continuation_ready) ||
+                (!s->in_continuation && s->worker->queue()->count() > 0)) {
                 ready_workers.push_back(s->index);
             }
         }
 
-        if (ready_workers.size() > 0)
-        {
+        if (ready_workers.size() > 0) {
             int i = dsn_random32(0, (uint32_t)ready_workers.size() - 1);
             _running_thread = _threads[ready_workers[i]];
             _running_thread->runnable.release();
-            
+
             _is_scheduling = false;
             return;
         }
@@ -283,21 +264,19 @@ void scheduler::schedule()
         // otherwise, run the timed tasks
         uint64_t ts = 0;
         auto events = _wheel.pop_next_events(ts);
-        if (events)
-        {
+        if (events) {
             {
-                utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+                utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
                 _time_ns = ts;
             }
 
             // randomize the events, and see
-            std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn_random32(0, n - 1); });
+            std::random_shuffle(
+                events->begin(), events->end(), [](int n) { return dsn_random32(0, n - 1); });
 
-            for (auto e : *events)
-            {
-                if (e.app_task != nullptr)
-                {
-                    task* t = e.app_task;
+            for (auto e : *events) {
+                if (e.app_task != nullptr) {
+                    task *t = e.app_task;
 
                     {
                         node_scoper ns(t->node());
@@ -305,9 +284,7 @@ void scheduler::schedule()
                     }
 
                     t->release_ref(); // added by previous t->enqueue from app
-                }
-                else
-                {
+                } else {
                     dassert(e.system_task != nullptr, "app and system tasks cannot be both empty");
                     e.system_task();
                 }
@@ -323,6 +300,5 @@ void scheduler::schedule()
 
     _is_scheduling = false;
 }
-
-
-}} // end namespace
+}
+} // end namespace

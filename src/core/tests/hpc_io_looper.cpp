@@ -53,32 +53,33 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER_2);
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_2, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER_2);
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
-# ifdef __linux__
+#ifdef __linux__
 
-# include <sys/eventfd.h>
-# include <libaio.h>
+#include <sys/eventfd.h>
+#include <libaio.h>
 
-namespace dsn{
-namespace test{
-    class io_looper_for_test : public dsn::tools::io_looper
+namespace dsn {
+namespace test {
+class io_looper_for_test : public dsn::tools::io_looper
+{
+public:
+    io_looper_for_test() : io_looper() {}
+    virtual ~io_looper_for_test() {}
+public:
+    virtual bool is_shared_timer_queue() override
     {
-    public:
-        io_looper_for_test() : io_looper(){}
-        virtual ~io_looper_for_test(){}
-    public:
-        virtual bool is_shared_timer_queue() override
-        {
-            if(io_looper::is_shared_timer_queue())
-                return false;
-            else
-                return true;
-        }
-    };
-}}
+        if (io_looper::is_shared_timer_queue())
+            return false;
+        else
+            return true;
+    }
+};
+}
+}
 
 TEST(tools_hpc, io_looper)
 {
-    dsn::test::io_looper_for_test* io_looper = new dsn::test::io_looper_for_test();
+    dsn::test::io_looper_for_test *io_looper = new dsn::test::io_looper_for_test();
     io_looper->start(::dsn::task::get_current_node(), 1);
     EXPECT_FALSE(io_looper->is_shared_timer_queue());
 
@@ -89,52 +90,48 @@ TEST(tools_hpc, io_looper)
     auto ret = io_setup(128, &ctx); // 128 concurrent events
     EXPECT_TRUE(ret == 0);
 
-    utils::notify_event* evt = new utils::notify_event();
-    dsn::tools::io_loop_callback callback = [ctx, event_fd, evt](
-            int native_error,
-            uint32_t io_size,
-            uintptr_t lolp_or_events
-            )
-    {
-        int64_t finished_aio = 0;
+    utils::notify_event *evt = new utils::notify_event();
+    dsn::tools::io_loop_callback callback =
+        [ctx, event_fd, evt](int native_error, uint32_t io_size, uintptr_t lolp_or_events) {
+            int64_t finished_aio = 0;
 
-        if (read(event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                return;
-            dassert(false, "read number of aio completion from eventfd failed, err = %s",
-                strerror(errno)
-                );
-        }
-        EXPECT_EQ(1, finished_aio);
+            if (read(event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio)) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    return;
+                dassert(false,
+                        "read number of aio completion from eventfd failed, err = %s",
+                        strerror(errno));
+            }
+            EXPECT_EQ(1, finished_aio);
 
-        struct io_event events[1];
-        int ret;
+            struct io_event events[1];
+            int ret;
 
-        struct timespec tms;
-        tms.tv_sec = 0;
-        tms.tv_nsec = 0;
+            struct timespec tms;
+            tms.tv_sec = 0;
+            tms.tv_nsec = 0;
 
-        ret = io_getevents(ctx, 1, 1, events, &tms);
-        EXPECT_EQ(1, ret);
-        EXPECT_EQ(0, static_cast<int>(events[0].res2));
-        EXPECT_EQ(10, static_cast<int>(events[0].res));
-        evt->notify();
-    };
+            ret = io_getevents(ctx, 1, 1, events, &tms);
+            EXPECT_EQ(1, ret);
+            EXPECT_EQ(0, static_cast<int>(events[0].res2));
+            EXPECT_EQ(10, static_cast<int>(events[0].res));
+            evt->notify();
+        };
 
-    auto err = io_looper->bind_io_handle((dsn_handle_t)(intptr_t)event_fd, &callback, EPOLLIN | EPOLLET);
+    auto err =
+        io_looper->bind_io_handle((dsn_handle_t)(intptr_t)event_fd, &callback, EPOLLIN | EPOLLET);
     EXPECT_EQ(ERR_OK, err);
 
     std::remove("test_io_looper.tmp"); // delete file
     std::ofstream myfile;
-    myfile.open ("test_io_looper.tmp");
+    myfile.open("test_io_looper.tmp");
     myfile << "abcdefghi$";
     myfile.close();
     int fd = ::open("test_io_looper.tmp", O_RDWR, 0666);
     char buffer[11];
     memset(buffer, 0, sizeof(buffer));
 
-    struct iocb* cb = new iocb;
+    struct iocb *cb = new iocb;
     memset(cb, 0, sizeof(iocb));
     io_prep_pread(cb, fd, buffer, 10, 0);
     io_set_eventfd(cb, event_fd);
@@ -152,24 +149,25 @@ TEST(tools_hpc, io_looper)
     delete evt;
 }
 
-void timer_callback(void* param)
+void timer_callback(void *param)
 {
-    int* a = (int*)param;
+    int *a = (int *)param;
     EXPECT_EQ(1, *a);
     *a = 2;
 }
 
 TEST(tools_hpc, io_looper_timer)
 {
-    if(dsn::service_engine::fast_instance().spec().semaphore_factory_name == "dsn::tools::sim_semaphore_provider")
+    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+        "dsn::tools::sim_semaphore_provider")
         return;
 
-    dsn::test::io_looper_for_test* io_looper = new dsn::test::io_looper_for_test();
+    dsn::test::io_looper_for_test *io_looper = new dsn::test::io_looper_for_test();
     io_looper->start(::dsn::task::get_current_node(), 1);
 
-    int* a = new int;
+    int *a = new int;
     *a = 1;
-    dsn::task_c* t = new dsn::task_c(LPC_AIO_TEST, timer_callback, a, nullptr);
+    dsn::task_c *t = new dsn::task_c(LPC_AIO_TEST, timer_callback, a, nullptr);
     t->add_ref();
 
     t->set_delay(1000);
@@ -185,4 +183,4 @@ TEST(tools_hpc, io_looper_timer)
     delete io_looper;
 }
 
-# endif // ifdef __linux__
+#endif // ifdef __linux__

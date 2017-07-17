@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,18 +36,15 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
 namespace dsn {
-    namespace tools {
+namespace tools {
 
-        perf_counter* simple_perf_counter_v2_atomic_factory(
-            const char* app, 
-            const char *section, 
-            const char *name, 
-            dsn_perf_counter_type_t type,
-            const char *dsptr
-            );
-    }
+perf_counter *simple_perf_counter_v2_atomic_factory(const char *app,
+                                                    const char *section,
+                                                    const char *name,
+                                                    dsn_perf_counter_type_t type,
+                                                    const char *dsptr);
 }
-
+}

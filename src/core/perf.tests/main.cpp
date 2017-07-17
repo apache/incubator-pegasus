@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,30 +33,29 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <iostream>
-# include "gtest/gtest.h"
-# include "test_utils.h"
+#include <iostream>
+#include "gtest/gtest.h"
+#include "test_utils.h"
 
 int g_test_count = 0;
 
-GTEST_API_ int main(int argc, char **argv) 
+GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    
+
     // register all possible services
     dsn::register_app<test_client>("test");
-    
+
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, false);
 
     // run in-rDSN tests
-    while (g_test_count == 0)
-    {
+    while (g_test_count == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    
+
     // exit without any destruction
     dsn_exit(0);
 
-    return 0;    
+    return 0;
 }

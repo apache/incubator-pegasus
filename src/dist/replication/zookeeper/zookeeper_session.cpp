@@ -43,15 +43,16 @@
 
 #define __TITLE__ "zookeeper_session"
 
-namespace dsn { namespace dist{
+namespace dsn {
+namespace dist {
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
     _capacity = size;
     _count = 0;
 
-    _ops = (zoo_op_t*)malloc(sizeof(zoo_op_t)*size);
-    _results = (zoo_op_result_t*)malloc(sizeof(zoo_op_result_t)*size);
+    _ops = (zoo_op_t *)malloc(sizeof(zoo_op_t) * size);
+    _results = (zoo_op_result_t *)malloc(sizeof(zoo_op_result_t) * size);
 
     _paths.resize(size);
     _datas.resize(size);
@@ -59,7 +60,7 @@ zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 
 zookeeper_session::zoo_atomic_packet::~zoo_atomic_packet()
 {
-    for (int i=0; i<_count; ++i) {
+    for (int i = 0; i < _count; ++i) {
         if (_ops[i].type == ZOO_CREATE_OP)
             free(_ops[i].create_op.buf);
         else if (_ops[i].type == ZOO_SETDATA_OP)
@@ -69,13 +70,14 @@ zookeeper_session::zoo_atomic_packet::~zoo_atomic_packet()
     free(_results);
 }
 
-char* zookeeper_session::zoo_atomic_packet::alloc_buffer(int buffer_length)
+char *zookeeper_session::zoo_atomic_packet::alloc_buffer(int buffer_length)
 {
-    return (char*)malloc(buffer_length);
+    return (char *)malloc(buffer_length);
 }
 
 /*static*/
-const char* zookeeper_session::string_zoo_operation(ZOO_OPERATION op) {
+const char *zookeeper_session::string_zoo_operation(ZOO_OPERATION op)
+{
     switch (op) {
     case ZOO_CREATE:
         return "zoo_create";
@@ -99,25 +101,25 @@ const char* zookeeper_session::string_zoo_operation(ZOO_OPERATION op) {
 }
 
 /*static*/
-const char* zookeeper_session::string_zoo_event(int zoo_event)
+const char *zookeeper_session::string_zoo_event(int zoo_event)
 {
-    if (ZOO_SESSION_EVENT==zoo_event)
+    if (ZOO_SESSION_EVENT == zoo_event)
         return "session event";
-    if (ZOO_CREATED_EVENT==zoo_event)
+    if (ZOO_CREATED_EVENT == zoo_event)
         return "created event";
-    if (ZOO_DELETED_EVENT==zoo_event)
+    if (ZOO_DELETED_EVENT == zoo_event)
         return "deleted event";
-    if (ZOO_CHANGED_EVENT==zoo_event)
+    if (ZOO_CHANGED_EVENT == zoo_event)
         return "changed event";
-    if (ZOO_CHILD_EVENT==zoo_event)
+    if (ZOO_CHILD_EVENT == zoo_event)
         return "child event";
-    if (ZOO_NOTWATCHING_EVENT==zoo_event)
+    if (ZOO_NOTWATCHING_EVENT == zoo_event)
         return "notwatching event";
     return "invalid event";
 }
 
 /*static*/
-const char* zookeeper_session::string_zoo_state(int zoo_state)
+const char *zookeeper_session::string_zoo_state(int zoo_state)
 {
     if (ZOO_CONNECTED_STATE == zoo_state)
         return "connected_state";
@@ -134,31 +136,20 @@ const char* zookeeper_session::string_zoo_state(int zoo_state)
     return "invalid_state";
 }
 
-zookeeper_session::~zookeeper_session()
-{
+zookeeper_session::~zookeeper_session() {}
 
-}
+zookeeper_session::zookeeper_session(dsn_app_info *node) : _handle(nullptr) { _srv_node = *node; }
 
-zookeeper_session::zookeeper_session(dsn_app_info* node):
-    _handle(nullptr)
-{
-    _srv_node = *node;
-}
-
-int zookeeper_session::attach(
-    void *callback_owner,
-    const state_callback &cb)
+int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
     utils::auto_write_lock l(_watcher_lock);
-    if (nullptr == _handle)
-    {
-        _handle = zookeeper_init(
-            zookeeper_session_mgr::instance().zoo_hosts(),
-            global_watcher,
-            zookeeper_session_mgr::instance().timeout(),
-            nullptr,
-            this,
-            0);
+    if (nullptr == _handle) {
+        _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
+                                 global_watcher,
+                                 zookeeper_session_mgr::instance().timeout(),
+                                 nullptr,
+                                 this,
+                                 0);
         dassert(_handle != nullptr, "zookeeper session init failed");
     }
 
@@ -173,10 +164,12 @@ int zookeeper_session::attach(
 void zookeeper_session::detach(void *callback_owner)
 {
     utils::auto_write_lock l(_watcher_lock);
-    _watchers.remove_if( [callback_owner](const watcher_object& obj) { return obj.callback_owner==callback_owner; } );
+    _watchers.remove_if([callback_owner](const watcher_object &obj) {
+        return obj.callback_owner == callback_owner;
+    });
 }
 
-void zookeeper_session::dispatch_event(int type, int zstate, const char* path)
+void zookeeper_session::dispatch_event(int type, int zstate, const char *path)
 {
     {
         utils::auto_read_lock l(_watcher_lock);
@@ -184,17 +177,17 @@ void zookeeper_session::dispatch_event(int type, int zstate, const char* path)
         if (ZOO_SESSION_EVENT == ret_code)
             ret_code = zstate;
 
-        std::for_each(_watchers.begin(), _watchers.end(), [path, ret_code](const watcher_object& obj){
-            if (obj.watcher_path == path)
-                obj.watcher_callback(ret_code);
-        });
+        std::for_each(
+            _watchers.begin(), _watchers.end(), [path, ret_code](const watcher_object &obj) {
+                if (obj.watcher_path == path)
+                    obj.watcher_callback(ret_code);
+            });
     }
     {
         if (ZOO_SESSION_EVENT != type) {
             utils::auto_write_lock l(_watcher_lock);
-            _watchers.remove_if([path](const watcher_object& obj) {
-                return obj.watcher_path == path;
-            } );
+            _watchers.remove_if(
+                [path](const watcher_object &obj) { return obj.watcher_path == path; });
         }
     }
 }
@@ -203,7 +196,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
 {
     ctx->_priv_session_ref = this;
 
-    if ( zoo_state(_handle) != ZOO_CONNECTED_STATE ) {
+    if (zoo_state(_handle) != ZOO_CONNECTED_STATE) {
         ctx->_output.error = ZINVALIDSTATE;
         ctx->_callback_function(ctx);
         release_ref(ctx);
@@ -213,84 +206,63 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     auto add_watch_object = [this, ctx]() {
         utils::auto_write_lock l(_watcher_lock);
         _watchers.push_back(watcher_object());
-        _watchers.back().watcher_path =ctx->_input._path;
-        _watchers.back().callback_owner =ctx->_input._owner;
+        _watchers.back().watcher_path = ctx->_input._path;
+        _watchers.back().callback_owner = ctx->_input._owner;
         _watchers.back().watcher_callback = std::move(ctx->_input._watcher_callback);
     };
 
-    //TODO: the read ops from zookeeper might get the staled data, need to fix
+    // TODO: the read ops from zookeeper might get the staled data, need to fix
     int ec;
-    zoo_input& input = ctx->_input;
-    const char* path = input._path.c_str();
-    switch (ctx->_optype)
-    {
+    zoo_input &input = ctx->_input;
+    const char *path = input._path.c_str();
+    switch (ctx->_optype) {
     case ZOO_CREATE:
-        ec = zoo_acreate(
-            _handle, 
-            path, 
-            input._value.data(), 
-            input._value.length(),
-            &ZOO_OPEN_ACL_UNSAFE, 
-            ctx->_input._flags, 
-            global_string_completion,
-            (const void*)ctx);
+        ec = zoo_acreate(_handle,
+                         path,
+                         input._value.data(),
+                         input._value.length(),
+                         &ZOO_OPEN_ACL_UNSAFE,
+                         ctx->_input._flags,
+                         global_string_completion,
+                         (const void *)ctx);
         break;
     case ZOO_DELETE:
-        ec = zoo_adelete(
-            _handle, 
-            path, 
-            -1,
-            global_void_completion, 
-            (const void*)ctx);
+        ec = zoo_adelete(_handle, path, -1, global_void_completion, (const void *)ctx);
         break;
     case ZOO_EXISTS:
         if (1 == input._is_set_watch)
             add_watch_object();
         ec = zoo_aexists(
-            _handle,
-            path,
-            input._is_set_watch,
-            global_state_completion,
-            (const void*)ctx);
+            _handle, path, input._is_set_watch, global_state_completion, (const void *)ctx);
         break;
     case ZOO_GET:
         if (1 == input._is_set_watch)
             add_watch_object();
-        ec = zoo_aget(
-            _handle, 
-            path, 
-            input._is_set_watch,
-            global_data_completion,
-            (const void*)ctx);
+        ec =
+            zoo_aget(_handle, path, input._is_set_watch, global_data_completion, (const void *)ctx);
         break;
     case ZOO_SET:
-        ec = zoo_aset(
-            _handle, 
-            path, 
-            input._value.data(),
-            input._value.length(),
-            -1,
-            global_state_completion,
-            (const void*)ctx);
+        ec = zoo_aset(_handle,
+                      path,
+                      input._value.data(),
+                      input._value.length(),
+                      -1,
+                      global_state_completion,
+                      (const void *)ctx);
         break;
     case ZOO_GETCHILDREN:
         if (1 == input._is_set_watch)
             add_watch_object();
         ec = zoo_aget_children(
-            _handle,
-            path,
-            input._is_set_watch,
-            global_strings_completion,
-            (const void*)ctx);
+            _handle, path, input._is_set_watch, global_strings_completion, (const void *)ctx);
         break;
     case ZOO_TRANSACTION:
-        ec = zoo_amulti(
-            _handle,
-            input._pkt->_count,
-            input._pkt->_ops,
-            input._pkt->_results,
-            global_void_completion,
-            (const void*)ctx);
+        ec = zoo_amulti(_handle,
+                        input._pkt->_count,
+                        input._pkt->_ops,
+                        input._pkt->_results,
+                        global_void_completion,
+                        (const void *)ctx);
         break;
     default:
         break;
@@ -306,7 +278,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
 void zookeeper_session::init_non_dsn_thread()
 {
     static __thread int dsn_context_init = 0;
-    if ( dsn_context_init == 0) {
+    if (dsn_context_init == 0) {
         dsn_mimic_app(_srv_node.role, _srv_node.index);
         dsn_context_init = 1;
     }
@@ -316,36 +288,38 @@ void zookeeper_session::init_non_dsn_thread()
  * the following static functions are in zookeeper threads,
  */
 /* static */
-void zookeeper_session::global_watcher(zhandle_t *handle, int type, int state, const char *path, void *ctx)
+void zookeeper_session::global_watcher(
+    zhandle_t *handle, int type, int state, const char *path, void *ctx)
 {
-    zookeeper_session* zoo_session = (zookeeper_session*)ctx;
+    zookeeper_session *zoo_session = (zookeeper_session *)ctx;
     zoo_session->init_non_dsn_thread();
     ddebug("global watcher, type(%s), state(%s)", string_zoo_event(type), string_zoo_state(state));
-    if (type!=ZOO_SESSION_EVENT && path!=nullptr)
+    if (type != ZOO_SESSION_EVENT && path != nullptr)
         ddebug("watcher path: %s", path);
 
     dassert(zoo_session->_handle == handle, "");
-    zoo_session->dispatch_event(type, state, type==ZOO_SESSION_EVENT?"":path);
+    zoo_session->dispatch_event(type, state, type == ZOO_SESSION_EVENT ? "" : path);
 }
 
-#define COMPLETION_INIT(rc, data) \
-    zoo_opcontext* op_ctx = (zoo_opcontext*)data;\
-    op_ctx->_priv_session_ref->init_non_dsn_thread();\
-    zoo_output& output = op_ctx->_output;\
+#define COMPLETION_INIT(rc, data)                                                                  \
+    zoo_opcontext *op_ctx = (zoo_opcontext *)data;                                                 \
+    op_ctx->_priv_session_ref->init_non_dsn_thread();                                              \
+    zoo_output &output = op_ctx->_output;                                                          \
     output.error = rc
 /* static */
 void zookeeper_session::global_string_completion(int rc, const char *name, const void *data)
 {
     COMPLETION_INIT(rc, data);
     dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
-    if (ZOK == rc && name!=nullptr)
+    if (ZOK == rc && name != nullptr)
         dinfo("created path:%s", name);
     output.create_op._created_path = name;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }
 /* static */
-void zookeeper_session::global_data_completion(int rc, const char *value, int value_length, const Stat*, const void *data)
+void zookeeper_session::global_data_completion(
+    int rc, const char *value, int value_length, const Stat *, const void *data)
 {
     COMPLETION_INIT(rc, data);
     dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
@@ -362,19 +336,20 @@ void zookeeper_session::global_state_completion(int rc, const Stat *stat, const 
     if (op_ctx->_optype == ZOO_EXISTS) {
         output.exists_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
-    }
-    else {
+    } else {
         output.set_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
     }
     release_ref(op_ctx);
 }
 /* static */
-void zookeeper_session::global_strings_completion(int rc, const String_vector *strings, const void *data)
+void zookeeper_session::global_strings_completion(int rc,
+                                                  const String_vector *strings,
+                                                  const void *data)
 {
     COMPLETION_INIT(rc, data);
     dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
-    if (rc==ZOK && strings!=nullptr)
+    if (rc == ZOK && strings != nullptr)
         dinfo("child count: %d", strings->count);
     output.getchildren_op.strings = strings;
     op_ctx->_callback_function(op_ctx);
@@ -387,8 +362,9 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
     if (op_ctx->_optype == ZOO_DELETE)
         dinfo("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
     else
-        dinfo("rc(%s)", zerror(rc));    op_ctx->_callback_function(op_ctx);
+        dinfo("rc(%s)", zerror(rc));
+    op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }
-
-}}
+}
+}

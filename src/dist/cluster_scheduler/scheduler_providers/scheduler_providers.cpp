@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,40 +30,32 @@
  *
  * Revision history:
  *     2016-1-15, Guoxi Li(goksyli1990@gmail.com), first version
- *   
+ *
  */
 #include "scheduler_providers.h"
 #include <dsn/utility/factory_store.h>
 
 namespace dsn {
-    namespace dist {
+namespace dist {
 
-        static bool register_component_provider(
-                const char * name,
-                ::dsn::dist::cluster_scheduler::factory f)
-        {
-            return dsn::utils::factory_store< ::dsn::dist::cluster_scheduler>::register_factory(
-                    name,
-                    f,
-                    PROVIDER_TYPE_MAIN);
-        }
-        void register_cluster_scheduler_providers()
-        {
+static bool register_component_provider(const char *name, ::dsn::dist::cluster_scheduler::factory f)
+{
+    return dsn::utils::factory_store<::dsn::dist::cluster_scheduler>::register_factory(
+        name, f, PROVIDER_TYPE_MAIN);
+}
+void register_cluster_scheduler_providers()
+{
 
-            // register all cluster provider
-            register_component_provider(
-                    "dsn::dist::kubernetes_cluster_scheduler",
-                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::kubernetes_cluster_scheduler>
-                    );
-            register_component_provider(
-                    "dsn::dist::docker_scheduler",
-                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::docker_scheduler>
-                    );
-            register_component_provider(
-                    "dsn::dist::windows_cluster_scheduler",
-                    ::dsn::dist::cluster_scheduler::create< ::dsn::dist::windows_cluster_scheduler>
-            );
-        }
-
-    }
+    // register all cluster provider
+    register_component_provider(
+        "dsn::dist::kubernetes_cluster_scheduler",
+        ::dsn::dist::cluster_scheduler::create<::dsn::dist::kubernetes_cluster_scheduler>);
+    register_component_provider(
+        "dsn::dist::docker_scheduler",
+        ::dsn::dist::cluster_scheduler::create<::dsn::dist::docker_scheduler>);
+    register_component_provider(
+        "dsn::dist::windows_cluster_scheduler",
+        ::dsn::dist::cluster_scheduler::create<::dsn::dist::windows_cluster_scheduler>);
+}
+}
 }

@@ -10,7 +10,6 @@
 #include <thread>
 #include <dsn/ext/hpc-locks/sema.h>
 
-
 //---------------------------------------------------------
 // AutoResetEvent
 //---------------------------------------------------------
@@ -32,42 +31,38 @@ public:
     void signal()
     {
         int oldStatus = m_status.load(std::memory_order_relaxed);
-        for (;;)    // Increment m_status atomically via CAS loop.
+        for (;;) // Increment m_status atomically via CAS loop.
         {
             assert(oldStatus <= 1);
             int newStatus = oldStatus < 1 ? oldStatus + 1 : 1;
-            if (m_status.compare_exchange_weak(oldStatus, newStatus, std::memory_order_release, std::memory_order_relaxed))
+            if (m_status.compare_exchange_weak(
+                    oldStatus, newStatus, std::memory_order_release, std::memory_order_relaxed))
                 break;
             // The compare-exchange failed, likely because another thread changed m_status.
             // oldStatus has been updated. Retry the CAS loop.
         }
         if (oldStatus < 0)
-            m_sema.signal();    // Release one waiting thread.
+            m_sema.signal(); // Release one waiting thread.
     }
 
-    void  wait()
+    void wait()
     {
         int oldStatus = m_status.fetch_sub(1, std::memory_order_acquire);
         assert(oldStatus <= 1);
-        if (oldStatus < 1)
-        {
+        if (oldStatus < 1) {
             m_sema.wait();
         }
     }
-    
+
     bool wait(int timeout_milliseconds)
     {
         int oldStatus = m_status.fetch_sub(1, std::memory_order_acquire);
         assert(oldStatus <= 1);
-        if (oldStatus < 1)
-        {
+        if (oldStatus < 1) {
             return m_sema.wait(timeout_milliseconds);
-        }
-        else
+        } else
             return true;
     }
-
 };
-
 
 #endif // __CPP11OM_AUTO_RESET_EVENT_H__

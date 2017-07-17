@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,32 +35,29 @@
 
 #include "replication_admission_controller.h"
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica.AC"
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "replica.AC"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-replication_admission_controller::replication_admission_controller(task_queue* q, std::vector<std::string>& sargs)
+replication_admission_controller::replication_admission_controller(task_queue *q,
+                                                                   std::vector<std::string> &sargs)
     : admission_controller(q, sargs)
 {
 }
 
-replication_admission_controller::~replication_admission_controller()
-{
-}
+replication_admission_controller::~replication_admission_controller() {}
 
-bool replication_admission_controller::is_task_accepted(task* t)
+bool replication_admission_controller::is_task_accepted(task *t)
 {
-    // read latency 
-    
+    // read latency
+
     return true;
 }
 
-int  replication_admission_controller::get_system_utilization()
-{
-    return 0;
+int replication_admission_controller::get_system_utilization() { return 0; }
 }
-
-}} // end namespace
+} // end namespace

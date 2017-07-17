@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,34 +34,36 @@
  */
 
 // apps
-# include "simple_kv.app.example.h"
-# include "simple_kv.server.impl.h"
+#include "simple_kv.app.example.h"
+#include "simple_kv.server.impl.h"
 
 // framework specific tools
-# include <dsn/dist/replication/replication.global_check.h>
+#include <dsn/dist/replication/replication.global_check.h>
 
 static void dsn_app_registration_simple_kv()
 {
     // register all possible services
-    dsn::register_app_with_type_1_replication_support< ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
-    
-    dsn::register_app< ::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::register_app< ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
+    dsn::register_app_with_type_1_replication_support<
+        ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
 
-    //dsn::replication::install_checkers();
+    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
+    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>(
+        "client.perf.test");
+
+    // dsn::replication::install_checkers();
 }
 
-# if defined(DSN_RUN_USE_SVCHOST)
+#if defined(DSN_RUN_USE_SVCHOST)
 
-# include <dsn/utility/module_init.cpp.h>
+#include <dsn/utility/module_init.cpp.h>
 
 MODULE_INIT_BEGIN(simple_kv)
-    dsn_app_registration_simple_kv();
+dsn_app_registration_simple_kv();
 MODULE_INIT_END
 
-# else
+#else
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     dsn_app_registration_simple_kv();
 

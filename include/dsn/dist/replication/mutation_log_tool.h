@@ -40,12 +40,17 @@
 #include <functional>
 #include <dsn/c/api_common.h>
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-class mutation_log_tool {
+class mutation_log_tool
+{
 public:
-    bool dump(const std::string& log_dir, std::ostream& output,
-              std::function<void(int64_t decree, int64_t timestamp, dsn_message_t* requests, int count)> callback);
+    bool
+    dump(const std::string &log_dir,
+         std::ostream &output,
+         std::function<void(int64_t decree, int64_t timestamp, dsn_message_t *requests, int count)>
+             callback);
 };
-
-} }
+}
+}

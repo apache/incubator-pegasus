@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +33,11 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool-api/task.h>
-# include <dsn/tool-api/perf_counter.h>
-# include <dsn/utility/dlib.h>
+#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/perf_counter.h>
+#include <dsn/utility/dlib.h>
 
 namespace dsn {
 
@@ -55,54 +55,63 @@ class admission_controller;
 class task_queue
 {
 public:
-    template <typename T> static task_queue* create(task_worker_pool* pool, int index, task_queue* inner_provider)
+    template <typename T>
+    static task_queue *create(task_worker_pool *pool, int index, task_queue *inner_provider)
     {
         return new T(pool, index, inner_provider);
     }
 
-    typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
+    typedef task_queue *(*factory)(task_worker_pool *, int, task_queue *);
 
 public:
-    DSN_API task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+    DSN_API task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
     DSN_API virtual ~task_queue();
-    
-    virtual void     enqueue(task* task) = 0;
+
+    virtual void enqueue(task *task) = 0;
     // dequeue may return more than 1 tasks, but there is a configured
     // best batch size for each worker so that load among workers
     // are balanced,
     // returned batch size is stored in parameter batch_size
-    virtual task*    dequeue(/*inout*/int& batch_size) = 0;
-    
-    int               count() const { return _queue_length.load(std::memory_order_relaxed); }
-    int               decrease_count(int count = 1) { _queue_length_counter->add((uint64_t)(-count));  return _queue_length.fetch_sub(count, std::memory_order_relaxed) - count;}
-    int               increase_count(int count = 1) { _queue_length_counter->add(count);  return _queue_length.fetch_add(count, std::memory_order_relaxed) + count;}
-    const std::string & get_name() { return _name; }    
-    task_worker_pool* pool() const { return _pool; }
-    bool              is_shared() const { return _worker_count > 1; }
-    int               worker_count() const { return _worker_count; }
-    task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
-    int               index() const { return _index; }
-    volatile int*     get_virtual_length_ptr() { return &_virtual_queue_length; }
+    virtual task *dequeue(/*inout*/ int &batch_size) = 0;
 
-    admission_controller* controller() const { return _controller; }
-    void set_controller(admission_controller* controller) { _controller = controller; }
+    int count() const { return _queue_length.load(std::memory_order_relaxed); }
+    int decrease_count(int count = 1)
+    {
+        _queue_length_counter->add((uint64_t)(-count));
+        return _queue_length.fetch_sub(count, std::memory_order_relaxed) - count;
+    }
+    int increase_count(int count = 1)
+    {
+        _queue_length_counter->add(count);
+        return _queue_length.fetch_add(count, std::memory_order_relaxed) + count;
+    }
+    const std::string &get_name() { return _name; }
+    task_worker_pool *pool() const { return _pool; }
+    bool is_shared() const { return _worker_count > 1; }
+    int worker_count() const { return _worker_count; }
+    task_worker *owner_worker() const { return _owner_worker; } // when not is_shared()
+    int index() const { return _index; }
+    volatile int *get_virtual_length_ptr() { return &_virtual_queue_length; }
+
+    admission_controller *controller() const { return _controller; }
+    void set_controller(admission_controller *controller) { _controller = controller; }
 
 private:
     friend class task_worker_pool;
-    void set_owner_worker(task_worker* worker) { _owner_worker = worker; }
-    void enqueue_internal(task* task);
-    
+    void set_owner_worker(task_worker *worker) { _owner_worker = worker; }
+    void enqueue_internal(task *task);
+
 private:
-    task_worker_pool*      _pool;
-    task_worker*           _owner_worker;
-    std::string            _name;
-    int                    _index;
-    admission_controller*  _controller;
-    int                    _worker_count;
-    std::atomic<int>       _queue_length;
-    mutable perf_counter_ptr  _queue_length_counter;
-    threadpool_spec*       _spec;
-    volatile int           _virtual_queue_length;
+    task_worker_pool *_pool;
+    task_worker *_owner_worker;
+    std::string _name;
+    int _index;
+    admission_controller *_controller;
+    int _worker_count;
+    std::atomic<int> _queue_length;
+    mutable perf_counter_ptr _queue_length_counter;
+    threadpool_spec *_spec;
+    volatile int _virtual_queue_length;
 };
 /*@}*/
 } // end namespace

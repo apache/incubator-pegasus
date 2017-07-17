@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,51 +33,48 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-
-
 //
 // developers define the following global function somewhere
 //
 //     MODULE_INIT_BEGIN(module_name)
 //          ...
 //     MODULE_INIT_END
-//    
+//
 // and include this cpp file only once in a module
 //     # include <dsn/utility/module_init.cpp.h>
 //
 // then it is done.
 //
 
-
-# if defined(__GNUC__) || defined(_WIN32)
-# else
-# error "dsn init on shared lib loading is not supported on this platform yet"
-# endif
+#if defined(__GNUC__) || defined(_WIN32)
+#else
+#error "dsn init on shared lib loading is not supported on this platform yet"
+#endif
 
 extern void dsn_module_init();
 
-# if defined(__GNUC__)
-# define MODULE_INIT_BEGIN(x) __attribute__((constructor)) void dsn_module_init_##x() {
-# else
-# define MODULE_INIT_BEGIN(x) void dsn_module_init() {
-# endif
+#if defined(__GNUC__)
+#define MODULE_INIT_BEGIN(x)                                                                       \
+    __attribute__((constructor)) void dsn_module_init_##x()                                        \
+    {
+#else
+#define MODULE_INIT_BEGIN(x)                                                                       \
+    void dsn_module_init()                                                                         \
+    {
+#endif
 
-# define MODULE_INIT_END }
+#define MODULE_INIT_END }
 
-# ifdef _WIN32
-# include <Windows.h>
+#ifdef _WIN32
+#include <Windows.h>
 
 #ifdef _MANAGED
 #pragma managed(push, off)
 #endif
 
-bool APIENTRY DllMain(HMODULE hModule,
-    DWORD  ul_reason_for_call,
-    void* lpReserved
-    )
+bool APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, void *lpReserved)
 {
-    switch (ul_reason_for_call)
-    {
+    switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
         dsn_module_init();
         break;
@@ -94,5 +91,4 @@ bool APIENTRY DllMain(HMODULE hModule,
 #pragma managed(pop)
 #endif
 
-# endif
-
+#endif

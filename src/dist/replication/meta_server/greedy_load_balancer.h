@@ -32,17 +32,18 @@
  *     2016-02-03, Weijie Sun, first version
  */
 
-# pragma once
+#pragma once
 
-# include <functional>
-# include "server_load_balancer.h"
+#include <functional>
+#include "server_load_balancer.h"
 
-namespace dsn { namespace replication {
+namespace dsn {
+namespace replication {
 
-class greedy_load_balancer: public simple_load_balancer
+class greedy_load_balancer : public simple_load_balancer
 {
 public:
-    greedy_load_balancer(meta_service* svc): simple_load_balancer(svc) {}
+    greedy_load_balancer(meta_service *svc) : simple_load_balancer(svc) {}
     bool balance(meta_view view, migration_list &list) override;
 
 private:
@@ -53,36 +54,43 @@ private:
         copy_secondary
     };
 
-    //these variables are temporarily assigned by interface "balance"
-    const meta_view* t_global_view;
-    migration_list* t_migration_result;
+    // these variables are temporarily assigned by interface "balance"
+    const meta_view *t_global_view;
+    migration_list *t_migration_result;
     int t_total_partitions;
     int t_alive_nodes;
 
-    //this is used to assign an integer id for every node
-    //and these are generated from the above data, which are tempory too
+    // this is used to assign an integer id for every node
+    // and these are generated from the above data, which are tempory too
     std::unordered_map<dsn::rpc_address, int> address_id;
     std::vector<dsn::rpc_address> address_vec;
 
 private:
-    void number_nodes(const node_mapper& nodes);
+    void number_nodes(const node_mapper &nodes);
 
-    void primary_balancer_per_app(const std::shared_ptr<app_state>& app);
-    void copy_primary_per_app(const std::shared_ptr<app_state>& app, bool still_have_less_than_average, int replicas_low);
+    void primary_balancer_per_app(const std::shared_ptr<app_state> &app);
+    void copy_primary_per_app(const std::shared_ptr<app_state> &app,
+                              bool still_have_less_than_average,
+                              int replicas_low);
     void primary_balancer_globally();
 
-    void copy_secondary_per_app(const std::shared_ptr<app_state>& app);
+    void copy_secondary_per_app(const std::shared_ptr<app_state> &app);
     void secondary_balancer_globally();
 
     void greedy_balancer();
-    void shortest_path(std::vector<bool>& visit, std::vector<int>& flow, std::vector<int>& prev, std::vector< std::vector<int> >& network);
-    void make_balancer_decision_based_on_flow(const std::shared_ptr<app_state>& app, const std::vector<int>& prev, const std::vector<int>& flow);
+    void shortest_path(std::vector<bool> &visit,
+                       std::vector<int> &flow,
+                       std::vector<int> &prev,
+                       std::vector<std::vector<int>> &network);
+    void make_balancer_decision_based_on_flow(const std::shared_ptr<app_state> &app,
+                                              const std::vector<int> &prev,
+                                              const std::vector<int> &flow);
 
-    std::shared_ptr<configuration_balancer_request> generate_balancer_request(
-        const partition_configuration& pc,
-        const balance_type& type,
-        const rpc_address& from,
-        const rpc_address& to);
+    std::shared_ptr<configuration_balancer_request>
+    generate_balancer_request(const partition_configuration &pc,
+                              const balance_type &type,
+                              const rpc_address &from,
+                              const rpc_address &to);
 };
-
-}}
+}
+}

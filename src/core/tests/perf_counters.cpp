@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# include <dsn/tool-api/perf_counter.h>
-# include <gtest/gtest.h>
+#include <dsn/tool-api/perf_counter.h>
+#include <gtest/gtest.h>
 
 using namespace ::dsn;
 
@@ -42,7 +42,7 @@ TEST(core, perf_counters)
 {
     perf_counter_ptr p;
 
-    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
     p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", true);
     ASSERT_NE(nullptr, p);
@@ -60,7 +60,7 @@ TEST(core, perf_counters)
     ASSERT_FALSE(perf_counter::remove_counter("unexist_counter"));
 
     ASSERT_TRUE(perf_counter::remove_counter("app*test*number_counter"));
-    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
 
     ASSERT_TRUE(perf_counter::remove_counter("app*test*rate_counter"));

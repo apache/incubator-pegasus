@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,71 +32,62 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-# pragma once
-# include "echo.code.definition.h"
-# include <iostream>
+#pragma once
+#include "echo.code.definition.h"
+#include <iostream>
 
-
-namespace dsn { namespace example { 
-class echo_client 
-    : public virtual ::dsn::clientlet
+namespace dsn {
+namespace example {
+class echo_client : public virtual ::dsn::clientlet
 {
 public:
     echo_client(::dsn::rpc_address server) { _server = server; }
-    echo_client() { }
+    echo_client() {}
     virtual ~echo_client() {}
 
-
     // ---------- call RPC_ECHO_ECHO_PING ------------
-    // - synchronous 
-    std::pair< ::dsn::error_code, std::string> ping_sync(
-        const std::string& val, 
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0), 
-        int thread_hash = 0,
-        uint64_t partition_hash = 0,
-        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none)
+    // - synchronous
+    std::pair<::dsn::error_code, std::string>
+    ping_sync(const std::string &val,
+              std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+              int thread_hash = 0,
+              uint64_t partition_hash = 0,
+              dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
         return ::dsn::rpc::wait_and_unwrap<std::string>(
-            ::dsn::rpc::call(
-                server_addr.unwrap_or(_server),
-                RPC_ECHO_ECHO_PING,
-                val,
-                nullptr,
-                empty_callback,
-                timeout,
-                thread_hash,
-                partition_hash
-                )
-            );
+            ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                             RPC_ECHO_ECHO_PING,
+                             val,
+                             nullptr,
+                             empty_callback,
+                             timeout,
+                             thread_hash,
+                             partition_hash));
     }
-    
-    // - asynchronous with on-stack std::string and std::string 
-    template<typename TCallback>
-    ::dsn::task_ptr ping(
-        const std::string& val, 
-        TCallback&& callback,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
-        int thread_hash = 0,
-        uint64_t partition_hash = 0,
-        int reply_thread_hash = 0,
-        dsn::optional< ::dsn::rpc_address> server_addr = dsn::none
-        )
+
+    // - asynchronous with on-stack std::string and std::string
+    template <typename TCallback>
+    ::dsn::task_ptr ping(const std::string &val,
+                         TCallback &&callback,
+                         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+                         int thread_hash = 0,
+                         uint64_t partition_hash = 0,
+                         int reply_thread_hash = 0,
+                         dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
-        return ::dsn::rpc::call(
-                    server_addr.unwrap_or(_server), 
-                    RPC_ECHO_ECHO_PING, 
-                    val, 
-                    this,
-                    std::forward<TCallback>(callback),
-                    timeout,
-                    thread_hash,
-                    partition_hash,
-                    reply_thread_hash
-                    );
+        return ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                                RPC_ECHO_ECHO_PING,
+                                val,
+                                this,
+                                std::forward<TCallback>(callback),
+                                timeout,
+                                thread_hash,
+                                partition_hash,
+                                reply_thread_hash);
     }
 
 private:
     ::dsn::rpc_address _server;
 };
-
-} } 
+}
+}

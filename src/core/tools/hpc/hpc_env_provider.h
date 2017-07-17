@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,34 +33,32 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool_api.h>
+#include <dsn/tool_api.h>
 
-namespace dsn
+namespace dsn {
+namespace tools {
+class hpc_env_provider : public env_provider
 {
-    namespace tools
+public:
+    hpc_env_provider(env_provider *inner_provider);
+
+    virtual uint64_t now_ns() const
     {
-        class hpc_env_provider : public env_provider
-        {
-        public:
-            hpc_env_provider(env_provider* inner_provider);
-
-            virtual uint64_t now_ns() const 
-            { 
-# if defined(_WIN32)
-                uint64_t now;
-                ::QueryPerformanceCounter((LARGE_INTEGER*)&now);
-                return _ns_start + (uint64_t)((double)(now - _tick_start) / _tick_frequency_per_ns);
-# else
-                return utils::get_current_physical_time_ns(); 
-# endif
-            }
-
-        private:
-            uint64_t _ns_start;
-            uint64_t _tick_start;
-            double   _tick_frequency_per_ns;
-        };
+#if defined(_WIN32)
+        uint64_t now;
+        ::QueryPerformanceCounter((LARGE_INTEGER *)&now);
+        return _ns_start + (uint64_t)((double)(now - _tick_start) / _tick_frequency_per_ns);
+#else
+        return utils::get_current_physical_time_ns();
+#endif
     }
+
+private:
+    uint64_t _ns_start;
+    uint64_t _tick_start;
+    double _tick_frequency_per_ns;
+};
+}
 }

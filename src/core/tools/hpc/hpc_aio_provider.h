@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,51 +33,51 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-# pragma once
+#pragma once
 
-# include <dsn/tool_api.h>
-# include <dsn/utility/synchronize.h>
-# include "io_looper.h"
+#include <dsn/tool_api.h>
+#include <dsn/utility/synchronize.h>
+#include "io_looper.h"
 
-# ifdef __linux__
-# include <libaio.h>
-# endif
+#ifdef __linux__
+#include <libaio.h>
+#endif
 
-# if defined(__APPLE__) || defined(__FreeBSD__)
-# include <aio.h>
-# endif
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <aio.h>
+#endif
 
 namespace dsn {
-    namespace tools {
-        class hpc_aio_provider : public aio_provider
-        {
-        public:
-            hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider);
-            virtual ~hpc_aio_provider();
+namespace tools {
+class hpc_aio_provider : public aio_provider
+{
+public:
+    hpc_aio_provider(disk_engine *disk, aio_provider *inner_provider);
+    virtual ~hpc_aio_provider();
 
-            virtual dsn_handle_t open(const char* file_name, int flag, int pmode) override;
-            virtual error_code   close(dsn_handle_t fh) override;
-            virtual error_code   flush(dsn_handle_t fh) override;
-            virtual void         aio(aio_task* aio) override;
-            virtual disk_aio*    prepare_aio_context(aio_task* tsk) override;
+    virtual dsn_handle_t open(const char *file_name, int flag, int pmode) override;
+    virtual error_code close(dsn_handle_t fh) override;
+    virtual error_code flush(dsn_handle_t fh) override;
+    virtual void aio(aio_task *aio) override;
+    virtual disk_aio *prepare_aio_context(aio_task *tsk) override;
 
-            virtual void start(io_modifer& ctx) override;
+    virtual void start(io_modifer &ctx) override;
 
-        protected:
-            error_code aio_internal(aio_task* aio, bool async, /*out*/ uint32_t* pbytes = nullptr);
+protected:
+    error_code aio_internal(aio_task *aio, bool async, /*out*/ uint32_t *pbytes = nullptr);
 
-        private:            
-            io_looper *_looper;
-            io_loop_callback _callback;
+private:
+    io_looper *_looper;
+    io_loop_callback _callback;
 
-# ifdef __linux__
-            void complete_aio(struct iocb* io, int bytes, int err);
+#ifdef __linux__
+    void complete_aio(struct iocb *io, int bytes, int err);
 
-            io_context_t _ctx;
-            int          _event_fd;
-# elif defined(__APPLE__) || defined(__FreeBSD__)
-            void complete_aio(struct aiocb* io, int bytes, int err);
-# endif
-        };
-    }
+    io_context_t _ctx;
+    int _event_fd;
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    void complete_aio(struct aiocb *io, int bytes, int err);
+#endif
+};
+}
 }

@@ -10,6 +10,7 @@ class spin_counter
 {
 private:
     std::atomic_int _counter;
+
 public:
     spin_counter() { _counter.store(0); }
     void wait()
@@ -28,17 +29,17 @@ struct reply_context
 };
 dsn_message_t create_corresponding_receive(dsn_message_t req);
 
-//release the dsn_message who's reference is 0
+// release the dsn_message who's reference is 0
 inline void destroy_message(dsn_message_t msg)
 {
     dsn_msg_add_ref(msg);
     dsn_msg_release_ref(msg);
 }
 
-class meta_service_test_app: public dsn::service::meta_service_app
+class meta_service_test_app : public dsn::service::meta_service_app
 {
 public:
-    meta_service_test_app(dsn_gpid pid): dsn::service::meta_service_app(pid) {}
+    meta_service_test_app(dsn_gpid pid) : dsn::service::meta_service_app(pid) {}
 
 public:
     virtual dsn::error_code start(int, char **argv) override;
@@ -58,22 +59,24 @@ public:
     void simple_lb_construct_replica();
     void json_compacity();
 
-    //test for bug found
+    // test for bug found
     void adjust_dropped_size();
 
-    void call_update_configuration(dsn::replication::meta_service* svc,
-        std::shared_ptr<dsn::replication::configuration_update_request>& request);
-    void call_config_sync(dsn::replication::meta_service* svc,
-        std::shared_ptr<dsn::replication::configuration_query_by_node_request>& request);
+    void call_update_configuration(
+        dsn::replication::meta_service *svc,
+        std::shared_ptr<dsn::replication::configuration_update_request> &request);
+    void call_config_sync(
+        dsn::replication::meta_service *svc,
+        std::shared_ptr<dsn::replication::configuration_query_by_node_request> &request);
 
-    template<typename TRequest>
-    std::shared_ptr<reply_context> fake_rpc_call(
-        dsn_task_code_t rpc_code,
-        dsn_task_code_t server_state_write_code,
-        dsn::replication::server_state* ss,
-        void (dsn::replication::server_state::*handle)(dsn_message_t request),
-        const TRequest& data,
-        std::chrono::milliseconds delay = std::chrono::milliseconds(0))
+    template <typename TRequest>
+    std::shared_ptr<reply_context>
+    fake_rpc_call(dsn_task_code_t rpc_code,
+                  dsn_task_code_t server_state_write_code,
+                  dsn::replication::server_state *ss,
+                  void (dsn::replication::server_state::*handle)(dsn_message_t request),
+                  const TRequest &data,
+                  std::chrono::milliseconds delay = std::chrono::milliseconds(0))
     {
         dsn_message_t msg = dsn_msg_create_request(rpc_code);
         dsn::marshall(msg, data);
@@ -85,25 +88,22 @@ public:
 
         dsn_message_t received = create_corresponding_receive(msg);
         dsn_msg_add_ref(received);
-        dsn::tasking::enqueue(
-            server_state_write_code,
-            nullptr,
-            std::bind(handle, ss, received),
-            dsn::replication::server_state::sStateHash,
-            delay
-        );
+        dsn::tasking::enqueue(server_state_write_code,
+                              nullptr,
+                              std::bind(handle, ss, received),
+                              dsn::replication::server_state::sStateHash,
+                              delay);
 
-        //release the sending message
+        // release the sending message
         destroy_message(msg);
 
         return result;
     }
+
 private:
-    typedef std::function<bool (const dsn::replication::app_mapper&)> state_validator;
-    bool wait_state(
-        dsn::replication::server_state* ss,
-        const state_validator& validator,
-        int time=-1);
+    typedef std::function<bool(const dsn::replication::app_mapper &)> state_validator;
+    bool
+    wait_state(dsn::replication::server_state *ss, const state_validator &validator, int time = -1);
 };
 
 #endif // META_SERVICE_TEST_APP_H

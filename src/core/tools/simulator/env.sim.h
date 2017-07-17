@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,20 +37,21 @@
 
 #include <dsn/tool_api.h>
 
-namespace dsn { namespace tools {
+namespace dsn {
+namespace tools {
 
 class sim_env_provider : public env_provider
 {
 public:
-    sim_env_provider(env_provider* inner_provider);
+    sim_env_provider(env_provider *inner_provider);
 
     // service local time (can be logical or physical)
     virtual uint64_t now_ns() const override;
     static int seed() { return _seed; }
 
 private:
-    static void on_worker_start(task_worker* worker);
+    static void on_worker_start(task_worker *worker);
     static int _seed;
 };
-
-}} // end namespace
+}
+} // end namespace

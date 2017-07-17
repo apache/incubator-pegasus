@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,74 +35,71 @@
 
 #pragma once
 
-# include <dsn/tool_api.h>
-# include <boost/asio.hpp>
+#include <dsn/tool_api.h>
+#include <boost/asio.hpp>
 
 namespace dsn {
-    namespace tools {
-        
-        class asio_network_provider : public connection_oriented_network
-        {
-        public:
-            asio_network_provider(rpc_engine* srv, network* inner_provider);
+namespace tools {
 
-            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) override;
-            virtual ::dsn::rpc_address address() override
-            { return _address;  }
-            virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
+class asio_network_provider : public connection_oriented_network
+{
+public:
+    asio_network_provider(rpc_engine *srv, network *inner_provider);
 
-        private:
-            void do_accept();
+    virtual error_code
+    start(rpc_channel channel, int port, bool client_only, io_modifer &ctx) override;
+    virtual ::dsn::rpc_address address() override { return _address; }
+    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
-        private:
-            friend class asio_rpc_session;
+private:
+    void do_accept();
 
-            std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;            
-            boost::asio::io_service                         _io_service;
-            std::vector<std::shared_ptr<std::thread>>       _workers;
-            ::dsn::rpc_address                              _address;
-        };
+private:
+    friend class asio_rpc_session;
 
-        class asio_udp_provider : public network
-        {
-        public:
-            asio_udp_provider(rpc_engine* srv, network* inner_provider);
+    std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
+    boost::asio::io_service _io_service;
+    std::vector<std::shared_ptr<std::thread>> _workers;
+    ::dsn::rpc_address _address;
+};
 
-            virtual ~asio_udp_provider();
+class asio_udp_provider : public network
+{
+public:
+    asio_udp_provider(rpc_engine *srv, network *inner_provider);
 
-            void send_message(message_ex* request) override;
+    virtual ~asio_udp_provider();
 
-            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) override;
+    void send_message(message_ex *request) override;
 
-            virtual ::dsn::rpc_address address() override
-            {
-                return _address;
-            }
+    virtual error_code
+    start(rpc_channel channel, int port, bool client_only, io_modifer &ctx) override;
 
-            virtual void inject_drop_message(message_ex* msg, bool is_send) override
-            {
-                // nothing to do for UDP
-            }
+    virtual ::dsn::rpc_address address() override { return _address; }
 
-        private:
-            void do_receive();
-
-            // create parser on demand
-            message_parser* get_message_parser(network_header_format hdr_format);
-
-            bool                                            _is_client;
-            boost::asio::io_service                         _io_service;
-            std::shared_ptr<boost::asio::ip::udp::socket>   _socket;
-            std::vector<std::shared_ptr<std::thread>>       _workers;
-            ::dsn::rpc_address                              _address;
-            message_reader                                  _recv_reader;
-
-            ::dsn::utils::ex_lock_nr                        _lock; // [
-            message_parser**                                _parsers;
-            // ]
-
-            static const size_t max_udp_packet_size = 1000;
-        };
-
+    virtual void inject_drop_message(message_ex *msg, bool is_send) override
+    {
+        // nothing to do for UDP
     }
+
+private:
+    void do_receive();
+
+    // create parser on demand
+    message_parser *get_message_parser(network_header_format hdr_format);
+
+    bool _is_client;
+    boost::asio::io_service _io_service;
+    std::shared_ptr<boost::asio::ip::udp::socket> _socket;
+    std::vector<std::shared_ptr<std::thread>> _workers;
+    ::dsn::rpc_address _address;
+    message_reader _recv_reader;
+
+    ::dsn::utils::ex_lock_nr _lock; // [
+    message_parser **_parsers;
+    // ]
+
+    static const size_t max_udp_packet_size = 1000;
+};
+}
 }

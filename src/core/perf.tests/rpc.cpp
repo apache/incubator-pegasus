@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,48 +44,38 @@ TEST(core, rpc_perf_test)
 
     rpc_read_stream response;
     std::mutex lock;
-    for (auto concurrency : {10, 100, 1000, 10000})
-    {
+    for (auto concurrency : {10, 100, 1000, 10000}) {
         std::atomic_int remain_concurrency;
         remain_concurrency = concurrency;
         size_t total_query_count = 1000000;
         std::chrono::steady_clock clock;
         auto tic = clock.now();
-        for (auto remain_query_count = total_query_count; remain_query_count--;)
-        {
-            while(true)
-            {
-                if (remain_concurrency.fetch_sub(1, std::memory_order_relaxed) <= 0)
-                {
+        for (auto remain_query_count = total_query_count; remain_query_count--;) {
+            while (true) {
+                if (remain_concurrency.fetch_sub(1, std::memory_order_relaxed) <= 0) {
                     remain_concurrency.fetch_add(1, std::memory_order_relaxed);
-                }
-                else
-                {
+                } else {
                     break;
                 }
             }
-            rpc::call(
-                localhost,
-                RPC_TEST_HASH,
-                0,
-                nullptr,
-                [&remain_concurrency](error_code ec, const std::string&)
-                {
-                    ec.end_tracking();
-                    remain_concurrency.fetch_add(1, std::memory_order_relaxed);
-                }
-            );
+            rpc::call(localhost,
+                      RPC_TEST_HASH,
+                      0,
+                      nullptr,
+                      [&remain_concurrency](error_code ec, const std::string &) {
+                          ec.end_tracking();
+                          remain_concurrency.fetch_add(1, std::memory_order_relaxed);
+                      });
         }
-        while(remain_concurrency != concurrency)
-        {
+        while (remain_concurrency != concurrency) {
             ;
         }
         auto toc = clock.now();
         auto time_us = std::chrono::duration_cast<std::chrono::microseconds>(toc - tic).count();
         std::cout << "rpc perf test: concurrency = " << concurrency
-            << " throughput = " << total_query_count * 1000000llu / time_us << "call/sec" << std::endl;
+                  << " throughput = " << total_query_count * 1000000llu / time_us << "call/sec"
+                  << std::endl;
     }
-
 }
 
 TEST(core, rpc_perf_test_sync)
@@ -100,26 +90,18 @@ TEST(core, rpc_perf_test_sync)
     auto total_query_count = round * concurrency;
 
     std::vector<task_ptr> tasks;
-    for (auto i = 0; i < round; i++)
-    {
-        for (auto j = 0; j < concurrency; j++)
-        {
+    for (auto i = 0; i < round; i++) {
+        for (auto j = 0; j < concurrency; j++) {
             auto req = 0;
             auto task = rpc::call(
-                localhost,
-                RPC_TEST_HASH,
-                req,
-                nullptr,
-                [](error_code err, std::string&& result) 
-                {
+                localhost, RPC_TEST_HASH, req, nullptr, [](error_code err, std::string &&result) {
                     // nothing to do
-                }
-                );
+                });
 
             tasks.push_back(task);
         }
 
-        for (auto& t : tasks)
+        for (auto &t : tasks)
             t->wait();
 
         tasks.clear();
@@ -127,10 +109,8 @@ TEST(core, rpc_perf_test_sync)
 
     auto toc = clock.now();
     auto time_us = std::chrono::duration_cast<std::chrono::microseconds>(toc - tic).count();
-    std::cout << "rpc-sync perf test: throughput = " 
-        << total_query_count * 1000000llu / time_us << " #/s, avg latency = "
-        << time_us / total_query_count 
-        << " us"<< std::endl;
+    std::cout << "rpc-sync perf test: throughput = " << total_query_count * 1000000llu / time_us
+              << " #/s, avg latency = " << time_us / total_query_count << " us" << std::endl;
 }
 
 TEST(core, lpc_perf_test_sync)
@@ -143,23 +123,17 @@ TEST(core, lpc_perf_test_sync)
     auto total_query_count = round * concurrency;
     std::vector<task_ptr> tasks;
     std::vector<std::string> results;
-    for (auto i = 0; i < round; i++)
-    {
+    for (auto i = 0; i < round; i++) {
         results.resize(concurrency);
-        for (auto j = 0; j < concurrency; j++)
-        {
-            auto task = tasking::enqueue(
-                LPC_TEST_HASH,
-                nullptr,
-                [&results, j]() {
-                    std::string r = dsn_get_app_data_dir();
-                    results[j] = std::move(r);
-                }
-                );
+        for (auto j = 0; j < concurrency; j++) {
+            auto task = tasking::enqueue(LPC_TEST_HASH, nullptr, [&results, j]() {
+                std::string r = dsn_get_app_data_dir();
+                results[j] = std::move(r);
+            });
             tasks.push_back(task);
         }
-        
-        for (auto& t : tasks)
+
+        for (auto &t : tasks)
             t->wait();
 
         tasks.clear();
@@ -167,8 +141,6 @@ TEST(core, lpc_perf_test_sync)
 
     auto toc = clock.now();
     auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(toc - tic).count();
-    std::cout << "lpc-sync perf test: throughput = "
-        << total_query_count * 1000000000llu / time_ns << " #/s, avg latency = "
-        << time_ns / total_query_count
-        << " ns" << std::endl;
+    std::cout << "lpc-sync perf test: throughput = " << total_query_count * 1000000000llu / time_ns
+              << " #/s, avg latency = " << time_ns / total_query_count << " ns" << std::endl;
 }
