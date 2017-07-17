@@ -492,6 +492,10 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                     {
                         zauto_write_lock l(_lock);
                         app->partitions[partition_id] = pc;
+                        for (const dsn::rpc_address &addr : pc.last_drops) {
+                            app->helpers->contexts[partition_id].record_drop_history(addr);
+                        }
+
                         if (app->status == app_status::AS_CREATING &&
                             (pc.partition_flags & pc_flags::dropped) != 0) {
                             recall_partition(app, partition_id);

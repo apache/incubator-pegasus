@@ -183,14 +183,18 @@ public:
     }
 
     void reconfig(meta_view view, const configuration_update_request &request) override;
+
     pc_status
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) override;
+
     bool
     collect_replica(meta_view view, const rpc_address &node, const replica_info &info) override;
+
     bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) override;
 
 protected:
     void reset_proposal(meta_view &view, const dsn::gpid &gpid);
+
     bool
     from_proposals(meta_view &view, const dsn::gpid &gpid, configuration_proposal_action &action);
 

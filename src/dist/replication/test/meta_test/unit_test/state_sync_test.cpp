@@ -23,7 +23,7 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
         return server_list[indice / 2];
     };
 
-    int max_servers = server_list.size() * 2 - 1;
+    int max_servers = (server_list.size() - 1) * 2 - 1;
     for (dsn::partition_configuration &pc : app->partitions) {
         int start = 0;
         std::vector<int> indices;
@@ -37,6 +37,7 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
             if (!addr.is_invalid())
                 pc.secondaries.push_back(addr);
         }
+        pc.last_drops = {server_list.back()};
     }
 }
 
@@ -133,6 +134,14 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->sync_apps_from_remote_storage();
         ASSERT_EQ(ec, dsn::ERR_OK);
 
+        for (int i = 1; i <= apps_count; ++i) {
+            std::shared_ptr<app_state> app = ss2->get_app(i);
+            for (int j = 0; j < app->partition_count; ++j) {
+                config_context &cc = app->helpers->contexts[j];
+                ASSERT_EQ(1, cc.dropped.size());
+                ASSERT_NE(cc.dropped.end(), cc.find_from_dropped(server_list.back()));
+            }
+        }
         ec = ss2->dump_from_remote_storage("meta_state.dump1", false);
         ASSERT_EQ(ec, dsn::ERR_OK);
     }
