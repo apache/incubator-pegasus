@@ -37,6 +37,7 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/utility/factory_store.h>
+#include <dsn/service_api_c.h>
 #include "mutation_log.h"
 #include <fstream>
 #include <sstream>
@@ -91,19 +92,22 @@ error_code replica_init_info::load(const std::string &dir)
 
 error_code replica_init_info::store(const std::string &dir)
 {
+    uint64_t start = dsn_now_ns();
     std::string new_info_path = utils::filesystem::path_combine(dir, ".init-info");
     error_code err = store_json(new_info_path.c_str());
     if (err == ERR_OK) {
-        ddebug("store replica_init_info to %s succeed: %s",
-               new_info_path.c_str(),
-               to_string().c_str());
         std::string old_info_path = utils::filesystem::path_combine(dir, ".info");
         if (utils::filesystem::file_exists(old_info_path)) {
             utils::filesystem::remove_path(old_info_path);
         }
-    } else {
-        derror("store replica_init_info to %s failed, err = %s",
+        ddebug("store replica_init_info to %s succeed, time_used_ns = %" PRIu64 ": %s",
                new_info_path.c_str(),
+               dsn_now_ns() - start,
+               to_string().c_str());
+    } else {
+        derror("store replica_init_info to %s failed, time_used_ns = %" PRIu64 ", err = %s",
+               new_info_path.c_str(),
+               dsn_now_ns() - start,
                err.to_string());
     }
 
@@ -336,7 +340,7 @@ error_code replication_app_base::open_internal(replica *r)
 
         if (err == ERR_OK && last_durable_decree() < _info.init_durable_decree) {
             derror("%s: replica data is not complete coz last_durable_decree(" PRId64
-                   ") >= init_durable_decree(" PRId64 ")",
+                   ") < init_durable_decree(" PRId64 ")",
                    r->name(),
                    last_durable_decree(),
                    _info.init_durable_decree);
