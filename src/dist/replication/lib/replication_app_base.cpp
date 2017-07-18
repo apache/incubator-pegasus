@@ -690,5 +690,13 @@ error_code replication_app_base::open_new_internal(replica *r,
 
     return err;
 }
+
+::dsn::error_code replication_app_base::update_init_info_ballot_and_decree(replica *r)
+{
+    return update_init_info(r,
+                            _info.init_offset_in_shared_log,
+                            _info.init_offset_in_private_log,
+                            r->last_durable_decree());
+}
 }
 } // end namespace

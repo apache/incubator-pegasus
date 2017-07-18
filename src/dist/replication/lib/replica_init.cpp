@@ -192,6 +192,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     "invalid app state, %" PRId64 " VS %" PRId64 "",
                     _app->last_committed_decree(),
                     _app->last_durable_decree());
+            _config.ballot = _app->init_info().init_ballot;
             _prepare_list->reset(_app->last_committed_decree());
 
             _private_log =

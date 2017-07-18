@@ -676,6 +676,22 @@ bool replica::update_local_configuration(const replica_configuration &config,
     bool r = false;
     uint64_t oldTs = _last_config_change_time_ms;
     _config = config;
+    // we should durable the new ballot to prevent the inconsistent state
+    if (_config.ballot > old_ballot) {
+        dsn::error_code result = _app->update_init_info_ballot_and_decree(this);
+        if (result == dsn::ERR_OK) {
+            ddebug("%s: update ballot and decree to init file from %" PRId64 " to %" PRId64 " OK",
+                   name(),
+                   old_ballot,
+                   _config.ballot);
+        } else {
+            dwarn("%s: update ballot and decree to init file from %" PRId64 " to %" PRId64 " %s",
+                  name(),
+                  old_ballot,
+                  _config.ballot,
+                  result.to_string());
+        }
+    }
     _last_config_change_time_ms = now_ms();
     dassert(max_prepared_decree() >= last_committed_decree(),
             "%" PRId64 " VS %" PRId64 "",
