@@ -68,7 +68,7 @@ replica::replica(replica_stub *stub, gpid gpid, const app_info &app, const char 
     _config.pid = gpid;
 
     std::stringstream ss;
-    ss << "private_log_size(MB)"
+    ss << "private.log.size(MB)"
        << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
     _counter_private_log_size.init(
         "eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");

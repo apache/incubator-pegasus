@@ -96,18 +96,24 @@ void replica::init_checkpoint(bool is_emergency)
     // if (_app->is_delta_state_learning_supported())
     //    return;
 
+    uint64_t start_time = dsn_now_ns();
     auto err = _app->async_checkpoint(is_emergency);
     if (err != ERR_NOT_IMPLEMENTED) {
+        uint64_t finish_time = dsn_now_ns();
         if (err == ERR_OK) {
-            ddebug("%s: call app.async_checkpoint() succeed, "
+            ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
                    "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
                    name(),
+                   finish_time - start_time,
                    _app->last_committed_decree(),
                    _app->last_durable_decree());
             _last_checkpoint_generate_time_ms = now_ms();
         } else if (err == ERR_TRY_AGAIN) {
             // already triggered memory flushing on async_checkpoint(), then try again later.
-            ddebug("%s: schedule later checkpoint after 10 seconds", name());
+            ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
+                   ", schedule later checkpoint after 10 seconds",
+                   name(),
+                   finish_time - start_time);
             tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
                              this,
                              [this] { init_checkpoint(false); },
@@ -116,7 +122,10 @@ void replica::init_checkpoint(bool is_emergency)
         } else if (err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE) {
             // do nothing
         } else {
-            derror("%s: call app.async_checkpoint() failed, err = %s", name(), err.to_string());
+            derror("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
+                   name(),
+                   finish_time - start_time,
+                   err.to_string());
         }
         return;
     }
