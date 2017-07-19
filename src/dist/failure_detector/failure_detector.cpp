@@ -54,6 +54,11 @@ failure_detector::failure_detector()
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING, pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING_ACK, pool);
 
+    _recent_beacon_fail_count.init("eon.failure_detector",
+                                   "recent_beacon_fail_count",
+                                   COUNTER_TYPE_VOLATILE_NUMBER,
+                                   "failure detector beacon fail count in the recent period");
+
     _is_started = false;
 }
 
@@ -356,6 +361,14 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     auto node = ack.this_node;
     uint64_t now = now_ms();
 
+    if (err != ERR_OK) {
+        dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
+              node.to_string(),
+              _beacon_timeout_milliseconds,
+              err.to_string());
+        _recent_beacon_fail_count.increment();
+    }
+
     master_map::iterator itr = _masters.find(node);
 
     if (itr == _masters.end()) {
@@ -363,7 +376,6 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
               "remote_master[%s], local_worker[%s]",
               node.to_string(),
               primary_address().to_string());
-        err.end_tracking();
         return false;
     }
 
@@ -375,7 +387,6 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
               primary_address().to_string());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
-        err.end_tracking();
         return false;
     }
 
@@ -384,17 +395,12 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         dinfo("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)",
               beacon_send_time,
               record.last_send_time_for_beacon_with_ack);
-        err.end_tracking();
         return false;
     }
 
     // now the ack is applicable
 
     if (err != ERR_OK) {
-        dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
-              node.to_string(),
-              _beacon_timeout_milliseconds,
-              err.to_string());
         return true;
     }
 
@@ -409,6 +415,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         itr->second.is_alive = true;
         on_master_connected(node);
     }
+
     return true;
 }
 

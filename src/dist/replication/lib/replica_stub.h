@@ -234,9 +234,17 @@ private:
     perf_counter_ _counter_replicas_closing_count;
     perf_counter_ _counter_replicas_total_commit_throught;
 
-    perf_counter_ _counter_replicas_learning_failed_latency;
-    perf_counter_ _counter_replicas_learning_success_latency;
     perf_counter_ _counter_replicas_learning_count;
+    perf_counter_ _counter_replicas_learning_max_duration_time_ms;
+    perf_counter_ _counter_replicas_learning_max_copy_file_size;
+    perf_counter_ _counter_replicas_learning_recent_start_count;
+    perf_counter_ _counter_replicas_learning_recent_round_start_count;
+    perf_counter_ _counter_replicas_learning_recent_copy_file_count;
+    perf_counter_ _counter_replicas_learning_recent_copy_file_size;
+    perf_counter_ _counter_replicas_learning_recent_copy_buffer_size;
+    perf_counter_ _counter_replicas_learning_recent_learn_cache_count;
+    perf_counter_ _counter_replicas_learning_recent_learn_app_count;
+    perf_counter_ _counter_replicas_learning_recent_learn_log_count;
 
     perf_counter_ _counter_shared_log_size;
 

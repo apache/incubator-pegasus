@@ -75,6 +75,7 @@ public:
             level = meta_function_level::fl_freezed;
         return level;
     }
+    void incr_update_config_counter() { _recent_update_config_count.increment(); }
 
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
     virtual void send_message(const rpc_address &target, dsn_message_t request)
@@ -154,7 +155,8 @@ private:
 
     std::string _cluster_root;
 
-    perf_counter_ _disconnect_qps;
+    perf_counter_ _recent_disconnect_count;
+    perf_counter_ _recent_update_config_count;
     perf_counter_ _unalive_nodes_count;
 };
 }

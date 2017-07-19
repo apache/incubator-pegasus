@@ -205,6 +205,9 @@ bool potential_secondary_context::cleanup(bool force)
 
     learning_version = 0;
     learning_start_ts_ns = 0;
+    learning_copy_file_count = 0;
+    learning_copy_file_size = 0;
+    learning_copy_buffer_size = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
     learning_status = learner_status::LearningInvalid;

@@ -49,6 +49,16 @@ TEST(core, perf_counters)
     p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_NE(nullptr, p);
 
+    p = perf_counter::get_counter(
+        "app", "test", "volatile_number_counter", COUNTER_TYPE_VOLATILE_NUMBER, "", false);
+    ASSERT_EQ(nullptr, p);
+    p = perf_counter::get_counter(
+        "app", "test", "volatile_number_counter", COUNTER_TYPE_VOLATILE_NUMBER, "", true);
+    ASSERT_NE(nullptr, p);
+    p = perf_counter::get_counter(
+        "app", "test", "volatile_number_counter", COUNTER_TYPE_VOLATILE_NUMBER, "", false);
+    ASSERT_NE(nullptr, p);
+
     p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
     ASSERT_EQ(nullptr, p);
     p = perf_counter::get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", true);
@@ -61,6 +71,11 @@ TEST(core, perf_counters)
 
     ASSERT_TRUE(perf_counter::remove_counter("app*test*number_counter"));
     p = perf_counter::get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
+    ASSERT_EQ(nullptr, p);
+
+    ASSERT_TRUE(perf_counter::remove_counter("app*test*volatile_number_counter"));
+    p = perf_counter::get_counter(
+        "app", "test", "volatile_number_counter", COUNTER_TYPE_VOLATILE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
 
     ASSERT_TRUE(perf_counter::remove_counter("app*test*rate_counter"));

@@ -97,6 +97,7 @@ void replica::init_learn(uint64_t signature)
             return;
         }
 
+        _stub->_counter_replicas_learning_recent_start_count.increment();
         _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
         _potential_secondary_states.learning_status = learner_status::LearningWithoutPrepare;
@@ -136,6 +137,7 @@ void replica::init_learn(uint64_t signature)
 
                     // missed ones need to be loaded via private logs
                     else {
+                        _stub->_counter_replicas_learning_recent_round_start_count.increment();
                         _potential_secondary_states.learning_round_is_running = true;
                         _potential_secondary_states.catchup_with_private_log_task =
                             tasking::create_task(LPC_CATCHUP_WITH_PRIVATE_LOGS,
@@ -175,6 +177,7 @@ void replica::init_learn(uint64_t signature)
         }
     }
 
+    _stub->_counter_replicas_learning_recent_round_start_count.increment();
     _potential_secondary_states.learning_round_is_running = true;
 
     learn_request request;
@@ -188,7 +191,8 @@ void replica::init_learn(uint64_t signature)
     ddebug("%s: init_learn[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
            " ms, local_committed_decree = %" PRId64 ", "
            "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64
-           ", current_learning_status = %s",
+           ", current_learning_status = %s, total_copy_file_count = %" PRIu64
+           ", total_copy_file_size = %" PRIu64 ", total_copy_buffer_size = %" PRIu64,
            name(),
            request.signature,
            _config.primary.to_string(),
@@ -196,7 +200,10 @@ void replica::init_learn(uint64_t signature)
            last_committed_decree(),
            _app->last_committed_decree(),
            _app->last_durable_decree(),
-           enum_to_string(_potential_secondary_states.learning_status));
+           enum_to_string(_potential_secondary_states.learning_status),
+           _potential_secondary_states.learning_copy_file_count,
+           _potential_secondary_states.learning_copy_file_size,
+           _potential_secondary_states.learning_copy_buffer_size);
 
     _potential_secondary_states.learning_task =
         rpc::create_message(
@@ -476,9 +483,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     ddebug("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
            " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
-           "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_meta_size = %u, "
-           "learned_file_count = %u, current_learning_status = "
-           "%s",
+           "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_buffer_size = %u, "
+           "learned_file_count = %u, current_learning_status = %s",
            name(),
            req.signature,
            resp.config.primary.to_string(),
@@ -490,6 +496,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
            resp.state.meta.length(),
            static_cast<uint32_t>(resp.state.files.size()),
            enum_to_string(_potential_secondary_states.learning_status));
+    _potential_secondary_states.learning_copy_buffer_size += resp.state.meta.length();
+    _stub->_counter_replicas_learning_recent_copy_buffer_size.add(resp.state.meta.length());
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE) {
@@ -607,6 +615,21 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
         }
+    }
+
+    switch (resp.type) {
+    case learn_type::LT_CACHE:
+        _stub->_counter_replicas_learning_recent_learn_cache_count.increment();
+        break;
+    case learn_type::LT_APP:
+        _stub->_counter_replicas_learning_recent_learn_app_count.increment();
+        break;
+    case learn_type::LT_LOG:
+        _stub->_counter_replicas_learning_recent_learn_log_count.increment();
+        break;
+    default:
+        // do nothing
+        break;
     }
 
     if (resp.prepare_start_decree != invalid_decree) {
@@ -811,6 +834,10 @@ void replica::on_copy_remote_state_completed(error_code err,
            _app->last_durable_decree(),
            resp.prepare_start_decree,
            enum_to_string(_potential_secondary_states.learning_status));
+    _potential_secondary_states.learning_copy_file_count += resp.state.files.size();
+    _potential_secondary_states.learning_copy_file_size += size;
+    _stub->_counter_replicas_learning_recent_copy_file_count.add(resp.state.files.size());
+    _stub->_counter_replicas_learning_recent_copy_file_size.add(size);
 
     if (err != ERR_OK) {
     } else if (_potential_secondary_states.learning_status == learner_status::LearningWithPrepare) {

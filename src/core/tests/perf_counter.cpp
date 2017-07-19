@@ -102,6 +102,11 @@ static void test_perf_counter(perf_counter::factory f)
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
+    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER, "");
+    perf_counter_inc_dec(counter);
+    perf_counter_add(counter, vec);
+    ddebug("%lf", counter->get_value());
+
     counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);

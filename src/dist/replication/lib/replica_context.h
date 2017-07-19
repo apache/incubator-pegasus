@@ -124,6 +124,9 @@ public:
     potential_secondary_context()
         : learning_version(0),
           learning_start_ts_ns(0),
+          learning_copy_file_count(0),
+          learning_copy_file_size(0),
+          learning_copy_buffer_size(0),
           learning_status(learner_status::LearningInvalid),
           learning_round_is_running(false),
           learning_start_prepare_decree(invalid_decree)
@@ -132,11 +135,17 @@ public:
 
     bool cleanup(bool force);
     bool is_cleaned();
-    uint64_t duration_ms() const { return (dsn_now_ns() - learning_start_ts_ns) / 1000000; }
+    uint64_t duration_ms() const
+    {
+        return learning_start_ts_ns > 0 ? (dsn_now_ns() - learning_start_ts_ns) / 1000000 : 0;
+    }
 
 public:
     uint64_t learning_version;
     uint64_t learning_start_ts_ns;
+    uint64_t learning_copy_file_count;
+    uint64_t learning_copy_file_size;
+    uint64_t learning_copy_buffer_size;
     learner_status::type learning_status;
     volatile bool learning_round_is_running;
     decree learning_start_prepare_decree;

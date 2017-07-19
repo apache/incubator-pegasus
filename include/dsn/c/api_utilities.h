@@ -365,6 +365,7 @@ their own cluster operation systems.
 */
 typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,
+    COUNTER_TYPE_VOLATILE_NUMBER, // special kind of NUMBER which will be reset on get
     COUNTER_TYPE_RATE,
     COUNTER_TYPE_NUMBER_PERCENTILES,
     COUNTER_TYPE_INVALID,

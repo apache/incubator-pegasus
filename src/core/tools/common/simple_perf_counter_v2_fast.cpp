@@ -106,8 +106,42 @@ public:
         return 0.0;
     }
 
-private:
+protected:
     uint64_t _val[DIVIDE_CONTAINER];
+};
+
+// -----------   VOLATILE_NUMBER perf counter ---------------------------------
+class perf_counter_volatile_number_v2_fast : public perf_counter_number_v2_fast
+{
+public:
+    perf_counter_volatile_number_v2_fast(const char *app,
+                                         const char *section,
+                                         const char *name,
+                                         dsn_perf_counter_type_t type,
+                                         const char *dsptr)
+        : perf_counter_number_v2_fast(app, section, name, type, dsptr)
+    {
+    }
+    ~perf_counter_volatile_number_v2_fast(void) {}
+
+    virtual double get_value()
+    {
+        double val = 0;
+        for (int i = 0; i < DIVIDE_CONTAINER; i++) {
+            val += (double)_val[i];
+            _val[i] = 0;
+        }
+        return val;
+    }
+    virtual uint64_t get_integer_value()
+    {
+        uint64_t val = 0;
+        for (int i = 0; i < DIVIDE_CONTAINER; i++) {
+            val += _val[i];
+            _val[i] = 0;
+        }
+        return val;
+    }
 };
 
 // -----------   RATE perf counter ---------------------------------
@@ -448,10 +482,16 @@ perf_counter *simple_perf_counter_v2_fast_factory(const char *app,
 {
     if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER)
         return new perf_counter_number_v2_fast(app, section, name, type, dsptr);
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER)
+        return new perf_counter_volatile_number_v2_fast(app, section, name, type, dsptr);
     else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_RATE)
         return new perf_counter_rate_v2_fast(app, section, name, type, dsptr);
-    else
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES)
         return new perf_counter_number_percentile_v2_fast(app, section, name, type, dsptr);
+    else {
+        dassert(false, "invalid type(%d)", type);
+        return nullptr;
+    }
 }
 
 #pragma pack(pop)

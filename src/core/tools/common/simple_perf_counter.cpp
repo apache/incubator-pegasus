@@ -74,8 +74,31 @@ public:
         return 0.0;
     }
 
-private:
+protected:
     std::atomic<uint64_t> _val;
+};
+
+// -----------   VOLATILE_NUMBER perf counter ---------------------------------
+
+class perf_counter_volatile_number : public perf_counter_number
+{
+public:
+public:
+    perf_counter_volatile_number(const char *app,
+                                 const char *section,
+                                 const char *name,
+                                 dsn_perf_counter_type_t type,
+                                 const char *dsptr)
+        : perf_counter_number(app, section, name, type, dsptr)
+    {
+    }
+    ~perf_counter_volatile_number(void) {}
+
+    virtual double get_value()
+    {
+        return static_cast<double>(_val.exchange(0, std::memory_order_relaxed));
+    }
+    virtual uint64_t get_integer_value() { return _val.exchange(0, std::memory_order_relaxed); }
 };
 
 // -----------   RATE perf counter ---------------------------------
@@ -390,10 +413,16 @@ perf_counter *simple_perf_counter_factory(const char *app,
 {
     if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER)
         return new perf_counter_number(app, section, name, type, dsptr);
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER)
+        return new perf_counter_volatile_number(app, section, name, type, dsptr);
     else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_RATE)
         return new perf_counter_rate(app, section, name, type, dsptr);
-    else
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES)
         return new perf_counter_number_percentile(app, section, name, type, dsptr);
+    else {
+        dassert(false, "invalid type(%d)", type);
+        return nullptr;
+    }
 }
 }
 }

@@ -71,12 +71,16 @@ meta_service::meta_service()
         }
     }
 
-    _disconnect_qps.init("eon.meta_service",
-                         "disconnect_qps",
-                         COUNTER_TYPE_RATE,
-                         "disconnect qps for replica nodes");
+    _recent_disconnect_count.init("eon.meta_service",
+                                  "recent_disconnect_count",
+                                  COUNTER_TYPE_VOLATILE_NUMBER,
+                                  "replica server disconnect count in the recent period");
+    _recent_update_config_count.init("eon.meta_service",
+                                     "recent_update_config_count",
+                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                     "update configuration count in the recent period");
     _unalive_nodes_count.init(
-        "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "currently unalive nodes");
+        "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
 }
 
 meta_service::~meta_service() {}
@@ -136,7 +140,7 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
         }
     }
 
-    _disconnect_qps.add(is_alive ? 0 : nodes.size());
+    _recent_disconnect_count.add(is_alive ? 0 : nodes.size());
     _unalive_nodes_count.set(_dead_set.size());
 
     if (!_started) {

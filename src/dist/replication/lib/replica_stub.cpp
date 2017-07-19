@@ -89,18 +89,58 @@ void replica_stub::install_perf_counters()
                                                  COUNTER_TYPE_RATE,
                                                  "app commit throughput for all replicas");
 
-    _counter_replicas_learning_failed_latency.init("eon.replica_stub",
-                                                   "replicas.learning.failed(ns)",
-                                                   COUNTER_TYPE_NUMBER_PERCENTILES,
-                                                   "learning time (failed)");
-    _counter_replicas_learning_success_latency.init("eon.replica_stub",
-                                                    "replicas.learning.success(ns)",
-                                                    COUNTER_TYPE_NUMBER_PERCENTILES,
-                                                    "learning time (success)");
     _counter_replicas_learning_count.init("eon.replica_stub",
-                                          "replicas.learning(Count)",
+                                          "replicas.learning.count",
                                           COUNTER_TYPE_NUMBER,
-                                          "total learning count");
+                                          "current learning count");
+    _counter_replicas_learning_max_duration_time_ms.init("eon.replica_stub",
+                                                         "replicas.learning.max.duration.time(ms)",
+                                                         COUNTER_TYPE_NUMBER,
+                                                         "current learning max duration time(ms)");
+    _counter_replicas_learning_max_copy_file_size.init("eon.replica_stub",
+                                                       "replicas.learning.max.copy.file.size",
+                                                       COUNTER_TYPE_NUMBER,
+                                                       "current learning max copy file size");
+    _counter_replicas_learning_recent_start_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.start.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current learning start count in the recent period");
+    _counter_replicas_learning_recent_round_start_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.round.start.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning round start count in the recent period");
+    _counter_replicas_learning_recent_copy_file_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.copy.file.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning copy file count in the recent period");
+    _counter_replicas_learning_recent_copy_file_size.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.copy.file.size",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning copy file size in the recent period");
+    _counter_replicas_learning_recent_copy_buffer_size.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.copy.buffer.size",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning copy buffer size in the recent period");
+    _counter_replicas_learning_recent_learn_cache_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.cache.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning LT_CACHE count in the recent period");
+    _counter_replicas_learning_recent_learn_app_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.app.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning LT_APP count in the recent period");
+    _counter_replicas_learning_recent_learn_log_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.log.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning LT_LOG count in the recent period");
 
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
@@ -1193,6 +1233,25 @@ void replica_stub::on_gc()
         rs = _replicas;
     }
 
+    // statistic learning info
+    uint64_t learning_count = 0;
+    uint64_t learning_max_duration_time_ms = 0;
+    uint64_t learning_max_copy_file_size = 0;
+    for (auto it = rs.begin(); it != rs.end(); ++it) {
+        replica_ptr &r = it->second;
+        if (r->status() == partition_status::PS_POTENTIAL_SECONDARY) {
+            learning_count++;
+            learning_max_duration_time_ms = std::max(learning_max_duration_time_ms,
+                                                     r->_potential_secondary_states.duration_ms());
+            learning_max_copy_file_size =
+                std::max(learning_max_copy_file_size,
+                         r->_potential_secondary_states.learning_copy_file_size);
+        }
+    }
+    _counter_replicas_learning_count.set(learning_count);
+    _counter_replicas_learning_max_duration_time_ms.set(learning_max_duration_time_ms);
+    _counter_replicas_learning_max_copy_file_size.set(learning_max_copy_file_size);
+
     // gc shared prepare log
     //
     // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when
@@ -1221,7 +1280,7 @@ void replica_stub::on_gc()
         replica_log_info_map gc_condition;
         for (auto it = rs.begin(); it != rs.end(); ++it) {
             replica_log_info ri;
-            replica_ptr r = it->second;
+            replica_ptr &r = it->second;
             mutation_log_ptr plog = r->private_log();
             if (plog) {
                 // flush private log to update plog_max_commit_on_disk,

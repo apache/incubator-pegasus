@@ -1389,6 +1389,8 @@ void server_state::update_configuration_locally(
     if (_config_change_subscriber) {
         _config_change_subscriber(_all_apps);
     }
+
+    _meta_svc->incr_update_config_counter();
 }
 
 task_ptr server_state::update_configuration_on_remote(
