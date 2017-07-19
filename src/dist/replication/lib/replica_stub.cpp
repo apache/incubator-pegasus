@@ -142,6 +142,11 @@ void replica_stub::install_perf_counters()
         COUNTER_TYPE_VOLATILE_NUMBER,
         "learning LT_LOG count in the recent period");
 
+    _counter_replicas_recent_prepare_fail_count.init("eon.replica_stub",
+                                                     "replicas.recent.prepare.fail.count",
+                                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                                     "prepare fail count in the recent period");
+
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
 }

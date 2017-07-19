@@ -484,6 +484,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                mu->name(),
                node.to_string(),
                resp.err.to_string());
+        _stub->_counter_replicas_recent_prepare_fail_count.increment();
     }
 
     if (resp.err == ERR_OK) {
