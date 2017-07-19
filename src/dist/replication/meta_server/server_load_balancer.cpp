@@ -473,26 +473,32 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                 dropped_replica &recent_dead = *cc.find_from_dropped(nodes[1]);
 
                 // 1. larger ballot should have larger committed decree
-                // 2. max_committed_decree should larger than what meta knows
-                if (((previous_dead.ballot <= recent_dead.ballot) ==
-                     (previous_dead.last_committed_decree <= recent_dead.last_committed_decree))) {
+                // 2. max_prepared_decree should larger than meta's committed decree
+                int64_t gap1 = previous_dead.ballot - recent_dead.ballot;
+                int64_t gap2 =
+                    previous_dead.last_committed_decree - recent_dead.last_committed_decree;
+                if (gap1 * gap2 >= 0) {
                     int64_t larger_cd = std::max(previous_dead.last_committed_decree,
                                                  recent_dead.last_committed_decree);
-                    if (larger_cd + 10 >= pc.last_committed_decree) {
+                    int64_t larger_pd = std::max(previous_dead.last_prepared_decree,
+                                                 recent_dead.last_prepared_decree);
+                    if (larger_pd >= pc.last_committed_decree && larger_pd >= larger_cd) {
                         action.node =
                             (previous_dead.ballot <= recent_dead.ballot) ? nodes[1] : nodes[0];
                         ddebug(
                             "%s: select %s as a new primary", gpid_name, action.node.to_string());
                     } else {
-                        ddebug("%s: don't select primary, larger_committed_decree(%" PRId64 ") < "
-                               "meta knows(%" PRId64 ")",
+                        ddebug("%s: don't select primary: larger_prepared_decree(%" PRId64 "), "
+                               "last committed decree on meta(%" PRId64
+                               "), larger_committed_decree(%" PRId64 ")",
                                gpid_name,
-                               larger_cd,
-                               pc.last_committed_decree);
+                               larger_pd,
+                               pc.last_committed_decree,
+                               larger_cd);
                     }
                 } else {
                     ddebug("%s: don't select primary as the node with larger "
-                           "ballot has smaller committed decree",
+                           "ballot has smaller last prepared decree",
                            gpid_name);
                 }
             }

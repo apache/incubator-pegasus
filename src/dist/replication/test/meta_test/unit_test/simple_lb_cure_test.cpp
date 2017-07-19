@@ -552,7 +552,7 @@ void meta_service_test_app::simple_lb_cure_test()
     cc.dropped = {
         dropped_replica{nodes[0], 12344, -1, -1, -1},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
-        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 2, 4},
+        dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 3, 4},
     };
     pc.last_committed_decree = 2;
 
