@@ -226,7 +226,7 @@ void meta_service_test_app::state_sync_test()
         configuration_query_by_node_response response;
 
         std::cerr << "test query config by node normal " << std::endl;
-        request.node = server_list[random32(0, 9)];
+        request.node = server_list[random32(0, 8)];
         ss2->query_configuration_by_node(request, response);
         ASSERT_EQ(dsn::ERR_OK, response.err);
 
