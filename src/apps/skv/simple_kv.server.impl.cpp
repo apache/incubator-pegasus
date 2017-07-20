@@ -244,6 +244,11 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
+::dsn::error_code simple_kv_service_impl::async_checkpoint(int64_t last_commit, bool is_emergency)
+{
+    return sync_checkpoint(last_commit);
+}
+
 // helper routines to accelerate learning
 ::dsn::error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
                                                          int64_t local_commit,

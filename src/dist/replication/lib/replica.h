@@ -233,6 +233,7 @@ private:
     void garbage_collection();
     void init_checkpoint(bool is_emergency);
     void background_checkpoint();
+    void background_async_checkpoint(bool is_emergency);
     void sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);

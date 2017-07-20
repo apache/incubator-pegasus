@@ -92,43 +92,17 @@ void replica::init_checkpoint(bool is_emergency)
         return;
     }
 
+    // here we demand that async_checkpoint() is implemented
+    tasking::enqueue(LPC_CHECKPOINT_REPLICA, this, [this, is_emergency] {
+        background_async_checkpoint(is_emergency);
+    });
+    return;
+
+    // disable the following codes
+    /*
     //// no need to checkpoint
     // if (_app->is_delta_state_learning_supported())
     //    return;
-
-    uint64_t start_time = dsn_now_ns();
-    auto err = _app->async_checkpoint(is_emergency);
-    if (err != ERR_NOT_IMPLEMENTED) {
-        uint64_t finish_time = dsn_now_ns();
-        if (err == ERR_OK) {
-            ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
-                   name(),
-                   finish_time - start_time,
-                   _app->last_committed_decree(),
-                   _app->last_durable_decree());
-            _last_checkpoint_generate_time_ms = now_ms();
-        } else if (err == ERR_TRY_AGAIN) {
-            // already triggered memory flushing on async_checkpoint(), then try again later.
-            ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
-                   ", schedule later checkpoint after 10 seconds",
-                   name(),
-                   finish_time - start_time);
-            tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                             this,
-                             [this] { init_checkpoint(false); },
-                             gpid_to_thread_hash(get_gpid()),
-                             std::chrono::seconds(10));
-        } else if (err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE) {
-            // do nothing
-        } else {
-            derror("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-                   name(),
-                   finish_time - start_time,
-                   err.to_string());
-        }
-        return;
-    }
 
     // private log must be enabled to make sure commits
     // are not lost during checkpinting
@@ -182,6 +156,7 @@ void replica::init_checkpoint(bool is_emergency)
             _secondary_states.checkpoint_task->enqueue();
         }
     }
+    */
 }
 
 // @ secondary
@@ -325,6 +300,46 @@ void replica::background_checkpoint()
                          this,
                          [this, err]() { this->on_checkpoint_completed(err); },
                          gpid_to_thread_hash(get_gpid()));
+}
+
+// run in background thread
+void replica::background_async_checkpoint(bool is_emergency)
+{
+    uint64_t start_time = dsn_now_ns();
+    auto err = _app->async_checkpoint(is_emergency);
+    uint64_t used_time = dsn_now_ns() - start_time;
+    dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
+    if (err == ERR_OK) {
+        ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
+               "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = %" PRId64,
+               name(),
+               used_time,
+               _app->last_committed_decree(),
+               _app->last_durable_decree());
+        _last_checkpoint_generate_time_ms = now_ms();
+    } else if (err == ERR_TRY_AGAIN) {
+        // already triggered memory flushing on async_checkpoint(), then try again later.
+        ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
+               ", schedule later checkpoint after 10 seconds",
+               name(),
+               used_time);
+        tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                         this,
+                         [this] { init_checkpoint(false); },
+                         gpid_to_thread_hash(get_gpid()),
+                         std::chrono::seconds(10));
+    } else if (err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE) {
+        // do nothing
+        ddebug("%s: call app.async_checkpoint() returns %s, time_used_ns = %" PRIu64 ", ignore",
+               name(),
+               err.to_string(),
+               used_time);
+    } else {
+        derror("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
+               name(),
+               used_time,
+               err.to_string());
+    }
 }
 
 // run in init thread
