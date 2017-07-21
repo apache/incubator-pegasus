@@ -444,33 +444,55 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                   pc.last_drops.back().to_string());
             action.node = pc.last_drops.back();
         } else {
-            bool ready = true;
             std::vector<dsn::rpc_address> nodes(pc.last_drops.end() - 2, pc.last_drops.end());
+            std::vector<dropped_replica> collected_info(2);
+            bool ready = true;
+
             ddebug("%s: last two drops are %s and %s",
                    gpid_name,
                    nodes[0].to_string(),
                    nodes[1].to_string());
-            for (dsn::rpc_address &node : nodes) {
-                if (!is_node_alive(*view.nodes, node)) {
+
+            for (unsigned int i = 0; i < nodes.size(); ++i) {
+                node_state *ns = get_node_state(*view.nodes, nodes[i], false);
+                if (ns == nullptr || !ns->alive()) {
                     dwarn("%s: last dropped node %s haven't come back yet",
                           gpid_name,
-                          node.to_string());
+                          nodes[i].to_string());
                     ready = false;
                 } else {
-                    std::vector<dropped_replica>::iterator it = cc.find_from_dropped(node);
+                    std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
                     if (it == cc.dropped.end() || it->ballot == invalid_ballot) {
-                        ddebug("%s: last dropped node %s's info haven't been collected, reason(%s)",
-                               gpid_name,
-                               node.to_string(),
-                               it == cc.dropped.end() ? "item not exist in dropped"
-                                                      : "no ballot/decree info");
-                        ready = false;
+                        if (ns->has_collected()) {
+                            ddebug("%s: ignore %s's replica info as it doesn't exist on replica "
+                                   "server",
+                                   gpid_name,
+                                   nodes[i].to_string());
+                            collected_info[i] = {nodes[i], 0, -1, -1, -1};
+                        } else {
+                            ddebug("%s: last dropped node %s's info haven't been collected, "
+                                   "reason(%s)",
+                                   gpid_name,
+                                   nodes[i].to_string(),
+                                   it == cc.dropped.end() ? "item not exist in dropped"
+                                                          : "no ballot/decree info");
+                            ready = false;
+                        }
+                    } else {
+                        collected_info[i] = *it;
                     }
                 }
             }
+
+            if (ready && collected_info[0].ballot == -1 && collected_info[1].ballot == -1) {
+                ready = false;
+                ddebug("%s: don't select primary as no info collected from non of last two drops",
+                       gpid_name);
+            }
+
             if (ready) {
-                dropped_replica &previous_dead = *cc.find_from_dropped(nodes[0]);
-                dropped_replica &recent_dead = *cc.find_from_dropped(nodes[1]);
+                dropped_replica &previous_dead = collected_info[0];
+                dropped_replica &recent_dead = collected_info[1];
 
                 // 1. larger ballot should have larger committed decree
                 // 2. max_prepared_decree should larger than meta's committed decree
@@ -483,8 +505,16 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                     int64_t larger_pd = std::max(previous_dead.last_prepared_decree,
                                                  recent_dead.last_prepared_decree);
                     if (larger_pd >= pc.last_committed_decree && larger_pd >= larger_cd) {
-                        action.node =
-                            (previous_dead.ballot <= recent_dead.ballot) ? nodes[1] : nodes[0];
+                        if (gap1 != 0) {
+                            action.node = gap1 < 0 ? recent_dead.node : previous_dead.node;
+                        } else if (gap2 != 0) {
+                            action.node = gap2 < 0 ? recent_dead.node : previous_dead.node;
+                        } else {
+                            action.node = previous_dead.last_prepared_decree >
+                                                  recent_dead.last_prepared_decree
+                                              ? previous_dead.node
+                                              : recent_dead.node;
+                        }
                         ddebug(
                             "%s: select %s as a new primary", gpid_name, action.node.to_string());
                     } else {

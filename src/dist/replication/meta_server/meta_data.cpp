@@ -253,7 +253,10 @@ std::shared_ptr<app_state> app_state::create(const app_info &info)
     return std::make_shared<app_state>(info);
 }
 
-node_state::node_state() : total_primaries(0), total_partitions(0), is_alive(false) {}
+node_state::node_state()
+    : total_primaries(0), total_partitions(0), is_alive(false), has_collected_replicas(false)
+{
+}
 
 bool node_state::for_each_partition(const std::function<bool(const gpid &)> &f) const
 {

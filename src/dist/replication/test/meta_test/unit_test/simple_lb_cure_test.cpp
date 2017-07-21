@@ -499,11 +499,68 @@ void meta_service_test_app::simple_lb_cure_test()
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica"
+    std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
+                 "nodes[2]'s info haven't updated"
               << std::endl;
     cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
                   dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
                   dropped_replica{nodes[2], 500, -1, -1, -1}};
+
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
+    t->wait();
+    ASSERT_FALSE(proposal_sent);
+    CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
+                 "nodes[2]'s info have updated"
+              << std::endl;
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
+        dsn_message_t recv_request = create_corresponding_receive(req);
+        cur_ptr update_req = std::make_shared<configuration_update_request>();
+        ::dsn::unmarshall(recv_request, *update_req);
+        destroy_message(recv_request);
+
+        EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
+        EXPECT_EQ(update_req->node, nodes[1]);
+        EXPECT_EQ(target, nodes[1]);
+
+        svc->set_filter(default_filter);
+        apply_update_request(*update_req);
+        proposal_sent = true;
+        return update_req;
+    });
+
+    cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[2], 500, -1, -1, -1}};
+    pc.last_committed_decree = 0;
+    get_node_state(state->_nodes, nodes[2], false)->set_replicas_collect_flag(true);
+    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
+                              nullptr,
+                              std::bind(&server_state::check_all_partitions, state),
+                              server_state::sStateHash);
+
+    t->wait();
+    PROPOSAL_FLAG_CHECK;
+    CONDITION_CHECK([&] { return pc.primary == nodes[1]; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cerr << "Case: recover from DDD, haven't collect nodes[1/2]'s info from replica, and "
+                 "nodes[1/2]'s info both have updated"
+              << std::endl;
+    cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
+                  dropped_replica{nodes[1], 500, -1, -1, -1},
+                  dropped_replica{nodes[2], 500, -1, -1, -1}};
+    get_node_state(state->_nodes, nodes[1], false)->set_replicas_collect_flag(true);
+    get_node_state(state->_nodes, nodes[2], false)->set_replicas_collect_flag(true);
+
+    pc.primary.set_invalid();
+    pc.secondaries.clear();
+    pc.last_drops = {nodes[0], nodes[1], nodes[2]};
 
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
                               nullptr,
@@ -555,6 +612,21 @@ void meta_service_test_app::simple_lb_cure_test()
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 3, 4},
     };
     pc.last_committed_decree = 2;
+    svc->set_filter([&](const dsn::rpc_address &target, dsn_message_t req) -> cur_ptr {
+        dsn_message_t recv_request = create_corresponding_receive(req);
+        cur_ptr update_req = std::make_shared<configuration_update_request>();
+        ::dsn::unmarshall(recv_request, *update_req);
+        destroy_message(recv_request);
+
+        EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
+        EXPECT_EQ(update_req->node, nodes[1]);
+        EXPECT_EQ(target, nodes[1]);
+
+        svc->set_filter(default_filter);
+        apply_update_request(*update_req);
+        proposal_sent = true;
+        return update_req;
+    });
 
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
                               nullptr,
@@ -562,7 +634,7 @@ void meta_service_test_app::simple_lb_cure_test()
                               server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK([&] { return pc.primary == nodes[2]; });
+    CONDITION_CHECK([&] { return pc.primary == nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, only one primary" << std::endl;

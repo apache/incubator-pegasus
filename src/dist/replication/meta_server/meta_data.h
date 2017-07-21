@@ -307,6 +307,7 @@ private:
 
     // status
     bool is_alive;
+    bool has_collected_replicas;
     dsn::rpc_address address;
 
     const partition_set *get_partitions(app_id id, bool only_primary) const;
@@ -329,6 +330,8 @@ public:
 
     bool alive() const { return is_alive; }
     void set_alive(bool alive) { is_alive = alive; }
+    bool has_collected() { return has_collected_replicas; }
+    void set_replicas_collect_flag(bool has_collected) { has_collected_replicas = has_collected; }
     dsn::rpc_address addr() const { return address; }
     void set_addr(const dsn::rpc_address &addr) { address = addr; }
 

@@ -745,6 +745,8 @@ void server_state::on_config_sync(dsn_message_t msg)
 
         // handle the stored replicas & the gc replicas
         if (!reject_this_request && request.__isset.stored_replicas) {
+            if (ns != nullptr)
+                ns->set_replicas_collect_flag(true);
             std::vector<replica_info> &replicas = request.stored_replicas;
             meta_function_level::type level = _meta_svc->get_function_level();
             // if the node serve the replica on the meta server, then we ignore it
@@ -1785,6 +1787,7 @@ void server_state::on_change_node_state(rpc_address node, bool is_alive)
         } else {
             node_state &ns = iter->second;
             ns.set_alive(false);
+            ns.set_replicas_collect_flag(false);
             ns.for_each_partition([&, this](const dsn::gpid &pid) {
                 std::shared_ptr<app_state> app = get_app(pid.get_app_id());
                 dassert(app != nullptr && app->status != app_status::AS_DROPPED,
