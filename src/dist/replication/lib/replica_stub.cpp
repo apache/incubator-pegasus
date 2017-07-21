@@ -141,11 +141,27 @@ void replica_stub::install_perf_counters()
         "replicas.learning.recent.learn.log.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "learning LT_LOG count in the recent period");
+    _counter_replicas_learning_recent_learn_reset_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.reset.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning reset count for the reason of "
+        "resp.last_committed_decree < _app->last_committed_decree() in the recent period");
 
     _counter_replicas_recent_prepare_fail_count.init("eon.replica_stub",
                                                      "replicas.recent.prepare.fail.count",
                                                      COUNTER_TYPE_VOLATILE_NUMBER,
                                                      "prepare fail count in the recent period");
+    _counter_replicas_recent_replica_move_error_count.init(
+        "eon.replica_stub",
+        "replicas.recent.replica.move.error.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "replica move to error count in the recent period");
+    _counter_replicas_recent_replica_move_garbage_count.init(
+        "eon.replica_stub",
+        "replicas.recent.replica.move.garbage.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "replica move to garbage count in the recent period");
 
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
@@ -231,7 +247,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     uint64_t start_time = dsn_now_ms();
     for (auto &dir : dir_list) {
         if (dir.length() >= 4 &&
-            (dir.substr(dir.length() - 4) == ".err" || dir.substr(dir.length() - 4) == ".bak")) {
+            (dir.substr(dir.length() - 4) == ".err" || dir.substr(dir.length() - 4) == ".gar" ||
+             dir.substr(dir.length() - 4) == ".bak")) {
             ddebug("ignore dir %s", dir.c_str());
             continue;
         }
@@ -318,12 +335,16 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         // TODO: checkpoint latest state and update on meta server so learning is cheaper
         for (auto it = rps.begin(); it != rps.end(); ++it) {
             it->second->close();
-            std::string new_dir = it->second->dir() + ".err";
-            if (utils::filesystem::directory_exists(it->second->dir())) {
-                if (!utils::filesystem::rename_path(it->second->dir(), new_dir)) {
-                    dassert(false, "we cannot recover from the above error, exit ...");
-                }
-            }
+            // move to '.err' directory
+            const char *dir = it->second->dir().c_str();
+            char rename_dir[1024];
+            sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
+            bool ret = dsn::utils::filesystem::rename_path(dir, rename_dir);
+            dassert(ret, "init_replica: failed to move directory '%s' to '%s'", dir, rename_dir);
+            dwarn("init_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+                  dir,
+                  rename_dir);
+            _counter_replicas_recent_replica_move_error_count.increment();
         }
         rps.clear();
 
@@ -1218,13 +1239,21 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
               app_type.c_str());
         return;
     }
-    ddebug("start to remove replica(%d.%d), path: %s",
+
+    ddebug("start to move replica(%d.%d) as garbage, path: %s",
            pid.get_app_id(),
            pid.get_partition_index(),
            replica_path.c_str());
-    if (!dsn::utils::filesystem::remove_path(replica_path)) {
-        derror("remove path %s failed", replica_path.c_str());
-        dsn::utils::filesystem::rename_path(replica_path, replica_path + ".err");
+    char rename_path[1024];
+    sprintf(rename_path, "%s.%" PRIu64 ".gar", replica_path.c_str(), dsn_now_us());
+    if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
+        dwarn(
+            "gc_replica: failed to move directory '%s' to '%s'", replica_path.c_str(), rename_path);
+    } else {
+        dwarn("gc_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+              replica_path.c_str(),
+              rename_path);
+        _counter_replicas_recent_replica_move_garbage_count.increment();
     }
 }
 
@@ -1374,27 +1403,28 @@ void replica_stub::on_gc()
     for (auto &dir : _options.data_dirs) {
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            dwarn("gc_replica: failed to get subdirectories in %s", dir.c_str());
+            dwarn("gc_disk: failed to get subdirectories in %s", dir.c_str());
             return;
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
-    std::string ext = ".err";
     for (auto &fpath : sub_list) {
         auto &&name = dsn::utils::filesystem::get_file_name(fpath);
-        if ((name.length() > ext.length()) &&
-            (name.compare((name.length() - ext.length()), std::string::npos, ext) == 0)) {
+        // don't delete ".bak" directory because it is backed by administrator.
+        if (name.length() >= 4 && (name.substr(name.length() - 4) == ".err" ||
+                                   name.substr(name.length() - 4) == ".gar")) {
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-                dwarn("gc_replica: failed to get last write time of %s", fpath.c_str());
+                dwarn("gc_disk: failed to get last write time of %s", fpath.c_str());
                 continue;
             }
 
             if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds) {
                 if (!dsn::utils::filesystem::remove_path(fpath)) {
-                    dwarn("gc_replica: failed to delete directory %s", fpath.c_str());
+                    dwarn("gc_disk: failed to delete directory '%s'", fpath.c_str());
                 } else {
-                    ddebug("gc_replica: deleted directory %s", fpath.c_str());
+                    dwarn("gc_disk: {replica_dir_op} succeed to delete directory '%s'",
+                          fpath.c_str());
                 }
             }
         }

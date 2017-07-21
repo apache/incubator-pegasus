@@ -245,8 +245,11 @@ private:
     perf_counter_ _counter_replicas_learning_recent_learn_cache_count;
     perf_counter_ _counter_replicas_learning_recent_learn_app_count;
     perf_counter_ _counter_replicas_learning_recent_learn_log_count;
+    perf_counter_ _counter_replicas_learning_recent_learn_reset_count;
 
     perf_counter_ _counter_replicas_recent_prepare_fail_count;
+    perf_counter_ _counter_replicas_recent_replica_move_error_count;
+    perf_counter_ _counter_replicas_recent_replica_move_garbage_count;
 
     perf_counter_ _counter_shared_log_size;
 

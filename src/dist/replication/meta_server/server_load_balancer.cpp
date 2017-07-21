@@ -414,9 +414,9 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
     }
     // well, all replicas in this partition is dead
     else {
-        derror("%s enters DDD state, we are waiting for all replicas to come back, "
-               "and select primary according to informations collected",
-               gpid_name);
+        dwarn("%s enters DDD state, we are waiting for all replicas to come back, "
+              "and select primary according to informations collected",
+              gpid_name);
         // when considering how to handle the DDD state, we must keep in mind that our
         // shared/private-log data only write to OS-cache.
         // so the last removed replica can't act as primary directly.
@@ -452,9 +452,9 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                    nodes[1].to_string());
             for (dsn::rpc_address &node : nodes) {
                 if (!is_node_alive(*view.nodes, node)) {
-                    ddebug("%s: last dropped node %s haven't come back yet",
-                           gpid_name,
-                           node.to_string());
+                    dwarn("%s: last dropped node %s haven't come back yet",
+                          gpid_name,
+                          node.to_string());
                     ready = false;
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(node);

@@ -163,11 +163,12 @@ error_code replica::initialize_on_load()
         if (dsn::utils::filesystem::directory_exists(dir)) {
             char rename_dir[1024];
             sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-            if (dsn::utils::filesystem::rename_path(dir, rename_dir)) {
-                dwarn("move bad replica from '%s' to '%s'", dir, rename_dir);
-            } else {
-                derror("move bad replica from '%s' to '%s' failed", dir, rename_dir);
-            }
+            bool ret = dsn::utils::filesystem::rename_path(dir, rename_dir);
+            dassert(ret, "load_replica: failed to move directory '%s' to '%s'", dir, rename_dir);
+            dwarn("load_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+                  dir,
+                  rename_dir);
+            stub->_counter_replicas_recent_replica_move_error_count.increment();
         }
 
         return nullptr;

@@ -70,9 +70,9 @@ replication_options::replication_options()
     checkpoint_max_interval_hours = 24; // at least one checkpoint per day
 
     gc_disabled = false;
-    gc_interval_ms = 30 * 1000;                                // 30000 milliseconds
-    gc_memory_replica_interval_ms = 5 * 60 * 1000;             // 5 minutes
-    gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
+    gc_interval_ms = 30 * 1000;                             // 30 seconds
+    gc_memory_replica_interval_ms = 10 * 60 * 1000;         // 10 minutes
+    gc_disk_error_replica_interval_seconds = 7 * 24 * 3600; // 1 week
 
     fd_disabled = false;
     fd_check_interval_seconds = 2;

@@ -549,6 +549,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
               resp.config.primary.to_string(),
               _app->last_committed_decree(),
               resp.last_committed_decree);
+        _stub->_counter_replicas_learning_recent_learn_reset_count.increment();
 
         // close app
         auto err = _app->close(true);
@@ -566,15 +567,15 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             std::string old_dir = _app->data_dir();
             if (dsn::utils::filesystem::directory_exists(old_dir)) {
                 char rename_dir[1024];
-                sprintf(rename_dir, "%s.%" PRIu64 ".bak", old_dir.c_str(), dsn_now_us());
+                sprintf(rename_dir, "%s.%" PRIu64 ".discarded", old_dir.c_str(), dsn_now_us());
                 if (dsn::utils::filesystem::rename_path(old_dir, rename_dir)) {
-                    dwarn("%s: backup bad replica from '%s' to '%s'",
+                    dwarn("%s: {replica_dir_op} succeed to move directory from '%s' to '%s'",
                           name(),
                           old_dir.c_str(),
                           rename_dir);
                 } else {
                     dassert(false,
-                            "%s: backup bad replica from '%s' to '%s' failed",
+                            "%s: failed to move directory from '%s' to '%s'",
                             name(),
                             old_dir.c_str(),
                             rename_dir);
