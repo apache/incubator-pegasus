@@ -277,6 +277,11 @@ public:
             dsn_now_ns() - _enqueue_ts_ns <
                 static_cast<uint64_t>(_request->header->client.timeout_ms) * 1000000ULL) {
             _handler->run(_request);
+        } else {
+            dwarn("rpc_request_task(%s) from(%s) stop to execute due to timeout_ms(%d) exceed",
+                  spec().name.c_str(),
+                  _request->header->from_address.to_string(),
+                  _request->header->client.timeout_ms);
         }
     }
 
