@@ -1103,6 +1103,9 @@ void replica::notify_learn_completion()
            _app->last_durable_decree(),
            enum_to_string(_potential_secondary_states.learning_status));
 
+    if (_potential_secondary_states.completion_notify_task != nullptr) {
+        _potential_secondary_states.completion_notify_task->cancel(false);
+    }
     _potential_secondary_states.completion_notify_task =
         rpc::create_message(RPC_LEARN_COMPLETION_NOTIFY,
                             report,
