@@ -39,6 +39,25 @@
 namespace dsn {
 namespace service {
 
+nfs_service_impl::nfs_service_impl(nfs_opts &opts)
+    : ::dsn::serverlet<nfs_service_impl>("nfs"), _opts(opts)
+{
+    _file_close_timer = ::dsn::tasking::enqueue_timer(
+        LPC_NFS_FILE_CLOSE_TIMER,
+        this,
+        [this] { close_file(); },
+        std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
+
+    _recent_copy_data_size.init("eon.nfs_server",
+                                "recent_copy_data_size",
+                                COUNTER_TYPE_VOLATILE_NUMBER,
+                                "nfs server copy data size in the recent period");
+    _recent_copy_fail_count.init("eon.nfs_server",
+                                 "recent_copy_fail_count",
+                                 COUNTER_TYPE_VOLATILE_NUMBER,
+                                 "nfs server copy fail count count in the recent period");
+}
+
 void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
                                ::dsn::rpc_replier<::dsn::service::copy_response> &reply)
 {
@@ -78,7 +97,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
           request.offset + request.size);
 
     if (hfile == 0) {
-        derror("file open failed");
+        derror("{nfs_service} open file %s failed", file_path.c_str());
         ::dsn::service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
         reply(resp);
@@ -111,6 +130,14 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
         }
     }
 
+    if (err != ERR_OK) {
+        derror(
+            "{nfs_service} read file %s failed, err = %s", cp.file_path.c_str(), err.to_string());
+        _recent_copy_fail_count.increment();
+    } else {
+        _recent_copy_data_size.add(sz);
+    }
+
     ::dsn::service::copy_response resp;
     resp.error = err;
     resp.file_content = std::move(cp.bb);
@@ -134,9 +161,11 @@ void nfs_service_impl::on_get_file_size(
     if (request.file_list.size() == 0) // return all file size in the destination file folder
     {
         if (!dsn::utils::filesystem::directory_exists(folder)) {
+            derror("{nfs_service} directory %s not exist", folder.c_str());
             err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true)) {
+                derror("{nfs_service} get subfiles of directory %s failed", folder.c_str());
                 err = ERR_FILE_OPERATION_FAILED;
             } else {
                 for (auto &fpath : file_list) {
@@ -144,7 +173,9 @@ void nfs_service_impl::on_get_file_size(
                     // Done
                     int64_t sz;
                     if (!dsn::utils::filesystem::file_size(fpath, sz)) {
-                        dassert(false, "Fail to get file size of %s.", fpath.c_str());
+                        derror("{nfs_service} get size of file %s failed", fpath.c_str());
+                        err = ERR_FILE_OPERATION_FAILED;
+                        break;
                     }
 
                     resp.size_list.push_back((uint64_t)sz);
@@ -162,7 +193,9 @@ void nfs_service_impl::on_get_file_size(
 
             struct stat st;
             if (0 != ::stat(file_path.c_str(), &st)) {
-                derror("file open %s failed, err = %s", file_path.c_str(), strerror(errno));
+                derror("{nfs_service} get stat of file %s failed, err = %s",
+                       file_path.c_str(),
+                       strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }

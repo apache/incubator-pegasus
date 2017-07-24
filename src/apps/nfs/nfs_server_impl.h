@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
+#include <dsn/cpp/perf_counter_.h>
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
 
@@ -42,14 +43,7 @@ class nfs_service_impl : public ::dsn::service::nfs_service,
                          public ::dsn::serverlet<nfs_service_impl>
 {
 public:
-    nfs_service_impl(nfs_opts &opts) : ::dsn::serverlet<nfs_service_impl>("nfs"), _opts(opts)
-    {
-        _file_close_timer = ::dsn::tasking::enqueue_timer(
-            LPC_NFS_FILE_CLOSE_TIMER,
-            this,
-            [this] { close_file(); },
-            std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
-    }
+    nfs_service_impl(nfs_opts &opts);
     virtual ~nfs_service_impl() {}
 
 protected:
@@ -113,6 +107,9 @@ private:
         _handles_map; // cache file handles
 
     ::dsn::task_ptr _file_close_timer;
+
+    perf_counter_ _recent_copy_data_size;
+    perf_counter_ _recent_copy_fail_count;
 };
 }
 }

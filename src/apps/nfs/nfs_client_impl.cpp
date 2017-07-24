@@ -39,6 +39,29 @@
 namespace dsn {
 namespace service {
 
+nfs_client_impl::nfs_client_impl(nfs_opts &opts) : _opts(opts)
+{
+    _concurrent_copy_request_count = 0;
+    _concurrent_local_write_count = 0;
+
+    _recent_copy_data_size.init("eon.nfs_client",
+                                "recent_copy_data_size",
+                                COUNTER_TYPE_VOLATILE_NUMBER,
+                                "nfs client copy data size in the recent period");
+    _recent_copy_fail_count.init("eon.nfs_client",
+                                 "recent_copy_fail_count",
+                                 COUNTER_TYPE_VOLATILE_NUMBER,
+                                 "nfs client copy fail count count in the recent period");
+    _recent_write_data_size.init("eon.nfs_client",
+                                 "recent_write_data_size",
+                                 COUNTER_TYPE_VOLATILE_NUMBER,
+                                 "nfs client write data size in the recent period");
+    _recent_write_fail_count.init("eon.nfs_client",
+                                  "recent_write_fail_count",
+                                  COUNTER_TYPE_VOLATILE_NUMBER,
+                                  "nfs client write fail count count in the recent period");
+}
+
 void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
                                         aio_task *nfs_task)
 {
@@ -69,7 +92,10 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
     user_request *ureq = (user_request *)context;
 
     if (err != ::dsn::ERR_OK) {
-        derror("remote copy request failed");
+        derror("{nfs_service} remote get file size failed, source = %s, dir = %s, err = %s",
+               ureq->file_size_req.source.to_string(),
+               ureq->file_size_req.source_dir.c_str(),
+               err.to_string());
         ureq->nfs_task->enqueue(err, 0);
         delete ureq;
         return;
@@ -77,7 +103,10 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
 
     err = resp.error;
     if (err != ::dsn::ERR_OK) {
-        derror("remote copy request failed");
+        derror("{nfs_service} remote get file size failed, source = %s, dir = %s, err = %s",
+               ureq->file_size_req.source.to_string(),
+               ureq->file_size_req.source_dir.c_str(),
+               err.to_string());
         ureq->nfs_task->enqueue(err, 0);
         delete ureq;
         return;
@@ -212,8 +241,16 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
     }
 
     if (err != ::dsn::ERR_OK) {
+        derror("{nfs_service} remote copy failed, source = %s, dir = %s, file = %s, err = %s",
+               reqc->file_ctx->user_req->file_size_req.source.to_string(),
+               reqc->file_ctx->user_req->file_size_req.source_dir.c_str(),
+               reqc->file_ctx->file_name.c_str(),
+               err.to_string());
+        _recent_copy_fail_count.increment();
         handle_completion(reqc->file_ctx->user_req, err);
         return;
+    } else {
+        _recent_copy_data_size.add(resp.size);
     }
 
     reqc->response = resp;
@@ -341,8 +378,14 @@ void nfs_client_impl::local_write_callback(error_code err,
     bool completed = false;
     dsn_handle_t file_to_close = nullptr;
     if (err != ERR_OK) {
+        derror("{nfs_service} local write failed, dir = %s, file = %s, err = %s",
+               reqc->file_ctx->user_req->file_size_req.dst_dir.c_str(),
+               reqc->file_ctx->file_name.c_str(),
+               err.to_string());
+        _recent_write_fail_count.increment();
         completed = true;
     } else {
+        _recent_write_data_size.add(sz);
         zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
         if (++reqc->file_ctx->finished_segments == (int)reqc->file_ctx->copy_requests.size()) {
             // close file immediately after write done to release resouces quickly

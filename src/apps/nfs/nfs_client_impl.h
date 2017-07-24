@@ -36,6 +36,7 @@
 #include "nfs_client.h"
 #include <queue>
 #include <dsn/tool-api/nfs.h>
+#include <dsn/cpp/perf_counter_.h>
 
 namespace dsn {
 namespace service {
@@ -78,10 +79,8 @@ struct nfs_opts
             "nfs",
             "max_file_copy_request_count_per_file",
             10,
-            "maximum concurrent remote copy requests for the same file on nfs client"); // limit
-                                                                                        // each file
-                                                                                        // copy
-                                                                                        // speed
+            "maximum concurrent remote copy requests for the same file on nfs client"
+            "to limit each file copy speed");
     }
 };
 
@@ -157,12 +156,7 @@ public:
     };
 
 public:
-    nfs_client_impl(nfs_opts &opts) : _opts(opts)
-    {
-        _concurrent_copy_request_count = 0;
-        _concurrent_local_write_count = 0;
-    }
-
+    nfs_client_impl(nfs_opts &opts);
     virtual ~nfs_client_impl() {}
 
     void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
@@ -202,6 +196,11 @@ private:
 
     zlock _local_writes_lock;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _local_writes;
+
+    perf_counter_ _recent_copy_data_size;
+    perf_counter_ _recent_copy_fail_count;
+    perf_counter_ _recent_write_data_size;
+    perf_counter_ _recent_write_fail_count;
 };
 }
 }
