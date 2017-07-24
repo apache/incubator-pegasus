@@ -83,15 +83,14 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
         return;
     }
 
+    ureq->file_context_vec.resize(resp.size_list.size());
     for (size_t i = 0; i < resp.size_list.size(); i++) // file list
     {
         file_context *filec;
         uint64_t size = resp.size_list[i];
 
         filec = new file_context(ureq, resp.file_list[i], resp.size_list[i]);
-        ureq->file_context_map.insert(std::pair<std::string, file_context *>(
-            utils::filesystem::path_combine(ureq->file_size_req.dst_dir, resp.file_list[i]),
-            filec));
+        ureq->file_context_vec[i] = filec;
 
         // dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
 
@@ -104,6 +103,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
         else
             req_size = static_cast<uint32_t>(size);
 
+        filec->copy_requests.reserve(size / _opts.nfs_copy_block_bytes + 1);
         int idx = 0;
         for (;;) // send one file with multi-round rpc
         {
@@ -115,14 +115,9 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
                 _copy_requests.push(req);
             }
 
-            req->copy_req.source = ureq->file_size_req.source;
-            req->copy_req.file_name = resp.file_list[i];
-            req->copy_req.offset = req_offset;
-            req->copy_req.size = req_size;
-            req->copy_req.dst_dir = ureq->file_size_req.dst_dir;
-            req->copy_req.source_dir = ureq->file_size_req.source_dir;
-            req->copy_req.overwrite = ureq->file_size_req.overwrite;
-            req->copy_req.is_last = (size <= req_size);
+            req->offset = req_offset;
+            req->size = req_size;
+            req->is_last = (size <= req_size);
 
             req_offset += req_size;
             size -= req_size;
@@ -169,7 +164,17 @@ void nfs_client_impl::continue_copy(int done_count)
             zauto_lock l(req->lock);
             if (req->is_valid) {
                 req->add_ref();
-                req->remote_copy_task = copy(req->copy_req,
+                user_request *ureq = req->file_ctx->user_req;
+                copy_request copy_req;
+                copy_req.source = ureq->file_size_req.source;
+                copy_req.file_name = req->file_ctx->file_name;
+                copy_req.offset = req->offset;
+                copy_req.size = req->size;
+                copy_req.dst_dir = ureq->file_size_req.dst_dir;
+                copy_req.source_dir = ureq->file_size_req.source_dir;
+                copy_req.overwrite = ureq->file_size_req.overwrite;
+                copy_req.is_last = req->is_last;
+                req->remote_copy_task = copy(copy_req,
                                              [=](error_code err, copy_response &&resp) {
                                                  end_copy(err, std::move(resp), req.get());
                                              },
@@ -196,6 +201,9 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
     dsn::ref_ptr<copy_request_ex> reqc;
     reqc = (copy_request_ex *)context;
     reqc->release_ref();
+
+    // reset task to release memory quickly
+    reqc->remote_copy_task = nullptr;
 
     continue_copy(1);
 
@@ -275,8 +283,8 @@ void nfs_client_impl::continue_write()
     }
 
     // real write
-    std::string file_path =
-        dsn::utils::filesystem::path_combine(reqc->copy_req.dst_dir, reqc->file_ctx->file_name);
+    std::string file_path = dsn::utils::filesystem::path_combine(
+        reqc->file_ctx->user_req->file_size_req.dst_dir, reqc->file_ctx->file_name);
     std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
     if (!dsn::utils::filesystem::create_directory(path)) {
         dassert(false, "Fail to create directory %s.", path.c_str());
@@ -324,22 +332,31 @@ void nfs_client_impl::local_write_callback(error_code err,
     // dassert(reqc->local_write_task == task::get_current_task(), "");
     --_concurrent_local_write_count;
 
-    // clear all content to release memory quickly
+    // clear all content and reset task to release memory quickly
     reqc->response.file_content = blob();
+    reqc->local_write_task = nullptr;
 
     continue_write();
 
     bool completed = false;
+    dsn_handle_t file_to_close = nullptr;
     if (err != ERR_OK) {
         completed = true;
     } else {
         zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
         if (++reqc->file_ctx->finished_segments == (int)reqc->file_ctx->copy_requests.size()) {
+            // close file immediately after write done to release resouces quickly
+            file_to_close = reqc->file_ctx->file.exchange(nullptr);
             if (++reqc->file_ctx->user_req->finished_files ==
-                (int)reqc->file_ctx->user_req->file_context_map.size()) {
+                (int)reqc->file_ctx->user_req->file_context_vec.size()) {
                 completed = true;
             }
         }
+    }
+
+    if (file_to_close) {
+        auto err = dsn_file_close(file_to_close);
+        dassert(err == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err));
     }
 
     if (completed) {
@@ -358,10 +375,10 @@ void nfs_client_impl::handle_completion(user_request *req, error_code err)
     }
 
     size_t total_size = 0;
-    for (auto &f : req->file_context_map) {
-        total_size += f.second->file_size;
+    for (auto &fc : req->file_context_vec) {
+        total_size += fc->file_size;
 
-        for (auto &rc : f.second->copy_requests) {
+        for (auto &rc : fc->copy_requests) {
             ::dsn::task_ptr ctask, wtask;
             {
                 zauto_lock l(rc->lock);
@@ -389,23 +406,22 @@ void nfs_client_impl::handle_completion(user_request *req, error_code err)
             }
         }
 
-        if (f.second->file) {
-            auto err2 = dsn_file_close(f.second->file);
+        dsn_handle_t file = fc->file.exchange(nullptr);
+        if (file) {
+            auto err2 = dsn_file_close(file);
             dassert(err2 == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err2));
 
-            f.second->file = nullptr;
-
-            if (f.second->finished_segments != (int)f.second->copy_requests.size()) {
-                ::remove((f.second->user_req->file_size_req.dst_dir + f.second->file_name).c_str());
+            if (fc->finished_segments != (int)fc->copy_requests.size()) {
+                ::remove((fc->user_req->file_size_req.dst_dir + fc->file_name).c_str());
             }
-
-            f.second->copy_requests.clear();
         }
 
-        delete f.second;
+        fc->copy_requests.clear();
+
+        delete fc;
     }
 
-    req->file_context_map.clear();
+    req->file_context_vec.clear();
     req->nfs_task->enqueue(err, err == ERR_OK ? total_size : 0);
 
     delete req;

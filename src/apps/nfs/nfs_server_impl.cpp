@@ -86,8 +86,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     }
 
     callback_para cp(std::move(reply));
-    cp.bb =
-        blob(dsn::make_shared_array<char>(_opts.nfs_copy_block_bytes), _opts.nfs_copy_block_bytes);
+    cp.bb = blob(dsn::make_shared_array<char>(request.size), request.size);
     cp.dst_dir = std::move(request.dst_dir);
     cp.file_path = std::move(file_path);
     cp.hfile = hfile;
@@ -114,7 +113,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
 
     ::dsn::service::copy_response resp;
     resp.error = err;
-    resp.file_content = cp.bb;
+    resp.file_content = std::move(cp.bb);
     resp.offset = cp.offset;
     resp.size = cp.size;
 

@@ -94,7 +94,9 @@ public:
     {
         file_context *file_ctx;
         int index;
-        copy_request copy_req;
+        uint64_t offset;
+        uint32_t size;
+        bool is_last;
         copy_response response;
         ::dsn::task_ptr remote_copy_task;
         ::dsn::task_ptr local_write_task;
@@ -106,6 +108,9 @@ public:
         {
             file_ctx = file;
             index = idx;
+            offset = 0;
+            size = 0;
+            is_last = false;
             remote_copy_task = nullptr;
             local_write_task = nullptr;
             is_ready_for_write = false;
@@ -146,8 +151,7 @@ public:
         std::atomic<int> finished_files;
         bool is_finished;
 
-        std::unordered_map<std::string, file_context *>
-            file_context_map; // map file name and file info
+        std::vector<file_context *> file_context_vec;
 
         user_request() { finished_files = 0; }
     };
