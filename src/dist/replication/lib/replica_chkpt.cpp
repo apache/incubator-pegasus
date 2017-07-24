@@ -62,10 +62,12 @@ void replica::on_checkpoint_timer()
         init_checkpoint(false);
     }
 
-    garbage_collection();
+    tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS, this, [this] {
+        garbage_collection();
+    });
 }
 
-// run in replica thread
+// run in background thread
 void replica::garbage_collection()
 {
     _private_log->garbage_collection(get_gpid(),
