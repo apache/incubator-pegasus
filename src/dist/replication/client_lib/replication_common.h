@@ -107,6 +107,8 @@ public:
 
     int32_t lb_interval_ms;
 
+    int32_t learn_app_max_concurrent_count;
+
 public:
     replication_options();
     void initialize();

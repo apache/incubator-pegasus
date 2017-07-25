@@ -60,7 +60,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     : serverlet("replica_stub"),
       _replicas_lock(true),
       /*_cli_replica_stub_json_state_handle(nullptr), */ _cli_kill_partition(nullptr),
-      _deny_client(false)
+      _deny_client(false),
+      _learn_app_concurrent_count(0)
 {
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;

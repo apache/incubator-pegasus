@@ -98,6 +98,7 @@ void replica::init_learn(uint64_t signature)
         }
 
         _stub->_counter_replicas_learning_recent_start_count.increment();
+
         _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
         _potential_secondary_states.learning_status = learner_status::LearningWithoutPrepare;
@@ -175,6 +176,19 @@ void replica::init_learn(uint64_t signature)
                     "invalid learner_status, status = %s",
                     enum_to_string(_potential_secondary_states.learning_status));
         }
+    }
+
+    if (_app->last_committed_decree() == 0 &&
+        _stub->_learn_app_concurrent_count.load() >= _options->learn_app_max_concurrent_count) {
+        dwarn("%s: init_learn[%016" PRIx64 "]: learnee = %s, "
+              "need to learn app because app_committed_decree = 0, but "
+              "learn_app_concurrent_count(%d) >= learn_app_max_concurrent_count(%d), skip",
+              name(),
+              _potential_secondary_states.learning_version,
+              _config.primary.to_string(),
+              _stub->_learn_app_concurrent_count.load(),
+              _options->learn_app_max_concurrent_count);
+        return;
     }
 
     _stub->_counter_replicas_learning_recent_round_start_count.increment();
@@ -496,6 +510,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
            resp.state.meta.length(),
            static_cast<uint32_t>(resp.state.files.size()),
            enum_to_string(_potential_secondary_states.learning_status));
+
     _potential_secondary_states.learning_copy_buffer_size += resp.state.meta.length();
     _stub->_counter_replicas_learning_recent_copy_buffer_size.add(resp.state.meta.length());
 
@@ -549,6 +564,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
               resp.config.primary.to_string(),
               _app->last_committed_decree(),
               resp.last_committed_decree);
+
         _stub->_counter_replicas_learning_recent_learn_reset_count.increment();
 
         // close app
@@ -615,6 +631,27 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 });
             _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
+        }
+    }
+
+    if (resp.type == learn_type::LT_APP) {
+        if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
+            --_stub->_learn_app_concurrent_count;
+            dwarn("%s: on_learn_reply[%016" PRIx64
+                  "]: learnee = %s, exceed learn_app_max_concurrent_count(%d) limit, skip this round",
+                  name(),
+                  _potential_secondary_states.learning_version,
+                  _config.primary.to_string(),
+                  _options->learn_app_max_concurrent_count);
+            _potential_secondary_states.learning_round_is_running = false;
+            return;
+        } else {
+            ddebug("%s: on_learn_reply[%016" PRIx64
+                   "]: learnee = %s, ++learn_app_concurrent_count = %d",
+                   name(),
+                   _potential_secondary_states.learning_version,
+                   _config.primary.to_string(),
+                   _stub->_learn_app_concurrent_count.load());
         }
     }
 
@@ -838,12 +875,26 @@ void replica::on_copy_remote_state_completed(error_code err,
            _app->last_durable_decree(),
            resp.prepare_start_decree,
            enum_to_string(_potential_secondary_states.learning_status));
-    _potential_secondary_states.learning_copy_file_count += resp.state.files.size();
-    _potential_secondary_states.learning_copy_file_size += size;
-    _stub->_counter_replicas_learning_recent_copy_file_count.add(resp.state.files.size());
-    _stub->_counter_replicas_learning_recent_copy_file_size.add(size);
+
+    if (resp.type == learn_type::LT_APP) {
+        --_stub->_learn_app_concurrent_count;
+        ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
+               "]: learnee = %s, --learn_app_concurrent_count = %d",
+               name(),
+               _potential_secondary_states.learning_version,
+               _config.primary.to_string(),
+               _stub->_learn_app_concurrent_count.load());
+    }
+
+    if (err == ERR_OK) {
+        _potential_secondary_states.learning_copy_file_count += resp.state.files.size();
+        _potential_secondary_states.learning_copy_file_size += size;
+        _stub->_counter_replicas_learning_recent_copy_file_count.add(resp.state.files.size());
+        _stub->_counter_replicas_learning_recent_copy_file_size.add(size);
+    }
 
     if (err != ERR_OK) {
+        // do nothing
     } else if (_potential_secondary_states.learning_status == learner_status::LearningWithPrepare) {
         dassert(resp.type == learn_type::LT_CACHE,
                 "invalid learn_type, type = %s",
@@ -1050,6 +1101,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
            _potential_secondary_states.learning_version,
            err.to_string(),
            _potential_secondary_states.duration_ms());
+
     _stub->_counter_replicas_learning_recent_learn_fail_count.increment();
 
     update_local_configuration_with_no_ballot_change(

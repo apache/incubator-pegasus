@@ -96,6 +96,8 @@ replication_options::replication_options()
     config_sync_interval_ms = 30000;
 
     lb_interval_ms = 10000;
+
+    learn_app_max_concurrent_count = 1;
 }
 
 replication_options::~replication_options() {}
@@ -396,6 +398,12 @@ void replication_options::initialize()
         "lb_interval_ms",
         lb_interval_ms,
         "every this period(ms) the meta server will do load balance");
+
+    learn_app_max_concurrent_count = (int)dsn_config_get_value_uint64(
+        "replication",
+        "learn_app_max_concurrent_count",
+        learn_app_max_concurrent_count,
+        "max count of learning app concurrently");
 
     replica_helper::load_meta_servers(meta_servers);
 

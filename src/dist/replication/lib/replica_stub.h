@@ -228,6 +228,10 @@ private:
     dsn_handle_t _cli_kill_partition;
     bool _deny_client;
 
+    // we limit LT_APP max concurrent count, because nfs service implementation is
+    // too simple, it do not support priority.
+    std::atomic_int _learn_app_concurrent_count;
+
     // performance counters
     perf_counter_ _counter_replicas_count;
     perf_counter_ _counter_replicas_opening_count;
