@@ -145,8 +145,18 @@ void replica_stub::install_perf_counters()
         "eon.replica_stub",
         "replicas.learning.recent.learn.reset.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning reset count for the reason of "
-        "resp.last_committed_decree < _app->last_committed_decree() in the recent period");
+        "learning reset count in the recent period"
+        "for the reason of resp.last_committed_decree < _app->last_committed_decree()");
+    _counter_replicas_learning_recent_learn_fail_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.fail.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning fail count in the recent period");
+    _counter_replicas_learning_recent_learn_succ_count.init(
+        "eon.replica_stub",
+        "replicas.learning.recent.learn.succ.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "learning succeed count in the recent period");
 
     _counter_replicas_recent_prepare_fail_count.init("eon.replica_stub",
                                                      "replicas.recent.prepare.fail.count",

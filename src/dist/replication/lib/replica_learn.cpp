@@ -1047,6 +1047,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
            _potential_secondary_states.learning_version,
            err.to_string(),
            _potential_secondary_states.duration_ms());
+    _stub->_counter_replicas_learning_recent_learn_fail_count.increment();
 
     update_local_configuration_with_no_ballot_change(
         is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
@@ -1227,6 +1228,8 @@ void replica::on_learn_completion_notification_reply(error_code err,
         } else {
             handle_learning_error(resp.err, false);
         }
+    } else {
+        _stub->_counter_replicas_learning_recent_learn_succ_count.increment();
     }
 }
 
