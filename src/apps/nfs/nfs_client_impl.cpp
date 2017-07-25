@@ -43,6 +43,7 @@ nfs_client_impl::nfs_client_impl(nfs_opts &opts) : _opts(opts)
 {
     _concurrent_copy_request_count = 0;
     _concurrent_local_write_count = 0;
+    _high_priority_remaining_time = _opts.high_priority_speed_rate;
 
     _recent_copy_data_size.init("eon.nfs_client",
                                 "recent_copy_data_size",
@@ -66,6 +67,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
                                         aio_task *nfs_task)
 {
     user_request *req = new user_request();
+    req->high_priority = rci->high_priority;
     req->file_size_req.source = rci->source;
     req->file_size_req.dst_dir = rci->dest_dir;
     req->file_size_req.file_list = rci->files;
@@ -141,7 +143,10 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
 
             {
                 zauto_lock l(_copy_requests_lock);
-                _copy_requests.push(req);
+                if (ureq->high_priority)
+                    _copy_requests_high.push(req);
+                else
+                    _copy_requests_low.push(req);
             }
 
             req->offset = req_offset;
@@ -180,9 +185,18 @@ void nfs_client_impl::continue_copy(int done_count)
     while (true) {
         {
             zauto_lock l(_copy_requests_lock);
-            if (!_copy_requests.empty()) {
-                req = _copy_requests.front();
-                _copy_requests.pop();
+            if (!_copy_requests_high.empty() &&
+                (_high_priority_remaining_time > 0 || _copy_requests_low.empty())) {
+                // pop from high priority
+                req = _copy_requests_high.front();
+                _copy_requests_high.pop();
+                if (_high_priority_remaining_time > 0)
+                    --_high_priority_remaining_time;
+            } else if (!_copy_requests_low.empty()) {
+                // pop from low priority
+                req = _copy_requests_low.front();
+                _copy_requests_low.pop();
+                _high_priority_remaining_time = _opts.high_priority_speed_rate;
             } else {
                 --_concurrent_copy_request_count;
                 break;

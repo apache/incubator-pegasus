@@ -54,6 +54,7 @@ struct remote_copy_request
     std::vector<std::string> files;
     std::string dest_dir;
     bool overwrite;
+    bool high_priority;
 };
 
 struct remote_copy_response

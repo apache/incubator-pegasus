@@ -338,7 +338,7 @@ TEST(core, dsn_nfs)
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
         dsn_file_copy_remote_files(
-            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", false, t);
+            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", false, false, t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
@@ -379,7 +379,7 @@ TEST(core, dsn_nfs)
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
         dsn_file_copy_remote_files(
-            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", true, t);
+            dsn_address_build("localhost", 20101), ".", files, "nfs_test_dir", true, false, t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);
@@ -405,8 +405,12 @@ TEST(core, dsn_nfs)
                                                 0);
         dsn_task_add_ref(t);
         ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_directory(
-            dsn_address_build("localhost", 20101), "nfs_test_dir", "nfs_test_dir_copy", false, t);
+        dsn_file_copy_remote_directory(dsn_address_build("localhost", 20101),
+                                       "nfs_test_dir",
+                                       "nfs_test_dir_copy",
+                                       false,
+                                       false,
+                                       t);
         ASSERT_TRUE(dsn_task_wait_timeout(t, 20000));
         ASSERT_EQ(r.err, dsn_task_error(t));
         ASSERT_EQ(ERR_OK, r.err);

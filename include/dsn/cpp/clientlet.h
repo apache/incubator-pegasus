@@ -463,6 +463,7 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
                             const std::vector<std::string> &files, // empty for all
                             const std::string &dest_dir,
                             bool overwrite,
+                            bool high_priority,
                             dsn_task_t native_task);
 
 template <typename TCallback>
@@ -471,13 +472,15 @@ task_ptr copy_remote_files(::dsn::rpc_address remote,
                            const std::vector<std::string> &files, // empty for all
                            const std::string &dest_dir,
                            bool overwrite,
+                           bool high_priority,
                            dsn_task_code_t callback_code,
                            clientlet *svc,
                            TCallback &&callback,
                            int hash = 0)
 {
     auto tsk = create_aio_task(callback_code, svc, std::forward<TCallback>(callback), hash);
-    copy_remote_files_impl(remote, source_dir, files, dest_dir, overwrite, tsk->native_handle());
+    copy_remote_files_impl(
+        remote, source_dir, files, dest_dir, overwrite, high_priority, tsk->native_handle());
     return tsk;
 }
 
@@ -486,6 +489,7 @@ task_ptr copy_remote_directory(::dsn::rpc_address remote,
                                const std::string &source_dir,
                                const std::string &dest_dir,
                                bool overwrite,
+                               bool high_priority,
                                dsn_task_code_t callback_code,
                                clientlet *svc,
                                TCallback &&callback,
@@ -496,6 +500,7 @@ task_ptr copy_remote_directory(::dsn::rpc_address remote,
                              {},
                              dest_dir,
                              overwrite,
+                             high_priority,
                              callback_code,
                              svc,
                              std::forward<TCallback>(callback),

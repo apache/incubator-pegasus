@@ -120,11 +120,16 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
                             const std::vector<std::string> &files, // empty for all
                             const std::string &dest_dir,
                             bool overwrite,
+                            bool high_priority,
                             dsn_task_t native_task)
 {
     if (files.empty()) {
-        dsn_file_copy_remote_directory(
-            remote.c_addr(), source_dir.c_str(), dest_dir.c_str(), overwrite, native_task);
+        dsn_file_copy_remote_directory(remote.c_addr(),
+                                       source_dir.c_str(),
+                                       dest_dir.c_str(),
+                                       overwrite,
+                                       high_priority,
+                                       native_task);
     } else {
         const char **ptr = (const char **)alloca(sizeof(const char *) * (files.size() + 1));
         const char **ptr_base = ptr;
@@ -138,6 +143,7 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
                                    ptr_base,
                                    dest_dir.c_str(),
                                    overwrite,
+                                   high_priority,
                                    native_task);
     }
 }

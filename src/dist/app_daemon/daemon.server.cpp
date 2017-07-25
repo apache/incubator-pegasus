@@ -396,6 +396,7 @@ void daemon_s_service::on_add_app(const ::dsn::replication::configuration_update
             files,
             _working_dir,
             true,
+            false,
             LPC_DAEMON_DOWNLOAD_PACKAGE,
             this,
             [ this, cap_app = std::move(app) ](error_code err, size_t sz) mutable {

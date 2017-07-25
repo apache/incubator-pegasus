@@ -779,20 +779,23 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             return;
         }
 
+        bool high_priority = (resp.type == learn_type::LT_APP ? false : true);
         ddebug("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-               " ms, start to copy remote files, copy_file_count = %d",
+               " ms, start to copy remote files, copy_file_count = %d, priority = %s",
                name(),
                req.signature,
                resp.config.primary.to_string(),
                _potential_secondary_states.duration_ms(),
-               static_cast<int>(resp.state.files.size()));
+               static_cast<int>(resp.state.files.size()),
+               high_priority ? "high" : "low");
 
         _potential_secondary_states.learn_remote_files_task = file::copy_remote_files(
             resp.config.primary,
             resp.base_local_dir,
             resp.state.files,
             learn_dir,
-            true,
+            true, // overwrite
+            high_priority,
             LPC_REPLICATION_COPY_REMOTE_FILES,
             this,
             [ this, req_cap = std::move(req), resp_copy = resp ](error_code err, int sz) mutable {

@@ -101,12 +101,14 @@ public:
         std::vector<std::string> files;  // empty is for all
         files.push_back("dsn.nfs.test");
         bool overwrite = true;
+        bool high_priority = false;
         file::copy_remote_files(
             _server,
             source_dir,
             files,
             dest_dir,
             overwrite,
+            high_priority,
             ::dsn::service::LPC_NFS_COPY_FILE,
             nullptr,
             [ this, index = _req_index.fetch_add(1, std::memory_order_relaxed) + 1 ](

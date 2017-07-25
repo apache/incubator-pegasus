@@ -46,6 +46,7 @@ struct nfs_opts
     uint32_t nfs_copy_block_bytes;
     int max_concurrent_remote_copy_requests;
     int max_concurrent_local_writes;
+    int high_priority_speed_rate;
 
     int file_close_expire_time_ms;
     int file_close_timer_interval_ms_on_server;
@@ -65,6 +66,11 @@ struct nfs_opts
             "maximum concurrent remote copy to the same server on nfs client");
         max_concurrent_local_writes = (int)dsn_config_get_value_uint64(
             "nfs", "max_concurrent_local_writes", 5, "maximum local file writes on nfs client");
+        high_priority_speed_rate = (int)dsn_config_get_value_uint64(
+            "nfs",
+            "high_priority_speed_rate",
+            2,
+            "the copy speed rate of high priority comparing with low priority on nfs client");
         file_close_expire_time_ms =
             (int)dsn_config_get_value_uint64("nfs",
                                              "file_close_expire_time_ms",
@@ -145,6 +151,7 @@ public:
     {
         zlock user_req_lock;
 
+        bool high_priority;
         get_file_size_request file_size_req;
         ::dsn::ref_ptr<aio_task> nfs_task;
         std::atomic<int> finished_files;
@@ -152,7 +159,12 @@ public:
 
         std::vector<file_context *> file_context_vec;
 
-        user_request() { finished_files = 0; }
+        user_request()
+        {
+            high_priority = false;
+            finished_files = 0;
+            is_finished = false;
+        }
     };
 
 public:
@@ -190,9 +202,11 @@ private:
                                                      // limitted above
                                                      // max_concurrent_remote_copy_requests
     std::atomic<int> _concurrent_local_write_count;  //
+    int _high_priority_remaining_time;
 
     zlock _copy_requests_lock;
-    std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests;
+    std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_high;
+    std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_low;
 
     zlock _local_writes_lock;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _local_writes;

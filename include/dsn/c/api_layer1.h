@@ -1021,12 +1021,14 @@ extern DSN_API void dsn_file_write_vector(dsn_handle_t file,
  \param source_dir source dir on remote server
  \param dest_dir   destination dir on local server
  \param overwrite  true to overwrite, false to preserve.
+ \param high_priority  true means copy in high priority.
  \param cb         callback aio task to be executed on completion
  */
 extern DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
                                                    const char *source_dir,
                                                    const char *dest_dir,
                                                    bool overwrite,
+                                                   bool high_priority,
                                                    dsn_task_t cb);
 
 /*!
@@ -1038,6 +1040,7 @@ extern DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
     when it contains no files, all files within source_dir are copied
  \param dest_dir     destination dir on local server
  \param overwrite    true to overwrite, false to preserve.
+ \param high_priority  true means copy in high priority.
  \param cb           callback aio task to be executed on completion
  */
 extern DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
@@ -1045,6 +1048,7 @@ extern DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
                                                const char **source_files,
                                                const char *dest_dir,
                                                bool overwrite,
+                                               bool high_priority,
                                                dsn_task_t cb);
 
 /*! get read/written io size for the given aio task */

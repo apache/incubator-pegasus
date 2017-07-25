@@ -885,6 +885,7 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
                                             const char *source_dir,
                                             const char *dest_dir,
                                             bool overwrite,
+                                            bool high_priority,
                                             dsn_task_t cb)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
@@ -893,6 +894,7 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
     rci->files.clear();
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
+    rci->high_priority = high_priority;
 
     ::dsn::aio_task *callback((::dsn::aio_task *)cb);
 
@@ -904,6 +906,7 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
                                         const char **source_files,
                                         const char *dest_dir,
                                         bool overwrite,
+                                        bool high_priority,
                                         dsn_task_t cb)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
@@ -921,6 +924,7 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
 
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
+    rci->high_priority = high_priority;
 
     ::dsn::aio_task *callback((::dsn::aio_task *)cb);
 

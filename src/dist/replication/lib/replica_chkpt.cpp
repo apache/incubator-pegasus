@@ -248,6 +248,7 @@ void replica::on_copy_checkpoint_ack(error_code err,
                                 resp->state.files,
                                 ldir,
                                 false,
+                                false,
                                 LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
                                 this,
                                 [this, resp, ldir](error_code err, size_t sz) {

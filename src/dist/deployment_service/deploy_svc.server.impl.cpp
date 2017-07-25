@@ -210,6 +210,7 @@ void deploy_svc_service_impl::on_deploy_internal(const deploy_request &req, /*ou
                                 files,
                                 ldir,
                                 true,
+                                false,
                                 LPC_DEPLOY_DOWNLOAD_RESOURCE,
                                 this,
                                 [this, svc, ldir, file](error_code err, size_t sz) {
