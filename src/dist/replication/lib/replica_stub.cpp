@@ -173,6 +173,11 @@ void replica_stub::install_perf_counters()
         "replicas.recent.replica.move.garbage.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "replica move to garbage count in the recent period");
+    _counter_replicas_recent_replica_remove_dir_count.init(
+        "eon.replica_stub",
+        "replicas.recent.replica.remove.dir.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "replica directory remove count in the recent period");
 
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
@@ -1430,35 +1435,25 @@ void replica_stub::on_gc()
                 continue;
             }
 
-            if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds) {
+            uint64_t last_write_time = (uint64_t)mt;
+            uint64_t current_time_ms = dsn_now_ms();
+            if (last_write_time + _options.gc_disk_error_replica_interval_seconds <
+                current_time_ms / 1000) {
                 if (!dsn::utils::filesystem::remove_path(fpath)) {
-                    dwarn("gc_disk: failed to delete directory '%s'", fpath.c_str());
+                    dwarn("gc_disk: failed to delete directory '%s', time_used_ms = %" PRIu64,
+                          fpath.c_str(),
+                          dsn_now_ms() - current_time_ms);
                 } else {
-                    dwarn("gc_disk: {replica_dir_op} succeed to delete directory '%s'",
-                          fpath.c_str());
+                    dwarn("gc_disk: {replica_dir_op} succeed to delete directory '%s'"
+                          ", time_used_ms = %" PRIu64,
+                          fpath.c_str(),
+                          dsn_now_ms() - current_time_ms);
+                    _counter_replicas_recent_replica_remove_dir_count.increment();
                 }
             }
         }
     }
     sub_list.clear();
-
-#if 0
-    boost::filesystem::directory_iterator endtr;
-    for (boost::filesystem::directory_iterator it(dir());
-        it != endtr;
-        ++it)
-    {
-        auto name = it->path().filename().string();
-        if (name.length() > strlen(".err") && name.substr() == ".err")
-        {
-            std::time_t mt = boost::filesystem::last_write_time(it->path());
-            if (mt > time(0) + _options.gc_disk_error_replica_interval_seconds)
-            {
-                boost::filesystem::remove_all(_dir + "/" + name);
-            }
-        }
-    }
-#endif
 
     ddebug("finish to garbage collection");
 }
