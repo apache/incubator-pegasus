@@ -43,6 +43,7 @@ nfs_client_impl::nfs_client_impl(nfs_opts &opts) : _opts(opts)
 {
     _concurrent_copy_request_count = 0;
     _concurrent_local_write_count = 0;
+    _buffered_local_write_count = 0;
     _high_priority_remaining_time = _opts.high_priority_speed_rate;
 
     _recent_copy_data_size.init("eon.nfs_client",
@@ -176,7 +177,15 @@ void nfs_client_impl::continue_copy(int done_count)
         _concurrent_copy_request_count -= done_count;
     }
 
+    if (_buffered_local_write_count >= _opts.max_buffered_local_writes) {
+        // exceed max_buffered_local_writes limit, pause.
+        // the copy task will be triggered by continue_copy() invoked in local_write_callback().
+        return;
+    }
+
     if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests) {
+        // exceed max_concurrent_remote_copy_requests limit, pause.
+        // the copy task will be triggered by continue_copy() invoked in end_copy().
         --_concurrent_copy_request_count;
         return;
     }
@@ -290,6 +299,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
                 {
                     zauto_lock l(_local_writes_lock);
                     _local_writes.push(fc->copy_requests[i]);
+                    ++_buffered_local_write_count;
                 }
             } else
                 break;
@@ -315,6 +325,7 @@ void nfs_client_impl::continue_write()
             if (!_local_writes.empty()) {
                 reqc = _local_writes.front();
                 _local_writes.pop();
+                --_buffered_local_write_count;
             } else {
                 reqc = nullptr;
                 break;
@@ -388,6 +399,7 @@ void nfs_client_impl::local_write_callback(error_code err,
     reqc->local_write_task = nullptr;
 
     continue_write();
+    continue_copy(0);
 
     bool completed = false;
     dsn_handle_t file_to_close = nullptr;

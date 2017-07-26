@@ -46,6 +46,7 @@ struct nfs_opts
     uint32_t nfs_copy_block_bytes;
     int max_concurrent_remote_copy_requests;
     int max_concurrent_local_writes;
+    int max_buffered_local_writes;
     int high_priority_speed_rate;
 
     int file_close_expire_time_ms;
@@ -54,18 +55,20 @@ struct nfs_opts
 
     void init()
     {
-        nfs_copy_block_bytes = (uint32_t)dsn_config_get_value_uint64(
-            "nfs",
-            "nfs_copy_block_bytes",
-            4 * 1024 * 1024,
-            "maximum block size (bytes) for each network copy");
+        nfs_copy_block_bytes =
+            (uint32_t)dsn_config_get_value_uint64("nfs",
+                                                  "nfs_copy_block_bytes",
+                                                  4 * 1024 * 1024,
+                                                  "max block size (bytes) for each network copy");
         max_concurrent_remote_copy_requests = (int)dsn_config_get_value_uint64(
             "nfs",
             "max_concurrent_remote_copy_requests",
             50,
-            "maximum concurrent remote copy to the same server on nfs client");
+            "max concurrent remote copy to the same server on nfs client");
         max_concurrent_local_writes = (int)dsn_config_get_value_uint64(
-            "nfs", "max_concurrent_local_writes", 5, "maximum local file writes on nfs client");
+            "nfs", "max_concurrent_local_writes", 5, "max local file writes on nfs client");
+        max_buffered_local_writes = (int)dsn_config_get_value_uint64(
+            "nfs", "max_buffered_local_writes", 500, "max buffered file writes on nfs client");
         high_priority_speed_rate = (int)dsn_config_get_value_uint64(
             "nfs",
             "high_priority_speed_rate",
@@ -75,7 +78,7 @@ struct nfs_opts
             (int)dsn_config_get_value_uint64("nfs",
                                              "file_close_expire_time_ms",
                                              60 * 1000,
-                                             "maximum idle time for an opening file on nfs server");
+                                             "max idle time for an opening file on nfs server");
         file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64(
             "nfs",
             "file_close_timer_interval_ms_on_server",
@@ -198,15 +201,17 @@ private:
 private:
     nfs_opts &_opts;
 
-    std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, need be
-                                                     // limitted above
-                                                     // max_concurrent_remote_copy_requests
-    std::atomic<int> _concurrent_local_write_count;  //
-    int _high_priority_remaining_time;
+    std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, limited
+                                                     // by max_concurrent_remote_copy_requests.
+    std::atomic<int> _concurrent_local_write_count;  // record concurrent write count, limited
+                                                     // by max_concurrent_local_writes.
+    std::atomic<int> _buffered_local_write_count;    // record current buffered write count, limited
+                                                     // by max_buffered_local_writes.
 
     zlock _copy_requests_lock;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_high;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_low;
+    int _high_priority_remaining_time;
 
     zlock _local_writes_lock;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _local_writes;
