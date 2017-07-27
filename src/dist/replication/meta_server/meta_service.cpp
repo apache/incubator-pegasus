@@ -75,10 +75,6 @@ meta_service::meta_service()
                                   "recent_disconnect_count",
                                   COUNTER_TYPE_VOLATILE_NUMBER,
                                   "replica server disconnect count in the recent period");
-    _recent_update_config_count.init("eon.meta_service",
-                                     "recent_update_config_count",
-                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                     "update configuration count in the recent period");
     _unalive_nodes_count.init(
         "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
 }

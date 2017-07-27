@@ -111,6 +111,41 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
 {
     _meta_svc = meta_svc;
     _apps_root = apps_root;
+
+    _dead_partition_count.init("eon.server_state",
+                               "dead_partition_count",
+                               COUNTER_TYPE_NUMBER,
+                               "current dead partition count");
+    _unreadable_partition_count.init("eon.server_state",
+                                     "unreadable_partition_count",
+                                     COUNTER_TYPE_NUMBER,
+                                     "current unreadable partition count");
+    _unwritable_partition_count.init("eon.server_state",
+                                     "unwritable_partition_count",
+                                     COUNTER_TYPE_NUMBER,
+                                     "current unwritable partition count");
+    _writable_ill_partition_count.init("eon.server_state",
+                                       "writable_ill_partition_count",
+                                       COUNTER_TYPE_NUMBER,
+                                       "current writable ill partition count");
+    _healthy_partition_count.init("eon.server_state",
+                                  "healthy_partition_count",
+                                  COUNTER_TYPE_NUMBER,
+                                  "current healthy partition count");
+    _recent_update_config_count.init("eon.server_state",
+                                     "recent_update_config_count",
+                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                     "update configuration count in the recent period");
+    _recent_partition_change_unwritable_count.init(
+        "eon.server_state",
+        "recent_partition_change_unwritable_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "partition change to unwritable count in the recent period");
+    _recent_partition_change_writable_count.init(
+        "eon.server_state",
+        "recent_partition_change_writable_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "partition change to writable count in the recent period");
 }
 
 bool server_state::spin_wait_staging(int timeout_seconds)
@@ -1285,6 +1320,10 @@ void server_state::update_configuration_locally(
     partition_configuration &old_cfg = app.partitions[gpid.get_partition_index()];
     partition_configuration &new_cfg = config_request->config;
 
+    int min_2pc_count = _meta_svc->get_options().mutation_2pc_min_replica_count;
+    health_status old_health_status = partition_health_status(old_cfg, min_2pc_count);
+    health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
+
     if (app.is_stateful) {
         dassert(old_cfg.ballot + 1 == new_cfg.ballot,
                 "invalid configuration update request, old ballot %" PRId64 ", new ballot %" PRId64
@@ -1392,7 +1431,13 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    _meta_svc->incr_update_config_counter();
+    _recent_update_config_count.increment();
+    if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
+        _recent_partition_change_unwritable_count.increment();
+    }
+    if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
+        _recent_partition_change_writable_count.increment();
+    }
 }
 
 task_ptr server_state::update_configuration_on_remote(
@@ -2192,33 +2237,22 @@ bool server_state::can_run_balancer()
 
 void server_state::update_partition_perf_counter()
 {
-    auto func = [this](const std::shared_ptr<app_state> &app) {
-        int dead = 0;
-        int unwritable_ill = 0;
-        int writable_ill = 0;
+    int counters[HS_MAX_VALUE];
+    ::memset(counters, 0, sizeof(counters));
+    int min_2pc_count = _meta_svc->get_options().mutation_2pc_min_replica_count;
+    auto func = [&](const std::shared_ptr<app_state> &app) {
         for (unsigned int i = 0; i != app->partition_count; ++i) {
-            partition_configuration &pc = app->partitions[i];
-            if (pc.primary.is_invalid()) {
-                if (pc.secondaries.empty())
-                    dead++;
-                else
-                    unwritable_ill++;
-            } else {
-                int n = replica_count(pc);
-                if (n < _meta_svc->get_options().mutation_2pc_min_replica_count) {
-                    unwritable_ill++;
-                } else if (n < pc.max_replica_count) {
-                    writable_ill++;
-                }
-            }
+            health_status st = partition_health_status(app->partitions[i], min_2pc_count);
+            counters[st]++;
         }
-        app->helpers->writable_ill_partitions.set(writable_ill);
-        app->helpers->unwritable_ill_partitions.set(unwritable_ill);
-        app->helpers->dead_partitions.set(dead);
         return true;
     };
-
     for_each_available_app(_all_apps, func);
+    _dead_partition_count.set(counters[HS_DEAD]);
+    _unreadable_partition_count.set(counters[HS_UNREADABLE]);
+    _unwritable_partition_count.set(counters[HS_UNWRITABLE]);
+    _writable_ill_partition_count.set(counters[HS_WRITABLE_ILL]);
+    _healthy_partition_count.set(counters[HS_HEALTHY]);
 }
 
 bool server_state::check_all_partitions()
@@ -2230,6 +2264,7 @@ bool server_state::check_all_partitions()
     zauto_write_lock l(_lock);
 
     update_partition_perf_counter();
+
     // first the cure stage
     if (level <= meta_function_level::fl_freezed) {
         ddebug("service is in level(%s), don't do any cure or balancer actions",

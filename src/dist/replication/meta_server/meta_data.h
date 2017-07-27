@@ -46,7 +46,6 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/cpp/perf_counter_.h>
 
 namespace dsn {
 namespace replication {
@@ -252,10 +251,6 @@ public:
     std::vector<config_context> contexts;
     dsn_message_t pending_response;
 
-    perf_counter_ writable_ill_partitions;
-    perf_counter_ unwritable_ill_partitions;
-    perf_counter_ dead_partitions;
-
 public:
     app_state_helper() : owner(nullptr), partitions_in_progress(0)
     {
@@ -408,6 +403,36 @@ inline int replica_count(const partition_configuration &pc)
 {
     int ans = (pc.primary.is_invalid()) ? 0 : 1;
     return ans + pc.secondaries.size();
+}
+
+enum health_status
+{
+    HS_DEAD = 0,     // (primary = 0 && secondary = 0)
+    HS_UNREADABLE,   // (primary = 0 && secondary > 0)
+    HS_UNWRITABLE,   // (primary = 1 && primary + secondary < mutation_2pc_min_replica_count)
+    HS_WRITABLE_ILL, // (primary = 1 && primary + secondary >= mutation_2pc_min_replica_count
+                     //              && primary + secondary < max_replica_count)
+    HS_HEALTHY,      // (primary = 1 && primary + secondary >= max_replica_count)
+    HS_MAX_VALUE
+};
+
+inline health_status partition_health_status(const partition_configuration &pc,
+                                             int mutation_2pc_min_replica_count)
+{
+    if (pc.primary.is_invalid()) {
+        if (pc.secondaries.empty())
+            return HS_DEAD;
+        else
+            return HS_UNREADABLE;
+    } else { // !pc.primary.is_invalid()
+        int n = pc.secondaries.size() + 1;
+        if (n < mutation_2pc_min_replica_count)
+            return HS_UNWRITABLE;
+        else if (n < pc.max_replica_count)
+            return HS_WRITABLE_ILL;
+        else
+            return HS_HEALTHY;
+    }
 }
 
 inline void

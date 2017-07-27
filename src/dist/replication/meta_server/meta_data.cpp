@@ -231,21 +231,6 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
         partitions[i].pid.set_partition_index(i);
 
     helpers->on_init_partitions();
-
-    // initialize the perf counters
-    std::string counter_name = std::string("unwritable_ill_partitions@") + log_name;
-    helpers->unwritable_ill_partitions.init("eon.meta_data",
-                                            counter_name.c_str(),
-                                            COUNTER_TYPE_NUMBER,
-                                            "unwritable ill partitions for an app");
-    counter_name = std::string("writable_ill_partitions@") + log_name;
-    helpers->writable_ill_partitions.init("eon.meta_data",
-                                          counter_name.c_str(),
-                                          COUNTER_TYPE_NUMBER,
-                                          "writable ill partitions for an app");
-    counter_name = std::string("dead_partitions@") + log_name;
-    helpers->dead_partitions.init(
-        "eon.meta_data", counter_name.c_str(), COUNTER_TYPE_NUMBER, "dead partitions for an app");
 }
 
 std::shared_ptr<app_state> app_state::create(const app_info &info)
