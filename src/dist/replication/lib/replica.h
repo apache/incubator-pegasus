@@ -162,7 +162,7 @@ private:
     void init_prepare(mutation_ptr &mu);
     void send_prepare_message(::dsn::rpc_address addr,
                               partition_status::type status,
-                              mutation_ptr &mu,
+                              const mutation_ptr &mu,
                               int timeout_milliseconds,
                               int64_t learn_signature = invalid_signature);
     void on_append_log_completed(mutation_ptr &mu, error_code err, size_t size);

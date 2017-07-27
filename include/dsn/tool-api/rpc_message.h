@@ -71,7 +71,7 @@ typedef struct message_header
     uint32_t hdr_crc32;
     uint32_t body_length;
     uint32_t body_crc32;
-    uint64_t id;       // sequence id
+    uint64_t id;       // sequence id, used to match request and response
     uint64_t trace_id; // used for tracking source
     char rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
     fast_code rpc_code; // dsn::task_code

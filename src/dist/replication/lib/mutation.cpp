@@ -53,7 +53,6 @@ mutation::mutation()
     _private0 = 0;
     _not_logged = 1;
     _prepare_ts_ms = 0;
-    _prepare_request = nullptr;
     strcpy(_name, "0.0.0.0");
     _appro_data_bytes = sizeof(mutation_header);
     _create_ts_ns = dsn_now_ns();
@@ -68,8 +67,8 @@ mutation::~mutation()
         }
     }
 
-    if (_prepare_request != nullptr) {
-        dsn_msg_release_ref(_prepare_request);
+    for (auto &request : _prepare_requests) {
+        dsn_msg_release_ref(request);
     }
 }
 
@@ -98,9 +97,9 @@ void mutation::copy_from(mutation_ptr &old)
     }
     */
 
-    _prepare_request = old->prepare_msg();
-    if (_prepare_request) {
-        dsn_msg_add_ref(_prepare_request);
+    _prepare_requests = old->prepare_requests();
+    for (auto &request : _prepare_requests) {
+        dsn_msg_add_ref(request);
     }
 }
 
@@ -211,11 +210,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
     }
 
     mu->client_requests.resize(mu->data.updates.size());
-
-    if (nullptr != from) {
-        mu->_prepare_request = from;
-        dsn_msg_add_ref(from); // released on dctor
-    }
+    mu->add_prepare_request(from);
 
     snprintf_p(mu->_name,
                sizeof(mu->_name),

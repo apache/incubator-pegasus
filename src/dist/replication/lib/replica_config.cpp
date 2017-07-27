@@ -963,6 +963,7 @@ void replica::replay_prepare_list()
                    mu->tid());
         }
 
+        // ATTENTION: init_prepare() may do nothing if NOT_ENOUGH_MEMBER
         init_prepare(mu);
     }
 }

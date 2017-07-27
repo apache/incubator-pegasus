@@ -59,7 +59,14 @@ public:
     const uint64_t tid() const { return _tid; }
     bool is_logged() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
-    dsn_message_t prepare_msg() { return _prepare_request; }
+    const std::vector<dsn_message_t> &prepare_requests() const { return _prepare_requests; }
+    void add_prepare_request(dsn_message_t request)
+    {
+        if (nullptr != request) {
+            _prepare_requests.push_back(request);
+            dsn_msg_add_ref(request); // released on dctor
+        }
+    }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const
     {
@@ -140,8 +147,8 @@ private:
     uint64_t _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
     node_tasks _prepare_or_commit_tasks;
-    dsn_message_t _prepare_request;
-    char _name[60]; // app_id.partition_index.ballot.decree
+    std::vector<dsn_message_t> _prepare_requests; // may combine duplicate requests
+    char _name[60];                               // app_id.partition_index.ballot.decree
     int _appro_data_bytes;
     uint64_t _create_ts_ns; // for profiling
     uint64_t _tid;          // trace id, unique in process

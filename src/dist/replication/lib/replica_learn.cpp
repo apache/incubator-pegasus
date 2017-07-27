@@ -180,12 +180,13 @@ void replica::init_learn(uint64_t signature)
 
     if (_app->last_committed_decree() == 0 &&
         _stub->_learn_app_concurrent_count.load() >= _options->learn_app_max_concurrent_count) {
-        dwarn("%s: init_learn[%016" PRIx64 "]: learnee = %s, "
-              "need to learn app because app_committed_decree = 0, but "
+        dwarn("%s: init_learn[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
+              "ms, need to learn app because app_committed_decree = 0, but "
               "learn_app_concurrent_count(%d) >= learn_app_max_concurrent_count(%d), skip",
               name(),
               _potential_secondary_states.learning_version,
               _config.primary.to_string(),
+              _potential_secondary_states.duration_ms(),
               _stub->_learn_app_concurrent_count.load(),
               _options->learn_app_max_concurrent_count);
         return;
@@ -343,6 +344,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request &request)
             cleanup_preparing_mutations(false);
 
             // the replayed prepare msg needs to be AFTER the learning response msg
+            // to reduce probability that preparing messages arrive remote early than
+            // learning response msg.
             delayed_replay_prepare_list = true;
 
             ddebug("%s: on_learn[%016" PRIx64
@@ -387,28 +390,31 @@ void replica::on_learn(dsn_message_t msg, const learn_request &request)
     // in this case, the state on the PS is still incomplete
     else {
         if (learn_start_decree > _app->last_durable_decree()) {
-            ddebug("%s: on_learn[%016" PRIx64 "]: choose to learn private logs, "
+            ddebug("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn private logs, "
                    "because learn_start_decree(%" PRId64 ") > _app->last_durable_decree(%" PRId64
                    ")",
                    name(),
                    request.signature,
+                   request.learner.to_string(),
                    learn_start_decree,
                    _app->last_durable_decree());
             _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
             response.type = learn_type::LT_LOG;
         } else if (_private_log->get_learn_state(get_gpid(), learn_start_decree, response.state)) {
-            ddebug("%s: on_learn[%016" PRIx64 "]: choose to learn private logs, "
+            ddebug("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn private logs, "
                    "because mutation_log::get_learn_state() returns true",
                    name(),
-                   request.signature);
+                   request.signature,
+                   request.learner.to_string());
             response.type = learn_type::LT_LOG;
         } else {
-            ddebug("%s: on_learn[%016" PRIx64 "]: choose to learn app, "
+            ddebug("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn app, "
                    "beacuse learn_start_decree(%" PRId64 ") <= _app->last_durable_decree(%" PRId64
                    "), "
                    "and mutation_log::get_learn_state() returns false",
                    name(),
                    request.signature,
+                   request.learner.to_string(),
                    learn_start_decree,
                    _app->last_durable_decree());
             response.type = learn_type::LT_APP;
@@ -637,12 +643,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     if (resp.type == learn_type::LT_APP) {
         if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
             --_stub->_learn_app_concurrent_count;
-            dwarn("%s: on_learn_reply[%016" PRIx64
-                  "]: learnee = %s, exceed learn_app_max_concurrent_count(%d) limit, skip this round",
-                  name(),
-                  _potential_secondary_states.learning_version,
-                  _config.primary.to_string(),
-                  _options->learn_app_max_concurrent_count);
+            dwarn(
+                "%s: on_learn_reply[%016" PRIx64
+                "]: learnee = %s, exceed learn_app_max_concurrent_count(%d) limit, skip this round",
+                name(),
+                _potential_secondary_states.learning_version,
+                _config.primary.to_string(),
+                _options->learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
         } else {
@@ -735,10 +742,11 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                     _prepare_list->get_mutation_by_decree(mu->data.header.decree);
                 if (existing_mutation != nullptr &&
                     existing_mutation->data.header.ballot > mu->data.header.ballot) {
-                    ddebug("%s: on learn reply[%016" PRIx64
-                           "]: mutation(%s) exist on the learner with larger ballot %" PRId64 "",
+                    ddebug("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, "
+                           "mutation(%s) exist on the learner with larger ballot %" PRId64 "",
                            name(),
                            req.signature,
+                           resp.config.primary.to_string(),
                            mu->name(),
                            existing_mutation->data.header.ballot);
                 } else {
@@ -933,22 +941,22 @@ void replica::on_copy_remote_state_completed(error_code err,
                         _app->last_committed_decree(),
                         resp.last_committed_decree);
                 ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
-                       "]: learner = %s, learn_duration = %" PRIu64 " ms, "
+                       "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
                        "checkpoint duration = %" PRIu64
                        " ns, apply checkpoint succeed, app_committed_decree = %" PRId64,
                        name(),
                        req.signature,
-                       req.learner.to_string(),
+                       resp.config.primary.to_string(),
                        _potential_secondary_states.duration_ms(),
                        dsn_now_ns() - start_ts,
                        _app->last_committed_decree());
             } else {
                 derror("%s: on_copy_remote_state_completed[%016" PRIx64
-                       "]: learner = %s, learn_duration = %" PRIu64 " ms, "
+                       "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
                        "checkpoint duration = %" PRIu64 " ns, apply checkpoint failed, err = %s",
                        name(),
                        req.signature,
-                       req.learner.to_string(),
+                       resp.config.primary.to_string(),
                        _potential_secondary_states.duration_ms(),
                        dsn_now_ns() - start_ts,
                        err.to_string());
@@ -1059,24 +1067,26 @@ void replica::on_learn_remote_state_completed(error_code err)
 
     if (partition_status::PS_POTENTIAL_SECONDARY != status()) {
         dwarn("%s: on_learn_remote_state_completed[%016" PRIx64
-              "]: err = %s, learn_duration = %" PRIu64 " ms, "
+              "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
               "the learner status is not PS_POTENTIAL_SECONDARY, but %s, ignore",
               name(),
               _potential_secondary_states.learning_version,
-              err.to_string(),
+              _config.primary.to_string(),
               _potential_secondary_states.duration_ms(),
+              err.to_string(),
               enum_to_string(status()));
         return;
     }
 
     ddebug("%s: on_learn_remote_state_completed[%016" PRIx64
-           "]: err = %s, learn_duration = %" PRIu64 " ms, local_committed_decree = %" PRId64 ", "
-           "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64
-           ", current_learning_status = %s",
+           "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
+           "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64
+           ", app_durable_decree = %" PRId64 ", current_learning_status = %s",
            name(),
            _potential_secondary_states.learning_version,
-           err.to_string(),
+           _config.primary.to_string(),
            _potential_secondary_states.duration_ms(),
+           err.to_string(),
            last_committed_decree(),
            _app->last_committed_decree(),
            _app->last_durable_decree(),
@@ -1096,11 +1106,13 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
 {
     check_hashed_access();
 
-    derror("%s: handle_learning_error[%016" PRIx64 "]: err = %s, learn_duration = %" PRIu64 " ms",
+    derror("%s: handle_learning_error[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
+           " ms, err = %s",
            name(),
            _potential_secondary_states.learning_version,
-           err.to_string(),
-           _potential_secondary_states.duration_ms());
+           _config.primary.to_string(),
+           _potential_secondary_states.duration_ms(),
+           err.to_string());
 
     _stub->_counter_replicas_learning_recent_learn_fail_count.increment();
 
@@ -1147,12 +1159,13 @@ void replica::notify_learn_completion()
     report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = _stub->_primary_address;
 
-    ddebug("%s: notify_learn_completion[%016" PRIx64 "]: learn_duration = %" PRIu64
-           " ms, local_committed_decree = %" PRId64 ", "
+    ddebug("%s: notify_learn_completion[%016" PRIx64 "]: learnee = %s, "
+           "learn_duration = %" PRIu64 " ms, local_committed_decree = %" PRId64 ", "
            "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64
            ", current_learning_status = %s",
            name(),
            _potential_secondary_states.learning_version,
+           _config.primary.to_string(),
            _potential_secondary_states.duration_ms(),
            last_committed_decree(),
            _app->last_committed_decree(),
@@ -1346,11 +1359,12 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                                },
                                offset);
 
-    ddebug("%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64
-           " ms, "
-           "apply private log files done, file_count = %d, app_committed_decree = %" PRId64,
+    ddebug("%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learnee = %s, "
+           "learn_duration = %" PRIu64 " ms, apply private log files done, "
+           "file_count = %d, app_committed_decree = %" PRId64,
            name(),
            _potential_secondary_states.learning_version,
+           _config.primary.to_string(),
            _potential_secondary_states.duration_ms(),
            static_cast<int>(state.files.size()),
            _app->last_committed_decree());
@@ -1374,15 +1388,15 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
             ++replay_count;
         }
 
-        ddebug(
-            "%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learn_duration = %" PRIu64
-            " ms, "
-            "apply in-buffer private logs done, replay_count = %d, app_committed_decree = %" PRId64,
-            name(),
-            _potential_secondary_states.learning_version,
-            _potential_secondary_states.duration_ms(),
-            replay_count,
-            _app->last_committed_decree());
+        ddebug("%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learnee = %s, "
+               "learn_duration = %" PRIu64 " ms, apply in-buffer private logs done, "
+               "replay_count = %d, app_committed_decree = %" PRId64,
+               name(),
+               _potential_secondary_states.learning_version,
+               _config.primary.to_string(),
+               _potential_secondary_states.duration_ms(),
+               replay_count,
+               _app->last_committed_decree());
     }
 
     return err;

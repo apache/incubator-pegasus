@@ -189,7 +189,7 @@ ErrOut:
 
 void replica::send_prepare_message(::dsn::rpc_address addr,
                                    partition_status::type status,
-                                   mutation_ptr &mu,
+                                   const mutation_ptr &mu,
                                    int timeout_milliseconds,
                                    int64_t learn_signature)
 {
@@ -296,8 +296,8 @@ void replica::on_prepare(dsn_message_t request)
     } else if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_version) {
-            derror("%s: mutation %s on_prepare failed as unmatched learning signature, state = %s, "
-                   "old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
+            derror("%s: mutation %s on_prepare failed as unmatched learning signature, state = %s"
+                   ", old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
                    name(),
                    mu->name(),
                    enum_to_string(status()),
@@ -308,15 +308,22 @@ void replica::on_prepare(dsn_message_t request)
             return;
         }
 
-        if (!(_potential_secondary_states.learning_status == learner_status::LearningWithPrepare ||
-              _potential_secondary_states.learning_status == learner_status::LearningSucceeded)) {
+        auto learning_status = _potential_secondary_states.learning_status;
+        if (learning_status != learner_status::LearningWithPrepare &&
+            learning_status != learner_status::LearningSucceeded) {
+            // if prepare requests are received when learning status is changing from
+            // LearningWithoutPrepare to LearningWithPrepare, we ack ERR_TRY_AGAIN.
+            error_code ack_code =
+                (learning_status == learner_status::LearningWithoutPrepare ? ERR_TRY_AGAIN
+                                                                           : ERR_INVALID_STATE);
             derror("%s: mutation %s on_prepare skipped as invalid learning status, state = %s, "
-                   "learning_status = %s",
+                   "learning_status = %s, ack %s",
                    name(),
                    mu->name(),
                    enum_to_string(status()),
-                   enum_to_string(_potential_secondary_states.learning_status));
-            ack_prepare_message(ERR_INVALID_STATE, mu);
+                   enum_to_string(learning_status),
+                   ack_code.to_string());
+            ack_prepare_message(ack_code, mu);
             return;
         }
     }
@@ -331,15 +338,15 @@ void replica::on_prepare(dsn_message_t request)
     }
 
     // real prepare start
+
     auto mu2 = _prepare_list->get_mutation_by_decree(decree);
     if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot) {
         if (mu2->is_logged()) {
+            // already logged, just response ERR_OK
             ack_prepare_message(ERR_OK, mu);
         } else {
-            derror("%s: mutation %s on_prepare skipped as it is duplicate", name(), mu->name());
-            // response will be unnecessary when we add retry logic in rpc engine.
-            // the retried rpc will use the same id therefore it will be considered responsed
-            // even the response is for a previous try.
+            // not logged, combine duplicate request to old mutation
+            mu2->add_prepare_request(request);
         }
         return;
     }
@@ -448,14 +455,16 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     check_hashed_access();
 
     mutation_ptr mu = pr.first;
-    partition_status::type targetStatus = pr.second;
+    partition_status::type target_status = pr.second;
 
     // skip callback for old mutations
-    if (mu->data.header.ballot < get_ballot() || partition_status::PS_PRIMARY != status())
+    if (partition_status::PS_PRIMARY != status() || mu->data.header.ballot < get_ballot() ||
+        mu->get_decree() <= last_committed_decree())
         return;
 
     dassert(mu->data.header.ballot == get_ballot(),
-            "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
+            "%s: invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
+            mu->name(),
             mu->data.header.ballot,
             get_ballot());
 
@@ -473,18 +482,19 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     }
 
     if (resp.err == ERR_OK) {
-        dinfo("%s: mutation %s on_prepare_reply from %s, err = %s",
+        dinfo("%s: mutation %s on_prepare_reply from %s, target_status = %s, err = %s",
               name(),
               mu->name(),
               node.to_string(),
+              enum_to_string(target_status),
               resp.err.to_string());
     } else {
-        derror("%s: mutation %s on_prepare_reply from %s, err = %s",
+        derror("%s: mutation %s on_prepare_reply from %s, target_status = %s, err = %s",
                name(),
                mu->name(),
                node.to_string(),
+               enum_to_string(target_status),
                resp.err.to_string());
-        _stub->_counter_replicas_recent_prepare_fail_count.increment();
     }
 
     if (resp.err == ERR_OK) {
@@ -497,7 +507,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                 resp.decree,
                 mu->data.header.decree);
 
-        switch (targetStatus) {
+        switch (target_status) {
         case partition_status::PS_SECONDARY:
             dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
                     "invalid secondary node address, address = %s",
@@ -525,21 +535,55 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 
     // failure handling
     else {
-        // retry for INACTIVE state when there are still time
-        if (resp.err == ERR_INACTIVE_STATE &&
-            !mu->is_prepare_close_to_timeout(
-                2,
-                targetStatus == partition_status::PS_SECONDARY
-                    ? _options->prepare_timeout_ms_for_secondaries
-                    : _options->prepare_timeout_ms_for_potential_secondaries)) {
-            send_prepare_message(node,
-                                 targetStatus,
-                                 mu,
-                                 targetStatus == partition_status::PS_SECONDARY
-                                     ? _options->prepare_timeout_ms_for_secondaries
-                                     : _options->prepare_timeout_ms_for_potential_secondaries);
-            return;
+        // retry for INACTIVE or TRY_AGAIN if there is still time.
+        if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_TRY_AGAIN) {
+            int prepare_timeout_ms = (target_status == partition_status::PS_SECONDARY
+                                          ? _options->prepare_timeout_ms_for_secondaries
+                                          : _options->prepare_timeout_ms_for_potential_secondaries);
+            int delay_time_ms = 5; // delay some time before retry to avoid sending too frequently
+            if (mu->is_prepare_close_to_timeout(delay_time_ms + 2, prepare_timeout_ms)) {
+                derror("%s: mutation %s do not retry prepare to %s for no enought time left, "
+                       "prepare_ts_ms = %" PRIu64 ", prepare_timeout_ms = %d, now_ms = %" PRIu64,
+                       name(),
+                       mu->name(),
+                       node.to_string(),
+                       mu->prepare_ts_ms(),
+                       prepare_timeout_ms,
+                       dsn_now_ms());
+            } else {
+                ddebug("%s: mutation %s retry prepare to %s after %d ms",
+                       name(),
+                       mu->name(),
+                       node.to_string(),
+                       delay_time_ms);
+                int64_t learn_signature = invalid_signature;
+                if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
+                    auto it = _primary_states.learners.find(node);
+                    if (it != _primary_states.learners.end()) {
+                        learn_signature = it->second.signature;
+                    }
+                }
+                tasking::enqueue(
+                    LPC_DELAY_PREPARE,
+                    this,
+                    [this, node, target_status, mu, prepare_timeout_ms, learn_signature] {
+                        // need to check status/ballot/decree before sending prepare message,
+                        // because the config may have been changed or the mutation may have been
+                        // committed during the delay time.
+                        if (status() == partition_status::PS_PRIMARY &&
+                            get_ballot() == mu->data.header.ballot &&
+                            mu->get_decree() > last_committed_decree()) {
+                            send_prepare_message(
+                                node, target_status, mu, prepare_timeout_ms, learn_signature);
+                        }
+                    },
+                    gpid_to_thread_hash(get_gpid()),
+                    std::chrono::milliseconds(delay_time_ms));
+                return;
+            }
         }
+
+        _stub->_counter_replicas_recent_prepare_fail_count.increment();
 
         // make sure this is before any later commit ops
         // because now commit ops may lead to new prepare ops
@@ -547,7 +591,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         handle_remote_failure(st, node, resp.err);
 
         // note targetStatus and (curent) status may diff
-        if (targetStatus == partition_status::PS_POTENTIAL_SECONDARY) {
+        if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
             dassert(mu->left_potential_secondary_ack_count() > 0,
                     "%u",
                     mu->left_potential_secondary_ack_count());
@@ -570,8 +614,11 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
     resp.last_committed_decree_in_app = _app->last_committed_decree();
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
-    dassert(nullptr != mu->prepare_msg(), "");
-    reply(mu->prepare_msg(), resp);
+    const std::vector<dsn_message_t> &prepare_requests = mu->prepare_requests();
+    dassert(!prepare_requests.empty(), "mutation = %s", mu->name());
+    for (auto &request : prepare_requests) {
+        reply(request, resp);
+    }
 
     if (err == ERR_OK) {
         dinfo("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
