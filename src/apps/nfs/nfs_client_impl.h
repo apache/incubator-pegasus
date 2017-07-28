@@ -174,21 +174,21 @@ public:
     nfs_client_impl(nfs_opts &opts);
     virtual ~nfs_client_impl() {}
 
-    void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
-                           aio_task *nfs_task); // copy file request entry
+    // copy file request entry
+    void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci, aio_task *nfs_task);
 
-    void local_write_callback(error_code err,
-                              size_t sz,
-                              ::dsn::ref_ptr<copy_request_ex> reqc); // write file callback
+    // write file callback
+    void
+    local_write_callback(error_code err, size_t sz, const ::dsn::ref_ptr<copy_request_ex> &reqc);
 
 private:
-    void end_copy(::dsn::error_code err,
-                  const copy_response &resp,
-                  void *context); // rewrite end_copy function
+    // rewrite end_copy function
+    void end_copy(::dsn::error_code err, const copy_response &resp, void *context);
 
+    // rewrite end_get_file_size function
     void end_get_file_size(::dsn::error_code err,
                            const ::dsn::service::get_file_size_response &resp,
-                           void *context); // rewrite end_get_file_size function
+                           void *context);
 
     void continue_copy(int done_count);
 

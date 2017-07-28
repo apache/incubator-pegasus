@@ -229,6 +229,13 @@ void nfs_client_impl::continue_copy(int done_count)
                 req->remote_copy_task = copy(copy_req,
                                              [=](error_code err, copy_response &&resp) {
                                                  end_copy(err, std::move(resp), req.get());
+                                                 // reset task to release memory quickly.
+                                                 // should do this after end_copy() done.
+                                                 ::dsn::task_ptr tsk;
+                                                 {
+                                                     zauto_lock l(req->lock);
+                                                     tsk = std::move(req->remote_copy_task);
+                                                 }
                                              },
                                              std::chrono::milliseconds(0),
                                              0,
@@ -253,9 +260,6 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
     dsn::ref_ptr<copy_request_ex> reqc;
     reqc = (copy_request_ex *)context;
     reqc->release_ref();
-
-    // reset task to release memory quickly
-    reqc->remote_copy_task = nullptr;
 
     continue_copy(1);
 
@@ -373,30 +377,35 @@ void nfs_client_impl::continue_write()
 
     {
         zauto_lock l(reqc->lock);
-        auto &reqc_save = *reqc.get();
-        reqc_save.local_write_task =
-            file::write(hfile,
-                        reqc_save.response.file_content.data(),
-                        reqc_save.response.size,
-                        reqc_save.response.offset,
-                        LPC_NFS_WRITE,
-                        this,
-                        [ this, reqc_cap = std::move(reqc) ](error_code err, int sz) {
-                            local_write_callback(err, sz, std::move(reqc_cap));
-                        });
+        reqc->local_write_task = file::write(hfile,
+                                             reqc->response.file_content.data(),
+                                             reqc->response.size,
+                                             reqc->response.offset,
+                                             LPC_NFS_WRITE,
+                                             this,
+                                             [=](error_code err, int sz) {
+                                                 local_write_callback(err, sz, reqc);
+                                                 // reset task to release memory quickly.
+                                                 // should do this after local_write_callback()
+                                                 // done.
+                                                 ::dsn::task_ptr tsk;
+                                                 {
+                                                     zauto_lock l(reqc->lock);
+                                                     tsk = std::move(reqc->local_write_task);
+                                                 }
+                                             });
     }
 }
 
 void nfs_client_impl::local_write_callback(error_code err,
                                            size_t sz,
-                                           dsn::ref_ptr<copy_request_ex> reqc)
+                                           const dsn::ref_ptr<copy_request_ex> &reqc)
 {
     // dassert(reqc->local_write_task == task::get_current_task(), "");
     --_concurrent_local_write_count;
 
     // clear all content and reset task to release memory quickly
     reqc->response.file_content = blob();
-    reqc->local_write_task = nullptr;
 
     continue_write();
     continue_copy(0);
@@ -452,11 +461,8 @@ void nfs_client_impl::handle_completion(user_request *req, error_code err)
             {
                 zauto_lock l(rc->lock);
                 rc->is_valid = false;
-                ctask = rc->remote_copy_task;
-                wtask = rc->local_write_task;
-
-                rc->remote_copy_task = nullptr;
-                rc->local_write_task = nullptr;
+                ctask = std::move(rc->remote_copy_task);
+                wtask = std::move(rc->local_write_task);
             }
 
             if (err != ERR_OK) {
