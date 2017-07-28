@@ -203,13 +203,13 @@ void simple_logger::create_log_file()
 
 simple_logger::~simple_logger(void)
 {
-    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     ::fclose(_log);
 }
 
 void simple_logger::flush()
 {
-    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     ::fflush(_log);
     ::fflush(stdout);
 }
@@ -227,7 +227,7 @@ void simple_logger::dsn_logv(const char *file,
         va_copy(args2, args);
     }
 
-    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
     print_header(_log, log_level);
     if (!_short_header) {
