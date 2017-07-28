@@ -59,7 +59,7 @@ public:
     typedef server_load_balancer *(*factory)(meta_service *svc);
 
 public:
-    server_load_balancer(meta_service *svc) : _svc(svc) {}
+    server_load_balancer(meta_service *svc);
     virtual ~server_load_balancer() {}
 
     virtual void reconfig(meta_view view, const configuration_update_request &request) = 0;
@@ -158,6 +158,7 @@ public:
 
 protected:
     meta_service *_svc;
+    perf_counter_ _recent_choose_primary_fail_count;
 };
 
 class simple_load_balancer : public server_load_balancer
