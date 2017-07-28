@@ -73,6 +73,7 @@ replication_options::replication_options()
     gc_interval_ms = 30 * 1000;                             // 30 seconds
     gc_memory_replica_interval_ms = 10 * 60 * 1000;         // 10 minutes
     gc_disk_error_replica_interval_seconds = 7 * 24 * 3600; // 1 week
+    gc_disk_garbage_replica_interval_seconds = 24 * 3600;   // 1 day
 
     fd_disabled = false;
     fd_check_interval_seconds = 2;
@@ -304,6 +305,12 @@ void replication_options::initialize()
                                          "gc_disk_error_replica_interval_seconds",
                                          gc_disk_error_replica_interval_seconds,
                                          "error replica are deleted after they have been closed "
+                                         "and lasted on disk this long (seconds)");
+    gc_disk_garbage_replica_interval_seconds =
+        (int)dsn_config_get_value_uint64("replication",
+                                         "gc_disk_garbage_replica_interval_seconds",
+                                         gc_disk_garbage_replica_interval_seconds,
+                                         "garbage replica are deleted after they have been closed "
                                          "and lasted on disk this long (seconds)");
 
     fd_disabled = dsn_config_get_value_bool(

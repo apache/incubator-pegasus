@@ -1437,8 +1437,10 @@ void replica_stub::on_gc()
 
             uint64_t last_write_time = (uint64_t)mt;
             uint64_t current_time_ms = dsn_now_ms();
-            if (last_write_time + _options.gc_disk_error_replica_interval_seconds <
-                current_time_ms / 1000) {
+            uint64_t interval_seconds = (name.substr(name.length() - 4) == ".err"
+                                             ? _options.gc_disk_error_replica_interval_seconds
+                                             : _options.gc_disk_garbage_replica_interval_seconds);
+            if (last_write_time + interval_seconds < current_time_ms / 1000) {
                 if (!dsn::utils::filesystem::remove_path(fpath)) {
                     dwarn("gc_disk: failed to delete directory '%s', time_used_ms = %" PRIu64,
                           fpath.c_str(),
