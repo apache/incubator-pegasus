@@ -58,8 +58,9 @@ public:
     std::vector<std::string> data_dirs;
 
     bool deny_client_on_start;
+    bool verbose_client_log_on_start;
+    bool verbose_commit_log_on_start;
     bool delay_for_fd_timeout_on_start;
-    bool verbose_log_on_commit;
     bool empty_write_disabled;
 
     int32_t prepare_timeout_ms_for_secondaries;

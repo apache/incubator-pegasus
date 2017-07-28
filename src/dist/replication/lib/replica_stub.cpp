@@ -61,6 +61,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _replicas_lock(true),
       /*_cli_replica_stub_json_state_handle(nullptr), */ _cli_kill_partition(nullptr),
       _deny_client(false),
+      _verbose_client_log(false),
+      _verbose_commit_log(false),
       _learn_app_concurrent_count(0)
 {
     _replica_state_subscriber = subscriber;
@@ -205,6 +207,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     ddebug("meta_servers = %s", oss.str().c_str());
 
     _deny_client = _options.deny_client_on_start;
+    _verbose_client_log = _options.verbose_client_log_on_start;
+    _verbose_commit_log = _options.verbose_commit_log_on_start;
 
     // clear dirs if need
     if (clear) {
@@ -1728,6 +1732,62 @@ void replica_stub::open_service()
                                     }
                                     ddebug("set deny_client to %s by remote command",
                                            _deny_client ? "true" : "false");
+                                    return "OK";
+                                });
+    }
+    {
+        std::string command(info.name);
+        command += ".verbose-client-log";
+        std::string help1(command);
+        help1 += " - control if print verbose error log when reply read & write request";
+        std::string help2(command);
+        help1 += " <true|false>";
+        ::dsn::register_command(command.c_str(),
+                                help1.c_str(),
+                                help2.c_str(),
+                                [this](const std::vector<std::string> &args) {
+                                    if (args.empty()) {
+                                        return _verbose_client_log ? "true" : "false";
+                                    }
+                                    std::string arg = args[0];
+                                    if (arg != "true" && arg != "false") {
+                                        return "ERROR: invalid arguments";
+                                    }
+                                    if (arg == "true") {
+                                        _verbose_client_log = true;
+                                    } else {
+                                        _verbose_client_log = false;
+                                    }
+                                    ddebug("set verbose_client_log to %s by remote command",
+                                           _verbose_client_log ? "true" : "false");
+                                    return "OK";
+                                });
+    }
+    {
+        std::string command(info.name);
+        command += ".verbose-commit-log";
+        std::string help1(command);
+        help1 += " - control if print verbose log when commit mutation";
+        std::string help2(command);
+        help1 += " <true|false>";
+        ::dsn::register_command(command.c_str(),
+                                help1.c_str(),
+                                help2.c_str(),
+                                [this](const std::vector<std::string> &args) {
+                                    if (args.empty()) {
+                                        return _verbose_commit_log ? "true" : "false";
+                                    }
+                                    std::string arg = args[0];
+                                    if (arg != "true" && arg != "false") {
+                                        return "ERROR: invalid arguments";
+                                    }
+                                    if (arg == "true") {
+                                        _verbose_commit_log = true;
+                                    } else {
+                                        _verbose_commit_log = false;
+                                    }
+                                    ddebug("set verbose_commit_log to %s by remote command",
+                                           _verbose_commit_log ? "true" : "false");
                                     return "OK";
                                 });
     }

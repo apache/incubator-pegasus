@@ -48,8 +48,9 @@ namespace replication {
 replication_options::replication_options()
 {
     deny_client_on_start = false;
+    verbose_client_log_on_start = false;
+    verbose_commit_log_on_start = false;
     delay_for_fd_timeout_on_start = false;
-    verbose_log_on_commit = false;
     empty_write_disabled = false;
 
     prepare_timeout_ms_for_secondaries = 1000;
@@ -202,17 +203,27 @@ void replication_options::initialize()
                                                      "and write requests when "
                                                      "starting the server, default "
                                                      "is false");
+    verbose_client_log_on_start = dsn_config_get_value_bool("replication",
+                                                            "verbose_client_log_on_start",
+                                                            verbose_client_log_on_start,
+                                                            "whether to print verbose error "
+                                                            "log when reply to client read "
+                                                            "and write requests when "
+                                                            "starting the server, default "
+                                                            "is false");
+    verbose_commit_log_on_start = dsn_config_get_value_bool("replication",
+                                                            "verbose_commit_log_on_start",
+                                                            verbose_commit_log_on_start,
+                                                            "whether to print verbose log "
+                                                            "when commit mutation when "
+                                                            "starting the server, default "
+                                                            "is false");
     delay_for_fd_timeout_on_start =
         dsn_config_get_value_bool("replication",
                                   "delay_for_fd_timeout_on_start",
                                   delay_for_fd_timeout_on_start,
                                   "whether to delay for beacon grace period to make failure "
                                   "detector timeout when starting the server, default is false");
-    verbose_log_on_commit =
-        dsn_config_get_value_bool("replication",
-                                  "verbose_log_on_commit",
-                                  verbose_log_on_commit,
-                                  "whether to print detailed log on commit, default is false");
     empty_write_disabled =
         dsn_config_get_value_bool("replication",
                                   "empty_write_disabled",

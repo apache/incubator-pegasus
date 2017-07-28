@@ -639,7 +639,7 @@ error_code replication_app_base::open_new_internal(replica *r,
 
     ++_last_committed_decree;
 
-    if (_replica->options()->verbose_log_on_commit) {
+    if (_replica->verbose_commit_log()) {
         auto status = _replica->status();
         const char *str;
         switch (status) {

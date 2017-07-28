@@ -227,6 +227,8 @@ private:
     // dsn_handle_t    _cli_replica_stub_json_state_handle;
     dsn_handle_t _cli_kill_partition;
     bool _deny_client;
+    bool _verbose_client_log;
+    bool _verbose_commit_log;
 
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.

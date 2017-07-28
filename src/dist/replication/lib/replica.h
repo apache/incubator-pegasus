@@ -140,6 +140,7 @@ public:
     const char *name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
     const replication_options *options() const { return _options; }
+    bool verbose_commit_log() const;
 
     // void json_state(std::stringstream& out) const;
     void update_commit_statistics(int count);

@@ -163,19 +163,17 @@ void replica::response_client_message(bool is_read, dsn_message_t request, error
         return;
     }
 
-    if (error == ERR_OK) {
-        dinfo("%s: reply client %s to %s, err = %s",
-              name(),
-              is_read ? "read" : "write",
-              dsn_address_to_string(dsn_msg_from_address(request)),
-              error.to_string());
-    } else {
-        derror("%s: reply client %s to %s, err = %s",
-               name(),
-               is_read ? "read" : "write",
-               dsn_address_to_string(dsn_msg_from_address(request)),
-               error.to_string());
+    dsn_log_level_t level = LOG_LEVEL_INFORMATION;
+    if (_stub->_verbose_client_log && error != ERR_OK) {
+        level = LOG_LEVEL_ERROR;
     }
+    dlog(level,
+         "%s: reply client %s to %s, err = %s",
+         name(),
+         is_read ? "read" : "write",
+         dsn_address_to_string(dsn_msg_from_address(request)),
+         error.to_string());
+
     dsn_rpc_reply(dsn_msg_create_response(request), error);
 }
 
@@ -375,6 +373,11 @@ decree replica::last_prepared_decree() const
         lastBallot = mu->data.header.ballot;
     }
     return start;
+}
+
+bool replica::verbose_commit_log() const
+{
+    return _stub->_verbose_commit_log;
 }
 
 void replica::close()
