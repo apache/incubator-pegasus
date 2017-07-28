@@ -230,7 +230,6 @@ private:
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
     void on_checkpoint_timer();
-    void garbage_collection();
     void init_checkpoint(bool is_emergency);
     void background_checkpoint();
     void background_async_checkpoint(bool is_emergency);

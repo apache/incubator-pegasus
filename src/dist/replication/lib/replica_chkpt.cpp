@@ -47,6 +47,7 @@
 namespace dsn {
 namespace replication {
 
+// run in replica thread
 void replica::on_checkpoint_timer()
 {
     check_hashed_access();
@@ -62,23 +63,27 @@ void replica::on_checkpoint_timer()
         init_checkpoint(false);
     }
 
-    tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS, this, [this] {
-        garbage_collection();
-    });
-}
-
-// run in background thread
-void replica::garbage_collection()
-{
-    _private_log->garbage_collection(get_gpid(),
-                                     _app->last_durable_decree(),
-                                     _app->init_info().init_offset_in_private_log,
-                                     (int64_t)_options->log_private_reserve_max_size_mb * 1024 *
-                                         1024,
-                                     (int64_t)_options->log_private_reserve_max_time_seconds);
-
-    if (partition_status::PS_PRIMARY == status()) {
-        _counter_private_log_size.set(_private_log->size() / 1000000);
+    if (_private_log) {
+        mutation_log_ptr plog = _private_log;
+        decree durable_decree = _app->last_durable_decree();
+        int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
+        tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+                         this,
+                         [this, plog, durable_decree, valid_start_offset] {
+                             // run in background thread to avoid file deletion operation blocking
+                             // replication thread.
+                             if (status() == partition_status::PS_ERROR ||
+                                 status() == partition_status::PS_INACTIVE)
+                                 return;
+                             plog->garbage_collection(
+                                 get_gpid(),
+                                 durable_decree,
+                                 valid_start_offset,
+                                 (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
+                                 (int64_t)_options->log_private_reserve_max_time_seconds);
+                             if (status() == partition_status::PS_PRIMARY)
+                                 _counter_private_log_size.set(_private_log->size() / 1000000);
+                         });
     }
 }
 
