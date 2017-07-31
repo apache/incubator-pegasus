@@ -377,23 +377,25 @@ void nfs_client_impl::continue_write()
 
     {
         zauto_lock l(reqc->lock);
-        reqc->local_write_task = file::write(hfile,
-                                             reqc->response.file_content.data(),
-                                             reqc->response.size,
-                                             reqc->response.offset,
-                                             LPC_NFS_WRITE,
-                                             this,
-                                             [=](error_code err, int sz) {
-                                                 local_write_callback(err, sz, reqc);
-                                                 // reset task to release memory quickly.
-                                                 // should do this after local_write_callback()
-                                                 // done.
-                                                 ::dsn::task_ptr tsk;
-                                                 {
-                                                     zauto_lock l(reqc->lock);
-                                                     tsk = std::move(reqc->local_write_task);
-                                                 }
-                                             });
+        if (reqc->is_valid) {
+            reqc->local_write_task = file::write(hfile,
+                                                 reqc->response.file_content.data(),
+                                                 reqc->response.size,
+                                                 reqc->response.offset,
+                                                 LPC_NFS_WRITE,
+                                                 this,
+                                                 [=](error_code err, int sz) {
+                                                     local_write_callback(err, sz, reqc);
+                                                     // reset task to release memory quickly.
+                                                     // should do this after local_write_callback()
+                                                     // done.
+                                                     ::dsn::task_ptr tsk;
+                                                     {
+                                                         zauto_lock l(reqc->lock);
+                                                         tsk = std::move(reqc->local_write_task);
+                                                     }
+                                                 });
+        }
     }
 }
 
