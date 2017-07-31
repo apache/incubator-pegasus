@@ -1427,15 +1427,18 @@ void server_state::update_configuration_locally(
 
     // we assume config in config_request stores the proper new config
     // as we sync to remote storage according to it
+    std::string old_config_str = boost::lexical_cast<std::string>(old_cfg);
     old_cfg = config_request->config;
     auto find_name = _config_type_VALUES_TO_NAMES.find(config_request->type);
     if (find_name != _config_type_VALUES_TO_NAMES.end()) {
-        ddebug("meta update config ok: type(%s), %s",
+        ddebug("meta update config ok: type(%s), old_config=%s, %s",
                find_name->second,
+               old_config_str.c_str(),
                boost::lexical_cast<std::string>(*config_request).c_str());
     } else {
-        ddebug("meta update config ok: type(%d), %s",
+        ddebug("meta update config ok: type(%d), old_config=%s, %s",
                config_request->type,
+               old_config_str.c_str(),
                boost::lexical_cast<std::string>(*config_request).c_str());
     }
 

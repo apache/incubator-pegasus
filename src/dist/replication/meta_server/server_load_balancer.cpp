@@ -251,8 +251,8 @@ void simple_load_balancer::reset_proposal(meta_view &view, const dsn::gpid &gpid
     configuration_proposal_action &act = cc->lb_actions.acts.front();
     newly_partitions *np = get_newly_partitions(*(view.nodes), act.node);
     if (np == nullptr) {
-        ddebug("can't get the newly_partitions extension structure for node(%s), the node may dead "
-               "and may be removed",
+        ddebug("can't get the newly_partitions extension structure for node(%s), "
+               "the node may be dead and removed",
                act.node.to_string());
     } else if (!cc->lb_actions.from_balancer) {
         when_update_replicas(act.type, [np, &gpid](bool is_adding) {
@@ -433,18 +433,26 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
         action.node.set_invalid();
         for (int i = 0; i < cc.dropped.size(); ++i) {
             const dropped_replica &dr = cc.dropped[i];
-            ddebug("%s: collected info in config_context.dropped: "
-                   "node(%s), time(%lld), ballot(%lld), cd(%lld), pd(%lld)",
+            char time_buf[30];
+            ::dsn::utils::time_ms_to_string(dr.time, time_buf);
+            ddebug("%s: config_context.dropped[%d]: "
+                   "node(%s), time(%" PRIu64 "){%s}, ballot(%" PRId64 "), "
+                   "commit_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
                    gpid_name,
+                   i,
                    dr.node.to_string(),
                    dr.time,
+                   time_buf,
                    dr.ballot,
                    dr.last_committed_decree,
                    dr.last_prepared_decree);
         }
 
         for (int i = 0; i < pc.last_drops.size(); ++i) {
-            ddebug("%s: nodes in pc.last_drop: node(%s)", gpid_name, pc.last_drops[i].to_string());
+            ddebug("%s: config_context.last_drop[%d]: node(%s)",
+                   gpid_name,
+                   i,
+                   pc.last_drops[i].to_string());
         }
 
         if (pc.last_drops.size() == 1) {
@@ -613,21 +621,41 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                oss.str().c_str(),
                cc.prefered_dropped);
         if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
-            ddebug("gpid(%d.%d): prefered_dropped(%d) may not updated when drop_list(size %d) "
-                   "update, reset to (drop_list.size - 1)",
+            ddebug("gpid(%d.%d): prefered_dropped(%d) is invalid according to drop_list(size %d), "
+                   "reset it to %d (drop_list.size - 1)",
                    gpid.get_app_id(),
                    gpid.get_partition_index(),
                    cc.prefered_dropped,
-                   (int)cc.dropped.size());
+                   (int)cc.dropped.size(),
+                   (int)cc.dropped.size() - 1);
             cc.prefered_dropped = (int)cc.dropped.size() - 1;
         }
 
         while (cc.prefered_dropped >= 0) {
-            dropped_replica &server = cc.dropped[cc.prefered_dropped--];
+            const dropped_replica &server = cc.dropped[cc.prefered_dropped];
             if (is_node_alive(*view.nodes, server.node)) {
+                ddebug("gpid(%d.%d): node(%s) at cc.dropped[%d] is alive now, choose it, "
+                       "and forward prefered_dropped from (%d) to (%d)",
+                       gpid.get_app_id(),
+                       gpid.get_partition_index(),
+                       server.node.to_string(),
+                       cc.prefered_dropped,
+                       cc.prefered_dropped,
+                       cc.prefered_dropped - 1);
                 action.node = server.node;
                 action.period_ts = suggest_alive_time(config_type::CT_ADD_SECONDARY);
+                cc.prefered_dropped--;
                 break;
+            } else {
+                ddebug("gpid(%d.%d): node(%s) at cc.dropped[%d] is not alive now, "
+                       "changed prefered_dropped from (%d) to (%d)",
+                       gpid.get_app_id(),
+                       gpid.get_partition_index(),
+                       server.node.to_string(),
+                       cc.prefered_dropped,
+                       cc.prefered_dropped,
+                       cc.prefered_dropped - 1);
+                cc.prefered_dropped--;
             }
         }
 
@@ -662,7 +690,7 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
         }
     } else {
         // if not emergency, only try to recover last dropped server
-        dropped_replica &server = cc.dropped.back();
+        const dropped_replica &server = cc.dropped.back();
         if (is_node_alive(*view.nodes, server.node)) {
             dassert(!server.node.is_invalid(),
                     "invalid server address, address = %s",
@@ -789,9 +817,9 @@ bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, in
     }
 
     // treat last server in drop_list as the primary
-    dropped_replica &server = drop_list.back();
-    dassert(server.time == dropped_replica::INVALID_TIMESTAMP,
-            "the drop time of server must be INVALID_TIMESTAMP, address = %s",
+    const dropped_replica &server = drop_list.back();
+    dassert(server.ballot != invalid_ballot,
+            "the ballot of server must not be invalid_ballot, node = %s",
             server.node.to_string());
     pc.primary = server.node;
     pc.ballot = server.ballot;

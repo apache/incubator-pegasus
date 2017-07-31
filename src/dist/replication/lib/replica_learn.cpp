@@ -862,8 +862,10 @@ void replica::on_copy_remote_state_completed(error_code err,
                                              learn_request &&req,
                                              learn_response &&resp)
 {
-    decree old_committed = _app->last_committed_decree();
-    decree old_durable = _app->last_durable_decree();
+    decree old_prepared = last_prepared_decree();
+    decree old_committed = last_committed_decree();
+    decree old_app_committed = _app->last_committed_decree();
+    decree old_app_durable = _app->last_durable_decree();
 
     ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
            "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
@@ -998,20 +1000,26 @@ void replica::on_copy_remote_state_completed(error_code err,
         ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
                "]: learnee = %s, learn_duration = %" PRIu64
                " ms, apply checkpoint/log done, err = %s, "
-               "app_committed_decree = (%" PRId64 " => %" PRId64 "), app_durable_decree = (%" PRId64
-               " => %" PRId64 "), "
-               "local_committed_decree = %" PRId64 ", remote_committed_decree = %" PRId64 ", "
-               "prepare_start_decree = %" PRId64 ", current_learning_status = %s",
+               "last_prepared_decree = (%" PRId64 " => %" PRId64 "), "
+               "last_committed_decree = (%" PRId64 " => %" PRId64 "), "
+               "app_committed_decree = (%" PRId64 " => %" PRId64 "), "
+               "app_durable_decree = (%" PRId64 " => %" PRId64 "), "
+               "remote_committed_decree = %" PRId64 ", "
+               "prepare_start_decree = %" PRId64 ", "
+               "current_learning_status = %s",
                name(),
                req.signature,
                resp.config.primary.to_string(),
                _potential_secondary_states.duration_ms(),
                err.to_string(),
+               old_prepared,
+               last_prepared_decree(),
                old_committed,
-               _app->last_committed_decree(),
-               old_durable,
-               _app->last_durable_decree(),
                last_committed_decree(),
+               old_app_committed,
+               _app->last_committed_decree(),
+               old_app_durable,
+               _app->last_durable_decree(),
                resp.last_committed_decree,
                resp.prepare_start_decree,
                enum_to_string(_potential_secondary_states.learning_status));
