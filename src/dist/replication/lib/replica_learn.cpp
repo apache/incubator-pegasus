@@ -438,13 +438,17 @@ void replica::on_learn(dsn_message_t msg, const learn_request &request)
                     learner_state.last_learn_log_file = last_file;
                 }
             }
+            // it is safe to commit to last_committed_decree() now
+            response.state.to_decree_included = last_committed_decree();
             ddebug("%s: on_learn[%016" PRIx64 "]: learner = %s, learn private logs succeed, "
-                   "learned_meta_size = %u, learned_file_count = %u",
+                   "learned_meta_size = %u, learned_file_count = %u, "
+                   "to_decree_included = %" PRId64,
                    name(),
                    request.signature,
                    request.learner.to_string(),
                    response.state.meta.length(),
-                   static_cast<uint32_t>(response.state.files.size()));
+                   static_cast<uint32_t>(response.state.files.size()),
+                   response.state.to_decree_included);
         } else {
             ::dsn::error_code err = _app->get_checkpoint(
                 learn_start_decree, request.app_specific_learn_request, response.state);
@@ -504,7 +508,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     ddebug("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
            " ms, response_err = %s, remote_committed_decree = %" PRId64 ", "
            "prepare_start_decree = %" PRId64 ", learn_type = %s, learned_buffer_size = %u, "
-           "learned_file_count = %u, current_learning_status = %s",
+           "learned_file_count = %u, to_decree_included = % " PRId64
+           ", current_learning_status = %s",
            name(),
            req.signature,
            resp.config.primary.to_string(),
@@ -515,6 +520,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
            enum_to_string(resp.type),
            resp.state.meta.length(),
            static_cast<uint32_t>(resp.state.files.size()),
+           resp.state.to_decree_included,
            enum_to_string(_potential_secondary_states.learning_status));
 
     _potential_secondary_states.learning_copy_buffer_size += resp.state.meta.length();
@@ -1394,6 +1400,18 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
             mu->set_logged();
             plist.prepare(mu, partition_status::PS_SECONDARY);
             ++replay_count;
+        }
+
+        if (state.to_decree_included > last_committed_decree()) {
+            ddebug("%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learnee = %s, "
+                   "learned_to_decree_included(%" PRId64 ") > last_committed_decree(%" PRId64 "), "
+                   "commit to to_decree_included",
+                   name(),
+                   _potential_secondary_states.learning_version,
+                   _config.primary.to_string(),
+                   state.to_decree_included,
+                   last_committed_decree());
+            plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
         }
 
         ddebug("%s: apply_learned_state_from_private_log[%016" PRIx64 "]: learnee = %s, "
