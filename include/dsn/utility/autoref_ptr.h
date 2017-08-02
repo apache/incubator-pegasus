@@ -46,10 +46,10 @@ public:
 
     virtual ~ref_counter()
     {
-        if (_magic != 0xdeadbeef) {
+        if (_magic != 0xdeadbeef) { // 3735928559
             assert(!"memory corrupted, could be double free or others");
         } else {
-            _magic = 0xfacedead;
+            _magic = 0xfacedead; // 4207861421
         }
     }
 

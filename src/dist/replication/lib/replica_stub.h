@@ -259,6 +259,8 @@ private:
     perf_counter_ _counter_replicas_recent_replica_move_error_count;
     perf_counter_ _counter_replicas_recent_replica_move_garbage_count;
     perf_counter_ _counter_replicas_recent_replica_remove_dir_count;
+    perf_counter_ _counter_replicas_error_replica_dir_count;
+    perf_counter_ _counter_replicas_garbage_replica_dir_count;
 
     perf_counter_ _counter_shared_log_size;
 

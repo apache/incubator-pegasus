@@ -180,6 +180,14 @@ void replica_stub::install_perf_counters()
         "replicas.recent.replica.remove.dir.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "replica directory remove count in the recent period");
+    _counter_replicas_error_replica_dir_count.init("eon.replica_stub",
+                                                   "replicas.error.replica.dir.count",
+                                                   COUNTER_TYPE_NUMBER,
+                                                   "error replica directory count");
+    _counter_replicas_garbage_replica_dir_count.init("eon.replica_stub",
+                                                     "replicas.garbage.replica.dir.count",
+                                                     COUNTER_TYPE_NUMBER,
+                                                     "garbage replica directory count");
 
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
@@ -1428,11 +1436,19 @@ void replica_stub::on_gc()
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
+    int error_replica_dir_count = 0;
+    int garbage_replica_dir_count = 0;
     for (auto &fpath : sub_list) {
         auto &&name = dsn::utils::filesystem::get_file_name(fpath);
         // don't delete ".bak" directory because it is backed by administrator.
         if (name.length() >= 4 && (name.substr(name.length() - 4) == ".err" ||
                                    name.substr(name.length() - 4) == ".gar")) {
+            if (name.substr(name.length() - 4) == ".err") {
+                error_replica_dir_count++;
+            } else {
+                garbage_replica_dir_count++;
+            }
+
             time_t mt;
             if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
                 dwarn("gc_disk: failed to get last write time of %s", fpath.c_str());
@@ -1459,6 +1475,8 @@ void replica_stub::on_gc()
             }
         }
     }
+    _counter_replicas_error_replica_dir_count.set(error_replica_dir_count);
+    _counter_replicas_garbage_replica_dir_count.set(garbage_replica_dir_count);
     sub_list.clear();
 
     ddebug("finish to garbage collection");
