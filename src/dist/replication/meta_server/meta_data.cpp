@@ -95,7 +95,10 @@ void config_context::cancel_sync()
 
 void config_context::check_size()
 {
-    while (replica_count(*config_owner) + dropped.size() > MAX_REPLICA_COUNT_IN_GRROUP) {
+    // when add learner, it is possible that replica_count > max_replica_count, so we
+    // need to remove things from dropped only when it's not empty.
+    while (replica_count(*config_owner) + dropped.size() > MAX_REPLICA_COUNT_IN_GRROUP &&
+           !dropped.empty()) {
         dropped.erase(dropped.begin());
         prefered_dropped = (int)dropped.size() - 1;
     }
