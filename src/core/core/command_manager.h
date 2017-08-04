@@ -69,7 +69,7 @@ private:
     struct command
     {
         dsn::rpc_address address;
-        std::vector<const char *> commands;
+        std::vector<std::string> commands;
         std::string help_short;
         std::string help_long;
         command_handler handler;

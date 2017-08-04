@@ -156,7 +156,10 @@ dsn_handle_t command_manager::register_command(const std::vector<const char *> &
 
     command *c = new command;
     c->address.set_invalid();
-    c->commands = commands;
+    c->commands.reserve(commands.size());
+    for (const auto &item : commands) {
+        c->commands.emplace_back(std::string(item));
+    }
     c->help_long = help_long;
     c->help_short = help_one_line;
     c->handler = handler;
@@ -175,14 +178,11 @@ void command_manager::deregister_command(dsn_handle_t handle)
     auto c = reinterpret_cast<command *>(handle);
     dassert(c != nullptr, "cannot deregister a null handle");
     utils::auto_write_lock l(_lock);
-    for (auto cmd : c->commands) {
-        if (cmd != nullptr) {
-            auto it = _handlers.find(cmd);
-            if (it != _handlers.end()) {
-                _handlers.erase(it);
-            }
-        }
+    for (const std::string &cmd : c->commands) {
+        ddebug("unregister command: %s", cmd.c_str());
+        _handlers.erase(cmd);
     }
+    std::remove(_commands.begin(), _commands.end(), c);
     delete c;
 }
 
