@@ -116,14 +116,15 @@ void replica::init_learn(uint64_t signature)
                     "learned state is incomplete");
             {
                 // check missing state due to _app->flush to checkpoint the learned state
-                auto c = _prepare_list->last_committed_decree();
+                auto ac = _app->last_committed_decree();
+                auto pc = _prepare_list->last_committed_decree();
 
                 // TODO(qinzuoyan): to test the following lines
                 // missing commits
-                if (c > _app->last_committed_decree()) {
+                if (pc > ac) {
                     // missed ones are covered by prepare list
-                    if (_app->last_committed_decree() > _prepare_list->min_decree()) {
-                        for (auto d = _app->last_committed_decree() + 1; d <= c; d++) {
+                    if (_prepare_list->count() > 0 && ac + 1 >= _prepare_list->min_decree()) {
+                        for (auto d = ac + 1; d <= pc; d++) {
                             auto mu = _prepare_list->get_mutation_by_decree(d);
                             dassert(nullptr != mu,
                                     "mutation must not be nullptr, decree = %" PRId64 "",
