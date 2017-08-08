@@ -91,7 +91,7 @@ error_code replica::initialize_on_new()
 
         // clear work on failure
         utils::filesystem::remove_path(dir);
-
+        stub->_fs_manager.remove_replica(gpid);
         return nullptr;
     }
 }
@@ -169,6 +169,7 @@ error_code replica::initialize_on_load()
                   dir,
                   rename_dir);
             stub->_counter_replicas_recent_replica_move_error_count.increment();
+            stub->_fs_manager.remove_replica(gpid);
         }
 
         return nullptr;

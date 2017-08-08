@@ -253,6 +253,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         count++;
     }
 
+    {
+        dsn::error_code err;
+        err = _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
+        dassert(err == dsn::ERR_OK, "initialize fs manager failed, err(%s)", err.to_string());
+    }
+
     _log = new mutation_log_shared(
         _options.slog_dir, _options.log_shared_file_size_mb, _options.log_shared_force_flush);
     ddebug("slog_dir = %s", _options.slog_dir.c_str());
@@ -468,6 +474,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     // attach rps
     _replicas = std::move(rps);
     _counter_replicas_count.add((uint64_t)_replicas.size());
+    for (const auto &kv : _replicas) {
+        _fs_manager.add_replica(kv.first, kv.second->dir());
+    }
 
     if (_options.delay_for_fd_timeout_on_start) {
         uint64_t now_time_ms = now_ms();
@@ -570,6 +579,7 @@ replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const a
             replica *rep = replica::newr(this, gpid, *app);
             if (rep != nullptr) {
                 add_replica(rep);
+                _closed_replicas.erase(gpid);
             }
             return rep;
         }
@@ -923,6 +933,11 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
     info.last_committed_decree = r->last_committed_decree();
     info.last_prepared_decree = r->last_prepared_decree();
     info.last_durable_decree = r->last_durable_decree();
+
+    dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
+    if (dsn::ERR_OK != err) {
+        dwarn("get disk tag of %s failed: %s", r->dir().c_str(), err.to_string());
+    }
 }
 
 void replica_stub::get_local_replicas(std::vector<replica_info> &replicas, bool lock_protected)
@@ -1248,23 +1263,24 @@ void replica_stub::init_gc_for_test()
 void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
 {
     std::string replica_path;
-    std::string app_type;
+    std::pair<app_info, replica_info> closed_info;
 
     {
         zauto_lock l(_replicas_lock);
         auto iter = _closed_replicas.find(pid);
         if (iter == _closed_replicas.end())
             return;
-        app_type = iter->second.second.app_type;
+        closed_info = iter->second;
         _closed_replicas.erase(iter);
+        _fs_manager.remove_replica(pid);
     }
 
-    replica_path = get_replica_dir(app_type.c_str(), pid, false);
+    replica_path = get_replica_dir(closed_info.first.app_type.c_str(), pid, false);
     if (replica_path.empty()) {
         dwarn("gc closed replica(%d.%d.%s) failed, no exist data",
               pid.get_app_id(),
               pid.get_partition_index(),
-              app_type.c_str());
+              closed_info.first.app_type.c_str());
         return;
     }
 
@@ -1277,6 +1293,11 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
     if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
         dwarn(
             "gc_replica: failed to move directory '%s' to '%s'", replica_path.c_str(), rename_path);
+
+        // if gc the replica failed, add it back
+        zauto_lock l(_replicas_lock);
+        _fs_manager.add_replica(pid, replica_path);
+        _closed_replicas.emplace(pid, closed_info);
     } else {
         dwarn("gc_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
               replica_path.c_str(),
@@ -1548,15 +1569,17 @@ void replica_stub::open_replica(const app_info &app,
                                 std::shared_ptr<group_check_request> req,
                                 std::shared_ptr<configuration_update_request> req2)
 {
-    std::string dir = get_replica_dir(app.app_type.c_str(), gpid);
-    ddebug("%d.%d@%s: start to open replica %s group check, dir = %s",
-           gpid.get_app_id(),
-           gpid.get_partition_index(),
-           _primary_address.to_string(),
-           req ? "with" : "without",
-           dir.c_str());
-
-    replica_ptr rep = replica::load(this, dir.c_str());
+    std::string dir = get_replica_dir(app.app_type.c_str(), gpid, false);
+    replica_ptr rep = nullptr;
+    if (!dir.empty()) {
+        ddebug("%d.%d@%s: start to load replica %s group check, dir = %s",
+               gpid.get_app_id(),
+               gpid.get_partition_index(),
+               _primary_address.to_string(),
+               req ? "with" : "without",
+               dir.c_str());
+        rep = replica::load(this, dir.c_str());
+    }
 
     if (rep == nullptr) {
         rep = replica::newr(this, gpid, app);
@@ -1925,7 +1948,7 @@ void replica_stub::close()
     }
 }
 
-std::string replica_stub::get_replica_dir(const char *app_type, gpid gpid, bool create_new) const
+std::string replica_stub::get_replica_dir(const char *app_type, gpid gpid, bool create_new)
 {
     char buffer[256];
     sprintf(buffer, "%d.%d.%s", gpid.get_app_id(), gpid.get_partition_index(), app_type);
@@ -1941,13 +1964,7 @@ std::string replica_stub::get_replica_dir(const char *app_type, gpid gpid, bool 
         }
     }
     if (ret_dir.empty() && create_new) {
-        /*
-        int r = dsn_random32(0, _options.data_dirs.size() - 1);
-        ret_dir = utils::filesystem::path_combine(_options.data_dirs[r], buffer);
-        */
-        static std::atomic<int> next_id;
-        int pos = (next_id++) % _options.data_dirs.size();
-        ret_dir = utils::filesystem::path_combine(_options.data_dirs[pos], buffer);
+        _fs_manager.allocate_dir(gpid, app_type, ret_dir);
     }
     return ret_dir;
 }

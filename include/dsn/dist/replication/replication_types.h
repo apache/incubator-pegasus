@@ -159,6 +159,8 @@ class configuration_update_request;
 
 class configuration_update_response;
 
+class replica_server_info;
+
 class configuration_query_by_node_request;
 
 class configuration_query_by_node_response;
@@ -1457,11 +1459,66 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_update_re
     return out;
 }
 
+typedef struct _replica_server_info__isset
+{
+    _replica_server_info__isset() : geo_tags(false), total_capacity_mb(false) {}
+    bool geo_tags : 1;
+    bool total_capacity_mb : 1;
+} _replica_server_info__isset;
+
+class replica_server_info
+{
+public:
+    replica_server_info(const replica_server_info &);
+    replica_server_info(replica_server_info &&);
+    replica_server_info &operator=(const replica_server_info &);
+    replica_server_info &operator=(replica_server_info &&);
+    replica_server_info() : total_capacity_mb(0) {}
+
+    virtual ~replica_server_info() throw();
+    std::map<std::string, std::string> geo_tags;
+    int64_t total_capacity_mb;
+
+    _replica_server_info__isset __isset;
+
+    void __set_geo_tags(const std::map<std::string, std::string> &val);
+
+    void __set_total_capacity_mb(const int64_t val);
+
+    bool operator==(const replica_server_info &rhs) const
+    {
+        if (!(geo_tags == rhs.geo_tags))
+            return false;
+        if (!(total_capacity_mb == rhs.total_capacity_mb))
+            return false;
+        return true;
+    }
+    bool operator!=(const replica_server_info &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const replica_server_info &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(replica_server_info &a, replica_server_info &b);
+
+inline std::ostream &operator<<(std::ostream &out, const replica_server_info &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
 typedef struct _configuration_query_by_node_request__isset
 {
-    _configuration_query_by_node_request__isset() : node(false), stored_replicas(false) {}
+    _configuration_query_by_node_request__isset() : node(false), stored_replicas(false), info(false)
+    {
+    }
     bool node : 1;
     bool stored_replicas : 1;
+    bool info : 1;
 } _configuration_query_by_node_request__isset;
 
 class configuration_query_by_node_request
@@ -1476,12 +1533,15 @@ public:
     virtual ~configuration_query_by_node_request() throw();
     ::dsn::rpc_address node;
     std::vector<replica_info> stored_replicas;
+    replica_server_info info;
 
     _configuration_query_by_node_request__isset __isset;
 
     void __set_node(const ::dsn::rpc_address &val);
 
     void __set_stored_replicas(const std::vector<replica_info> &val);
+
+    void __set_info(const replica_server_info &val);
 
     bool operator==(const configuration_query_by_node_request &rhs) const
     {
@@ -1490,6 +1550,10 @@ public:
         if (__isset.stored_replicas != rhs.__isset.stored_replicas)
             return false;
         else if (__isset.stored_replicas && !(stored_replicas == rhs.stored_replicas))
+            return false;
+        if (__isset.info != rhs.__isset.info)
+            return false;
+        else if (__isset.info && !(info == rhs.info))
             return false;
         return true;
     }
@@ -2710,7 +2774,8 @@ typedef struct _replica_info__isset
           last_committed_decree(false),
           last_prepared_decree(false),
           last_durable_decree(false),
-          app_type(false)
+          app_type(false),
+          disk_tag(false)
     {
     }
     bool pid : 1;
@@ -2720,6 +2785,7 @@ typedef struct _replica_info__isset
     bool last_prepared_decree : 1;
     bool last_durable_decree : 1;
     bool app_type : 1;
+    bool disk_tag : 1;
 } _replica_info__isset;
 
 class replica_info
@@ -2735,7 +2801,8 @@ public:
           last_committed_decree(0),
           last_prepared_decree(0),
           last_durable_decree(0),
-          app_type()
+          app_type(),
+          disk_tag()
     {
     }
 
@@ -2747,6 +2814,7 @@ public:
     int64_t last_prepared_decree;
     int64_t last_durable_decree;
     std::string app_type;
+    std::string disk_tag;
 
     _replica_info__isset __isset;
 
@@ -2764,6 +2832,8 @@ public:
 
     void __set_app_type(const std::string &val);
 
+    void __set_disk_tag(const std::string &val);
+
     bool operator==(const replica_info &rhs) const
     {
         if (!(pid == rhs.pid))
@@ -2779,6 +2849,8 @@ public:
         if (!(last_durable_decree == rhs.last_durable_decree))
             return false;
         if (!(app_type == rhs.app_type))
+            return false;
+        if (!(disk_tag == rhs.disk_tag))
             return false;
         return true;
     }

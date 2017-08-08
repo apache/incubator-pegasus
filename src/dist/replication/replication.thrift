@@ -212,15 +212,28 @@ struct configuration_update_response
 }
 
 // client => meta server
+struct replica_server_info
+{
+    // replica server can report its geo position
+    // possible tags may be:
+    // geo_tags["host"] = hostid;
+    // geo_tags["rack"] = rackid
+    // geo_tags["datacenter"] = datacenterid
+    // geo_tags["city"] = cityid
+    1:map<string, string> geo_tags;
+    2:i64 total_capacity_mb;
+}
+
 struct configuration_query_by_node_request
 {
     1:dsn.rpc_address  node;
     2:optional list<replica_info> stored_replicas;
+    3:optional replica_server_info info;
 }
 
 struct configuration_query_by_node_response
 {
-    1:dsn.error_code                    err;
+    1:dsn.error_code err;
     2:list<configuration_update_request> partitions;
     3:optional list<replica_info> gc_replicas;
 }
@@ -380,6 +393,7 @@ struct replica_info
     5:i64                    last_prepared_decree;
     6:i64                    last_durable_decree;
     7:string                 app_type;
+    8:string                 disk_tag;
 }
 
 struct query_replica_info_request

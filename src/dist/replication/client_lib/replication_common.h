@@ -56,6 +56,7 @@ public:
     std::string app_dir;
     std::string slog_dir;
     std::vector<std::string> data_dirs;
+    std::vector<std::string> data_dir_tags;
 
     bool deny_client_on_start;
     bool verbose_client_log_on_start;

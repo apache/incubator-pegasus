@@ -125,16 +125,43 @@ void replication_options::initialize()
 
     // data_dirs
     // - if config[data_dirs] is empty: "app_dir/reps"
-    // - else: "config[data_dirs]/app_name/reps"
+    // - else:
+    //       config[data_dirs] = "tag1:dir1,tag2:dir2:tag3:dir3"
+    //       data_dir = "config[data_dirs]/app_name/reps"
     std::string dirs_str =
         dsn_config_get_value_string("replication", "data_dirs", "", "replica directory list");
     std::vector<std::string> dirs;
+    std::vector<std::string> dir_tags;
     ::dsn::utils::split_args(dirs_str.c_str(), dirs, ',');
     if (dirs.empty()) {
         dirs.push_back(app_dir);
+        dir_tags.push_back("default");
     } else {
         for (auto &dir : dirs) {
-            dir = utils::filesystem::path_combine(dir, app_name);
+            std::vector<std::string> tag_and_dir;
+            ::dsn::utils::split_args(dir.c_str(), tag_and_dir, ':');
+            if (tag_and_dir.size() != 2) {
+                dassert(false, "invalid data_dir item(%s) in config", dir.c_str());
+            } else {
+                dassert(!tag_and_dir[0].empty() && !tag_and_dir[1].empty(),
+                        "invalid data_dir item(%s) in config",
+                        dir.c_str());
+                dir = utils::filesystem::path_combine(tag_and_dir[1], app_name);
+                for (unsigned i = 0; i < dir_tags.size(); ++i) {
+                    dassert(dirs[i] != dir,
+                            "dir(%s) and dir(%s) conflict",
+                            dirs[i].c_str(),
+                            dir.c_str());
+                }
+                for (unsigned i = 0; i < dir_tags.size(); ++i) {
+                    dassert(dir_tags[i] != tag_and_dir[0],
+                            "dir(%s) and dir(%s) have same tag(%s)",
+                            dirs[i].c_str(),
+                            dir.c_str(),
+                            tag_and_dir[0].c_str());
+                }
+                dir_tags.push_back(tag_and_dir[0]);
+            }
         }
     }
 
@@ -170,7 +197,8 @@ void replication_options::initialize()
     }
 
     int dir_count = 0;
-    for (std::string &dir : dirs) {
+    for (unsigned i = 0; i < dirs.size(); ++i) {
+        std::string &dir = dirs[i];
         bool in_black_list = false;
         if (!black_list.empty()) {
             std::string dir2 = dir;
@@ -187,8 +215,9 @@ void replication_options::initialize()
         if (in_black_list) {
             dwarn("replica data dir %s is in black list, ignore it", dir.c_str());
         } else {
-            ddebug("data_dirs[%d] = %s", dir_count++, dir.c_str());
+            ddebug("data_dirs[%d] = %s, tag = %s", dir_count++, dir.c_str(), dir_tags[i].c_str());
             data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+            data_dir_tags.push_back(dir_tags[i]);
         }
     }
 
@@ -417,11 +446,11 @@ void replication_options::initialize()
         lb_interval_ms,
         "every this period(ms) the meta server will do load balance");
 
-    learn_app_max_concurrent_count = (int)dsn_config_get_value_uint64(
-        "replication",
-        "learn_app_max_concurrent_count",
-        learn_app_max_concurrent_count,
-        "max count of learning app concurrently");
+    learn_app_max_concurrent_count =
+        (int)dsn_config_get_value_uint64("replication",
+                                         "learn_app_max_concurrent_count",
+                                         learn_app_max_concurrent_count,
+                                         "max count of learning app concurrently");
 
     replica_helper::load_meta_servers(meta_servers);
 

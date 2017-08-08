@@ -42,6 +42,7 @@
 //
 
 #include "../client_lib/replication_common.h"
+#include "../client_lib/fs_manager.h"
 #include <dsn/cpp/perf_counter_.h>
 #include <dsn/dist/failure_detector_multimaster.h>
 
@@ -140,7 +141,7 @@ public:
     // dsn_cli_reply* reply);
     static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
 
-    std::string get_replica_dir(const char *app_type, gpid gpid, bool create_new = true) const;
+    std::string get_replica_dir(const char *app_type, gpid gpid, bool create_new = true);
 
 private:
     enum replica_node_state
@@ -233,6 +234,9 @@ private:
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.
     std::atomic_int _learn_app_concurrent_count;
+
+    // handle all the data dirs
+    fs_manager _fs_manager;
 
     // performance counters
     perf_counter_ _counter_replicas_count;
