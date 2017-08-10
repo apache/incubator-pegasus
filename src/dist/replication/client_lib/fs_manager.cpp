@@ -118,6 +118,10 @@ fs_manager::fs_manager()
                                       "disk.available.min.ratio",
                                       COUNTER_TYPE_NUMBER,
                                       "minimal disk available ratio in all disks");
+    _counter_available_max_ratio.init("eon.replica_stub",
+                                      "disk.available.max.ratio",
+                                      COUNTER_TYPE_NUMBER,
+                                      "maximal disk available ratio in all disks");
 }
 
 dir_node *fs_manager::get_dir_node(const std::string &subdir)
