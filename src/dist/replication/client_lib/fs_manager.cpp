@@ -152,13 +152,14 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
         std::string norm_path;
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
         dir_node *n = new dir_node(tags[i], norm_path);
-        n->update_disk_stat();
         _dir_nodes.emplace_back(n);
         ddebug("%s: mark data dir(%s) as tag(%s)",
                dsn_address_to_string(dsn_primary_address()),
                norm_path.c_str(),
                tags[i].c_str());
     }
+
+    update_disk_stat();
 
     return dsn::ERR_OK;
 }
