@@ -87,6 +87,9 @@ public:
     int32_t gc_disk_error_replica_interval_seconds;
     int32_t gc_disk_garbage_replica_interval_seconds;
 
+    bool disk_stat_disabled;
+    int32_t disk_stat_interval_seconds;
+
     bool fd_disabled;
     int32_t fd_check_interval_seconds;
     int32_t fd_beacon_interval_seconds;

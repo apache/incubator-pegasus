@@ -20,6 +20,8 @@ set(MY_PROJ_LIB_PATH
     "${GTEST_LIB_DIR}"
 )
 
+set(MY_BOOST_PACKAGES system filesystem)
+
 # Extra files that will be installed
 
 if (UNIX)

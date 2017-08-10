@@ -36,6 +36,7 @@
 #include <dsn/utility/utils.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <boost/filesystem.hpp>
 
 #ifdef _WIN32
 
@@ -968,6 +969,22 @@ error_code get_process_image_path(int pid, std::string &path)
 #endif
 
     return ERR_OK;
+}
+
+bool get_disk_space_info(const std::string &path, disk_space_info &info)
+{
+
+    boost::system::error_code ec;
+    boost::filesystem::space_info in = boost::filesystem::space(path, ec);
+    if (ec) {
+        derror(
+            "get disk space info failed: path = %s, err = %s", path.c_str(), ec.message().c_str());
+        return false;
+    } else {
+        info.capacity = in.capacity;
+        info.available = in.available;
+        return true;
+    }
 }
 }
 }

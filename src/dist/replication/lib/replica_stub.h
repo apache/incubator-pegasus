@@ -116,6 +116,7 @@ public:
     void on_meta_server_connected();
     void on_meta_server_disconnected();
     void on_gc();
+    void on_disk_stat();
 
     //
     //  routines published for test
@@ -223,6 +224,7 @@ private:
     ::dsn::task_ptr _config_query_task;
     ::dsn::task_ptr _config_sync_timer_task;
     ::dsn::task_ptr _gc_timer_task;
+    ::dsn::task_ptr _disk_stat_timer_task;
 
     // cli handle, for deregister cli command
     // dsn_handle_t    _cli_replica_stub_json_state_handle;

@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH
   ../../dist/replication/lib
   )
 
-set(MY_BOOST_PACKAGES system)
+set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIB_PATH "")
 set(MY_PROJ_LIBS dsn.replication

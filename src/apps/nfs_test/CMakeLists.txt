@@ -15,6 +15,8 @@ set(MY_PROJ_LIBS dsn.nfs)
 
 set(MY_PROJ_LIB_PATH "")
 
+set(MY_BOOST_PACKAGES system filesystem)
+
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

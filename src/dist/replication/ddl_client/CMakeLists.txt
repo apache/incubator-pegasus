@@ -7,7 +7,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_BOOST_PACKAGES system)
+set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS 
     dsn.replication.clientlib

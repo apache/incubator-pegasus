@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../skv")
 
-set(MY_BOOST_PACKAGES system)
+set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS "")
 

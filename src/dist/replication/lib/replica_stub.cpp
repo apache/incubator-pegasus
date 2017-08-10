@@ -471,6 +471,17 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                                    std::chrono::milliseconds(random32(0, _options.gc_interval_ms)));
     }
 
+    // disk stat
+    if (false == _options.disk_stat_disabled) {
+        _disk_stat_timer_task = ::dsn::tasking::enqueue_timer(
+            LPC_DISK_STAT,
+            this,
+            [this]() { on_disk_stat(); },
+            std::chrono::seconds(_options.disk_stat_interval_seconds),
+            0,
+            std::chrono::seconds(_options.disk_stat_interval_seconds));
+    }
+
     // attach rps
     _replicas = std::move(rps);
     _counter_replicas_count.add((uint64_t)_replicas.size());
@@ -1309,6 +1320,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
 void replica_stub::on_gc()
 {
     ddebug("start to garbage collection");
+    uint64_t start = dsn_now_ns();
 
     replicas rs;
     {
@@ -1447,6 +1459,14 @@ void replica_stub::on_gc()
         _counter_shared_log_size.set(_log->size() / (1024 * 1024));
     }
 
+    ddebug("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
+}
+
+void replica_stub::on_disk_stat()
+{
+    ddebug("start to update disk stat");
+    uint64_t start = dsn_now_ns();
+
     // gc on-disk rps
     std::vector<std::string> sub_list;
     for (auto &dir : _options.data_dirs) {
@@ -1498,9 +1518,10 @@ void replica_stub::on_gc()
     }
     _counter_replicas_error_replica_dir_count.set(error_replica_dir_count);
     _counter_replicas_garbage_replica_dir_count.set(garbage_replica_dir_count);
-    sub_list.clear();
 
-    ddebug("finish to garbage collection");
+    _fs_manager.update_disk_stat();
+
+    ddebug("finish to update disk stat, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
 
 ::dsn::task_ptr replica_stub::begin_open_replica(const app_info &app,
@@ -1892,6 +1913,11 @@ void replica_stub::close()
         _config_query_task = nullptr;
     }
     _state = NS_Disconnected;
+
+    if (_disk_stat_timer_task != nullptr) {
+        _disk_stat_timer_task->cancel(true);
+        _disk_stat_timer_task = nullptr;
+    }
 
     if (_gc_timer_task != nullptr) {
         _gc_timer_task->cancel(true);

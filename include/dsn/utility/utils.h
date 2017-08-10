@@ -533,6 +533,14 @@ inline error_code get_current_process_image_path(std::string &path)
     dassert(err == ERR_OK, "get_current_process_image_path failed.");
     return err;
 }
+
+struct disk_space_info
+{
+    // all values are byte counts
+    uint64_t capacity;
+    uint64_t available;
+};
+extern bool get_disk_space_info(const std::string &path, disk_space_info &info);
 }
 }
 } // end namespace dsn::utils

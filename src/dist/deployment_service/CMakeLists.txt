@@ -12,9 +12,10 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH ${RAPIDJSON_INCLUDE_DIR})
 
+set(MY_BOOST_PACKAGES system filesystem)
+
 set(MY_PROJ_LIBS 
     "dsn.scheduler.providers")
-
 
 set(MY_PROJ_LIB_PATH "")
 

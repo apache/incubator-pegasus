@@ -10,7 +10,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../scheduler_providers")
 
-set(MY_BOOST_PACKAGES system)
+set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS "")
 

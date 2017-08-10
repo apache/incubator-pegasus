@@ -76,6 +76,9 @@ replication_options::replication_options()
     gc_disk_error_replica_interval_seconds = 7 * 24 * 3600; // 1 week
     gc_disk_garbage_replica_interval_seconds = 24 * 3600;   // 1 day
 
+    disk_stat_disabled = false;
+    disk_stat_interval_seconds = 600;
+
     fd_disabled = false;
     fd_check_interval_seconds = 2;
     fd_beacon_interval_seconds = 3;
@@ -352,6 +355,14 @@ void replication_options::initialize()
                                          gc_disk_garbage_replica_interval_seconds,
                                          "garbage replica are deleted after they have been closed "
                                          "and lasted on disk this long (seconds)");
+
+    disk_stat_disabled = dsn_config_get_value_bool(
+        "replication", "disk_stat_disabled", disk_stat_disabled, "whether to disable disk stat");
+    disk_stat_interval_seconds =
+        (int)dsn_config_get_value_uint64("replication",
+                                         "disk_stat_interval_seconds",
+                                         disk_stat_interval_seconds,
+                                         "every what period (ms) we do disk stat");
 
     fd_disabled = dsn_config_get_value_bool(
         "replication", "fd_disabled", fd_disabled, "whether to disable failure detection");
