@@ -130,7 +130,7 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _ctrl_only_primary_balancer =
         dsn_cli_app_register("lb.only_primary_balancer",
-                             "control whether only move primary in balancer",
+                             "control whether do only primary balancer",
                              "lb.only_primary_balancer <true|false>",
                              (void *)this,
                              [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {

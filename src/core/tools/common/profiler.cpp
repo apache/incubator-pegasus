@@ -42,33 +42,19 @@
 
 /*
 HELP GRAPH
-
-                                     CALL ===================== net(call) =====================>
-ENQUEUE =========== queue(server) ===========> START
-                                      ^                                                            ^
-||
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                Client Latency                                               Server
-Latency                                  exec(server)
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                      |                                                            |
-||
-                                      V                                                            V
-||
-START<======== queue(server) ======ENQUEUE <===================== net(reply) ====================
-REPLY <==========================================
+                           CALL ===== net(call) ========> ENQUEUE ===== queue(server) ====> START
+                            ^                               ^                                ||
+                            |                               |                                ||
+                            |                               |                                ||
+                            |                               |                                ||
+                            |                               |                                ||
+                      Client Latency                Server Latency                     exec(server)
+                            |                               |                                ||
+                            |                               |                                ||
+                            |                               |                                ||
+                            |                               |                                ||
+                            V                               V                                ||
+START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============================
   ||
   ||
  exec(client)
