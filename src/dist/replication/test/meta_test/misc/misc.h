@@ -6,6 +6,18 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication.types.h>
 #include "meta_data.h"
+#include "fs_manager.h"
+
+typedef std::map<dsn::rpc_address, dsn::replication::fs_manager> nodes_fs_manager;
+
+inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
+                                                    const dsn::rpc_address &node)
+{
+    auto iter = nfm.find(node);
+    if (nfm.end() == iter)
+        return nullptr;
+    return &(iter->second);
+}
 
 uint32_t random32(uint32_t min, uint32_t max);
 
@@ -22,15 +34,44 @@ void generate_node_mapper(
     const dsn::replication::app_mapper &input_apps,
     const std::vector<dsn::rpc_address> &input_node_list);
 
+void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication::app_state> &app,
+                                       int total_disks);
+
+void generate_node_fs_manager(const dsn::replication::app_mapper &apps,
+                              const dsn::replication::node_mapper &nodes,
+                              /*out*/ nodes_fs_manager &nfm,
+                              int total_disks);
+
+void generate_apps(/*out*/ dsn::replication::app_mapper &apps,
+                   const std::vector<dsn::rpc_address> &node_list,
+                   int apps_count,
+                   int disks_per_node,
+                   std::pair<uint32_t, uint32_t> partitions_range,
+                   bool generate_serving_info);
+
+// when the test need to track the disk info, please input the fs_manager of all disks,
+// the check_apply routine will modify it accordingly.
+// if track disk info is not necessary, please input a nullptr.
 void migration_check_and_apply(
     /*in-out*/ dsn::replication::app_mapper &apps,
     /*in-out*/ dsn::replication::node_mapper &nodes,
-    /*in-out*/ dsn::replication::migration_list &ml);
+    /*in-out*/ dsn::replication::migration_list &ml,
+    /*in-out*/ nodes_fs_manager *manager);
 
+// when the test need to track the disk info, please input the fs_manager of all disks,
+// the check_apply routine will modify it accordingly.
+// if track disk info is not necessary, please input a nullptr.
 void proposal_action_check_and_apply(const dsn::replication::configuration_proposal_action &act,
                                      const dsn::gpid &pid,
                                      dsn::replication::app_mapper &apps,
-                                     dsn::replication::node_mapper &nodes);
+                                     dsn::replication::node_mapper &nodes,
+                                     nodes_fs_manager *manager);
+
+void track_disk_info_check_and_apply(const dsn::replication::configuration_proposal_action &act,
+                                     const dsn::gpid &pid,
+                                     /*in-out*/ dsn::replication::app_mapper &apps,
+                                     /*in-out*/ dsn::replication::node_mapper &nodes,
+                                     /*in-out*/ nodes_fs_manager &manager);
 
 void app_mapper_compare(const dsn::replication::app_mapper &mapper1,
                         const dsn::replication::app_mapper &mapper2);

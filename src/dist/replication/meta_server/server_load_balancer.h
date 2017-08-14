@@ -169,9 +169,9 @@ public:
         if (svc != nullptr) {
             mutation_2pc_min_replica_count = svc->get_options().mutation_2pc_min_replica_count;
             replica_assign_delay_ms_for_dropouts =
-                svc->get_meta_options().replica_assign_delay_ms_for_dropouts;
+                svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
             config_context::MAX_REPLICA_COUNT_IN_GRROUP =
-                svc->get_meta_options().max_replicas_in_group;
+                svc->get_meta_options()._lb_opts.max_replicas_in_group;
         } else {
             mutation_2pc_min_replica_count = 0;
             replica_assign_delay_ms_for_dropouts = 0;

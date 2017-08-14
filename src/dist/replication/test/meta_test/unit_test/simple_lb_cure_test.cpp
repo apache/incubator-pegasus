@@ -723,7 +723,7 @@ void meta_service_test_app::simple_lb_balanced_cure()
             status = simple_lb.cure({&app, &nodes}, pid, action);
             if (status != pc_status::healthy) {
                 all_partitions_healthy = false;
-                proposal_action_check_and_apply(action, pid, app, nodes);
+                proposal_action_check_and_apply(action, pid, app, nodes, nullptr);
 
                 configuration_update_request fake_request;
                 fake_request.info = *the_app;

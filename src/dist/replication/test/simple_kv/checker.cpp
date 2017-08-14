@@ -167,7 +167,8 @@ bool test_checker::init(const char *name, dsn_app_info *info, int count)
             meta_service_app *meta_app = (meta_service_app *)app.app.app_context_ptr;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
-            meta_app->_service->_meta_opts.server_load_balancer_type = "checker_load_balancer";
+            meta_app->_service->_meta_opts._lb_opts.server_load_balancer_type =
+                "checker_load_balancer";
             _meta_servers.push_back(meta_app);
         } else if (0 == strcmp(app.type, "replica")) {
             replication_service_app *replica_app =

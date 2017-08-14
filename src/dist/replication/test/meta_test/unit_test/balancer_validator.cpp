@@ -33,29 +33,6 @@ using namespace dsn::replication;
 #endif
 #define ASSERT_FALSE(exp) dassert(!(exp), "")
 
-static void generate_apps(/*out*/ app_mapper &mapper,
-                          const std::vector<dsn::rpc_address> &node_list,
-                          int apps_count)
-{
-    mapper.clear();
-
-    dsn::app_info info;
-    for (int i = 1; i <= apps_count; ++i) {
-        info.status = dsn::app_status::AS_AVAILABLE;
-        info.app_id = i;
-        info.is_stateful = true;
-        info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
-        info.app_type = "test";
-        info.max_replica_count = 3;
-        info.partition_count = random32(1000, 2000);
-        std::shared_ptr<app_state> the_app = app_state::create(info);
-        generate_app(the_app, node_list);
-
-        dinfo("generated app, partitions(%d)", info.partition_count);
-        mapper.emplace(the_app->app_id, the_app);
-    }
-}
-
 static void check_cure(server_load_balancer *lb,
                        app_mapper &apps,
                        node_mapper &nodes,
@@ -187,6 +164,34 @@ static void check_cure(server_load_balancer *lb,
 //        std::cout << std::endl;
 //    }
 //}
+// static void print_node_fs_manager(const app_mapper &apps,
+//                                  const node_mapper &nodes,
+//                                  const nodes_fs_manager &manager)
+//{
+//    int apps_count = apps.size();
+//    for (const auto &kv : nodes) {
+//        const node_state &ns = kv.second;
+//        printf("%s: %d primaries, %d partitions\n",
+//               ns.addr().to_string(),
+//               ns.primary_count(),
+//               ns.partition_count());
+//        printf("%8s", "tag");
+//        for (int i = 1; i <= apps_count; ++i) {
+//            std::string app = std::string("app") + std::to_string(i);
+//            printf("%8s", app.c_str());
+//        }
+//        printf("\n");
+//        const fs_manager &m = manager.find(ns.addr())->second;
+//        m.for_each_dir_node([apps_count](const dir_node &dn) {
+//            printf("%8s", dn.tag.c_str());
+//            for (int i = 1; i <= apps_count; ++i) {
+//                printf("%8u", dn.replicas_count(i));
+//            }
+//            printf("%8u\n", dn.replicas_count());
+//            return true;
+//        });
+//    }
+//}
 
 void meta_service_test_app::balancer_validator()
 {
@@ -195,6 +200,8 @@ void meta_service_test_app::balancer_validator()
 
     app_mapper apps;
     node_mapper nodes;
+    nodes_fs_manager manager;
+    int disk_on_node = 9;
 
     meta_service svc;
     simple_load_balancer slb(&svc);
@@ -205,8 +212,10 @@ void meta_service_test_app::balancer_validator()
         std::cerr << "the " << i << "th balancer" << std::endl;
         server_load_balancer *lb = lbs[i];
 
-        generate_apps(apps, node_list, 5);
+        generate_apps(
+            apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(1000, 2000), true);
         generate_node_mapper(nodes, apps, node_list);
+        generate_node_fs_manager(apps, nodes, manager, disk_on_node);
         migration_list ml;
 
         for (auto &iter : nodes) {
@@ -216,10 +225,10 @@ void meta_service_test_app::balancer_validator()
                   iter.second.partition_count());
         }
 
-        // iterate 1000 times
+        // iterate 1000000 times
         for (int i = 0; i < 1000000 && lb->balance({&apps, &nodes}, ml); ++i) {
             dinfo("the %dth round of balancer", i);
-            migration_check_and_apply(apps, nodes, ml);
+            migration_check_and_apply(apps, nodes, ml, &manager);
         }
 
         for (auto &iter : nodes) {
@@ -316,7 +325,7 @@ void meta_service_test_app::balance_config_file()
         // iterate 1000 times
         for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
             dinfo("the %dth round of balancer", i);
-            migration_check_and_apply(apps, nodes, ml);
+            migration_check_and_apply(apps, nodes, ml, nullptr);
         }
     }
 }

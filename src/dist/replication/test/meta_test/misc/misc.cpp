@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <boost/lexical_cast.hpp>
 
 #include <dsn/dist/replication/replication.types.h>
 #include "misc.h"
@@ -93,10 +94,143 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
     }
 }
 
+void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication::app_state> &app,
+                                       int total_disks)
+{
+    char buffer[256];
+    for (int i = 0; i < app->partition_count; ++i) {
+        config_context &cc = app->helpers->contexts[i];
+        dsn::partition_configuration &pc = app->partitions[i];
+        replica_info ri;
+
+        snprintf(buffer, 256, "disk%u", dsn_random32(1, total_disks));
+        ri.disk_tag = buffer;
+        cc.collect_serving_replica(pc.primary, ri);
+
+        for (const dsn::rpc_address &addr : pc.secondaries) {
+            snprintf(buffer, 256, "disk%u", dsn_random32(1, total_disks));
+            ri.disk_tag = buffer;
+            cc.collect_serving_replica(addr, ri);
+        }
+    }
+}
+
+void generate_apps(/*out*/ dsn::replication::app_mapper &mapper,
+                   const std::vector<dsn::rpc_address> &node_list,
+                   int apps_count,
+                   int disks_per_node,
+                   std::pair<uint32_t, uint32_t> partitions_range,
+                   bool generate_serving_info)
+{
+    mapper.clear();
+    dsn::app_info info;
+    for (int i = 1; i <= apps_count; ++i) {
+        info.status = dsn::app_status::AS_AVAILABLE;
+        info.app_id = i;
+        info.is_stateful = true;
+        info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
+        info.app_type = "test";
+        info.max_replica_count = 3;
+        info.partition_count = random32(partitions_range.first, partitions_range.second);
+        std::shared_ptr<app_state> the_app = app_state::create(info);
+        generate_app(the_app, node_list);
+
+        if (generate_serving_info) {
+            generate_app_serving_replica_info(the_app, disks_per_node);
+        }
+        dinfo("generated app, partitions(%d)", info.partition_count);
+        mapper.emplace(the_app->app_id, the_app);
+    }
+}
+
+void generate_node_fs_manager(const app_mapper &apps,
+                              const node_mapper &nodes,
+                              /*out*/ nodes_fs_manager &nfm,
+                              int total_disks)
+{
+    nfm.clear();
+    const char *prefix = "/home/work/";
+    char pid_dir[256];
+    std::vector<std::string> data_dirs(total_disks);
+    std::vector<std::string> tags(total_disks);
+    for (int i = 0; i < data_dirs.size(); ++i) {
+        snprintf(pid_dir, 256, "%sdisk%d", prefix, i + 1);
+        data_dirs[i] = pid_dir;
+        snprintf(pid_dir, 256, "disk%d", i + 1);
+        tags[i] = pid_dir;
+    }
+
+    for (const auto &kv : nodes) {
+        const node_state &ns = kv.second;
+        fs_manager &manager = nfm[ns.addr()];
+        manager.initialize(data_dirs, tags);
+        ns.for_each_partition([&](const dsn::gpid &pid) {
+            const config_context &cc = *get_config_context(apps, pid);
+            snprintf(pid_dir,
+                     256,
+                     "%s%s/%d.%d.test",
+                     prefix,
+                     cc.find_from_serving(ns.addr())->disk_tag.c_str(),
+                     pid.get_app_id(),
+                     pid.get_partition_index());
+            dinfo("concat pid_dir(%s) of node(%s)", pid_dir, ns.addr().to_string());
+            manager.add_replica(pid, pid_dir);
+            return true;
+        });
+    }
+}
+
+void track_disk_info_check_and_apply(const dsn::replication::configuration_proposal_action &act,
+                                     const dsn::gpid &pid,
+                                     /*in-out*/ dsn::replication::app_mapper &apps,
+                                     /*in-out*/ dsn::replication::node_mapper & /*nodes*/,
+                                     /*in-out*/ nodes_fs_manager &manager)
+{
+    config_context *cc = get_config_context(apps, pid);
+    ASSERT_TRUE(cc != nullptr);
+
+    fs_manager *target_manager = get_fs_manager(manager, act.target);
+    ASSERT_TRUE(target_manager != nullptr);
+    fs_manager *node_manager = get_fs_manager(manager, act.node);
+    ASSERT_TRUE(node_manager != nullptr);
+
+    std::string dir;
+    replica_info ri;
+    switch (act.type) {
+    case config_type::CT_ASSIGN_PRIMARY:
+        target_manager->allocate_dir(pid, "test", dir);
+        ASSERT_EQ(dsn::ERR_OK, target_manager->get_disk_tag(dir, ri.disk_tag));
+        cc->collect_serving_replica(act.target, ri);
+        break;
+
+    case config_type::CT_ADD_SECONDARY:
+    case config_type::CT_ADD_SECONDARY_FOR_LB:
+        node_manager->allocate_dir(pid, "test", dir);
+        ASSERT_EQ(dsn::ERR_OK, node_manager->get_disk_tag(dir, ri.disk_tag));
+        cc->collect_serving_replica(act.node, ri);
+        break;
+
+    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+    case config_type::CT_UPGRADE_TO_PRIMARY:
+        break;
+
+    case config_type::CT_REMOVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+        node_manager->remove_replica(pid);
+        cc->remove_from_serving(act.node);
+        break;
+
+    default:
+        ASSERT_TRUE(false);
+        break;
+    }
+}
+
 void proposal_action_check_and_apply(const configuration_proposal_action &act,
                                      const dsn::gpid &pid,
                                      app_mapper &apps,
-                                     node_mapper &nodes)
+                                     node_mapper &nodes,
+                                     nodes_fs_manager *manager)
 {
     dsn::partition_configuration &pc = *get_config(apps, pid);
     node_state *ns;
@@ -105,6 +239,10 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     ASSERT_TRUE(act.type != config_type::CT_INVALID);
     ASSERT_FALSE(act.target.is_invalid());
     ASSERT_FALSE(act.node.is_invalid());
+
+    if (manager) {
+        track_disk_info_check_and_apply(act, pid, apps, nodes, *manager);
+    }
 
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY:
@@ -182,7 +320,10 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
 }
 
-void migration_check_and_apply(app_mapper &apps, node_mapper &nodes, migration_list &ml)
+void migration_check_and_apply(app_mapper &apps,
+                               node_mapper &nodes,
+                               migration_list &ml,
+                               nodes_fs_manager *manager)
 {
     int i = 0;
     for (auto kv = ml.begin(); kv != ml.end(); ++kv) {
@@ -211,7 +352,7 @@ void migration_check_and_apply(app_mapper &apps, node_mapper &nodes, migration_l
                   dsn::enum_to_string(act.type),
                   act.node.to_string(),
                   act.target.to_string());
-            proposal_action_check_and_apply(act, proposal->gpid, apps, nodes);
+            proposal_action_check_and_apply(act, proposal->gpid, apps, nodes, manager);
         }
     }
 }

@@ -169,6 +169,16 @@ inline int dropped_cmp(const dropped_replica &d1, const dropped_replica &d2)
     return 0;
 }
 
+// Represent a replica that is serving. Info in this structure can only from config-sync of RS.
+// Load balancer may use this to do balance decisions.
+struct serving_replica
+{
+    dsn::rpc_address node;
+    // TODO: report the storage size of replica
+    int64_t storage_mb;
+    std::string disk_tag;
+};
+
 class config_context
 {
 public:
@@ -183,6 +193,8 @@ public:
 
     // for load balancer's decision
     //[
+    std::vector<serving_replica> serving;
+
     proposal_actions lb_actions;
     std::vector<dropped_replica> dropped;
     // An index value to the vector "dropped".
@@ -198,7 +210,9 @@ public:
 public:
     void check_size();
     void cancel_sync();
+
     std::vector<dropped_replica>::iterator find_from_dropped(const dsn::rpc_address &node);
+    std::vector<dropped_replica>::const_iterator find_from_dropped(const rpc_address &node) const;
 
     // return true if remove ok, false if node doesn't in dropped
     bool remove_from_dropped(const dsn::rpc_address &node);
@@ -216,6 +230,14 @@ public:
 
     // check if dropped vector satisfied the order
     bool check_order();
+
+    std::vector<serving_replica>::iterator find_from_serving(const dsn::rpc_address &node);
+    std::vector<serving_replica>::const_iterator find_from_serving(const rpc_address &node) const;
+
+    // return true if remove ok, false if node doesn't in serving
+    bool remove_from_serving(const dsn::rpc_address &node);
+
+    void collect_serving_replica(const dsn::rpc_address &node, const replica_info &info);
 
 public:
     // intialize to 4 statically.
@@ -334,6 +356,7 @@ public:
     void remove_partition(const dsn::gpid &pid, bool only_primary);
 
     bool for_each_partition(const std::function<bool(const dsn::gpid &pid)> &f) const;
+    bool for_each_partition(app_id id, const std::function<bool(const dsn::gpid &)> &f) const;
     bool for_each_primary(app_id id, const std::function<bool(const dsn::gpid &pid)> &f) const;
 };
 

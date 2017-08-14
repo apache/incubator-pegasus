@@ -111,6 +111,14 @@ std::vector<dropped_replica>::iterator config_context::find_from_dropped(const r
     });
 }
 
+std::vector<dropped_replica>::const_iterator
+config_context::find_from_dropped(const rpc_address &node) const
+{
+    return std::find_if(dropped.begin(), dropped.end(), [&node](const dropped_replica &r) {
+        return r.node == node;
+    });
+}
+
 bool config_context::remove_from_dropped(const rpc_address &node)
 {
     auto iter = find_from_dropped(node);
@@ -197,6 +205,42 @@ bool config_context::check_order()
     return true;
 }
 
+std::vector<serving_replica>::iterator config_context::find_from_serving(const rpc_address &node)
+{
+    return std::find_if(serving.begin(), serving.end(), [&node](const serving_replica &r) {
+        return r.node == node;
+    });
+}
+
+std::vector<serving_replica>::const_iterator
+config_context::find_from_serving(const rpc_address &node) const
+{
+    return std::find_if(serving.begin(), serving.end(), [&node](const serving_replica &r) {
+        return r.node == node;
+    });
+}
+
+bool config_context::remove_from_serving(const rpc_address &node)
+{
+    auto iter = find_from_serving(node);
+    if (iter != serving.end()) {
+        serving.erase(iter);
+        return true;
+    }
+    return false;
+}
+
+void config_context::collect_serving_replica(const rpc_address &node, const replica_info &info)
+{
+    auto iter = find_from_serving(node);
+    if (iter != serving.end()) {
+        iter->disk_tag = info.disk_tag;
+        iter->storage_mb = 0;
+    } else {
+        serving.emplace_back(serving_replica{node, 0, info.disk_tag});
+    }
+}
+
 void app_state_helper::on_init_partitions()
 {
     config_context context;
@@ -244,18 +288,6 @@ std::shared_ptr<app_state> app_state::create(const app_info &info)
 node_state::node_state()
     : total_primaries(0), total_partitions(0), is_alive(false), has_collected_replicas(false)
 {
-}
-
-bool node_state::for_each_partition(const std::function<bool(const gpid &)> &f) const
-{
-    for (const auto &pair : app_partitions) {
-        const partition_set &ps = pair.second;
-        for (const auto &gpid : ps) {
-            if (!f(gpid))
-                return false;
-        }
-    }
-    return true;
 }
 
 const partition_set *node_state::get_partitions(int app_id, bool only_primary) const
@@ -327,8 +359,9 @@ void node_state::remove_partition(const gpid &pid, bool only_primary)
 bool node_state::for_each_primary(app_id id, const std::function<bool(const gpid &)> &f) const
 {
     const partition_set *pri = partitions(id, true);
-    if (pri == nullptr)
-        return false;
+    if (pri == nullptr) {
+        return true;
+    }
     for (const gpid &pid : *pri) {
         dassert(id == pid.get_app_id(),
                 "invalid gpid(%d.%d), app_id must be %d",
@@ -337,6 +370,36 @@ bool node_state::for_each_primary(app_id id, const std::function<bool(const gpid
                 id);
         if (!f(pid))
             return false;
+    }
+    return true;
+}
+
+bool node_state::for_each_partition(app_id id, const std::function<bool(const gpid &)> &f) const
+{
+    const partition_set *par = partitions(id, false);
+    if (par == nullptr) {
+        return true;
+    }
+    for (const gpid &pid : *par) {
+        dassert(id == pid.get_app_id(),
+                "invalid gpid(%d.%d), app_id must be %d",
+                pid.get_app_id(),
+                pid.get_partition_index(),
+                id);
+        if (!f(pid))
+            return false;
+    }
+    return true;
+}
+
+bool node_state::for_each_partition(const std::function<bool(const gpid &)> &f) const
+{
+    for (const auto &pair : app_partitions) {
+        const partition_set &ps = pair.second;
+        for (const auto &gpid : ps) {
+            if (!f(gpid))
+                return false;
+        }
     }
     return true;
 }

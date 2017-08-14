@@ -58,23 +58,12 @@ void meta_options::initialize()
                                                           "meta_state_service_type",
                                                           "meta_state_service_simple",
                                                           "meta_state_service provider type");
-    server_load_balancer_type = dsn_config_get_value_string("meta_server",
-                                                            "server_load_balancer_type",
-                                                            "simple_load_balancer",
-                                                            "server load balancer provider");
-
     const char *meta_state_service_parameters =
         dsn_config_get_value_string("meta_server",
                                     "meta_state_service_parameters",
                                     "",
                                     "meta_state_service provider parameters");
     utils::split_args(meta_state_service_parameters, meta_state_service_args);
-
-    replica_assign_delay_ms_for_dropouts =
-        dsn_config_get_value_uint64("meta_server",
-                                    "replica_assign_delay_ms_for_dropouts",
-                                    300000,
-                                    "replica_assign_delay_ms_for_dropouts, default is 300000");
 
     node_live_percentage_threshold_for_update = dsn_config_get_value_uint64(
         "meta_server",
@@ -88,12 +77,6 @@ void meta_options::initialize()
                                     "min_live_node_count_for_unfreeze",
                                     3,
                                     "minimum live node count without which the state is freezed");
-
-    hold_seconds_for_dropped_app =
-        dsn_config_get_value_uint64("meta_server",
-                                    "hold_seconds_for_dropped_app",
-                                    604800,
-                                    "how long to hold data for dropped apps");
 
     meta_function_level_on_start = meta_function_level::fl_invalid;
     const char *level_str = dsn_config_get_value_string(
@@ -115,8 +98,11 @@ void meta_options::initialize()
         false,
         "whether to recover from replica server when no apps in remote storage");
 
-    max_replicas_in_group = dsn_config_get_value_uint64(
-        "meta_server", "max_replicas_in_group", 4, "max replicas(alive & dead) in a group");
+    hold_seconds_for_dropped_app =
+        dsn_config_get_value_uint64("meta_server",
+                                    "hold_seconds_for_dropped_app",
+                                    604800,
+                                    "how long to hold data for dropped apps");
 
     add_secondary_enable_flow_control =
         dsn_config_get_value_bool("meta_server",
@@ -134,6 +120,7 @@ void meta_options::initialize()
                                     900,
                                     "add secondary proposal alive time in seconds");
 
+    /// failure detector options
     _fd_opts.distributed_lock_service_type =
         dsn_config_get_value_string("meta_server",
                                     "distributed_lock_service_type",
@@ -145,7 +132,6 @@ void meta_options::initialize()
                                     "",
                                     "distributed_lock_service provider parameters");
     utils::split_args(distributed_lock_service_parameters, _fd_opts.distributed_lock_service_args);
-
     _fd_opts.stable_rs_min_running_seconds =
         dsn_config_get_value_uint64("meta_server",
                                     "stable_rs_min_running_seconds",
@@ -158,6 +144,27 @@ void meta_options::initialize()
         5,
         "meta server will treat an rs unstable so as to reject it's beacons "
         "if its succssively restarting count exceeds this value");
+
+    /// load balancer options
+    _lb_opts.server_load_balancer_type =
+        dsn_config_get_value_string("meta_server",
+                                    "server_load_balancer_type",
+                                    "simple_load_balancer",
+                                    "server load balancer provider");
+    _lb_opts.replica_assign_delay_ms_for_dropouts =
+        dsn_config_get_value_uint64("meta_server",
+                                    "replica_assign_delay_ms_for_dropouts",
+                                    300000,
+                                    "replica_assign_delay_ms_for_dropouts, default is 300000");
+    _lb_opts.max_replicas_in_group = dsn_config_get_value_uint64(
+        "meta_server", "max_replicas_in_group", 4, "max replicas(alive & dead) in a group");
+
+    _lb_opts.balancer_in_turn = dsn_config_get_value_bool(
+        "meta_server", "balancer_in_turn", false, "balance the apps one-by-one/concurrently");
+    _lb_opts.only_primary_balancer = dsn_config_get_value_bool(
+        "meta_server", "only_primary_balancer", false, "only try to make the primary balanced");
+    _lb_opts.only_move_primary = dsn_config_get_value_bool(
+        "meta_server", "only_move_primary", false, "only try to make the primary balanced by move");
 }
 }
 }

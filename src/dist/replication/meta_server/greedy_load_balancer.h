@@ -43,7 +43,8 @@ namespace replication {
 class greedy_load_balancer : public simple_load_balancer
 {
 public:
-    greedy_load_balancer(meta_service *svc) : simple_load_balancer(svc) {}
+    greedy_load_balancer(meta_service *svc);
+    virtual ~greedy_load_balancer();
     bool balance(meta_view view, migration_list &list) override;
 
 private:
@@ -65,26 +66,63 @@ private:
     std::unordered_map<dsn::rpc_address, int> address_id;
     std::vector<dsn::rpc_address> address_vec;
 
+    // disk_tag -> targets(primaries/partitions)_on_this_disk
+    typedef std::map<std::string, int> disk_load;
+
+    // options
+    bool _balancer_in_turn;
+    bool _only_primary_balancer;
+    bool _only_move_primary;
+
+    dsn_handle_t _ctrl_balancer_in_turn;
+    dsn_handle_t _ctrl_only_primary_balancer;
+    dsn_handle_t _ctrl_only_move_primary;
+
 private:
+    void register_ctrl_commands();
+
+    void ctrl_balancer_in_turn(int argc, const char **argv, dsn_cli_reply *reply);
+    void ctrl_only_primary_balancer(int argc, const char **argv, dsn_cli_reply *reply);
+    void ctrl_only_move_primary(int argc, const char **argv, dsn_cli_reply *reply);
+
     void number_nodes(const node_mapper &nodes);
-
-    void primary_balancer_per_app(const std::shared_ptr<app_state> &app);
-    void copy_primary_per_app(const std::shared_ptr<app_state> &app,
-                              bool still_have_less_than_average,
-                              int replicas_low);
-    void primary_balancer_globally();
-
-    void copy_secondary_per_app(const std::shared_ptr<app_state> &app);
-    void secondary_balancer_globally();
-
-    void greedy_balancer();
     void shortest_path(std::vector<bool> &visit,
                        std::vector<int> &flow,
                        std::vector<int> &prev,
                        std::vector<std::vector<int>> &network);
-    void make_balancer_decision_based_on_flow(const std::shared_ptr<app_state> &app,
-                                              const std::vector<int> &prev,
-                                              const std::vector<int> &flow);
+
+    // balance decision generators. All these functions try to make balance decisions
+    // and store them to t_migration_result.
+    //
+    // return true if some decision is made, which means that these generators either put some
+    // actions to the migration_list or don't take any action if they think the state is balanced.
+    //
+    // when return false, it means generators refuse to make decision coz
+    // they think they need more informations.
+    bool move_primary_based_on_flow_per_app(const std::shared_ptr<app_state> &app,
+                                            const std::vector<int> &prev,
+                                            const std::vector<int> &flow);
+    bool copy_primary_per_app(const std::shared_ptr<app_state> &app,
+                              bool still_have_less_than_average,
+                              int replicas_low);
+    bool primary_balancer_per_app(const std::shared_ptr<app_state> &app);
+    bool primary_balancer_globally();
+
+    bool copy_secondary_per_app(const std::shared_ptr<app_state> &app);
+    bool secondary_balancer_globally();
+
+    void greedy_balancer();
+
+    // using t_global_view to get disk_tag of node's pid
+    const std::string &get_disk_tag(const dsn::rpc_address &node, const dsn::gpid &pid);
+
+    // return false if can't get the replica_info for some replicas on this node
+    bool calc_disk_load(app_id id,
+                        const dsn::rpc_address &node,
+                        bool only_primary,
+                        /*out*/ disk_load &load);
+    void
+    dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const disk_load &load);
 
     std::shared_ptr<configuration_balancer_request>
     generate_balancer_request(const partition_configuration &pc,

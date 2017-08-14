@@ -2275,7 +2275,7 @@ void server_state::update_partition_perf_counter()
 
 bool server_state::check_all_partitions()
 {
-    int unhealthy_partitions = 0;
+    int healthy_partitions = 0;
     int total_partitions = 0;
     meta_function_level::type level = _meta_svc->get_function_level();
 
@@ -2320,7 +2320,6 @@ bool server_state::check_all_partitions()
                       pc.pid.get_partition_index(),
                       enum_to_string(s));
                 if (pc_status::healthy != s) {
-                    unhealthy_partitions++;
                     if (action.type != config_type::CT_INVALID) {
                         if (action.type == config_type::CT_ADD_SECONDARY ||
                             action.type == config_type::CT_ADD_SECONDARY_FOR_LB) {
@@ -2332,6 +2331,8 @@ bool server_state::check_all_partitions()
                             send_proposal_count++;
                         }
                     }
+                } else {
+                    healthy_partitions++;
                 }
             } else {
                 ddebug("ignore gpid(%d.%d) as it's stage is pending_remote_sync",
@@ -2411,9 +2412,9 @@ bool server_state::check_all_partitions()
         return false;
     }
 
-    if (unhealthy_partitions != 0) {
+    if (healthy_partitions != total_partitions) {
         ddebug("don't do replica migration coz %d of %d partitions aren't healthy",
-               unhealthy_partitions,
+               total_partitions - healthy_partitions,
                total_partitions);
         return false;
     }

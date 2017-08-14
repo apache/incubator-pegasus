@@ -223,6 +223,8 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
 
     // handle the dropped out servers
     if (request.type == config_type::CT_DROP_PARTITION) {
+        cc->serving.clear();
+
         const std::vector<rpc_address> &config_dropped = request.config.last_drops;
         for (const rpc_address &drop_node : config_dropped) {
             cc->record_drop_history(drop_node);
@@ -235,6 +237,8 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
                 // we should try to adjust the size of drop_list
                 cc->check_size();
             } else {
+                cc->remove_from_serving(request.node);
+
                 dassert(cc->record_drop_history(request.node),
                         "node(%s) has been in the dropped",
                         request.node.to_string());
@@ -787,10 +791,12 @@ bool simple_load_balancer::collect_replica(meta_view view,
                                            const replica_info &info)
 {
     partition_configuration &pc = *get_config(*view.apps, info.pid);
-    if (is_member(pc, node))
-        return true;
-
     config_context &cc = *get_config_context(*view.apps, info.pid);
+    if (is_member(pc, node)) {
+        cc.collect_serving_replica(node, info);
+        return true;
+    }
+
     int ans = cc.collect_drop_replica(node, info);
     dassert(cc.check_order(), "");
     return ans != -1;

@@ -231,7 +231,7 @@ void meta_service_test_app::update_configuration_test()
     };
     // the default delay for add node is 5 miniutes
     ASSERT_FALSE(wait_state(ss, validator3, 10));
-    svc->_meta_opts.replica_assign_delay_ms_for_dropouts = 0;
+    svc->_meta_opts._lb_opts.replica_assign_delay_ms_for_dropouts = 0;
     svc->_balancer.reset(new simple_load_balancer(svc.get()));
     ASSERT_TRUE(wait_state(ss, validator3, 10));
 }
@@ -323,32 +323,12 @@ void meta_service_test_app::adjust_dropped_size()
     spin_wait_condition(status_check, 10);
 }
 
-static void generate_apps(app_mapper &mapper, const std::vector<dsn::rpc_address> &node_list)
-{
-    mapper.clear();
-    for (int i = 1; i <= 5; ++i) {
-        dsn::app_info info;
-        info.status = dsn::app_status::AS_CREATING;
-        info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
-        info.app_type = "simple_kv";
-        info.app_id = i;
-        info.max_replica_count = 3;
-        info.is_stateful = true;
-        info.partition_count = random32(2, 5);
-
-        std::shared_ptr<app_state> app = app_state::create(info);
-        generate_app(app, node_list);
-        mapper.emplace(app->app_id, app);
-    }
-}
-
 static void clone_app_mapper(app_mapper &output, const app_mapper &input)
 {
     output.clear();
     for (auto &iter : input) {
         const std::shared_ptr<app_state> &old_app = iter.second;
         dsn::app_info info = *old_app;
-        info.status = dsn::app_status::AS_AVAILABLE;
         std::shared_ptr<app_state> new_app = app_state::create(info);
         for (unsigned int i = 0; i != old_app->partition_count; ++i)
             new_app->partitions[i] = old_app->partitions[i];
@@ -359,26 +339,32 @@ static void clone_app_mapper(app_mapper &output, const app_mapper &input)
 void meta_service_test_app::apply_balancer_test()
 {
     dsn::error_code ec;
-    fake_sender_meta_service *meta_svc = new fake_sender_meta_service(this);
+    std::shared_ptr<fake_sender_meta_service> meta_svc(new fake_sender_meta_service(this));
     ec = meta_svc->remote_storage_initialize();
     ASSERT_EQ(dsn::ERR_OK, ec);
 
-    meta_svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(meta_svc));
-    meta_svc->_balancer.reset(new greedy_load_balancer(meta_svc));
+    meta_svc->_failure_detector.reset(
+        new dsn::replication::meta_server_failure_detector(meta_svc.get()));
+    meta_svc->_balancer.reset(new greedy_load_balancer(meta_svc.get()));
 
     // initialize data structure
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 5, 10);
 
     server_state *ss = meta_svc->_state.get();
-    generate_apps(ss->_all_apps, node_list);
+    generate_apps(ss->_all_apps, node_list, 5, 5, std::pair<uint32_t, uint32_t>(2, 5), false);
 
     app_mapper backed_app;
     node_mapper backed_nodes;
+
     clone_app_mapper(backed_app, ss->_all_apps);
     generate_node_mapper(backed_nodes, backed_app, node_list);
 
-    ss->initialize(meta_svc, "/meta_test/apps");
+    // before initialize, we need to mark apps to AS_CREATING:
+    for (auto &kv : ss->_all_apps) {
+        kv.second->status = dsn::app_status::AS_CREATING;
+    }
+    ss->initialize(meta_svc.get(), "/meta_test/apps");
     ASSERT_EQ(dsn::ERR_OK, meta_svc->_state->sync_apps_to_remote_storage());
     ASSERT_TRUE(ss->spin_wait_staging(30));
     ss->initialize_node_state();
@@ -397,7 +383,7 @@ void meta_service_test_app::apply_balancer_test()
                 std::make_shared<configuration_balancer_request>(*(iter.second));
             result.emplace(iter.first, req);
         }
-        migration_check_and_apply(backed_app, backed_nodes, result);
+        migration_check_and_apply(backed_app, backed_nodes, result, nullptr);
     };
 
     ss->set_replica_migration_subscriber_for_test(migration_actions);
