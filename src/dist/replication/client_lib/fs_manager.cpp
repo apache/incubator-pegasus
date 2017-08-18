@@ -80,24 +80,20 @@ unsigned dir_node::remove(const gpid &pid)
 void dir_node::update_disk_stat()
 {
     dsn::utils::filesystem::disk_space_info info;
-    int try_count = 0;
-    int max_try_count = 3;
-    while (try_count < max_try_count) {
-        if (dsn::utils::filesystem::get_disk_space_info(full_dir, info))
-            break;
-        try_count++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
+        disk_capacity_mb = info.capacity / 1024 / 1024;
+        disk_available_mb = info.available / 1024 / 1024;
+        disk_available_ratio =
+            disk_capacity_mb == 0 ? 0 : disk_available_mb * 100 / disk_capacity_mb;
+        ddebug("update disk space succeed: dir = %s, capacity_mb = %" PRId64
+               ", available_mb = %" PRId64 ", available_ratio = %" PRId64 "%%",
+               full_dir.c_str(),
+               disk_capacity_mb,
+               disk_available_mb,
+               disk_available_ratio);
+    } else {
+        derror("update disk space failed: dir = %s", full_dir.c_str());
     }
-    dassert(try_count < max_try_count, "update disk space failed: dir = %s", full_dir.c_str());
-    disk_capacity_mb = info.capacity / 1024 / 1024;
-    disk_available_mb = info.available / 1024 / 1024;
-    disk_available_ratio = disk_capacity_mb == 0 ? 0 : disk_available_mb * 100 / disk_capacity_mb;
-    ddebug("update disk space succeed: dir = %s, capacity_mb = %" PRId64 ", available_mb = %" PRId64
-           ", available_ratio = %" PRId64 "%%",
-           full_dir.c_str(),
-           disk_capacity_mb,
-           disk_available_mb,
-           disk_available_ratio);
 }
 
 fs_manager::fs_manager()

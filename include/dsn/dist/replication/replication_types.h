@@ -2224,21 +2224,17 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_meta_cont
 
 typedef struct _configuration_proposal_action__isset
 {
-    _configuration_proposal_action__isset()
-        : target(false), node(false), type(false), period_ts(false)
-    {
-    }
+    _configuration_proposal_action__isset() : target(false), node(false), type(false) {}
     bool target : 1;
     bool node : 1;
     bool type : 1;
-    bool period_ts : 1;
 } _configuration_proposal_action__isset;
 
 class configuration_proposal_action
 {
 public:
     configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp)
-        : target(t), node(n), type(tp), period_ts(0)
+        : target(t), node(n), type(tp)
     {
     }
 
@@ -2246,13 +2242,12 @@ public:
     configuration_proposal_action(configuration_proposal_action &&);
     configuration_proposal_action &operator=(const configuration_proposal_action &);
     configuration_proposal_action &operator=(configuration_proposal_action &&);
-    configuration_proposal_action() : type((config_type::type)0), period_ts(0) {}
+    configuration_proposal_action() : type((config_type::type)0) {}
 
     virtual ~configuration_proposal_action() throw();
     ::dsn::rpc_address target;
     ::dsn::rpc_address node;
     config_type::type type;
-    int64_t period_ts;
 
     _configuration_proposal_action__isset __isset;
 
@@ -2262,8 +2257,6 @@ public:
 
     void __set_type(const config_type::type val);
 
-    void __set_period_ts(const int64_t val);
-
     bool operator==(const configuration_proposal_action &rhs) const
     {
         if (!(target == rhs.target))
@@ -2271,8 +2264,6 @@ public:
         if (!(node == rhs.node))
             return false;
         if (!(type == rhs.type))
-            return false;
-        if (!(period_ts == rhs.period_ts))
             return false;
         return true;
     }

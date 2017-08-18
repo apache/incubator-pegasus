@@ -43,6 +43,8 @@ TEST(meta, simple_lb_balanced_cure) { g_app->simple_lb_balanced_cure(); }
 
 TEST(meta, simple_lb_cure_test) { g_app->simple_lb_cure_test(); }
 
+TEST(meta, simple_lb_from_proposal_test) { g_app->simple_lb_from_proposal_test(); }
+
 TEST(meta, simple_lb_collect_replica) { g_app->simple_lb_collect_replica(); }
 
 TEST(meta, simple_lb_construct_replica) { g_app->simple_lb_construct_replica(); }

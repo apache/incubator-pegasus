@@ -55,6 +55,7 @@ public:
 
     void simple_lb_cure_test();
     void simple_lb_balanced_cure();
+    void simple_lb_from_proposal_test();
     void simple_lb_collect_replica();
     void simple_lb_construct_replica();
     void json_compacity();

@@ -1225,30 +1225,15 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     response.err = dsn::ERR_OK;
 }
 
-void server_state::send_proposal(rpc_address target,
-                                 int64_t period_ts,
-                                 const configuration_update_request &proposal)
+void server_state::send_proposal(rpc_address target, const configuration_update_request &proposal)
 {
-    char period_timestamp[32];
-    int64_t remaining_seconds;
-    if (period_ts > 0) {
-        dsn::utils::time_ms_to_date_time(
-            period_ts * 1000, period_timestamp, sizeof(period_timestamp));
-        remaining_seconds = period_ts - (int64_t)dsn_now_ms() / 1000;
-    } else {
-        strcpy(period_timestamp, "null");
-        remaining_seconds = 0;
-    }
-    ddebug("send proposal %s for gpid(%d.%d), ballot = %" PRId64
-           ", target = %s, node = %s, period_timestamp = %s, remaining_seconds = %" PRId64,
+    ddebug("send proposal %s for gpid(%d.%d), ballot = %" PRId64 ", target = %s, node = %s",
            ::dsn::enum_to_string(proposal.type),
            proposal.config.pid.get_app_id(),
            proposal.config.pid.get_partition_index(),
            proposal.config.ballot,
            target.to_string(),
-           proposal.node.to_string(),
-           period_timestamp,
-           remaining_seconds);
+           proposal.node.to_string());
     dsn_message_t msg =
         dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, gpid_to_thread_hash(proposal.config.pid));
     ::marshall(msg, proposal);
@@ -1264,7 +1249,7 @@ void server_state::send_proposal(const configuration_proposal_action &action,
     request.type = action.type;
     request.node = action.node;
     request.config = pc;
-    send_proposal(action.target, action.period_ts, request);
+    send_proposal(action.target, request);
 }
 
 void server_state::request_check(const partition_configuration &old,
@@ -1543,7 +1528,7 @@ void server_state::on_update_configuration_on_remote_reply(
                     config_request->type = action.type;
                     config_request->node = action.node;
                     config_request->info = *app;
-                    send_proposal(action.target, action.period_ts, *config_request);
+                    send_proposal(action.target, *config_request);
                 }
             }
         }
@@ -1682,7 +1667,7 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
         request.config = pc;
         request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
         request.node = node;
-        send_proposal(pc.primary, 0, request);
+        send_proposal(pc.primary, request);
     } else {
         ddebug("gpid(%d.%d) is syncing with remote storage, ignore the remove seconary(%s)",
                app->app_id,

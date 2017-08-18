@@ -78,6 +78,117 @@ void maintain_drops(std::vector<rpc_address> &drops, const rpc_address &node, co
     when_update_replicas(t, action);
 }
 
+proposal_actions::proposal_actions() : from_balancer(false) { reset_tracked_current_learner(); }
+
+void proposal_actions::reset_tracked_current_learner()
+{
+    learning_progress_abnormal_detected = false;
+    current_learner.ballot = invalid_ballot;
+    current_learner.last_durable_decree = invalid_decree;
+    current_learner.last_committed_decree = invalid_decree;
+    current_learner.last_prepared_decree = invalid_decree;
+}
+
+void proposal_actions::track_current_learner(const dsn::rpc_address &node, const replica_info &info)
+{
+    if (empty())
+        return;
+    configuration_proposal_action &act = acts.front();
+    if (act.node != node)
+        return;
+
+    // currently we only handle add secondary
+    // TODO: adjust other proposals according to replica info collected
+    if (act.type == config_type::CT_ADD_SECONDARY ||
+        act.type == config_type::CT_ADD_SECONDARY_FOR_LB) {
+
+        if (info.status == partition_status::PS_ERROR ||
+            info.status == partition_status::PS_INACTIVE) {
+            // if we've collected inforamtions for the learner, then it claims it's down
+            // we will treat the learning process failed
+            if (current_learner.ballot != invalid_ballot) {
+                ddebug("%d.%d: a learner's is down to status(%s), perhaps learn failed",
+                       info.pid.get_app_id(),
+                       info.pid.get_partition_index(),
+                       dsn::enum_to_string(info.status));
+                learning_progress_abnormal_detected = true;
+            } else {
+                dinfo("%d.%d: ignore abnormal status of %s, perhaps learn not start",
+                      info.pid.get_app_id(),
+                      info.pid.get_partition_index(),
+                      node.to_string());
+            }
+        } else if (info.status == partition_status::PS_POTENTIAL_SECONDARY) {
+            if (current_learner.ballot > info.ballot ||
+                current_learner.last_committed_decree > info.last_committed_decree ||
+                current_learner.last_prepared_decree > info.last_prepared_decree) {
+
+                // TODO: need to add a perf counter here
+                dwarn("%d.%d: learner(%s)'s progress step back, please trace this carefully",
+                      info.pid.get_app_id(),
+                      info.pid.get_partition_index(),
+                      node.to_string());
+            }
+
+            // NOTICE: the flag may be abormal currently. it's balancer's duty to make use of the
+            // abnormal flag and decide whether to cancel the proposal.
+            // if the balancer try to give the proposal another chance, or another learning round
+            // starts before the balancer notice it, let's just treat it normal again.
+            learning_progress_abnormal_detected = false;
+            current_learner = info;
+        }
+    }
+}
+
+bool proposal_actions::is_abnormal_learning_proposal() const
+{
+    if (empty())
+        return false;
+    if (front()->type != config_type::CT_ADD_SECONDARY &&
+        front()->type != config_type::CT_ADD_SECONDARY_FOR_LB)
+        return false;
+    return learning_progress_abnormal_detected;
+}
+
+void proposal_actions::clear()
+{
+    from_balancer = false;
+    acts.clear();
+    reset_tracked_current_learner();
+}
+
+void proposal_actions::pop_front()
+{
+    if (!acts.empty()) {
+        acts.erase(acts.begin());
+        reset_tracked_current_learner();
+    }
+}
+
+const configuration_proposal_action *proposal_actions::front() const
+{
+    if (acts.empty())
+        return nullptr;
+    return &acts.front();
+}
+
+void proposal_actions::assign_cure_proposal(const configuration_proposal_action &act)
+{
+    from_balancer = false;
+    acts = {act};
+    reset_tracked_current_learner();
+}
+
+void proposal_actions::assign_balancer_proposals(
+    const std::vector<configuration_proposal_action> &cpa_list)
+{
+    from_balancer = true;
+    acts = cpa_list;
+    reset_tracked_current_learner();
+}
+
+bool proposal_actions::empty() const { return acts.empty(); }
+
 int config_context::MAX_REPLICA_COUNT_IN_GRROUP = 4;
 void config_context::cancel_sync()
 {
@@ -241,13 +352,17 @@ void config_context::collect_serving_replica(const rpc_address &node, const repl
     }
 }
 
+void config_context::adjust_proposal(const rpc_address &node, const replica_info &info)
+{
+    lb_actions.track_current_learner(node, info);
+}
+
 void app_state_helper::on_init_partitions()
 {
     config_context context;
     context.stage = config_status::not_pending;
     context.pending_sync_task = nullptr;
     context.msg = nullptr;
-    context.lb_actions.from_balancer = false;
 
     context.prefered_dropped = -1;
     contexts.assign(owner->partition_count, context);

@@ -86,8 +86,13 @@ public:
 
 class proposal_actions
 {
-public:
+private:
     bool from_balancer;
+
+    // used for track the learing process and check if abnormal situation happens
+    bool learning_progress_abnormal_detected;
+    replica_info current_learner;
+
     // NOTICE:
     // meta servic use configuration_proposal_action::period_ts
     // to store a expire timestamp, but a rpc_sender use this field
@@ -95,25 +100,21 @@ public:
     std::vector<configuration_proposal_action> acts;
 
 public:
-    proposal_actions() : from_balancer(false) {}
-    void clear()
-    {
-        from_balancer = false;
-        acts.clear();
-    }
-    void pop_front()
-    {
-        if (acts.empty())
-            return;
-        acts.erase(acts.begin());
-    }
-    void assign_cure_proposal(const configuration_proposal_action &act)
-    {
-        from_balancer = false;
-        acts.clear();
-        acts.push_back(act);
-    }
-    bool empty() const { return acts.empty(); }
+    proposal_actions();
+    void reset_tracked_current_learner();
+    void track_current_learner(const rpc_address &node, const replica_info &info);
+    void clear();
+
+    // return the action in acts & whether the action is from balancer
+    bool is_from_balancer() const { return from_balancer; }
+    bool is_abnormal_learning_proposal() const;
+
+    void pop_front();
+    void assign_cure_proposal(const configuration_proposal_action &act);
+    void assign_balancer_proposals(const std::vector<configuration_proposal_action> &cpa_list);
+
+    const configuration_proposal_action *front() const;
+    bool empty() const;
 };
 
 //
@@ -193,9 +194,8 @@ public:
 
     // for load balancer's decision
     //[
-    std::vector<serving_replica> serving;
-
     proposal_actions lb_actions;
+    std::vector<serving_replica> serving;
     std::vector<dropped_replica> dropped;
     // An index value to the vector "dropped".
     // Used in load-balancer's cure to avoid select the same learner as
@@ -238,6 +238,8 @@ public:
     bool remove_from_serving(const dsn::rpc_address &node);
 
     void collect_serving_replica(const dsn::rpc_address &node, const replica_info &info);
+
+    void adjust_proposal(const dsn::rpc_address &node, const replica_info &info);
 
 public:
     // intialize to 4 statically.

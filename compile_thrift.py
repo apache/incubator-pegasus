@@ -415,7 +415,7 @@ if __name__ == "__main__":
     init_env()
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
-    ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp), period_ts(0) {}"
+    ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
     add_hook("deploy_svc", "src/dist/deployment_service", remove_struct_define_hook, ["deploy_svc_types.h", "cluster_type", "service_status"])
     add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
     add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])

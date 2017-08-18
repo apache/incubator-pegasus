@@ -220,9 +220,7 @@ private:
     void on_partition_node_dead(std::shared_ptr<app_state> &app,
                                 int pidx,
                                 const dsn::rpc_address &address);
-    void send_proposal(rpc_address target,
-                       int64_t period_ts,
-                       const configuration_update_request &proposal);
+    void send_proposal(rpc_address target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
                        const app_state &app);

@@ -4978,8 +4978,6 @@ void configuration_proposal_action::__set_node(const ::dsn::rpc_address &val) { 
 
 void configuration_proposal_action::__set_type(const config_type::type val) { this->type = val; }
 
-void configuration_proposal_action::__set_period_ts(const int64_t val) { this->period_ts = val; }
-
 uint32_t configuration_proposal_action::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -5025,14 +5023,6 @@ uint32_t configuration_proposal_action::read(::apache::thrift::protocol::TProtoc
                 xfer += iprot->skip(ftype);
             }
             break;
-        case 4:
-            if (ftype == ::apache::thrift::protocol::T_I64) {
-                xfer += iprot->readI64(this->period_ts);
-                this->__isset.period_ts = true;
-            } else {
-                xfer += iprot->skip(ftype);
-            }
-            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -5063,10 +5053,6 @@ uint32_t configuration_proposal_action::write(::apache::thrift::protocol::TProto
     xfer += oprot->writeI32((int32_t)this->type);
     xfer += oprot->writeFieldEnd();
 
-    xfer += oprot->writeFieldBegin("period_ts", ::apache::thrift::protocol::T_I64, 4);
-    xfer += oprot->writeI64(this->period_ts);
-    xfer += oprot->writeFieldEnd();
-
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -5078,7 +5064,6 @@ void swap(configuration_proposal_action &a, configuration_proposal_action &b)
     swap(a.target, b.target);
     swap(a.node, b.node);
     swap(a.type, b.type);
-    swap(a.period_ts, b.period_ts);
     swap(a.__isset, b.__isset);
 }
 
@@ -5088,7 +5073,6 @@ configuration_proposal_action::configuration_proposal_action(
     target = other185.target;
     node = other185.node;
     type = other185.type;
-    period_ts = other185.period_ts;
     __isset = other185.__isset;
 }
 configuration_proposal_action::configuration_proposal_action(
@@ -5097,7 +5081,6 @@ configuration_proposal_action::configuration_proposal_action(
     target = std::move(other186.target);
     node = std::move(other186.node);
     type = std::move(other186.type);
-    period_ts = std::move(other186.period_ts);
     __isset = std::move(other186.__isset);
 }
 configuration_proposal_action &configuration_proposal_action::
@@ -5106,7 +5089,6 @@ operator=(const configuration_proposal_action &other187)
     target = other187.target;
     node = other187.node;
     type = other187.type;
-    period_ts = other187.period_ts;
     __isset = other187.__isset;
     return *this;
 }
@@ -5116,7 +5098,6 @@ operator=(configuration_proposal_action &&other188)
     target = std::move(other188.target);
     node = std::move(other188.node);
     type = std::move(other188.type);
-    period_ts = std::move(other188.period_ts);
     __isset = std::move(other188.__isset);
     return *this;
 }
@@ -5129,8 +5110,6 @@ void configuration_proposal_action::printTo(std::ostream &out) const
         << "node=" << to_string(node);
     out << ", "
         << "type=" << to_string(type);
-    out << ", "
-        << "period_ts=" << to_string(period_ts);
     out << ")";
 }
 

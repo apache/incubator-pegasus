@@ -32,10 +32,10 @@ public:
 
     bool less_primaries(newly_partitions &another, int32_t app_id);
     bool less_partitions(newly_partitions &another, int32_t app_id);
-    void newly_add_primary(int32_t app_id);
+    void newly_add_primary(int32_t app_id, bool only_primary);
     void newly_add_partition(int32_t app_id);
 
-    void newly_remove_primary(int32_t app_id);
+    void newly_remove_primary(int32_t app_id, bool only_primary);
     void newly_remove_partition(int32_t app_id);
 
 public:
@@ -75,15 +75,16 @@ bool newly_partitions::less_partitions(newly_partitions &another, int32_t app_id
     return newly_p1 < newly_p2;
 }
 
-void newly_partitions::newly_add_primary(int32_t app_id)
+void newly_partitions::newly_add_primary(int32_t app_id, bool only_primary)
 {
     ++primaries[app_id];
-    ++partitions[app_id];
+    if (!only_primary)
+        ++partitions[app_id];
 }
 
 void newly_partitions::newly_add_partition(int32_t app_id) { ++partitions[app_id]; }
 
-void newly_partitions::newly_remove_primary(int32_t app_id)
+void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 {
     auto iter = primaries.find(app_id);
     dassert(iter != primaries.end(), "invalid app_id, app_id = %d", app_id);
@@ -92,11 +93,13 @@ void newly_partitions::newly_remove_primary(int32_t app_id)
         primaries.erase(iter);
     }
 
-    auto iter2 = partitions.find(app_id);
-    dassert(iter2 != partitions.end(), "invalid app_id, app_id = %d", app_id);
-    dassert(iter2->second > 0, "invalid partition count, cnt = %d", iter2->second);
-    if (0 == (--iter2->second)) {
-        partitions.erase(iter2);
+    if (!only_primary) {
+        auto iter2 = partitions.find(app_id);
+        dassert(iter2 != partitions.end(), "invalid app_id, app_id = %d", app_id);
+        dassert(iter2->second > 0, "invalid partition count, cnt = %d", iter2->second);
+        if (0 == (--iter2->second)) {
+            partitions.erase(iter2);
+        }
     }
 }
 
@@ -134,31 +137,10 @@ local_module_initializer local_module_initializer::_instance;
 
 server_load_balancer::server_load_balancer(meta_service *svc) : _svc(svc)
 {
-    _recent_choose_primary_fail_count.init(
-        "eon.server_load_balancer",
-        "recent_choose_primary_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "choose primary fail count in the recent period");
-}
-
-int server_load_balancer::suggest_alive_time(config_type::type t)
-{
-    switch (t) {
-    case config_type::CT_ASSIGN_PRIMARY:
-    case config_type::CT_UPGRADE_TO_PRIMARY:
-    case config_type::CT_DOWNGRADE_TO_INACTIVE:
-    case config_type::CT_REMOVE:
-    case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        // this should be fast, 1 minutes is enough
-        return 60;
-
-    case config_type::CT_ADD_SECONDARY:
-    case config_type::CT_ADD_SECONDARY_FOR_LB:
-        return _svc->get_meta_options().add_secondary_proposal_alive_time_seconds;
-    default:
-        dassert(false, "invalid config_type, type = %s", ::dsn::enum_to_string(t));
-        return 0;
-    }
+    _recent_choose_primary_fail_count.init("eon.server_load_balancer",
+                                           "recent_choose_primary_fail_count",
+                                           COUNTER_TYPE_VOLATILE_NUMBER,
+                                           "choose primary fail count in the recent period");
 }
 
 void server_load_balancer::register_proposals(meta_view view,
@@ -172,17 +154,26 @@ void server_load_balancer::register_proposals(meta_view view,
         return;
     }
 
-    cc.lb_actions.acts = req.action_list;
-    cc.lb_actions.from_balancer = true;
-    for (configuration_proposal_action &act : cc.lb_actions.acts) {
-        if (act.target.is_invalid())
-            act.target = pc.primary;
-
-        if (act.period_ts == 0)
-            act.period_ts = suggest_alive_time(act.type);
-        act.period_ts += (dsn_now_ms() / 1000);
+    std::vector<configuration_proposal_action> acts = req.action_list;
+    for (configuration_proposal_action &act : acts) {
+        // for some client generated proposals, the sender may not know the primary address.
+        // e.g: "copy_secondary from a to b".
+        // the client only knows the secondary a and secondary b, it doesn't know which target
+        // to send the proposal to.
+        // for these proposals, they should keep the target empty and
+        // the meta-server will fill primary as target.
+        if (act.target.is_invalid()) {
+            if (!pc.primary.is_invalid())
+                act.target = pc.primary;
+            else {
+                resp.err = ERR_INVALID_PARAMETERS;
+                return;
+            }
+        }
     }
+
     resp.err = ERR_OK;
+    cc.lb_actions.assign_balancer_proposals(acts);
     return;
 }
 
@@ -214,11 +205,16 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
     partition_configuration *pc = get_config(*(view.apps), gpid);
 
     if (!cc->lb_actions.empty()) {
-        if (cc->lb_actions.acts.size() == 1) {
-            reset_proposal(view, gpid);
-        } else {
-            cc->lb_actions.pop_front();
+        const configuration_proposal_action *current = cc->lb_actions.front();
+        dassert(current != nullptr && current->type != config_type::CT_INVALID,
+                "invalid proposal for gpid(%d.%d)",
+                gpid.get_app_id(),
+                gpid.get_partition_index());
+        // if the valid proposal is from cure
+        if (!cc->lb_actions.is_from_balancer()) {
+            finish_cure_proposal(view, gpid, *current);
         }
+        cc->lb_actions.pop_front();
     }
 
     // handle the dropped out servers
@@ -247,26 +243,24 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
     }
 }
 
-void simple_load_balancer::reset_proposal(meta_view &view, const dsn::gpid &gpid)
+void simple_load_balancer::finish_cure_proposal(meta_view &view,
+                                                const dsn::gpid &gpid,
+                                                const configuration_proposal_action &act)
 {
-    config_context *cc = get_config_context(*(view.apps), gpid);
-    dassert(!cc->lb_actions.empty(), "");
-
-    configuration_proposal_action &act = cc->lb_actions.acts.front();
     newly_partitions *np = get_newly_partitions(*(view.nodes), act.node);
     if (np == nullptr) {
         ddebug("can't get the newly_partitions extension structure for node(%s), "
                "the node may be dead and removed",
                act.node.to_string());
-    } else if (!cc->lb_actions.from_balancer) {
-        when_update_replicas(act.type, [np, &gpid](bool is_adding) {
-            if (is_adding)
-                np->newly_remove_partition(gpid.get_app_id());
-        });
+    } else {
+        if (act.type == config_type::CT_ASSIGN_PRIMARY) {
+            np->newly_remove_primary(gpid.get_app_id(), false);
+        } else if (act.type == config_type::CT_UPGRADE_TO_PRIMARY) {
+            np->newly_remove_primary(gpid.get_app_id(), true);
+        } else if (act.type == config_type::CT_UPGRADE_TO_SECONDARY) {
+            np->newly_remove_partition(gpid.get_app_id());
+        }
     }
-
-    cc->lb_actions.clear();
-    cc->lb_actions.from_balancer = false;
 }
 
 bool simple_load_balancer::from_proposals(meta_view &view,
@@ -281,7 +275,7 @@ bool simple_load_balancer::from_proposals(meta_view &view,
         action.type = config_type::CT_INVALID;
         return false;
     }
-    action = cc.lb_actions.acts.front();
+    action = *(cc.lb_actions.front());
     char reason[1024];
     if (action.target.is_invalid()) {
         sprintf(reason, "action target is invalid");
@@ -299,8 +293,8 @@ bool simple_load_balancer::from_proposals(meta_view &view,
         sprintf(reason, "action node(%s) is not alive", action.node.to_string());
         goto invalid_action;
     }
-    if (has_seconds_expired(action.period_ts)) {
-        sprintf(reason, "action time expired");
+    if (cc.lb_actions.is_abnormal_learning_proposal()) {
+        sprintf(reason, "learning process abnormal");
         goto invalid_action;
     }
 
@@ -345,7 +339,13 @@ invalid_action:
            reason);
     action.type = config_type::CT_INVALID;
 
-    reset_proposal(view, gpid);
+    while (!cc.lb_actions.empty()) {
+        configuration_proposal_action cpa = *cc.lb_actions.front();
+        if (!cc.lb_actions.is_from_balancer()) {
+            finish_cure_proposal(view, gpid, cpa);
+        }
+        cc.lb_actions.pop_front();
+    }
     return false;
 }
 
@@ -389,10 +389,9 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
         } else {
             action.type = config_type::CT_UPGRADE_TO_PRIMARY;
             newly_partitions *np = get_newly_partitions(*(view.nodes), action.node);
-            np->newly_add_primary(gpid.get_app_id());
+            np->newly_add_primary(gpid.get_app_id(), true);
 
             action.target = action.node;
-            action.period_ts = suggest_alive_time(action.type);
             result = pc_status::ill;
         }
     }
@@ -419,8 +418,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
             action.node = min_primary_server;
             action.target = action.node;
             action.type = config_type::CT_ASSIGN_PRIMARY;
-            min_primary_server_np->newly_add_primary(gpid.get_app_id());
-            action.period_ts = suggest_alive_time(action.type);
+            min_primary_server_np->newly_add_primary(gpid.get_app_id(), false);
         }
 
         result = pc_status::ill;
@@ -558,9 +556,9 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
         if (!action.node.is_invalid()) {
             action.target = action.node;
             action.type = config_type::CT_ASSIGN_PRIMARY;
-            action.period_ts = 86400;
 
-            get_newly_partitions(*view.nodes, action.node)->newly_add_primary(gpid.get_app_id());
+            get_newly_partitions(*view.nodes, action.node)
+                ->newly_add_primary(gpid.get_app_id(), false);
         } else {
             dwarn("%s: don't select any node for security reason, administrator can select "
                   "a proper one by shell",
@@ -572,7 +570,6 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
     }
 
     if (action.type != config_type::CT_INVALID) {
-        action.period_ts += (dsn_now_ms() / 1000);
         acts.assign_cure_proposal(action);
     }
     return result;
@@ -582,7 +579,6 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
 {
     partition_configuration &pc = *get_config(*(view.apps), gpid);
     config_context &cc = *get_config_context(*(view.apps), gpid);
-    proposal_actions &prop_acts = get_config_context(*(view.apps), gpid)->lb_actions;
 
     configuration_proposal_action action;
     bool is_emergency = false;
@@ -647,7 +643,6 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                        cc.prefered_dropped,
                        cc.prefered_dropped - 1);
                 action.node = server.node;
-                action.period_ts = suggest_alive_time(config_type::CT_ADD_SECONDARY);
                 cc.prefered_dropped--;
                 break;
             } else {
@@ -683,8 +678,6 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                        gpid.get_app_id(),
                        gpid.get_partition_index(),
                        action.node.to_string());
-                // need to copy data, so suggest more alive time
-                action.period_ts = suggest_alive_time(config_type::CT_ADD_SECONDARY) * 2;
             } else {
                 ddebug("gpid(%d.%d): can't find valid node in dropped list to add as secondary, "
                        "but also we can't find a new node to add as secondary",
@@ -700,7 +693,6 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                     "invalid server address, address = %s",
                     server.node.to_string());
             action.node = server.node;
-            action.period_ts = suggest_alive_time(config_type::CT_ADD_SECONDARY);
         }
 
         if (!action.node.is_invalid()) {
@@ -726,8 +718,7 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
         dassert(np != nullptr, "");
         np->newly_add_partition(gpid.get_app_id());
 
-        action.period_ts += (dsn_now_ms() / 1000);
-        prop_acts.assign_cure_proposal(action);
+        cc.lb_actions.assign_cure_proposal(action);
     }
 
     return pc_status::ill;
@@ -751,8 +742,9 @@ pc_status simple_load_balancer::on_redundant_secondary(meta_view &view, const ds
     action.type = config_type::CT_REMOVE;
     action.node = pc.secondaries[target];
     action.target = pc.primary;
-    action.period_ts = dsn_now_ms() / 1000 + suggest_alive_time(action.type);
-    get_config_context(*view.apps, gpid)->lb_actions.assign_cure_proposal(action);
+
+    // TODO: treat remove as cure proposals too
+    get_config_context(*view.apps, gpid)->lb_actions.assign_balancer_proposals({action});
     return pc_status::ill;
 }
 
@@ -781,7 +773,7 @@ pc_status simple_load_balancer::cure(meta_view view,
         status = pc_status::healthy;
 
     if (!acts.empty()) {
-        action = acts.acts.front();
+        action = *acts.front();
     }
     return status;
 }
@@ -797,9 +789,15 @@ bool simple_load_balancer::collect_replica(meta_view view,
         return true;
     }
 
+    // compare current node's replica information with current proposal,
+    // and try to find abnormal situations in send proposal
+    cc.adjust_proposal(node, info);
+
+    // adjust the drop list
     int ans = cc.collect_drop_replica(node, info);
     dassert(cc.check_order(), "");
-    return ans != -1;
+
+    return info.status == partition_status::PS_POTENTIAL_SECONDARY || ans != -1;
 }
 
 bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, int max_replica_count)
