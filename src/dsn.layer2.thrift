@@ -36,9 +36,9 @@ enum app_status
     AS_INVALID,
     AS_AVAILABLE,
     AS_CREATING,
-    AS_CREATE_FAILED,
+    AS_CREATE_FAILED, // depricated
     AS_DROPPING,
-    AS_DROP_FAILED,
+    AS_DROP_FAILED, // depricated
     AS_DROPPED,
     AS_RECALLING
 }
