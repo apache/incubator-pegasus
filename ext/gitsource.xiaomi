@@ -8,6 +8,10 @@ set(CONQUEUE_GIT_TAG "master")
 set(GFLAGS_GIT_SOURCE "http://git.n.xiaomi.com/pegasus/gflags.git")
 set(GFLAGS_GIT_TAG "master")
 
+#for gtest
+set(GTEST_GIT_SOURCE "http://git.n.xiaomi.com/pegasus/googletest.git")
+set(GTEST_GIT_TAG "master")
+
 #for zookeeper
 set(ZOOKEEPER_GIT_SOURCE "http://git.n.xiaomi.com/pegasus/zookeeper_client_c.git")
 set(ZOOKEEPER_GIT_TAG "master")
