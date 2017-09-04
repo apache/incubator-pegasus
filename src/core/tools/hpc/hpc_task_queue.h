@@ -37,8 +37,8 @@
 
 #include <dsn/tool_api.h>
 #include <condition_variable>
-#include <concurrentqueue.h>
-#include <blockingconcurrentqueue.h>
+#include <concurrentqueue/concurrentqueue.h>
+#include <concurrentqueue/blockingconcurrentqueue.h>
 
 namespace dsn {
 namespace tools {

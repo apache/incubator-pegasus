@@ -32,7 +32,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <zookeeper.h>
+#include <zookeeper/zookeeper.h>
 
 #include "zookeeper_session.h"
 #include "zookeeper_session_mgr.h"

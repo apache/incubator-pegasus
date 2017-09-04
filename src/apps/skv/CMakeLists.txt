@@ -15,7 +15,7 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS "")
 
-set(MY_PROJ_LIB_PATH "${ZOOKEEPER_LIB_DIR}")
+set(MY_PROJ_LIB_PATH "")
 
 set(INI_FILES "")
 file(GLOB

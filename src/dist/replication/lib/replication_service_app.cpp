@@ -33,33 +33,27 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "../client_lib/replication_common.h"
-#include "replica_stub.h"
 #include <dsn/dist/replication/replication_service_app.h>
+#include "dist/replication/client_lib/replication_common.h"
+#include "replica_stub.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
 #define __TITLE__ "replica.service_app"
 
-#ifdef DSN_REPLICATION_TYPE_1_DYNAMIC_LIB
-
-#include <dsn/utility/module_init.cpp.h>
-
-MODULE_INIT_BEGIN(replication_type1)
-dsn_task_code_register("RPC_L2_CLIENT_READ",
-                       TASK_TYPE_RPC_REQUEST,
-                       TASK_PRIORITY_COMMON,
-                       THREAD_POOL_LOCAL_APP);
-dsn_task_code_register("RPC_L2_CLIENT_WRITE",
-                       TASK_TYPE_RPC_REQUEST,
-                       TASK_PRIORITY_LOW,
-                       THREAD_POOL_REPLICATION);
-dsn::register_layer2_framework<::dsn::replication::replication_service_app>("replica",
-                                                                            DSN_APP_MASK_FRAMEWORK);
-MODULE_INIT_END
-
-#endif
+extern "C" {
+dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
+{
+    dsn_task_code_register(
+        "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
+    dsn_task_code_register(
+        "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
+    dsn::register_layer2_framework<::dsn::replication::replication_service_app>(
+        "replica", DSN_APP_MASK_FRAMEWORK);
+    return dsn::ERR_OK;
+}
+}
 
 namespace dsn {
 namespace replication {

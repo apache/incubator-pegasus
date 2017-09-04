@@ -9,9 +9,9 @@ set(MY_PROJ_SRC ../misc/misc.cpp)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../../../meta_server ../../../client_lib ${GTEST_INCLUDE_DIR})
+set(MY_PROJ_INC_PATH)
 
-set(MY_PROJ_LIBS dsn.replication.meta_server
+set(MY_PROJ_LIBS dsn_meta_server
                  dsn.replication.clientlib
                  gtest)
 
@@ -23,4 +23,3 @@ set(MY_BOOST_PACKAGES system filesystem)
 set(MY_BINPLACES "")
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)

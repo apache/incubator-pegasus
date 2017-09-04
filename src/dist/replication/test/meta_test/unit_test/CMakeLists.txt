@@ -9,9 +9,9 @@ set(MY_PROJ_SRC ../misc/misc.cpp)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../../../meta_server ../../../zookeeper ../../../client_lib ${GTEST_INCLUDE_DIR})
+set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS dsn.replication.meta_server
+set(MY_PROJ_LIBS dsn_meta_server
                  dsn.replication.zookeeper_provider
                  dsn.replication.clientlib
                  dsn.failure_detector

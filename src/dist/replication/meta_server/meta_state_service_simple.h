@@ -34,7 +34,7 @@
  */
 
 #include <dsn/dist/meta_state_service.h>
-#include "replication_common.h"
+#include "dist/replication/client_lib/replication_common.h"
 
 #include <queue>
 

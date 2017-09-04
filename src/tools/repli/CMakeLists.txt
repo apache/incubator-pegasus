@@ -9,15 +9,12 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH 
-  ../../dist/replication/client_lib
-  ../../dist/replication/lib
-  )
+set(MY_PROJ_INC_PATH "")
 
 set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIB_PATH "")
-set(MY_PROJ_LIBS dsn.replication
+set(MY_PROJ_LIBS dsn_layer2_stateful_type1
                  dsn.replication.clientlib
                  dsn.failure_detector
                  dsn.failure_detector.multimaster

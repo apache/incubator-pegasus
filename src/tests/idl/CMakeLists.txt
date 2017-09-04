@@ -53,6 +53,3 @@ set(MY_SERIALIZATION_TYPE
 )
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)
-add_dependencies(${MY_PROJ_NAME} thrift)
-add_dependencies(${MY_PROJ_NAME} protobuf)

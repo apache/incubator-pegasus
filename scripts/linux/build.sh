@@ -5,7 +5,6 @@
 #    CLEAR          YES|NO
 #    JOB_NUM        <num>
 #    BUILD_TYPE     debug|release
-#    GIT_SOURCE     github|xiaomi
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
 #    WARNING_ALL    YES|NO
@@ -51,12 +50,6 @@ echo "SERIALIZE_TYPE=$SERIALIZE_TYPE"
 if [ -n "$SERIALIZE_TYPE" ]
 then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_SERIALIZATION_TYPE=$SERIALIZE_TYPE"
-fi
-
-echo "GIT_SOURCE=$GIT_SOURCE"
-if [ -n "$GIT_SOURCE" ]
-then
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_GIT_SOURCE=$GIT_SOURCE"
 fi
 
 if [ "$ONLY_BUILD" == "YES" ]
@@ -132,12 +125,7 @@ fi
 if [ ! -f "$ROOT/bin/Linux/thrift" ]
 then
     echo "Downloading thrift..."
-    if [ "$GIT_SOURCE" == "xiaomi" ]
-    then
-        wget http://git.n.xiaomi.com/pegasus/packages/raw/master/rdsn/thrift
-    else
-        wget --no-check-certificate https://github.com/imzhenyu/thrift/raw/master/pre-built/ubuntu14.04/thrift
-    fi
+    wget --no-check-certificate https://github.com/imzhenyu/thrift/raw/master/pre-built/ubuntu14.04/thrift
     chmod u+x thrift
     mv thrift $ROOT/bin/Linux
 fi

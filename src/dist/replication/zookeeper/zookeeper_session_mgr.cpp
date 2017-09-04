@@ -34,8 +34,9 @@
  */
 #include "zookeeper_session_mgr.h"
 #include "zookeeper_session.h"
+
 #include <stdio.h>
-#include <zookeeper.h>
+#include <zookeeper/zookeeper.h>
 #include <stdexcept>
 
 namespace dsn {

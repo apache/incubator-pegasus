@@ -41,8 +41,8 @@
 #include <dsn/dist/meta_state_service.h>
 #include <dsn/cpp/perf_counter_.h>
 
-#include "replication_common.h"
-#include "meta_options.h"
+#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/meta_server/meta_options.h"
 
 class meta_service_test_app;
 namespace dsn {

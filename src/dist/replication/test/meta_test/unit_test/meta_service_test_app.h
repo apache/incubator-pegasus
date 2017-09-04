@@ -4,7 +4,8 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/meta_service_app.h>
-#include "server_state.h"
+
+#include "dist/replication/meta_server/server_state.h"
 
 class spin_counter
 {

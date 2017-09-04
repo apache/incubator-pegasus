@@ -47,20 +47,12 @@
 void dsn_app_registration_simple_kv()
 {
     // register simple-kv type here
+    dsn_layer2_stateful_type1_bridge(0, nullptr);
+    dsn_meta_server_bridge(0, nullptr);
 
-    // register services
-    dsn_task_code_register(
-        "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
-    dsn_task_code_register(
-        "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
-    dsn::register_layer2_framework<::dsn::replication::replication_service_app>(
-        "replica", DSN_APP_MASK_FRAMEWORK);
-
-    dsn::register_app<dsn::service::meta_service_app>("meta");
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
     dsn::register_app_with_type_1_replication_support<
         ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
-    // dsn::replication::register_replica_provider<dsn::replication::test::simple_kv_service_impl>("simple_kv");
 
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");
     dsn::replication::test::install_checkers();

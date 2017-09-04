@@ -38,7 +38,7 @@
 #include <dsn/utility/synchronize.h>
 
 #include <thread>
-#include <zookeeper.h>
+#include <zookeeper/zookeeper.h>
 #include "zookeeper_session_mgr.h"
 
 namespace dsn {

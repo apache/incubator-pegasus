@@ -19,3 +19,7 @@ rDSN.github.*
 update_qt_config.sh
 zookeeper-3.4.6.tar.gz
 zookeeper-3.4.6/
+
+thirdparty/build
+thirdparty/src
+thirdparty/output

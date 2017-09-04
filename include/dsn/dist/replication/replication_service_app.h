@@ -38,6 +38,8 @@
 #include <dsn/dist/layer2_handler.h>
 #include <dsn/dist/replication/replication_other_types.h>
 
+extern "C" dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv);
+
 namespace dsn {
 namespace replication {
 
@@ -45,6 +47,7 @@ class replication_checker;
 namespace test {
 class test_checker;
 }
+
 class replication_service_app : public ::dsn::layer2_handler
 {
 public:

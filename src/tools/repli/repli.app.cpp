@@ -33,10 +33,12 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "repli.app.h"
 #include <dsn/utility/utils.h>
 #include <dsn/utility/configuration.h>
-#include "mutation_log.h"
+
+#include "dist/replication/lib/mutation_log.h"
+
+#include "repli.app.h"
 
 #include <iostream>
 

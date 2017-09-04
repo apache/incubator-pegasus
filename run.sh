@@ -41,7 +41,6 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
-    echo "   -g|--git          git source of ext module: github|xiaomi, default is xiaomi"
     echo "   -c|--clear        clear the environment before building"
     echo "   -j|--jobs <num>"
     echo "                     the number of jobs to run simultaneously, default 8"
@@ -60,7 +59,6 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    GIT_SOURCE="xiaomi"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
@@ -77,10 +75,6 @@ function run_build()
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
-                shift
-                ;;
-            -g|--git)
-                GIT_SOURCE="$2"
                 shift
                 ;;
             -c|--clear)
@@ -122,14 +116,23 @@ function run_build()
         esac
         shift
     done
+
+    if [ -f "thirdparty/output/lib/libzookeeper_mt.a" ]; then
+        echo "thirdparty has already built, ignore the build thirdparty process"
+    else
+        echo "thirdparty haven't built, build the thirdparty first"
+        cd thirdparty
+        ./download-thirdparty.sh
+        if [ "x"$BOOST_DIR != "x" ]; then
+            ./build-thirdparty.sh -b $BOOST_DIR
+        else
+            ./build-thirdparty.sh
+        fi
+        cd ..
+    fi
+
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
-        echo
-        usage_build
-        exit -1
-    fi
-    if [ "$GIT_SOURCE" != "github" -a "$GIT_SOURCE" != "xiaomi" ]; then
-        echo "ERROR: invalid git source \"$GIT_SOURCE\""
         echo
         usage_build
         exit -1
@@ -138,7 +141,7 @@ function run_build()
         run_start_zk -g $GIT_SOURCE
     fi
     BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" \
-        GIT_SOURCE="$GIT_SOURCE" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+        CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }

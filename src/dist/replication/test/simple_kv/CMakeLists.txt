@@ -11,7 +11,7 @@ set(MY_PROJ_SRC "../../../../core/dll/core_main.cpp")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH ../../client_lib)
+set(MY_PROJ_INC_PATH)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
@@ -23,8 +23,8 @@ set(MY_PROJ_LIBS gtest
                  dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
-                 dsn.replication
-                 dsn.replication.meta_server
+                 dsn_layer2_stateful_type1
+                 dsn_meta_server
                  dsn.replication.clientlib
                  dsn.failure_detector.multimaster
                  dsn.failure_detector

@@ -6,10 +6,12 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 
-#include "meta_service.h"
-#include "server_state.h"
+#include "dist/replication/meta_server/meta_service.h"
+#include "dist/replication/meta_server/server_state.h"
+
+#include "dist/replication/test/meta_test/misc/misc.h"
+
 #include "meta_service_test_app.h"
-#include "../misc/misc.h"
 
 using namespace dsn::replication;
 

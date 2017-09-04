@@ -41,8 +41,8 @@
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/perf_counter_.h>
 
-#include "replication_common.h"
-#include "meta_data.h"
+#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/meta_server/meta_data.h"
 
 class meta_service_test_app;
 

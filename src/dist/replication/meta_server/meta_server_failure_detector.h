@@ -37,8 +37,9 @@
 
 #include <dsn/dist/failure_detector.h>
 #include <dsn/dist/distributed_lock_service.h>
-#include "replication_common.h"
-#include "meta_options.h"
+
+#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/meta_server/meta_options.h"
 
 namespace dsn {
 namespace replication {

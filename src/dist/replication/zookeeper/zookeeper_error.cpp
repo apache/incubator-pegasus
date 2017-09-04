@@ -32,7 +32,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <zookeeper.h>
+#include <zookeeper/zookeeper.h>
 #include <dsn/dist/error_code.h>
 #include <dsn/cpp/auto_codes.h>
 

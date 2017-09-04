@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include "dist/replication/client_lib/replication_common.h"
 #include "distributed_lock_service_simple.h"
-#include "replication_common.h"
 
 namespace dsn {
 namespace dist {

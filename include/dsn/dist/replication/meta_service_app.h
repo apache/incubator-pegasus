@@ -37,11 +37,14 @@
 
 #include <dsn/cpp/service_app.h>
 
+extern "C" dsn_error_t dsn_meta_server_bridge(int argc, char **argv);
+
 namespace dsn {
 namespace replication {
-class server_state;
+
 class meta_service;
 class replication_checker;
+
 namespace test {
 class test_checker;
 }

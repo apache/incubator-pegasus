@@ -5,8 +5,8 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 
+#include "dist/replication/meta_server/meta_data.h"
 #include "meta_service_test_app.h"
-#include "meta_data.h"
 
 int gtest_flags = 0;
 int gtest_ret = 0;

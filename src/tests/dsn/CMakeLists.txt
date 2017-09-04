@@ -9,16 +9,6 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-message(STATUS "GTEST_INCLUDE_DIR = ${GTEST_INCLUDE_DIR}")
-set(MY_PROJ_INC_PATH
-    ${GTEST_INCLUDE_DIR} 
-    ../../dist/failure_detector 
-    ../../dist/replication/client_lib 
-    ../../dist/replication/lib 
-    ../../dist/replication/meta_server
-    ../../dist/replication/zookeeper
-    )
-
 if (UNIX)
     set(MY_PROJ_LIBS gtest pthread)
 else()
@@ -26,8 +16,8 @@ else()
 endif()
 
 set(MY_PROJ_LIBS 
-    dsn.replication.meta_server
-    dsn.replication
+    dsn_meta_server
+    dsn_layer2_stateful_type1
     dsn.replication.clientlib
     dsn.failure_detector.multimaster
     dsn.failure_detector
@@ -38,10 +28,7 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_PROJ_LIB_PATH 
-        ${GTEST_LIB_DIR}
-        ${ZOOKEEPER_LIB_DIR}
-        )
+set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
 set(MY_BINPLACES

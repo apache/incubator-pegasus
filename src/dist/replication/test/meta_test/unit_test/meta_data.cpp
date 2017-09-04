@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "meta_data.h"
+#include "dist/replication/meta_server/meta_data.h"
 
 using namespace dsn::replication;
 

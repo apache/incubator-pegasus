@@ -32,7 +32,7 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-#include "mutation_log.h"
+#include "dist/replication/lib/mutation_log.h"
 #include <gtest/gtest.h>
 #include <chrono>
 #include <condition_variable>

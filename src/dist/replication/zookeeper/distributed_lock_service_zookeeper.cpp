@@ -32,7 +32,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 #include <dsn/dist/replication/replication.codes.h>
-#include <zookeeper.h>
+#include <zookeeper/zookeeper.h>
 #include <boost/lexical_cast.hpp>
 #include <functional>
 #include <algorithm>

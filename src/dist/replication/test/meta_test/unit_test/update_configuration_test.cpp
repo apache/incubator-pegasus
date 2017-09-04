@@ -3,12 +3,13 @@
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
 
-#include "meta_service.h"
-#include "server_state.h"
-#include "greedy_load_balancer.h"
-#include "meta_server_failure_detector.h"
+#include "dist/replication/meta_server/meta_service.h"
+#include "dist/replication/meta_server/server_state.h"
+#include "dist/replication/meta_server/greedy_load_balancer.h"
+#include "dist/replication/meta_server/meta_server_failure_detector.h"
+#include "dist/replication/test/meta_test/misc/misc.h"
+
 #include "meta_service_test_app.h"
-#include "../misc/misc.h"
 
 using namespace dsn::replication;
 

@@ -1,6 +1,4 @@
-add_definitions(-DDSN_REPLICATION_TYPE_1_DYNAMIC_LIB)
-
-set(MY_PROJ_NAME dsn.layer2.stateful.type1)
+set(MY_PROJ_NAME dsn_layer2_stateful_type1)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.

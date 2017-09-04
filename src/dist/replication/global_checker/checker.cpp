@@ -38,12 +38,13 @@
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
 
-#include "replica.h"
-#include "replica_stub.h"
-#include "meta_service.h"
-#include "meta_server_failure_detector.h"
-#include "server_state.h"
-#include "mutation_log.h"
+#include "dist/replication/lib/replica.h"
+#include "dist/replication/lib/replica_stub.h"
+#include "dist/replication/lib/mutation_log.h"
+
+#include "dist/replication/meta_server/meta_service.h"
+#include "dist/replication/meta_server/meta_server_failure_detector.h"
+#include "dist/replication/meta_server/server_state.h"
 
 #ifdef __TITLE__
 #undef __TITLE__

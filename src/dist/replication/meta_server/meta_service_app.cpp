@@ -40,23 +40,21 @@
 #include "distributed_lock_service_simple.h"
 #include "meta_state_service_simple.h"
 
-#include "../zookeeper/distributed_lock_service_zookeeper.h"
-#include "../zookeeper/meta_state_service_zookeeper.h"
+#include "dist/replication/zookeeper/distributed_lock_service_zookeeper.h"
+#include "dist/replication/zookeeper/meta_state_service_zookeeper.h"
 
 #include "server_load_balancer.h"
 #include "greedy_load_balancer.h"
 
 #include "meta_service.h"
 
-#ifdef DSN_META_SERVER_DYNAMIC_LIB
-
-#include <dsn/utility/module_init.cpp.h>
-
-MODULE_INIT_BEGIN(meta)
-dsn::register_app<::dsn::service::meta_service_app>("meta");
-MODULE_INIT_END
-
-#endif
+extern "C" {
+dsn_error_t dsn_meta_server_bridge(int argc, char **argv)
+{
+    dsn::register_app<::dsn::service::meta_service_app>("meta");
+    return dsn::ERR_OK;
+}
+}
 
 namespace dsn {
 namespace service {

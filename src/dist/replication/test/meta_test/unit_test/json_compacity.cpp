@@ -3,8 +3,8 @@
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
 
-#include "meta_service.h"
-#include "server_state.h"
+#include "dist/replication/meta_server/meta_service.h"
+#include "dist/replication/meta_server/server_state.h"
 #include "meta_service_test_app.h"
 
 void meta_service_test_app::json_compacity()

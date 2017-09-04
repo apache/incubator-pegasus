@@ -363,7 +363,8 @@ void service_spec::load_app_shared_libraries()
                     "\n; when the service cannot automatically register its app types into rdsn \n"
                     "; through %dmoudule%'s dllmain or attribute(constructor), we require the "
                     "%dmodule% \n"
-                    "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* "
+                    "; implement an exporte function called \"dsn_error_t "
+                    "DMODULE_NAME_bridge(const char* "
                     "args);\", \n"
                     "; which loads the real target (e.g., a python/Java/php module), that "
                     "registers their \n"
@@ -382,17 +383,11 @@ void service_spec::load_app_shared_libraries()
             break;
         }
 
-        // have dmodule_bridge_arguments?
-        if (m.second.length() > 0) {
-            dsn_app_bridge_t bridge_ptr =
-                (dsn_app_bridge_t)::dsn::utils::load_symbol(hmod, "dsn_app_bridge");
-            dassert(bridge_ptr != nullptr,
-                    "when dmodule_bridge_arguments is present (%s), function dsn_app_bridge must "
-                    "be implemented in module %s",
-                    m.second.c_str(),
-                    m.first.c_str());
-
-            ddebug("call %s.dsn_app_bridge(...%s...)", m.first.c_str(), m.second.c_str());
+        std::string bridge_symbol = m.first + "_bridge";
+        dsn_app_bridge_t bridge_ptr =
+            (dsn_app_bridge_t)::dsn::utils::load_symbol(hmod, bridge_symbol.c_str());
+        if (bridge_ptr != nullptr) {
+            ddebug("call %s_bridge(...%s...)", m.first.c_str(), m.second.c_str());
 
             std::vector<std::string> args;
             std::vector<const char *> args_ptr;
@@ -403,6 +398,15 @@ void service_spec::load_app_shared_libraries()
             }
 
             bridge_ptr((int)args_ptr.size(), &args_ptr[0]);
+        } else {
+            if (m.second.length() > 0) {
+                dassert(false,
+                        "can't find bridge_symbol(%s) though arguments set(%s)",
+                        bridge_symbol.c_str(),
+                        m.second.c_str());
+            } else {
+                dwarn("can't find bridge_symbol(%s)", m.second.c_str());
+            }
         }
     }
 }
