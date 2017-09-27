@@ -1,0 +1,20 @@
+[service.rrdb]
+stateful = true
+
+[function.rrdb.put]
+write = true
+
+[function.rrdb.remove]
+write = true
+
+[function.rrdb.get]
+write = false
+
+[function.rrdb.get_scanner]
+write = false
+
+[function.rrdb.scan]
+write = false
+
+[function.rrdb.clear_scanner]
+write = false

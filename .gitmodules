@@ -1,0 +1,3 @@
+[submodule "rdsn"]
+	path = rdsn
+	url = https://github.com/xiaomi/rdsn.git

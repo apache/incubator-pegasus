@@ -1,0 +1,36 @@
+// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
+#pragma once
+
+#include <map>
+#include <string>
+#include <dsn/dist/replication/replication_ddl_client.h>
+#include <pegasus/client.h>
+
+struct command_executor;
+struct shell_context
+{
+    std::string current_cluster_name;
+    std::string current_app_name;
+    std::vector<dsn::rpc_address> meta_list;
+    dsn::replication::replication_ddl_client *ddl_client;
+    pegasus::pegasus_client *pg_client;
+};
+
+struct arguments
+{
+    int argc;
+    char **argv;
+};
+
+typedef bool (*executor)(command_executor *this_, shell_context *sc, arguments args);
+
+struct command_executor
+{
+    const char *name;
+    const char *description;
+    const char *option_usage;
+    executor exec;
+};
