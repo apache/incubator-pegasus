@@ -205,7 +205,13 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
 const std::string &greedy_load_balancer::get_disk_tag(const rpc_address &node, const gpid &pid)
 {
     config_context &cc = *get_config_context(*(t_global_view->apps), pid);
-    return cc.find_from_serving(node)->disk_tag;
+    auto iter = cc.find_from_serving(node);
+    dassert(iter != cc.serving.end(),
+            "can't find disk tag of gpid(%d.%d) for %s",
+            pid.get_app_id(),
+            pid.get_partition_index(),
+            node.to_string());
+    return iter->disk_tag;
 }
 
 // assume all nodes are alive
@@ -532,6 +538,9 @@ bool greedy_load_balancer::move_primary_based_on_flow_per_app(const std::shared_
     int graph_nodes = prev.size();
     int current = prev[graph_nodes - 1];
 
+    // used to calculate the primary disk loads of each server.
+    // disk_load[disk_tag] means how many primaies on this "disk_tag".
+    // IF disk_load.find(disk_tag) == disk_load.end(), means 0
     disk_load loads[2];
     disk_load *prev_load = &loads[0];
     disk_load *current_load = &loads[1];
@@ -854,12 +863,35 @@ bool greedy_load_balancer::primary_balancer_globally()
     return true;
 }
 
+bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
+{
+    dsn::rpc_address n = ns.addr();
+    return ns.for_each_partition([this, n](const dsn::gpid &pid) {
+        config_context &cc = *get_config_context(*(t_global_view->apps), pid);
+        if (cc.find_from_serving(n) == cc.serving.end()) {
+            ddebug("meta server hasn't colected gpid(%d.%d)'s info of %s",
+                   pid.get_app_id(),
+                   pid.get_partition_index(),
+                   n.to_string());
+            return false;
+        }
+        return true;
+    });
+}
+
 void greedy_load_balancer::greedy_balancer()
 {
     const app_mapper &apps = *t_global_view->apps;
 
     dassert(t_alive_nodes > 2, "too few nodes will be freezed");
     number_nodes(*t_global_view->nodes);
+
+    for (auto &kv : *(t_global_view->nodes)) {
+        node_state &ns = kv.second;
+        if (!all_replica_infos_collected(ns)) {
+            return;
+        }
+    }
 
     for (const auto &kv : apps) {
         const std::shared_ptr<app_state> &app = kv.second;
