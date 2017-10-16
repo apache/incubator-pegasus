@@ -1,4 +1,7 @@
 Pegasus
+
+![docs/media-img/pegasus-logo.png](docs/media-img/pegasus-logo.png)
+
 ============
 
 Pegasus is a distributed key-value storage system developed and maintained by Xiaomi Cloud Storage Team, with targets of
