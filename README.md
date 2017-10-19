@@ -1,16 +1,14 @@
-Pegasus
-
 ![docs/media-img/pegasus-logo.png](docs/media-img/pegasus-logo.png)
 
-============
+[**中文Wiki**](https://github.com/xiaomi/pegasus/wiki)
+
+## What is Pegasus?
 
 Pegasus is a distributed key-value storage system developed and maintained by Xiaomi Cloud Storage Team, with targets of
 high availability, high performance, strong consistency and ease of use. The original motivation of this project is to replace
 [Apache HBase](https://hbase.apache.org/) for users who only need simple key-value schema but require low latency and high availability.
 It is based on the open source [rDSN](https://github.com/Microsoft/rDSN) framework, and uses modified [RocksDB](https://github.com/facebook/rocksdb) as underlying storage engine.
 The consensus algorithm it uses is [PacificA](https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/).
-
-[**中文Wiki**](https://github.com/xiaomi/pegasus/wiki)
 
 ## Features
 
