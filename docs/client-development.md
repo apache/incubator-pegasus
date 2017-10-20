@@ -50,11 +50,11 @@ You should write a thrift "TMessage" in TMessageBegin, the structure of TMessage
 
 ## write/read request process
 
-You can refer to [TableHandler.java] for the detailed RPC process in write/read request RPCs.
+You can refer to [TableHandler.java](../java/src/main/java/dsn/rpc/async/TableHandler.java) for the detailed RPC process in write/read request RPCs.
 
 ## how to generate code in thrift
 
-There are [3 IDL files](http://git.n.xiaomi.com/pegasus/pegasus/tree/open-source/java/idl) for RPC client:
+There are [3 IDL files](../java/idl) for RPC client:
 * base.thrift: a placeholder for rDSN specific structures(blob, error\_code, task\_code, RPC_address, gpid), you may use thrift to generate a sketch, and implement the details all by yourself.
 * replication.thrift: messages and RPCs used for communicate with meta server. Using generated code is ok.
 * rrdb.thrift: messages and RPCs used for communicate with replica server. Using generated code is ok.
