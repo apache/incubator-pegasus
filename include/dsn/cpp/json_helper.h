@@ -501,6 +501,7 @@ inline void json_encode(std::stringstream &out, const std::shared_ptr<T> &t)
 template <typename T>
 inline void json_decode(string_tokenizer &in, std::shared_ptr<T> &t)
 {
+    t.reset(new T());
     json_decode(in, *t);
 }
 

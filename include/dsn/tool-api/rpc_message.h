@@ -77,11 +77,14 @@ typedef struct message_header
     fast_code rpc_code; // dsn::task_code
     dsn_gpid gpid;      // global partition id
     dsn_msg_context_t context;
-    rpc_address from_address; // always ipv4/v6 address,
-                              // generally, it is the from_node's primary address, except the
+
+    // always ipv4/v6 address,
+    // generally, it is the from_node's primary address, except the
     // case described in message_ex::create_response()'s ATTENTION comment.
     // the from_address is always the orignal client's address, it will
     // not be changed in forwarding request.
+    rpc_address from_address;
+
     struct
     {
         int32_t timeout_ms;      // rpc timeout in milliseconds
