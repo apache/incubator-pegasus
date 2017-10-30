@@ -979,6 +979,15 @@ struct DBWithColumnFamilies {
     num_hot = 0;
   }
 
+  DBWithColumnFamilies& operator=(const DBWithColumnFamilies& other) {
+    cfh = other.cfh;
+    db = other.db;
+    opt_txn_db = other.opt_txn_db;
+    num_created = other.num_created.load();
+    num_hot = other.num_hot;
+    return *this;
+  }
+
   DBWithColumnFamilies(const DBWithColumnFamilies& other)
       : cfh(other.cfh),
         db(other.db),

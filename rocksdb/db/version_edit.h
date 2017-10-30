@@ -51,6 +51,13 @@ struct FileDescriptor {
     return *this;
   }
 
+  FileDescriptor(const FileDescriptor &fd)
+      : table_reader(nullptr) {
+    table_reader = fd.table_reader;
+    packed_number_and_path_id = fd.packed_number_and_path_id;
+    file_size = fd.file_size;
+  }
+
   uint64_t GetNumber() const {
     return packed_number_and_path_id & kFileNumberMask;
   }
