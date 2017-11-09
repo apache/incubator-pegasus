@@ -13,7 +13,7 @@ namespace test {
 class killer_handler_shell : public killer_handler
 {
 public:
-    killer_handler_shell(std::shared_ptr<std::ofstream> &log_handler);
+    killer_handler_shell();
     // index begin from 1, not zero
     // kill one
     virtual bool kill_meta(int index) override;
@@ -32,6 +32,9 @@ public:
     virtual bool start_all_replica(std::unordered_set<int> &) override;
     virtual bool start_all_zookeeper(std::unordered_set<int> &) override;
 
+    virtual bool has_meta_dumped_core(int index) override;
+    virtual bool has_replica_dumped_core(int index) override;
+
 private:
     // action = start | stop | restart.
     std::string generate_cmd(int index, const std::string &job, const std::string &action);
@@ -41,7 +44,6 @@ private:
 private:
     // using ${_run_script_path}/run.sh to kill/start
     std::string _run_script_path;
-    std::shared_ptr<std::ofstream> _log_handler;
 };
 }
 } // end namespace

@@ -2,10 +2,11 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "kill_testor.h"
+#include <list>
 #include <dsn/c/api_utilities.h>
 #include <dsn/service_api_cpp.h>
-#include <list>
+
+#include "kill_testor.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -15,8 +16,7 @@
 namespace pegasus {
 namespace test {
 
-// help function that generate random
-void generate_random(std::vector<int> &res, int cnt, int a, int b)
+void kill_testor::generate_random(std::vector<int> &res, int cnt, int a, int b)
 {
     res.clear();
     if (a > b)
@@ -34,82 +34,93 @@ void generate_random(std::vector<int> &res, int cnt, int a, int b)
     }
 }
 
-// [a, b]
-int generate_one_number(int a, int b)
+int kill_testor::generate_one_number(int a, int b)
 {
     if (a > b)
         std::swap(a, b);
     return ((rand() % (b - a + 1)) + a);
 }
 
-// kill_testor functions
 kill_testor::kill_testor()
 {
     const char *section = "pegasus.killtest";
     kill_round = 0;
-    _log_filename = dsn_config_get_value_string(
-        section, "kill_log_file", "./kill_history.txt", "kill log file");
-    dassert(_log_filename.size() > 0, "");
-    _log_handler.reset(new std::ofstream(_log_filename.c_str(), std::ios_base::out));
-    dassert(_log_handler != nullptr, "");
+
     // initialize killer_handler
     std::string killer_name =
         dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
     dassert(killer_name.size() > 0, "");
     if (killer_name == "shell")
-        _killer_handler.reset(new killer_handler_shell(_log_handler));
+        _killer_handler.reset(new killer_handler_shell());
     else {
         dassert(false, "invalid killer_handler, name = %s", killer_name.c_str());
     }
+
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_kill.resize(JOB_LENGTH);
-    _sleep_time_before_recover_seconds =
-        (uint32_t)dsn_config_get_value_uint64(section,
-                                              "sleep_time_before_recover_seconds",
-                                              30, // unit is second,default is 30s
-                                              "sleep time before recover seconds");
-    _total_meta_count = (int32_t)dsn_config_get_value_uint64(section,
-                                                             "total_meta_count",
-                                                             0, // default is 0
-                                                             "total meta count");
-    _total_replica_count = (int32_t)dsn_config_get_value_uint64(section,
-                                                                "total_replica_count",
-                                                                0, // default is 0
-                                                                "total replica count");
-    _total_zookeeper_count = (int32_t)dsn_config_get_value_uint64(section,
-                                                                  "total_zookeeper_count",
-                                                                  0, // default is 0
-                                                                  "total zookeeper count");
+    _sleep_time_before_recover_seconds = (uint32_t)dsn_config_get_value_uint64(
+        section, "sleep_time_before_recover_seconds", 30, "sleep time before recover seconds");
+
+    _total_meta_count =
+        (int32_t)dsn_config_get_value_uint64(section, "total_meta_count", 0, "total meta count");
+    _total_replica_count = (int32_t)dsn_config_get_value_uint64(
+        section, "total_replica_count", 0, "total replica count");
+    _total_zookeeper_count = (int32_t)dsn_config_get_value_uint64(
+        section, "total_zookeeper_count", 0, "total zookeeper count");
+
     if (_total_meta_count == 0 && _total_replica_count == 0 && _total_zookeeper_count == 0) {
         dassert(false, "total number of meta/replica/zookeeper is 0");
     }
-    _replica_killed_max_count = (int32_t)dsn_config_get_value_uint64(
-        section,
-        "replica_killed_max_count",
-        _total_replica_count, // default is the total number of replica-servers
-        "replica killed max count");
-    _meta_killed_max_count = (int32_t)dsn_config_get_value_uint64(
-        section,
-        "meta_killed_max_count",
-        _total_meta_count, // default is the total number of replica-servers
-        "meta killed max count");
-    _zk_killed_max_count = (int32_t)dsn_config_get_value_uint64(
-        section,
-        "zookeeper_killed_max_count",
-        _total_zookeeper_count, // default is the total number of replica-servers
-        "zookeeper killed max count");
+
+    _kill_replica_max_count = (int32_t)dsn_config_get_value_uint64(
+        section, "kill_replica_max_count", _total_replica_count, "replica killed max count");
+    _kill_meta_max_count = (int32_t)dsn_config_get_value_uint64(
+        section, "kill_meta_max_count", _total_meta_count, "meta killed max count");
+    _kill_zk_max_count = (int32_t)dsn_config_get_value_uint64(
+        section, "kill_zookeeper_max_count", _total_zookeeper_count, "zookeeper killed max count");
     srand((unsigned)time(NULL));
 }
 
-kill_testor::~kill_testor() { _log_handler->close(); }
+kill_testor::~kill_testor() {}
+
+void kill_testor::stop_verifier_and_exit(const char *msg)
+{
+    system("ps aux | grep verifier | awk '{print $2}' | xargs kill -9");
+    dassert(false, "%s", msg);
+}
+
+bool kill_testor::check_coredump()
+{
+    bool has_core = false;
+
+    // make sure all generated core are logged
+    for (int i = 1; i <= _total_meta_count; ++i) {
+        if (_killer_handler->has_meta_dumped_core(i)) {
+            derror("meta server %d generate core dump", i);
+            has_core = true;
+        }
+    }
+
+    for (int i = 1; i <= _total_replica_count; ++i) {
+        if (_killer_handler->has_replica_dumped_core(i)) {
+            derror("replica server %d generate core dump", i);
+            has_core = true;
+        }
+    }
+
+    return has_core;
+}
 
 void kill_testor::run()
 {
-    std::ofstream &flog = *_log_handler;
+    if (check_coredump()) {
+        stop_verifier_and_exit("detect core dump in pegasus cluster");
+    }
+
     if (kill_round == 0) {
-        flog << "Number of meta-server: " << _total_meta_count << std::endl;
-        flog << "Number of replica-server: " << _total_replica_count << std::endl;
-        flog << "Number of zookeeper-server: " << _total_zookeeper_count << std::endl;
+        ddebug("Number of meta-server: %d", _total_meta_count);
+        ddebug("Number of replica-server: %d", _total_replica_count);
+        ddebug("Number of zookeeper: %d", _total_zookeeper_count);
     }
     kill_round += 1;
     int meta_cnt = 0;
@@ -118,32 +129,33 @@ void kill_testor::run()
     while ((meta_cnt == 0 && replica_cnt == 0 && zk_cnt == 0) ||
            (meta_cnt == _total_meta_count && replica_cnt == _total_replica_count &&
             zk_cnt == _total_zookeeper_count)) {
-        meta_cnt = generate_one_number(0, _meta_killed_max_count);
-        replica_cnt = generate_one_number(0, _replica_killed_max_count);
-        zk_cnt = generate_one_number(0, _zk_killed_max_count);
+        meta_cnt = generate_one_number(0, _kill_meta_max_count);
+        replica_cnt = generate_one_number(0, _kill_replica_max_count);
+        zk_cnt = generate_one_number(0, _kill_zk_max_count);
     }
-    flog << std::endl << "****************" << std::endl;
-    flog << "Round [" << kill_round << "]" << std::endl;
-    flog << "start kill..." << std::endl;
-    flog << "kill meta number=" << meta_cnt << " replica number=" << replica_cnt
-         << " zookeeper number=" << zk_cnt << std::endl;
+    ddebug("************************");
+    ddebug("Round [%d]", kill_round);
+    ddebug("start kill...");
+    ddebug("kill meta number=%d, replica number=%d, zk number=%d", meta_cnt, replica_cnt, zk_cnt);
+
     if (!kill(meta_cnt, replica_cnt, zk_cnt)) {
-        dassert(false, "kill jobs failed");
+        stop_verifier_and_exit("kill jobs failed");
     }
-    // sleep time [1, _sleep_time_before_recover_seconds]
+
     auto sleep_time_random_seconds = generate_one_number(1, _sleep_time_before_recover_seconds);
-    flog << "sleep time: " << sleep_time_random_seconds << "s" << std::endl;
+    ddebug("sleep %d seconds before recovery", sleep_time_random_seconds);
     sleep(sleep_time_random_seconds);
-    flog << "start recover..." << std::endl;
+
+    ddebug("start recover...");
     if (!start()) {
-        dassert(false, "recover jobs failed");
+        stop_verifier_and_exit("recover jobs failed");
     }
-    flog << "after recover..." << std::endl;
+    ddebug("after recover...");
+    ddebug("************************");
 }
 
 bool kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
 {
-    std::ofstream &out = *_log_handler;
     std::vector<int> kill_counts = {meta_cnt, replica_cnt, zookeeper_cnt};
     std::vector<int> total_count = {
         _total_meta_count, _total_replica_count, _total_zookeeper_count};
@@ -154,12 +166,12 @@ bool kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
         job_index_to_kill.clear();
         generate_random(job_index_to_kill, kill_counts[id], 1, total_count[id]);
         for (auto index : job_index_to_kill) {
-            out << "kill ";
+            ddebug("start to kill %s@%d", job_type_str(_job_types[id]), index);
             if (!kill_job_by_index(_job_types[id], index)) {
-                out << " fail..." << std::endl;
+                ddebug("kill %s@%d failed", job_type_str(_job_types[id]), index);
                 return false;
             }
-            out << " success..." << std::endl;
+            ddebug("kill %s@%d succeed", job_type_str(_job_types[id]), index);
         }
     }
     return true;
@@ -167,18 +179,17 @@ bool kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
 
 bool kill_testor::start()
 {
-    std::ofstream &out = *_log_handler;
     std::vector<int> random_idxs;
     generate_random(random_idxs, JOB_LENGTH, META, ZOOKEEPER);
     for (auto id : random_idxs) {
         std::vector<int> &job_index_to_kill = _job_index_to_kill[_job_types[id]];
         for (auto index : job_index_to_kill) {
-            out << "start ";
+            ddebug("start to recover %s@%d", job_type_str(_job_types[id]), index);
             if (!start_job_by_index(_job_types[id], index)) {
-                out << " fail..." << std::endl;
+                ddebug("recover %s@%d failed", job_type_str(_job_types[id]), index);
                 return false;
             }
-            out << " success..." << std::endl;
+            ddebug("recover %s@%d succeed", job_type_str(_job_types[id]), index);
         }
     }
     return true;

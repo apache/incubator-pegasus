@@ -37,7 +37,7 @@ SHELL_INPUT=.kill_test.shell.input
 SHELL_OUTPUT=.kill_test.shell.output
 echo "cluster_info" >$SHELL_INPUT
 echo "nodes" >>$SHELL_INPUT
-echo "app $APP_NAME -detailed" >>$SHELL_INPUT
+echo "app $APP_NAME --detailed" >>$SHELL_INPUT
 WAIT_SECONDS=0
 while true
 do
@@ -133,7 +133,7 @@ do
     then
       break
     fi
-    cd onebox/${TYPE}${TASK_ID}/data/logs
+    cd onebox/${TYPE}${TASK_ID}/data/log
     if ls --sort=time -r | tail -n 1 | xargs grep "Address already in use"
     then
       cd $shell_dir

@@ -19,6 +19,20 @@ enum job_type
     JOB_LENGTH = 3
 };
 
+inline const char *job_type_str(enum job_type type)
+{
+    switch (type) {
+    case META:
+        return "meta";
+    case REPLICA:
+        return "replica";
+    case ZOOKEEPER:
+        return "zookeeper";
+    default:
+        return "invalid";
+    }
+}
+
 struct job
 {
     std::vector<std::string> addrs;

@@ -4,9 +4,13 @@
 
 #include "killer_handler_shell.h"
 #include <cstdlib>
+#include <cstring>
+#include <cerrno>
 #include <sstream>
 #include <fstream>
 #include <dsn/c/api_utilities.h>
+
+#include "../function_test/global_env.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -16,78 +20,105 @@
 namespace pegasus {
 namespace test {
 
-killer_handler_shell::killer_handler_shell(std::shared_ptr<std::ofstream> &log_handler)
+killer_handler_shell::killer_handler_shell()
 {
     const char *section = "killer.handler.shell";
     _run_script_path = dsn_config_get_value_string(
         section, "onebox_run_path", "~/pegasus/run.sh", "onebox run path");
     dassert(_run_script_path.size() > 0, "");
-    _log_handler = log_handler;
+}
+
+bool killer_handler_shell::has_meta_dumped_core(int index)
+{
+    char find_core[1024];
+    snprintf(find_core,
+             1024,
+             "ls %s/onebox/meta%d | grep core | wc -l",
+             _run_script_path.c_str(),
+             index);
+
+    std::stringstream output;
+    int core_count;
+    global_env::instance().pipe_execute(find_core, output);
+    output >> core_count;
+
+    return core_count != 0;
+}
+
+bool killer_handler_shell::has_replica_dumped_core(int index)
+{
+    char find_core[1024];
+    snprintf(find_core,
+             1024,
+             "ls %s/onebox/replica%d | grep core | wc -l",
+             _run_script_path.c_str(),
+             index);
+
+    std::stringstream output;
+    int core_count;
+    global_env::instance().pipe_execute(find_core, output);
+    output >> core_count;
+
+    return core_count != 0;
 }
 
 bool killer_handler_shell::kill_meta(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "meta@" << index;
     std::string cmd = generate_cmd(index, "meta", "stop");
     int res = system(cmd.c_str());
     ddebug("kill meta command: %s", cmd.c_str());
-    if (res != 0)
+    if (res != 0) {
+        ddebug("kill meta encounter error(%s)", strerror(errno));
         return false;
+    }
     return check("meta", index, "stop");
 }
 
 bool killer_handler_shell::kill_replica(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "replica@" << index;
     std::string cmd = generate_cmd(index, "replica", "stop");
-    ;
     int res = system(cmd.c_str());
     ddebug("kill replica command: %s", cmd.c_str());
-    if (res != 0)
+    if (res != 0) {
+        ddebug("kill meta encounter error(%s)", strerror(errno));
         return false;
+    }
     return check("replica", index, "stop");
 }
 
 bool killer_handler_shell::kill_zookeeper(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "zookeeper@" << index;
     // not implement
     return true;
 }
 
 bool killer_handler_shell::start_meta(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "meta@" << index;
     std::string cmd = generate_cmd(index, "meta", "start");
-    ;
     int res = system(cmd.c_str());
     ddebug("start meta command: %s", cmd.c_str());
-    if (res != 0)
+    if (res != 0) {
+        ddebug("kill meta encounter error(%s)", strerror(errno));
         return false;
+    }
     return check("meta", index, "start");
 }
 
 bool killer_handler_shell::start_replica(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "replica@" << index;
     std::string cmd = generate_cmd(index, "replica", "start");
-    ;
+
     int res = system(cmd.c_str());
     ddebug("start replica command: %s", cmd.c_str());
-    if (res != 0)
+    if (res != 0) {
+        ddebug("kill meta encounter error(%s)", strerror(errno));
         return false;
+    }
     return check("meta", index, "start");
 }
 
 bool killer_handler_shell::start_zookeeper(int index)
 {
-    std::ofstream &out = *_log_handler;
-    out << "zookeeper@" << index;
     // not implement.
     return true;
 }
@@ -133,8 +164,7 @@ killer_handler_shell::generate_cmd(int index, const std::string &job, const std:
 {
     std::stringstream res;
     res << "cd " << _run_script_path << "; "
-        << "bash "
-        << " run.sh";
+        << "bash run.sh";
     if (action == "stop")
         res << " stop_onebox_instance ";
     else

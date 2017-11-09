@@ -839,13 +839,34 @@ function run_start_kill_test()
 
     cd $ROOT
     CONFIG=config-kill-test.ini
-    sed "s/@LOCAL_IP@/`hostname -i`/g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
+
+    sed "s/@LOCAL_IP@/`hostname -i`/g;\
+s/@META_COUNT@/${META_COUNT}/g;\
+s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
+s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
+s/@SET_THREAD_COUNT@/${THREAD_COUNT}/g;\
+s/@GET_THREAD_COUNT@/${THREAD_COUNT}/g;\
+s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
+
+    # start verifier
+    mkdir -p onebox/verifier && cd onebox/verifier
     ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
-    echo "./pegasus_kill_test $CONFIG &>/dev/null &"
-    ./pegasus_kill_test $CONFIG &>/dev/null &
+    ln -s -f ${ROOT}/$CONFIG config.ini
+    echo "./pegasus_kill_test config.ini verifier &>/dev/null &"
+    ./pegasus_kill_test config.ini verifier &>/dev/null &
     sleep 0.2
     echo
+    cd ${ROOT}
 
+    #start killer
+    mkdir -p onebox/killer && cd onebox/killer
+    ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${ROOT}/$CONFIG config.ini
+    echo "./pegasus_kill_test config.ini killer &>/dev/null &"
+    ./pegasus_kill_test config.ini killer &>/dev/null &
+    sleep 0.2
+    echo
+    cd ${ROOT}
     run_list_kill_test
 }
 
@@ -913,8 +934,6 @@ function run_list_kill_test()
     ps -ef | grep ' \./pegasus_kill_test ' | grep -v grep
     echo "------------------------------"
     echo "Server dir: ./onebox"
-    echo "Client dir: ./pegasus_kill_test.data"
-    echo "Kill   log: ./kill_history.txt"
     echo "------------------------------"
 }
 

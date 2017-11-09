@@ -31,6 +31,10 @@ public:
     virtual bool start_all_meta(std::unordered_set<int> &) = 0;
     virtual bool start_all_replica(std::unordered_set<int> &) = 0;
     virtual bool start_all_zookeeper(std::unordered_set<int> &) = 0;
+
+    virtual bool has_meta_dumped_core(int index) { return false; }
+    virtual bool has_replica_dumped_core(int index) { return false; }
+    virtual bool has_zookeeper_dumped_core(int index) { return false; }
 };
 }
 } // end namespace
