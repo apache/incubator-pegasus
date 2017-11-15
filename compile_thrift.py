@@ -11,16 +11,6 @@ the default thrift generator
 
 thrift_description = [
     {
-        "name": "deploy_svc", 
-        "path": "src/dist/deployment_service",
-        "include_fix": {
-            "_types.h": {
-                "add": ["<dsn/dist/cluster_scheduler.h>"],
-                "remove": ["\"dsn_types.h\"", "\"dsn.layer2_types.h\""]
-            }
-        }
-    },
-    {
         "name": "dsn.layer2",
         "path": "src",
         "include_fix": {
