@@ -8,7 +8,7 @@
 #include "dist/replication/meta_server/meta_data.h"
 #include "dist/replication/client_lib/fs_manager.h"
 
-typedef std::map<dsn::rpc_address, dsn::replication::fs_manager> nodes_fs_manager;
+typedef std::map<dsn::rpc_address, std::shared_ptr<dsn::replication::fs_manager>> nodes_fs_manager;
 
 inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
                                                     const dsn::rpc_address &node)
@@ -16,7 +16,7 @@ inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
     auto iter = nfm.find(node);
     if (nfm.end() == iter)
         return nullptr;
-    return &(iter->second);
+    return iter->second.get();
 }
 
 uint32_t random32(uint32_t min, uint32_t max);

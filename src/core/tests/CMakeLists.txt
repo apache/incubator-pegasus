@@ -56,4 +56,3 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
 )
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)

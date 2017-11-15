@@ -40,4 +40,3 @@ set(MY_BINPLACES
 )
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)

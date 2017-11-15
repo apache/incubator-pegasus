@@ -34,5 +34,4 @@ set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini")
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)
 

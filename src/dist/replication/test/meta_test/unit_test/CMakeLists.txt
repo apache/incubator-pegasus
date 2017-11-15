@@ -26,4 +26,3 @@ set(MY_BOOST_PACKAGES system filesystem)
 set(MY_BINPLACES clear.sh run.sh config-ddl-test.ini config-test.ini suite1 suite2)
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)

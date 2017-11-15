@@ -37,4 +37,3 @@ dsn_add_executable()
 add_custom_target( docker 
     COMMAND docker build -t "${MY_PROJ_NAME}-image" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${MY_PROJ_NAME}")
 add_dependencies( docker "${MY_PROJ_NAME}")
-add_dependencies("${MY_PROJ_NAME}" rapidjson_header)

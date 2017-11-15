@@ -162,8 +162,11 @@ void generate_node_fs_manager(const app_mapper &apps,
 
     for (const auto &kv : nodes) {
         const node_state &ns = kv.second;
-        fs_manager &manager = nfm[ns.addr()];
-        manager.initialize(data_dirs, tags);
+        if (nfm.find(ns.addr()) == nfm.end()) {
+            nfm.emplace(ns.addr(), std::make_shared<fs_manager>(true));
+        }
+        fs_manager &manager = *(nfm.find(ns.addr())->second);
+        manager.initialize(data_dirs, tags, true);
         ns.for_each_partition([&](const dsn::gpid &pid) {
             const config_context &cc = *get_config_context(apps, pid);
             snprintf(pid_dir,

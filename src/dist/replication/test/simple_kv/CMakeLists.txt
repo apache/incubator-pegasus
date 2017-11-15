@@ -52,4 +52,3 @@ if(WIN32)
 endif()
 
 dsn_add_executable()
-add_dependencies(${MY_PROJ_NAME} googletest)

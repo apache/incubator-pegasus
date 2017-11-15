@@ -72,13 +72,14 @@ public:
 class fs_manager
 {
 public:
-    fs_manager();
+    fs_manager(bool for_test);
     ~fs_manager() {}
 
     // this should be called before open/load any replicas
     dsn::error_code initialize(const replication_options &opts);
     dsn::error_code initialize(const std::vector<std::string> &data_dirs,
-                               const std::vector<std::string> &tags);
+                               const std::vector<std::string> &tags,
+                               bool for_test);
 
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
     void allocate_dir(const dsn::gpid &pid,

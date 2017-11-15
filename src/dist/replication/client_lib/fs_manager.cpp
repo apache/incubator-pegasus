@@ -96,28 +96,30 @@ void dir_node::update_disk_stat()
     }
 }
 
-fs_manager::fs_manager()
+fs_manager::fs_manager(bool for_test)
 {
-    _counter_capacity_total_mb.init("eon.replica_stub",
-                                    "disk.capacity.total(MB)",
-                                    COUNTER_TYPE_NUMBER,
-                                    "total disk capacity in MB");
-    _counter_available_total_mb.init("eon.replica_stub",
-                                     "disk.available.total(MB)",
-                                     COUNTER_TYPE_NUMBER,
-                                     "total disk available in MB");
-    _counter_available_total_ratio.init("eon.replica_stub",
-                                        "disk.available.total.ratio",
+    if (!for_test) {
+        _counter_capacity_total_mb.init("eon.replica_stub",
+                                        "disk.capacity.total(MB)",
                                         COUNTER_TYPE_NUMBER,
-                                        "total disk available ratio");
-    _counter_available_min_ratio.init("eon.replica_stub",
-                                      "disk.available.min.ratio",
-                                      COUNTER_TYPE_NUMBER,
-                                      "minimal disk available ratio in all disks");
-    _counter_available_max_ratio.init("eon.replica_stub",
-                                      "disk.available.max.ratio",
-                                      COUNTER_TYPE_NUMBER,
-                                      "maximal disk available ratio in all disks");
+                                        "total disk capacity in MB");
+        _counter_available_total_mb.init("eon.replica_stub",
+                                         "disk.available.total(MB)",
+                                         COUNTER_TYPE_NUMBER,
+                                         "total disk available in MB");
+        _counter_available_total_ratio.init("eon.replica_stub",
+                                            "disk.available.total.ratio",
+                                            COUNTER_TYPE_NUMBER,
+                                            "total disk available ratio");
+        _counter_available_min_ratio.init("eon.replica_stub",
+                                          "disk.available.min.ratio",
+                                          COUNTER_TYPE_NUMBER,
+                                          "minimal disk available ratio in all disks");
+        _counter_available_max_ratio.init("eon.replica_stub",
+                                          "disk.available.max.ratio",
+                                          COUNTER_TYPE_NUMBER,
+                                          "maximal disk available ratio in all disks");
+    }
 }
 
 dir_node *fs_manager::get_dir_node(const std::string &subdir)
@@ -137,7 +139,8 @@ dir_node *fs_manager::get_dir_node(const std::string &subdir)
 
 // size of the two vectors should be equal
 dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs,
-                                       const std::vector<std::string> &tags)
+                                       const std::vector<std::string> &tags,
+                                       bool for_test)
 {
     // create all dir_nodes
     dassert(data_dirs.size() == tags.size(),
@@ -155,8 +158,9 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
                tags[i].c_str());
     }
 
-    update_disk_stat();
-
+    if (!for_test) {
+        update_disk_stat();
+    }
     return dsn::ERR_OK;
 }
 

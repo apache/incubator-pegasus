@@ -63,7 +63,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
-      _learn_app_concurrent_count(0)
+      _learn_app_concurrent_count(0),
+      _fs_manager(false)
 {
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -255,7 +256,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     {
         dsn::error_code err;
-        err = _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
+        err = _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags, false);
         dassert(err == dsn::ERR_OK, "initialize fs manager failed, err(%s)", err.to_string());
     }
 
