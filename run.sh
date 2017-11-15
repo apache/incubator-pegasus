@@ -239,6 +239,19 @@ function usage_start_zk()
 }
 function run_start_zk()
 {
+    # first we check the environment that zk need: java and nc command
+    # check java
+    java -help 1>/dev/null 2>/dev/null
+    if [ $? != 0 ]; then
+        echo "start zk failed, need install jre..."
+        exit
+    fi
+    # check nc command
+    nc -help 1>/dev/null 2>/dev/null
+    if [ $? != 0 ]; then
+        echo "start zk failed, need install netcat command..."
+        exit
+    fi
     INSTALL_DIR=`pwd`/.zk_install
     PORT=22181
     while [[ $# > 0 ]]; do
