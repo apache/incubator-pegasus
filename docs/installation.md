@@ -57,7 +57,7 @@ Please make sure you install the proper version of GCC, CMake and Boost.
    if Boost is installed at some custom path , please tell the build script the install path of Boost:
 
    ```
-   ./run.sh build -g github -b /your/boost/installation/path
+   ./run.sh build -b /your/boost/installation/path
    ```
 
 ## Run in standalone mode
