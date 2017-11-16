@@ -52,7 +52,7 @@ Please make sure you install the proper version of GCC, CMake and Boost.
 2. build
 
    ```
-   cd pegasus && ./run.sh build -g github
+   cd pegasus && ./run.sh build
    ```
    if Boost is installed at some custom path , please tell the build script the install path of Boost:
 
