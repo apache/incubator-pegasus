@@ -3,7 +3,8 @@
 ROOT=`pwd`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$BOOST_DIR/lib:$TOOLCHAIN_DIR/lib64:$LD_LIBRARY_PATH
+export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$BOOST_DIR/lib:$TOOLCHAIN_DIR/lib64:$LD_LIBRARY_PATH
 
 function usage()
 {
@@ -53,7 +54,6 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
     echo "   -t|--type         build type: debug|release, default is debug"
-    echo "   -g|--git          git source of ext module: github|xiaomi, default is xiaomi"
     echo "   -s|--serialize    serialize type: dsn|thrift|proto, default is thrift"
     echo "   -c|--clear        clear the environment before building"
     echo "   -cc|--half-clear  only clear the environment of replication before building"
@@ -68,7 +68,6 @@ function usage_build()
 function run_build()
 {
     BUILD_TYPE="debug"
-    GIT_SOURCE="xiaomi"
     CLEAR=NO
     PART_CLEAR=NO
     JOB_NUM=8
@@ -86,10 +85,6 @@ function run_build()
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
-                shift
-                ;;
-            -g|--git)
-                GIT_SOURCE="$2"
                 shift
                 ;;
             -c|--clear)
@@ -143,7 +138,7 @@ function run_build()
 
     echo "INFO: start build rdsn..."
     cd $ROOT/rdsn
-    OPT="-t $BUILD_TYPE -g $GIT_SOURCE -j $JOB_NUM"
+    OPT="-t $BUILD_TYPE -j $JOB_NUM"
     if [ "$BOOST_DIR" != "" ]; then
         OPT="$OPT -b $BOOST_DIR"
     fi

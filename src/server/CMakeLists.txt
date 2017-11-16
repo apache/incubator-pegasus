@@ -18,8 +18,8 @@ set(MY_PROJ_INC_PATH
     "${DSN_ROOT}/include/ext")
 
 set(MY_PROJ_LIBS
-    dsn.replication
-    dsn.replication.meta_server
+    dsn_layer2_stateful_type1
+    dsn_meta_server
     dsn.replication.clientlib
     dsn.replication.ddlclient
     dsn.failure_detector
