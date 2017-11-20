@@ -21,8 +21,7 @@ set(MY_PROJ_LIBS
     dsn.replication.ddlclient
     dsn.failure_detector
     dsn.failure_detector.multimaster
-    pegasus.clientlib
-    pegasus.base
+    pegasus_client_static
     readline
     )
 

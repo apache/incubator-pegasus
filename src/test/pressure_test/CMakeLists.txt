@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_INC_PATH "../../include")
 
 set(MY_PROJ_LIBS
-    pegasus.clientlib
+    pegasus_client_static
     )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-pressure.ini")

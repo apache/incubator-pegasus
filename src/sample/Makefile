@@ -1,7 +1,10 @@
+# pegasus client depends on pthread, rt, dl, aio, boost_system boost_filesystem for linkage,
+# no matter the shared or static library
+# please make sure to install these depedencies properly
 CXX = g++
 CXXFLAGS = -std=c++11 -g
 INCLUDE = -I../include
-LIBRARY = -Wl,-rpath-link,../lib -L../../DSN_ROOT/lib -lpegasus.clientlib -ldsn.core -lthrift -lpthread -lrt
+LIBRARY = -Wl,-rpath-link,../lib -L../../DSN_ROOT/lib -lpegasus_client_static -lpthread -lrt -ldl -laio -lboost_system -lboost_filesystem
 CPPS = $(wildcard vad_stdaln/*.cpp) $(wildcard ./*.cpp)
 OBJS = $(patsubst %.cpp,%.o,$(CPPS))
 

@@ -108,12 +108,8 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/lib
-cp -v ./DSN_ROOT/lib/libdsn.core.so ${pack}/lib
-cp -v ./DSN_ROOT/lib/libpegasus.clientlib.so ${pack}/lib
-cp -v ./DSN_ROOT/lib/libthrift.so.* ${pack}/lib
-cp -v `get_boost_lib $custom_boost_lib system` ${pack}/lib
-cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/lib
-cp -v `get_stdcpp_lib $custom_gcc` ${pack}/lib
+cp -v ./DSN_ROOT/lib/libpegasus_client_static.a ${pack}/lib
+cp -v ./DSN_ROOT/lib/libpegasus_client_shared.so ${pack}/lib
 cp -v -r ./src/include ${pack}
 cp -v -r ./src/sample ${pack}
 

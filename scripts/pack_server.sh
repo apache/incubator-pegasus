@@ -110,9 +110,8 @@ done
 mkdir -p ${pack}/bin
 cp -v ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
 cp -v ./DSN_ROOT/bin/pegasus_rproxy/pegasus_rproxy ${pack}/bin
-cp -v ./DSN_ROOT/lib/libdsn.core.so ${pack}/bin
-cp -v ./DSN_ROOT/lib/libpegasus.clientlib.so ${pack}/bin
-cp -v ./DSN_ROOT/lib/libthrift.so.* ${pack}/bin
+cp -v ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
+cp -v ./DSN_ROOT/lib/libdsn_layer2_stateful_type1.so ${pack}/bin
 cp -v ./rdsn/scripts/linux/learn_stat.py ${pack}/bin
 cp -v ./src/ext/libevent/lib/libevent-2.0.so.5 ${pack}/bin
 cp -v ./scripts/sendmail.sh ${pack}/bin

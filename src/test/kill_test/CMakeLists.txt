@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_INC_PATH "../../include" "../function_test")
 
 set(MY_PROJ_LIBS
-    pegasus.clientlib
+    pegasus_client_static
     dsn.replication.ddlclient
     dsn.replication.clientlib
     )
