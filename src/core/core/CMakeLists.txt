@@ -1,5 +1,4 @@
-
-set(MY_PROJ_NAME dsn.corelib)
+set(MY_PROJ_NAME dsn.core)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -19,4 +18,4 @@ set(MY_PROJ_LIB_PATH "")
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_static_library()
+dsn_add_object()

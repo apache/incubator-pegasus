@@ -1,4 +1,3 @@
 add_subdirectory(failure_detector)
 add_subdirectory(replication)
-add_subdirectory(common_providers)
 add_subdirectory(failure_detector_multimaster)

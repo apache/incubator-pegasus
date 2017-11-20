@@ -18,4 +18,4 @@ set(MY_PROJ_LIB_PATH "")
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_static_library()
+dsn_add_object()

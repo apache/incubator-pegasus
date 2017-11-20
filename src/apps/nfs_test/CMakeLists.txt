@@ -11,7 +11,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH ../nfs)
 
-set(MY_PROJ_LIBS dsn.nfs)
+set(MY_PROJ_LIBS "")
 
 set(MY_PROJ_LIB_PATH "")
 
