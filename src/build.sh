@@ -186,6 +186,3 @@ else
     cp ./config-bench.ini $DSN_ROOT/bin/pegasus_bench/config.ini
     echo "Build pegasus_bench succeed"
 fi
-
-install ./ext/libevent/lib/libevent-2.0.so.5.1.9 $DSN_ROOT/lib/libevent-2.0.so.5
-

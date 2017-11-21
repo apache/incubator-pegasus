@@ -14,7 +14,6 @@ set(MY_PROJ_INC_PATH
     "../include"
     "../base"
     "../../rocksdb/include"
-    "../ext/libevent/include"
     "${DSN_ROOT}/include/ext")
 
 set(MY_PROJ_LIBS
