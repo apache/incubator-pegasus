@@ -4,6 +4,10 @@ TP_DIR=$( cd $( dirname $0 ) && pwd )
 TP_SRC=$TP_DIR/src
 TP_BUILD=$TP_DIR/build
 TP_OUTPUT=$TP_DIR/output
+# Explicitly annouce the compilers in case that
+# a machine has low version of gcc and user install a higher version manually
+export CC=gcc
+export CXX=g++
 
 CLEAR_OLD_BUILD="NO"
 BOOST_ROOT=""
@@ -86,6 +90,7 @@ CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=release\
     -DBUILD_TUTORIALS=OFF\
     -DWITH_LIBEVENT=OFF\
     -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT\
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON\
     -DWITH_SHARED_LIB=OFF"
 
 if [ "x"$BOOST_ROOT != "x" ]; then
