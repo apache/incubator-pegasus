@@ -117,19 +117,15 @@ function run_build()
         shift
     done
 
-    if [ -f "thirdparty/output/lib/libzookeeper_mt.a" ]; then
-        echo "thirdparty has already built, ignore the build thirdparty process"
+    # build thirdparty first
+    cd thirdparty
+    ./download-thirdparty.sh
+    if [ "x"$BOOST_DIR != "x" ]; then
+        ./build-thirdparty.sh -b $BOOST_DIR
     else
-        echo "thirdparty haven't built, build the thirdparty first"
-        cd thirdparty
-        ./download-thirdparty.sh
-        if [ "x"$BOOST_DIR != "x" ]; then
-            ./build-thirdparty.sh -b $BOOST_DIR
-        else
-            ./build-thirdparty.sh
-        fi
-        cd ..
+        ./build-thirdparty.sh
     fi
+    cd ..
 
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""

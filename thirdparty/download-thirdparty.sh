@@ -1,3 +1,37 @@
+#!/bin/bash
+
+# check_and_download package_name url
+# return:
+#   1 if already downloaded
+#   0 if download and extract ok
+#  -1 if download or extract fail
+function check_and_download()
+{
+    package_name=$1
+    url=$2
+    if [ -f $package_name ]; then
+        echo "$package_name has already downloaded, skip it"
+        return 1
+    else
+        echo "download package $package_name"
+        curl $url > $package_name
+        tar xf $package_name
+        local ret_code=$?
+        if [ $ret_code -ne 0 ]; then
+            return -1
+        else
+            return 0
+        fi
+    fi
+}
+
+function exit_if_fail()
+{
+    if [ $1 -eq -1 ]; then
+        exit $1
+    fi
+}
+
 TP_DIR=$( cd $( dirname $0 ) && pwd )
 TP_SRC=$TP_DIR/src
 TP_BUILD=$TP_DIR/build
@@ -17,37 +51,38 @@ fi
 
 cd $TP_SRC
 # concurrent queue
-echo "download concurrentqueue"
-curl https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.0-beta > concurrentqueue-v1.0.0-beta.tar.gz
-tar xf concurrentqueue-v1.0.0-beta.tar.gz
+check_and_download "concurrentqueue-v1.0.0-beta.tar.gz" "https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.0-beta"
+exit_if_fail $?
 
 # googletest
-echo "download googletest"
-curl https://codeload.github.com/google/googletest/tar.gz/release-1.8.0 > googletest-1.8.0.tar.gz
-tar xf googletest-1.8.0.tar.gz
+check_and_download "googletest-1.8.0.tar.gz" "https://codeload.github.com/google/googletest/tar.gz/release-1.8.0"
+exit_if_fail $?
 
 # protobuf
-echo "download protobuf"
-curl https://codeload.github.com/google/protobuf/tar.gz/v3.5.0 > protobuf-v3.5.0.tar.gz
-tar xf protobuf-v3.5.0.tar.gz
+check_and_download "protobuf-v3.5.0.tar.gz" "https://codeload.github.com/google/protobuf/tar.gz/v3.5.0"
+exit_if_fail $?
 
 #rapidjson
-echo "download rapidjson"
-curl https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0 > rapidjson-v1.1.0.tar.gz
-tar xf rapidjson-v1.1.0.tar.gz
+check_and_download "rapidjson-v1.1.0.tar.gz" "https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0"
 
 # thrift 0.9.3
-echo "download thrift"
-curl http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz > thrift-0.9.3.tar.gz
-tar xf thrift-0.9.3.tar.gz
-cd thrift-0.9.3
-echo "make patch to thrift"
-patch -p1 < ../../fix_thrift_for_cpp11.patch
-cd ..
+check_and_download "thrift-0.9.3.tar.gz" "http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz"
+ret_code=$?
+if [ $ret_code -eq -1 ]; then
+    exit -1
+elif [ $ret_code -eq 0 ]; then
+    echo "make patch to thrift"
+    cd thrift-0.9.3
+    patch -p1 < ../../fix_thrift_for_cpp11.patch
+    cd ..
+fi
 
 # use zookeeper c client
-echo "download zookeeper"
-curl https://mirrors.tuna.tsinghua.edu.cn/apache/zookeeper/stable/zookeeper-3.4.10.tar.gz > zookeeper-3.4.10.tar.gz
-tar xf zookeeper-3.4.10.tar.gz
+check_and_download "zookeeper-3.4.10.tar.gz" "https://mirrors.tuna.tsinghua.edu.cn/apache/zookeeper/stable/zookeeper-3.4.10.tar.gz"
+exit_if_fail $?
+
+# libevent for send http request
+check_and_download "libevent-2.0.22.tar.gz" "https://codeload.github.com/libevent/libevent/tar.gz/release-2.0.22-stable"
+exit_if_fail $?
 
 cd $TP_DIR
