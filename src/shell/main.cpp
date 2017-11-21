@@ -94,6 +94,12 @@ command_executor commands[] = {
         use_app_as_current,
     },
     {
+        "escape_all",
+        "if escape all characters when printing key/value bytes",
+        "[true|false]",
+        process_escape_all,
+    },
+    {
         "hash",
         "calculate the hash result for some hash key",
         "<hash_key> <sort_key>",
@@ -331,6 +337,7 @@ void initialize(int argc, char **argv)
         global_context.meta_list, section.c_str(), key.c_str());
     global_context.ddl_client =
         new dsn::replication::replication_ddl_client(global_context.meta_list);
+    global_context.escape_all = false;
 
     register_all_commands();
 }

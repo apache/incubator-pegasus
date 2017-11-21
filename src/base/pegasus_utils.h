@@ -30,15 +30,16 @@ bool buf2int64(const char *buffer, int length, int64_t &result);
 //    Returns the number of bytes written to 'dest' (not including the \0)
 //    or (size_t)-1 if there was insufficient space.
 // ----------------------------------------------------------------------
-size_t c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len);
+size_t c_escape_string(
+    const char *src, size_t src_len, char *dest, size_t dest_len, bool always_escape = false);
 
 // T must support data() and length() method.
 template <class T>
-std::string c_escape_string(const T &src)
+std::string c_escape_string(const T &src, bool always_escape = false)
 {
     const size_t dest_len = src.length() * 4 + 1; // Maximum possible expansion
     char *dest = new char[dest_len];
-    const size_t used = c_escape_string(src.data(), src.length(), dest, dest_len);
+    const size_t used = c_escape_string(src.data(), src.length(), dest, dest_len, always_escape);
     std::string s(dest, used);
     delete[] dest;
     return s;

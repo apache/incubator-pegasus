@@ -17,6 +17,7 @@ struct shell_context
     std::vector<dsn::rpc_address> meta_list;
     dsn::replication::replication_ddl_client *ddl_client;
     pegasus::pegasus_client *pg_client;
+    bool escape_all;
 };
 
 struct arguments

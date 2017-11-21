@@ -58,16 +58,23 @@ bool buf2int64(const char *buffer, int length, int64_t &result)
     return true;
 }
 
-size_t c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len)
+size_t
+c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len, bool always_escape)
 {
     const char *src_end = src + src_len;
     size_t used = 0;
 
     for (; src < src_end; src++) {
+        unsigned char c = *src;
+        if (always_escape) {
+            if (dest_len - used < 5) // space for four-character escape + \0
+                return (size_t)-1;
+            snprintf(dest + used, 5, "\\x%02X", c);
+            used += 4;
+            continue;
+        }
         if (dest_len - used < 2) // space for two-character escape
             return (size_t)-1;
-
-        unsigned char c = *src;
         switch (c) {
         case '\n':
             dest[used++] = '\\';
