@@ -565,6 +565,25 @@ inline bool process_escape_all(command_executor *e, shell_context *sc, arguments
     }
 }
 
+inline bool process_timeout(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc == 1) {
+        fprintf(stderr, "Current timeout: %d ms.\n", sc->timeout_ms);
+        return true;
+    } else if (args.argc == 2) {
+        int timeout = atoi(args.argv[1]);
+        if (timeout <= 0) {
+            fprintf(stderr, "ERROR: invalid timeout %s\n", args.argv[2]);
+            return false;
+        }
+        sc->timeout_ms = timeout;
+        fprintf(stderr, "OK\n");
+        return true;
+    } else {
+        return false;
+    }
+}
+
 inline bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3) {
@@ -644,7 +663,7 @@ inline bool get_value(command_executor *e, shell_context *sc, arguments args)
     std::string value;
 
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->get(hash_key, sort_key, value, 5000, &info);
+    int ret = sc->pg_client->get(hash_key, sort_key, value, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         if (ret == pegasus::PERR_NOT_FOUND) {
             fprintf(stderr, "Not found\n");
@@ -681,7 +700,7 @@ inline bool multi_get_value(command_executor *e, shell_context *sc, arguments ar
     std::map<std::string, std::string> kvs;
 
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->multi_get(hash_key, sort_keys, kvs, -1, -1, 5000, &info);
+    int ret = sc->pg_client->multi_get(hash_key, sort_keys, kvs, -1, -1, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK && ret != pegasus::PERR_INCOMPLETE) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -715,7 +734,7 @@ inline bool multi_get_sortkeys(command_executor *e, shell_context *sc, arguments
     std::set<std::string> sort_keys;
 
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->multi_get_sortkeys(hash_key, sort_keys, -1, -1, 5000, &info);
+    int ret = sc->pg_client->multi_get_sortkeys(hash_key, sort_keys, -1, -1, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK && ret != pegasus::PERR_INCOMPLETE) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -750,7 +769,7 @@ inline bool exist(command_executor *e, shell_context *sc, arguments args)
     if (!unescape_str(sort_key))
         return true;
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->exist(hash_key, sort_key, 5000, &info);
+    int ret = sc->pg_client->exist(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         if (ret == pegasus::PERR_NOT_FOUND) {
             fprintf(stderr, "False\n");
@@ -779,7 +798,7 @@ inline bool sortkey_count(command_executor *e, shell_context *sc, arguments args
         return true;
     int64_t count;
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->sortkey_count(hash_key, count, 5000, &info);
+    int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -817,7 +836,7 @@ inline bool set_value(command_executor *e, shell_context *sc, arguments args)
     }
 
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->set(hash_key, sort_key, value, 5000, ttl, &info);
+    int ret = sc->pg_client->set(hash_key, sort_key, value, sc->timeout_ms, ttl, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -857,7 +876,7 @@ inline bool multi_set_value(command_executor *e, shell_context *sc, arguments ar
     }
     pegasus::pegasus_client::internal_info info;
 
-    int ret = sc->pg_client->multi_set(hash_key, kvs, 5000, 0, &info);
+    int ret = sc->pg_client->multi_set(hash_key, kvs, sc->timeout_ms, 0, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -885,7 +904,7 @@ inline bool delete_value(command_executor *e, shell_context *sc, arguments args)
     if (!unescape_str(sort_key))
         return true;
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->del(hash_key, sort_key, 5000, &info);
+    int ret = sc->pg_client->del(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {
@@ -917,7 +936,7 @@ inline bool multi_del_value(command_executor *e, shell_context *sc, arguments ar
 
     pegasus::pegasus_client::internal_info info;
     int64_t deleted_count;
-    int ret = sc->pg_client->multi_del(hash_key, sort_keys, deleted_count, 5000, &info);
+    int ret = sc->pg_client->multi_del(hash_key, sort_keys, deleted_count, sc->timeout_ms, &info);
     if (ret == pegasus::PERR_OK) {
         fprintf(stderr, "%" PRId64 " key-value pairs deleted.\n", deleted_count);
     } else if (ret == pegasus::PERR_INCOMPLETE) {
@@ -948,7 +967,7 @@ inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
         return true;
     int ttl_seconds;
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->ttl(hash_key, sort_key, ttl_seconds, 5000, &info);
+    int ret = sc->pg_client->ttl(hash_key, sort_key, ttl_seconds, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         if (ret == pegasus::PERR_NOT_FOUND) {
             fprintf(stderr, "Not found\n");
@@ -999,7 +1018,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     int32_t max_count = 0x7FFFFFFF;
     bool detailed = false;
     FILE *file = stderr;
-    int32_t timeout_ms = 5000;
+    int32_t timeout_ms = sc->timeout_ms;
 
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"count", required_argument, 0, 'n'},
@@ -1091,6 +1110,9 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                         info.server.c_str());
             }
         }
+    }
+
+    if (scanner) {
         delete scanner;
     }
 
@@ -1098,7 +1120,10 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         fclose(file);
     }
 
-    fprintf(stderr, "\n%d key-value pairs got.\n", i);
+    if (file == stderr && i > 0) {
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "%d key-value pairs got.\n", i);
     return true;
 }
 
@@ -1106,6 +1131,7 @@ inline bool scan_all(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"count", required_argument, 0, 'n'},
+                                           {"partition", required_argument, 0, 'p'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -1113,13 +1139,14 @@ inline bool scan_all(command_executor *e, shell_context *sc, arguments args)
     int32_t max_count = 0x7FFFFFFF;
     bool detailed = false;
     FILE *file = stderr;
-    int32_t timeout_ms = 5000;
+    int32_t timeout_ms = sc->timeout_ms;
+    int32_t partition = -1;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dn:t:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "dn:p:t:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1128,13 +1155,19 @@ inline bool scan_all(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'n':
             if ((max_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as max_count integer failed\n", optarg);
+                fprintf(stderr, "parse %s as count integer failed\n", optarg);
+                return false;
+            }
+            break;
+        case 'p':
+            if (!pegasus::utils::buf2int(optarg, strlen(optarg), partition)) {
+                fprintf(stderr, "parse %s as partition integer failed\n", optarg);
                 return false;
             }
             break;
         case 't':
             if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as %s integer failed\n", optarg, "timeout_ms");
+                fprintf(stderr, "parse %s as timeout_ms integer failed\n", optarg);
                 return false;
             }
             break;
@@ -1154,20 +1187,34 @@ inline bool scan_all(command_executor *e, shell_context *sc, arguments args)
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
-    int ret = sc->pg_client->get_unordered_scanners(1, options, scanners);
+    int ret = sc->pg_client->get_unordered_scanners(10000, options, scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(file, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
         if (file != stderr) {
             fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
         }
+    } else if (partition >= 0 && (size_t)partition > scanners.size()) {
+        fprintf(file, "ERROR: invalid partition %d\n", partition);
+        if (file != stderr) {
+            fprintf(stderr, "ERROR: invalid partition %d\n", partition);
+        }
     } else {
-        std::string hash_key;
-        std::string sort_key;
-        std::string value;
-        pegasus::pegasus_client::internal_info info;
-        for (; i < max_count && !(ret = scanners[0]->next(hash_key, sort_key, value, &info)); i++) {
-            if (detailed) {
-                fprintf(file,
+
+        fprintf(stderr,
+                "Partition: %s\n\n",
+                partition >= 0 ? boost::lexical_cast<std::string>(partition).c_str() : "all");
+        for (int j = 0; j < scanners.size(); j++) {
+            if (partition >= 0 && partition != j)
+                continue;
+            std::string hash_key;
+            std::string sort_key;
+            std::string value;
+            pegasus::pegasus_client::internal_info info;
+            pegasus::pegasus_client::pegasus_scanner *scanner = scanners[j];
+            for (; i < max_count && !(ret = scanner->next(hash_key, sort_key, value, &info)); i++) {
+                if (detailed) {
+                    fprintf(
+                        file,
                         "\"%s\" : \"%s\" => \"%s\" {app_id=%d, pratition_index=%d, server=%s}\n",
                         pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
                         pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
@@ -1175,38 +1222,45 @@ inline bool scan_all(command_executor *e, shell_context *sc, arguments args)
                         info.app_id,
                         info.partition_index,
                         info.server.c_str());
-            } else {
-                fprintf(file,
-                        "\"%s\" : \"%s\" => \"%s\"\n",
-                        pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
-                        pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
-                        pegasus::utils::c_escape_string(value, sc->escape_all).c_str());
+                } else {
+                    fprintf(file,
+                            "\"%s\" : \"%s\" => \"%s\"\n",
+                            pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
+                            pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
+                            pegasus::utils::c_escape_string(value, sc->escape_all).c_str());
+                }
             }
-        }
-        if (ret != pegasus::PERR_SCAN_COMPLETE && ret != pegasus::PERR_OK) {
-            fprintf(file,
-                    "ERROR: %s {app_id=%d, pratition_index=%d, server=%s}\n",
-                    sc->pg_client->get_error_string(ret),
-                    info.app_id,
-                    info.partition_index,
-                    info.server.c_str());
-            if (file != stderr) {
-                fprintf(stderr,
+            if (ret != pegasus::PERR_SCAN_COMPLETE && ret != pegasus::PERR_OK) {
+                fprintf(file,
                         "ERROR: %s {app_id=%d, pratition_index=%d, server=%s}\n",
                         sc->pg_client->get_error_string(ret),
                         info.app_id,
                         info.partition_index,
                         info.server.c_str());
+                if (file != stderr) {
+                    fprintf(stderr,
+                            "ERROR: %s {app_id=%d, pratition_index=%d, server=%s}\n",
+                            sc->pg_client->get_error_string(ret),
+                            info.app_id,
+                            info.partition_index,
+                            info.server.c_str());
+                }
             }
         }
-        delete scanners[0];
+    }
+
+    for (auto scanner : scanners) {
+        delete scanner;
     }
 
     if (file != stderr) {
         fclose(file);
     }
 
-    fprintf(stderr, "\n%d key-value pairs got.\n", i);
+    if (file == stderr && i > 0) {
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "%d key-value pairs got.\n", i);
     return true;
 }
 
@@ -1223,7 +1277,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     std::string target_app_name;
     int max_split_count = 100000000;
     int max_batch_count = 500;
-    int timeout_ms = 5000;
+    int timeout_ms = sc->timeout_ms;
 
     optind = 0;
     while (true) {
@@ -1414,7 +1468,7 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
     bool force = false;
     int max_split_count = 100000000;
     int max_batch_count = 500;
-    int timeout_ms = 5000;
+    int timeout_ms = sc->timeout_ms;
 
     optind = 0;
     while (true) {
@@ -1574,7 +1628,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     int max_split_count = 100000000;
     int max_batch_count = 500;
-    int timeout_ms = 5000;
+    int timeout_ms = sc->timeout_ms;
     bool stat_size = false;
 
     optind = 0;

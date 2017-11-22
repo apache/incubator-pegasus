@@ -42,8 +42,6 @@ info_collector::info_collector()
     _shell_context.current_cluster_name = _cluster_name;
     _shell_context.meta_list = meta_servers;
     _shell_context.ddl_client = new replication_ddl_client(meta_servers);
-    _shell_context.pg_client = nullptr;
-    _shell_context.escape_all = false;
 
     _app_stat_interval_seconds = (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
                                                                        "app_stat_interval_seconds",

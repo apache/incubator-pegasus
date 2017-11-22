@@ -100,6 +100,12 @@ command_executor commands[] = {
         process_escape_all,
     },
     {
+        "timeout",
+        "default timeout in milliseconds for read/write operations",
+        "[time_in_ms]",
+        process_timeout,
+    },
+    {
         "hash",
         "calculate the hash result for some hash key",
         "<hash_key> <sort_key>",
@@ -159,7 +165,7 @@ command_executor commands[] = {
         "scan_all",
         "scan among all hash_keys",
         "-d|--detailed [-n|--count <max_kv_count>] [-o|--output <file_name>] "
-        "[-t|--timeout_ms <num>]",
+        "[-p|--partition <num>] [-t|--timeout_ms <num>]",
         data_operations,
     },
     {
@@ -337,7 +343,6 @@ void initialize(int argc, char **argv)
         global_context.meta_list, section.c_str(), key.c_str());
     global_context.ddl_client =
         new dsn::replication::replication_ddl_client(global_context.meta_list);
-    global_context.escape_all = false;
 
     register_all_commands();
 }

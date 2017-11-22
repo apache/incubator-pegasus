@@ -18,6 +18,10 @@ struct shell_context
     dsn::replication::replication_ddl_client *ddl_client;
     pegasus::pegasus_client *pg_client;
     bool escape_all;
+    int timeout_ms;
+    shell_context() : ddl_client(nullptr), pg_client(nullptr), escape_all(false), timeout_ms(5000)
+    {
+    }
 };
 
 struct arguments
