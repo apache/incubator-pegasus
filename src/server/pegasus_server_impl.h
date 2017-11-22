@@ -187,8 +187,6 @@ private:
     ::dsn::perf_counter_ _pfc_multi_put_qps;
     ::dsn::perf_counter_ _pfc_remove_qps;
     ::dsn::perf_counter_ _pfc_multi_remove_qps;
-    ::dsn::perf_counter_ _pfc_sst_count;
-    ::dsn::perf_counter_ _pfc_sst_size;
 
     ::dsn::perf_counter_ _pfc_get_latency;
     ::dsn::perf_counter_ _pfc_multi_get_latency;
@@ -197,6 +195,10 @@ private:
     ::dsn::perf_counter_ _pfc_multi_put_latency;
     ::dsn::perf_counter_ _pfc_remove_latency;
     ::dsn::perf_counter_ _pfc_multi_remove_latency;
+
+    ::dsn::perf_counter_ _pfc_recent_expire_count;
+    ::dsn::perf_counter_ _pfc_sst_count;
+    ::dsn::perf_counter_ _pfc_sst_size;
 };
 }
 } // namespace

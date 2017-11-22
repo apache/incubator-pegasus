@@ -107,6 +107,7 @@ void info_collector::on_app_stat()
             counters->remove_qps.set(row.remove_qps);
             counters->multi_remove_qps.set(row.multi_remove_qps);
             counters->scan_qps.set(row.scan_qps);
+            counters->recent_expire_count.set(row.recent_expire_count);
             counters->storage_mb.set(row.storage_mb);
             counters->storage_count.set(row.storage_count);
             counters->read_qps.set(read_qps[i]);

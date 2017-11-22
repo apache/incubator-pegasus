@@ -227,12 +227,20 @@ pegasus_server_impl::pegasus_server_impl(dsn_gpid gpid)
                                    COUNTER_TYPE_NUMBER_PERCENTILES,
                                    "statistic the latency of MULTI_REMOVE request");
 
+    snprintf(buf, 255, "recent.expire.count@%d.%d", gpid.u.app_id, gpid.u.partition_index);
+    _pfc_recent_expire_count.init("app.pegasus",
+                                  buf,
+                                  COUNTER_TYPE_VOLATILE_NUMBER,
+                                  "statistic the recent expired value read count");
+
     snprintf(buf, 255, "disk.storage.sst.count@%d.%d", gpid.u.app_id, gpid.u.partition_index);
     _pfc_sst_count.init(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
+
     snprintf(buf, 255, "disk.storage.sst(MB)@%d.%d", gpid.u.app_id, gpid.u.partition_index);
     _pfc_sst_size.init(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
+
     updating_rocksdb_sstsize();
 }
 
@@ -692,6 +700,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     if (status.ok()) {
         uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, *value);
         if (expire_ts > 0 && expire_ts <= ::pegasus::utils::epoch_now()) {
+            _pfc_recent_expire_count.increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired", _replica_name.c_str());
             }
@@ -742,6 +751,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     int32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
+    uint64_t expire_count = 0;
 
     if (request.sort_keys.empty()) {
         // scan
@@ -763,6 +773,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 count++;
                 auto &kv = resp.kvs.back();
                 size += kv.key.length() + kv.value.length();
+            } else {
+                expire_count++;
             }
             it->Next();
         }
@@ -809,6 +821,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             if (status.ok()) {
                 uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, *value);
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
+                    expire_count++;
                     if (_verbose_log) {
                         derror("%s: rocksdb data expired for multi get", _replica_name.c_str());
                     }
@@ -863,6 +876,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
+    if (expire_count > 0) {
+        _pfc_recent_expire_count.add(expire_count);
+    }
     _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
     reply(resp);
 }
@@ -889,9 +905,22 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(options));
     it->Seek(start);
     resp.count = 0;
+    uint32_t epoch_now = ::pegasus::utils::epoch_now();
+    uint64_t expire_count = 0;
     while (it->Valid()) {
-        resp.count++;
+        uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, it->value());
+        if (expire_ts > 0 && expire_ts <= epoch_now) {
+            expire_count++;
+            if (_verbose_log) {
+                derror("%s: rocksdb data expired for sortkey count", _replica_name.c_str());
+            }
+        } else {
+            resp.count++;
+        }
         it->Next();
+    }
+    if (expire_count > 0) {
+        _pfc_recent_expire_count.add(expire_count);
     }
 
     resp.error = it->status().code();
@@ -934,6 +963,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     if (status.ok()) {
         expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
         if (expire_ts > 0 && expire_ts <= now_ts) {
+            _pfc_recent_expire_count.increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired", _replica_name.c_str());
             }
@@ -993,6 +1023,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     bool complete = false;
     bool exclusive = !args.start_inclusive;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
+    uint64_t expire_count = 0;
     for (int i = 0; i < args.batch_size; i++, it->Next()) {
         if (!it->Valid() || it->key().compare(stop) >= 0) {
             if (!it->status().ok()) {
@@ -1015,7 +1046,9 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                            it->status().ToString().c_str());
                 }
             } else if (args.stop_inclusive && it->Valid() && !it->key().compare(stop)) {
-                append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now);
+                if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+                    expire_count++;
+                }
             }
             complete = true;
             break;
@@ -1027,7 +1060,12 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
             }
         }
 
-        append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now);
+        if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+            expire_count++;
+        }
+    }
+    if (expire_count > 0) {
+        _pfc_recent_expire_count.add(expire_count);
     }
     resp.error = it->status().code();
 
@@ -1074,6 +1112,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &args,
         const rocksdb::Slice &stop = context->stop;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
+        uint64_t expire_count = 0;
         for (int i = 0; i < batch_size; i++, it->Next()) {
             if (!it->Valid() || it->key().compare(stop) >= 0) {
                 if (!it->status().ok()) {
@@ -1094,12 +1133,19 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &args,
                                it->status().ToString().c_str());
                     }
                 } else if (context->stop_inclusive && it->Valid() && !it->key().compare(stop)) {
-                    append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now);
+                    if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+                        expire_count++;
+                    }
                 }
                 complete = true;
                 break;
             }
-            append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now);
+            if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+                expire_count++;
+            }
+        }
+        if (expire_count > 0) {
+            _pfc_recent_expire_count.add(expire_count);
         }
         if (complete) {
             resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;

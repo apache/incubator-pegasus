@@ -2669,8 +2669,9 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     out << std::setw(15) << std::right << "GET" << std::setw(15) << std::right << "MULTI_GET"
         << std::setw(15) << std::right << "PUT" << std::setw(15) << std::right << "MULTI_PUT"
         << std::setw(15) << std::right << "REMOVE" << std::setw(15) << std::right << "MULTI_REMOVE"
-        << std::setw(15) << std::right << "SCAN" << std::setw(15) << std::right << "storage(MB)"
-        << std::setw(15) << std::right << "sst_count" << std::endl;
+        << std::setw(15) << std::right << "SCAN" << std::setw(15) << std::right << "expire_count"
+        << std::setw(15) << std::right << "storage(MB)" << std::setw(15) << std::right
+        << "sst_count" << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -2682,6 +2683,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.remove_qps += row.remove_qps;
         sum.multi_remove_qps += row.multi_remove_qps;
         sum.scan_qps += row.scan_qps;
+        sum.recent_expire_count += row.recent_expire_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
     }
@@ -2702,7 +2704,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(remove_qps);
         PRINT_QPS(multi_remove_qps);
         PRINT_QPS(scan_qps);
-        out << std::setw(15) << std::right << (int64_t)row.storage_mb << std::setw(15) << std::right
+        out << std::setw(15) << std::right << (int64_t)row.recent_expire_count << std::setw(15)
+            << std::right << (int64_t)row.storage_mb << std::setw(15) << std::right
             << (int64_t)row.storage_count << std::endl;
     }
 #undef PRINT_QPS

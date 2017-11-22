@@ -282,6 +282,7 @@ struct row_data
     double remove_qps;
     double multi_remove_qps;
     double scan_qps;
+    double recent_expire_count;
     double storage_mb;
     double storage_count;
     row_data()
@@ -292,6 +293,7 @@ struct row_data
           remove_qps(0),
           multi_remove_qps(0),
           scan_qps(0),
+          recent_expire_count(0),
           storage_mb(0),
           storage_count(0)
     {
@@ -314,6 +316,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.multi_remove_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
+    else if (counter_name == "recent.expire.count")
+        row.recent_expire_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")

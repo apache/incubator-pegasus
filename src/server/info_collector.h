@@ -35,6 +35,7 @@ public:
         ::dsn::perf_counter_ remove_qps;
         ::dsn::perf_counter_ multi_remove_qps;
         ::dsn::perf_counter_ scan_qps;
+        ::dsn::perf_counter_ recent_expire_count;
         ::dsn::perf_counter_ storage_mb;
         ::dsn::perf_counter_ storage_count;
         ::dsn::perf_counter_ read_qps;
