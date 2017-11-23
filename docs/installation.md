@@ -60,6 +60,15 @@ Please make sure you install the proper version of GCC, CMake and Boost.
    ./run.sh build -b /your/boost/installation/path
    ```
 
+Generally, the build process of Pegasus consists of 4 parts:
+
+1. Download the thirdparty dependencies to "rdsn/thirdparty" and build them, and the output headers/libraries/binaries are installed in "rdsn/thirdparty/output".
+2. build the rdsn project, which is a dependency of our KV storage. The output headers/libraries/binaries are installed in "rdsn/builder/output". The build script will create a symbolic link "DSN_ROOT" in the pegasus project root.
+3. build rocksdb in "rocksdb" dir, which is modified from [facebook/rocksdb](https://github.com/facebook/rocksdb)
+4. build pegasus's KV-layer in "src".
+
+**Please make sure the thirdparty are successfully downloaded and built before subsequent parts**.
+
 ## Run in standalone mode
 
 You can play with pegasus with a **onebox** cluster:
