@@ -233,6 +233,12 @@ pegasus_server_impl::pegasus_server_impl(dsn_gpid gpid)
                                   COUNTER_TYPE_VOLATILE_NUMBER,
                                   "statistic the recent expired value read count");
 
+    snprintf(buf, 255, "recent.filter.count@%d.%d", gpid.u.app_id, gpid.u.partition_index);
+    _pfc_recent_filter_count.init("app.pegasus",
+                                  buf,
+                                  COUNTER_TYPE_VOLATILE_NUMBER,
+                                  "statistic the recent filtered value read count");
+
     snprintf(buf, 255, "disk.storage.sst.count@%d.%d", gpid.u.app_id, gpid.u.partition_index);
     _pfc_sst_count.init(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
@@ -748,34 +754,85 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     resp.partition_index = id.u.partition_index;
     resp.server = _primary_address;
 
+    if (!is_filter_type_supported(request.sort_key_filter_type)) {
+        derror("%s: filter type %d not supported for multi get",
+               _replica_name.c_str(),
+               request.sort_key_filter_type);
+        resp.error = rocksdb::Status::kInvalidArgument;
+        _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
+        reply(resp);
+        return;
+    }
+
     int32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     uint64_t expire_count = 0;
+    uint64_t filter_count = 0;
 
     if (request.sort_keys.empty()) {
-        // scan
         ::dsn::blob start_key, stop_key;
-        pegasus_generate_key(start_key, request.hash_key, ::dsn::blob());
-        pegasus_generate_next_blob(stop_key, request.hash_key);
+        pegasus_generate_key(start_key, request.hash_key, request.start_sortkey);
+        bool stop_inclusive;
+        if (request.stop_sortkey.length() == 0) {
+            pegasus_generate_next_blob(stop_key, request.hash_key);
+            stop_inclusive = false;
+        } else {
+            pegasus_generate_key(stop_key, request.hash_key, request.stop_sortkey);
+            stop_inclusive = request.stop_inclusive;
+        }
+
         rocksdb::Slice start(start_key.data(), start_key.length());
         rocksdb::Slice stop(stop_key.data(), stop_key.length());
-        rocksdb::ReadOptions options = _rd_opts;
-        options.iterate_upper_bound = &stop;
-        std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(options));
+        std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
         it->Seek(start);
-
+        bool complete = false;
+        bool first_exclusive = !request.start_inclusive;
         int32_t count = 0;
         int32_t size = 0;
         while (count < max_kv_count && size < max_kv_size && it->Valid()) {
-            if (append_key_value_for_multi_get(
-                    resp.kvs, it->key(), it->value(), epoch_now, request.no_value)) {
+            // check stop sort key
+            int c = it->key().compare(stop);
+            if (c > 0 || (c == 0 && !stop_inclusive)) {
+                // out of range
+                complete = true;
+                break;
+            }
+
+            // check start sort key
+            if (first_exclusive) {
+                first_exclusive = false;
+                if (it->key().compare(start) == 0) {
+                    // discard start_sortkey
+                    it->Next();
+                    continue;
+                }
+            }
+
+            // extract value
+            int r = append_key_value_for_multi_get(resp.kvs,
+                                                   it->key(),
+                                                   it->value(),
+                                                   request.sort_key_filter_type,
+                                                   request.sort_key_filter_pattern,
+                                                   epoch_now,
+                                                   request.no_value);
+            if (r == 1) {
                 count++;
                 auto &kv = resp.kvs.back();
                 size += kv.key.length() + kv.value.length();
-            } else {
+            } else if (r == 2) {
                 expire_count++;
+            } else { // r == 3
+                filter_count++;
             }
+
+            if (c == 0) {
+                // if arrived to the last position
+                complete = true;
+                break;
+            }
+
             it->Next();
         }
 
@@ -794,7 +851,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
-        } else if (it->Valid()) {
+        } else if (it->Valid() && !complete) {
             // scan not completed
             resp.error = rocksdb::Status::kIncomplete;
         }
@@ -879,6 +936,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     if (expire_count > 0) {
         _pfc_recent_expire_count.add(expire_count);
     }
+    if (filter_count > 0) {
+        _pfc_recent_filter_count.add(filter_count);
+    }
+
     _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
     reply(resp);
 }
@@ -1003,10 +1064,12 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
 }
 
 DEFINE_TASK_CODE(LOCAL_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &args,
+void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &request,
                                          ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
     dassert(_is_open, "");
+    _pfc_scan_qps.increment();
+    uint64_t start_time = dsn_now_ns();
 
     ::dsn::apps::scan_response resp;
     auto id = get_gpid();
@@ -1014,85 +1077,140 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     resp.partition_index = id.u.partition_index;
     resp.server = _primary_address;
 
-    rocksdb::Slice start(args.start_key.data(), args.start_key.length());
-    rocksdb::Slice stop(args.stop_key.data(), args.stop_key.length());
-    resp.kvs.reserve(args.batch_size);
+    if (!is_filter_type_supported(request.hash_key_filter_type)) {
+        derror("%s: filter type %d not supported for scan",
+               _replica_name.c_str(),
+               request.hash_key_filter_type);
+        resp.error = rocksdb::Status::kInvalidArgument;
+        reply(resp);
+        return;
+    }
 
-    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(rocksdb::ReadOptions()));
+    if (!is_filter_type_supported(request.sort_key_filter_type)) {
+        derror("%s: filter type %d not supported for scan",
+               _replica_name.c_str(),
+               request.sort_key_filter_type);
+        resp.error = rocksdb::Status::kInvalidArgument;
+        reply(resp);
+        return;
+    }
+
+    rocksdb::Slice start(request.start_key.data(), request.start_key.length());
+    rocksdb::Slice stop(request.stop_key.data(), request.stop_key.length());
+    resp.kvs.reserve(request.batch_size);
+
+    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
     it->Seek(start);
     bool complete = false;
-    bool exclusive = !args.start_inclusive;
+    bool first_exclusive = !request.start_inclusive;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     uint64_t expire_count = 0;
-    for (int i = 0; i < args.batch_size; i++, it->Next()) {
-        if (!it->Valid() || it->key().compare(stop) >= 0) {
-            if (!it->status().ok()) {
-                // error occur
-                if (_verbose_log) {
-                    derror(
-                        "%s: rocksdb get_scanner failed: start_key = %s (%s), stop_key = %s (%s), "
-                        "batch_size = %d, read_count = %d, error = %s",
-                        _replica_name.c_str(),
-                        start.ToString(true).c_str(),
-                        args.start_inclusive ? "inclusive" : "exclusive",
-                        stop.ToString(true).c_str(),
-                        args.stop_inclusive ? "inclusive" : "exclusive",
-                        args.batch_size,
-                        i,
-                        it->status().ToString().c_str());
-                } else {
-                    derror("%s: rocksdb get_scanner failed: error = %s",
-                           _replica_name.c_str(),
-                           it->status().ToString().c_str());
-                }
-            } else if (args.stop_inclusive && it->Valid() && !it->key().compare(stop)) {
-                if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
-                    expire_count++;
-                }
-            }
+    uint64_t filter_count = 0;
+    int32_t count = 0;
+    while (count < request.batch_size && it->Valid()) {
+        int c = it->key().compare(stop);
+        if (c > 0 || (c == 0 && !request.stop_inclusive)) {
+            // out of range
             complete = true;
             break;
-        } else if (exclusive && i == 0) {
-            exclusive = false;
-            if (!it->key().compare(start)) {
-                i--;
+        }
+
+        if (first_exclusive) {
+            first_exclusive = false;
+            if (it->key().compare(start) == 0) {
+                // discard start_sortkey
+                it->Next();
                 continue;
             }
         }
 
-        if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+        int r = append_key_value_for_scan(resp.kvs,
+                                          it->key(),
+                                          it->value(),
+                                          request.hash_key_filter_type,
+                                          request.hash_key_filter_pattern,
+                                          request.sort_key_filter_type,
+                                          request.sort_key_filter_pattern,
+                                          epoch_now,
+                                          request.no_value);
+        if (r == 1) {
+            count++;
+        } else if (r == 2) {
             expire_count++;
+        } else { // r == 3
+            filter_count++;
         }
-    }
-    if (expire_count > 0) {
-        _pfc_recent_expire_count.add(expire_count);
-    }
-    resp.error = it->status().code();
 
-    if (complete) {
-        resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
-    } else {
+        if (c == 0) {
+            // seek to the last position
+            complete = true;
+            break;
+        }
+
+        it->Next();
+    }
+
+    resp.error = it->status().code();
+    if (!it->status().ok()) {
+        // error occur
+        if (_verbose_log) {
+            derror("%s: rocksdb get_scanner failed: start_key = %s (%s), stop_key = %s (%s), "
+                   "batch_size = %d, read_count = %d, error = %s",
+                   _replica_name.c_str(),
+                   start.ToString(true).c_str(),
+                   request.start_inclusive ? "inclusive" : "exclusive",
+                   stop.ToString(true).c_str(),
+                   request.stop_inclusive ? "inclusive" : "exclusive",
+                   request.batch_size,
+                   count,
+                   it->status().ToString().c_str());
+        } else {
+            derror("%s: rocksdb get_scanner failed: error = %s",
+                   _replica_name.c_str(),
+                   it->status().ToString().c_str());
+        }
+        resp.kvs.clear();
+    } else if (it->Valid() && !complete) {
+        // scan not completed
         std::unique_ptr<pegasus_scan_context> context(
             new pegasus_scan_context(std::move(it),
                                      std::string(stop.data(), stop.size()),
-                                     args.stop_inclusive,
-                                     args.batch_size));
+                                     request.stop_inclusive,
+                                     request.hash_key_filter_type,
+                                     std::string(request.hash_key_filter_pattern.data(),
+                                                 request.hash_key_filter_pattern.length()),
+                                     request.sort_key_filter_type,
+                                     std::string(request.sort_key_filter_pattern.data(),
+                                                 request.sort_key_filter_pattern.length()),
+                                     request.batch_size,
+                                     request.no_value));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
-        // if the context is used, it will be fetched and re-put into cache, which will change the
-        // handle,
+        // if the context is used, it will be fetched and re-put into cache,
+        // which will change the handle,
         // then the delayed task will fetch null context by old handle, and do nothing.
         ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
                                 this,
                                 [this, handle]() { _context_cache.fetch(handle); },
                                 0,
                                 std::chrono::minutes(5));
+    } else {
+        // scan completed
+        resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
     }
 
+    if (expire_count > 0) {
+        _pfc_recent_expire_count.add(expire_count);
+    }
+    if (filter_count > 0) {
+        _pfc_recent_filter_count.add(filter_count);
+    }
+
+    _pfc_scan_latency.set(dsn_now_ns() - start_time);
     reply(resp);
 }
 
-void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &args,
+void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                                   ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
     dassert(_is_open, "");
@@ -1105,51 +1223,78 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &args,
     resp.partition_index = id.u.partition_index;
     resp.server = _primary_address;
 
-    std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(args.context_id);
+    std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
         rocksdb::Iterator *it = context->iterator.get();
         int32_t batch_size = context->batch_size;
         const rocksdb::Slice &stop = context->stop;
+        bool stop_inclusive = context->stop_inclusive;
+        ::dsn::apps::filter_type::type hash_key_filter_type = context->hash_key_filter_type;
+        const ::dsn::blob &hash_key_filter_pattern = context->hash_key_filter_pattern;
+        ::dsn::apps::filter_type::type sort_key_filter_type = context->hash_key_filter_type;
+        const ::dsn::blob &sort_key_filter_pattern = context->hash_key_filter_pattern;
+        bool no_value = context->no_value;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
         uint64_t expire_count = 0;
-        for (int i = 0; i < batch_size; i++, it->Next()) {
-            if (!it->Valid() || it->key().compare(stop) >= 0) {
-                if (!it->status().ok()) {
-                    // error occur
-                    if (_verbose_log) {
-                        derror("%s: rocksdb on_scan failed: context_id= %lld, stop_key = %s (%s),, "
-                               "batch_size = %d, read_count = %d, error = %s",
-                               _replica_name.c_str(),
-                               args.context_id,
-                               stop.ToString(true).c_str(),
-                               context->stop_inclusive ? "inclusive" : "exclusieve",
-                               context->batch_size,
-                               i,
-                               it->status().ToString().c_str());
-                    } else {
-                        derror("%s: rocksdb get_scanner failed: error = %s",
-                               _replica_name.c_str(),
-                               it->status().ToString().c_str());
-                    }
-                } else if (context->stop_inclusive && it->Valid() && !it->key().compare(stop)) {
-                    if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
-                        expire_count++;
-                    }
-                }
+        uint64_t filter_count = 0;
+        int32_t count = 0;
+
+        while (count < batch_size && it->Valid()) {
+            int c = it->key().compare(stop);
+            if (c > 0 || (c == 0 && !stop_inclusive)) {
+                // out of range
                 complete = true;
                 break;
             }
-            if (!append_key_value_for_scan(resp.kvs, it->key(), it->value(), epoch_now)) {
+
+            int r = append_key_value_for_scan(resp.kvs,
+                                              it->key(),
+                                              it->value(),
+                                              hash_key_filter_type,
+                                              hash_key_filter_pattern,
+                                              sort_key_filter_type,
+                                              sort_key_filter_pattern,
+                                              epoch_now,
+                                              no_value);
+            if (r == 1) {
+                count++;
+            } else if (r == 2) {
                 expire_count++;
+            } else { // r == 3
+                filter_count++;
             }
+
+            if (c == 0) {
+                // seek to the last position
+                complete = true;
+                break;
+            }
+
+            it->Next();
         }
-        if (expire_count > 0) {
-            _pfc_recent_expire_count.add(expire_count);
-        }
-        if (complete) {
-            resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
-        } else {
+
+        resp.error = it->status().code();
+        if (!it->status().ok()) {
+            // error occur
+            if (_verbose_log) {
+                derror("%s: rocksdb on_scan failed: context_id= %lld, stop_key = %s (%s),, "
+                       "batch_size = %d, read_count = %d, error = %s",
+                       _replica_name.c_str(),
+                       request.context_id,
+                       stop.ToString(true).c_str(),
+                       stop_inclusive ? "inclusive" : "exclusieve",
+                       batch_size,
+                       count,
+                       it->status().ToString().c_str());
+            } else {
+                derror("%s: rocksdb on_scan failed: error = %s",
+                       _replica_name.c_str(),
+                       it->status().ToString().c_str());
+            }
+            resp.kvs.clear();
+        } else if (it->Valid() && !complete) {
+            // scan not completed
             int64_t handle = _context_cache.put(std::move(context));
             resp.context_id = handle;
             ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
@@ -1157,8 +1302,17 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &args,
                                     [this, handle]() { _context_cache.fetch(handle); },
                                     0,
                                     std::chrono::minutes(5));
+        } else {
+            // scan completed
+            resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
         }
-        resp.error = rocksdb::Status::Code::kOk;
+
+        if (expire_count > 0) {
+            _pfc_recent_expire_count.add(expire_count);
+        }
+        if (filter_count > 0) {
+            _pfc_recent_filter_count.add(filter_count);
+        }
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
     }
@@ -1643,46 +1797,121 @@ private:
     return ::dsn::ERR_OK;
 }
 
-bool pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                                    const rocksdb::Slice &key,
-                                                    const rocksdb::Slice &value,
-                                                    uint32_t epoch_now)
+bool pegasus_server_impl::is_filter_type_supported(::dsn::apps::filter_type::type filter_type)
+{
+    return filter_type >= ::dsn::apps::filter_type::FT_NO_FILTER &&
+           filter_type <= ::dsn::apps::filter_type::FT_MATCH_POSTFIX;
+}
+
+bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
+                                          const ::dsn::blob &filter_pattern,
+                                          const ::dsn::blob &value)
+{
+    if (filter_type == ::dsn::apps::filter_type::FT_NO_FILTER || filter_pattern.length() == 0)
+        return true;
+    if (value.length() < filter_pattern.length())
+        return false;
+    switch (filter_type) {
+    case ::dsn::apps::filter_type::FT_MATCH_ANYWHERE: {
+        // brute force search
+        // TODO: improve it according to
+        //   http://old.blog.phusion.nl/2010/12/06/efficient-substring-searching/
+        const char *a1 = value.data();
+        int l1 = value.length();
+        const char *a2 = filter_pattern.data();
+        int l2 = filter_pattern.length();
+        for (int i = 0; i <= l1 - l2; ++i) {
+            int j = 0;
+            while (j < l2 && a1[i + j] == a2[j])
+                ++j;
+            if (j == l2)
+                return true;
+        }
+        return false;
+    }
+    case ::dsn::apps::filter_type::FT_MATCH_PREFIX:
+        return (memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0);
+    case ::dsn::apps::filter_type::FT_MATCH_POSTFIX:
+        return (memcmp(value.data() + value.length() - filter_pattern.length(),
+                       filter_pattern.data(),
+                       filter_pattern.length()) == 0);
+    default:
+        dassert(false, "unsupported filter type: %d", filter_type);
+    }
+    return false;
+}
+
+int pegasus_server_impl::append_key_value_for_scan(
+    std::vector<::dsn::apps::key_value> &kvs,
+    const rocksdb::Slice &key,
+    const rocksdb::Slice &value,
+    ::dsn::apps::filter_type::type hash_key_filter_type,
+    const ::dsn::blob &hash_key_filter_pattern,
+    ::dsn::apps::filter_type::type sort_key_filter_type,
+    const ::dsn::blob &sort_key_filter_pattern,
+    uint32_t epoch_now,
+    bool no_value)
 {
     uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
     if (expire_ts > 0 && expire_ts <= epoch_now) {
         if (_verbose_log) {
             derror("%s: rocksdb data expired for scan", _replica_name.c_str());
         }
-        return false;
+        return 2;
     }
 
     ::dsn::apps::key_value kv;
 
     // extract raw key
-    std::shared_ptr<char> key_buf(::dsn::make_shared_array<char>(key.size()));
-    ::memcpy(key_buf.get(), key.data(), key.size());
-    kv.key.assign(std::move(key_buf), 0, key.size());
+    ::dsn::blob raw_key(key.data(), 0, key.size());
+    if (hash_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER ||
+        sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER) {
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(raw_key, hash_key, sort_key);
+        if (hash_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
+            !validate_filter(hash_key_filter_type, hash_key_filter_pattern, hash_key)) {
+            if (_verbose_log) {
+                derror("%s: hash key filtered for scan", _replica_name.c_str());
+            }
+            return 3;
+        }
+        if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
+            !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
+            if (_verbose_log) {
+                derror("%s: sort key filtered for scan", _replica_name.c_str());
+            }
+            return 3;
+        }
+    }
+    std::shared_ptr<char> key_buf(::dsn::make_shared_array<char>(raw_key.length()));
+    ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
+    kv.key.assign(std::move(key_buf), 0, raw_key.length());
 
     // extract value
-    std::unique_ptr<std::string> value_buf(new std::string(value.data(), value.size()));
-    pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
+    if (!no_value) {
+        std::unique_ptr<std::string> value_buf(new std::string(value.data(), value.size()));
+        pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
+    }
 
     kvs.emplace_back(kv);
-    return true;
+    return 1;
 }
 
-bool pegasus_server_impl::append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
-                                                         const rocksdb::Slice &key,
-                                                         const rocksdb::Slice &value,
-                                                         uint32_t epoch_now,
-                                                         bool no_value)
+int pegasus_server_impl::append_key_value_for_multi_get(
+    std::vector<::dsn::apps::key_value> &kvs,
+    const rocksdb::Slice &key,
+    const rocksdb::Slice &value,
+    ::dsn::apps::filter_type::type sort_key_filter_type,
+    const ::dsn::blob &sort_key_filter_pattern,
+    uint32_t epoch_now,
+    bool no_value)
 {
     uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
     if (expire_ts > 0 && expire_ts <= epoch_now) {
         if (_verbose_log) {
             derror("%s: rocksdb data expired for multi get", _replica_name.c_str());
         }
-        return false;
+        return 2;
     }
 
     ::dsn::apps::key_value kv;
@@ -1691,6 +1920,13 @@ bool pegasus_server_impl::append_key_value_for_multi_get(std::vector<::dsn::apps
     ::dsn::blob raw_key(key.data(), 0, key.size());
     ::dsn::blob hash_key, sort_key;
     pegasus_restore_key(raw_key, hash_key, sort_key);
+    if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
+        !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
+        if (_verbose_log) {
+            derror("%s: sort key filtered for multi get", _replica_name.c_str());
+        }
+        return 3;
+    }
     std::shared_ptr<char> sort_key_buf(::dsn::make_shared_array<char>(sort_key.length()));
     ::memcpy(sort_key_buf.get(), sort_key.data(), sort_key.length());
     kv.key.assign(std::move(sort_key_buf), 0, sort_key.length());
@@ -1702,7 +1938,7 @@ bool pegasus_server_impl::append_key_value_for_multi_get(std::vector<::dsn::apps
     }
 
     kvs.emplace_back(kv);
-    return true;
+    return 1;
 }
 
 // statistic the count and size of files of this type. return (-1,-1) if failed.

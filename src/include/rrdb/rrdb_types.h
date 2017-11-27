@@ -20,6 +20,19 @@
 namespace dsn {
 namespace apps {
 
+struct filter_type
+{
+    enum type
+    {
+        FT_NO_FILTER = 0,
+        FT_MATCH_ANYWHERE = 1,
+        FT_MATCH_PREFIX = 2,
+        FT_MATCH_POSTFIX = 3
+    };
+};
+
+extern const std::map<int, const char *> _filter_type_VALUES_TO_NAMES;
+
 class update_request;
 
 class update_response;
@@ -661,7 +674,13 @@ typedef struct _multi_get_request__isset
           sort_keys(false),
           max_kv_count(false),
           max_kv_size(false),
-          no_value(false)
+          no_value(false),
+          start_sortkey(false),
+          stop_sortkey(false),
+          start_inclusive(false),
+          stop_inclusive(false),
+          sort_key_filter_type(false),
+          sort_key_filter_pattern(false)
     {
     }
     bool hash_key : 1;
@@ -669,6 +688,12 @@ typedef struct _multi_get_request__isset
     bool max_kv_count : 1;
     bool max_kv_size : 1;
     bool no_value : 1;
+    bool start_sortkey : 1;
+    bool stop_sortkey : 1;
+    bool start_inclusive : 1;
+    bool stop_inclusive : 1;
+    bool sort_key_filter_type : 1;
+    bool sort_key_filter_pattern : 1;
 } _multi_get_request__isset;
 
 class multi_get_request
@@ -678,7 +703,15 @@ public:
     multi_get_request(multi_get_request &&);
     multi_get_request &operator=(const multi_get_request &);
     multi_get_request &operator=(multi_get_request &&);
-    multi_get_request() : max_kv_count(0), max_kv_size(0), no_value(0) {}
+    multi_get_request()
+        : max_kv_count(0),
+          max_kv_size(0),
+          no_value(0),
+          start_inclusive(0),
+          stop_inclusive(0),
+          sort_key_filter_type((filter_type::type)0)
+    {
+    }
 
     virtual ~multi_get_request() throw();
     ::dsn::blob hash_key;
@@ -686,6 +719,12 @@ public:
     int32_t max_kv_count;
     int32_t max_kv_size;
     bool no_value;
+    ::dsn::blob start_sortkey;
+    ::dsn::blob stop_sortkey;
+    bool start_inclusive;
+    bool stop_inclusive;
+    filter_type::type sort_key_filter_type;
+    ::dsn::blob sort_key_filter_pattern;
 
     _multi_get_request__isset __isset;
 
@@ -699,6 +738,18 @@ public:
 
     void __set_no_value(const bool val);
 
+    void __set_start_sortkey(const ::dsn::blob &val);
+
+    void __set_stop_sortkey(const ::dsn::blob &val);
+
+    void __set_start_inclusive(const bool val);
+
+    void __set_stop_inclusive(const bool val);
+
+    void __set_sort_key_filter_type(const filter_type::type val);
+
+    void __set_sort_key_filter_pattern(const ::dsn::blob &val);
+
     bool operator==(const multi_get_request &rhs) const
     {
         if (!(hash_key == rhs.hash_key))
@@ -710,6 +761,18 @@ public:
         if (!(max_kv_size == rhs.max_kv_size))
             return false;
         if (!(no_value == rhs.no_value))
+            return false;
+        if (!(start_sortkey == rhs.start_sortkey))
+            return false;
+        if (!(stop_sortkey == rhs.stop_sortkey))
+            return false;
+        if (!(start_inclusive == rhs.start_inclusive))
+            return false;
+        if (!(stop_inclusive == rhs.stop_inclusive))
+            return false;
+        if (!(sort_key_filter_type == rhs.sort_key_filter_type))
+            return false;
+        if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
             return false;
         return true;
     }
@@ -863,7 +926,12 @@ typedef struct _get_scanner_request__isset
           stop_key(false),
           start_inclusive(false),
           stop_inclusive(false),
-          batch_size(false)
+          batch_size(false),
+          no_value(false),
+          hash_key_filter_type(false),
+          hash_key_filter_pattern(false),
+          sort_key_filter_type(false),
+          sort_key_filter_pattern(false)
     {
     }
     bool start_key : 1;
@@ -871,6 +939,11 @@ typedef struct _get_scanner_request__isset
     bool start_inclusive : 1;
     bool stop_inclusive : 1;
     bool batch_size : 1;
+    bool no_value : 1;
+    bool hash_key_filter_type : 1;
+    bool hash_key_filter_pattern : 1;
+    bool sort_key_filter_type : 1;
+    bool sort_key_filter_pattern : 1;
 } _get_scanner_request__isset;
 
 class get_scanner_request
@@ -880,7 +953,15 @@ public:
     get_scanner_request(get_scanner_request &&);
     get_scanner_request &operator=(const get_scanner_request &);
     get_scanner_request &operator=(get_scanner_request &&);
-    get_scanner_request() : start_inclusive(0), stop_inclusive(0), batch_size(0) {}
+    get_scanner_request()
+        : start_inclusive(0),
+          stop_inclusive(0),
+          batch_size(0),
+          no_value(0),
+          hash_key_filter_type((filter_type::type)0),
+          sort_key_filter_type((filter_type::type)0)
+    {
+    }
 
     virtual ~get_scanner_request() throw();
     ::dsn::blob start_key;
@@ -888,6 +969,11 @@ public:
     bool start_inclusive;
     bool stop_inclusive;
     int32_t batch_size;
+    bool no_value;
+    filter_type::type hash_key_filter_type;
+    ::dsn::blob hash_key_filter_pattern;
+    filter_type::type sort_key_filter_type;
+    ::dsn::blob sort_key_filter_pattern;
 
     _get_scanner_request__isset __isset;
 
@@ -901,6 +987,16 @@ public:
 
     void __set_batch_size(const int32_t val);
 
+    void __set_no_value(const bool val);
+
+    void __set_hash_key_filter_type(const filter_type::type val);
+
+    void __set_hash_key_filter_pattern(const ::dsn::blob &val);
+
+    void __set_sort_key_filter_type(const filter_type::type val);
+
+    void __set_sort_key_filter_pattern(const ::dsn::blob &val);
+
     bool operator==(const get_scanner_request &rhs) const
     {
         if (!(start_key == rhs.start_key))
@@ -912,6 +1008,16 @@ public:
         if (!(stop_inclusive == rhs.stop_inclusive))
             return false;
         if (!(batch_size == rhs.batch_size))
+            return false;
+        if (!(no_value == rhs.no_value))
+            return false;
+        if (!(hash_key_filter_type == rhs.hash_key_filter_type))
+            return false;
+        if (!(hash_key_filter_pattern == rhs.hash_key_filter_pattern))
+            return false;
+        if (!(sort_key_filter_type == rhs.sort_key_filter_type))
+            return false;
+        if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
             return false;
         return true;
     }

@@ -75,6 +75,25 @@ public:
                                  int max_fetch_size = 1000000,
                                  int timeout_milliseconds = 5000) override;
 
+    virtual int multi_get(const std::string &hashkey,
+                          const std::string &start_sortkey,
+                          const std::string &stop_sortkey,
+                          const multi_get_options &options,
+                          std::map<std::string, std::string> &values,
+                          int max_fetch_count = 100,
+                          int max_fetch_size = 1000000,
+                          int timeout_milliseconds = 5000,
+                          internal_info *info = NULL) override;
+
+    virtual void async_multi_get(const std::string &hashkey,
+                                 const std::string &start_sortkey,
+                                 const std::string &stop_sortkey,
+                                 const multi_get_options &options,
+                                 async_multi_get_callback_t &&callback = nullptr,
+                                 int max_fetch_count = 100,
+                                 int max_fetch_size = 1000000,
+                                 int timeout_milliseconds = 5000) override;
+
     virtual int multi_get_sortkeys(const std::string &hashkey,
                                    std::set<std::string> &sortkeys,
                                    int max_fetch_count = 100,

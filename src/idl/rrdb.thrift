@@ -2,6 +2,14 @@ include "dsn.thrift"
 
 namespace cpp dsn.apps
 
+enum filter_type
+{
+    FT_NO_FILTER,
+    FT_MATCH_ANYWHERE,
+    FT_MATCH_PREFIX,
+    FT_MATCH_POSTFIX
+}
+
 struct update_request
 {
     1:dsn.blob      key;
@@ -78,10 +86,16 @@ struct multi_remove_response
 struct multi_get_request
 {
     1:dsn.blob      hash_key;
-    2:list<dsn.blob> sort_keys; // empty means fetch all sortkeys
+    2:list<dsn.blob> sort_keys; // not empty means only fetch specified sortkeys
     3:i32           max_kv_count; // <= 0 means no limit
     4:i32           max_kv_size; // <= 0 means no limit
     5:bool          no_value; // not return value, only return sortkeys
+    6:dsn.blob      start_sortkey;
+    7:dsn.blob      stop_sortkey; // empty means fetch to the last sort key
+    8:bool          start_inclusive;
+    9:bool          stop_inclusive;
+    10:filter_type  sort_key_filter_type;
+    11:dsn.blob     sort_key_filter_pattern;
 }
 
 struct multi_get_response
@@ -106,6 +120,11 @@ struct get_scanner_request
     3:bool      start_inclusive;
     4:bool      stop_inclusive;
     5:i32       batch_size;
+    6:bool      no_value; // not return value, only return sortkeys
+    7:filter_type  hash_key_filter_type;
+    8:dsn.blob     hash_key_filter_pattern;
+    9:filter_type  sort_key_filter_type;
+    10:dsn.blob    sort_key_filter_pattern;
 }
 
 struct scan_request

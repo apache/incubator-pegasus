@@ -64,16 +64,57 @@ public:
         }
     };
 
+    enum filter_type
+    {
+        FT_NO_FILTER = 0,
+        FT_MATCH_ANYWHERE = 1,
+        FT_MATCH_PREFIX = 2,
+        FT_MATCH_POSTFIX = 3
+    };
+
+    struct multi_get_options
+    {
+        bool start_inclusive;
+        bool stop_inclusive;
+        filter_type sort_key_filter_type;
+        std::string sort_key_filter_pattern;
+        bool no_value; // only fetch hash_key and sort_key, but not fetch value
+        multi_get_options()
+            : start_inclusive(true),
+              stop_inclusive(false),
+              sort_key_filter_type(FT_NO_FILTER),
+              no_value(false)
+        {
+        }
+        multi_get_options(const multi_get_options &o)
+            : start_inclusive(o.start_inclusive),
+              stop_inclusive(o.stop_inclusive),
+              sort_key_filter_type(o.sort_key_filter_type),
+              sort_key_filter_pattern(o.sort_key_filter_pattern),
+              no_value(o.no_value)
+        {
+        }
+    };
+
     struct scan_options
     {
-        int timeout_ms;       // RPC call timeout param, in milliseconds
-        int batch_size;       // max k-v count one RPC call
-        bool start_inclusive; // start_inclusive and stop_inclusive will be ingored when
-                              // get_unordered_scanners()
-        bool stop_inclusive;
-        std::string snapshot; // for future use
+        int timeout_ms;           // RPC call timeout param, in milliseconds
+        int batch_size;           // max k-v count one RPC call
+        bool start_inclusive;     // will be ingored when get_unordered_scanners()
+        bool stop_inclusive;      // will be ingored when get_unordered_scanners()
+        filter_type hash_key_filter_type;
+        std::string hash_key_filter_pattern;
+        filter_type sort_key_filter_type;
+        std::string sort_key_filter_pattern;
+        bool no_value; // only fetch hash_key and sort_key, but not fetch value
         scan_options()
-            : timeout_ms(5000), batch_size(1000), start_inclusive(true), stop_inclusive(false)
+            : timeout_ms(5000),
+              batch_size(1000),
+              start_inclusive(true),
+              stop_inclusive(false),
+              hash_key_filter_type(FT_NO_FILTER),
+              sort_key_filter_type(FT_NO_FILTER),
+              no_value(false)
         {
         }
         scan_options(const scan_options &o)
@@ -81,7 +122,11 @@ public:
               batch_size(o.batch_size),
               start_inclusive(o.start_inclusive),
               stop_inclusive(o.stop_inclusive),
-              snapshot(o.snapshot)
+              hash_key_filter_type(o.hash_key_filter_type),
+              hash_key_filter_pattern(o.hash_key_filter_pattern),
+              sort_key_filter_type(o.sort_key_filter_type),
+              sort_key_filter_pattern(o.sort_key_filter_pattern),
+              no_value(o.no_value)
         {
         }
     };
@@ -387,6 +432,74 @@ public:
     ///
     virtual void async_multi_get(const std::string &hashkey,
                                  const std::set<std::string> &sortkeys,
+                                 async_multi_get_callback_t &&callback = nullptr,
+                                 int max_fetch_count = 100,
+                                 int max_fetch_size = 1000000,
+                                 int timeout_milliseconds = 5000) = 0;
+
+    ///
+    /// \brief multi_get
+    ///     get multiple value by hash_key and sort_key range from the cluster.
+    /// \param hashkey
+    /// used to decide which partition to get this k-v.
+    /// \param start_sortkey
+    /// the start sort key.
+    /// \param stop_sortkey
+    /// the stop sort key, empty string means fetch until the last.
+    /// \param options
+    /// the multi-get options.
+    /// \param values
+    /// the returned <sortkey,value> pairs will be put into it.
+    /// if data is not found for some <hashkey,sortkey>, then it will not appear in the map.
+    /// \param max_fetch_count
+    /// max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+    /// \param max_fetch_size
+    /// max size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string().
+    /// returns PERR_OK if fetch done, even no data is returned.
+    /// returns PERR_INCOMPLETE is only partial data is fetched.
+    ///
+    virtual int multi_get(const std::string &hashkey,
+                          const std::string &start_sortkey,
+                          const std::string &stop_sortkey,
+                          const multi_get_options &options,
+                          std::map<std::string, std::string> &values,
+                          int max_fetch_count = 100,
+                          int max_fetch_size = 1000000,
+                          int timeout_milliseconds = 5000,
+                          internal_info *info = NULL) = 0;
+
+    ///
+    /// \brief asynchronous multi_get
+    ///     get multiple value by hash_key and sort_key range from the cluster.
+    ///     will not be blocked, return immediately.
+    /// \param hashkey
+    /// used to decide which partition to get this k-v.
+    /// \param start_sortkey
+    /// the start sort key.
+    /// \param stop_sortkey
+    /// the stop sort key, empty string means fetch until the last.
+    /// \param options
+    /// the multi-get options.
+    /// \param callback
+    /// the callback function will be invoked after operation finished or error occurred.
+    /// \param max_fetch_count
+    /// max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+    /// \param max_fetch_size
+    /// max size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// void.
+    ///
+    virtual void async_multi_get(const std::string &hashkey,
+                                 const std::string &start_sortkey,
+                                 const std::string &stop_sortkey,
+                                 const multi_get_options &options,
                                  async_multi_get_callback_t &&callback = nullptr,
                                  int max_fetch_count = 100,
                                  int max_fetch_size = 1000000,

@@ -125,18 +125,37 @@ private:
     int64_t last_durable_decree() { return _last_durable_decree.load(); }
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
-    // return true if value is appended
-    bool append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                   const rocksdb::Slice &key,
-                                   const rocksdb::Slice &value,
-                                   uint32_t epoch_now);
+    // return 1 if value is appended
+    // return 2 if value is expired
+    // return 3 if value is filtered
+    int append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                                  const rocksdb::Slice &key,
+                                  const rocksdb::Slice &value,
+                                  ::dsn::apps::filter_type::type hash_key_filter_type,
+                                  const ::dsn::blob &hash_key_filter_pattern,
+                                  ::dsn::apps::filter_type::type sort_key_filter_type,
+                                  const ::dsn::blob &sort_key_filter_pattern,
+                                  uint32_t epoch_now,
+                                  bool no_value);
 
-    // return true if value is appended
-    bool append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
-                                        const rocksdb::Slice &key,
-                                        const rocksdb::Slice &value,
-                                        uint32_t epoch_now,
-                                        bool no_value);
+    // return 1 if value is appended
+    // return 2 if value is expired
+    // return 3 if value is filtered
+    int append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
+                                       const rocksdb::Slice &key,
+                                       const rocksdb::Slice &value,
+                                       ::dsn::apps::filter_type::type sort_key_filter_type,
+                                       const ::dsn::blob &sort_key_filter_pattern,
+                                       uint32_t epoch_now,
+                                       bool no_value);
+
+    // return true if the filter type is supported
+    bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type);
+
+    // return true if the data is valid for the filter
+    bool validate_filter(::dsn::apps::filter_type::type filter_type,
+                         const ::dsn::blob &filter_pattern,
+                         const ::dsn::blob &value);
 
     // statistic the sst file info for this replica. return (-1,-1) if failed.
     std::pair<int64_t, int64_t> statistic_sst_size();
@@ -197,6 +216,7 @@ private:
     ::dsn::perf_counter_ _pfc_multi_remove_latency;
 
     ::dsn::perf_counter_ _pfc_recent_expire_count;
+    ::dsn::perf_counter_ _pfc_recent_filter_count;
     ::dsn::perf_counter_ _pfc_sst_count;
     ::dsn::perf_counter_ _pfc_sst_size;
 };

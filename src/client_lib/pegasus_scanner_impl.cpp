@@ -195,6 +195,13 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
     req.stop_key = _stop_key;
     req.stop_inclusive = _options.stop_inclusive;
     req.batch_size = _options.batch_size;
+    req.hash_key_filter_type = (dsn::apps::filter_type::type)_options.hash_key_filter_type;
+    req.hash_key_filter_pattern = ::dsn::blob(
+        _options.hash_key_filter_pattern.data(), 0, _options.hash_key_filter_pattern.size());
+    req.sort_key_filter_type = (dsn::apps::filter_type::type)_options.sort_key_filter_type;
+    req.sort_key_filter_pattern = ::dsn::blob(
+        _options.sort_key_filter_pattern.data(), 0, _options.sort_key_filter_pattern.size());
+    req.no_value = _options.no_value;
 
     dassert(!_rpc_started, "");
     _rpc_started = true;
@@ -300,4 +307,4 @@ const char pegasus_client_impl::pegasus_scanner_impl::_holder[] = {'\x00', '\x00
 const ::dsn::blob pegasus_client_impl::pegasus_scanner_impl::_min = ::dsn::blob(_holder, 0, 2);
 const ::dsn::blob pegasus_client_impl::pegasus_scanner_impl::_max = ::dsn::blob(_holder, 2, 2);
 }
-} // namesapce
+} // namespace

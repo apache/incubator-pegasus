@@ -11,12 +11,22 @@
 #include "commands.h"
 
 std::string s_last_history;
-const int max_params_count = 10;
+const int max_params_count = 10000;
 std::map<std::string, command_executor *> commands_map;
 shell_context global_context;
 size_t max_length = 0;
 
+void print_help();
+bool help_info(command_executor *e, shell_context *sc, arguments args)
+{
+    print_help();
+    return true;
+}
+
 command_executor commands[] = {
+    {
+        "help", "print help info", "", help_info,
+    },
     {
         "version", "get the shell version", "", version,
     },
@@ -130,6 +140,16 @@ command_executor commands[] = {
         data_operations,
     },
     {
+        "multi_get_range",
+        "get multiple values under sort key range for a single hash key",
+        "<hash_key> <start_sort_key> <stop_sort_key> "
+        "[--start_inclusive|-a <true|false>] [--stop_inclusive|-b <true|false>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
+        "<str>] "
+        "[--max_count|-n <num>] [--no_value|-i]",
+        data_operations,
+    },
+    {
         "multi_get_sortkeys",
         "get multiple sort keys for a single hash key",
         "<hash_key>",
@@ -154,18 +174,25 @@ command_executor commands[] = {
         "ttl", "query ttl for a specific key", "<hash_key> <sort_key>", data_operations,
     },
     {
-        "scan",
+        "hash_scan",
         "scan all sorted keys for a single hash key",
-        "<hash_key> [start_sort_key] [stop_sort_key] [-d|--detailed] [-n|--count "
-        "<max_kv_count>] "
-        "[-t|--timeout_ms <num>]",
+        "<hash_key> <start_sort_key> <stop_sort_key> [-d|--detailed] "
+        "[-o|--output <file_name>] [-n|--max_count <num>] [-t|--timeout_ms <num>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
+        "<str>] "
+        "[--no_value|-i]",
         data_operations,
     },
     {
-        "scan_all",
-        "scan among all hash_keys",
-        "-d|--detailed [-n|--count <max_kv_count>] [-o|--output <file_name>] "
-        "[-p|--partition <num>] [-t|--timeout_ms <num>]",
+        "full_scan",
+        "scan all hash keys",
+        "[-d|--detailed] [-p|--partition <num>] [-o|--output <file_name>] "
+        "[-n|--max_count <num>] [-t|--timeout_ms <num>] "
+        "[--hash_key_filter_type|-h <anywhere|prefix|postfix>] [--hash_key_filter_pattern|-x "
+        "<str>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
+        "<str>] "
+        "[--no_value|-i]",
         data_operations,
     },
     {

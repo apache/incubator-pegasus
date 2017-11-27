@@ -42,12 +42,7 @@ echo "rdsn/src/dist/replication/client_lib" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/lib" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/meta_server" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/zookeeper" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/concurrentqueue/concurrentqueue-prefix/src/concurrentqueue" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/gtest/googletest-prefix/src/googletest/include" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/protobuf/include" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/thrift/include" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/zookeeper/zookeeper-prefix/src/zookeeper/include" >>$INCLUDES_OUT
-echo "rdsn/builder/ext/rapidjson/rapidjson_header-prefix/src/rapidjson_header/include" >>$INCLUDES_OUT
+echo "rdsn/thirdparty/output/include" >>$INCLUDES_OUT
 echo "rocksdb" >>$INCLUDES_OUT
 echo "rocksdb/include" >>$INCLUDES_OUT
 echo "src/include" >>$INCLUDES_OUT
@@ -70,6 +65,6 @@ do
     find $i -name '*.h' -o -name '*.cpp' -o -name '*.c' -o -name '*.cc' \
         -o -name '*.thrift' -o -name '*.ini' -o -name '*.act' \
         -o -name 'CMakeLists.txt' -o -name '*.sh' \
-        | grep -v '\<builder\>' >>$FILES_OUT
+        | grep -v '\<rdsn/thirdparty/src\>' >>$FILES_OUT
 done
 

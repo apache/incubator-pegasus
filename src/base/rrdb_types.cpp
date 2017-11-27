@@ -14,6 +14,16 @@
 namespace dsn {
 namespace apps {
 
+int _kfilter_typeValues[] = {filter_type::FT_NO_FILTER,
+                             filter_type::FT_MATCH_ANYWHERE,
+                             filter_type::FT_MATCH_PREFIX,
+                             filter_type::FT_MATCH_POSTFIX};
+const char *_kfilter_typeNames[] = {
+    "FT_NO_FILTER", "FT_MATCH_ANYWHERE", "FT_MATCH_PREFIX", "FT_MATCH_POSTFIX"};
+const std::map<int, const char *> _filter_type_VALUES_TO_NAMES(
+    ::apache::thrift::TEnumIterator(4, _kfilter_typeValues, _kfilter_typeNames),
+    ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+
 update_request::~update_request() throw() {}
 
 void update_request::__set_key(const ::dsn::blob &val) { this->key = val; }
@@ -1519,6 +1529,24 @@ void multi_get_request::__set_max_kv_size(const int32_t val) { this->max_kv_size
 
 void multi_get_request::__set_no_value(const bool val) { this->no_value = val; }
 
+void multi_get_request::__set_start_sortkey(const ::dsn::blob &val) { this->start_sortkey = val; }
+
+void multi_get_request::__set_stop_sortkey(const ::dsn::blob &val) { this->stop_sortkey = val; }
+
+void multi_get_request::__set_start_inclusive(const bool val) { this->start_inclusive = val; }
+
+void multi_get_request::__set_stop_inclusive(const bool val) { this->stop_inclusive = val; }
+
+void multi_get_request::__set_sort_key_filter_type(const filter_type::type val)
+{
+    this->sort_key_filter_type = val;
+}
+
+void multi_get_request::__set_sort_key_filter_pattern(const ::dsn::blob &val)
+{
+    this->sort_key_filter_pattern = val;
+}
+
 uint32_t multi_get_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -1589,6 +1617,56 @@ uint32_t multi_get_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->start_sortkey.read(iprot);
+                this->__isset.start_sortkey = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->stop_sortkey.read(iprot);
+                this->__isset.stop_sortkey = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 8:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->start_inclusive);
+                this->__isset.start_inclusive = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 9:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->stop_inclusive);
+                this->__isset.stop_inclusive = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 10:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                int32_t ecast53;
+                xfer += iprot->readI32(ecast53);
+                this->sort_key_filter_type = (filter_type::type)ecast53;
+                this->__isset.sort_key_filter_type = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 11:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->sort_key_filter_pattern.read(iprot);
+                this->__isset.sort_key_filter_pattern = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -1615,9 +1693,9 @@ uint32_t multi_get_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->sort_keys.size()));
-        std::vector<::dsn::blob>::const_iterator _iter53;
-        for (_iter53 = this->sort_keys.begin(); _iter53 != this->sort_keys.end(); ++_iter53) {
-            xfer += (*_iter53).write(oprot);
+        std::vector<::dsn::blob>::const_iterator _iter54;
+        for (_iter54 = this->sort_keys.begin(); _iter54 != this->sort_keys.end(); ++_iter54) {
+            xfer += (*_iter54).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -1635,6 +1713,31 @@ uint32_t multi_get_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     xfer += oprot->writeBool(this->no_value);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("start_sortkey", ::apache::thrift::protocol::T_STRUCT, 6);
+    xfer += this->start_sortkey.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("stop_sortkey", ::apache::thrift::protocol::T_STRUCT, 7);
+    xfer += this->stop_sortkey.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("start_inclusive", ::apache::thrift::protocol::T_BOOL, 8);
+    xfer += oprot->writeBool(this->start_inclusive);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("stop_inclusive", ::apache::thrift::protocol::T_BOOL, 9);
+    xfer += oprot->writeBool(this->stop_inclusive);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("sort_key_filter_type", ::apache::thrift::protocol::T_I32, 10);
+    xfer += oprot->writeI32((int32_t)this->sort_key_filter_type);
+    xfer += oprot->writeFieldEnd();
+
+    xfer +=
+        oprot->writeFieldBegin("sort_key_filter_pattern", ::apache::thrift::protocol::T_STRUCT, 11);
+    xfer += this->sort_key_filter_pattern.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -1648,45 +1751,75 @@ void swap(multi_get_request &a, multi_get_request &b)
     swap(a.max_kv_count, b.max_kv_count);
     swap(a.max_kv_size, b.max_kv_size);
     swap(a.no_value, b.no_value);
+    swap(a.start_sortkey, b.start_sortkey);
+    swap(a.stop_sortkey, b.stop_sortkey);
+    swap(a.start_inclusive, b.start_inclusive);
+    swap(a.stop_inclusive, b.stop_inclusive);
+    swap(a.sort_key_filter_type, b.sort_key_filter_type);
+    swap(a.sort_key_filter_pattern, b.sort_key_filter_pattern);
     swap(a.__isset, b.__isset);
 }
 
-multi_get_request::multi_get_request(const multi_get_request &other54)
+multi_get_request::multi_get_request(const multi_get_request &other55)
 {
-    hash_key = other54.hash_key;
-    sort_keys = other54.sort_keys;
-    max_kv_count = other54.max_kv_count;
-    max_kv_size = other54.max_kv_size;
-    no_value = other54.no_value;
-    __isset = other54.__isset;
+    hash_key = other55.hash_key;
+    sort_keys = other55.sort_keys;
+    max_kv_count = other55.max_kv_count;
+    max_kv_size = other55.max_kv_size;
+    no_value = other55.no_value;
+    start_sortkey = other55.start_sortkey;
+    stop_sortkey = other55.stop_sortkey;
+    start_inclusive = other55.start_inclusive;
+    stop_inclusive = other55.stop_inclusive;
+    sort_key_filter_type = other55.sort_key_filter_type;
+    sort_key_filter_pattern = other55.sort_key_filter_pattern;
+    __isset = other55.__isset;
 }
-multi_get_request::multi_get_request(multi_get_request &&other55)
+multi_get_request::multi_get_request(multi_get_request &&other56)
 {
-    hash_key = std::move(other55.hash_key);
-    sort_keys = std::move(other55.sort_keys);
-    max_kv_count = std::move(other55.max_kv_count);
-    max_kv_size = std::move(other55.max_kv_size);
-    no_value = std::move(other55.no_value);
-    __isset = std::move(other55.__isset);
+    hash_key = std::move(other56.hash_key);
+    sort_keys = std::move(other56.sort_keys);
+    max_kv_count = std::move(other56.max_kv_count);
+    max_kv_size = std::move(other56.max_kv_size);
+    no_value = std::move(other56.no_value);
+    start_sortkey = std::move(other56.start_sortkey);
+    stop_sortkey = std::move(other56.stop_sortkey);
+    start_inclusive = std::move(other56.start_inclusive);
+    stop_inclusive = std::move(other56.stop_inclusive);
+    sort_key_filter_type = std::move(other56.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other56.sort_key_filter_pattern);
+    __isset = std::move(other56.__isset);
 }
-multi_get_request &multi_get_request::operator=(const multi_get_request &other56)
+multi_get_request &multi_get_request::operator=(const multi_get_request &other57)
 {
-    hash_key = other56.hash_key;
-    sort_keys = other56.sort_keys;
-    max_kv_count = other56.max_kv_count;
-    max_kv_size = other56.max_kv_size;
-    no_value = other56.no_value;
-    __isset = other56.__isset;
+    hash_key = other57.hash_key;
+    sort_keys = other57.sort_keys;
+    max_kv_count = other57.max_kv_count;
+    max_kv_size = other57.max_kv_size;
+    no_value = other57.no_value;
+    start_sortkey = other57.start_sortkey;
+    stop_sortkey = other57.stop_sortkey;
+    start_inclusive = other57.start_inclusive;
+    stop_inclusive = other57.stop_inclusive;
+    sort_key_filter_type = other57.sort_key_filter_type;
+    sort_key_filter_pattern = other57.sort_key_filter_pattern;
+    __isset = other57.__isset;
     return *this;
 }
-multi_get_request &multi_get_request::operator=(multi_get_request &&other57)
+multi_get_request &multi_get_request::operator=(multi_get_request &&other58)
 {
-    hash_key = std::move(other57.hash_key);
-    sort_keys = std::move(other57.sort_keys);
-    max_kv_count = std::move(other57.max_kv_count);
-    max_kv_size = std::move(other57.max_kv_size);
-    no_value = std::move(other57.no_value);
-    __isset = std::move(other57.__isset);
+    hash_key = std::move(other58.hash_key);
+    sort_keys = std::move(other58.sort_keys);
+    max_kv_count = std::move(other58.max_kv_count);
+    max_kv_size = std::move(other58.max_kv_size);
+    no_value = std::move(other58.no_value);
+    start_sortkey = std::move(other58.start_sortkey);
+    stop_sortkey = std::move(other58.stop_sortkey);
+    start_inclusive = std::move(other58.start_inclusive);
+    stop_inclusive = std::move(other58.stop_inclusive);
+    sort_key_filter_type = std::move(other58.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other58.sort_key_filter_pattern);
+    __isset = std::move(other58.__isset);
     return *this;
 }
 void multi_get_request::printTo(std::ostream &out) const
@@ -1702,6 +1835,18 @@ void multi_get_request::printTo(std::ostream &out) const
         << "max_kv_size=" << to_string(max_kv_size);
     out << ", "
         << "no_value=" << to_string(no_value);
+    out << ", "
+        << "start_sortkey=" << to_string(start_sortkey);
+    out << ", "
+        << "stop_sortkey=" << to_string(stop_sortkey);
+    out << ", "
+        << "start_inclusive=" << to_string(start_inclusive);
+    out << ", "
+        << "stop_inclusive=" << to_string(stop_inclusive);
+    out << ", "
+        << "sort_key_filter_type=" << to_string(sort_key_filter_type);
+    out << ", "
+        << "sort_key_filter_pattern=" << to_string(sort_key_filter_pattern);
     out << ")";
 }
 
@@ -1748,13 +1893,13 @@ uint32_t multi_get_response::read(::apache::thrift::protocol::TProtocol *iprot)
             if (ftype == ::apache::thrift::protocol::T_LIST) {
                 {
                     this->kvs.clear();
-                    uint32_t _size58;
-                    ::apache::thrift::protocol::TType _etype61;
-                    xfer += iprot->readListBegin(_etype61, _size58);
-                    this->kvs.resize(_size58);
-                    uint32_t _i62;
-                    for (_i62 = 0; _i62 < _size58; ++_i62) {
-                        xfer += this->kvs[_i62].read(iprot);
+                    uint32_t _size59;
+                    ::apache::thrift::protocol::TType _etype62;
+                    xfer += iprot->readListBegin(_etype62, _size59);
+                    this->kvs.resize(_size59);
+                    uint32_t _i63;
+                    for (_i63 = 0; _i63 < _size59; ++_i63) {
+                        xfer += this->kvs[_i63].read(iprot);
                     }
                     xfer += iprot->readListEnd();
                 }
@@ -1813,9 +1958,9 @@ uint32_t multi_get_response::write(::apache::thrift::protocol::TProtocol *oprot)
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->kvs.size()));
-        std::vector<key_value>::const_iterator _iter63;
-        for (_iter63 = this->kvs.begin(); _iter63 != this->kvs.end(); ++_iter63) {
-            xfer += (*_iter63).write(oprot);
+        std::vector<key_value>::const_iterator _iter64;
+        for (_iter64 = this->kvs.begin(); _iter64 != this->kvs.end(); ++_iter64) {
+            xfer += (*_iter64).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -1849,42 +1994,42 @@ void swap(multi_get_response &a, multi_get_response &b)
     swap(a.__isset, b.__isset);
 }
 
-multi_get_response::multi_get_response(const multi_get_response &other64)
+multi_get_response::multi_get_response(const multi_get_response &other65)
 {
-    error = other64.error;
-    kvs = other64.kvs;
-    app_id = other64.app_id;
-    partition_index = other64.partition_index;
-    server = other64.server;
-    __isset = other64.__isset;
+    error = other65.error;
+    kvs = other65.kvs;
+    app_id = other65.app_id;
+    partition_index = other65.partition_index;
+    server = other65.server;
+    __isset = other65.__isset;
 }
-multi_get_response::multi_get_response(multi_get_response &&other65)
+multi_get_response::multi_get_response(multi_get_response &&other66)
 {
-    error = std::move(other65.error);
-    kvs = std::move(other65.kvs);
-    app_id = std::move(other65.app_id);
-    partition_index = std::move(other65.partition_index);
-    server = std::move(other65.server);
-    __isset = std::move(other65.__isset);
+    error = std::move(other66.error);
+    kvs = std::move(other66.kvs);
+    app_id = std::move(other66.app_id);
+    partition_index = std::move(other66.partition_index);
+    server = std::move(other66.server);
+    __isset = std::move(other66.__isset);
 }
-multi_get_response &multi_get_response::operator=(const multi_get_response &other66)
+multi_get_response &multi_get_response::operator=(const multi_get_response &other67)
 {
-    error = other66.error;
-    kvs = other66.kvs;
-    app_id = other66.app_id;
-    partition_index = other66.partition_index;
-    server = other66.server;
-    __isset = other66.__isset;
+    error = other67.error;
+    kvs = other67.kvs;
+    app_id = other67.app_id;
+    partition_index = other67.partition_index;
+    server = other67.server;
+    __isset = other67.__isset;
     return *this;
 }
-multi_get_response &multi_get_response::operator=(multi_get_response &&other67)
+multi_get_response &multi_get_response::operator=(multi_get_response &&other68)
 {
-    error = std::move(other67.error);
-    kvs = std::move(other67.kvs);
-    app_id = std::move(other67.app_id);
-    partition_index = std::move(other67.partition_index);
-    server = std::move(other67.server);
-    __isset = std::move(other67.__isset);
+    error = std::move(other68.error);
+    kvs = std::move(other68.kvs);
+    app_id = std::move(other68.app_id);
+    partition_index = std::move(other68.partition_index);
+    server = std::move(other68.server);
+    __isset = std::move(other68.__isset);
     return *this;
 }
 void multi_get_response::printTo(std::ostream &out) const
@@ -1983,30 +2128,30 @@ void swap(incr_request &a, incr_request &b)
     swap(a.__isset, b.__isset);
 }
 
-incr_request::incr_request(const incr_request &other68)
+incr_request::incr_request(const incr_request &other69)
 {
-    key = other68.key;
-    increment = other68.increment;
-    __isset = other68.__isset;
+    key = other69.key;
+    increment = other69.increment;
+    __isset = other69.__isset;
 }
-incr_request::incr_request(incr_request &&other69)
+incr_request::incr_request(incr_request &&other70)
 {
-    key = std::move(other69.key);
-    increment = std::move(other69.increment);
-    __isset = std::move(other69.__isset);
+    key = std::move(other70.key);
+    increment = std::move(other70.increment);
+    __isset = std::move(other70.__isset);
 }
-incr_request &incr_request::operator=(const incr_request &other70)
+incr_request &incr_request::operator=(const incr_request &other71)
 {
-    key = other70.key;
-    increment = other70.increment;
-    __isset = other70.__isset;
+    key = other71.key;
+    increment = other71.increment;
+    __isset = other71.__isset;
     return *this;
 }
-incr_request &incr_request::operator=(incr_request &&other71)
+incr_request &incr_request::operator=(incr_request &&other72)
 {
-    key = std::move(other71.key);
-    increment = std::move(other71.increment);
-    __isset = std::move(other71.__isset);
+    key = std::move(other72.key);
+    increment = std::move(other72.increment);
+    __isset = std::move(other72.__isset);
     return *this;
 }
 void incr_request::printTo(std::ostream &out) const
@@ -2030,6 +2175,28 @@ void get_scanner_request::__set_start_inclusive(const bool val) { this->start_in
 void get_scanner_request::__set_stop_inclusive(const bool val) { this->stop_inclusive = val; }
 
 void get_scanner_request::__set_batch_size(const int32_t val) { this->batch_size = val; }
+
+void get_scanner_request::__set_no_value(const bool val) { this->no_value = val; }
+
+void get_scanner_request::__set_hash_key_filter_type(const filter_type::type val)
+{
+    this->hash_key_filter_type = val;
+}
+
+void get_scanner_request::__set_hash_key_filter_pattern(const ::dsn::blob &val)
+{
+    this->hash_key_filter_pattern = val;
+}
+
+void get_scanner_request::__set_sort_key_filter_type(const filter_type::type val)
+{
+    this->sort_key_filter_type = val;
+}
+
+void get_scanner_request::__set_sort_key_filter_pattern(const ::dsn::blob &val)
+{
+    this->sort_key_filter_pattern = val;
+}
 
 uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
@@ -2090,6 +2257,50 @@ uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->no_value);
+                this->__isset.no_value = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                int32_t ecast73;
+                xfer += iprot->readI32(ecast73);
+                this->hash_key_filter_type = (filter_type::type)ecast73;
+                this->__isset.hash_key_filter_type = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 8:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->hash_key_filter_pattern.read(iprot);
+                this->__isset.hash_key_filter_pattern = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 9:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                int32_t ecast74;
+                xfer += iprot->readI32(ecast74);
+                this->sort_key_filter_type = (filter_type::type)ecast74;
+                this->__isset.sort_key_filter_type = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 10:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->sort_key_filter_pattern.read(iprot);
+                this->__isset.sort_key_filter_pattern = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2128,6 +2339,28 @@ uint32_t get_scanner_request::write(::apache::thrift::protocol::TProtocol *oprot
     xfer += oprot->writeI32(this->batch_size);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("no_value", ::apache::thrift::protocol::T_BOOL, 6);
+    xfer += oprot->writeBool(this->no_value);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("hash_key_filter_type", ::apache::thrift::protocol::T_I32, 7);
+    xfer += oprot->writeI32((int32_t)this->hash_key_filter_type);
+    xfer += oprot->writeFieldEnd();
+
+    xfer +=
+        oprot->writeFieldBegin("hash_key_filter_pattern", ::apache::thrift::protocol::T_STRUCT, 8);
+    xfer += this->hash_key_filter_pattern.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("sort_key_filter_type", ::apache::thrift::protocol::T_I32, 9);
+    xfer += oprot->writeI32((int32_t)this->sort_key_filter_type);
+    xfer += oprot->writeFieldEnd();
+
+    xfer +=
+        oprot->writeFieldBegin("sort_key_filter_pattern", ::apache::thrift::protocol::T_STRUCT, 10);
+    xfer += this->sort_key_filter_pattern.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2141,45 +2374,70 @@ void swap(get_scanner_request &a, get_scanner_request &b)
     swap(a.start_inclusive, b.start_inclusive);
     swap(a.stop_inclusive, b.stop_inclusive);
     swap(a.batch_size, b.batch_size);
+    swap(a.no_value, b.no_value);
+    swap(a.hash_key_filter_type, b.hash_key_filter_type);
+    swap(a.hash_key_filter_pattern, b.hash_key_filter_pattern);
+    swap(a.sort_key_filter_type, b.sort_key_filter_type);
+    swap(a.sort_key_filter_pattern, b.sort_key_filter_pattern);
     swap(a.__isset, b.__isset);
 }
 
-get_scanner_request::get_scanner_request(const get_scanner_request &other72)
+get_scanner_request::get_scanner_request(const get_scanner_request &other75)
 {
-    start_key = other72.start_key;
-    stop_key = other72.stop_key;
-    start_inclusive = other72.start_inclusive;
-    stop_inclusive = other72.stop_inclusive;
-    batch_size = other72.batch_size;
-    __isset = other72.__isset;
+    start_key = other75.start_key;
+    stop_key = other75.stop_key;
+    start_inclusive = other75.start_inclusive;
+    stop_inclusive = other75.stop_inclusive;
+    batch_size = other75.batch_size;
+    no_value = other75.no_value;
+    hash_key_filter_type = other75.hash_key_filter_type;
+    hash_key_filter_pattern = other75.hash_key_filter_pattern;
+    sort_key_filter_type = other75.sort_key_filter_type;
+    sort_key_filter_pattern = other75.sort_key_filter_pattern;
+    __isset = other75.__isset;
 }
-get_scanner_request::get_scanner_request(get_scanner_request &&other73)
+get_scanner_request::get_scanner_request(get_scanner_request &&other76)
 {
-    start_key = std::move(other73.start_key);
-    stop_key = std::move(other73.stop_key);
-    start_inclusive = std::move(other73.start_inclusive);
-    stop_inclusive = std::move(other73.stop_inclusive);
-    batch_size = std::move(other73.batch_size);
-    __isset = std::move(other73.__isset);
+    start_key = std::move(other76.start_key);
+    stop_key = std::move(other76.stop_key);
+    start_inclusive = std::move(other76.start_inclusive);
+    stop_inclusive = std::move(other76.stop_inclusive);
+    batch_size = std::move(other76.batch_size);
+    no_value = std::move(other76.no_value);
+    hash_key_filter_type = std::move(other76.hash_key_filter_type);
+    hash_key_filter_pattern = std::move(other76.hash_key_filter_pattern);
+    sort_key_filter_type = std::move(other76.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other76.sort_key_filter_pattern);
+    __isset = std::move(other76.__isset);
 }
-get_scanner_request &get_scanner_request::operator=(const get_scanner_request &other74)
+get_scanner_request &get_scanner_request::operator=(const get_scanner_request &other77)
 {
-    start_key = other74.start_key;
-    stop_key = other74.stop_key;
-    start_inclusive = other74.start_inclusive;
-    stop_inclusive = other74.stop_inclusive;
-    batch_size = other74.batch_size;
-    __isset = other74.__isset;
+    start_key = other77.start_key;
+    stop_key = other77.stop_key;
+    start_inclusive = other77.start_inclusive;
+    stop_inclusive = other77.stop_inclusive;
+    batch_size = other77.batch_size;
+    no_value = other77.no_value;
+    hash_key_filter_type = other77.hash_key_filter_type;
+    hash_key_filter_pattern = other77.hash_key_filter_pattern;
+    sort_key_filter_type = other77.sort_key_filter_type;
+    sort_key_filter_pattern = other77.sort_key_filter_pattern;
+    __isset = other77.__isset;
     return *this;
 }
-get_scanner_request &get_scanner_request::operator=(get_scanner_request &&other75)
+get_scanner_request &get_scanner_request::operator=(get_scanner_request &&other78)
 {
-    start_key = std::move(other75.start_key);
-    stop_key = std::move(other75.stop_key);
-    start_inclusive = std::move(other75.start_inclusive);
-    stop_inclusive = std::move(other75.stop_inclusive);
-    batch_size = std::move(other75.batch_size);
-    __isset = std::move(other75.__isset);
+    start_key = std::move(other78.start_key);
+    stop_key = std::move(other78.stop_key);
+    start_inclusive = std::move(other78.start_inclusive);
+    stop_inclusive = std::move(other78.stop_inclusive);
+    batch_size = std::move(other78.batch_size);
+    no_value = std::move(other78.no_value);
+    hash_key_filter_type = std::move(other78.hash_key_filter_type);
+    hash_key_filter_pattern = std::move(other78.hash_key_filter_pattern);
+    sort_key_filter_type = std::move(other78.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other78.sort_key_filter_pattern);
+    __isset = std::move(other78.__isset);
     return *this;
 }
 void get_scanner_request::printTo(std::ostream &out) const
@@ -2195,6 +2453,16 @@ void get_scanner_request::printTo(std::ostream &out) const
         << "stop_inclusive=" << to_string(stop_inclusive);
     out << ", "
         << "batch_size=" << to_string(batch_size);
+    out << ", "
+        << "no_value=" << to_string(no_value);
+    out << ", "
+        << "hash_key_filter_type=" << to_string(hash_key_filter_type);
+    out << ", "
+        << "hash_key_filter_pattern=" << to_string(hash_key_filter_pattern);
+    out << ", "
+        << "sort_key_filter_type=" << to_string(sort_key_filter_type);
+    out << ", "
+        << "sort_key_filter_pattern=" << to_string(sort_key_filter_pattern);
     out << ")";
 }
 
@@ -2263,26 +2531,26 @@ void swap(scan_request &a, scan_request &b)
     swap(a.__isset, b.__isset);
 }
 
-scan_request::scan_request(const scan_request &other76)
+scan_request::scan_request(const scan_request &other79)
 {
-    context_id = other76.context_id;
-    __isset = other76.__isset;
+    context_id = other79.context_id;
+    __isset = other79.__isset;
 }
-scan_request::scan_request(scan_request &&other77)
+scan_request::scan_request(scan_request &&other80)
 {
-    context_id = std::move(other77.context_id);
-    __isset = std::move(other77.__isset);
+    context_id = std::move(other80.context_id);
+    __isset = std::move(other80.__isset);
 }
-scan_request &scan_request::operator=(const scan_request &other78)
+scan_request &scan_request::operator=(const scan_request &other81)
 {
-    context_id = other78.context_id;
-    __isset = other78.__isset;
+    context_id = other81.context_id;
+    __isset = other81.__isset;
     return *this;
 }
-scan_request &scan_request::operator=(scan_request &&other79)
+scan_request &scan_request::operator=(scan_request &&other82)
 {
-    context_id = std::move(other79.context_id);
-    __isset = std::move(other79.__isset);
+    context_id = std::move(other82.context_id);
+    __isset = std::move(other82.__isset);
     return *this;
 }
 void scan_request::printTo(std::ostream &out) const
@@ -2338,13 +2606,13 @@ uint32_t scan_response::read(::apache::thrift::protocol::TProtocol *iprot)
             if (ftype == ::apache::thrift::protocol::T_LIST) {
                 {
                     this->kvs.clear();
-                    uint32_t _size80;
-                    ::apache::thrift::protocol::TType _etype83;
-                    xfer += iprot->readListBegin(_etype83, _size80);
-                    this->kvs.resize(_size80);
-                    uint32_t _i84;
-                    for (_i84 = 0; _i84 < _size80; ++_i84) {
-                        xfer += this->kvs[_i84].read(iprot);
+                    uint32_t _size83;
+                    ::apache::thrift::protocol::TType _etype86;
+                    xfer += iprot->readListBegin(_etype86, _size83);
+                    this->kvs.resize(_size83);
+                    uint32_t _i87;
+                    for (_i87 = 0; _i87 < _size83; ++_i87) {
+                        xfer += this->kvs[_i87].read(iprot);
                     }
                     xfer += iprot->readListEnd();
                 }
@@ -2411,9 +2679,9 @@ uint32_t scan_response::write(::apache::thrift::protocol::TProtocol *oprot) cons
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->kvs.size()));
-        std::vector<key_value>::const_iterator _iter85;
-        for (_iter85 = this->kvs.begin(); _iter85 != this->kvs.end(); ++_iter85) {
-            xfer += (*_iter85).write(oprot);
+        std::vector<key_value>::const_iterator _iter88;
+        for (_iter88 = this->kvs.begin(); _iter88 != this->kvs.end(); ++_iter88) {
+            xfer += (*_iter88).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -2452,46 +2720,46 @@ void swap(scan_response &a, scan_response &b)
     swap(a.__isset, b.__isset);
 }
 
-scan_response::scan_response(const scan_response &other86)
+scan_response::scan_response(const scan_response &other89)
 {
-    error = other86.error;
-    kvs = other86.kvs;
-    context_id = other86.context_id;
-    app_id = other86.app_id;
-    partition_index = other86.partition_index;
-    server = other86.server;
-    __isset = other86.__isset;
+    error = other89.error;
+    kvs = other89.kvs;
+    context_id = other89.context_id;
+    app_id = other89.app_id;
+    partition_index = other89.partition_index;
+    server = other89.server;
+    __isset = other89.__isset;
 }
-scan_response::scan_response(scan_response &&other87)
+scan_response::scan_response(scan_response &&other90)
 {
-    error = std::move(other87.error);
-    kvs = std::move(other87.kvs);
-    context_id = std::move(other87.context_id);
-    app_id = std::move(other87.app_id);
-    partition_index = std::move(other87.partition_index);
-    server = std::move(other87.server);
-    __isset = std::move(other87.__isset);
+    error = std::move(other90.error);
+    kvs = std::move(other90.kvs);
+    context_id = std::move(other90.context_id);
+    app_id = std::move(other90.app_id);
+    partition_index = std::move(other90.partition_index);
+    server = std::move(other90.server);
+    __isset = std::move(other90.__isset);
 }
-scan_response &scan_response::operator=(const scan_response &other88)
+scan_response &scan_response::operator=(const scan_response &other91)
 {
-    error = other88.error;
-    kvs = other88.kvs;
-    context_id = other88.context_id;
-    app_id = other88.app_id;
-    partition_index = other88.partition_index;
-    server = other88.server;
-    __isset = other88.__isset;
+    error = other91.error;
+    kvs = other91.kvs;
+    context_id = other91.context_id;
+    app_id = other91.app_id;
+    partition_index = other91.partition_index;
+    server = other91.server;
+    __isset = other91.__isset;
     return *this;
 }
-scan_response &scan_response::operator=(scan_response &&other89)
+scan_response &scan_response::operator=(scan_response &&other92)
 {
-    error = std::move(other89.error);
-    kvs = std::move(other89.kvs);
-    context_id = std::move(other89.context_id);
-    app_id = std::move(other89.app_id);
-    partition_index = std::move(other89.partition_index);
-    server = std::move(other89.server);
-    __isset = std::move(other89.__isset);
+    error = std::move(other92.error);
+    kvs = std::move(other92.kvs);
+    context_id = std::move(other92.context_id);
+    app_id = std::move(other92.app_id);
+    partition_index = std::move(other92.partition_index);
+    server = std::move(other92.server);
+    __isset = std::move(other92.__isset);
     return *this;
 }
 void scan_response::printTo(std::ostream &out) const
