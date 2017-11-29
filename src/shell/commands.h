@@ -753,7 +753,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:b:f:s:n:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:b:s:y:n:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1160,6 +1160,8 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                                            {"max_count", required_argument, 0, 'n'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"start_inclusive", required_argument, 0, 'a'},
+                                           {"stop_inclusive", required_argument, 0, 'b'},
                                            {"sort_key_filter_type", required_argument, 0, 's'},
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
                                            {"no_value", no_argument, 0, 'i'},
@@ -1169,7 +1171,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dn:t:o:s:y:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "dn:t:o:a:b:s:y:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1192,6 +1194,26 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             file = fopen(optarg, "w");
             if (!file) {
                 fprintf(stderr, "open filename %s failed", optarg);
+                return false;
+            }
+            break;
+        case 'a':
+            if (strcmp(optarg, "true") == 0) {
+                options.start_inclusive = true;
+            } else if (strcmp(optarg, "false") == 0) {
+                options.start_inclusive = false;
+            } else {
+                fprintf(stderr, "invalid start_inclusive param\n");
+                return false;
+            }
+            break;
+        case 'b':
+            if (strcmp(optarg, "true") == 0) {
+                options.stop_inclusive = true;
+            } else if (strcmp(optarg, "false") == 0) {
+                options.stop_inclusive = false;
+            } else {
+                fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
             break;

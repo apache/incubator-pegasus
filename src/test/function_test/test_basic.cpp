@@ -261,6 +261,15 @@ TEST(basic, multi_get)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
+    // [2, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "2", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
     // match-anywhere("-")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
@@ -317,6 +326,65 @@ TEST(basic, multi_get)
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in [0, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = false;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("1") in [0, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
+    // match-prefix("1") in [1, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in (1, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in (1-abcdefg, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "1-abcdefg", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
 
     // match-prefix("1-")
     options = pegasus::pegasus_client::multi_get_options();

@@ -6,6 +6,7 @@
 
 #include <time.h>
 #include <cctype>
+#include <cstring>
 #include <boost/lexical_cast.hpp>
 #include <dsn/cpp/address.h>
 
@@ -22,6 +23,25 @@ void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
 // parse int from string
 bool buf2int(const char *buffer, int length, int &result);
 bool buf2int64(const char *buffer, int length, int64_t &result);
+
+// three-way comparison, returns value:
+//   <  0 iff "a" <  "b",
+//   == 0 iff "a" == "b",
+//   >  0 iff "a" >  "b"
+// T must support data() and length() method.
+template <class T>
+int binary_compare(const T &a, const T &b)
+{
+    size_t min_len = (a.length() < b.length()) ? a.length() : b.length();
+    int r = ::memcmp(a.data(), b.data(), min_len);
+    if (r == 0) {
+        if (a.length() < b.length())
+            r = -1;
+        else if (a.length() > b.length())
+            r = +1;
+    }
+    return r;
+}
 
 // ----------------------------------------------------------------------
 // c_escape_string()

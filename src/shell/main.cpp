@@ -144,8 +144,8 @@ command_executor commands[] = {
         "get multiple values under sort key range for a single hash key",
         "<hash_key> <start_sort_key> <stop_sort_key> "
         "[--start_inclusive|-a <true|false>] [--stop_inclusive|-b <true|false>] "
-        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
-        "<str>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] "
+        "[--sort_key_filter_pattern|-y <str>] "
         "[--max_count|-n <num>] [--no_value|-i]",
         data_operations,
     },
@@ -178,8 +178,9 @@ command_executor commands[] = {
         "scan all sorted keys for a single hash key",
         "<hash_key> <start_sort_key> <stop_sort_key> [-d|--detailed] "
         "[-o|--output <file_name>] [-n|--max_count <num>] [-t|--timeout_ms <num>] "
-        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
-        "<str>] "
+        "[--start_inclusive|-a <true|false>] [--stop_inclusive|-b <true|false>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] "
+        "[--sort_key_filter_pattern|-y <str>] "
         "[--no_value|-i]",
         data_operations,
     },
@@ -188,10 +189,10 @@ command_executor commands[] = {
         "scan all hash keys",
         "[-d|--detailed] [-p|--partition <num>] [-o|--output <file_name>] "
         "[-n|--max_count <num>] [-t|--timeout_ms <num>] "
-        "[--hash_key_filter_type|-h <anywhere|prefix|postfix>] [--hash_key_filter_pattern|-x "
-        "<str>] "
-        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] [--sort_key_filter_pattern|-y "
-        "<str>] "
+        "[--hash_key_filter_type|-h <anywhere|prefix|postfix>] "
+        "[--hash_key_filter_pattern|-x <str>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] "
+        "[--sort_key_filter_pattern|-y <str>] "
         "[--no_value|-i]",
         data_operations,
     },

@@ -843,6 +843,8 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
     ::dsn::blob start;
     ::dsn::blob stop;
     scan_options o(options);
+
+    // generate key range by start_sort_key and stop_sort_key
     pegasus_generate_key(start, hash_key, start_sort_key);
     if (stop_sort_key.empty()) {
         pegasus_generate_next_blob(stop, hash_key);
@@ -851,12 +853,28 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
         pegasus_generate_key(stop, hash_key, stop_sort_key);
     }
 
+    // limit key range by prefix filter
+    if (o.sort_key_filter_type == filter_type::FT_MATCH_PREFIX &&
+        o.sort_key_filter_pattern.length() > 0) {
+        ::dsn::blob prefix_start, prefix_stop;
+        pegasus_generate_key(prefix_start, hash_key, o.sort_key_filter_pattern);
+        pegasus_generate_next_blob(prefix_stop, hash_key, o.sort_key_filter_pattern);
+
+        if (::pegasus::utils::binary_compare(prefix_start, start) > 0) {
+            start = std::move(prefix_start);
+            o.start_inclusive = true;
+        }
+
+        if (::pegasus::utils::binary_compare(prefix_stop, stop) <= 0) {
+            stop = std::move(prefix_stop);
+            o.stop_inclusive = false;
+        }
+    }
+
+    // check if range is empty
     std::vector<uint64_t> v;
-    int cmp = memcmp(start.data(), stop.data(), std::min(start.length(), stop.length()));
-    if (cmp < 0 || (cmp == 0 && start.length() < stop.length()) || // start < stop
-        (cmp == 0 && start.length() == stop.length() && o.start_inclusive &&
-         o.stop_inclusive)) // start == end and bounds are inclusive
-    {
+    int c = ::pegasus::utils::binary_compare(start, stop);
+    if (c < 0 || (c == 0 && o.start_inclusive && o.stop_inclusive)) {
         v.push_back(pegasus_key_hash(start));
     }
     scanner = new pegasus_scanner_impl(_client, std::move(v), o, start, stop);
