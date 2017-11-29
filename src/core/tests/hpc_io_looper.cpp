@@ -43,8 +43,8 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/priority_queue.h>
+#include <dsn/tool-api/command_manager.h>
 #include "../core/group_address.h"
-#include "../core/command_manager.h"
 #include "../core/service_engine.h"
 #include "test_utils.h"
 #include "../tools/hpc/io_looper.h"

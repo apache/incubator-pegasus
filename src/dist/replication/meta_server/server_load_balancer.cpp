@@ -1,4 +1,5 @@
 #include <dsn/utility/extensible_object.h>
+#include <dsn/tool-api/command_manager.h>
 #include <boost/lexical_cast.hpp>
 #include "server_load_balancer.h"
 
@@ -750,56 +751,42 @@ pc_status simple_load_balancer::on_redundant_secondary(meta_view &view, const ds
     return pc_status::ill;
 }
 
-static void free_string_in_cli_reply(dsn_cli_reply reply)
-{
-    std::string *s = reinterpret_cast<std::string *>(reply.context);
-    delete s;
-}
-
 void simple_load_balancer::register_ctrl_commands()
 {
     server_load_balancer::register_ctrl_commands();
 
-    _ctrl_assign_delay_ms =
-        dsn_cli_app_register("lb.assign_delay_ms",
-                             "control the replica_assign_delay_ms_for_dropouts config",
-                             "lb.assign_delay_ms [num | DEFAULT]",
-                             (void *)this,
-                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
-                                 simple_load_balancer *lb =
-                                     reinterpret_cast<simple_load_balancer *>(context);
-                                 lb->ctrl_assign_delay_ms(argc, argv, reply);
-                             },
-                             free_string_in_cli_reply);
+    _ctrl_assign_delay_ms = dsn::command_manager::instance().register_app_command(
+        {"lb.assign_delay_ms"},
+        "control the replica_assign_delay_ms_for_dropouts config",
+        "lb.assign_delay_ms [num | DEFAULT]",
+        [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); });
 }
 
 void simple_load_balancer::unregister_ctrl_commands()
 {
-    unregister_helper(_ctrl_assign_delay_ms);
+    UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms);
     server_load_balancer::unregister_ctrl_commands();
 }
 
-void simple_load_balancer::ctrl_assign_delay_ms(int argc, const char **argv, dsn_cli_reply *reply)
+std::string simple_load_balancer::ctrl_assign_delay_ms(const std::vector<std::string> &args)
 {
-    std::string *ret_msg = new std::string("OK");
-    if (argc <= 0) {
-        *ret_msg = boost::lexical_cast<std::string>(replica_assign_delay_ms_for_dropouts);
+    std::string result("OK");
+    if (args.size() <= 0) {
+        result = std::to_string(replica_assign_delay_ms_for_dropouts);
     } else {
-        if (strcmp(argv[0], "DEFAULT") == 0) {
+        if (args[0] == "DEFAULT") {
             replica_assign_delay_ms_for_dropouts =
                 _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
         } else {
-            int v = atoi(argv[0]);
+            int v = atoi(args[0].c_str());
             if (v <= 0) {
-                *ret_msg = "ERR: invalid arguments";
+                result = std::string("ERR: invalid arguments");
             } else {
                 replica_assign_delay_ms_for_dropouts = v;
             }
         }
     }
-    reply->context = ret_msg;
-    reply->message = (const char *)ret_msg->c_str();
-    reply->size = ret_msg->size();
+    return result;
 }
 
 pc_status simple_load_balancer::cure(meta_view view,

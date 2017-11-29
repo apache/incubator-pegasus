@@ -90,88 +90,6 @@ extern DSN_API dsn_error_t dsn_error_from_string(const char *s, dsn_error_t defa
 /*@}*/
 
 /*!
-@defgroup app-cli Command-Line Interface (cli)
-@ingroup service-api-utilities
-
- Built-in command line interface that can be accessed via local/tcp/http consoles.
-
- @{
- */
-
-/*!
- run a given cli command
-
- \param command_line given command line.
-
- \return null if it fails, else execution response
- */
-extern DSN_API const char *dsn_cli_run(const char *command_line);
-
-/*!
- free memory occupied by cli response
-
- \param command_output result from \ref dsn_cli_run
- */
-extern DSN_API void dsn_cli_free(const char *command_output);
-
-/*! cli response definition */
-typedef struct dsn_cli_reply
-{
-    const char *message; ///< zero-ended reply message
-    uint64_t size;       ///< message_size
-    void *context;       ///< context for free_handler
-} dsn_cli_reply;
-
-/*! cli request handler definition */
-typedef void (*dsn_cli_handler)(void *context,     ///< context registered by \ref dsn_cli_register
-                                int argc,          ///< argument count
-                                const char **argv, ///< arguments
-                                /*out*/ dsn_cli_reply *reply ///< reply message
-                                );
-
-/*! cli response resource gc handler definition */
-typedef void (*dsn_cli_free_handler)(dsn_cli_reply reply);
-
-/*!
- register a customized cli command handler
-
- \param command       command name
- \param help_one_line one line help information
- \param help_long     long help information
- \param context       context used by \ref cmd_handler
- \param cmd_handler   command handler
- \param output_freer  command result resource free handler
-
- \return the handle of this registered command
- */
-extern DSN_API dsn_handle_t dsn_cli_register(const char *command,
-                                             const char *help_one_line,
-                                             const char *help_long,
-                                             void *context,
-                                             dsn_cli_handler cmd_handler,
-                                             dsn_cli_free_handler output_freer);
-
-/*!
- same as \ref dsn_cli_register, except that the command
- name is auto-augmented by rDSN as $app_full_name.$command
- */
-extern DSN_API dsn_handle_t dsn_cli_app_register(const char *command,
-                                                 const char *help_one_line,
-                                                 const char *help_long,
-                                                 void *context,
-                                                 dsn_cli_handler cmd_handler,
-                                                 dsn_cli_free_handler output_freer);
-
-/*!
- remove a cli handler
-
- \param cli_handle handle of the cli returned from \ref dsn_cli_register or \ref
- dsn_cli_app_register
- */
-extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
-/*@}*/
-
-/*!
 @defgroup config Configuration Service
 @ingroup service-api-utilities
 
@@ -366,7 +284,6 @@ extern DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init,
                                               uint64_t y_init,
                                               uint64_t y_final,
                                               size_t y_size);
-/*@}*/
 
 /*!
 @defgroup memory Memory Management

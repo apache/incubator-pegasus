@@ -48,7 +48,7 @@
 #include <dsn/utility/utils.h>
 
 #include <dsn/utility/configuration.h>
-#include "command_manager.h"
+#include <dsn/tool-api/command_manager.h>
 #include "service_engine.h"
 #include "rpc_engine.h"
 #include "disk_engine.h"
@@ -1383,12 +1383,6 @@ bool run(const char *config_file,
         exit(1);
     }
 
-    // start cli if necessary
-    if (dsn_all.config->get_value<bool>(
-            "core", "cli_local", true, "whether to enable local command line interface (cli)")) {
-        ::dsn::command_manager::instance().start_local_cli();
-    }
-
     if (dsn_all.config->get_value<bool>(
             "core",
             "cli_remote",
@@ -1398,23 +1392,24 @@ bool run(const char *config_file,
     }
 
     // register local cli commands
-    ::dsn::register_command("config-dump",
-                            "config-dump - dump configuration",
-                            "config-dump [to-this-config-file]",
-                            [](const std::vector<std::string> &args) {
-                                std::ostringstream oss;
-                                std::ofstream off;
-                                std::ostream *os = &oss;
-                                if (args.size() > 0) {
-                                    off.open(args[0]);
-                                    os = &off;
+    ::dsn::command_manager::instance().register_command({"config-dump"},
+                                                        "config-dump - dump configuration",
+                                                        "config-dump [to-this-config-file]",
+                                                        [](const std::vector<std::string> &args) {
+                                                            std::ostringstream oss;
+                                                            std::ofstream off;
+                                                            std::ostream *os = &oss;
+                                                            if (args.size() > 0) {
+                                                                off.open(args[0]);
+                                                                os = &off;
 
-                                    oss << "config dump to file " << args[0] << std::endl;
-                                }
+                                                                oss << "config dump to file "
+                                                                    << args[0] << std::endl;
+                                                            }
 
-                                dsn_all.config->dump(*os);
-                                return oss.str();
-                            });
+                                                            dsn_all.config->dump(*os);
+                                                            return oss.str();
+                                                        });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();

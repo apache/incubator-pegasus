@@ -37,7 +37,7 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/tool-api/task.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <sstream>
 #include <cinttypes>
 #include <string>
@@ -62,40 +62,41 @@ namespace replication {
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
-server_state::server_state()
-    : _meta_svc(nullptr), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
-{
-}
+server_state::server_state() : _meta_svc(nullptr), _cli_dump_handle(nullptr) {}
 
 server_state::~server_state()
 {
-    if (_cli_json_state_handle != nullptr) {
-        dsn_cli_deregister(_cli_json_state_handle);
-        _cli_json_state_handle = nullptr;
-    }
     if (_cli_dump_handle != nullptr) {
-        dsn_cli_deregister(_cli_dump_handle);
+        dsn::command_manager::instance().deregister_command(_cli_dump_handle);
         _cli_dump_handle = nullptr;
     }
 }
 
 void server_state::register_cli_commands()
 {
-    _cli_json_state_handle = dsn_cli_app_register("info",
-                                                  "get info of nodes and apps on meta_server",
-                                                  "",
-                                                  this,
-                                                  &static_cli_json_state,
-                                                  &static_cli_json_state_cleanup);
-    dassert(_cli_json_state_handle != nullptr,
-            "register cil handler failed, maybe it has been registered");
-
-    _cli_dump_handle = dsn_cli_app_register("dump",
-                                            "dump app_states of meta server to local file",
-                                            "usage: -t|--target target_file",
-                                            this,
-                                            &static_cli_dump_app_states,
-                                            &static_cli_dump_app_states_cleanup);
+    _cli_dump_handle = dsn::command_manager::instance().register_app_command(
+        {"dump"},
+        "dump: dump app_states of meta server to local file",
+        "dump -t|--target target_file",
+        [this](const std::vector<std::string> &args) {
+            dsn::error_code err;
+            if (args.size() != 2) {
+                err = ERR_INVALID_PARAMETERS;
+            } else {
+                const char *target_file = nullptr;
+                for (int i = 0; i < args.size(); i += 2) {
+                    if (strcmp(args[i].c_str(), "-t") == 0 ||
+                        strcmp(args[i].c_str(), "--target") == 0)
+                        target_file = args[i + 1].c_str();
+                }
+                if (target_file == nullptr) {
+                    err = ERR_INVALID_PARAMETERS;
+                } else {
+                    err = this->dump_from_remote_storage(target_file, false);
+                }
+            }
+            return std::string(err.to_string());
+        });
     dassert(_cli_dump_handle != nullptr, "register cli handler failed");
 }
 
@@ -2471,71 +2472,6 @@ void server_state::check_consistency(const dsn::gpid &gpid)
                     dsn::enum_to_string(it->second.served_as(gpid)));
         }
     }
-}
-
-void server_state::json_state(std::stringstream &out) const
-{
-    zauto_read_lock _(_lock);
-    // JSON_ENCODE_ENTRIES(out, *this, _nodes, _exist_apps);
-}
-
-void server_state::static_cli_json_state(void *context,
-                                         int argc,
-                                         const char **argv,
-                                         dsn_cli_reply *reply)
-{
-    auto _server_state = reinterpret_cast<server_state *>(context);
-    std::stringstream out;
-    _server_state->json_state(out);
-    auto danglingstring = new std::string(std::move(out.str()));
-    reply->message = danglingstring->c_str();
-    reply->size = danglingstring->size();
-    reply->context = danglingstring;
-}
-
-void server_state::static_cli_json_state_cleanup(dsn_cli_reply reply)
-{
-    dassert(reply.context != nullptr, "corrupted cli reply context");
-    auto danglingstring = reinterpret_cast<std::string *>(reply.context);
-    dassert(reply.message == danglingstring->c_str(), "corrupted cli reply message");
-    delete danglingstring;
-}
-
-void server_state::static_cli_dump_app_states(void *context,
-                                              int argc,
-                                              const char **argv,
-                                              dsn_cli_reply *reply)
-{
-    server_state *_this = reinterpret_cast<server_state *>(context);
-    std::string *dump_result;
-    if (argc != 4) {
-        dump_result = new std::string("invalid command parameter");
-    } else {
-        const char *target_file = nullptr;
-        for (int i = 0; i < argc; i += 2) {
-            if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--target") == 0)
-                target_file = argv[i + 1];
-        }
-
-        if (target_file == nullptr) {
-            dump_result = new std::string("invalid command parameter");
-        } else {
-            error_code ec = _this->dump_from_remote_storage(target_file, false);
-            dump_result = new std::string("execute result: ");
-            dump_result->append(ec.to_string());
-        }
-    }
-
-    reply->message = dump_result->c_str();
-    reply->size = dump_result->size();
-    reply->context = dump_result;
-}
-
-void server_state::static_cli_dump_app_states_cleanup(dsn_cli_reply reply)
-{
-    dassert(reply.context != nullptr, "corrupted cli context");
-    std::string *dump_result = reinterpret_cast<std::string *>(reply.context);
-    delete dump_result;
 }
 
 void server_state::lock_read(zauto_read_lock &other)

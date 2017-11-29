@@ -38,7 +38,7 @@
 #include "mutation_log.h"
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <vector>
 #include <deque>
@@ -59,7 +59,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
       _replicas_lock(true),
-      /*_cli_replica_stub_json_state_handle(nullptr), */ _cli_kill_partition(nullptr),
+      _kill_partition_command(nullptr),
+      _deny_client_command(nullptr),
+      _verbose_client_log_command(nullptr),
+      _verbose_commit_log_command(nullptr),
+      _trigger_chkpt_command(nullptr),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -606,29 +610,17 @@ void replica_stub::initialize_start()
     }
 }
 
-void replica_stub::on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply)
+dsn::error_code replica_stub::on_kill_replica(gpid pid)
 {
     error_code err = ERR_INVALID_PARAMETERS;
-    if (argc >= 2) {
-        gpid gpid;
-        gpid.set_app_id(atoi(argv[0]));
-        gpid.set_partition_index(atoi(argv[1]));
-
-        replica_ptr r = get_replica(gpid);
-        if (r == nullptr) {
-            err = ERR_OBJECT_NOT_FOUND;
-        } else {
-            r->inject_error(ERR_INJECTED);
-            err = ERR_OK;
-        }
+    replica_ptr r = get_replica(pid);
+    if (r == nullptr) {
+        err = ERR_OBJECT_NOT_FOUND;
+    } else {
+        r->inject_error(ERR_INJECTED);
+        err = ERR_OK;
     }
-
-    std::string *resp_json = new std::string();
-    *resp_json = err.to_string();
-    reply->context = resp_json;
-    reply->message = (const char *)resp_json->c_str();
-    reply->size = resp_json->size();
-    return;
+    return err;
 }
 
 replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const app_info *app)
@@ -996,39 +988,6 @@ void replica_stub::on_remove(const replica_configuration &request)
     if (rep != nullptr) {
         rep->on_remove(request);
     }
-}
-//
-// void replica_stub::json_state(std::stringstream& out) const
-//{
-//    std::vector<replica_ptr> replicas_copy;
-//    {
-//        zauto_lock _(_replicas_lock);
-//        for (auto& rep : _replicas)
-//        {
-//            replicas_copy.push_back(rep.second);
-//        }
-//    }
-//    json_encode(out, replicas_copy);
-//}
-//
-// void replica_stub::static_replica_stub_json_state(void* context, int argc, const char** argv,
-// dsn_cli_reply* reply)
-//{
-//    auto stub = reinterpret_cast<replica_stub*>(context);
-//    std::stringstream ss;
-//    stub->json_state(ss);
-//    auto danglingstr = new std::string(std::move(ss.str()));
-//    reply->message = danglingstr->c_str();
-//    reply->size = danglingstr->size();
-//    reply->context = danglingstr;
-//}
-
-void replica_stub::static_replica_stub_json_state_freer(dsn_cli_reply reply)
-{
-    dassert(reply.context != nullptr, "corrupted cli reply");
-    auto danglingstr = reinterpret_cast<std::string *>(reply.context);
-    dassert(danglingstr->c_str() == reply.message, "corrupted cli reply");
-    delete danglingstr;
 }
 
 void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
@@ -1880,148 +1839,69 @@ void replica_stub::open_service()
         RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 
     register_rpc_handler(RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
-
     register_rpc_handler(RPC_COLD_BACKUP, "ColdBackup", &replica_stub::on_cold_backup);
 
-    /*_cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of
-    replica_stub on this node", "",
-        this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
-    dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");*/
+    _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
+        {"kill_partition"},
+        "kill_partition <app_id> <partition_index>",
+        "kill_partition: kill partition with its global partition id",
+        [this](const std::vector<std::string> &args) {
+            if (args.size() != 2)
+                return std::string(ERR_INVALID_PARAMETERS.to_string());
+            dsn::gpid pid;
+            pid.set_app_id(atoi(args[0].c_str()));
+            pid.set_partition_index(atoi(args[1].c_str()));
+            if (pid.get_app_id() <= 0 || pid.get_partition_index() < 0)
+                return std::string(ERR_INVALID_PARAMETERS.to_string());
+            dsn::error_code e = this->on_kill_replica(pid);
+            return std::string(e.to_string());
+        });
 
-    _cli_kill_partition =
-        dsn_cli_app_register("kill_partition",
-                             "kill partition with its global partition id",
-                             "kill_partition app_id partition_index",
-                             (void *)this,
-                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
-                                 auto this_ = (replica_stub *)context;
-                                 this_->on_kill_app_cli(context, argc, argv, reply);
-                             },
-                             [](dsn_cli_reply reply) {
-                                 std::string *s = (std::string *)reply.context;
-                                 delete s;
-                             });
+    _deny_client_command = ::dsn::command_manager::instance().register_app_command(
+        {"deny-client"},
+        "deny-client <true|false>",
+        "deny-client - control if deny client read & write request",
+        [this](const std::vector<std::string> &args) { HANDLE_CLI_FLAGS(_deny_client, args); });
 
-    dsn_app_info info;
-    dsn_get_current_app_info(&info);
-    {
-        std::string command(info.name);
-        command += ".deny-client";
-        std::string help1(command);
-        help1 += " - control if deny client read & write request";
-        std::string help2(command);
-        help1 += " <true|false>";
-        ::dsn::register_command(command.c_str(),
-                                help1.c_str(),
-                                help2.c_str(),
-                                [this](const std::vector<std::string> &args) {
-                                    if (args.empty()) {
-                                        return _deny_client ? "true" : "false";
-                                    }
-                                    std::string arg = args[0];
-                                    if (arg != "true" && arg != "false") {
-                                        return "ERROR: invalid arguments";
-                                    }
-                                    if (arg == "true") {
-                                        _deny_client = true;
-                                    } else {
-                                        _deny_client = false;
-                                    }
-                                    ddebug("set deny_client to %s by remote command",
-                                           _deny_client ? "true" : "false");
-                                    return "OK";
-                                });
-    }
-    {
-        std::string command(info.name);
-        command += ".verbose-client-log";
-        std::string help1(command);
-        help1 += " - control if print verbose error log when reply read & write request";
-        std::string help2(command);
-        help1 += " <true|false>";
-        ::dsn::register_command(command.c_str(),
-                                help1.c_str(),
-                                help2.c_str(),
-                                [this](const std::vector<std::string> &args) {
-                                    if (args.empty()) {
-                                        return _verbose_client_log ? "true" : "false";
-                                    }
-                                    std::string arg = args[0];
-                                    if (arg != "true" && arg != "false") {
-                                        return "ERROR: invalid arguments";
-                                    }
-                                    if (arg == "true") {
-                                        _verbose_client_log = true;
-                                    } else {
-                                        _verbose_client_log = false;
-                                    }
-                                    ddebug("set verbose_client_log to %s by remote command",
-                                           _verbose_client_log ? "true" : "false");
-                                    return "OK";
-                                });
-    }
-    {
-        std::string command(info.name);
-        command += ".verbose-commit-log";
-        std::string help1(command);
-        help1 += " - control if print verbose log when commit mutation";
-        std::string help2(command);
-        help1 += " <true|false>";
-        ::dsn::register_command(command.c_str(),
-                                help1.c_str(),
-                                help2.c_str(),
-                                [this](const std::vector<std::string> &args) {
-                                    if (args.empty()) {
-                                        return _verbose_commit_log ? "true" : "false";
-                                    }
-                                    std::string arg = args[0];
-                                    if (arg != "true" && arg != "false") {
-                                        return "ERROR: invalid arguments";
-                                    }
-                                    if (arg == "true") {
-                                        _verbose_commit_log = true;
-                                    } else {
-                                        _verbose_commit_log = false;
-                                    }
-                                    ddebug("set verbose_commit_log to %s by remote command",
-                                           _verbose_commit_log ? "true" : "false");
-                                    return "OK";
-                                });
-    }
-    {
-        std::string command(info.name);
-        command += ".trigger-checkpoint";
-        std::string help1(command);
-        help1 += " - trigger all replicas to do checkpoint";
-        std::string help2(command);
-        help1 += "";
-        ::dsn::register_command(
-            command.c_str(),
-            help1.c_str(),
-            help2.c_str(),
-            [this](const std::vector<std::string> &args) {
-                ddebug("start to trigger checkpoint by remote command");
+    _verbose_client_log_command = ::dsn::command_manager::instance().register_app_command(
+        {"verbose-client-log"},
+        "verbose-client-log <true|false>",
+        "verbose-client-log - control if print verbose error log when reply read & write request",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_verbose_client_log, args);
+        });
 
-                replicas rs;
-                {
-                    zauto_lock l(_replicas_lock);
-                    rs = _replicas;
-                }
+    _verbose_commit_log_command = ::dsn::command_manager::instance().register_app_command(
+        {"verbose-commit-log"},
+        "verbose-commit-log <true|false>",
+        "verbose-commit-log - control if print verbose log when commit mutation",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_verbose_commit_log, args);
+        });
 
-                for (auto it = rs.begin(); it != rs.end(); ++it) {
-                    tasking::enqueue(
-                        LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                        this,
-                        std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
-                        gpid_to_thread_hash(it->first),
-                        std::chrono::milliseconds(
-                            dsn_random32(0, 3000)) // delay random to avoid write compete
-                        );
-                }
-
-                return "OK";
-            });
-    }
+    _trigger_chkpt_command = ::dsn::command_manager::instance().register_app_command(
+        {"trigger-checkpoint"},
+        "trigger-checkpoint",
+        "trigger-checkpoint - trigger all replicas to do checkpoints",
+        [this](const std::vector<std::string> &args) {
+            ddebug("start to trigger checkpoint by remote command");
+            replicas rs;
+            {
+                zauto_lock l(_replicas_lock);
+                rs = _replicas;
+            }
+            for (auto it = rs.begin(); it != rs.end(); ++it) {
+                tasking::enqueue(
+                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                    this,
+                    std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
+                    gpid_to_thread_hash(it->first),
+                    std::chrono::milliseconds(
+                        dsn_random32(0, 3000)) // delay random to avoid write compete
+                    );
+            }
+            return "OK";
+        });
 }
 
 void replica_stub::close()
@@ -2029,14 +1909,21 @@ void replica_stub::close()
     // this replica may not be opened
     // or is already closed by calling tool_app::stop_all_apps()
     // in this case, just return
-    if (_cli_kill_partition == nullptr) {
+    if (_kill_partition_command == nullptr) {
         return;
     }
 
-    // dsn_cli_deregister(_cli_replica_stub_json_state_handle);
-    dsn_cli_deregister(_cli_kill_partition);
-    //_cli_replica_stub_json_state_handle = nullptr;
-    _cli_kill_partition = nullptr;
+    dsn::command_manager::instance().deregister_command(_kill_partition_command);
+    dsn::command_manager::instance().deregister_command(_deny_client_command);
+    dsn::command_manager::instance().deregister_command(_verbose_client_log_command);
+    dsn::command_manager::instance().deregister_command(_verbose_commit_log_command);
+    dsn::command_manager::instance().deregister_command(_trigger_chkpt_command);
+
+    _kill_partition_command = nullptr;
+    _deny_client_command = nullptr;
+    _verbose_client_log_command = nullptr;
+    _verbose_commit_log_command = nullptr;
+    _trigger_chkpt_command = nullptr;
 
     if (_config_sync_timer_task != nullptr) {
         _config_sync_timer_task->cancel(true);

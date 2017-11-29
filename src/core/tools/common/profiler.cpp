@@ -67,7 +67,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include <dsn/service_api_c.h>
 #include "shared_io_service.h"
 #include "profiler_header.h"
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 
 #ifdef __TITLE__
@@ -389,19 +389,20 @@ void register_command_profiler()
     textpd << textarg.str();
     textquery << textarg.str();
 
-    register_command({"p", "P", "profile", "Profile"},
-                     "profile|Profile|p|P - performance profiling",
-                     textp.str().c_str(),
-                     profiler_output_handler);
+    command_manager::instance().register_command({"p", "P", "profile", "Profile"},
+                                                 "profile|Profile|p|P - performance profiling",
+                                                 textp.str().c_str(),
+                                                 profiler_output_handler);
 
-    register_command({"pd", "PD", "profiledata", "ProfileData"},
-                     "profiler data - get appointed data, using by pjs",
-                     textpd.str().c_str(),
-                     profiler_data_handler);
-    register_command({"profiler.query", "pq"},
-                     "profiler.query|pq - query profiling data, output in json format",
-                     textquery.str().c_str(),
-                     query_data_handler);
+    command_manager::instance().register_command({"pd", "PD", "profiledata", "ProfileData"},
+                                                 "profiler data - get appointed data, using by pjs",
+                                                 textpd.str().c_str(),
+                                                 profiler_data_handler);
+    command_manager::instance().register_command(
+        {"profiler.query", "pq"},
+        "profiler.query|pq - query profiling data, output in json format",
+        textquery.str().c_str(),
+        query_data_handler);
 }
 
 void profiler::install(service_spec &spec)

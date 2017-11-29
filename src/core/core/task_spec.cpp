@@ -36,7 +36,7 @@
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/tool-api/perf_counter.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <sstream>
 #include <vector>
 #include <thread>
@@ -200,29 +200,30 @@ bool task_spec::init()
         }
     }
 
-    ::dsn::register_command("task-code",
-                            "task-code - query task code containing any given keywords",
-                            "task-code keyword1 keyword2 ...",
-                            [](const std::vector<std::string> &args) {
-                                std::stringstream ss;
+    ::dsn::command_manager::instance().register_command(
+        {"task-code"},
+        "task-code - query task code containing any given keywords",
+        "task-code keyword1 keyword2 ...",
+        [](const std::vector<std::string> &args) {
+            std::stringstream ss;
 
-                                for (int code = 0; code <= dsn_task_code_max(); code++) {
-                                    if (code == TASK_CODE_INVALID)
-                                        continue;
+            for (int code = 0; code <= dsn_task_code_max(); code++) {
+                if (code == TASK_CODE_INVALID)
+                    continue;
 
-                                    std::string codes = dsn_task_code_to_string(code);
-                                    if (args.size() == 0) {
-                                        ss << "    " << codes << std::endl;
-                                    } else {
-                                        for (auto &arg : args) {
-                                            if (codes.find(arg.c_str()) != std::string::npos) {
-                                                ss << "    " << codes << std::endl;
-                                            }
-                                        }
-                                    }
-                                }
-                                return ss.str();
-                            });
+                std::string codes = dsn_task_code_to_string(code);
+                if (args.size() == 0) {
+                    ss << "    " << codes << std::endl;
+                } else {
+                    for (auto &arg : args) {
+                        if (codes.find(arg.c_str()) != std::string::npos) {
+                            ss << "    " << codes << std::endl;
+                        }
+                    }
+                }
+            }
+            return ss.str();
+        });
 
     return true;
 }

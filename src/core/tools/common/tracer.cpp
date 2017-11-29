@@ -34,7 +34,7 @@
  */
 
 #include <dsn/toollet/tracer.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -397,11 +397,12 @@ void tracer::install(service_spec &spec)
             spec->on_rpc_create_response.put_back(tracer_on_rpc_create_response, "tracer");
     }
 
-    register_command({"tracer.find"},
-                     "tracer.find - find related logs",
-                     "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., "
-                     "a023003920302390) log_file_name(log.xx.txt)",
-                     tracer_log_flow);
+    command_manager::instance().register_command(
+        {"tracer.find"},
+        "tracer.find - find related logs",
+        "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., "
+        "a023003920302390) log_file_name(log.xx.txt)",
+        tracer_log_flow);
 }
 
 tracer::tracer(const char *name) : toollet(name) {}

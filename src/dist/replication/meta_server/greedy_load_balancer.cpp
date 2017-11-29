@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <iostream>
 #include <queue>
+#include <dsn/tool-api/command_manager.h>
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
 
@@ -67,53 +68,9 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
 
 greedy_load_balancer::~greedy_load_balancer()
 {
-    unregister_helper(_ctrl_balancer_in_turn);
-    unregister_helper(_ctrl_only_move_primary);
-    unregister_helper(_ctrl_only_move_primary);
-}
-
-static void free_string_in_cli_reply(dsn_cli_reply reply)
-{
-    std::string *s = reinterpret_cast<std::string *>(reply.context);
-    delete s;
-}
-
-#define HANDLE_CLI_FLAGS(flag, argc, argv, reply)                                                  \
-    do {                                                                                           \
-        std::string *ret_msg = new std::string("OK");                                              \
-        if (argc <= 0) {                                                                           \
-            *ret_msg = flag ? "true" : "false";                                                    \
-        } else {                                                                                   \
-            if (strcmp(argv[0], "true") == 0) {                                                    \
-                flag = true;                                                                       \
-                ddebug("set " #flag " to true by remote command");                                 \
-            } else if (strcmp(argv[0], "false") == 0) {                                            \
-                flag = false;                                                                      \
-                ddebug("set " #flag " to false by remote command");                                \
-            } else {                                                                               \
-                *ret_msg = "ERR: invalid arguments";                                               \
-            }                                                                                      \
-        }                                                                                          \
-        reply->context = ret_msg;                                                                  \
-        reply->message = (const char *)ret_msg->c_str();                                           \
-        reply->size = ret_msg->size();                                                             \
-    } while (0)
-
-void greedy_load_balancer::ctrl_balancer_in_turn(int argc, const char **argv, dsn_cli_reply *reply)
-{
-    HANDLE_CLI_FLAGS(_balancer_in_turn, argc, argv, reply);
-}
-
-void greedy_load_balancer::ctrl_only_move_primary(int argc, const char **argv, dsn_cli_reply *reply)
-{
-    HANDLE_CLI_FLAGS(_only_move_primary, argc, argv, reply);
-}
-
-void greedy_load_balancer::ctrl_only_primary_balancer(int argc,
-                                                      const char **argv,
-                                                      dsn_cli_reply *reply)
-{
-    HANDLE_CLI_FLAGS(_only_primary_balancer, argc, argv, reply);
+    UNREGISTER_VALID_HANDLER(_ctrl_balancer_in_turn);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
 }
 
 void greedy_load_balancer::register_ctrl_commands()
@@ -121,48 +78,36 @@ void greedy_load_balancer::register_ctrl_commands()
     // register command that belong to simple_load_balancer
     simple_load_balancer::register_ctrl_commands();
 
-    _ctrl_balancer_in_turn =
-        dsn_cli_app_register("lb.balancer_in_turn",
-                             "control whether do app balancer in turn",
-                             "lb.balancer_in_turn <true|false>",
-                             (void *)this,
-                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
-                                 greedy_load_balancer *lb =
-                                     reinterpret_cast<greedy_load_balancer *>(context);
-                                 lb->ctrl_balancer_in_turn(argc, argv, reply);
-                             },
-                             free_string_in_cli_reply);
+    _ctrl_balancer_in_turn = dsn::command_manager::instance().register_app_command(
+        {"lb.balancer_in_turn"},
+        "control whether do app balancer in turn",
+        "lb.balancer_in_turn <true|false>",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_balancer_in_turn, args);
+        });
 
-    _ctrl_only_primary_balancer =
-        dsn_cli_app_register("lb.only_primary_balancer",
-                             "control whether do only primary balancer",
-                             "lb.only_primary_balancer <true|false>",
-                             (void *)this,
-                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
-                                 greedy_load_balancer *lb =
-                                     reinterpret_cast<greedy_load_balancer *>(context);
-                                 lb->ctrl_only_primary_balancer(argc, argv, reply);
-                             },
-                             free_string_in_cli_reply);
+    _ctrl_only_primary_balancer = dsn::command_manager::instance().register_app_command(
+        {"lb.only_primary_balancer"},
+        "control whether do only primary balancer",
+        "lb.only_primary_balancer <true|false>",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_only_primary_balancer, args);
+        });
 
-    _ctrl_only_move_primary =
-        dsn_cli_app_register("lb.only_move_primary",
-                             "control whether only move primary in balancer",
-                             "lb.only_move_primary <true|false>",
-                             (void *)this,
-                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
-                                 greedy_load_balancer *lb =
-                                     reinterpret_cast<greedy_load_balancer *>(context);
-                                 lb->ctrl_only_move_primary(argc, argv, reply);
-                             },
-                             free_string_in_cli_reply);
+    _ctrl_only_move_primary = dsn::command_manager::instance().register_app_command(
+        {"lb.only_move_primary"},
+        "control whether only move primary in balancer",
+        "lb.only_move_primary <true|false>",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_only_move_primary, args);
+        });
 }
 
 void greedy_load_balancer::unregister_ctrl_commands()
 {
-    unregister_helper(_ctrl_balancer_in_turn);
-    unregister_helper(_ctrl_only_move_primary);
-    unregister_helper(_ctrl_only_move_primary);
+    UNREGISTER_VALID_HANDLER(_ctrl_balancer_in_turn);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
 
     simple_load_balancer::unregister_ctrl_commands();
 }

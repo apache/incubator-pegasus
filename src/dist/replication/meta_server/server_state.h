@@ -302,7 +302,6 @@ private:
     config_change_subscriber _config_change_subscriber;
     replica_migration_subscriber _replica_migration_subscriber;
 
-    dsn_handle_t _cli_json_state_handle;
     dsn_handle_t _cli_dump_handle;
 
     perf_counter_wrapper _dead_partition_count;
@@ -313,16 +312,6 @@ private:
     perf_counter_wrapper _recent_update_config_count;
     perf_counter_wrapper _recent_partition_change_unwritable_count;
     perf_counter_wrapper _recent_partition_change_writable_count;
-
-public:
-    void json_state(std::stringstream &out) const;
-    static void
-    static_cli_json_state(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    static void static_cli_json_state_cleanup(dsn_cli_reply reply);
-
-    static void
-    static_cli_dump_app_states(void *context, int argc, const char **argv, dsn_cli_reply *reply);
-    static void static_cli_dump_app_states_cleanup(dsn_cli_reply reply);
 };
 }
 }

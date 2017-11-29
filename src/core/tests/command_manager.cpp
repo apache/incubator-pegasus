@@ -34,27 +34,28 @@
  */
 
 #include <dsn/tool/cli/cli.client.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
 
 void command_manager_module_init()
 {
-    register_command("test-cmd",
-                     "test-cmd - just for command_manager unit-test",
-                     "test-cmd arg1 arg2 ...",
-                     [](const std::vector<std::string> &args) {
-                         std::stringstream ss;
-                         ss << "test-cmd response: [";
-                         for (size_t i = 0; i < args.size(); ++i) {
-                             if (i != 0)
-                                 ss << " ";
-                             ss << args[i];
-                         }
-                         ss << "]";
-                         return ss.str();
-                     });
+    dsn::command_manager::instance().register_command(
+        {"test-cmd"},
+        "test-cmd - just for command_manager unit-test",
+        "test-cmd arg1 arg2 ...",
+        [](const std::vector<std::string> &args) {
+            std::stringstream ss;
+            ss << "test-cmd response: [";
+            for (size_t i = 0; i < args.size(); ++i) {
+                if (i != 0)
+                    ss << " ";
+                ss << args[i];
+            }
+            ss << "]";
+            return ss.str();
+        });
 }
 
 /*

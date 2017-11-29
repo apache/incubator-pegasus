@@ -36,7 +36,7 @@
 #include "hpc_tail_logger.h"
 #include <dsn/utility/singleton_store.h>
 #include <dsn/utility/utils.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <cstdlib>
 #include <sstream>
 #include <fstream>
@@ -84,8 +84,8 @@ hpc_tail_logger::hpc_tail_logger(const char *log_dir) : logging_provider(log_dir
     register_it = true;
 
     // register command for tail logging
-    ::dsn::register_command(
-        "tail-log",
+    ::dsn::command_manager::instance().register_command(
+        {"tail-log"},
         "tail-log keyword back-seconds [back-start-seconds = 0] [tid1,tid2,...]",
         "tail-log find logs with given keyword and within [now - back-seconds, now - "
         "back-start-seconds]",
@@ -109,8 +109,8 @@ hpc_tail_logger::hpc_tail_logger(const char *log_dir) : logging_provider(log_dir
             }
         });
 
-    ::dsn::register_command(
-        "tail-log-dump",
+    ::dsn::command_manager::instance().register_command(
+        {"tail-log-dump"},
         "tail-log-dump",
         "tail-log-dump dump all tail logs to log files",
         [this](const std::vector<std::string> &args) {

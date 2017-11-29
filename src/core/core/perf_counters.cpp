@@ -36,7 +36,7 @@
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool-api/perf_counters.h>
 #include <dsn/service_api_c.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/cpp/json_helper.h>
 #include "service_engine.h"
@@ -45,20 +45,23 @@ namespace dsn {
 
 perf_counters::perf_counters(void)
 {
-    ::dsn::register_command("counter.list",
-                            "counter.list - get the list of all counters",
-                            "counter.list",
-                            &perf_counters::list_counter);
+    ::dsn::command_manager::instance().register_command(
+        {"counter.list"},
+        "counter.list - get the list of all counters",
+        "counter.list",
+        &perf_counters::list_counter);
 
-    ::dsn::register_command("counter.value",
-                            "counter.value - get current value of a specific counter",
-                            "counter.value app-name*section-name*counter-name",
-                            &perf_counters::get_counter_value);
+    ::dsn::command_manager::instance().register_command(
+        {"counter.value"},
+        "counter.value - get current value of a specific counter",
+        "counter.value app-name*section-name*counter-name",
+        &perf_counters::get_counter_value);
 
-    ::dsn::register_command("counter.sample",
-                            "counter.sample - get latest sample of a specific counter",
-                            "counter.sample app-name*section-name*counter-name",
-                            &perf_counters::get_counter_sample);
+    ::dsn::command_manager::instance().register_command(
+        {"counter.sample"},
+        "counter.sample - get latest sample of a specific counter",
+        "counter.sample app-name*section-name*counter-name",
+        &perf_counters::get_counter_sample);
 }
 
 perf_counters::~perf_counters(void) {}

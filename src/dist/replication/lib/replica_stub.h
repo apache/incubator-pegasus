@@ -143,12 +143,6 @@ public:
     replication_options &options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
 
-    // void json_state(std::stringstream& out) const;
-
-    // static void static_replica_stub_json_state(void* context, int argc, const char** argv,
-    // dsn_cli_reply* reply);
-    static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
-
     std::string get_replica_dir(const char *app_type, gpid gpid, bool create_new = true);
 
 private:
@@ -193,7 +187,7 @@ private:
     void handle_log_failure(error_code err);
 
     void install_perf_counters();
-    void on_kill_app_cli(void *context, int argc, const char **argv, dsn_cli_reply *reply);
+    dsn::error_code on_kill_replica(gpid pid);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
     void get_local_replicas(/*out*/ std::vector<replica_info> &replicas, bool lock_protected);
@@ -234,9 +228,13 @@ private:
     ::dsn::task_ptr _gc_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
 
-    // cli handle, for deregister cli command
-    // dsn_handle_t    _cli_replica_stub_json_state_handle;
-    dsn_handle_t _cli_kill_partition;
+    // command_handlers
+    dsn_handle_t _kill_partition_command;
+    dsn_handle_t _deny_client_command;
+    dsn_handle_t _verbose_client_log_command;
+    dsn_handle_t _verbose_commit_log_command;
+    dsn_handle_t _trigger_chkpt_command;
+
     bool _deny_client;
     bool _verbose_client_log;
     bool _verbose_commit_log;

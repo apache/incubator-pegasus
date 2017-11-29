@@ -82,10 +82,6 @@ private:
     dsn_handle_t _ctrl_only_move_primary;
 
 private:
-    void ctrl_balancer_in_turn(int argc, const char **argv, dsn_cli_reply *reply);
-    void ctrl_only_primary_balancer(int argc, const char **argv, dsn_cli_reply *reply);
-    void ctrl_only_move_primary(int argc, const char **argv, dsn_cli_reply *reply);
-
     void number_nodes(const node_mapper &nodes);
     void shortest_path(std::vector<bool> &visit,
                        std::vector<int> &flow,

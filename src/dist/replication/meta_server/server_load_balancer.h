@@ -37,6 +37,7 @@
 #pragma once
 
 #include <dsn/service_api_cpp.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/dist/error_code.h>
 #include <string>
 #include <functional>
@@ -47,14 +48,6 @@
 
 namespace dsn {
 namespace replication {
-
-#define unregister_helper(ptr)                                                                     \
-    do {                                                                                           \
-        if (ptr != nullptr) {                                                                      \
-            dsn_cli_deregister(ptr);                                                               \
-            ptr = nullptr;                                                                         \
-        }                                                                                          \
-    } while (0)
 
 class server_load_balancer
 {
@@ -100,7 +93,8 @@ public:
     // Try to construct a replica-group by current replica-infos of a gpid
     // ret:
     //   if construct the replica successfully, return true.
-    //   Notice: as long as we can construct something from current infos, we treat it as a success
+    //   Notice: as long as we can construct something from current infos, we treat it as a
+    //   success
     //
     virtual bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) = 0;
 
@@ -112,8 +106,10 @@ public:
     //
     // Try to register some cli-commands
     //
-    // ATTENTION: because this function will register the cli-commands to singleton-container, so
-    // you must unregister the commands that you have already registered or release the instance of
+    // ATTENTION: because this function will register the cli-commands to singleton-container,
+    // so
+    // you must unregister the commands that you have already registered or release the instance
+    // of
     // server_load_balancer before you call this function again
     //
     virtual void register_ctrl_commands() {}
@@ -199,7 +195,7 @@ public:
             replica_assign_delay_ms_for_dropouts = 0;
         }
     }
-    virtual ~simple_load_balancer() { unregister_helper(_ctrl_assign_delay_ms); }
+    virtual ~simple_load_balancer() { UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms); }
 
     bool balance(meta_view, migration_list &list) override
     {
@@ -237,7 +233,7 @@ protected:
     pc_status on_missing_secondary(meta_view &view, const dsn::gpid &gpid);
     pc_status on_redundant_secondary(meta_view &view, const dsn::gpid &gpid);
 
-    void ctrl_assign_delay_ms(int argc, const char **argv, dsn_cli_reply *reply);
+    std::string ctrl_assign_delay_ms(const std::vector<std::string> &args);
 
     int32_t mutation_2pc_min_replica_count;
     uint64_t replica_assign_delay_ms_for_dropouts;

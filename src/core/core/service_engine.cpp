@@ -42,7 +42,7 @@
 #include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/utility/factory_store.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool-api/perf_counters.h>
 #include <dsn/tool_api.h>
@@ -453,14 +453,15 @@ service_engine::service_engine(void)
     _logging = nullptr;
     _memory = nullptr;
 
-    ::dsn::register_command("engine",
-                            "engine - get engine internal information",
-                            "engine [app-id]",
-                            &service_engine::get_runtime_info);
-    ::dsn::register_command("system.queue",
-                            "system.queue - get queue internal information",
-                            "system.queue",
-                            &service_engine::get_queue_info);
+    ::dsn::command_manager::instance().register_command({"engine"},
+                                                        "engine - get engine internal information",
+                                                        "engine [app-id]",
+                                                        &service_engine::get_runtime_info);
+    ::dsn::command_manager::instance().register_command(
+        {"system.queue"},
+        "system.queue - get queue internal information",
+        "system.queue",
+        &service_engine::get_queue_info);
 }
 
 void service_engine::init_before_toollets(const service_spec &spec)

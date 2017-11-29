@@ -33,141 +33,69 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "command_manager.h"
 #include <iostream>
 #include <thread>
 #include <sstream>
+
 #include <dsn/utility/utils.h>
 #include <dsn/cpp/rpc_stream.h>
-#include "service_engine.h"
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/rpc_message.h>
-#include "rpc_engine.h"
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/tool/cli.h>
+
+#include "service_engine.h"
+#include "rpc_engine.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
 #define __TITLE__ "command_manager"
 
-DSN_API const char *dsn_cli_run(const char *command_line) // return command output
-{
-    std::string cmd = command_line;
-    std::string output;
-    dsn::command_manager::instance().run_command(cmd, output);
-
-    char *c_output = (char *)malloc(output.length() + 1);
-    memcpy(c_output, &output[0], output.length());
-    c_output[output.length()] = '\0';
-    return c_output;
-}
-
-DSN_API void dsn_cli_free(const char *command_output) { ::free((void *)command_output); }
-
-DSN_API dsn_handle_t dsn_cli_register(const char *command,
-                                      const char *help_one_line,
-                                      const char *help_long,
-                                      void *context,
-                                      dsn_cli_handler cmd_handler,
-                                      dsn_cli_free_handler output_freer)
-{
-    return dsn::register_command(
-        command, help_one_line, help_long, [=](const std::vector<std::string> &args) {
-            std::vector<const char *> c_args;
-            for (auto &s : args) {
-                c_args.push_back(s.c_str());
-            }
-            dsn_cli_reply reply;
-            cmd_handler(context,
-                        (int)c_args.size(),
-                        c_args.empty() ? nullptr : (const char **)&c_args[0],
-                        &reply);
-            std::string cpp_output = std::string(reply.message, reply.message + reply.size);
-            output_freer(reply);
-            return cpp_output;
-        });
-}
-
-DSN_API dsn_handle_t dsn_cli_app_register(const char *command, // registered command, you should
-                                                               // call this command by
-                                                               // app_full_name.command
-                                          const char *help_one_line,
-                                          const char *help_long,
-                                          void *context,
-                                          dsn_cli_handler cmd_handler,
-                                          dsn_cli_free_handler output_freer)
-{
-    auto cnode = ::dsn::task::get_current_node2();
-    dassert(cnode != nullptr, "tls_dsn not inited properly");
-    auto handle =
-        dsn_cli_register((std::string(cnode->name()) + "." + command).c_str(),
-                         (std::string(cnode->name()) + "." + command + " " + help_one_line).c_str(),
-                         help_long,
-                         context,
-                         cmd_handler,
-                         output_freer);
-    dsn::command_manager::instance().set_cli_target_address(
-        handle, dsn::task::get_current_rpc()->primary_address());
-    return handle;
-}
-
-DSN_API void dsn_cli_deregister(dsn_handle_t handle) { dsn::deregister_command(handle); }
-
 namespace dsn {
 
-void deregister_command(dsn_handle_t command_handle)
+dsn_handle_t command_manager::register_app_command(const std::vector<std::string> &commands,
+                                                   const std::string &help_one_line,
+                                                   const std::string &help_long,
+                                                   command_handler handler)
 {
-    return command_manager::instance().deregister_command(command_handle);
+    dsn_app_info info;
+    dsn_get_current_app_info(&info);
+    std::string app_tag = std::string(info.name) + ".";
+    std::vector<std::string> commands_with_app_tag;
+    commands_with_app_tag.reserve(commands.size());
+    for (const std::string &c : commands) {
+        commands_with_app_tag.push_back(app_tag + c);
+    }
+    return register_command(
+        commands_with_app_tag, app_tag + help_one_line, app_tag + help_long, handler);
 }
 
-dsn_handle_t register_command(
-    const std::vector<const char *> &commands, // commands, e.g., {"help", "Help", "HELP", "h", "H"}
-    const char *help_one_line,
-    const char *help_long, // help info for users
-    command_handler handler)
-{
-    return command_manager::instance().register_command(
-        commands, help_one_line, help_long, handler);
-}
-
-dsn_handle_t register_command(const char *command, // commands, e.g., "help"
-                              const char *help_one_line,
-                              const char *help_long,
-                              command_handler handler)
-{
-    std::vector<const char *> cmds;
-    cmds.push_back(command);
-    return register_command(cmds, help_one_line, help_long, handler);
-}
-
-dsn_handle_t command_manager::register_command(const std::vector<const char *> &commands,
-                                               const char *help_one_line,
-                                               const char *help_long,
+dsn_handle_t command_manager::register_command(const std::vector<std::string> &commands,
+                                               const std::string &help_one_line,
+                                               const std::string &help_long,
                                                command_handler handler)
 {
     utils::auto_write_lock l(_lock);
 
-    for (auto cmd : commands) {
-        if (cmd != nullptr) {
-            auto it = _handlers.find(std::string(cmd));
-            dassert(it == _handlers.end(), "command '%s' already regisered", cmd);
+    for (const std::string &cmd : commands) {
+        if (!cmd.empty()) {
+            auto it = _handlers.find(cmd);
+            dassert(it == _handlers.end(), "command '%s' already regisered", cmd.c_str());
         }
     }
 
-    command *c = new command;
+    command_instance *c = new command_instance();
     c->address.set_invalid();
-    c->commands.reserve(commands.size());
-    for (const auto &item : commands) {
-        c->commands.emplace_back(std::string(item));
-    }
+    c->commands = commands;
     c->help_long = help_long;
     c->help_short = help_one_line;
     c->handler = handler;
     _commands.push_back(c);
 
-    for (auto cmd : commands) {
-        if (cmd != nullptr) {
-            _handlers[std::string(cmd)] = c;
+    for (const std::string &cmd : commands) {
+        if (!cmd.empty()) {
+            _handlers[cmd] = c;
         }
     }
     return c;
@@ -175,7 +103,7 @@ dsn_handle_t command_manager::register_command(const std::vector<const char *> &
 
 void command_manager::deregister_command(dsn_handle_t handle)
 {
-    auto c = reinterpret_cast<command *>(handle);
+    auto c = reinterpret_cast<command_instance *>(handle);
     dassert(c != nullptr, "cannot deregister a null handle");
     utils::auto_write_lock l(_lock);
     for (const std::string &cmd : c->commands) {
@@ -214,7 +142,7 @@ bool command_manager::run_command(const std::string &cmd,
                                   const std::vector<std::string> &args,
                                   /*out*/ std::string &output)
 {
-    command *h = nullptr;
+    command_instance *h = nullptr;
     {
         utils::auto_read_lock l(_lock);
         auto it = _handlers.find(cmd);
@@ -250,25 +178,6 @@ bool command_manager::run_command(const std::string &cmd,
     }
 }
 
-void command_manager::run_console()
-{
-    std::cout << "dsn cli begin ... (type 'help' + Enter to learn more)" << std::endl;
-    std::cout << ">";
-
-    std::string cmdline;
-    while (std::getline(std::cin, cmdline)) {
-        std::string result;
-        run_command(cmdline, result);
-        std::cout << result << std::endl;
-        std::cout << ">";
-    }
-}
-
-void command_manager::start_local_cli()
-{
-    new std::thread(std::bind(&command_manager::run_console, this));
-}
-
 void remote_cli_handler(dsn_message_t req, void *)
 {
     command_manager::instance().on_remote_cli(req);
@@ -295,7 +204,7 @@ void command_manager::on_remote_cli(dsn_message_t req)
 
 void command_manager::set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address)
 {
-    reinterpret_cast<command *>(handle)->address = address;
+    reinterpret_cast<command_instance *>(handle)->address = address;
 }
 
 command_manager::command_manager()

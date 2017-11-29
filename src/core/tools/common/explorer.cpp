@@ -36,7 +36,7 @@
 
 #include <dsn/toollet/explorer.h>
 #include <dsn/service_api_c.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 
 namespace dsn {
 namespace tools {
@@ -450,7 +450,7 @@ void explorer::install(service_spec &spec)
 
     message_ext_for_explorer::register_ext();
     task_ext_for_explorer::register_ext();
-    ::dsn::register_command({"explore", "exp"},
+    ::dsn::command_manager::instance().register_command({"explore", "exp"},
                             "explore the task dependencies as GraphViz dot graph",
                             "explore the task dependencies as GraphViz dot graph",
                             [](const std::vector<std::string> &args) {

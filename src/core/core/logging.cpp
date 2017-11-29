@@ -35,7 +35,7 @@
  */
 
 #include <dsn/service_api_c.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/logging_provider.h>
 #include <dsn/tool_api.h>
 #include "service_engine.h"
@@ -71,19 +71,19 @@ void dsn_log_init()
     }
 
     // register command for logging
-    ::dsn::register_command("flush-log",
-                            "flush-log - flush log to stderr or log file",
-                            "flush-log",
-                            [](const std::vector<std::string> &args) {
-                                ::dsn::logging_provider *logger =
-                                    ::dsn::service_engine::fast_instance().logging();
-                                if (logger != nullptr) {
-                                    logger->flush();
-                                }
-                                return "Flush done.";
-                            });
-    ::dsn::register_command(
-        "reset-log-start-level",
+    ::dsn::command_manager::instance().register_command(
+        {"flush-log"},
+        "flush-log - flush log to stderr or log file",
+        "flush-log",
+        [](const std::vector<std::string> &args) {
+            ::dsn::logging_provider *logger = ::dsn::service_engine::fast_instance().logging();
+            if (logger != nullptr) {
+                logger->flush();
+            }
+            return "Flush done.";
+        });
+    ::dsn::command_manager::instance().register_command(
+        {"reset-log-start-level"},
         "reset-log-start-level - reset the log start level",
         "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
