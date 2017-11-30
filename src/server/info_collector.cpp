@@ -147,6 +147,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(remove_qps);
     INIT_COUNER(multi_remove_qps);
     INIT_COUNER(scan_qps);
+    INIT_COUNER(recent_expire_count);
+    INIT_COUNER(recent_filter_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
     INIT_COUNER(read_qps);
