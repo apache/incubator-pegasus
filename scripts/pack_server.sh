@@ -120,7 +120,7 @@ cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
 cp -v `get_stdcpp_lib $custom_gcc` ${pack}/bin
 #cp `ldconfig -p|grep -e "libbz2.so.1.0$"|awk '{print $NF}'` ${pack}/bin
 
-chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.py ${pack}/bin/*.sh
+chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*
 
 echo "Pegasus Server $version ($commit_id) $platform $build_type" >${pack}/VERSION

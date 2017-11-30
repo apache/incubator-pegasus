@@ -205,7 +205,7 @@ function run_test()
     fi
 
     ./run.sh clear_onebox #clear the onebox before test
-    ./run.sh start_onebox -p 4
+    ./run.sh start_onebox 
     echo "sleep 20 to wait for the onebox to start all partitions ..."
     sleep 20
 

@@ -653,7 +653,7 @@ db_bench: db/db_bench.o $(LIBOBJECTS) $(TESTUTIL)
 	$(AM_LINK)
 
 pegasus_bench: db/pegasus_bench.o $(LIBOBJECTS) $(TESTUTIL)
-	$(AM_LINK) -L${DSN_ROOT}/lib -L${DSN_THIRDPARTY_ROOT}/lib -L${BOOST_ROOT}/lib -lpegasus_client_static -ldl -laio -lboost_system -lboost_filesystem -Wl,-rpath,.
+	$(AM_LINK) -L${DSN_ROOT}/lib -L${DSN_THIRDPARTY_ROOT}/lib -L${BOOST_ROOT}/lib -lpegasus_client_static -lcrypto -ldl -laio -lboost_system -lboost_filesystem -Wl,-rpath,.
 
 cache_bench: util/cache_bench.o $(LIBOBJECTS) $(TESTUTIL)
 	$(AM_LINK)

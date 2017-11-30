@@ -19,10 +19,18 @@ set(MY_PROJ_LIBS
     dsn_layer2_stateful_type1
     dsn.replication.clientlib
     dsn.replication.ddlclient
+    dsn.block_service.local
+    dsn.block_service.fds
     dsn.failure_detector
     dsn.failure_detector.multimaster
     pegasus_client_static
     readline
+    galaxy-fds-sdk-cpp
+    PocoNet
+    PocoFoundation
+    PocoNetSSL
+    PocoJSON
+    crypto
     )
 
 if (UNIX)
@@ -31,7 +39,7 @@ else()
     set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
 endif()
 
-set(MY_PROJ_LIB_PATH "../../rocksdb")
+set(MY_PROJ_LIB_PATH "../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

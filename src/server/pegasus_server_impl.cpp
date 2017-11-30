@@ -45,6 +45,7 @@ pegasus_server_impl::pegasus_server_impl(dsn_gpid gpid)
       _db(nullptr),
       _is_open(false),
       _value_schema_version(0),
+      _last_durable_decree(0),
       _physical_error(0),
       _is_checkpointing(false)
 {
@@ -1418,6 +1419,70 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
 
     auto path = ::dsn::utils::filesystem::path_combine(_data_dir, "rdb");
+
+    //
+    // here, we must distinguish three cases, such as:
+    //  case 1: we open the db that already exist
+    //  case 2: we open a new db
+    //  case 3: we restore the db base on old data
+    //
+    // if we want to restore the db base on old data, only all of the restore preconditions are
+    // satisfied
+    //      restore preconditions:
+    //          1, rdb isn't exist
+    //          2, we can parse restore info from app env, which is stored in argv
+    //          3, restore_dir is exist
+    //
+    if (::dsn::utils::filesystem::path_exists(path)) {
+        // only case 1
+        ddebug("%s: rdb is already exist, path = %s", _replica_name.c_str(), path.c_str());
+    } else {
+        std::pair<std::string, bool> restore_info = get_restore_dir_from_env(argc, argv);
+        const std::string &restore_dir = restore_info.first;
+        bool force_restore = restore_info.second;
+        if (restore_dir.empty()) {
+            // case 2
+            dinfo("%s: open a new db, path = %s", _replica_name.c_str(), path.c_str());
+        } else {
+            // case 3
+            ddebug("%s: try to restore from restore_dir = %s",
+                   _replica_name.c_str(),
+                   restore_dir.c_str());
+            if (::dsn::utils::filesystem::directory_exists(restore_dir)) {
+                // here, we just rename restore_dir to rdb, then continue the normal process
+                if (::dsn::utils::filesystem::rename_path(restore_dir.c_str(), path.c_str())) {
+                    ddebug("%s: rename restore_dir(%s) to rdb(%s) succeed",
+                           _replica_name.c_str(),
+                           restore_dir.c_str(),
+                           path.c_str());
+                } else {
+                    derror("%s: rename restore_dir(%s) to rdb(%s) failed",
+                           _replica_name.c_str(),
+                           restore_dir.c_str(),
+                           path.c_str());
+                    return ::dsn::ERR_FILE_OPERATION_FAILED;
+                }
+            } else {
+                if (force_restore) {
+                    derror("%s: try to restore, but restore_dir isn't exist, restore_dir = %s",
+                           _replica_name.c_str(),
+                           restore_dir.c_str());
+                    return ::dsn::ERR_FILE_OPERATION_FAILED;
+                } else {
+                    dwarn(
+                        "%s: try to restore and restore_dir(%s) isn't exist, but we don't force "
+                        "it, the role of this replica must not primary, so we open a new db on the "
+                        "path(%s)",
+                        _replica_name.c_str(),
+                        restore_dir.c_str(),
+                        path.c_str());
+                }
+            }
+        }
+    }
+
+    ddebug("%s: start to open rocksDB's rdb(%s)", _replica_name.c_str(), path.c_str());
+
     auto status = rocksdb::DB::Open(opts, path, &_db);
     if (status.ok()) {
         _value_schema_version = _db->GetValueSchemaVersion();
@@ -2070,6 +2135,64 @@ void pegasus_server_impl::updating_rocksdb_sstsize()
         _pfc_sst_count.set(sst_size.first);
         _pfc_sst_size.set(sst_size_mb);
     }
+}
+
+std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int argc, char **argv)
+{
+    std::pair<std::string, bool> res;
+    res.first = std::string();
+    res.second = false;
+    if (argc != 2) {
+        dassert(false,
+                "%s: parse restore info from env failed, because invalid argc = %d",
+                _replica_name.c_str(),
+                argc);
+        return res;
+    }
+    // env is compounded in replication_app_base::open() function
+    std::vector<std::string> envs;
+    ::dsn::utils::split_args(argv[1], envs, ',');
+    std::map<std::string, std::string> env_kvs;
+    for (const auto &env : envs) {
+        auto pos = env.find(':');
+        if (pos == std::string::npos) {
+            dwarn("%s: invalid env, env = %s", _replica_name.c_str(), env.c_str());
+        } else {
+            env_kvs.insert(std::make_pair(env.substr(0, pos), env.substr(pos + 1)));
+        }
+    }
+
+    auto it = env_kvs.find("force_restore");
+    if (it != env_kvs.end()) {
+        res.second = true;
+    }
+
+    std::stringstream os;
+    os << "restore.";
+    // TODO: using cold_backup_constant to replace
+    // Attention: "policy_name" and "backup_id" must equal to cold_backup_constant::POLICY_NAME
+    //             and cold_backup_constant::BACKUP_ID
+    it = env_kvs.find("policy_name");
+    if (it != env_kvs.end()) {
+        ddebug("%s: find policy_name from env, policy_name = %s",
+               _replica_name.c_str(),
+               it->second.c_str());
+        os << it->second << ".";
+    } else {
+        return res;
+    }
+    it = env_kvs.find("backup_id");
+    if (it != env_kvs.end()) {
+        ddebug("%s: find backup_id from env, backup_id = %s",
+               _replica_name.c_str(),
+               it->second.c_str());
+        os << it->second;
+    } else {
+        return res;
+    }
+    std::string parent_dir = ::dsn::utils::filesystem::remove_file_name(_data_dir);
+    res.first = ::dsn::utils::filesystem::path_combine(parent_dir, os.str());
+    return res;
 }
 }
 } // namespace

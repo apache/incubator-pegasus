@@ -3184,6 +3184,430 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+inline bool restore(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"old_cluster_name", required_argument, 0, 'c'},
+                                           {"old_policy_name", required_argument, 0, 'p'},
+                                           {"old_app_name", required_argument, 0, 'a'},
+                                           {"old_app_id", required_argument, 0, 'i'},
+                                           {"new_app_name", required_argument, 0, 'n'},
+                                           {"timestamp", required_argument, 0, 't'},
+                                           {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"skip_bad_partition", no_argument, 0, 's'},
+                                           {0, 0, 0, 0}};
+    std::string old_cluster_name, old_policy_name;
+    std::string old_app_name, new_app_name;
+    std::string backup_provider_type;
+    int32_t old_app_id;
+    int64_t timestamp;
+    bool skip_bad_partition = false;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:s", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'c':
+            old_cluster_name = optarg;
+            break;
+        case 'p':
+            old_policy_name = optarg;
+            break;
+        case 'a':
+            old_app_name = optarg;
+            break;
+        case 'i':
+            old_app_id = boost::lexical_cast<int32_t>(optarg);
+            break;
+        case 'n':
+            new_app_name = optarg;
+            break;
+        case 't':
+            timestamp = boost::lexical_cast<int64_t>(optarg);
+            break;
+        case 'b':
+            backup_provider_type = optarg;
+            break;
+        case 's':
+            skip_bad_partition = true;
+            break;
+        default:
+            fprintf(stderr, "invalid parameter\n");
+            return false;
+        }
+    }
+
+    if (old_cluster_name.empty() || old_policy_name.empty() || old_app_name.empty() ||
+        old_app_id <= 0 || timestamp <= 0 || backup_provider_type.empty()) {
+        fprintf(stderr, "invalid parameter\n");
+        return false;
+    }
+
+    if (new_app_name.empty()) {
+        // using old_app_name
+        new_app_name = old_app_name;
+    }
+
+    ::dsn::error_code err = sc->ddl_client->do_restore(backup_provider_type,
+                                                       old_cluster_name,
+                                                       old_policy_name,
+                                                       timestamp,
+                                                       old_app_name,
+                                                       old_app_id,
+                                                       new_app_name,
+                                                       skip_bad_partition);
+    if (err != ::dsn::ERR_OK) {
+        fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool query_restore_status(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 2) {
+        fprintf(stderr, "invalid parameter\n");
+        return false;
+    }
+
+    int32_t restore_app_id = boost::lexical_cast<int32_t>(args.argv[1]);
+    if (restore_app_id <= 0) {
+        fprintf(stderr, "invalid restore_app_id(%d)", restore_app_id);
+        return false;
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->query_restore(restore_app_id);
+
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr,
+                "query restore status failed, restore_app_id(%d), err = %s\n",
+                restore_app_id,
+                ret.to_string());
+        ret.end_tracking();
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"app_ids", required_argument, 0, 'a'},
+                                           {"backup_interval_seconds", required_argument, 0, 'i'},
+                                           {"start_time", required_argument, 0, 's'},
+                                           {"backup_history_cnt", required_argument, 0, 'c'},
+                                           {0, 0, 0, 0}};
+
+    std::string policy_name;
+    std::string backup_provider_type;
+    std::vector<int32_t> app_ids;
+    int64_t backup_interval_seconds = 0;
+    std::string start_time;
+    int32_t backup_history_cnt = 0;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:b:a:i:s:c:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
+        case 'b':
+            backup_provider_type = optarg;
+            ;
+            break;
+        case 'a': {
+            std::vector<std::string> app_list;
+            ::dsn::utils::split_args(optarg, app_list, ',');
+            for (const auto &app : app_list) {
+                int32_t id = atoi(app.c_str());
+                if (id <= 0) {
+                    fprintf(stderr, "invalid app_id, %d\n", id);
+                    return false;
+                } else {
+                    app_ids.emplace_back(id);
+                }
+            }
+        } break;
+        case 'i':
+            backup_interval_seconds = atoi(optarg);
+            break;
+        case 's':
+            start_time = optarg;
+            break;
+        case 'c':
+            backup_history_cnt = atoi(optarg);
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (policy_name.empty()) {
+        fprintf(stderr, "policy_name should not be empty\n");
+        return false;
+    }
+    if (backup_provider_type.empty()) {
+        fprintf(stderr, "backup_provider_type should not be empty\n");
+        return false;
+    }
+
+    if (backup_interval_seconds <= 0) {
+        fprintf(stderr,
+                "invalid backup_interval_seconds: %" PRId64 ", should > 0\n",
+                backup_interval_seconds);
+        return false;
+    }
+
+    if (backup_history_cnt <= 0) {
+        fprintf(stderr, "invalid backup_history_cnt: %d, should > 0\n", backup_history_cnt);
+        return false;
+    }
+
+    if (!start_time.empty()) {
+        int32_t hour = 0, min = 0;
+        if (sscanf(start_time.c_str(), "%d:%d", &hour, &min) != 2 || hour > 24 || hour < 0 ||
+            min >= 60 || min < 0 || (hour == 24 && min > 0)) {
+            fprintf(stderr,
+                    "invalid start time: %s, should like this hour:minute\n",
+                    start_time.c_str());
+            return false;
+        }
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->add_backup_policy(policy_name,
+                                                              backup_provider_type,
+                                                              app_ids,
+                                                              backup_interval_seconds,
+                                                              backup_history_cnt,
+                                                              start_time);
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "add backup policy failed, err = %s\n", ret.to_string());
+        ret.end_tracking();
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {"backup_info_cnt", required_argument, 0, 'b'},
+                                           {0, 0, 0, 0}};
+    std::vector<std::string> policy_names;
+    int backup_info_cnt = 1;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:b:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p': {
+            std::vector<std::string> names;
+            ::dsn::utils::split_args(optarg, names, ',');
+            for (const auto &policy_name : names) {
+                if (policy_name.empty()) {
+                    fprintf(stderr, "invalid, empty policy_name, just ignore");
+                    continue;
+                } else {
+                    policy_names.emplace_back(policy_name);
+                }
+            }
+        } break;
+        case 'b':
+            backup_info_cnt = atoi(optarg);
+            if (backup_info_cnt <= 0) {
+                fprintf(stderr, "invalid backup_info_cnt %s to int failed\n", optarg);
+                return false;
+            }
+            break;
+        default:
+            return false;
+        }
+    }
+    if (policy_names.empty()) {
+        fprintf(stderr, "empty policy_name, please assign policy_name you want to query");
+        return false;
+    }
+    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
+        ret.end_tracking();
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"add_app", required_argument, 0, 'a'},
+                                           {"remove_app", required_argument, 0, 'r'},
+                                           {"backup_interval_seconds", required_argument, 0, 'i'},
+                                           {"backup_history_count", required_argument, 0, 'c'},
+                                           {"start_time", required_argument, 0, 's'},
+                                           {0, 0, 0, 0}};
+    if (args.argc < 2) {
+        fprintf(stderr, "invalid parameter\n");
+        return false;
+    }
+
+    std::string policy_name = args.argv[1];
+    std::vector<int32_t> add_appids;
+    std::vector<int32_t> remove_appids;
+    int64_t backup_interval_seconds = 0;
+    int32_t backup_history_count = 0;
+    std::string start_time;
+    std::vector<std::string> app_id_strs;
+
+    if (policy_name.empty()) {
+        fprintf(stderr, "empty policy name\n");
+        return false;
+    }
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:r:i:c:s:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            app_id_strs.clear();
+            ::dsn::utils::split_args(optarg, app_id_strs, ',');
+            for (const auto &s_appid : app_id_strs) {
+                int32_t appid = boost::lexical_cast<int32_t>(s_appid);
+                if (appid <= 0) {
+                    fprintf(stderr, "add invalid app_id(%d) to policy\n", appid);
+                    return false;
+                } else {
+                    add_appids.emplace_back(boost::lexical_cast<int32_t>(s_appid));
+                }
+            }
+            break;
+        case 'r':
+            app_id_strs.clear();
+            ::dsn::utils::split_args(optarg, app_id_strs, ',');
+            for (const auto &s_appid : app_id_strs) {
+                int32_t appid = boost::lexical_cast<int32_t>(s_appid);
+                if (appid <= 0) {
+                    fprintf(stderr, "remove invalid app_id(%d) from policy\n", appid);
+                    return false;
+                } else {
+                    remove_appids.emplace_back(boost::lexical_cast<int32_t>(s_appid));
+                }
+            }
+            break;
+        case 'i':
+            backup_interval_seconds = boost::lexical_cast<int64_t>(optarg);
+            if (backup_interval_seconds < 0) {
+                fprintf(stderr,
+                        "invalid backup_interval_seconds(%" PRId64 ")\n",
+                        backup_interval_seconds);
+                return false;
+            }
+            break;
+        case 'c':
+            backup_history_count = boost::lexical_cast<int32_t>(optarg);
+            if (backup_history_count < 0) {
+                fprintf(stderr, "invalid backup_history_count(%d)\n", backup_history_count);
+                return false;
+            }
+            break;
+        case 's':
+            start_time = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (!start_time.empty()) {
+        int32_t hour = 0, min = 0;
+        if (sscanf(start_time.c_str(), "%d:%d", &hour, &min) != 2 || hour > 24 || hour < 0 ||
+            min >= 60 || min < 0 || (hour == 24 && min > 0)) {
+            fprintf(stderr,
+                    "invalid start time: %s, should like this hour:minute\n",
+                    start_time.c_str());
+            return false;
+        }
+    }
+
+    dsn::error_code ret = sc->ddl_client->update_backup_policy(policy_name,
+                                                               add_appids,
+                                                               remove_appids,
+                                                               backup_interval_seconds,
+                                                               backup_history_count,
+                                                               start_time);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "modify backup policy failed, with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 2) {
+        fprintf(stderr, "invalid parameter\n");
+        return false;
+    }
+
+    std::string policy_name = args.argv[1];
+
+    if (policy_name.empty()) {
+        fprintf(stderr, "empty policy name\n");
+        return false;
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 2) {
+        fprintf(stderr, "invalid parameter\n");
+        return false;
+    }
+
+    std::string policy_name = args.argv[1];
+
+    if (policy_name.empty()) {
+        fprintf(stderr, "empty policy name\n");
+        return false;
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->enable_backup_policy(policy_name);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "enable backup policy failed, with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
 inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
 {
     dsn_exit(0);

@@ -114,7 +114,7 @@ int main(int argc, char **argv)
                    PEGASUS_VERSION,
                    PEGASUS_GIT_COMMIT,
                    PEGASUS_BUILD_TYPE);
-            return 0;
+            dsn_exit(0);
         }
     }
     ddebug("pegasus server starting, pid(%d), version(%s)", (int)getpid(), pegasus_server_rcsid());

@@ -162,6 +162,12 @@ private:
 
     void updating_rocksdb_sstsize();
 
+    // get the absolute path of restore directory and the flag whether force restore from env
+    // return
+    //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
+    //      the flag that whether force restore
+    std::pair<std::string, bool> get_restore_dir_from_env(int argc, char **argv);
+
 private:
     dsn_gpid _gpid;
     std::string _primary_address;

@@ -285,6 +285,50 @@ command_executor commands[] = {
         recover,
     },
     {
+        "add_backup_policy",
+        "add new cold backup policy",
+        "<-p|--policy_name p1> <-b|--backup_provider_type provider> <-a|--app_ids 1,2,3..> "
+        "<-i|--backup_interval_seconds sec> <-s|--start_time hour:minute> "
+        "<-c|--backup_history_cnt count>",
+        add_backup_policy,
+    },
+    {
+        "query_backup_policy",
+        "query existed backup policy and last backup infos",
+        "<-p| --policy_name p1,p2> [-b| --backup_info_cnt cnt]",
+        query_backup_policy,
+    },
+    {
+        "modify_backup_policy",
+        "modify the backup policy",
+        "policy_name [-a|add_app 1,2...] [-r|remove_app 1,2...] [-i|backup_interval_seconds sec] "
+        "[-c|backup_history_count cnt] [-s|start_time hour:minute]",
+        modify_backup_policy,
+    },
+    {
+        "disable_backup_policy",
+        "stop policy continue backup",
+        "<policy_name>",
+        disable_backup_policy,
+    },
+    {
+        "enable_backup_policy",
+        "start backup policy to backup again",
+        "<policy_name>",
+        enable_backup_policy,
+    },
+    {
+        "restore_app",
+        "restore app from backup media",
+        "<-c|old_cluster_name name> <-p|old_policy_name name> <-a|old_app_name name> "
+        "<-i|old_app_id id> <-t|timestamp/backup_id timestamp> <-b|backup_provider_type provider> "
+        "[-n|new_app_name name] [-s|skip_bad_partition] ",
+        restore,
+    },
+    {
+        "query_restore_status", "query restore status", "<restore_app_id 1>", query_restore_status,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {

@@ -43,6 +43,9 @@ echo "rdsn/src/dist/replication/lib" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/meta_server" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/zookeeper" >>$INCLUDES_OUT
 echo "rdsn/thirdparty/output/include" >>$INCLUDES_OUT
+echo "rdsn/src/dist/block_service/fds" >>$INCLUDES_OUT
+echo "rdsn/src/dist/block_service/local" >>$INCLUDES_OUT
+echo "rdsn/src" >> $INCLUDES_OUT
 echo "rocksdb" >>$INCLUDES_OUT
 echo "rocksdb/include" >>$INCLUDES_OUT
 echo "src/include" >>$INCLUDES_OUT

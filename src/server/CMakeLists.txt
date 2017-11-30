@@ -21,12 +21,20 @@ set(MY_PROJ_LIBS
     dsn_meta_server
     dsn.replication.clientlib
     dsn.replication.ddlclient
+    dsn.block_service.local
+    dsn.block_service.fds
     dsn.failure_detector
     dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
     pegasus_client_static
     zookeeper_mt
     event
+    galaxy-fds-sdk-cpp
+    PocoNet
+    PocoFoundation
+    PocoNetSSL
+    PocoJSON
+    crypto
     )
 
 if (UNIX)
@@ -35,7 +43,7 @@ else()
     set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
 endif()
 
-set(MY_PROJ_LIB_PATH "../../rocksdb" "../ext/libevent/lib")
+set(MY_PROJ_LIB_PATH "../../rocksdb" "../ext/libevent/lib" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
 
 set(MY_BOOST_PACKAGES system filesystem)
 
