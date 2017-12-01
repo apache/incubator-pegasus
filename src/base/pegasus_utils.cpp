@@ -58,6 +58,19 @@ bool buf2int64(const char *buffer, int length, int64_t &result)
     return true;
 }
 
+bool buf2bool(const char *buffer, int length, bool &result)
+{
+    if (length == 4 && strncmp(buffer, "true", 4) == 0) {
+        result = true;
+        return true;
+    }
+    if (length == 5 && strncmp(buffer, "false", 5) == 0) {
+        result = false;
+        return true;
+    }
+    return false;
+}
+
 size_t
 c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len, bool always_escape)
 {

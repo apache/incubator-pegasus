@@ -165,6 +165,16 @@ command_executor commands[] = {
         data_operations,
     },
     {
+        "multi_del_range",
+        "delete multiple values under sort key range for a single hash key",
+        "<hash_key> <start_sort_key> <stop_sort_key> "
+        "[--start_inclusive|-a <true|false>] [--stop_inclusive|-b <true|false>] "
+        "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] "
+        "[--sort_key_filter_pattern|-y <str>] "
+        "[--output|-o <file_name>] [--silent|-i]",
+        data_operations,
+    },
+    {
         "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
     },
     {

@@ -38,6 +38,24 @@ inline bool version(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+inline bool
+buf2filter_type(const char *buffer, int length, pegasus::pegasus_client::filter_type &result)
+{
+    if (length == 8 && strncmp(buffer, "anywhere", 8) == 0) {
+        result = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        return true;
+    }
+    if (length == 6 && strncmp(buffer, "prefix", 6) == 0) {
+        result = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        return true;
+    }
+    if (length == 7 && strncmp(buffer, "postfix", 7) == 0) {
+        result = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        return true;
+    }
+    return false;
+}
+
 inline bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
     ::dsn::error_code err = sc->ddl_client->cluster_info("");
@@ -237,14 +255,14 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'p':
-            if ((pc = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as int failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), pc)) {
+                fprintf(stderr, "parse %s as partition_count failed\n", optarg);
                 return false;
             }
             break;
         case 'r':
-            if ((rc = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as int failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), rc)) {
+                fprintf(stderr, "parse %s as replica_count failed\n", optarg);
                 return false;
             }
             break;
@@ -283,8 +301,8 @@ inline bool drop_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'r':
-            if ((reserve_seconds = atoi(optarg)) == 0 && strcmp(optarg, "0") != 0) {
-                fprintf(stderr, "parse %s as int failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), reserve_seconds)) {
+                fprintf(stderr, "parse %s as reserve_seconds failed\n", optarg);
                 return false;
             }
             break;
@@ -310,9 +328,8 @@ inline bool recall_app(command_executor *e, shell_context *sc, arguments args)
 
     int id;
     std::string new_name = "";
-    id = atoi(args.argv[1]);
-    if (id == 0) {
-        fprintf(stdout, "can't parse %s as an integer\n", args.argv[1]);
+    if (!::pegasus::utils::buf2int(args.argv[1], strlen(args.argv[1]), id)) {
+        fprintf(stderr, "ERROR: parse %s as id failed\n", args.argv[1]);
         return false;
     }
     if (args.argc >= 3) {
@@ -571,9 +588,13 @@ inline bool process_timeout(command_executor *e, shell_context *sc, arguments ar
         fprintf(stderr, "Current timeout: %d ms.\n", sc->timeout_ms);
         return true;
     } else if (args.argc == 2) {
-        int timeout = atoi(args.argv[1]);
+        int timeout;
+        if (!::pegasus::utils::buf2int(args.argv[1], strlen(args.argv[1]), timeout)) {
+            fprintf(stderr, "ERROR: parse %s as timeout failed\n", args.argv[1]);
+            return false;
+        }
         if (timeout <= 0) {
-            fprintf(stderr, "ERROR: invalid timeout %s\n", args.argv[2]);
+            fprintf(stderr, "ERROR: invalid timeout %s\n", args.argv[1]);
             return false;
         }
         sc->timeout_ms = timeout;
@@ -758,33 +779,19 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             break;
         switch (c) {
         case 'a':
-            if (strcmp(optarg, "true") == 0) {
-                options.start_inclusive = true;
-            } else if (strcmp(optarg, "false") == 0) {
-                options.start_inclusive = false;
-            } else {
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
                 fprintf(stderr, "invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
-            if (strcmp(optarg, "true") == 0) {
-                options.stop_inclusive = true;
-            } else if (strcmp(optarg, "false") == 0) {
-                options.stop_inclusive = false;
-            } else {
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
                 fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
             break;
         case 's':
-            if (strcmp(optarg, "anywhere") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-            } else if (strcmp(optarg, "prefix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-            } else if (strcmp(optarg, "postfix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-            } else {
+            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -809,6 +816,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
         }
     }
 
+    fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
     fprintf(stderr,
             "start_sort_key: \"%s\"\n",
             pegasus::utils::c_escape_string(start_sort_key).c_str());
@@ -822,6 +830,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
+    fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
@@ -972,7 +981,11 @@ inline bool set_value(command_executor *e, shell_context *sc, arguments args)
         return true;
     int32_t ttl = 0;
     if (args.argc == 5) {
-        if ((ttl = atoi(args.argv[4])) <= 0) {
+        if (!::pegasus::utils::buf2int(args.argv[4], strlen(args.argv[4]), ttl)) {
+            fprintf(stderr, "ERROR: parse %s as ttl failed\n", args.argv[4]);
+            return false;
+        }
+        if (ttl <= 0) {
             fprintf(stderr, "ERROR: invalid ttl %s\n", args.argv[4]);
             return false;
         }
@@ -1096,6 +1109,205 @@ inline bool multi_del_value(command_executor *e, shell_context *sc, arguments ar
     return true;
 }
 
+inline bool multi_del_range(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc < 4)
+        return false;
+
+    std::string hash_key = args.argv[1];
+    if (!unescape_str(hash_key))
+        return true;
+    std::string start_sort_key = args.argv[2];
+    if (!unescape_str(start_sort_key))
+        return true;
+    std::string stop_sort_key = args.argv[3];
+    if (!unescape_str(stop_sort_key))
+        return true;
+    pegasus::pegasus_client::scan_options options;
+    options.no_value = true;
+    options.timeout_ms = sc->timeout_ms;
+    std::string sort_key_filter_type_name("no_filter");
+    bool silent = false;
+    FILE *file = stderr;
+    int batch_del_count = 100;
+
+    static struct option long_options[] = {{"start_inclusive", required_argument, 0, 'a'},
+                                           {"stop_inclusive", required_argument, 0, 'b'},
+                                           {"sort_key_filter_type", required_argument, 0, 's'},
+                                           {"sort_key_filter_pattern", required_argument, 0, 'y'},
+                                           {"output", required_argument, 0, 'o'},
+                                           {"silent", no_argument, 0, 'i'},
+                                           {0, 0, 0, 0}};
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:b:s:y:o:i", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
+                fprintf(stderr, "invalid start_inclusive param\n");
+                return false;
+            }
+            break;
+        case 'b':
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
+                fprintf(stderr, "invalid stop_inclusive param\n");
+                return false;
+            }
+            break;
+        case 's':
+            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
+                fprintf(stderr, "invalid sort_key_filter_type param\n");
+                return false;
+            }
+            sort_key_filter_type_name = optarg;
+            break;
+        case 'y':
+            options.sort_key_filter_pattern = optarg;
+            if (!unescape_str(options.sort_key_filter_pattern))
+                return true;
+            break;
+        case 'o':
+            file = fopen(optarg, "w");
+            if (!file) {
+                fprintf(stderr, "open filename %s failed", optarg);
+                return false;
+            }
+            break;
+        case 'i':
+            silent = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
+    fprintf(stderr,
+            "start_sort_key: \"%s\"\n",
+            pegasus::utils::c_escape_string(start_sort_key).c_str());
+    fprintf(stderr, "start_inclusive: %s\n", options.start_inclusive ? "true" : "false");
+    fprintf(
+        stderr, "stop_sort_key: \"%s\"\n", pegasus::utils::c_escape_string(stop_sort_key).c_str());
+    fprintf(stderr, "stop_inclusive: %s\n", options.stop_inclusive ? "true" : "false");
+    fprintf(stderr, "sort_key_filter_type: %s\n", sort_key_filter_type_name.c_str());
+    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "sort_key_filter_pattern: \"%s\"\n",
+                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+    }
+    fprintf(stderr, "silent: %s\n", silent ? "true" : "false");
+    fprintf(stderr, "\n");
+
+    int count = 0;
+    bool error_occured = false;
+    pegasus::pegasus_client::pegasus_scanner *scanner = nullptr;
+    int ret = sc->pg_client->get_scanner(hash_key, start_sort_key, stop_sort_key, options, scanner);
+    if (ret != pegasus::PERR_OK) {
+        fprintf(file, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
+        if (file != stderr) {
+            fprintf(
+                stderr, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
+        }
+        error_occured = true;
+    } else {
+        std::string tmp_hash_key;
+        std::string sort_key;
+        std::string value;
+        pegasus::pegasus_client::internal_info info;
+        std::set<std::string> sort_keys;
+        while (true) {
+            int scan_ret = scanner->next(tmp_hash_key, sort_key, value, &info);
+            if (scan_ret != pegasus::PERR_SCAN_COMPLETE && scan_ret != pegasus::PERR_OK) {
+                fprintf(file,
+                        "ERROR: scan data failed: %s {app_id=%d, partition_index=%d, server=%s}\n",
+                        sc->pg_client->get_error_string(ret),
+                        info.app_id,
+                        info.partition_index,
+                        info.server.c_str());
+                if (file != stderr) {
+                    fprintf(
+                        stderr,
+                        "ERROR: scan data failed: %s {app_id=%d, partition_index=%d, server=%s}\n",
+                        sc->pg_client->get_error_string(ret),
+                        info.app_id,
+                        info.partition_index,
+                        info.server.c_str());
+                }
+                error_occured = true;
+                break;
+            }
+
+            if (scan_ret == pegasus::PERR_OK) {
+                sort_keys.emplace(std::move(sort_key));
+            }
+
+            if (sort_keys.size() > 0 &&
+                (sort_keys.size() >= batch_del_count || scan_ret == pegasus::PERR_SCAN_COMPLETE)) {
+                int64_t del_count;
+                pegasus::pegasus_client::internal_info del_info;
+                int del_ret = sc->pg_client->multi_del(
+                    hash_key, sort_keys, del_count, sc->timeout_ms, &del_info);
+                if (del_ret != pegasus::PERR_OK) {
+                    fprintf(file,
+                            "ERROR: delete data failed: %s {app_id=%d, partition_index=%d, "
+                            "server=%s}\n",
+                            sc->pg_client->get_error_string(del_ret),
+                            del_info.app_id,
+                            del_info.partition_index,
+                            del_info.server.c_str());
+                    if (file != stderr) {
+                        fprintf(stderr,
+                                "ERROR: delete data failed: %s {app_id=%d, partition_index=%d, "
+                                "server=%s}\n",
+                                sc->pg_client->get_error_string(del_ret),
+                                del_info.app_id,
+                                del_info.partition_index,
+                                del_info.server.c_str());
+                    }
+                    error_occured = true;
+                    break;
+                } else {
+                    count += del_count;
+                    if (!silent) {
+                        for (auto &k : sort_keys) {
+                            fprintf(file,
+                                    "Deleted: \"%s\"\n",
+                                    pegasus::utils::c_escape_string(k, sc->escape_all).c_str());
+                        }
+                    }
+                    sort_keys.clear();
+                }
+            }
+
+            if (scan_ret == pegasus::PERR_SCAN_COMPLETE) {
+                break;
+            }
+        }
+    }
+
+    if (scanner) {
+        delete scanner;
+    }
+
+    if (file != stderr) {
+        fclose(file);
+    }
+
+    if (error_occured) {
+        fprintf(stderr, "\nTerminated for error, %d sort keys deleted.\n", count);
+    } else {
+        if (file == stderr && !silent && count > 0) {
+            fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "OK, %d sort keys deleted.\n", count);
+    }
+    return true;
+}
+
 inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3) {
@@ -1149,7 +1361,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     if (!unescape_str(stop_sort_key))
         return true;
 
-    int32_t max_count = 0x7FFFFFFF;
+    int32_t max_count = -1;
     bool detailed = false;
     FILE *file = stderr;
     int32_t timeout_ms = sc->timeout_ms;
@@ -1179,14 +1391,14 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'n':
-            if ((max_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as %s integer failed\n", optarg, "max_count");
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
+                fprintf(stderr, "parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as %s integer failed\n", optarg, "timeout_ms");
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
@@ -1198,33 +1410,19 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'a':
-            if (strcmp(optarg, "true") == 0) {
-                options.start_inclusive = true;
-            } else if (strcmp(optarg, "false") == 0) {
-                options.start_inclusive = false;
-            } else {
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
                 fprintf(stderr, "invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
-            if (strcmp(optarg, "true") == 0) {
-                options.stop_inclusive = true;
-            } else if (strcmp(optarg, "false") == 0) {
-                options.stop_inclusive = false;
-            } else {
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
                 fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
             break;
         case 's':
-            if (strcmp(optarg, "anywhere") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-            } else if (strcmp(optarg, "prefix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-            } else if (strcmp(optarg, "postfix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-            } else {
+            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1243,6 +1441,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
+    fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
     fprintf(stderr,
             "start_sort_key: \"%s\"\n",
             pegasus::utils::c_escape_string(start_sort_key).c_str());
@@ -1256,6 +1455,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
+    fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
@@ -1264,16 +1464,19 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     options.timeout_ms = timeout_ms;
     int ret = sc->pg_client->get_scanner(hash_key, start_sort_key, stop_sort_key, options, scanner);
     if (ret != pegasus::PERR_OK) {
-        fprintf(file, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+        fprintf(file, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
         if (file != stderr) {
-            fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+            fprintf(
+                stderr, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
         }
     } else {
         std::string hash_key;
         std::string sort_key;
         std::string value;
         pegasus::pegasus_client::internal_info info;
-        for (; i < max_count && !(ret = scanner->next(hash_key, sort_key, value, &info)); i++) {
+        for (; (max_count <= 0 || i < max_count) &&
+               !(ret = scanner->next(hash_key, sort_key, value, &info));
+             i++) {
             fprintf(file,
                     "\"%s\" : \"%s\"",
                     pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
@@ -1360,14 +1563,14 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'n':
-            if ((max_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
+                fprintf(stderr, "parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 'p':
-            if (!pegasus::utils::buf2int(optarg, strlen(optarg), partition)) {
-                fprintf(stderr, "parse %s as partition integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), partition)) {
+                fprintf(stderr, "parse %s as partition id failed\n", optarg);
                 return false;
             }
             if (partition < 0) {
@@ -1376,8 +1579,8 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 't':
-            if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse %s as timeout_ms integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
@@ -1389,13 +1592,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            if (strcmp(optarg, "anywhere") == 0) {
-                options.hash_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-            } else if (strcmp(optarg, "prefix") == 0) {
-                options.hash_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-            } else if (strcmp(optarg, "postfix") == 0) {
-                options.hash_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-            } else {
+            if (!buf2filter_type(optarg, strlen(optarg), options.hash_key_filter_type)) {
                 fprintf(stderr, "invalid hash_key_filter_type param\n");
                 return false;
             }
@@ -1407,13 +1604,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
                 return true;
             break;
         case 's':
-            if (strcmp(optarg, "anywhere") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-            } else if (strcmp(optarg, "prefix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-            } else if (strcmp(optarg, "postfix") == 0) {
-                options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-            } else {
+            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1447,6 +1638,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
+    fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
@@ -1479,7 +1671,9 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             std::string value;
             pegasus::pegasus_client::internal_info info;
             pegasus::pegasus_client::pegasus_scanner *scanner = scanners[j];
-            for (; i < max_count && !(ret = scanner->next(hash_key, sort_key, value, &info)); i++) {
+            for (; (max_count <= 0 || i < max_count) &&
+                   !(ret = scanner->next(hash_key, sort_key, value, &info));
+                 i++) {
                 fprintf(file,
                         "\"%s\" : \"%s\"",
                         pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
@@ -1562,20 +1756,20 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             target_app_name = optarg;
             break;
         case 's':
-            if ((max_split_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_split_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+                fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if ((max_batch_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_batch_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+                fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as timeout_ms integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
@@ -1750,20 +1944,20 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
             force = true;
             break;
         case 's':
-            if ((max_split_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_split_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+                fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if ((max_batch_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_batch_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+                fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as timeout_ms integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
@@ -1908,20 +2102,20 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 's':
-            if ((max_split_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_split_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+                fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if ((max_batch_count = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as max_batch_count integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+                fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if ((timeout_ms = atoi(optarg)) == 0) {
-                fprintf(stderr, "ERROR: parse %s as timeout_ms integer failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
@@ -2130,6 +2324,7 @@ inline bool data_operations(command_executor *e, shell_context *sc, arguments ar
         {"multi_get_sortkeys", multi_get_sortkeys},
         {"del", delete_value},
         {"multi_del", multi_del_value},
+        {"multi_del_range", multi_del_range},
         {"exist", exist},
         {"count", sortkey_count},
         {"ttl", get_ttl},
@@ -2384,8 +2579,8 @@ inline bool recover(command_executor *e, shell_context *sc, arguments args)
             node_list_str = optarg;
             break;
         case 'w':
-            if ((wait_seconds = atoi(optarg)) == 0) {
-                fprintf(stderr, "parse wait_time %s as int failed\n", optarg);
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), wait_seconds)) {
+                fprintf(stderr, "parse %s as wait_seconds failed\n", optarg);
                 return false;
             }
             break;

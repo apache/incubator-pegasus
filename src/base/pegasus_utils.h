@@ -24,6 +24,9 @@ void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
 bool buf2int(const char *buffer, int length, int &result);
 bool buf2int64(const char *buffer, int length, int64_t &result);
 
+// parse bool from string, must be "true" or "false".
+bool buf2bool(const char *buffer, int length, bool &result);
+
 // three-way comparison, returns value:
 //   <  0 iff "a" <  "b",
 //   == 0 iff "a" == "b",
