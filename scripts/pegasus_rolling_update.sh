@@ -111,6 +111,7 @@ do
   echo "Migrating primary replicas out of node..."
   ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.migrate_node
   echo "Wait [$node] to migrate done..."
+  echo "Refer to /tmp/pegasus.rolling_update.migrate_node for details"
   while true
   do
     pri_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $4}'`
@@ -118,10 +119,30 @@ do
       echo "Migrate done."
       break
     else
+      echo "Still $pri_count primary replicas left on $node"
       sleep 1
     fi
-  done 
+  done
   echo
+  sleep 3
+
+  echo "Downgrading replicas on node..."
+  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.downgrade_node
+  echo "Wait [$node] to downgrade done..."
+  echo "Refer to /tmp/pegasus.rolling_update.downgrade_node for details"
+  while true
+  do
+    rep_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $3}'`
+    if [ $rep_count -eq 0 ]; then
+      echo "Downgrade done."
+      break
+    else
+      echo "Still $rep_count replicas left on $node"
+      sleep 1
+    fi
+  done
+  echo
+  sleep 3
 
   echo "Rolling update by minos..."
   cd $minos_client_dir
@@ -145,7 +166,7 @@ do
     else
       sleep 1
     fi
-  done 
+  done
   echo
 
   echo "Wait cluster to become healthy..."
@@ -159,7 +180,7 @@ do
     else
       sleep 1
     fi
-  done 
+  done
   echo "Sleep done."
   echo
 

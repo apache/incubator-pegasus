@@ -35,6 +35,7 @@ function usage()
     echo "   bench                     run benchmark test"
     echo "   shell                     run pegasus shell"
     echo "   migrate_node              migrate primary replicas out of specified node"
+    echo "   downgrade_node            downgrade replicas to inactive on specified node"
     echo
     echo "   test                      run unit test"
     echo
@@ -1275,6 +1276,100 @@ function run_migrate_node()
     fi
 }
 
+#####################
+## downgrade_node
+#####################
+function usage_downgrade_node()
+{
+    echo "Options for subcommand 'downgrade_node':"
+    echo "   -h|--help            print the help info"
+    echo "   -c|--cluster <str>   cluster meta lists"
+    echo "   -n|--node <str>      the node to downgrade replicas, should be ip:port"
+    echo "   -a|--app <str>       the app to downgrade replicas, if not set, means downgrade all apps"
+    echo "   -t|--type <str>      type: test or run, default is test"
+}
+
+function run_downgrade_node()
+{
+    CLUSTER=""
+    NODE=""
+    APP="*"
+    TYPE="test"
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+            -h|--help)
+                usage_downgrade_node
+                exit 0
+                ;;
+            -c|--cluster)
+                CLUSTER="$2"
+                shift
+                ;;
+            -n|--node)
+                NODE="$2"
+                shift
+                ;;
+            -a|--app)
+                APP="$2"
+                shift
+                ;;
+            -t|--type)
+                TYPE="$2"
+                shift
+                ;;
+            *)
+                echo "ERROR: unknown option \"$key\""
+                echo
+                usage_downgrade_node
+                exit -1
+                ;;
+        esac
+        shift
+    done
+
+    if [ "$CLUSTER" == "" ]; then
+        echo "ERROR: no cluster specified"
+        echo
+        usage_downgrade_node
+        exit -1
+    fi
+
+    if [ "$NODE" == "" ]; then
+        echo "ERROR: no node specified"
+        echo
+        usage_downgrade_node
+        exit -1
+    fi
+
+    if [ "$TYPE" != "test" -a "$TYPE" != "run" ]; then
+        echo "ERROR: invalid type $TYPE"
+        echo
+        usage_downgrade_node
+        exit -1
+    fi
+
+    echo "CLUSTER=$CLUSTER"
+    echo "NODE=$NODE"
+    echo "APP=$APP"
+    echo "TYPE=$TYPE"
+    echo
+    cd ${ROOT}
+    echo "------------------------------"
+    ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+    echo "------------------------------"
+    echo
+    if [ "$TYPE" == "test" ]; then
+        echo "The above is sample downgrade commands."
+        echo "Run with option '-t run' to do migration actually."
+    else
+        echo "Done."
+        echo "You can run shell command 'nodes -d' to check the result."
+        echo
+        echo "The cluster's auto migration is disabled now, you can run shell command 'set_meta_level lively' to enable it again."
+    fi
+}
+
 ####################################################################
 
 if [ $# -eq 0 ]; then
@@ -1357,6 +1452,10 @@ case $cmd in
     migrate_node)
         shift
         run_migrate_node $*
+        ;;
+    downgrade_node)
+        shift
+        run_downgrade_node $*
         ;;
     test)
         shift

@@ -30,7 +30,7 @@ fi
 
 result_file="pegasus.stat_available.scan_result"
 tmp_file="/tmp/pegasus.stat_available.scan.$UID"
-echo -e "use $detect_table\nscan detect_available_day -o $result_file" | ./run.sh shell -n $cluster &>$tmp_file
+echo -e "use $detect_table\nhash_scan detect_available_day '' '' -s prefix -y \"$filter\" -o $result_file" | ./run.sh shell -n $cluster &>$tmp_file
 scan_ok=`grep 'key-value pairs got' $tmp_file | wc -l`
 if [ $scan_ok -ne 1 ]; then
   echo "ERROR: scan detect table failed, refer error to $tmp_file"
@@ -38,13 +38,13 @@ if [ $scan_ok -ne 1 ]; then
   exit -1
 fi
 
-days=`grep $filter $result_file | wc -l`
+days=`cat $result_file | wc -l`
 if [ $days -eq 0 ]; then
   echo "ERROR: no detect data found for filter \"$filter\", refer to $tmp_file"
   rm -f $result_file
   exit -1
 fi
 
-available=`grep $filter $result_file | grep -o '[0-9]*,[0-9]*,[0-9]*' | awk -F, '{a+=$1;b+=$2}END{printf("%f\n",(double)b/a);}'`
+available=`cat $result_file | grep -o '[0-9]*,[0-9]*,[0-9]*' | awk -F, '{a+=$1;b+=$2}END{printf("%f\n",(double)b/a);}'`
 rm -f $result_file
 echo "$cluster $filter $days $available"

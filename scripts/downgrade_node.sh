@@ -2,8 +2,8 @@
 
 if [ $# -ne 4 ]
 then
-  echo "This tool is for migrating primary replicas out of specified node."
-  echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
+  echo "This tool is for downgrading replicas of specified node."
+  echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
   echo "  app-name = * means migrate all apps"
   exit -1
 fi
@@ -20,7 +20,7 @@ type=$4
 if [ "$type" != "run" -a "$type" != "test" ]
 then
   echo "ERROR: invalid type: $type"
-  echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
+  echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
   exit -1
 fi
 
@@ -44,12 +44,27 @@ do
 
     while read line
     do
-      pri=`echo $line | awk '{print $4}'`
-      if [ "$pri" = "$node" ]
+      sec=`echo $line | awk '{print $5}' | grep -o '\[.*\]' | grep -o '[0-9.:,]*'`
+      if echo $sec | grep -q "$node"
       then
         pid=`echo $line | awk '{print $1}'`
-        to=`echo $line | awk '{print $5}' | grep -o '\[.*\]' | grep -o '[0-9.:,]*' | cut -d, -f$((RANDOM%2+1))`
-        echo "balance --gpid ${gid}.${pid} --type move_pri -f $node -t $to"
+        pri=`echo $line | awk '{print $4}'`
+        if [ "$pri" = "" ]
+        then
+          echo "ERROR: can't downgrade ${gid}.${pid} because it is unhealthy"
+          exit -1
+        fi
+        if [ "$pri" = "$node" ]
+        then
+          echo "ERROR: can't downgrade ${gid}.${pid} because $node is primary"
+          exit -1
+        fi
+        if echo $sec | grep -v -q ','
+        then
+          echo "ERROR: can't downgrade ${gid}.${pid} because it is unhealthy"
+          exit -1
+        fi
+        echo "propose --gpid ${gid}.${pid} --type DOWNGRADE_TO_INACTIVE -t $pri -n $node"
       fi
     done </tmp/pegasus.app.$app >/tmp/pegasus.cmd.$app
 
