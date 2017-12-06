@@ -1997,6 +1997,7 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
+    options.no_value = true;
     int ret = sc->pg_client->get_unordered_scanners(max_split_count, options, scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(
@@ -2152,6 +2153,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
+    options.no_value = !stat_size;
     int ret = sc->pg_client->get_unordered_scanners(max_split_count, options, scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(
