@@ -37,8 +37,8 @@
 
 #include <dsn/cpp/service_app.h>
 
-extern "C" dsn_error_t dsn_meta_server_bridge(int argc, char **argv);
-extern "C" void dsn_meta_sever_register_providers();
+dsn::error_code dsn_meta_server_bridge(int argc, char **argv);
+void dsn_meta_sever_register_providers();
 
 namespace dsn {
 namespace replication {

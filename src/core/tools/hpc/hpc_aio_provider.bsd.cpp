@@ -163,11 +163,7 @@ disk_aio *hpc_aio_provider::prepare_aio_context(aio_task *tsk)
     return r;
 }
 
-void hpc_aio_provider::aio(aio_task *aio_tsk)
-{
-    auto err = aio_internal(aio_tsk, true);
-    err.end_tracking();
-}
+void hpc_aio_provider::aio(aio_task *aio_tsk) { aio_internal(aio_tsk, true); }
 
 error_code hpc_aio_provider::aio_internal(aio_task *aio_tsk,
                                           bool async,

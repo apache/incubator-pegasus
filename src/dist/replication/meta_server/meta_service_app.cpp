@@ -73,7 +73,6 @@ static bool register_component_provider(const char *name,
         name, f, dsn::PROVIDER_TYPE_MAIN);
 }
 
-extern "C" {
 void dsn_meta_sever_register_providers()
 {
     register_component_provider(
@@ -98,12 +97,11 @@ void dsn_meta_sever_register_providers()
         dsn::replication::server_load_balancer::create<dsn::replication::greedy_load_balancer>);
 }
 
-dsn_error_t dsn_meta_server_bridge(int argc, char **argv)
+dsn::error_code dsn_meta_server_bridge(int argc, char **argv)
 {
     dsn::service_app::register_factory<::dsn::service::meta_service_app>("meta");
     dsn_meta_sever_register_providers();
     return dsn::ERR_OK;
-}
 }
 
 namespace dsn {

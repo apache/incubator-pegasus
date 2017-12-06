@@ -1,7 +1,7 @@
 #include <memory>
 
 #include <dsn/utility/filesystem.h>
-#include <dsn/dist/error_code.h>
+#include <dsn/utility/error_code.h>
 #include "local_service.h"
 
 #ifdef __TITLE__

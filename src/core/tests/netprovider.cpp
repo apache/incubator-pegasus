@@ -57,15 +57,15 @@ static int TEST_PORT = 20401;
 DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 volatile int wait_flag = 0;
-void response_handler(int ec, dsn_message_t req, dsn_message_t resp, void *request_buf)
+void response_handler(dsn::error_code ec, dsn_message_t req, dsn_message_t resp, void *request_buf)
 {
-    if (ERR_OK.get() == ec) {
+    if (ERR_OK == ec) {
         std::string response_string;
         char *request_str = (char *)(request_buf);
         ::dsn::unmarshall(resp, response_string);
         ASSERT_TRUE(strcmp(response_string.c_str(), request_str) == 0);
     } else {
-        ddebug("error msg: %d", ec);
+        ddebug("error msg: %s", ec.to_string());
     }
     wait_flag = 1;
 }

@@ -108,10 +108,7 @@ public:
         dsn_task_call(_task, static_cast<int>(delay.count()));
     }
 
-    void enqueue_aio(error_code err, size_t size) const
-    {
-        dsn_file_task_enqueue(_task, err.get(), size);
-    }
+    void enqueue_aio(error_code err, size_t size) const { dsn_file_task_enqueue(_task, err, size); }
 
     dsn_message_t response()
     {
@@ -122,7 +119,7 @@ public:
 
     void enqueue_rpc_response(error_code err, dsn_message_t resp) const
     {
-        dsn_rpc_enqueue_response(_task, err.get(), resp);
+        dsn_rpc_enqueue_response(_task, err, resp);
     }
 
 private:
@@ -158,7 +155,7 @@ public:
     }
 
     static void
-    exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void *task)
+    exec_rpc_response(dsn::error_code err, dsn_message_t req, dsn_message_t resp, void *task)
     {
         auto t = static_cast<transient_safe_task *>(task);
         dbg_dassert(t->_handler.is_some(), "_handler is missing");
@@ -167,7 +164,7 @@ public:
         t->release_ref(); // added upon callback exec_rpc_response registration
     }
 
-    static void exec_aio(dsn_error_t err, size_t sz, void *task)
+    static void exec_aio(dsn::error_code err, size_t sz, void *task)
     {
         auto t = static_cast<transient_safe_task *>(task);
         dbg_dassert(t->_handler.is_some(), "_handler is missing");

@@ -122,7 +122,7 @@ error_code repli_app::start(const std::vector<std::string> &args)
                                    },
                                    offset);
         std::cout << "}" << std::endl;
-        std::cout << "read_return_err=" << dsn_error_to_string(err) << std::endl;
+        std::cout << "read_return_err=" << err.to_string() << std::endl;
         std::cout << "read_end_offset=" << offset << std::endl;
     } else if (cmd == "config_get") {
         if (s_args.size() < 4) {

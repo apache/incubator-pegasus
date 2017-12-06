@@ -32,7 +32,7 @@
  *     2015-12-30, xiaotz, first version
  */
 #include <boost/lexical_cast.hpp>
-#include <dsn/dist/error_code.h>
+#include <dsn/utility/error_code.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <iostream>

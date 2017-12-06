@@ -248,7 +248,7 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine &io)
     return err;
 }
 
-dsn_error_t service_node::start_app()
+dsn::error_code service_node::start_app()
 {
     dassert(_entity.get(), "entity hasn't initialized");
     _entity->set_address(node_rpc()->primary_address());
@@ -256,17 +256,17 @@ dsn_error_t service_node::start_app()
     std::vector<std::string> args;
     utils::split_args(spec().arguments.c_str(), args);
     args.insert(args.begin(), spec().full_name);
-    dsn_error_t res = _entity->start(args);
+    dsn::error_code res = _entity->start(args);
     if (res == dsn::ERR_OK) {
         _entity->set_started(true);
     }
     return res;
 }
 
-dsn_error_t service_node::stop_app(bool cleanup)
+dsn::error_code service_node::stop_app(bool cleanup)
 {
     dassert(_entity.get(), "entity hasn't initialized");
-    dsn_error_t res = _entity->stop(cleanup);
+    dsn::error_code res = _entity->stop(cleanup);
     if (res == dsn::ERR_OK) {
         _entity->set_started(false);
     }

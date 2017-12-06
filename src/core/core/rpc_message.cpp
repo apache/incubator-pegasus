@@ -226,12 +226,12 @@ message_ex::~message_ex()
 
 error_code message_ex::error()
 {
-    dsn_error_t code;
+    dsn::error_code code;
     auto binary_hash = header->server.error_code.local_hash;
     if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
-        code = header->server.error_code.local_code;
+        code = dsn::error_code(header->server.error_code.local_code);
     } else {
-        code = dsn_error_from_string(header->server.error_name, ::dsn::ERR_UNKNOWN);
+        code = error_code::try_get(header->server.error_name, dsn::ERR_UNKNOWN);
         header->server.error_code.local_hash = ::dsn::message_ex::s_local_hash;
         header->server.error_code.local_code = code;
     }

@@ -1744,14 +1744,14 @@ public:
     }
     ~file_streamer()
     {
-        _current_buffer->wait_ongoing_task().end_tracking();
-        _next_buffer->wait_ongoing_task().end_tracking();
+        _current_buffer->wait_ongoing_task();
+        _next_buffer->wait_ongoing_task();
     }
     // try to reset file_offset
     void reset(size_t file_offset)
     {
-        _current_buffer->wait_ongoing_task().end_tracking();
-        _next_buffer->wait_ongoing_task().end_tracking();
+        _current_buffer->wait_ongoing_task();
+        _next_buffer->wait_ongoing_task();
         // fast path if we can just move the cursor
         if (_current_buffer->_file_offset_of_buffer <= file_offset &&
             _current_buffer->_file_offset_of_buffer + _current_buffer->_end > file_offset) {

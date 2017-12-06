@@ -79,7 +79,7 @@ TEST(tools_hpc, aio)
 
     dsn_task_wait(callback);
 
-    dsn_error_t err = dsn_file_close(file);
+    dsn::error_code err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
 
     dsn_task_release_ref(cb);
@@ -148,7 +148,7 @@ TEST(tools_hpc, aio_invalid_type)
 
     dsn_task_wait(callback);
 
-    dsn_error_t err = dsn_file_close(file);
+    dsn::error_code err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
 
     dsn_task_release_ref(cb);

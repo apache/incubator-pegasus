@@ -109,11 +109,7 @@ disk_aio *native_linux_aio_provider::prepare_aio_context(aio_task *tsk)
     return r;
 }
 
-void native_linux_aio_provider::aio(aio_task *aio_tsk)
-{
-    auto err = aio_internal(aio_tsk, true);
-    err.end_tracking();
-}
+void native_linux_aio_provider::aio(aio_task *aio_tsk) { aio_internal(aio_tsk, true); }
 
 void native_linux_aio_provider::get_event()
 {

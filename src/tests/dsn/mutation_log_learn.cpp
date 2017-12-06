@@ -165,8 +165,7 @@ TEST(replication, mutation_log_learn)
 
                 return true;
             },
-            offset)
-            .end_tracking();
+            offset);
         time_toc = clock.now();
         std::cout
             << "learn_point[" << lp << "]: replay time(us): "

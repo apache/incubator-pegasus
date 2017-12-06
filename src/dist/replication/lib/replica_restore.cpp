@@ -1,11 +1,11 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 
+#include <dsn/utility/error_code.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/utils.h>
 
-#include <dsn/dist/error_code.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
 #include "replica.h"

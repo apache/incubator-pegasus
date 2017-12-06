@@ -90,44 +90,6 @@ static struct _all_info_
 
 } dsn_all;
 
-//------------------------------------------------------------------------------
-//
-// common types
-//
-//------------------------------------------------------------------------------
-struct dsn_error_placeholder
-{
-};
-class error_code_mgr : public ::dsn::utils::customized_id_mgr<dsn_error_placeholder>
-{
-public:
-    error_code_mgr()
-    {
-        auto err = register_id("ERR_OK"); // make sure ERR_OK is always registered first
-        dassert(0 == err, "register_id failed, err = %d", err);
-    }
-};
-
-DSN_API dsn_error_t dsn_error_register(const char *name)
-{
-    dassert(strlen(name) < DSN_MAX_ERROR_CODE_NAME_LENGTH,
-            "error code '%s' is too long - length must be smaller than %d",
-            name,
-            DSN_MAX_ERROR_CODE_NAME_LENGTH);
-    return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
-}
-
-DSN_API const char *dsn_error_to_string(dsn_error_t err)
-{
-    return error_code_mgr::instance().get_name(static_cast<int>(err));
-}
-
-DSN_API dsn_error_t dsn_error_from_string(const char *s, dsn_error_t default_err)
-{
-    auto r = error_code_mgr::instance().get_id(s);
-    return r == -1 ? default_err : r;
-}
-
 DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn_task_code_t code, int hash)
 {
     return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
@@ -413,10 +375,7 @@ DSN_API bool dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds)
     return ((::dsn::task *)(task))->wait(timeout_milliseconds);
 }
 
-DSN_API dsn_error_t dsn_task_error(dsn_task_t task)
-{
-    return ((::dsn::task *)(task))->error().get();
-}
+DSN_API dsn::error_code dsn_task_error(dsn_task_t task) { return ((::dsn::task *)(task))->error(); }
 
 //------------------------------------------------------------------------------
 //
@@ -685,7 +644,7 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn_message_t response, dsn_error_t err)
+DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err)
 {
     auto msg = ((::dsn::message_ex *)response);
     ::dsn::task::get_current_rpc()->reply(msg, err);
@@ -711,7 +670,8 @@ DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
         return nullptr;
 }
 
-DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_message_t response)
+DSN_API void
+dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn::error_code err, dsn_message_t response)
 {
     ::dsn::rpc_response_task *task = (::dsn::rpc_response_task *)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE,
@@ -732,12 +692,12 @@ DSN_API dsn_handle_t dsn_file_open(const char *file_name, int flag, int pmode)
     return ::dsn::task::get_current_disk()->open(file_name, flag, pmode);
 }
 
-DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
+DSN_API dsn::error_code dsn_file_close(dsn_handle_t file)
 {
     return ::dsn::task::get_current_disk()->close(file);
 }
 
-DSN_API dsn_error_t dsn_file_flush(dsn_handle_t file)
+DSN_API dsn::error_code dsn_file_flush(dsn_handle_t file)
 {
     return ::dsn::task::get_current_disk()->flush(file);
 }
@@ -879,7 +839,7 @@ DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task)
     return ((::dsn::aio_task *)task)->get_transferred_size();
 }
 
-DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t size)
+DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn::error_code err, size_t size)
 {
     ::dsn::task *task = (::dsn::task *)cb_task;
     dassert(task->spec().type == TASK_TYPE_AIO,

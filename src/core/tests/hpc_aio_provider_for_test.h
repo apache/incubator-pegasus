@@ -63,7 +63,6 @@ public:
         } else {
             auto err = aio_internal(aio_tsk, f, &b);
             complete_io(aio_tsk, err, b);
-            err.end_tracking();
         }
         f = !f;
     }

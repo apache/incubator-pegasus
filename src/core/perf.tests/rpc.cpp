@@ -63,7 +63,6 @@ TEST(core, rpc_perf_test)
                       0,
                       nullptr,
                       [&remain_concurrency](error_code ec, const std::string &) {
-                          ec.end_tracking();
                           remain_concurrency.fetch_add(1, std::memory_order_relaxed);
                       });
         }

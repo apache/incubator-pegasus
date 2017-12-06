@@ -69,7 +69,6 @@ void replica::handle_remote_failure(partition_status::type st,
            error.to_string(),
            enum_to_string(st),
            node.to_string());
-    error.end_tracking();
 
     dassert(status() == partition_status::PS_PRIMARY,
             "invalid partition_status, status = %s",

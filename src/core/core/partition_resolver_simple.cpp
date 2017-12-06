@@ -135,7 +135,6 @@ void partition_resolver_simple::end_request(request_context_ptr &&request,
 {
     zauto_lock l(request->lock);
     if (request->completed) {
-        err.end_tracking();
         return;
     }
 

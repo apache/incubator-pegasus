@@ -8,7 +8,7 @@
 #include <model/fds_object_summary.h>
 #include <model/fds_object_listing.h>
 #include <model/delete_multi_objects_result.h>
-#include <dsn/dist/error_code.h>
+#include <dsn/utility/error_code.h>
 #include <Poco/Net/HTTPResponse.h>
 
 #include <boost/scoped_ptr.hpp>

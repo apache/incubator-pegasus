@@ -587,7 +587,7 @@ void event_on_rpc_response_enqueue::init(rpc_response_task *tsk)
     event_on_rpc::init(tsk->get_request(), tsk); // use request here because response may be nullptr
     _rpc_name += "_ACK";
     _from.swap(_to);
-    _err = dsn_error_to_string(tsk->error());
+    _err = tsk->error().to_string();
 }
 
 void event_on_aio::internal_to_string(std::ostream &oss) const
@@ -675,7 +675,7 @@ bool event_on_aio_enqueue::check_satisfied(const event *ev) const
 void event_on_aio_enqueue::init(aio_task *tsk)
 {
     event_on_aio::init(tsk);
-    _err = dsn_error_to_string(tsk->error());
+    _err = tsk->error().to_string();
     _transferred_size = boost::lexical_cast<std::string>(tsk->get_transferred_size());
 }
 
@@ -804,8 +804,8 @@ bool client_case_line::parse(const std::string &params)
     }
     case end_write: {
         _id = boost::lexical_cast<int>(kv_map["id"]);
-        _err = dsn_error_from_string(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
-                                     ERR_UNKNOWN);
+        _err = dsn::error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
+                                        ERR_UNKNOWN);
         _write_resp = boost::lexical_cast<int>(kv_map["resp"]);
         if (_err == ERR_UNKNOWN)
             parse_ok = false;
@@ -813,8 +813,8 @@ bool client_case_line::parse(const std::string &params)
     }
     case end_read: {
         _id = boost::lexical_cast<int>(kv_map["id"]);
-        _err = dsn_error_from_string(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
-                                     ERR_UNKNOWN);
+        _err = dsn::error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
+                                        ERR_UNKNOWN);
         _read_resp = kv_map["resp"];
         if (_err == ERR_UNKNOWN)
             parse_ok = false;

@@ -298,7 +298,7 @@ protected:
 };
 
 typedef void (*dsn_rpc_response_handler_replace_t)(dsn_rpc_response_handler_t callback,
-                                                   dsn_error_t err,
+                                                   dsn::error_code err,
                                                    dsn_message_t req,
                                                    dsn_message_t resp,
                                                    void *context,
@@ -329,9 +329,7 @@ public:
     void exec() override
     {
         if (_cb) {
-            _cb(_error.get(), _request, _response, _context);
-        } else {
-            _error.end_tracking();
+            _cb(_error, _request, _response, _context);
         }
     }
 
@@ -421,9 +419,7 @@ public:
     virtual void exec() override // aio completed
     {
         if (nullptr != _cb) {
-            _cb(_error.get(), _transferred_size, _context);
-        } else {
-            _error.end_tracking();
+            _cb(_error, _transferred_size, _context);
         }
     }
 

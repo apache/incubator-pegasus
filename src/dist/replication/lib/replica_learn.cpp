@@ -1210,8 +1210,6 @@ void replica::on_learn_completion_notification(const group_check_response &repor
 {
     check_hashed_access();
 
-    report.err.end_tracking();
-
     ddebug("%s: on_learn_completion_notification[%016" PRIx64
            "]: learner = %s, learning_status = %s",
            name(),
@@ -1356,7 +1354,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                        _options->max_mutation_count_in_prepare_list,
                        [this, &err](mutation_ptr &mu) {
                            if (mu->data.header.decree == _app->last_committed_decree() + 1) {
-                               _app->apply_mutation(mu).end_tracking();
+                               _app->apply_mutation(mu);
                            }
                        });
 

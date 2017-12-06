@@ -167,7 +167,6 @@ void replica::on_client_read(task_code code, dsn_message_t request)
 void replica::response_client_message(bool is_read, dsn_message_t request, error_code error)
 {
     if (nullptr == request) {
-        error.end_tracking();
         return;
     }
 

@@ -72,7 +72,7 @@ public:
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
         } else {
-            ddebug("stop app result(%s)", dsn_error_to_string(_node->stop_app(_cleanup)));
+            ddebug("stop app result(%s)", _node->stop_app(_cleanup).to_string());
         }
     }
 

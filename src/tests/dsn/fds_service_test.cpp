@@ -2,7 +2,6 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/block_service.h>
-#include <dsn/dist/error_code.h>
 #include <memory>
 #include <fstream>
 

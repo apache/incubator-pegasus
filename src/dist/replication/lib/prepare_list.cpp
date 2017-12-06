@@ -132,7 +132,7 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
 
     default:
         dassert(false, "invalid partition_status, status = %s", enum_to_string(status));
-        return 0;
+        return dsn::ERR_OK;
     }
 }
 

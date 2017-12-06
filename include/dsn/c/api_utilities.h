@@ -38,54 +38,6 @@
 #include <dsn/c/api_common.h>
 
 /*!
-@defgroup service-api-utilities Utility Service API
-@ingroup service-api
-
- Commonly used utility API for building distributed systems.
-*/
-
-/*!
-@defgroup error-t Error Code
-@ingroup service-api-utilities
-
- Error code registration and translation between string and integer.
-
- See \ref error_code for more details.
- @{
- */
-
-/*!
-register error code
-
-\param name error code in string format
-
-\return interger value representing this error.
-
- For the same input string, rDSN returns the same interger error code.
-*/
-extern DSN_API dsn_error_t dsn_error_register(const char *name);
-
-/*!
- translate interger error code to a string
-
- \param err integer error code
-
- \return string format of the error code
- */
-extern DSN_API const char *dsn_error_to_string(dsn_error_t err);
-
-/*!
- parse string error code into integer code
-
- \param s           the input error in string format
- \param default_err to-be-returned error code if the string is not registered.
-
- \return integer format of error code
- */
-extern DSN_API dsn_error_t dsn_error_from_string(const char *s, dsn_error_t default_err);
-/*@}*/
-
-/*!
 @defgroup config Configuration Service
 @ingroup service-api-utilities
 

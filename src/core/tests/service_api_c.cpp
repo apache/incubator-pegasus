@@ -47,8 +47,8 @@ using namespace dsn;
 
 TEST(core, dsn_error)
 {
-    ASSERT_EQ(ERR_OK, dsn_error_register("ERR_OK"));
-    ASSERT_STREQ("ERR_OK", dsn_error_to_string(ERR_OK));
+    ASSERT_EQ(ERR_OK, dsn::error_code("ERR_OK"));
+    ASSERT_STREQ("ERR_OK", ERR_OK.to_string());
 }
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST)
@@ -217,7 +217,7 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAU
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_NFS, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 struct aio_result
 {
-    dsn_error_t err;
+    dsn::error_code err;
     size_t sz;
 };
 TEST(core, dsn_file)
@@ -239,7 +239,7 @@ TEST(core, dsn_file)
     while (true) {
         aio_result rin;
         dsn_task_t tin = dsn_file_create_aio_task(LPC_AIO_TEST_READ,
-                                                  [](dsn_error_t err, size_t sz, void *param) {
+                                                  [](dsn::error_code err, size_t sz, void *param) {
                                                       aio_result *r = (aio_result *)param;
                                                       r->err = err;
                                                       r->sz = sz;
@@ -266,7 +266,7 @@ TEST(core, dsn_file)
 
         aio_result rout;
         dsn_task_t tout = dsn_file_create_aio_task(LPC_AIO_TEST_WRITE,
-                                                   [](dsn_error_t err, size_t sz, void *param) {
+                                                   [](dsn::error_code err, size_t sz, void *param) {
                                                        aio_result *r = (aio_result *)param;
                                                        r->err = err;
                                                        r->sz = sz;
@@ -325,7 +325,7 @@ TEST(core, dsn_nfs)
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                [](dsn::error_code err, size_t sz, void *param) {
                                                     aio_result *r = (aio_result *)param;
                                                     r->err = err;
                                                     r->sz = sz;
@@ -366,7 +366,7 @@ TEST(core, dsn_nfs)
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                [](dsn::error_code err, size_t sz, void *param) {
                                                     aio_result *r = (aio_result *)param;
                                                     r->err = err;
                                                     r->sz = sz;
@@ -393,7 +393,7 @@ TEST(core, dsn_nfs)
 
         aio_result r;
         dsn_task_t t = dsn_file_create_aio_task(LPC_AIO_TEST_NFS,
-                                                [](dsn_error_t err, size_t sz, void *param) {
+                                                [](dsn::error_code err, size_t sz, void *param) {
                                                     aio_result *r = (aio_result *)param;
                                                     r->err = err;
                                                     r->sz = sz;

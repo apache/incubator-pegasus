@@ -33,7 +33,7 @@
  */
 
 #include <zookeeper/zookeeper.h>
-#include <dsn/dist/error_code.h>
+#include <dsn/utility/error_code.h>
 #include <dsn/cpp/auto_codes.h>
 
 #include "zookeeper_error.h"

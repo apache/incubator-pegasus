@@ -101,9 +101,9 @@ public:
 
     error_code start_io_engine_in_node_start_task(const io_engine &io);
 
-    ::dsn::error_code start();
-    dsn_error_t start_app();
-    dsn_error_t stop_app(bool cleanup);
+    dsn::error_code start();
+    dsn::error_code start_app();
+    dsn::error_code stop_app(bool cleanup);
 
     int id() const { return _app_spec.id; }
     const char *full_name() const { return _app_spec.full_name.c_str(); }

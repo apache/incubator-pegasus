@@ -37,7 +37,7 @@
 
 #include <dsn/cpp/service_app.h>
 
-extern "C" dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv);
+dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv);
 
 namespace dsn {
 namespace replication {

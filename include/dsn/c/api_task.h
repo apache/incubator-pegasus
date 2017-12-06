@@ -36,6 +36,7 @@
 #pragma once
 
 #include <dsn/c/api_common.h>
+#include <dsn/utility/error_code.h>
 #include <dsn/tool-api/threadpool_code.h>
 
 /*!
@@ -66,16 +67,17 @@ typedef void (*dsn_rpc_request_handler_t)(dsn_message_t, ///< incoming request
                                           );
 
 /*! callback prototype for \ref TASK_TYPE_RPC_RESPONSE */
-typedef void (*dsn_rpc_response_handler_t)(dsn_error_t, ///< usually, it is ok, or timeout, or busy
-                                           dsn_message_t, ///< sent rpc request
-                                           dsn_message_t, ///< incoming rpc response
-                                           void *         ///< context when rpc is called
-                                           );
+typedef void (*dsn_rpc_response_handler_t)(
+    dsn::error_code, ///< usually, it is ok, or timeout, or busy
+    dsn_message_t,   ///< sent rpc request
+    dsn_message_t,   ///< incoming rpc response
+    void *           ///< context when rpc is called
+    );
 
 /*! callback prototype for \ref TASK_TYPE_AIO */
-typedef void (*dsn_aio_handler_t)(dsn_error_t, ///< error code for the io operation
-                                  size_t,      ///< transferred io size
-                                  void *       ///< context when rd/wt is called
+typedef void (*dsn_aio_handler_t)(dsn::error_code, ///< error code for the io operation
+                                  size_t,          ///< transferred io size
+                                  void *           ///< context when rd/wt is called
                                   );
 
 /*! task priority */

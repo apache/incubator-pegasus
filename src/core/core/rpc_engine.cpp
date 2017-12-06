@@ -736,7 +736,7 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
         if (call) {
             call->replace_callback(
                 [](dsn_rpc_response_handler_t callback,
-                   dsn_error_t err,
+                   dsn::error_code err,
                    dsn_message_t req,
                    dsn_message_t resp,
                    void *context,

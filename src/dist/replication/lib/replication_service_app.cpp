@@ -42,8 +42,7 @@
 #endif
 #define __TITLE__ "replica.service_app"
 
-extern "C" {
-dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
+dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv)
 {
     dsn_task_code_register(
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
@@ -51,7 +50,6 @@ dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
     dsn::service_app::register_factory<::dsn::replication::replication_service_app>("replica");
     return dsn::ERR_OK;
-}
 }
 
 namespace dsn {

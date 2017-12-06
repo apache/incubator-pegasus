@@ -518,7 +518,7 @@ inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
 
         xfer += iprot->readStructEnd();
     }
-    _internal_code = dsn_error_from_string(ec_string.c_str(), ERR_UNKNOWN);
+    *this = error_code::try_get(ec_string.c_str(), ERR_UNKNOWN);
     return xfer;
 }
 

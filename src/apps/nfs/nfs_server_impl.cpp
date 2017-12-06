@@ -213,7 +213,7 @@ void nfs_service_impl::on_get_file_size(
         }
     }
 
-    resp.error = err.get();
+    resp.error = err;
     reply(resp);
 }
 

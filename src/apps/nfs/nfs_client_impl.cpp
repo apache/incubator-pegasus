@@ -107,7 +107,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
         return;
     }
 
-    err = resp.error;
+    err = dsn::error_code(resp.error);
     if (err != ::dsn::ERR_OK) {
         derror("{nfs_service} remote get file size failed, source = %s, dir = %s, err = %s",
                ureq->file_size_req.source.to_string(),
@@ -284,7 +284,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
     }
 
     reqc->response = resp;
-    reqc->response.error.end_tracking(); // always ERR_OK
+    // dassert(reqc->response.error == ERR_OK, "")
     reqc->is_ready_for_write = true;
 
     auto &fc = reqc->file_ctx;
@@ -439,7 +439,7 @@ void nfs_client_impl::local_write_callback(error_code err,
 
     if (file_to_close) {
         auto err = dsn_file_close(file_to_close);
-        dassert(err == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err));
+        dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
     }
 
     if (completed) {
@@ -489,7 +489,7 @@ void nfs_client_impl::handle_completion(user_request *req, error_code err)
         dsn_handle_t file = fc->file.exchange(nullptr);
         if (file) {
             auto err2 = dsn_file_close(file);
-            dassert(err2 == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err2));
+            dassert(err2 == ERR_OK, "dsn_file_close failed, err = %s", err2.to_string());
 
             if (fc->finished_segments != (int)fc->copy_requests.size()) {
                 ::remove((fc->user_req->file_size_req.dst_dir + fc->file_name).c_str());

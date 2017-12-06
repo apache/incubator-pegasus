@@ -171,10 +171,7 @@ private:
     {
         dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds);
         task_ptr task = ::dsn::rpc::create_rpc_response_task(
-            msg,
-            nullptr,
-            [](error_code err, dsn_message_t, dsn_message_t) { err.end_tracking(); },
-            reply_thread_hash);
+            msg, nullptr, [](error_code err, dsn_message_t, dsn_message_t) {}, reply_thread_hash);
         ::dsn::marshall(msg, *req);
         rpc::call(_meta_server,
                   msg,

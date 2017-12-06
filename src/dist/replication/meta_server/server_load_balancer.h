@@ -38,7 +38,7 @@
 
 #include <dsn/service_api_cpp.h>
 #include <dsn/tool-api/command_manager.h>
-#include <dsn/dist/error_code.h>
+#include <dsn/utility/error_code.h>
 #include <string>
 #include <functional>
 #include <memory>

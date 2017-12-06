@@ -432,7 +432,6 @@ void replica::on_update_configuration_on_meta_server_reply(
 
     if (partition_status::PS_INACTIVE != status() || _stub->is_connected() == false) {
         _primary_states.reconfiguration_task = nullptr;
-        err.end_tracking();
         return;
     }
 

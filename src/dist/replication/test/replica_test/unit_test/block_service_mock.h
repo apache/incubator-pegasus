@@ -10,8 +10,6 @@ using namespace ::dsn;
 using namespace ::dsn::dist::block_service;
 using namespace ::dsn::replication;
 
-DEFINE_ERR_CODE(ERR_MOCK_INTERNAL)
-
 class block_file_mock;
 
 extern ref_ptr<block_file_mock> current_chkpt_file;

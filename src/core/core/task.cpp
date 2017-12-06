@@ -226,9 +226,6 @@ void task::exec_internal()
         }
 
         tls_dsn.current_task = parent_task;
-    } else {
-        // task cancelled, so
-        _error.end_tracking();
     }
 
     // signal_waiters(); [
@@ -359,8 +356,6 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
 
         spec().on_task_cancelled.execute(this);
         signal_waiters();
-
-        _error.end_tracking();
     }
 
     if (finished)
@@ -609,8 +604,10 @@ struct hook_context : public transient_object
     uint64_t new_context;
 };
 
-static void
-rpc_response_task_hook_callback(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void *ctx)
+static void rpc_response_task_hook_callback(dsn::error_code err,
+                                            dsn_message_t req,
+                                            dsn_message_t resp,
+                                            void *ctx)
 {
     auto nc = (hook_context *)ctx;
     nc->new_callback(nc->old_callback, err, req, resp, nc->old_context, nc->new_context);

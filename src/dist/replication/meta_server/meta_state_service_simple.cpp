@@ -268,21 +268,21 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                     std::string node;
                     blob data;
                     create_node_log::parse(reader, node, data);
-                    create_node_internal(node, data).end_tracking();
+                    create_node_internal(node, data);
                     break;
                 }
                 case operation_type::delete_node: {
                     std::string node;
                     bool recursively_delete;
                     delete_node_log::parse(reader, node, recursively_delete);
-                    delete_node_internal(node, recursively_delete).end_tracking();
+                    delete_node_internal(node, recursively_delete);
                     break;
                 }
                 case operation_type::set_data: {
                     std::string node;
                     blob data;
                     set_data_log::parse(reader, node, data);
-                    set_data_internal(node, data).end_tracking();
+                    set_data_internal(node, data);
                     break;
                 }
                 default:

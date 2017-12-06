@@ -280,7 +280,7 @@ extern DSN_API bool dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseco
 
  \return the result error code of the task
  */
-extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
+extern DSN_API dsn::error_code dsn_task_error(dsn_task_t task);
 
 /*!
  check whether the task is currently running inside the given task
@@ -811,7 +811,7 @@ extern DSN_API void *dsn_rpc_unregiser_handler(dsn_task_code_t code,
                                                dsn_gpid gpid DEFAULT(dsn_gpid{0}));
 
 /*! reply with a response which is created using dsn_msg_create_response */
-extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn_error_t err DEFAULT(0));
+extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err DEFAULT(dsn::ERR_OK));
 
 /*! forward the request to another server instead */
 extern DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);
@@ -886,7 +886,7 @@ extern DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call);
 
 /*! this is to mimic a response is received when no real rpc is called */
 extern DSN_API void
-dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_message_t response);
+dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn::error_code err, dsn_message_t response);
 
 /*@}*/
 
@@ -927,10 +927,10 @@ typedef enum dsn_ctrl_code_t {
 extern DSN_API dsn_handle_t dsn_file_open(const char *file_name, int flag, int pmode);
 
 /*! close the file handle */
-extern DSN_API dsn_error_t dsn_file_close(dsn_handle_t file);
+extern DSN_API dsn::error_code dsn_file_close(dsn_handle_t file);
 
 /*! flush the buffer of the given file */
-extern DSN_API dsn_error_t dsn_file_flush(dsn_handle_t file);
+extern DSN_API dsn::error_code dsn_file_flush(dsn_handle_t file);
 
 /*! get native handle: HANDLE for windows, int for non-windows */
 extern DSN_API void *dsn_file_native_handle(dsn_handle_t file);
@@ -1051,7 +1051,7 @@ extern DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
 extern DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task);
 
 /*! mimic io completion when no io operation is really issued */
-extern DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t size);
+extern DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn::error_code err, size_t size);
 
 /*@}*/
 
