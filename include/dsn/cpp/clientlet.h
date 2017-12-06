@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/cpp/task_helper.h>
-#include <dsn/cpp/function_traits.h>
+#include <dsn/utility/function_traits.h>
 
 namespace dsn {
 /*

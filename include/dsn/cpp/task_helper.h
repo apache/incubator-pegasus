@@ -37,18 +37,18 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/auto_codes.h>
-#include <dsn/utility/utils.h>
 #include <dsn/cpp/rpc_stream.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/cpp/zlocks.h>
+#include <dsn/cpp/callocator.h>
+#include <dsn/utility/utils.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/synchronize.h>
 #include <dsn/utility/link.h>
-#include <dsn/cpp/callocator.h>
+#include <dsn/utility/optional.h>
 #include <set>
 #include <map>
 #include <thread>
-#include <dsn/cpp/optional.h>
 
 namespace dsn {
 typedef std::function<void(error_code, size_t)> aio_handler;
