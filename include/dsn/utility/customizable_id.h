@@ -74,6 +74,7 @@ struct customized_id
     customized_id(const char *name);
     customized_id(const customized_id &source);
     operator int() const;
+    operator T() const { return T(_internal_code); }
     const char *to_string() const;
     void reset(const customized_id &r);
 

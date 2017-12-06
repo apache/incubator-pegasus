@@ -49,7 +49,7 @@ namespace fd {
 
 failure_detector::failure_detector()
 {
-    dsn_threadpool_code_t pool;
+    dsn::threadpool_code pool;
     dsn_task_code_query(LPC_BEACON_CHECK, nullptr, nullptr, &pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING, pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING_ACK, pool);

@@ -134,40 +134,13 @@ DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn_task_code_t code, in
                                                                                            hash);
 }
 
-// use ::dsn::threadpool_code2; for parsing purpose
-DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char *name)
-{
-    return static_cast<dsn_threadpool_code_t>(
-        ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().register_id(name));
-}
-
-DSN_API const char *dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code)
-{
-    return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().get_name(
-        static_cast<int>(pool_code));
-}
-
-DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(const char *s,
-                                                              dsn_threadpool_code_t default_code)
-{
-    auto r = ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().get_id(s);
-    return r == -1 ? default_code : r;
-}
-
-DSN_API int dsn_threadpool_code_max()
-{
-    return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
-}
-
-DSN_API int dsn_threadpool_get_current_tid() { return ::dsn::utils::get_current_tid(); }
-
 struct task_code_placeholder
 {
 };
 DSN_API dsn_task_code_t dsn_task_code_register(const char *name,
                                                dsn_task_type_t type,
                                                dsn_task_priority_t pri,
-                                               dsn_threadpool_code_t pool)
+                                               int pool)
 {
     dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH,
             "task code '%s' is too long - length must be smaller than %d",
@@ -175,14 +148,14 @@ DSN_API dsn_task_code_t dsn_task_code_register(const char *name,
             DSN_MAX_TASK_CODE_NAME_LENGTH);
     auto r = static_cast<dsn_task_code_t>(
         ::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().register_id(name));
-    ::dsn::task_spec::register_task_code(r, type, pri, pool);
+    ::dsn::task_spec::register_task_code(r, type, pri, dsn::threadpool_code(pool));
     return r;
 }
 
 DSN_API void dsn_task_code_query(dsn_task_code_t code,
                                  dsn_task_type_t *ptype,
                                  dsn_task_priority_t *ppri,
-                                 dsn_threadpool_code_t *ppool)
+                                 dsn::threadpool_code *ppool)
 {
     auto sp = ::dsn::task_spec::get(code);
     dassert(sp != nullptr, "task code = %d", code);
@@ -194,7 +167,7 @@ DSN_API void dsn_task_code_query(dsn_task_code_t code,
         *ppool = sp->pool_code;
 }
 
-DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn_threadpool_code_t pool)
+DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn::threadpool_code pool)
 {
     auto sp = ::dsn::task_spec::get(code);
     dassert(sp != nullptr, "task code = %d", code);

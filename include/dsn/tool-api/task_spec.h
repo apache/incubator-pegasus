@@ -166,9 +166,6 @@ DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 
-// define thread pool code
-DEFINE_CUSTOMIZED_ID_TYPE(threadpool_code2)
-
 class task;
 class task_queue;
 class aio_task;
@@ -193,7 +190,7 @@ public:
     DSN_API static void register_task_code(dsn_task_code_t code,
                                            dsn_task_type_t type,
                                            dsn_task_priority_t pri,
-                                           dsn_threadpool_code_t pool);
+                                           dsn::threadpool_code pool);
 
 public:
     // not configurable [
@@ -207,7 +204,7 @@ public:
     // configurable [
     dsn_task_priority_t priority;
     grpc_mode_t grpc_mode; // used when a rpc request is sent to a group address
-    dsn_threadpool_code_t pool_code;
+    dsn::threadpool_code pool_code;
 
     // allow task executed in other thread pools or tasks
     // for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site
@@ -273,7 +270,7 @@ public:
                       const char *name,
                       dsn_task_type_t type,
                       dsn_task_priority_t pri,
-                      dsn_threadpool_code_t pool);
+                      dsn::threadpool_code pool);
 
 public:
     DSN_API static bool init();
@@ -294,7 +291,7 @@ CONFIG_FLD_ENUM(grpc_mode_t,
                 false,
                 "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
 CONFIG_FLD_ID(
-    threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
+    threadpool_code, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
 CONFIG_FLD(bool,
            bool,
            allow_inline,
@@ -391,7 +388,7 @@ CONFIG_END
 struct threadpool_spec
 {
     std::string name;
-    dsn_threadpool_code_t pool_code;
+    dsn::threadpool_code pool_code;
     int worker_count;
     worker_priority_t worker_priority;
     bool worker_share_core;
@@ -407,10 +404,7 @@ struct threadpool_spec
     std::string admission_controller_factory_name;
     std::string admission_controller_arguments;
 
-    threadpool_spec(const dsn_threadpool_code_t &code)
-        : name(dsn_threadpool_code_to_string(code)), pool_code(code)
-    {
-    }
+    threadpool_spec(const dsn::threadpool_code &code) : name(code.to_string()), pool_code(code) {}
     threadpool_spec(const threadpool_spec &source) = default;
     threadpool_spec &operator=(const threadpool_spec &source) = default;
 
@@ -418,7 +412,6 @@ struct threadpool_spec
 };
 
 CONFIG_BEGIN(threadpool_spec)
-// CONFIG_FLD_ID(dsn_threadpool_code_t, pool_code) // no need to define it inside section
 CONFIG_FLD_STRING(name, "", "thread pool name")
 CONFIG_FLD(int, uint64, worker_count, 2, "thread/worker count")
 CONFIG_FLD(int,

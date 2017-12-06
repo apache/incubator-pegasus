@@ -51,7 +51,7 @@ namespace dsn {
 void task_spec::register_task_code(dsn_task_code_t code,
                                    dsn_task_type_t type,
                                    dsn_task_priority_t pri,
-                                   dsn_threadpool_code_t pool)
+                                   dsn::threadpool_code pool)
 {
     dassert(pool != THREAD_POOL_INVALID,
             "registered pool cannot be THREAD_POOL_INVALID for task %s, "
@@ -92,8 +92,8 @@ void task_spec::register_task_code(dsn_task_code_t code,
         if (spec->pool_code != pool) {
             dwarn("overwrite default thread pool for task %s from %s to %s",
                   dsn_task_code_to_string(code),
-                  dsn_threadpool_code_to_string(spec->pool_code),
-                  dsn_threadpool_code_to_string(pool));
+                  spec->pool_code.to_string(),
+                  pool.to_string());
             spec->pool_code = pool;
         }
     }
@@ -108,7 +108,7 @@ task_spec::task_spec(int code,
                      const char *name,
                      dsn_task_type_t type,
                      dsn_task_priority_t pri,
-                     dsn_threadpool_code_t pool)
+                     dsn::threadpool_code pool)
     : code(code),
       type(type),
       name(name),
@@ -258,17 +258,17 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec> &specs)
 
     default_spec.name = "";
     specs.clear();
-    for (int code = 0; code <= dsn_threadpool_code_max(); code++) {
-        std::string section_name =
-            std::string("threadpool.") + std::string(dsn_threadpool_code_to_string(code));
+    for (int code = 0; code <= threadpool_code::max(); code++) {
+        std::string code_name = std::string(threadpool_code(code).to_string());
+        std::string section_name = std::string("threadpool.") + code_name;
         threadpool_spec spec(default_spec);
         if (false == read_config(section_name.c_str(), spec, &default_spec))
             return false;
 
-        spec.pool_code = code;
+        spec.pool_code = threadpool_code(code);
 
         if ("" == spec.name)
-            spec.name = std::string(dsn_threadpool_code_to_string(code));
+            spec.name = code_name;
 
         if (false == spec.worker_share_core && 0 == spec.worker_affinity_mask) {
             spec.worker_affinity_mask = (1 << std::thread::hardware_concurrency()) - 1;

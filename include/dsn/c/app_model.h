@@ -37,10 +37,6 @@
 
 #include <dsn/c/api_common.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*!
  mimic an app as if the following execution in the current thread are
  executed in the target app's threads.
@@ -104,7 +100,3 @@ extern DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init DEFAULT
  to exit the current process to avoid exceptions happending during normal exit.
  */
 NORETURN extern DSN_API void dsn_exit(int code);
-
-#ifdef __cplusplus
-}
-#endif

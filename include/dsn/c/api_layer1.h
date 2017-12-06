@@ -39,10 +39,6 @@
 #include <dsn/c/api_common.h>
 #include <dsn/c/api_task.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*!
  @defgroup service-api-c Core Service API
 
@@ -1142,7 +1138,3 @@ extern DSN_API bool dsn_semaphore_wait_timeout(dsn_handle_t s, int timeout_milli
 /*@}*/
 
 /*@}*/
-
-#ifdef __cplusplus
-}
-#endif

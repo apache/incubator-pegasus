@@ -105,7 +105,7 @@ public:
     //
     // service management routines
     //
-    void create(const std::list<dsn_threadpool_code_t> &pools);
+    void create(const std::list<dsn::threadpool_code> &pools);
     void start();
 
     //

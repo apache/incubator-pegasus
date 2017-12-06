@@ -393,7 +393,7 @@ void task::enqueue(task_worker_pool *pool)
             "(1). thread pool not designatd in '[%s] pools'; "
             "(2). the caller is executed in io threads "
             "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
-            dsn_threadpool_code_to_string(_spec->pool_code),
+            _spec->pool_code.to_string(),
             _node->spec().config_section.c_str(),
             _spec->name.c_str());
 

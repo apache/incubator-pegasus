@@ -112,7 +112,7 @@ void task_worker_pool::start()
            "%s, partitioned = %s, ...",
            _node->full_name(),
            _spec.name.c_str(),
-           dsn_threadpool_code_to_string(_spec.pool_code),
+           _spec.pool_code.to_string(),
            _spec.worker_count,
            _spec.worker_share_core ? "true" : "false",
            _spec.partitioned ? "true" : "false");
@@ -232,13 +232,13 @@ task_engine::task_engine(service_node *node)
     _node = node;
 }
 
-void task_engine::create(const std::list<dsn_threadpool_code_t> &pools)
+void task_engine::create(const std::list<threadpool_code> &pools)
 {
     if (_is_running)
         return;
 
     // init pools
-    _pools.resize(dsn_threadpool_code_max() + 1, nullptr);
+    _pools.resize(threadpool_code::max() + 1, nullptr);
     for (auto &p : pools) {
         auto &s = service_engine::fast_instance().spec().threadpool_specs[p];
         auto workerPool = new task_worker_pool(s, this);
@@ -274,7 +274,7 @@ void task_engine::get_runtime_info(const std::string &indent,
     std::string indent2 = indent + "\t";
     for (auto &p : _pools) {
         if (p) {
-            ss << indent << dsn_threadpool_code_to_string(p->spec().pool_code) << std::endl;
+            ss << indent << p->spec().pool_code.to_string() << std::endl;
             p->get_runtime_info(indent2, args, ss);
         }
     }
@@ -289,7 +289,7 @@ void task_engine::get_queue_info(/*out*/ std::stringstream &ss)
                 first_flag = 1;
             else
                 ss << ",";
-            ss << "\t{\"pool_name\":\"" << dsn_threadpool_code_to_string(p->spec().pool_code)
+            ss << "\t{\"pool_name\":\"" << p->spec().pool_code.to_string()
                << "\",\n\t\"pool_queue\":\n";
             p->get_queue_info(ss);
             ss << "}\n";

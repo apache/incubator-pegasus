@@ -49,10 +49,6 @@
 #include <stdbool.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define DSN_MAX_TASK_CODE_NAME_LENGTH 48
 #define DSN_MAX_ERROR_CODE_NAME_LENGTH 48
 #define DSN_MAX_ADDRESS_NAME_LENGTH 48
@@ -64,14 +60,9 @@ extern "C" {
 
 typedef int dsn_error_t;
 typedef int dsn_task_code_t;
-typedef int dsn_threadpool_code_t;
 typedef void *dsn_handle_t;
 typedef void *dsn_task_t;
 typedef void *dsn_task_tracker_t;
 typedef void *dsn_message_t;
 typedef void *dsn_group_t;
 typedef void *dsn_uri_t;
-
-#ifdef __cplusplus
-}
-#endif

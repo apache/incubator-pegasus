@@ -38,6 +38,7 @@
 #include <dsn/service_api_c.h>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/autoref_ptr.h>
+#include <dsn/tool-api/threadpool_code.h>
 #include <memory>
 #include <atomic>
 
@@ -150,7 +151,7 @@ public:
     task_code(const char *name,
               dsn_task_type_t tt,
               dsn_task_priority_t pri,
-              dsn_threadpool_code_t pool)
+              dsn::threadpool_code pool)
     {
         _internal_code = dsn_task_code_register(name, tt, pri, pool);
     }
@@ -196,38 +197,6 @@ private:
 #define DEFINE_TASK_CODE_AIO(x, pri, pool) DEFINE_NAMED_TASK_CODE_AIO(x, x, pri, pool)
 #define DEFINE_TASK_CODE_RPC(x, pri, pool) DEFINE_NAMED_TASK_CODE_RPC(x, x, pri, pool)
 
-class threadpool_code
-{
-public:
-    threadpool_code(const char *name) { _internal_code = dsn_threadpool_code_register(name); }
-
-    threadpool_code() { _internal_code = 0; }
-
-    threadpool_code(const threadpool_code &r) { _internal_code = r._internal_code; }
-
-    const char *to_string() const { return dsn_task_code_to_string(_internal_code); }
-
-    threadpool_code &operator=(const threadpool_code &source)
-    {
-        _internal_code = source._internal_code;
-        return *this;
-    }
-
-    bool operator==(const threadpool_code &r) { return _internal_code == r._internal_code; }
-
-    bool operator!=(const threadpool_code &r) { return !(*this == r); }
-
-    operator dsn_threadpool_code_t() const { return _internal_code; }
-
-private:
-    dsn_threadpool_code_t _internal_code;
-};
-
-/*! define a new thread pool named x*/
-#define DEFINE_THREAD_POOL_CODE(x) __selectany const ::dsn::threadpool_code x(#x);
-
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
 // define default task code
 DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)

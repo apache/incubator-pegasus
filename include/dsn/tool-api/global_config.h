@@ -99,7 +99,7 @@ struct service_app_spec
     std::string type; // registered type name, alse named as "app_type"
     std::string arguments;
     std::vector<int> ports;
-    std::list<dsn_threadpool_code_t> pools;
+    std::list<dsn::threadpool_code> pools;
     int delay_seconds;
     bool run;
     int count;     // index = 1,2,...,count
@@ -121,7 +121,7 @@ CONFIG_BEGIN(service_app_spec)
 CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
 CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
 CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
-CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
+CONFIG_FLD_ID_LIST(threadpool_code, pools, "thread pools need to be started")
 CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
 CONFIG_FLD(int,
            uint64,
@@ -193,7 +193,7 @@ struct service_spec
     service_spec() {}
     DSN_API bool init();
     DSN_API bool init_app_specs();
-    DSN_API int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
+    DSN_API int get_ports_delta(int app_id, dsn::threadpool_code pool, int queue_index) const;
 };
 
 CONFIG_BEGIN(service_spec)

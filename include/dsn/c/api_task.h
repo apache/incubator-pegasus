@@ -36,10 +36,7 @@
 #pragma once
 
 #include <dsn/c/api_common.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <dsn/tool-api/threadpool_code.h>
 
 /*!
 @addtogroup task-common
@@ -106,30 +103,19 @@ typedef void (*dsn_task_cancelled_handler_t)(
     void * ///< shared with the task handler callbacks, e.g., in \ref dsn_task_handler_t
     );
 
-/*! define a new thread pool with a given name */
-extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char *name);
-extern DSN_API const char *dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code);
-extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
-    const char *s,
-    dsn_threadpool_code_t default_code // when s is not registered
-    );
-extern DSN_API int dsn_threadpool_code_max();
-extern DSN_API int dsn_threadpool_get_current_tid();
-
 /*! register a new task code */
-extern DSN_API dsn_task_code_t dsn_task_code_register(
-    const char *name, // task code name
-    dsn_task_type_t type,
-    dsn_task_priority_t,
-    dsn_threadpool_code_t pool // in which thread pool the tasks run
-    );
+extern DSN_API dsn_task_code_t dsn_task_code_register(const char *name, // task code name
+                                                      dsn_task_type_t type,
+                                                      dsn_task_priority_t,
+                                                      int pool // in which thread pool the tasks run
+                                                      );
 extern DSN_API void dsn_task_code_query(dsn_task_code_t code,
                                         /*out*/ dsn_task_type_t *ptype,
                                         /*out*/ dsn_task_priority_t *ppri,
-                                        /*out*/ dsn_threadpool_code_t *ppool);
+                                        /*out*/ dsn::threadpool_code *ppool);
 extern DSN_API void dsn_task_code_set_threadpool( // change thread pool for this task code
     dsn_task_code_t code,
-    dsn_threadpool_code_t pool);
+    dsn::threadpool_code pool);
 extern DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri);
 extern DSN_API const char *dsn_task_code_to_string(dsn_task_code_t code);
 extern DSN_API dsn_task_code_t dsn_task_code_from_string(const char *s,
@@ -147,7 +133,3 @@ extern DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn_task_code_t c
                                                                int hash DEFAULT(0));
 
 /*@}*/
-
-#ifdef __cplusplus
-}
-#endif

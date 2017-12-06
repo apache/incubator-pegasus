@@ -409,7 +409,7 @@ bool service_spec::init_app_specs()
     return true;
 }
 
-int service_spec::get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const
+int service_spec::get_ports_delta(int app_id, dsn::threadpool_code pool, int queue_index) const
 {
     dassert(rpc_io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
 

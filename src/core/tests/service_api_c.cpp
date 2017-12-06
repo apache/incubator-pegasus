@@ -54,20 +54,16 @@ TEST(core, dsn_error)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST)
 TEST(core, dsn_threadpool_code)
 {
-    ASSERT_EQ(THREAD_POOL_INVALID,
-              dsn_threadpool_code_from_string("THREAD_POOL_NOT_EXIST", THREAD_POOL_INVALID));
+    ASSERT_FALSE(dsn::threadpool_code::is_exist("THREAD_POOL_NOT_EXIST"));
+    ASSERT_STREQ("THREAD_POOL_DEFAULT", THREAD_POOL_DEFAULT.to_string());
+    ASSERT_EQ(THREAD_POOL_DEFAULT, dsn::threadpool_code("THREAD_POOL_DEFAULT"));
+    ASSERT_LE(THREAD_POOL_DEFAULT, dsn::threadpool_code::max());
 
-    ASSERT_STREQ("THREAD_POOL_DEFAULT", dsn_threadpool_code_to_string(THREAD_POOL_DEFAULT));
-    ASSERT_EQ(THREAD_POOL_DEFAULT,
-              dsn_threadpool_code_from_string("THREAD_POOL_DEFAULT", THREAD_POOL_INVALID));
-    ASSERT_LE(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
+    ASSERT_STREQ("THREAD_POOL_FOR_TEST", THREAD_POOL_FOR_TEST.to_string());
+    ASSERT_EQ(THREAD_POOL_FOR_TEST, dsn::threadpool_code("THREAD_POOL_FOR_TEST"));
+    ASSERT_LE(THREAD_POOL_FOR_TEST, dsn::threadpool_code::max());
 
-    ASSERT_STREQ("THREAD_POOL_FOR_TEST", dsn_threadpool_code_to_string(THREAD_POOL_FOR_TEST));
-    ASSERT_EQ(THREAD_POOL_FOR_TEST,
-              dsn_threadpool_code_from_string("THREAD_POOL_FOR_TEST", THREAD_POOL_INVALID));
-    ASSERT_LE(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
-
-    ASSERT_LT(0, dsn_threadpool_get_current_tid());
+    ASSERT_LT(0, dsn::utils::get_current_tid());
 }
 
 DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
@@ -77,7 +73,7 @@ TEST(core, dsn_task_code)
 {
     dsn_task_type_t type;
     dsn_task_priority_t pri;
-    dsn_threadpool_code_t pool;
+    dsn::threadpool_code pool;
 
     ASSERT_EQ(TASK_CODE_INVALID,
               dsn_task_code_from_string("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
