@@ -467,6 +467,7 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
         backup_context->ignore_checkpoint();
         return;
     }
+
     // after triggering init_checkpoint, we just wait until it finish
     if (backup_context->checkpoint_decree > 0) {
         char time_buf[20];
@@ -522,7 +523,7 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
 
     decree du = last_durable_decree();
     if (du < backup_context->checkpoint_decree) {
-        ddebug("%s: async checkpoint not done, will trigger again after 10 seconds, "
+        ddebug("%s: async checkpoint not done, we just wait it done, "
                "last_durable_decree = %" PRId64 ", backup_checkpoint_decree = %" PRId64,
                backup_context->name,
                du,

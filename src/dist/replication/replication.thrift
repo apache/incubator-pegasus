@@ -556,9 +556,9 @@ struct configuration_query_restore_request
 
 struct configuration_query_restore_response
 {
-    1:dsn.error_code    err;
-    2:dsn.error_code    restore_status;
-    3:i32               restore_progress;
+    1:dsn.error_code        err;
+    2:list<dsn.error_code>  restore_status;
+    3:list<i32>             restore_progress;
 }
 
 /*

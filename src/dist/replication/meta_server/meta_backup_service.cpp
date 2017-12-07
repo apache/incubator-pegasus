@@ -1314,7 +1314,16 @@ void backup_service::query_policy(dsn_message_t msg)
     ::dsn::unmarshall(msg, request);
 
     response.err = ERR_OK;
-    for (const auto &policy_name : request.policy_names) {
+
+    std::vector<std::string> policy_names = request.policy_names;
+    if (policy_names.empty()) {
+        // default all the policy
+        zauto_lock l(_lock);
+        for (const auto &pair : _policy_states) {
+            policy_names.emplace_back(pair.first);
+        }
+    }
+    for (const auto &policy_name : policy_names) {
         std::shared_ptr<policy_context> policy_context_ptr(nullptr);
         {
             zauto_lock l(_lock);
@@ -1357,14 +1366,16 @@ void backup_service::query_policy(dsn_message_t msg)
         // policy_context_ptr.reset();
     }
     if (response.policys.empty()) {
-        response.err = ERR_INVALID_PARAMETERS;
-    } else {
-        // if request contain some(not all) invalid policy_name, we use hint_msg to return
-        // to tell user
-        if (!response.hint_msg.empty()) {
-            response.__isset.hint_msg = true;
+        // have not pass a valid policy_name
+        if (!policy_names.empty()) {
+            response.err = ERR_INVALID_PARAMETERS;
         }
     }
+
+    if (!response.hint_msg.empty()) {
+        response.__isset.hint_msg = true;
+    }
+
     _meta_svc->reply_data(msg, response);
     dsn_msg_release_ref(msg);
 }

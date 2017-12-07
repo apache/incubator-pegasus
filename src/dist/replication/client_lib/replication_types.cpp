@@ -9752,11 +9752,11 @@ void configuration_query_restore_response::__set_err(const  ::dsn::error_code& v
   this->err = val;
 }
 
-void configuration_query_restore_response::__set_restore_status(const  ::dsn::error_code& val) {
+void configuration_query_restore_response::__set_restore_status(const std::vector< ::dsn::error_code> & val) {
   this->restore_status = val;
 }
 
-void configuration_query_restore_response::__set_restore_progress(const int32_t val) {
+void configuration_query_restore_response::__set_restore_progress(const std::vector<int32_t> & val) {
   this->restore_progress = val;
 }
 
@@ -9790,16 +9790,40 @@ uint32_t configuration_query_restore_response::read(::apache::thrift::protocol::
         }
         break;
       case 2:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->restore_status.read(iprot);
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->restore_status.clear();
+            uint32_t _size418;
+            ::apache::thrift::protocol::TType _etype421;
+            xfer += iprot->readListBegin(_etype421, _size418);
+            this->restore_status.resize(_size418);
+            uint32_t _i422;
+            for (_i422 = 0; _i422 < _size418; ++_i422)
+            {
+              xfer += this->restore_status[_i422].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
           this->__isset.restore_status = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
       case 3:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->restore_progress);
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->restore_progress.clear();
+            uint32_t _size423;
+            ::apache::thrift::protocol::TType _etype426;
+            xfer += iprot->readListBegin(_etype426, _size423);
+            this->restore_progress.resize(_size423);
+            uint32_t _i427;
+            for (_i427 = 0; _i427 < _size423; ++_i427)
+            {
+              xfer += iprot->readI32(this->restore_progress[_i427]);
+            }
+            xfer += iprot->readListEnd();
+          }
           this->__isset.restore_progress = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -9826,12 +9850,28 @@ uint32_t configuration_query_restore_response::write(::apache::thrift::protocol:
   xfer += this->err.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("restore_status", ::apache::thrift::protocol::T_STRUCT, 2);
-  xfer += this->restore_status.write(oprot);
+  xfer += oprot->writeFieldBegin("restore_status", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->restore_status.size()));
+    std::vector< ::dsn::error_code> ::const_iterator _iter428;
+    for (_iter428 = this->restore_status.begin(); _iter428 != this->restore_status.end(); ++_iter428)
+    {
+      xfer += (*_iter428).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("restore_progress", ::apache::thrift::protocol::T_I32, 3);
-  xfer += oprot->writeI32(this->restore_progress);
+  xfer += oprot->writeFieldBegin("restore_progress", ::apache::thrift::protocol::T_LIST, 3);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I32, static_cast<uint32_t>(this->restore_progress.size()));
+    std::vector<int32_t> ::const_iterator _iter429;
+    for (_iter429 = this->restore_progress.begin(); _iter429 != this->restore_progress.end(); ++_iter429)
+    {
+      xfer += oprot->writeI32((*_iter429));
+    }
+    xfer += oprot->writeListEnd();
+  }
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -9847,30 +9887,30 @@ void swap(configuration_query_restore_response &a, configuration_query_restore_r
   swap(a.__isset, b.__isset);
 }
 
-configuration_query_restore_response::configuration_query_restore_response(const configuration_query_restore_response& other418) {
-  err = other418.err;
-  restore_status = other418.restore_status;
-  restore_progress = other418.restore_progress;
-  __isset = other418.__isset;
+configuration_query_restore_response::configuration_query_restore_response(const configuration_query_restore_response& other430) {
+  err = other430.err;
+  restore_status = other430.restore_status;
+  restore_progress = other430.restore_progress;
+  __isset = other430.__isset;
 }
-configuration_query_restore_response::configuration_query_restore_response( configuration_query_restore_response&& other419) {
-  err = std::move(other419.err);
-  restore_status = std::move(other419.restore_status);
-  restore_progress = std::move(other419.restore_progress);
-  __isset = std::move(other419.__isset);
+configuration_query_restore_response::configuration_query_restore_response( configuration_query_restore_response&& other431) {
+  err = std::move(other431.err);
+  restore_status = std::move(other431.restore_status);
+  restore_progress = std::move(other431.restore_progress);
+  __isset = std::move(other431.__isset);
 }
-configuration_query_restore_response& configuration_query_restore_response::operator=(const configuration_query_restore_response& other420) {
-  err = other420.err;
-  restore_status = other420.restore_status;
-  restore_progress = other420.restore_progress;
-  __isset = other420.__isset;
+configuration_query_restore_response& configuration_query_restore_response::operator=(const configuration_query_restore_response& other432) {
+  err = other432.err;
+  restore_status = other432.restore_status;
+  restore_progress = other432.restore_progress;
+  __isset = other432.__isset;
   return *this;
 }
-configuration_query_restore_response& configuration_query_restore_response::operator=(configuration_query_restore_response&& other421) {
-  err = std::move(other421.err);
-  restore_status = std::move(other421.restore_status);
-  restore_progress = std::move(other421.restore_progress);
-  __isset = std::move(other421.__isset);
+configuration_query_restore_response& configuration_query_restore_response::operator=(configuration_query_restore_response&& other433) {
+  err = std::move(other433.err);
+  restore_status = std::move(other433.restore_status);
+  restore_progress = std::move(other433.restore_progress);
+  __isset = std::move(other433.__isset);
   return *this;
 }
 void configuration_query_restore_response::printTo(std::ostream& out) const {

@@ -338,9 +338,12 @@ private:
     int64_t _chkpt_total_size;
     std::atomic<int64_t> _cur_download_size;
     std::atomic<int32_t> _restore_progress;
-    // ERR_OK is restore succeed
-    // ERR_CORRUPTION data is damaged, should restore rollback
-    // ERR_IGNORE_DAMAGED_DATA, skip the damaged partition, this is just ok
+    // _restore_status:
+    //      ERR_OK: restore haven't encounter some error
+    //      ERR_CORRUPTION : data on backup media is damaged and we can not skip the damage data,
+    //                       so should restore rollback
+    //      ERR_IGNORE_DAMAGED_DATA : data on backup media is damaged but we can skip the damage
+    //                                data, so skip the damaged partition
     dsn::error_code _restore_status;
 
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true

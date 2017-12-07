@@ -270,6 +270,12 @@ struct partition_configuration_stateless
 
 struct restore_state
 {
+    // restore_status:
+    //      ERR_OK: restore haven't encounter some error
+    //      ERR_CORRUPTION : data on backup media is damaged and we can not skip the damage data,
+    //                       so should restore rollback
+    //      ERR_IGNORE_DAMAGED_DATA : data on backup media is damaged but we can skip the damage
+    //                                data, so skip the damaged partition
     dsn::error_code restore_status;
     int32_t progress;
     std::string reason;

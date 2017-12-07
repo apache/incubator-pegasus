@@ -1054,6 +1054,101 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 }
 
+// help functions
+
+template <typename T>
+// make sure T support cout << T;
+std::string print_set(const std::set<T> &set)
+{
+    std::stringstream ss;
+    ss << "{";
+    auto begin = set.begin();
+    auto end = set.end();
+    for (auto it = begin; it != end; it++) {
+        if (it != begin) {
+            ss << ", ";
+        }
+        ss << *it;
+    }
+    ss << "}";
+    return ss.str();
+}
+
+static void print_policy_entry(const policy_entry &entry)
+{
+    int width = strlen("backup_provider_type");
+
+    std::cout << "    " << std::setw(width) << std::left << "name"
+              << " : " << entry.policy_name << std::endl
+              << "    " << std::setw(width) << std::left << "backup_provider_type"
+              << " : " << entry.backup_provider_type << std::endl
+              << "    " << std::setw(width) << std::left << "backup_interval"
+              << " : " << entry.backup_interval_seconds << "s" << std::endl
+              << "    " << std::setw(width) << std::left << "app_ids"
+              << " : " << print_set(entry.app_ids) << std::endl;
+
+    std::string status = (entry.is_disable) ? std::string("disabled") : std::string("enabled");
+    std::cout << "    " << std::setw(width) << std::left << "start_time"
+              << " : " << entry.start_time << std::endl
+              << "    " << std::setw(width) << std::left << "status"
+              << " : " << status << std::endl
+              << "    " << std::setw(width) << std::left << "backup_history_count"
+              << " : " << entry.backup_history_count_to_keep << std::endl;
+}
+
+static void print_backup_entry(const backup_entry &bentry)
+{
+    int width = strlen("start_time");
+
+    char start_time[30] = {'\0'};
+    char end_time[30] = {'\0'};
+    ::dsn::utils::time_ms_to_date_time(bentry.start_time_ms, start_time, 30);
+    if (bentry.end_time_ms == 0) {
+        end_time[0] = '-';
+        end_time[1] = '\0';
+    } else {
+        ::dsn::utils::time_ms_to_date_time(bentry.end_time_ms, end_time, 30);
+    }
+
+    std::cout << "    " << std::setw(width) << std::left << "id"
+              << " : " << bentry.backup_id << std::endl
+              << "    " << std::setw(width) << std::left << "start_time"
+              << " : " << start_time << std::endl
+              << "    " << std::setw(width) << std::left << "end_time"
+              << " : " << end_time << std::endl
+              << "    " << std::setw(width) << std::left << "app_ids"
+              << " : " << print_set(bentry.app_ids) << std::endl;
+}
+
+dsn::error_code replication_ddl_client::ls_backup_policy()
+{
+    std::shared_ptr<configuration_query_backup_policy_request> req =
+        std::make_shared<configuration_query_backup_policy_request>();
+    req->policy_names.clear();
+    req->backup_info_count = 0;
+
+    auto resp_task =
+        request_meta<configuration_query_backup_policy_request>(RPC_CM_QUERY_BACKUP_POLICY, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+    configuration_query_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else {
+        for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
+            std::cout << "[" << idx + 1 << "]" << std::endl;
+            print_policy_entry(resp.policys[idx]);
+            std::cout << std::endl;
+        }
+    }
+    return ERR_OK;
+}
+
 dsn::error_code
 replication_ddl_client::query_backup_policy(const std::vector<std::string> &policy_names,
                                             int backup_info_cnt)
@@ -1077,49 +1172,18 @@ replication_ddl_client::query_backup_policy(const std::vector<std::string> &poli
     if (resp.err != ERR_OK) {
         return resp.err;
     } else {
-        std::cout << "query backup policy succeed" << std::endl;
         for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
+            if (idx != 0) {
+                std::cout << "************************" << std::endl;
+            }
             const policy_entry &pentry = resp.policys[idx];
-            if (idx > 0) {
-                std::cout << std::endl << std::endl;
-            }
             std::cout << "policy_info:" << std::endl;
-            std::cout << "\t"
-                      << "name = " << pentry.policy_name << std::endl;
-            std::cout << "\t"
-                      << "backup_provider_type = " << pentry.backup_provider_type << "\t"
-                      << "backup_interval = " << pentry.backup_interval_seconds << "s" << std::endl;
-            std::cout << "\t"
-                      << "app_ids: ";
-            for (auto &app_id : pentry.app_ids) {
-                std::cout << app_id << " ";
-            }
-            std::cout << "\t"
-                      << "start_time = " << pentry.start_time << "\t";
-            std::cout << "\t"
-                      << "status = " << (pentry.is_disable ? "disable" : "enable") << std::endl;
-            std::cout << "\t"
-                      << "backup_history_count_to_keep = " << pentry.backup_history_count_to_keep
-                      << "\t" << std::endl;
-            std::cout << std::endl;
-            // print backup info
-            std::cout << "backup_infos:" << std::endl;
+            print_policy_entry(pentry);
+            std::cout << std::endl << "backup_infos:" << std::endl;
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
-            for (const auto &bentry : backup_infos) {
-                std::cout << "\t"
-                          << "id = " << bentry.backup_id << std::endl;
-                char start_time[30] = {'\0'};
-                char end_time[30] = {'\0'};
-                ::dsn::utils::time_ms_to_date_time(bentry.start_time_ms, start_time, 30);
-                if (bentry.end_time_ms == 0) {
-                    end_time[0] = '-';
-                    end_time[1] = '\0';
-                } else {
-                    ::dsn::utils::time_ms_to_date_time(bentry.end_time_ms, end_time, 30);
-                }
-                std::cout << "\t"
-                          << "start_time = " << start_time << "\t"
-                          << "end_time = " << end_time << std::endl;
+            for (int idx = 0; idx < backup_infos.size(); idx++) {
+                std::cout << "[" << (idx + 1) << "]" << std::endl;
+                print_backup_entry(backup_infos[idx]);
             }
         }
     }
@@ -1177,7 +1241,7 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
     }
 }
 
-dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id)
+dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bool detailed)
 {
     if (restore_app_id <= 0) {
         return ERR_INVALID_PARAMETERS;
@@ -1198,9 +1262,46 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id)
     configuration_query_restore_response response;
     ::dsn::unmarshall(resp_task->response(), response);
     if (response.err == ERR_OK) {
-        std::cout << "app(" << restore_app_id << ") restore status:" << std::endl;
-        std::cout << "\terror_code = " << response.restore_status.to_string() << std::endl;
-        std::cout << "\tprogress = " << response.restore_progress << std::endl;
+        int overall_progress = 0;
+        for (const auto &p : response.restore_progress) {
+            overall_progress += p;
+        }
+        overall_progress = overall_progress / response.restore_progress.size();
+        overall_progress = overall_progress / 10;
+
+        if (detailed) {
+            int width = strlen("restore_status");
+            std::cout << std::setw(width) << std::left << "pid" << std::setw(width) << std::left
+                      << "progress(%)" << std::setw(width) << std::left << "restore_status"
+                      << std::endl;
+            for (int idx = 0; idx < response.restore_status.size(); idx++) {
+                std::string restore_status = std::string("unknown");
+                if (response.restore_status[idx] == ::dsn::ERR_OK) {
+                    restore_status = (response.restore_progress[idx] == 1000) ? "ok" : "ongoing";
+                } else if (response.restore_status[idx] == ERR_IGNORE_BAD_DATA) {
+                    restore_status = "skip";
+                }
+                int progress = response.restore_progress[idx] / 10;
+                std::cout << std::setw(width) << std::left << idx << std::setw(width) << std::left
+                          << progress << std::setw(width) << std::left << restore_status
+                          << std::endl;
+            }
+
+            std::cout << std::endl
+                      << "the overall progress of restore is " << overall_progress << "%"
+                      << std::endl;
+
+            std::cout << std::endl << "annotations:" << std::endl;
+            std::cout << "    ok : mean restore complete" << std::endl;
+            std::cout << "    ongoing : mean restore is under going" << std::endl;
+            std::cout
+                << "    skip : data on cold backup media is damaged, but skip the damaged partition"
+                << std::endl;
+            std::cout << "    unknown : invalid, should login server and check it" << std::endl;
+        } else {
+            std::cout << "the overall progress of restore is " << overall_progress << "%"
+                      << std::endl;
+        }
     } else if (response.err == ERR_APP_NOT_EXIST) {
         std::cout << "invalid restore_app_id(" << restore_app_id << ")" << std::endl;
     } else if (response.err == ERR_APP_DROPPED) {

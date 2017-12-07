@@ -129,7 +129,7 @@ public:
                                const std::string &new_app_name,
                                bool skip_bad_partition);
 
-    dsn::error_code query_restore(int32_t restore_app_id);
+    dsn::error_code query_restore(int32_t restore_app_id, bool detailed);
 
     dsn::error_code add_backup_policy(const std::string &policy_name,
                                       const std::string &backup_provider_type,
@@ -137,6 +137,8 @@ public:
                                       int64_t backup_interval_seconds,
                                       int32_t backup_history_cnt,
                                       const std::string &start_time);
+
+    dsn::error_code ls_backup_policy();
 
     dsn::error_code disable_backup_policy(const std::string &policy_name);
 

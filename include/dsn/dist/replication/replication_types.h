@@ -4178,21 +4178,21 @@ class configuration_query_restore_response {
   configuration_query_restore_response(configuration_query_restore_response&&);
   configuration_query_restore_response& operator=(const configuration_query_restore_response&);
   configuration_query_restore_response& operator=(configuration_query_restore_response&&);
-  configuration_query_restore_response() : restore_progress(0) {
+  configuration_query_restore_response() {
   }
 
   virtual ~configuration_query_restore_response() throw();
    ::dsn::error_code err;
-   ::dsn::error_code restore_status;
-  int32_t restore_progress;
+  std::vector< ::dsn::error_code>  restore_status;
+  std::vector<int32_t>  restore_progress;
 
   _configuration_query_restore_response__isset __isset;
 
   void __set_err(const  ::dsn::error_code& val);
 
-  void __set_restore_status(const  ::dsn::error_code& val);
+  void __set_restore_status(const std::vector< ::dsn::error_code> & val);
 
-  void __set_restore_progress(const int32_t val);
+  void __set_restore_progress(const std::vector<int32_t> & val);
 
   bool operator == (const configuration_query_restore_response & rhs) const
   {

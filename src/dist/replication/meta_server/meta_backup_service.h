@@ -65,9 +65,9 @@ struct backup_start_time
     backup_start_time(int32_t h, int32_t m) : hour(h), minute(m) {}
     std::string to_string()
     {
-        std::stringstream ss;
-        ss << hour << ":" << minute;
-        return ss.str();
+        char res[10] = {"\0"};
+        sprintf(res, "%02d:%02d", hour, minute);
+        return std::string(res);
     }
     // NOTICE: this function will modify hour and minute, if time is invalid, this func will set
     // hour = 24, minute = 0
@@ -138,7 +138,7 @@ public:
           backup_interval_seconds(0),
           backup_history_count_to_keep(6),
           is_disable(false),
-          start_time(2, 0) // default is 2:00 erery day
+          start_time(24, 0) // default is 24:00, namely no limit
     {
     }
 
