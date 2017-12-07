@@ -89,7 +89,7 @@ namespace dsn {
 ////------------------------------ SingleRpcClassResponseTimeAdmissionController
 ///----------------------------------------------------------------
 //
-////      args: dsn_task_code_t PercentileType LatencyThreshold100ns(from task create to end in
+////      args: dsn::task_code PercentileType LatencyThreshold100ns(from task create to end in
 /// local process)
 ////
 //

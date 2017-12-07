@@ -434,7 +434,7 @@ inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
 
         xfer += iprot->readStructEnd();
     }
-    _internal_code = dsn_task_code_from_string(task_code_string.c_str(), TASK_CODE_INVALID);
+    _internal_code = try_get(task_code_string.c_str(), TASK_CODE_INVALID);
     return xfer;
 }
 

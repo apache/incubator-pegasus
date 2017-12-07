@@ -116,7 +116,7 @@ public:
 
     bool is_started() const { return _is_running; }
 
-    volatile int *get_task_queue_virtual_length_ptr(dsn_task_code_t code, int hash);
+    volatile int *get_task_queue_virtual_length_ptr(dsn::task_code code, int hash);
 
     service_node *node() const { return _node; }
     void get_runtime_info(const std::string &indent,

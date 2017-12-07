@@ -487,7 +487,7 @@ void event_on_task::init(task *tsk)
         sprintf(buf, "%016" PRIx64, tsk->id());
         _task_id = buf;
         _node = tsk->node()->full_name();
-        _task_code = dsn_task_code_to_string(tsk->code());
+        _task_code = tsk->code().to_string();
         _delay = boost::lexical_cast<std::string>(tsk->delay_milliseconds());
     }
 }

@@ -349,7 +349,7 @@ void rpc_client_matcher::on_call(message_ex *request, rpc_response_task *call)
 //----------------------------------------------------------------------------------------------
 rpc_server_dispatcher::rpc_server_dispatcher()
 {
-    _vhandlers.resize(dsn_task_code_max() + 1);
+    _vhandlers.resize(dsn::task_code::max() + 1);
     for (auto &h : _vhandlers) {
         h = new std::pair<rpc_handler_info *, utils::rw_lock_nr>();
         h->first = nullptr;
@@ -369,7 +369,7 @@ rpc_server_dispatcher::~rpc_server_dispatcher()
 
 bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info *handler)
 {
-    auto name = std::string(dsn_task_code_to_string(handler->code));
+    std::string name(handler->code.to_string());
 
     utils::auto_write_lock l(_handlers_lock);
     auto it = _handlers.find(name);
@@ -389,12 +389,12 @@ bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info *handler)
     }
 }
 
-rpc_handler_info *rpc_server_dispatcher::unregister_rpc_handler(dsn_task_code_t rpc_code)
+rpc_handler_info *rpc_server_dispatcher::unregister_rpc_handler(dsn::task_code rpc_code)
 {
     rpc_handler_info *ret;
     {
         utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
+        auto it = _handlers.find(rpc_code.to_string());
         if (it == _handlers.end())
             return nullptr;
 
@@ -626,7 +626,7 @@ bool rpc_engine::register_rpc_handler(rpc_handler_info *handler)
     return _rpc_dispatcher.register_rpc_handler(handler);
 }
 
-rpc_handler_info *rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code)
+rpc_handler_info *rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
 {
     return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
 }

@@ -191,7 +191,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
     for (int i = 0; i < size; ++i) {
         std::string name;
         reader.read(name);
-        ::dsn::task_code code(dsn_task_code_from_string(name.c_str(), TASK_CODE_INVALID));
+        ::dsn::task_code code = dsn::task_code::try_get(name.c_str(), TASK_CODE_INVALID);
         dassert(code != TASK_CODE_INVALID, "invalid mutation task code: %s", name.c_str());
         mu->data.updates[i].code = code;
 

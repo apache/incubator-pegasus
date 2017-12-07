@@ -104,8 +104,8 @@ public:
 
     template <typename TRequest, typename RequestHandler>
     std::shared_ptr<reply_context>
-    fake_rpc_call(dsn_task_code_t rpc_code,
-                  dsn_task_code_t lpc_code,
+    fake_rpc_call(dsn::task_code rpc_code,
+                  dsn::task_code server_state_write_code,
                   RequestHandler *handle_class,
                   void (RequestHandler::*handle)(dsn_message_t request),
                   const TRequest &data,
@@ -122,8 +122,11 @@ public:
 
         dsn_message_t received = create_corresponding_receive(msg);
         dsn_msg_add_ref(received);
-        dsn::tasking::enqueue(
-            lpc_code, nullptr, std::bind(handle, handle_class, received), hash, delay);
+        dsn::tasking::enqueue(server_state_write_code,
+                              nullptr,
+                              std::bind(handle, handle_class, received),
+                              hash,
+                              delay);
 
         // release the sending message
         destroy_message(msg);

@@ -74,7 +74,7 @@ task_ptr rpc::create_rpc_response_task(dsn_message_t request,
 }
 
 namespace file {
-task_ptr create_aio_task(dsn_task_code_t callback_code, clientlet *svc, empty_callback_t, int hash)
+task_ptr create_aio_task(dsn::task_code callback_code, clientlet *svc, empty_callback_t, int hash)
 {
     task_ptr tsk = new safe_task_handle;
     // do not add_ref here

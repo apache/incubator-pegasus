@@ -117,7 +117,7 @@ scheduler::scheduler(void)
     task_worker::on_create.put_back(on_task_worker_create, "simulation.on_task_worker_create");
     task_worker::on_start.put_back(on_task_worker_start, "simulation.on_task_worker_start");
 
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait,
                                                      "simulation.on_task_wait");
         task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified,

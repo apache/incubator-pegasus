@@ -355,7 +355,7 @@ extern DSN_API void dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
  THREAD_POOL_DEFAULT; hash defines the thread with index hash % worker_count in the
  threadpool to execute the callback, when [threadpool.%pool_code%] partitioned = true.
  */
-extern DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code,
+extern DSN_API dsn_task_t dsn_task_create(dsn::task_code code,
                                           dsn_task_handler_t cb,
                                           void *context,
                                           int hash DEFAULT(0),
@@ -381,7 +381,7 @@ extern DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code,
  THREAD_POOL_DEFAULT; hash defines the thread with index hash % worker_count in the
  threadpool to execute the callback, when [threadpool.%pool_code%] partitioned = true.
  */
-extern DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code,
+extern DSN_API dsn_task_t dsn_task_create_timer(dsn::task_code code,
                                                 dsn_task_handler_t cb,
                                                 void *context,
                                                 int hash,
@@ -393,7 +393,7 @@ similar to \ref dsn_task_create, except an on_cancel callback is provided
 to be executed when the task is cancelled, see \ref dsn_task_cancelled_handler_t for
 more details.
 */
-extern DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code,  // task label
+extern DSN_API dsn_task_t dsn_task_create_ex(dsn::task_code code,   // task label
                                              dsn_task_handler_t cb, // callback function
                                              dsn_task_cancelled_handler_t on_cancel,
                                              void *context, // context to the two callbacks above
@@ -405,7 +405,7 @@ extern DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code,  // task labe
  to be executed when the task is cancelled, see \ref dsn_task_cancelled_handler_t for
  more details.
  */
-extern DSN_API dsn_task_t dsn_task_create_timer_ex(dsn_task_code_t code,
+extern DSN_API dsn_task_t dsn_task_create_timer_ex(dsn::task_code code,
                                                    dsn_task_handler_t cb,
                                                    dsn_task_cancelled_handler_t on_cancel,
                                                    void *context,
@@ -604,7 +604,7 @@ rpc message read/write
  \param partition_hash        used for finding which partition the request should be sent to
  \return RPC message handle
  */
-extern DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code,
+extern DSN_API dsn_message_t dsn_msg_create_request(dsn::task_code rpc_code,
                                                     int timeout_milliseconds DEFAULT(0),
                                                     int thread_hash DEFAULT(0),
                                                     uint64_t partition_hash DEFAULT(0));
@@ -638,7 +638,7 @@ typedef enum dsn_msg_serialize_format {
 /*! explicitly create a received RPC request, MUST released mannually later using
  * dsn_msg_release_ref */
 extern DSN_API dsn_message_t
-dsn_msg_create_received_request(dsn_task_code_t rpc_code,
+dsn_msg_create_received_request(dsn::task_code rpc_code,
                                 dsn_msg_serialize_format serialization_type,
                                 void *buffer,
                                 int size,
@@ -750,7 +750,7 @@ extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 extern DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg);
 
 /*! get task code of the message, return TASK_CODE_INVALID if code name is not recognized */
-extern DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg);
+extern DSN_API dsn::task_code dsn_msg_task_code(dsn_message_t msg);
 
 /*! get rpc name of the message */
 extern DSN_API const char *dsn_msg_rpc_name(dsn_message_t msg);
@@ -799,7 +799,7 @@ Server-Side RPC Primitives
  */
 
 /*! register callback to handle RPC request */
-extern DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code,
+extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
                                              const char *name,
                                              dsn_rpc_request_handler_t cb,
                                              void *context,
@@ -807,7 +807,7 @@ extern DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code,
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref
  * dsn_rpc_register_handler  */
-extern DSN_API void *dsn_rpc_unregiser_handler(dsn_task_code_t code,
+extern DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code,
                                                dsn_gpid gpid DEFAULT(dsn_gpid{0}));
 
 /*! reply with a response which is created using dsn_msg_create_response */
@@ -946,7 +946,7 @@ extern DSN_API void *dsn_file_native_handle(dsn_handle_t file);
 
  \return aio task handle, nullptr for failure
  */
-extern DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code,
+extern DSN_API dsn_task_t dsn_file_create_aio_task(dsn::task_code code,
                                                    dsn_aio_handler_t cb,
                                                    void *context,
                                                    int hash DEFAULT(0),
@@ -964,7 +964,7 @@ extern DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code,
 
  \return aio task handle, nullptr for failure
  */
-extern DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn_task_code_t code,
+extern DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn::task_code code,
                                                       dsn_aio_handler_t cb,
                                                       dsn_task_cancelled_handler_t on_cancel,
                                                       void *context,

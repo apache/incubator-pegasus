@@ -182,7 +182,7 @@ static bool inject_on_rpc_response_enqueue(rpc_response_task *resp)
 
 void test_injector::install(service_spec &svc_spec)
 {
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 

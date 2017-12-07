@@ -111,7 +111,7 @@ public:
     const service_app_info &get_service_app_info() const { return _info; }
     const service_app *get_service_app() const { return _entity.get(); }
     bool rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid);
-    rpc_handler_info *rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
+    rpc_handler_info *rpc_unregister_handler(dsn::task_code rpc_code, dsn_gpid gpid);
 
     void handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
     rpc_request_task *generate_intercepted_request_task(message_ex *req);
@@ -159,7 +159,7 @@ public:
     void configuration_changed();
 
     service_node *start_node(service_app_spec &app_spec);
-    void register_system_rpc_handler(dsn_task_code_t code,
+    void register_system_rpc_handler(dsn::task_code code,
                                      const char *name,
                                      dsn_rpc_request_handler_t cb,
                                      void *param,

@@ -73,11 +73,11 @@ void profiler_output_top(std::stringstream &ss,
                          const dsn_perf_counter_percentile_type_t percentile_type,
                          const int num)
 {
-    sort_node *_tmp = new sort_node[dsn_task_code_max() + 3];
-    int tmp_num = (num >= dsn_task_code_max() + 1) ? dsn_task_code_max() + 1 : num;
+    sort_node *_tmp = new sort_node[dsn::task_code::max() + 3];
+    int tmp_num = (num >= dsn::task_code::max() + 1) ? dsn::task_code::max() + 1 : num;
 
     // Load data
-    for (int i = 0; i <= dsn_task_code_max(); _tmp[i].id = i, i++) {
+    for (int i = 0; i <= dsn::task_code::max(); _tmp[i].id = i, i++) {
         if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) ||
             (s_spec_profilers[i].ptr[counter_type].get() == nullptr))
             continue;
@@ -89,7 +89,7 @@ void profiler_output_top(std::stringstream &ss,
         }
     }
 
-    std::sort(_tmp, _tmp + 1 + dsn_task_code_max(), cmp);
+    std::sort(_tmp, _tmp + 1 + dsn::task_code::max(), cmp);
 
     ss << profiler_output_data->separate_line_top << std::endl;
     ss << "|PROFILE|" << profiler_output_data->view_task_type << std::setw(data_width)
@@ -105,7 +105,7 @@ void profiler_output_top(std::stringstream &ss,
             continue;
 
         ss << "|" << std::setw(4) << i << "   |" << std::setiosflags(std::ios::left)
-           << std::setw(taskname_width) << std::string(dsn_task_code_to_string(i))
+           << std::setw(taskname_width) << std::string(dsn::task_code(i).to_string())
            << std::resetiosflags(std::ios::left);
         if (_tmp[k].val != -1) {
             ss << "|" << std::setw(data_width) << _tmp[k].val << "|" << std::endl;
@@ -126,7 +126,7 @@ void profiler_output_infomation_line(std::stringstream &ss,
     // Print the table infrom
     if (full_data == true) {
         ss << "|" << std::setw(4) << task_id << "   |" << std::setiosflags(std::ios::left)
-           << std::setw(taskname_width) << std::string(dsn_task_code_to_string(task_id))
+           << std::setw(taskname_width) << std::string(dsn::task_code(task_id).to_string())
            << std::resetiosflags(std::ios::left) << "|" << std::setw(7)
            << percentail_counter_string[percentile_type] << "|";
     } else {
@@ -189,7 +189,7 @@ void profiler_output_information_table(std::stringstream &ss, const int task_id)
     }
 
     // Print all task infrom
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i == TASK_CODE_INVALID) || (s_spec_profilers[i].is_profile == false))
             continue;
 
@@ -207,7 +207,7 @@ void profiler_output_dependency_matrix(std::stringstream &ss)
 {
     // Print the separate line
     ss << profiler_output_data->separate_line_depmatrix;
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false)) {
             ss << profiler_output_data->separate_line_call_times;
         }
@@ -216,7 +216,7 @@ void profiler_output_dependency_matrix(std::stringstream &ss)
 
     // Print the title of table
     ss << "|" << profiler_output_data->view_task_type << profiler_output_data->blank_matrix;
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false)) {
             ss << std::setw(call_width) << i << "|";
         }
@@ -225,7 +225,7 @@ void profiler_output_dependency_matrix(std::stringstream &ss)
 
     // Print the separate line
     ss << profiler_output_data->separate_line_depmatrix;
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false)) {
             ss << profiler_output_data->separate_line_call_times;
         }
@@ -233,12 +233,12 @@ void profiler_output_dependency_matrix(std::stringstream &ss)
     ss << std::endl;
 
     // Print the calling table
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false)) {
             ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width)
-               << std::string(dsn_task_code_to_string(i)) << std::resetiosflags(std::ios::left)
+               << std::string(dsn::task_code(i).to_string()) << std::resetiosflags(std::ios::left)
                << "|" << std::setw(call_width) << i << "|";
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile != false)) {
                     ss << std::setw(call_width) << s_spec_profilers[i].call_counts[j] << "|";
                 }
@@ -247,7 +247,7 @@ void profiler_output_dependency_matrix(std::stringstream &ss)
 
             // Print the separate line
             ss << profiler_output_data->separate_line_depmatrix;
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile != false)) {
                     ss << profiler_output_data->separate_line_call_times;
                 }
@@ -271,12 +271,12 @@ void profiler_output_dependency_list_caller(std::stringstream &ss, const int tas
             (!s_spec_profilers[task_id].collect_call_count))
             return;
 
-        for (int j = 0; j <= dsn_task_code_max(); j++) {
+        for (int j = 0; j <= dsn::task_code::max(); j++) {
             if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                 (s_spec_profilers[task_id].call_counts[j] > 0)) {
                 ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width)
-                   << std::string(dsn_task_code_to_string(task_id));
-                ss << "|" << std::setw(taskname_width) << std::string(dsn_task_code_to_string(j))
+                   << std::string(dsn::task_code(task_id).to_string());
+                ss << "|" << std::setw(taskname_width) << std::string(dsn::task_code(j).to_string())
                    << std::resetiosflags(std::ios::left);
                 ss << "|" << std::setw(call_width) << s_spec_profilers[task_id].call_counts[j]
                    << "|" << std::endl;
@@ -287,16 +287,16 @@ void profiler_output_dependency_list_caller(std::stringstream &ss, const int tas
     }
 
     // Print all task calling infrom
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile) &&
             (s_spec_profilers[i].collect_call_count)) {
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                     (s_spec_profilers[i].call_counts[j] > 0)) {
                     ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width)
-                       << std::string(dsn_task_code_to_string(i));
+                       << std::string(dsn::task_code(i).to_string());
                     ss << "|" << std::setw(taskname_width)
-                       << std::string(dsn_task_code_to_string(j))
+                       << std::string(dsn::task_code(j).to_string())
                        << std::resetiosflags(std::ios::left);
                     ss << "|" << std::setw(call_width) << s_spec_profilers[i].call_counts[j] << "|"
                        << std::endl;
@@ -321,13 +321,13 @@ void profiler_output_dependency_list_callee(std::stringstream &ss, const int tas
             (!s_spec_profilers[task_id].collect_call_count))
             return;
 
-        for (int j = 0; j <= dsn_task_code_max(); j++) {
+        for (int j = 0; j <= dsn::task_code::max(); j++) {
             if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                 (s_spec_profilers[j].collect_call_count) &&
                 (s_spec_profilers[j].call_counts[task_id] > 0)) {
                 ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width)
-                   << std::string(dsn_task_code_to_string(task_id));
-                ss << "|" << std::setw(taskname_width) << std::string(dsn_task_code_to_string(j))
+                   << std::string(dsn::task_code(task_id).to_string());
+                ss << "|" << std::setw(taskname_width) << std::string(dsn::task_code(j).to_string())
                    << std::resetiosflags(std::ios::left);
                 ss << "|" << std::setw(call_width) << s_spec_profilers[j].call_counts[task_id]
                    << "|" << std::endl;
@@ -338,16 +338,16 @@ void profiler_output_dependency_list_callee(std::stringstream &ss, const int tas
     }
 
     // Print all task calling infrom
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile)) {
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                     (s_spec_profilers[j].collect_call_count) &&
                     (s_spec_profilers[j].call_counts[i] > 0)) {
                     ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width)
-                       << std::string(dsn_task_code_to_string(i));
+                       << std::string(dsn::task_code(i).to_string());
                     ss << "|" << std::setw(taskname_width)
-                       << std::string(dsn_task_code_to_string(j))
+                       << std::string(dsn::task_code(j).to_string())
                        << std::resetiosflags(std::ios::left);
                     ss << "|" << std::setw(call_width) << s_spec_profilers[j].call_counts[i] << "|"
                        << std::endl;
@@ -363,11 +363,11 @@ void profiler_data_top(std::stringstream &ss,
                        const dsn_perf_counter_percentile_type_t percentile_type,
                        const int num)
 {
-    sort_node *_tmp = new sort_node[dsn_task_code_max() + 3];
-    int tmp_num = num >= dsn_task_code_max() + 1 ? dsn_task_code_max() + 1 : num;
+    sort_node *_tmp = new sort_node[dsn::task_code::max() + 3];
+    int tmp_num = num >= dsn::task_code::max() + 1 ? dsn::task_code::max() + 1 : num;
 
     // Load data
-    for (int i = 0; i <= dsn_task_code_max(); _tmp[i].id = i, i++) {
+    for (int i = 0; i <= dsn::task_code::max(); _tmp[i].id = i, i++) {
         if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) ||
             (s_spec_profilers[i].ptr[counter_type].get() == nullptr))
             continue;
@@ -379,7 +379,7 @@ void profiler_data_top(std::stringstream &ss,
         }
     }
 
-    std::sort(_tmp, _tmp + 1 + dsn_task_code_max(), cmp);
+    std::sort(_tmp, _tmp + 1 + dsn::task_code::max(), cmp);
 
     // Output sorted data
     for (int k = 0; k < tmp_num; k++) {
@@ -389,7 +389,7 @@ void profiler_data_top(std::stringstream &ss,
             (_tmp[k].val == -1))
             continue;
 
-        ss << dsn_task_code_to_string(i) << ":" << counter_info_ptr[counter_type]->keys[0] << ":"
+        ss << dsn::task_code(i).to_string() << ":" << counter_info_ptr[counter_type]->keys[0] << ":"
            << percentail_counter_int[percentile_type] << " ";
     }
     delete[] _tmp;

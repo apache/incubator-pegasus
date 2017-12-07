@@ -54,7 +54,7 @@ static void tracer_on_task_create(task *caller, task *callee)
                ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
                callee->spec().name.c_str(),
                callee->id(),
-               dsn_task_type_to_string(type),
+               enum_to_string(type),
                tsk->get_request()->header->rpc_name,
                tsk->get_request()->header->trace_id);
     } else if (TASK_TYPE_RPC_RESPONSE == type) {
@@ -63,14 +63,14 @@ static void tracer_on_task_create(task *caller, task *callee)
                ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
                callee->spec().name.c_str(),
                callee->id(),
-               dsn_task_type_to_string(type),
+               enum_to_string(type),
                tsk->get_request()->header->rpc_name,
                tsk->get_request()->header->trace_id);
     } else {
         ddebug("%s CREATE, task_id = %016" PRIx64 ", type = %s",
                callee->spec().name.c_str(),
                callee->id(),
-               dsn_task_type_to_string(type));
+               enum_to_string(type));
     }
 }
 
@@ -295,11 +295,12 @@ void tracer::install(service_spec &spec)
     auto trace = dsn_config_get_value_bool(
         "task..default", "is_trace", false, "whether to trace tasks by default");
 
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name = std::string("task.") + std::string(dsn_task_code_to_string(i));
+        std::string section_name =
+            std::string("task.") + std::string(dsn::task_code(i).to_string());
         task_spec *spec = task_spec::get(i);
         dassert(spec != nullptr, "task_spec cannot be null");
 

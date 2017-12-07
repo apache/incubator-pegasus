@@ -75,58 +75,59 @@ TEST(core, dsn_task_code)
     dsn_task_priority_t pri;
     dsn::threadpool_code pool;
 
-    ASSERT_EQ(TASK_CODE_INVALID,
-              dsn_task_code_from_string("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_INVALID, dsn::task_code::try_get("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
 
-    ASSERT_STREQ("TASK_TYPE_COMPUTE", dsn_task_type_to_string(TASK_TYPE_COMPUTE));
+    ASSERT_STREQ("TASK_TYPE_COMPUTE", enum_to_string(TASK_TYPE_COMPUTE));
 
-    ASSERT_STREQ("TASK_PRIORITY_HIGH", dsn_task_priority_to_string(TASK_PRIORITY_HIGH));
+    ASSERT_STREQ("TASK_PRIORITY_HIGH", enum_to_string(TASK_PRIORITY_HIGH));
 
-    ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST", dsn_task_code_to_string(TASK_CODE_COMPUTE_FOR_TEST));
+    ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST",
+                 dsn::task_code(TASK_CODE_COMPUTE_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST,
-              dsn_task_code_from_string("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
-    dsn_task_code_query(TASK_CODE_COMPUTE_FOR_TEST, &type, &pri, &pool);
-    ASSERT_EQ(TASK_TYPE_COMPUTE, type);
-    ASSERT_EQ(TASK_PRIORITY_HIGH, pri);
-    ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
+              dsn::task_code::try_get("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn::task_code::max());
+    dsn::task_spec *spec = dsn::task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
+    ASSERT_EQ(TASK_TYPE_COMPUTE, spec->type);
+    ASSERT_EQ(TASK_PRIORITY_HIGH, spec->priority);
+    ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn_task_code_to_string(TASK_CODE_AIO_FOR_TEST));
+    ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn::task_code(TASK_CODE_AIO_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_AIO_FOR_TEST,
-              dsn_task_code_from_string("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
-    dsn_task_code_query(TASK_CODE_AIO_FOR_TEST, &type, &pri, &pool);
-    ASSERT_EQ(TASK_TYPE_AIO, type);
-    ASSERT_EQ(TASK_PRIORITY_COMMON, pri);
-    ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
+              dsn::task_code::try_get("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn::task_code::max());
+    spec = dsn::task_spec::get(TASK_CODE_AIO_FOR_TEST.code());
+    ASSERT_EQ(TASK_TYPE_AIO, spec->type);
+    ASSERT_EQ(TASK_PRIORITY_COMMON, spec->priority);
+    ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST));
+    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn::task_code(TASK_CODE_RPC_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST,
-              dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
-    dsn_task_code_query(TASK_CODE_RPC_FOR_TEST, &type, &pri, &pool);
-    ASSERT_EQ(TASK_TYPE_RPC_REQUEST, type);
-    ASSERT_EQ(TASK_PRIORITY_LOW, pri);
-    ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
+              dsn::task_code::try_get("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn::task_code::max());
+    spec = dsn::task_spec::get(TASK_CODE_RPC_FOR_TEST.code());
+    ASSERT_EQ(TASK_TYPE_RPC_REQUEST, spec->type);
+    ASSERT_EQ(TASK_PRIORITY_LOW, spec->priority);
+    ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST_ACK));
+    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK",
+                 dsn::task_code(TASK_CODE_RPC_FOR_TEST_ACK).to_string());
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK,
-              dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
-    dsn_task_code_query(TASK_CODE_RPC_FOR_TEST_ACK, &type, &pri, &pool);
-    ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, type);
-    ASSERT_EQ(TASK_PRIORITY_LOW, pri);
-    ASSERT_EQ(THREAD_POOL_DEFAULT, pool);
+              dsn::task_code::try_get("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn::task_code::max());
+    spec = dsn::task_spec::get(TASK_CODE_RPC_FOR_TEST_ACK.code());
+    ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, spec->type);
+    ASSERT_EQ(TASK_PRIORITY_LOW, spec->priority);
+    ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    dsn_task_code_set_threadpool(TASK_CODE_COMPUTE_FOR_TEST, THREAD_POOL_FOR_TEST);
-    dsn_task_code_set_priority(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_COMMON);
-    dsn_task_code_query(TASK_CODE_COMPUTE_FOR_TEST, &type, &pri, &pool);
-    ASSERT_EQ(TASK_TYPE_COMPUTE, type);
-    ASSERT_EQ(TASK_PRIORITY_COMMON, pri);
-    ASSERT_EQ(THREAD_POOL_FOR_TEST, pool);
+    spec = dsn::task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
+    spec->pool_code = THREAD_POOL_FOR_TEST;
+    spec->priority = TASK_PRIORITY_COMMON;
+    ASSERT_EQ(TASK_TYPE_COMPUTE, spec->type);
+    ASSERT_EQ(TASK_PRIORITY_COMMON, spec->priority);
+    ASSERT_EQ(THREAD_POOL_FOR_TEST, spec->pool_code);
 
-    dsn_task_code_set_threadpool(TASK_CODE_COMPUTE_FOR_TEST, THREAD_POOL_DEFAULT);
-    dsn_task_code_set_priority(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH);
+    spec->pool_code = THREAD_POOL_DEFAULT;
+    spec->priority = TASK_PRIORITY_HIGH;
 }
 
 TEST(core, dsn_config)

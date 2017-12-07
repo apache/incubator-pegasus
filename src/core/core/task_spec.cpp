@@ -48,7 +48,7 @@
 
 namespace dsn {
 
-void task_spec::register_task_code(dsn_task_code_t code,
+void task_spec::register_task_code(task_code code,
                                    dsn_task_type_t type,
                                    dsn_task_priority_t pri,
                                    dsn::threadpool_code pool)
@@ -56,18 +56,17 @@ void task_spec::register_task_code(dsn_task_code_t code,
     dassert(pool != THREAD_POOL_INVALID,
             "registered pool cannot be THREAD_POOL_INVALID for task %s, "
             "make sure it is registered AFTER the pool is registered",
-            dsn_task_code_to_string(code));
+            code.to_string());
 
     if (!dsn::utils::singleton_vector_store<task_spec *, nullptr>::instance().contains(code)) {
-        task_spec *spec = new task_spec(code, dsn_task_code_to_string(code), type, pri, pool);
+        task_spec *spec = new task_spec(code, code.to_string(), type, pri, pool);
         dsn::utils::singleton_vector_store<task_spec *, nullptr>::instance().put(code, spec);
 
         if (type == TASK_TYPE_RPC_REQUEST) {
-            std::string ack_name = std::string(dsn_task_code_to_string(code)) + std::string("_ACK");
-            auto ack_code =
-                dsn_task_code_register(ack_name.c_str(), TASK_TYPE_RPC_RESPONSE, pri, pool);
+            std::string ack_name = std::string(code.to_string()) + std::string("_ACK");
+            dsn::task_code ack_code(ack_name.c_str(), TASK_TYPE_RPC_RESPONSE, pri, pool);
             spec->rpc_paired_code = ack_code;
-            task_spec::get(ack_code)->rpc_paired_code = code;
+            task_spec::get(ack_code.code())->rpc_paired_code = code;
         }
     } else {
         auto spec = task_spec::get(code);
@@ -75,7 +74,7 @@ void task_spec::register_task_code(dsn_task_code_t code,
             dassert(
                 false,
                 "task code %s registerd for %s, which does not match with previously registered %s",
-                dsn_task_code_to_string(code),
+                code.to_string(),
                 enum_to_string(type),
                 enum_to_string(spec->type));
             return;
@@ -83,7 +82,7 @@ void task_spec::register_task_code(dsn_task_code_t code,
 
         if (spec->priority != pri) {
             dwarn("overwrite priority for task %s from %s to %s",
-                  dsn_task_code_to_string(code),
+                  code.to_string(),
                   enum_to_string(spec->priority),
                   enum_to_string(pri));
             spec->priority = pri;
@@ -91,7 +90,7 @@ void task_spec::register_task_code(dsn_task_code_t code,
 
         if (spec->pool_code != pool) {
             dwarn("overwrite default thread pool for task %s from %s to %s",
-                  dsn_task_code_to_string(code),
+                  code.to_string(),
                   spec->pool_code.to_string(),
                   pool.to_string());
             spec->pool_code = pool;
@@ -168,12 +167,12 @@ bool task_spec::init()
     if (!read_config("task..default", default_spec))
         return false;
 
-    for (int code = 0; code <= dsn_task_code_max(); code++) {
+    for (int code = 0; code <= dsn::task_code::max(); code++) {
         if (code == TASK_CODE_INVALID)
             continue;
 
         std::string section_name =
-            std::string("task.") + std::string(dsn_task_code_to_string(code));
+            std::string("task.") + std::string(dsn::task_code(code).to_string());
         task_spec *spec = task_spec::get(code);
         dassert(spec != nullptr, "task_spec cannot be null");
 
@@ -207,11 +206,11 @@ bool task_spec::init()
         [](const std::vector<std::string> &args) {
             std::stringstream ss;
 
-            for (int code = 0; code <= dsn_task_code_max(); code++) {
+            for (int code = 0; code <= dsn::task_code::max(); code++) {
                 if (code == TASK_CODE_INVALID)
                     continue;
 
-                std::string codes = dsn_task_code_to_string(code);
+                std::string codes = dsn::task_code(code).to_string();
                 if (args.size() == 0) {
                     ss << "    " << codes << std::endl;
                 } else {

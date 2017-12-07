@@ -164,7 +164,7 @@ private:
                           dsn_message_t resp);
 
     template <typename TRequest>
-    dsn::task_ptr request_meta(dsn_task_code_t code,
+    dsn::task_ptr request_meta(dsn::task_code code,
                                std::shared_ptr<TRequest> &req,
                                int timeout_milliseconds = 0,
                                int reply_thread_hash = 0)

@@ -46,7 +46,7 @@ class task_explorer
 public:
     task_explorer()
     {
-        int maxt = dsn_task_code_max();
+        int maxt = dsn::task_code::max();
         _locals.resize((size_t)maxt, 0);
         _msg_count.store(0);
         _lpc_count.store(0);
@@ -59,7 +59,7 @@ public:
         ++_ins[msg->header->from_address.c_addr().u.value][caller];
     }
 
-    void on_local_call(dsn_task_code_t callee)
+    void on_local_call(dsn::task_code callee)
     {
         ++_lpc_count;
 
@@ -113,7 +113,7 @@ class per_node_task_explorer
 public:
     per_node_task_explorer()
     {
-        int maxt = dsn_task_code_max();
+        int maxt = dsn::task_code::max();
         _explorers.resize(maxt + 1);
         _node_id = 0;
         _name = "ukn";
@@ -148,7 +148,7 @@ public:
         _explorers[callee]->on_message_recv(msg, caller);
     }
 
-    void on_local_call(dsn_task_code_t caller, dsn_task_code_t callee)
+    void on_local_call(dsn::task_code caller, dsn::task_code callee)
     {
         _explorers[caller]->on_local_call(callee);
         _explorers[callee]->increase_lpc_count();
@@ -299,7 +299,7 @@ public:
         _explorers[task::get_current_node_id()].on_message_recv(msg, caller_code, callee_code);
     }
 
-    void on_local_call(dsn_task_code_t caller, dsn_task_code_t callee)
+    void on_local_call(dsn::task_code caller, dsn::task_code callee)
     {
         _explorers[task::get_current_node_id()].on_local_call(caller, callee);
     }
@@ -383,7 +383,7 @@ static void explorer_on_task_begin(task *t)
     switch (t->spec().type) {
     case dsn_task_type_t::TASK_TYPE_COMPUTE:
     case dsn_task_type_t::TASK_TYPE_AIO: {
-        auto caller_code = (dsn_task_code_t)(task_ext_for_explorer::get(t));
+        dsn::task_code caller_code(task_ext_for_explorer::get(t));
         if (caller_code != TASK_CODE_INVALID) {
             all_task_explorer::instance().on_local_call(caller_code, t->spec().code);
         }
@@ -416,9 +416,8 @@ static void explorer_on_rpc_response_enqueue(rpc_response_task *resp)
             (int)(message_ext_for_explorer::get(resp->get_response())),
             resp->spec().code);
     } else {
-        auto caller_code = message_ext_for_explorer::get(resp->get_request());
-        all_task_explorer::instance().on_local_call((dsn_task_code_t)caller_code,
-                                                    resp->spec().code);
+        dsn::task_code caller_code(message_ext_for_explorer::get(resp->get_request()));
+        all_task_explorer::instance().on_local_call(caller_code, resp->spec().code);
     }
 }
 
@@ -427,11 +426,11 @@ void explorer::install(service_spec &spec)
     auto explore = dsn_config_get_value_bool(
         "task..default", "is_explore", true, "whether to explore this kind of task");
 
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string name(dsn_task_code_to_string(i));
+        std::string name(dsn::task_code(i).to_string());
         std::string section_name = std::string("task.") + name;
         task_spec *spec = task_spec::get(i);
         dassert(spec != nullptr, "task_spec cannot be null");

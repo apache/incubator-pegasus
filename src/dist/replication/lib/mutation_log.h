@@ -133,7 +133,7 @@ public:
     // return value: nullptr for error
     // thread safe
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn_task_code_t callback_code,
+                                   dsn::task_code callback_code,
                                    clientlet *callback_host,
                                    aio_handler &&callback,
                                    int hash = 0) = 0;
@@ -381,7 +381,7 @@ public:
     }
 
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn_task_code_t callback_code,
+                                   dsn::task_code callback_code,
                                    clientlet *callback_host,
                                    aio_handler &&callback,
                                    int hash = 0) override;
@@ -434,7 +434,7 @@ public:
     }
 
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn_task_code_t callback_code,
+                                   dsn::task_code callback_code,
                                    clientlet *callback_host,
                                    aio_handler &&callback,
                                    int hash = 0) override;
@@ -556,7 +556,7 @@ public:
     //   - null if error
     ::dsn::task_ptr commit_log_block(log_block &block,
                                      int64_t offset,
-                                     dsn_task_code_t evt,
+                                     dsn::task_code evt,
                                      clientlet *callback_host,
                                      aio_handler &&callback,
                                      int hash);

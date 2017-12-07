@@ -109,7 +109,7 @@ public:
     ~rpc_server_dispatcher();
 
     bool register_rpc_handler(rpc_handler_info *handler);
-    rpc_handler_info *unregister_rpc_handler(dsn_task_code_t rpc_code);
+    rpc_handler_info *unregister_rpc_handler(dsn::task_code rpc_code);
     rpc_request_task *on_request(message_ex *msg, service_node *node);
     bool on_request_with_inline_execution(message_ex *msg, service_node *node);
     int handler_count() const
@@ -141,7 +141,7 @@ public:
     // rpc registrations
     //
     bool register_rpc_handler(rpc_handler_info *handler);
-    rpc_handler_info *unregister_rpc_handler(dsn_task_code_t rpc_code);
+    rpc_handler_info *unregister_rpc_handler(dsn::task_code rpc_code);
 
     //
     // rpc routines

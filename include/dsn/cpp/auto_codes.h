@@ -40,6 +40,7 @@
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/error_code.h>
 #include <dsn/tool-api/threadpool_code.h>
+#include <dsn/tool-api/task_code.h>
 #include <memory>
 #include <atomic>
 
@@ -139,65 +140,4 @@ public:
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 #endif
 };
-
-/*!
-  @addtogroup exec-model
-  @{
- */
-class task_code
-{
-public:
-    task_code(const char *name,
-              dsn_task_type_t tt,
-              dsn_task_priority_t pri,
-              dsn::threadpool_code pool)
-    {
-        _internal_code = dsn_task_code_register(name, tt, pri, pool);
-    }
-
-    task_code() { _internal_code = 0; }
-
-    explicit task_code(dsn_task_code_t code) { _internal_code = code; }
-
-    task_code(const task_code &r) { _internal_code = r._internal_code; }
-
-    const char *to_string() const { return dsn_task_code_to_string(_internal_code); }
-
-    task_code &operator=(const task_code &source)
-    {
-        _internal_code = source._internal_code;
-        return *this;
-    }
-
-    bool operator==(const task_code &r) { return _internal_code == r._internal_code; }
-
-    bool operator!=(const task_code &r) { return !(*this == r); }
-
-    operator dsn_task_code_t() const { return _internal_code; }
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
-private:
-    dsn_task_code_t _internal_code;
-};
-
-#define DEFINE_NAMED_TASK_CODE(x, name, pri, pool)                                                 \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_COMPUTE, pri, pool);
-#define DEFINE_NAMED_TASK_CODE_AIO(x, name, pri, pool)                                             \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_AIO, pri, pool);
-#define DEFINE_NAMED_TASK_CODE_RPC(x, name, pri, pool)                                             \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_RPC_REQUEST, pri, pool);                 \
-    __selectany const ::dsn::task_code x##_ACK(#name "_ACK", TASK_TYPE_RPC_RESPONSE, pri, pool);
-
-/*! define a new task code with TASK_TYPE_COMPUTATION */
-#define DEFINE_TASK_CODE(x, pri, pool) DEFINE_NAMED_TASK_CODE(x, x, pri, pool)
-#define DEFINE_TASK_CODE_AIO(x, pri, pool) DEFINE_NAMED_TASK_CODE_AIO(x, x, pri, pool)
-#define DEFINE_TASK_CODE_RPC(x, pri, pool) DEFINE_NAMED_TASK_CODE_RPC(x, x, pri, pool)
-
-// define default task code
-DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-/*@}*/
-} // end namespace
+}

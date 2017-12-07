@@ -18,7 +18,7 @@ protected:
 
     template <typename TReq, typename TResp>
     static bool
-    register_async_rpc_handler(dsn_task_code_t rpc_code,
+    register_async_rpc_handler(dsn::task_code rpc_code,
                                const char *name,
                                void (*handler)(T *svc, const TReq &req, rpc_replier<TResp> &resp))
     {
@@ -33,7 +33,7 @@ protected:
     }
 
     template <typename TReq>
-    static bool register_async_rpc_handler(dsn_task_code_t rpc_code,
+    static bool register_async_rpc_handler(dsn::task_code rpc_code,
                                            const char *name,
                                            void (*handler)(T *svc, const TReq &req))
     {
@@ -46,28 +46,27 @@ protected:
         return register_async_rpc_handler(rpc_code, name, h);
     }
 
-    static bool
-    register_async_rpc_handler(dsn_task_code_t rpc_code, const char *name, rpc_handler h)
+    static bool register_async_rpc_handler(dsn::task_code rpc_code, const char *name, rpc_handler h)
     {
-        dassert(_handlers.emplace(dsn_task_code_to_string(rpc_code), h).second,
+        dassert(_handlers.emplace(rpc_code.to_string(), h).second,
                 "handler %s has already been registered",
-                dsn_task_code_to_string(rpc_code));
+                rpc_code.to_string());
         dassert(_handlers.emplace(name, h).second, "handler %s has already been registered", name);
 
         _vhandlers.resize(rpc_code + 1);
         dassert(_vhandlers[rpc_code] == nullptr,
                 "handler %s(%d) has already been registered",
-                dsn_task_code_to_string(rpc_code),
-                rpc_code);
+                rpc_code.to_string(),
+                rpc_code.code());
         _vhandlers[rpc_code] = h;
         return true;
     }
 
-    static const rpc_handler *find_handler(dsn_task_code_t rpc_code)
+    static const rpc_handler *find_handler(dsn::task_code rpc_code)
     {
         if (rpc_code < _vhandlers.size() && _vhandlers[rpc_code] != nullptr)
             return &_vhandlers[rpc_code];
-        auto iter = _handlers.find(dsn_task_code_to_string(rpc_code));
+        auto iter = _handlers.find(rpc_code.to_string());
         if (iter != _handlers.end())
             return &(iter->second);
         return nullptr;
@@ -75,14 +74,14 @@ protected:
 
     int handle_request(dsn_message_t request)
     {
-        dsn_task_code_t t = dsn_msg_task_code(request);
+        dsn::task_code t = dsn_msg_task_code(request);
         const rpc_handler *ptr = find_handler(t);
         if (ptr != nullptr) {
             (*ptr)(static_cast<T *>(this), request);
         } else {
             dassert(false,
                     "recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
-                    dsn_task_code_to_string(t),
+                    t.to_string(),
                     dsn_address_to_string(dsn_msg_from_address(request)),
                     dsn_msg_trace_id(request));
             dsn_rpc_reply(dsn_msg_create_response(request), ::dsn::ERR_HANDLER_NOT_FOUND);

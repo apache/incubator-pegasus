@@ -50,8 +50,7 @@ extern counter_info *counter_info_ptr[PREF_COUNTER_COUNT];
 
 static int find_task_id(const std::string &name)
 {
-    auto code = dsn_task_code_from_string(name.c_str(), TASK_CODE_INVALID);
-    return code;
+    return dsn::task_code::try_get(name.c_str(), TASK_CODE_INVALID).code();
 }
 
 static dsn_perf_counter_percentile_type_t find_percentail_type(const std::string &name)
@@ -207,8 +206,9 @@ std::string profiler_data_handler(const std::vector<std::string> &args)
         if ((task_id != TASK_CODE_INVALID) && (counter_type != PREF_COUNTER_INVALID) &&
             (s_spec_profilers[task_id].ptr[counter_type].get() != nullptr) &&
             (s_spec_profilers[task_id].is_profile != false)) {
-            ss << dsn_task_code_to_string(task_id) << ":" << counter_info_ptr[counter_type]->title
-               << ":" << percentail_counter_string[percentile_type] << ":";
+            ss << dsn::task_code(task_id).to_string() << ":"
+               << counter_info_ptr[counter_type]->title << ":"
+               << percentail_counter_string[percentile_type] << ":";
             if (counter_info_ptr[counter_type]->type != COUNTER_TYPE_NUMBER_PERCENTILES) {
                 ss << s_spec_profilers[task_id].ptr[counter_type]->get_value() << " ";
             } else if (percentile_type != COUNTER_PERCENTILE_INVALID) {
@@ -220,7 +220,7 @@ std::string profiler_data_handler(const std::vector<std::string> &args)
             for (int j = 0; j < PREF_COUNTER_COUNT; j++) {
                 if ((s_spec_profilers[task_id].ptr[j].get() != nullptr) &&
                     (counter_info_ptr[j]->type == COUNTER_TYPE_NUMBER_PERCENTILES)) {
-                    ss << dsn_task_code_to_string(i) << ":" << counter_info_ptr[j]->title << ":"
+                    ss << dsn::task_code(i).to_string() << ":" << counter_info_ptr[j]->title << ":"
                        << percentail_counter_string[percentile_type] << ":"
                        << s_spec_profilers[task_id].ptr[j]->get_percentile(percentile_type) << " ";
                 }
@@ -281,7 +281,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
 
         bool first_flag = 0;
         ss << "[";
-        for (int i = 0; i <= dsn_task_code_max(); ++i) {
+        for (int i = 0; i <= dsn::task_code::max(); ++i) {
             task_id = i;
 
             if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
@@ -295,7 +295,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                     first_flag = 1;
 
                 percentile_type = static_cast<dsn_perf_counter_percentile_type_t>(j);
-                ss << "[\"" << dsn_task_code_to_string(task_id) << "\",";
+                ss << "[\"" << dsn::task_code(task_id).to_string() << "\",";
                 ss << "\"" << percentail_counter_string[percentile_type] << "\"";
 
                 for (int k = 0; k < PREF_COUNTER_COUNT; k++) {
@@ -336,12 +336,12 @@ std::string query_data_handler(const std::vector<std::string> &args)
         int task_id;
 
         std::vector<std::string> task_list;
-        for (int i = 0; i <= dsn_task_code_max(); ++i) {
+        for (int i = 0; i <= dsn::task_code::max(); ++i) {
             task_id = i;
 
             if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 continue;
-            task_list.push_back(dsn_task_code_to_string(task_id));
+            task_list.push_back(dsn::task_code(task_id).to_string());
         }
         dsn::json::json_encode(ss, task_list);
         return ss.str();
@@ -594,12 +594,12 @@ std::string query_data_handler(const std::vector<std::string> &args)
             std::vector<std::string> task_list;
             std::vector<std::vector<uint64_t>> call_matrix;
 
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile)) {
-                    task_list.push_back(std::string(dsn_task_code_to_string(j)));
+                    task_list.push_back(std::string(dsn::task_code(j).to_string()));
 
                     std::vector<uint64_t> call_vector;
-                    for (int k = 0; k <= dsn_task_code_max(); k++) {
+                    for (int k = 0; k <= dsn::task_code::max(); k++) {
                         if ((k != TASK_CODE_INVALID) && (s_spec_profilers[k].is_profile)) {
                             call_vector.push_back(s_spec_profilers[j].call_counts[k]);
                         }
@@ -623,23 +623,23 @@ std::string query_data_handler(const std::vector<std::string> &args)
         std::vector<call_link> callee_list;
 
         if (s_spec_profilers[task_id].collect_call_count) {
-            for (int j = 0; j <= dsn_task_code_max(); j++) {
+            for (int j = 0; j <= dsn::task_code::max(); j++) {
                 if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                     (s_spec_profilers[task_id].call_counts[j] > 0)) {
                     call_link tmp_call_link;
-                    tmp_call_link.name = std::string(dsn_task_code_to_string(j));
+                    tmp_call_link.name = std::string(dsn::task_code(j).to_string());
                     tmp_call_link.num = s_spec_profilers[task_id].call_counts[j];
                     caller_list.push_back(tmp_call_link);
                 }
             }
         }
 
-        for (int j = 0; j <= dsn_task_code_max(); j++) {
+        for (int j = 0; j <= dsn::task_code::max(); j++) {
             if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) &&
                 (s_spec_profilers[j].collect_call_count) &&
                 (s_spec_profilers[j].call_counts[task_id] > 0)) {
                 call_link tmp_call_link;
-                tmp_call_link.name = std::string(dsn_task_code_to_string(j));
+                tmp_call_link.name = std::string(dsn::task_code(j).to_string());
                 tmp_call_link.num = s_spec_profilers[j].call_counts[task_id];
                 callee_list.push_back(tmp_call_link);
             }
@@ -666,10 +666,10 @@ std::string query_data_handler(const std::vector<std::string> &args)
         auto pool = task_spec::get(task_id)->pool_code;
 
         std::vector<std::string> sharer_list;
-        for (int j = 0; j <= dsn_task_code_max(); j++)
+        for (int j = 0; j <= dsn::task_code::max(); j++)
             if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool &&
                 task_spec::get(j)->type == TASK_TYPE_RPC_RESPONSE)
-                sharer_list.push_back(std::string(dsn_task_code_to_string(j)));
+                sharer_list.push_back(std::string(dsn::task_code(j).to_string()));
         dsn::json::json_encode(ss, sharer_list);
         return ss.str();
     }

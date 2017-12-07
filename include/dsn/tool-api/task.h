@@ -105,7 +105,7 @@ extern __thread struct __tls_dsn__ tls_dsn;
 class task : public ref_counter, public extensible_object<task, 4>
 {
 public:
-    DSN_API task(dsn_task_code_t code,
+    DSN_API task(dsn::task_code code,
                  void *context,
                  dsn_task_cancelled_handler_t on_cancel,
                  int hash = 0,
@@ -128,7 +128,7 @@ public:
 
     uint64_t id() const { return _task_id; }
     task_state state() const { return _state.load(std::memory_order_acquire); }
-    dsn_task_code_t code() const { return _spec->code; }
+    dsn::task_code code() const { return _spec->code; }
     task_spec &spec() const { return *_spec; }
     int hash() const { return _hash; }
     int delay_milliseconds() const { return _delay_milliseconds; }
@@ -192,7 +192,7 @@ public:
 class task_c : public task, public transient_object
 {
 public:
-    task_c(dsn_task_code_t code,
+    task_c(dsn::task_code code,
            dsn_task_handler_t cb,
            void *context,
            dsn_task_cancelled_handler_t on_cancel,
@@ -214,7 +214,7 @@ private:
 class timer_task : public task
 {
 public:
-    timer_task(dsn_task_code_t code,
+    timer_task(dsn::task_code code,
                dsn_task_handler_t cb,
                void *context,
                dsn_task_cancelled_handler_t on_cancel,
@@ -235,14 +235,14 @@ private:
 
 struct rpc_handler_info
 {
-    dsn_task_code_t code;
+    dsn::task_code code;
     std::string name;
     bool unregistered;
     std::atomic<int> running_count;
     dsn_rpc_request_handler_t c_handler;
     void *parameter;
 
-    explicit rpc_handler_info(dsn_task_code_t code)
+    explicit rpc_handler_info(dsn::task_code code)
         : code(code), unregistered(false), running_count(0), c_handler(nullptr), parameter(nullptr)
     {
     }
@@ -382,7 +382,7 @@ public:
 class aio_task : public task, public transient_object
 {
 public:
-    DSN_API aio_task(dsn_task_code_t code,
+    DSN_API aio_task(dsn::task_code code,
                      dsn_aio_handler_t cb,
                      void *context,
                      dsn_task_cancelled_handler_t on_cancel,

@@ -113,7 +113,7 @@ public:
     rpc_session_ptr io_session; // send/recv session
     rpc_address to_address;     // always ipv4/v6 address, it is the to_node's net address
     rpc_address server_address; // used by requests, and may be of uri/group address
-    dsn_task_code_t local_rpc_code;
+    dsn::task_code local_rpc_code;
     network_header_format hdr_format;
     int send_retry_count;
 
@@ -136,7 +136,7 @@ public:
     // routines for create messages
     //
     DSN_API static message_ex *create_receive_message(const blob &data);
-    DSN_API static message_ex *create_request(dsn_task_code_t rpc_code,
+    DSN_API static message_ex *create_request(dsn::task_code rpc_code,
                                               int timeout_milliseconds = 0,
                                               int thread_hash = 0,
                                               uint64_t partition_hash = 0);

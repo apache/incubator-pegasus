@@ -256,7 +256,7 @@ void worker_set_leader(test_worker *worker, int leader_contact)
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn_task_code_t(RPC_MASTER_CONFIG), msg);
+        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 }
 
@@ -270,7 +270,7 @@ void clear(test_worker *worker, std::vector<test_master *> masters)
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn_task_code_t(RPC_MASTER_CONFIG), msg);
+        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 
     worker->fd()->toggle_send_ping(false);

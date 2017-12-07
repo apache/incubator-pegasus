@@ -50,7 +50,7 @@ using namespace dsn::utils;
 #endif
 #define __TITLE__ "rpc.message"
 
-DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code,
+DSN_API dsn_message_t dsn_msg_create_request(dsn::task_code rpc_code,
                                              int timeout_milliseconds,
                                              int thread_hash,
                                              uint64_t partition_hash)
@@ -59,7 +59,7 @@ DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code,
         rpc_code, timeout_milliseconds, thread_hash, partition_hash);
 }
 
-DSN_API dsn_message_t dsn_msg_create_received_request(dsn_task_code_t rpc_code,
+DSN_API dsn_message_t dsn_msg_create_received_request(dsn::task_code rpc_code,
                                                       dsn_msg_serialize_format serialization_type,
                                                       void *buffer,
                                                       int size,
@@ -69,7 +69,7 @@ DSN_API dsn_message_t dsn_msg_create_received_request(dsn_task_code_t rpc_code,
     ::dsn::blob bb((const char *)buffer, 0, size);
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
-    const char *name = dsn_task_code_to_string(rpc_code);
+    const char *name = rpc_code.to_string();
     strncpy(msg->header->rpc_name, name, strlen(name));
 
     msg->header->client.thread_hash = thread_hash;
@@ -139,7 +139,7 @@ DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg)
     return ((::dsn::message_ex *)msg)->header->trace_id;
 }
 
-DSN_API dsn_task_code_t dsn_msg_task_code(dsn_message_t msg)
+DSN_API dsn::task_code dsn_msg_task_code(dsn_message_t msg)
 {
     return ((::dsn::message_ex *)msg)->rpc_code();
 }
@@ -241,19 +241,19 @@ error_code message_ex::error()
 task_code message_ex::rpc_code()
 {
     if (local_rpc_code != ::dsn::TASK_CODE_INVALID) {
-        return task_code(local_rpc_code);
+        return local_rpc_code;
     }
 
     auto binary_hash = header->rpc_code.local_hash;
     if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
-        local_rpc_code = header->rpc_code.local_code;
+        local_rpc_code = dsn::task_code(header->rpc_code.local_code);
     } else {
-        local_rpc_code = dsn_task_code_from_string(header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        local_rpc_code = dsn::task_code::try_get(header->rpc_name, ::dsn::TASK_CODE_INVALID);
         header->rpc_code.local_hash = ::dsn::message_ex::s_local_hash;
-        header->rpc_code.local_code = local_rpc_code;
+        header->rpc_code.local_code = local_rpc_code.code();
     }
 
-    return task_code(local_rpc_code);
+    return local_rpc_code;
 }
 
 message_ex *message_ex::create_receive_message(const blob &data)
@@ -376,7 +376,7 @@ message_ex *message_ex::copy_and_prepare_send(bool clone_content)
     return copy;
 }
 
-message_ex *message_ex::create_request(dsn_task_code_t rpc_code,
+message_ex *message_ex::create_request(dsn::task_code rpc_code,
                                        int timeout_milliseconds,
                                        int thread_hash,
                                        uint64_t partition_hash)

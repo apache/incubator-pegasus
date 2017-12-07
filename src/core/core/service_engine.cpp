@@ -100,7 +100,7 @@ bool service_node::rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid
     return true;
 }
 
-rpc_handler_info *service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid)
+rpc_handler_info *service_node::rpc_unregister_handler(dsn::task_code rpc_code, dsn_gpid gpid)
 {
     if (gpid.value == 0) {
         rpc_handler_info *ret = nullptr;
@@ -491,7 +491,7 @@ void service_engine::init_after_toollets()
     tls_dsn.env = _env;
 }
 
-void service_engine::register_system_rpc_handler(dsn_task_code_t code,
+void service_engine::register_system_rpc_handler(dsn::task_code code,
                                                  const char *name,
                                                  dsn_rpc_request_handler_t cb,
                                                  void *param,

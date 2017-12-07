@@ -260,7 +260,7 @@ void task_engine::start()
     _is_running = true;
 }
 
-volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn_task_code_t code, int hash)
+volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
     auto pl = get_pool(task_spec::get(code)->pool_code);
     auto idx = (pl->spec().partitioned ? hash % pl->spec().worker_count : 0);

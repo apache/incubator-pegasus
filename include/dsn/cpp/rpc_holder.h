@@ -31,6 +31,7 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/smart_pointers.h>
+#include <dsn/tool-api/task_code.h>
 
 namespace dsn {
 
@@ -75,7 +76,7 @@ public:
             _i = std::make_shared<internal>(req);
         }
     }
-    rpc_holder(std::unique_ptr<TRequest> req, dsn_task_code_t code) : _i(new internal(req, code)) {}
+    rpc_holder(std::unique_ptr<TRequest> req, dsn::task_code code) : _i(new internal(req, code)) {}
 
     // copyable and movable
     rpc_holder(const rpc_holder &) = default;
@@ -175,7 +176,7 @@ private:
             dsn::unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &req, dsn_task_code_t code)
+        internal(std::unique_ptr<TRequest> &req, dsn::task_code code)
             : thrift_request(std::move(req))
         {
             dassert(thrift_request != nullptr, "req should not be null");

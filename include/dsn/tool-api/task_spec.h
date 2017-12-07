@@ -56,20 +56,6 @@ ENUM_REG(LOG_LEVEL_ERROR)
 ENUM_REG(LOG_LEVEL_FATAL)
 ENUM_END(dsn_log_level_t)
 
-ENUM_BEGIN(dsn_task_type_t, TASK_TYPE_INVALID)
-ENUM_REG(TASK_TYPE_RPC_REQUEST)
-ENUM_REG(TASK_TYPE_RPC_RESPONSE)
-ENUM_REG(TASK_TYPE_COMPUTE)
-ENUM_REG(TASK_TYPE_AIO)
-ENUM_REG(TASK_TYPE_CONTINUATION)
-ENUM_END(dsn_task_type_t)
-
-ENUM_BEGIN(dsn_task_priority_t, TASK_PRIORITY_INVALID)
-ENUM_REG(TASK_PRIORITY_LOW)
-ENUM_REG(TASK_PRIORITY_COMMON)
-ENUM_REG(TASK_PRIORITY_HIGH)
-ENUM_END(dsn_task_priority_t)
-
 namespace dsn {
 
 enum worker_priority_t
@@ -187,17 +173,17 @@ class task_spec : public extensible_object<task_spec, 4>
 {
 public:
     DSN_API static task_spec *get(int ec);
-    DSN_API static void register_task_code(dsn_task_code_t code,
+    DSN_API static void register_task_code(dsn::task_code code,
                                            dsn_task_type_t type,
                                            dsn_task_priority_t pri,
                                            dsn::threadpool_code pool);
 
 public:
     // not configurable [
-    dsn_task_code_t code;
+    dsn::task_code code;
     dsn_task_type_t type;
     std::string name;
-    dsn_task_code_t rpc_paired_code;
+    dsn::task_code rpc_paired_code;
     shared_exp_delay rpc_request_delayer;
     // ]
 

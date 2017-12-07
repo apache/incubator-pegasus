@@ -58,7 +58,6 @@
 #define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 #define DSN_MAX_PATH 1024
 
-typedef int dsn_task_code_t;
 typedef void *dsn_handle_t;
 typedef void *dsn_task_t;
 typedef void *dsn_task_tracker_t;

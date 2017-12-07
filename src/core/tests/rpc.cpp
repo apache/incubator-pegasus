@@ -101,7 +101,7 @@ TEST(core, group_address_talk_to_others)
     };
 
     ::dsn::task_ptr resp = ::dsn::rpc::call(addr,
-                                            dsn_task_code_t(RPC_TEST_STRING_COMMAND),
+                                            RPC_TEST_STRING_COMMAND,
                                             std::string("expect_talk_to_others"),
                                             nullptr,
                                             typed_callback);
@@ -131,7 +131,7 @@ TEST(core, group_address_change_leader)
     dsn_group_set_leader(addr.group_handle(),
                          ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
     resp_task = ::dsn::rpc::call(addr,
-                                 dsn_task_code_t(RPC_TEST_STRING_COMMAND),
+                                 RPC_TEST_STRING_COMMAND,
                                  std::string("expect_talk_to_others"),
                                  nullptr,
                                  typed_callback);
@@ -145,7 +145,7 @@ TEST(core, group_address_change_leader)
     dsn_group_set_leader(addr.group_handle(),
                          ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
     resp_task = ::dsn::rpc::call(addr,
-                                 dsn_task_code_t(RPC_TEST_STRING_COMMAND),
+                                 RPC_TEST_STRING_COMMAND,
                                  std::string("expect_talk_to_others"),
                                  nullptr,
                                  typed_callback);

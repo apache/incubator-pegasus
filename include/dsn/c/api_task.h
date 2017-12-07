@@ -38,25 +38,12 @@
 #include <dsn/c/api_common.h>
 #include <dsn/utility/error_code.h>
 #include <dsn/tool-api/threadpool_code.h>
+#include <dsn/tool-api/task_code.h>
 
 /*!
 @addtogroup task-common
 @{
  */
-
-/*! task/event type definition */
-typedef enum dsn_task_type_t {
-    TASK_TYPE_RPC_REQUEST,  ///< task handling rpc request
-    TASK_TYPE_RPC_RESPONSE, ///< task handling rpc response or timeout
-    TASK_TYPE_COMPUTE,      ///< async calls or timers
-    TASK_TYPE_AIO,          ///< callback for file read and write
-    TASK_TYPE_CONTINUATION, ///< above tasks are seperated into several continuation
-                            ///< tasks by thread-synchronization operations.
-                            ///< so that each "task" is non-blocking
-    TASK_TYPE_COUNT,
-    TASK_TYPE_INVALID
-} dsn_task_type_t;
-
 /*! callback prototype for \ref TASK_TYPE_COMPUTE */
 typedef void (*dsn_task_handler_t)(void * ///< void* context
                                    );
@@ -79,16 +66,6 @@ typedef void (*dsn_aio_handler_t)(dsn::error_code, ///< error code for the io op
                                   size_t,          ///< transferred io size
                                   void *           ///< context when rd/wt is called
                                   );
-
-/*! task priority */
-typedef enum dsn_task_priority_t {
-    TASK_PRIORITY_LOW,
-    TASK_PRIORITY_COMMON,
-    TASK_PRIORITY_HIGH,
-    TASK_PRIORITY_COUNT,
-    TASK_PRIORITY_INVALID
-} dsn_task_priority_t;
-
 /*!
  callback prototype for task cancellation (called on task-being-cancelled)
 
@@ -105,33 +82,12 @@ typedef void (*dsn_task_cancelled_handler_t)(
     void * ///< shared with the task handler callbacks, e.g., in \ref dsn_task_handler_t
     );
 
-/*! register a new task code */
-extern DSN_API dsn_task_code_t dsn_task_code_register(const char *name, // task code name
-                                                      dsn_task_type_t type,
-                                                      dsn_task_priority_t,
-                                                      int pool // in which thread pool the tasks run
-                                                      );
-extern DSN_API void dsn_task_code_query(dsn_task_code_t code,
-                                        /*out*/ dsn_task_type_t *ptype,
-                                        /*out*/ dsn_task_priority_t *ppri,
-                                        /*out*/ dsn::threadpool_code *ppool);
-extern DSN_API void dsn_task_code_set_threadpool( // change thread pool for this task code
-    dsn_task_code_t code,
-    dsn::threadpool_code pool);
-extern DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri);
-extern DSN_API const char *dsn_task_code_to_string(dsn_task_code_t code);
-extern DSN_API dsn_task_code_t dsn_task_code_from_string(const char *s,
-                                                         dsn_task_code_t default_code);
-extern DSN_API int dsn_task_code_max();
-extern DSN_API const char *dsn_task_type_to_string(dsn_task_type_t tt);
-extern DSN_API const char *dsn_task_priority_to_string(dsn_task_priority_t tt);
-
 /*!
 apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to
 enable customized throttling, see spec of thread pool for more information
 */
-extern DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn_task_code_t code,
+extern DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code,
                                                                int hash DEFAULT(0));
 
 /*@}*/

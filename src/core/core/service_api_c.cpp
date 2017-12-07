@@ -90,81 +90,10 @@ static struct _all_info_
 
 } dsn_all;
 
-DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn_task_code_t code, int hash)
+DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
     return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
                                                                                            hash);
-}
-
-struct task_code_placeholder
-{
-};
-DSN_API dsn_task_code_t dsn_task_code_register(const char *name,
-                                               dsn_task_type_t type,
-                                               dsn_task_priority_t pri,
-                                               int pool)
-{
-    dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH,
-            "task code '%s' is too long - length must be smaller than %d",
-            name,
-            DSN_MAX_TASK_CODE_NAME_LENGTH);
-    auto r = static_cast<dsn_task_code_t>(
-        ::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().register_id(name));
-    ::dsn::task_spec::register_task_code(r, type, pri, dsn::threadpool_code(pool));
-    return r;
-}
-
-DSN_API void dsn_task_code_query(dsn_task_code_t code,
-                                 dsn_task_type_t *ptype,
-                                 dsn_task_priority_t *ppri,
-                                 dsn::threadpool_code *ppool)
-{
-    auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "task code = %d", code);
-    if (ptype)
-        *ptype = sp->type;
-    if (ppri)
-        *ppri = sp->priority;
-    if (ppool)
-        *ppool = sp->pool_code;
-}
-
-DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn::threadpool_code pool)
-{
-    auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "task code = %d", code);
-    sp->pool_code = pool;
-}
-
-DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri)
-{
-    auto sp = ::dsn::task_spec::get(code);
-    dassert(sp != nullptr, "task code = %d", code);
-    sp->priority = pri;
-}
-
-DSN_API const char *dsn_task_code_to_string(dsn_task_code_t code)
-{
-    return ::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().get_name(
-        static_cast<int>(code));
-}
-
-DSN_API dsn_task_code_t dsn_task_code_from_string(const char *s, dsn_task_code_t default_code)
-{
-    auto r = ::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().get_id(s);
-    return r == -1 ? default_code : r;
-}
-
-DSN_API int dsn_task_code_max()
-{
-    return ::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().max_value();
-}
-
-DSN_API const char *dsn_task_type_to_string(dsn_task_type_t tt) { return enum_to_string(tt); }
-
-DSN_API const char *dsn_task_priority_to_string(dsn_task_priority_t tt)
-{
-    return enum_to_string(tt);
 }
 
 DSN_API bool dsn_task_is_running_inside(dsn_task_t t)
@@ -252,11 +181,8 @@ DSN_API void dsn_coredump()
     ::abort();
 }
 
-DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code,
-                                   dsn_task_handler_t cb,
-                                   void *context,
-                                   int hash,
-                                   dsn_task_tracker_t tracker)
+DSN_API dsn_task_t dsn_task_create(
+    dsn::task_code code, dsn_task_handler_t cb, void *context, int hash, dsn_task_tracker_t tracker)
 {
     auto t = new ::dsn::task_c(code, cb, context, nullptr, hash);
     t->set_tracker((dsn::task_tracker *)tracker);
@@ -264,7 +190,7 @@ DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code,
     return t;
 }
 
-DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code,
+DSN_API dsn_task_t dsn_task_create_timer(dsn::task_code code,
                                          dsn_task_handler_t cb,
                                          void *context,
                                          int hash,
@@ -277,7 +203,7 @@ DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code,
     return t;
 }
 
-DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code,
+DSN_API dsn_task_t dsn_task_create_ex(dsn::task_code code,
                                       dsn_task_handler_t cb,
                                       dsn_task_cancelled_handler_t on_cancel,
                                       void *context,
@@ -290,7 +216,7 @@ DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code,
     return t;
 }
 
-DSN_API dsn_task_t dsn_task_create_timer_ex(dsn_task_code_t code,
+DSN_API dsn_task_t dsn_task_create_timer_ex(dsn::task_code code,
                                             dsn_task_handler_t cb,
                                             dsn_task_cancelled_handler_t on_cancel,
                                             void *context,
@@ -543,11 +469,8 @@ DSN_API dsn_address_t dsn_primary_address()
     return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
-DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code,
-                                      const char *name,
-                                      dsn_rpc_request_handler_t cb,
-                                      void *param,
-                                      dsn_gpid gpid)
+DSN_API bool dsn_rpc_register_handler(
+    dsn::task_code code, const char *name, dsn_rpc_request_handler_t cb, void *param, dsn_gpid gpid)
 {
     ::dsn::rpc_handler_info *h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
@@ -563,7 +486,7 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code,
     return r;
 }
 
-DSN_API void *dsn_rpc_unregiser_handler(dsn_task_code_t code, dsn_gpid gpid)
+DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code, dsn_gpid gpid)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, gpid);
     void *param = nullptr;
@@ -710,7 +633,7 @@ DSN_API void *dsn_file_native_handle(dsn_handle_t file)
 }
 
 DSN_API dsn_task_t dsn_file_create_aio_task(
-    dsn_task_code_t code, dsn_aio_handler_t cb, void *context, int hash, dsn_task_tracker_t tracker)
+    dsn::task_code code, dsn_aio_handler_t cb, void *context, int hash, dsn_task_tracker_t tracker)
 {
     auto t = new ::dsn::aio_task(code, cb, context, nullptr, hash);
     t->set_tracker((dsn::task_tracker *)tracker);
@@ -718,7 +641,7 @@ DSN_API dsn_task_t dsn_file_create_aio_task(
     return t;
 }
 
-DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn_task_code_t code,
+DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn::task_code code,
                                                dsn_aio_handler_t cb,
                                                dsn_task_cancelled_handler_t on_cancel,
                                                void *context,
@@ -1097,7 +1020,7 @@ bool run(const char *config_file,
         getchar();
     }
 
-    for (int i = 0; i <= dsn_task_code_max(); i++) {
+    for (int i = 0; i <= dsn::task_code::max(); i++) {
         dsn_all.task_specs.push_back(::dsn::task_spec::get(i));
     }
 

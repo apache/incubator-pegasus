@@ -104,8 +104,8 @@ void check_wait_task(task *waitee)
             dwarn("task %s waits for another task %s sharing the same thread pool "
                   "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool "
                   "is partitioned)",
-                  dsn_task_code_to_string(task::get_current_task()->spec().code),
-                  dsn_task_code_to_string(waitee->spec().code));
+                  task::get_current_task()->spec().code.to_string(),
+                  waitee->spec().code.to_string());
         }
     }
 }

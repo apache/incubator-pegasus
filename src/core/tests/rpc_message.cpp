@@ -68,7 +68,7 @@ TEST(core, message_ex)
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.trace_id); ///////////////////
-        ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
+        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), h.rpc_name);
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
@@ -100,7 +100,7 @@ TEST(core, message_ex)
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->trace_id, h.trace_id); ///////////////////
-        ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);
+        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST_ACK).to_string(), h.rpc_name);
         ASSERT_EQ(0, h.gpid.value);
         ASSERT_EQ(ctx1.context, h.context.context);
         ASSERT_EQ(0, h.server.error_code.local_code);
@@ -163,7 +163,7 @@ TEST(core, message_ex)
         message_ex *receive = message_ex::create_receive_message(request->buffers[0]);
         ASSERT_EQ(1u, receive->buffers.size());
 
-        ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), receive->header->rpc_name);
+        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), receive->header->rpc_name);
 
         ASSERT_TRUE(receive->read_next(&ptr, &sz));
         ASSERT_EQ(data_size, sz);
