@@ -203,15 +203,13 @@ private:
 // is_rpc_holder<T>::value = true indicates that type T is an rpc_holder.
 
 template <typename T>
-struct is_rpc_holder
+struct is_rpc_holder : public std::false_type
 {
-    static constexpr bool value = false;
 };
 
 template <typename TRequest, typename TResponse>
-struct is_rpc_holder<rpc_holder<TRequest, TResponse>>
+struct is_rpc_holder<rpc_holder<TRequest, TResponse>> : public std::true_type
 {
-    static constexpr bool value = true;
 };
 
 // ======== utilities ========
