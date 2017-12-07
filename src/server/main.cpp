@@ -40,9 +40,9 @@ using namespace dsn::replication;
 
 void dsn_app_registration_pegasus()
 {
-    dsn_task_code_register(
+    dsn::task_code rpc_read(
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
-    dsn_task_code_register(
+    dsn::task_code rpc_write(
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
     dsn_meta_sever_register_providers();
 
