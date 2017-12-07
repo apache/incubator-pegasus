@@ -292,9 +292,10 @@ command_executor commands[] = {
         "<-c|--backup_history_cnt count>",
         add_backup_policy,
     },
+    {"ls_backup_policy", "list the names of the subsistent backup policies", "", ls_backup_policy},
     {
         "query_backup_policy",
-        "query existed backup policy and last backup infos",
+        "query subsistent backup policy and last backup infos",
         "<-p| --policy_name p1,p2> [-b| --backup_info_cnt cnt]",
         query_backup_policy,
     },
@@ -326,7 +327,10 @@ command_executor commands[] = {
         restore,
     },
     {
-        "query_restore_status", "query restore status", "<restore_app_id 1>", query_restore_status,
+        "query_restore_status",
+        "query restore status",
+        "<restore_app_id 1> [-d| --detailed]",
+        query_restore_status,
     },
     {
         "exit", "exit shell", "", exit_shell,

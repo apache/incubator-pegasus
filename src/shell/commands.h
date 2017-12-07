@@ -3271,7 +3271,7 @@ inline bool restore(command_executor *e, shell_context *sc, arguments args)
 
 inline bool query_restore_status(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc != 2) {
+    if (args.argc < 2) {
         fprintf(stderr, "invalid parameter\n");
         return false;
     }
@@ -3281,8 +3281,24 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
         fprintf(stderr, "invalid restore_app_id(%d)", restore_app_id);
         return false;
     }
-
-    ::dsn::error_code ret = sc->ddl_client->query_restore(restore_app_id);
+    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'}, {0, 0, 0, 0}};
+    optind = 0;
+    bool detailed = false;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "d", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'd':
+            detailed = true;
+            break;
+        default:
+            return false;
+        }
+    }
+    ::dsn::error_code ret = sc->ddl_client->query_restore(restore_app_id, detailed);
 
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr,
@@ -3402,13 +3418,24 @@ inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments 
     }
 }
 
+inline bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
+{
+    ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
+    if (err != ::dsn::ERR_OK) {
+        std::cout << "ls backup policy failed" << std::endl;
+    } else {
+        std::cout << std::endl << "ls backup policy succeed" << std::endl;
+    }
+    return true;
+}
+
 inline bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
                                            {"backup_info_cnt", required_argument, 0, 'b'},
                                            {0, 0, 0, 0}};
     std::vector<std::string> policy_names;
-    int backup_info_cnt = 1;
+    int backup_info_cnt = 3;
 
     optind = 0;
     while (true) {
@@ -3451,6 +3478,7 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
         ret.end_tracking();
         return false;
     } else {
+        std::cout << std::endl << "query backup policy succeed" << std::endl;
         return true;
     }
 }
