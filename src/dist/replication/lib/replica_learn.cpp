@@ -1122,12 +1122,13 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
     check_hashed_access();
 
     derror("%s: handle_learning_error[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-           " ms, err = %s",
+           " ms, err = %s, %s",
            name(),
            _potential_secondary_states.learning_version,
            _config.primary.to_string(),
            _potential_secondary_states.duration_ms(),
-           err.to_string());
+           err.to_string(),
+           is_local_error ? "local_error" : "remote error");
 
     _stub->_counter_replicas_learning_recent_learn_fail_count.increment();
 

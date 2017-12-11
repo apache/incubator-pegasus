@@ -36,11 +36,15 @@
 #include "replication_app_base.h"
 #include "replica.h"
 #include "mutation.h"
+#include "mutation_log.h"
+
 #include <dsn/utility/factory_store.h>
 #include <dsn/service_api_c.h>
-#include "mutation_log.h"
+#include <dsn/cpp/smart_pointers.h>
+
 #include <fstream>
 #include <sstream>
+#include <memory>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -389,30 +393,26 @@ error_code replication_app_base::open_new_internal(replica *r,
     auto info = _replica->get_app_info();
     auto err = dsn_hosted_app_create(
         info->app_type.c_str(), gd, _dir_data.c_str(), &_app_context, &_app_context_callbacks);
+
     if (err == ERR_OK) {
-        char *argv[2];
-        argv[0] = (char *)info->app_name.c_str();
-        std::string env_string; // k1:v1,k2:v2 ...
-        for (auto kv : info->envs) {
-            if (kv.first.find_first_of(":,") != std::string::npos ||
-                kv.second.find_first_of(":,") != std::string::npos) {
-                derror("Invalid character ':' or ',' in envs keyvalue %s <> %s",
-                       kv.first.c_str(),
-                       kv.second.c_str());
-                return ERR_INVALID_PARAMETERS;
+        int argc = 1;
+        argc += (2 * info->envs.size());
+        std::unique_ptr<char *[]> argvs = make_unique<char *[]>(argc);
+        char **argv = argvs.get();
+        dassert(argv != nullptr, "");
+        int idx = 0;
+        argv[idx++] = (char *)(info->app_name.c_str());
+        if (argc > 1) {
+            for (auto &kv : info->envs) {
+                argv[idx++] = (char *)(kv.first.c_str());
+                argv[idx++] = (char *)(kv.second.c_str());
             }
-            env_string += (kv.first + ':' + kv.second + ',');
         }
-        const std::map<std::string, std::string> &extra_envs = _replica->get_replica_extra_envs();
-        for (const auto &pair : extra_envs) {
-            env_string += (pair.first + ':' + pair.second + ',');
-        }
-        if (!env_string.empty()) {
-            env_string.back() = '\0';
-        }
-        argv[1] = const_cast<char *>(env_string.c_str());
-        err = dsn_hosted_app_start(_app_context, 2, argv);
+        dassert(argc == idx, "%d VS %d", argc, idx);
+        err = dsn_hosted_app_start(_app_context, argc, argv);
+        argv = nullptr;
     }
+
     return err;
 }
 

@@ -70,4 +70,13 @@ void meta_service_test_app::json_compacity()
     if (!result) {
         std::cout << "invalid pos: " << json4 + in.tell() << std::endl;
     }
+
+    // 6 app_name with ':'
+    const char *json6 = "{\"status\":\"app_status::AS_AVAILABLE\","
+                        "\"app_type\":\"pegasus\",\"app_name\":\"CL769:test\","
+                        "\"app_id\":1,\"partition_count\":16,\"envs\":{},"
+                        "\"is_stateful\":1,\"max_replica_count\":3}";
+    dsn::json::json_forwarder<dsn::app_info>::decode(dsn::blob(json6, 0, strlen(json6)), info2);
+    ASSERT_EQ(info2.app_name, "CL769:test");
+    ASSERT_EQ(info2.max_replica_count, 3);
 }

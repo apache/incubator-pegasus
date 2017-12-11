@@ -1313,7 +1313,7 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
 
 bool replication_ddl_client::valid_app_char(int c)
 {
-    return (bool)std::isalnum(c) || c == '_' || c == '.';
+    return (bool)std::isalnum(c) || c == '_' || c == '.' || c == ':';
 }
 
 void replication_ddl_client::end_meta_request(
