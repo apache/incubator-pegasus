@@ -1,11 +1,13 @@
 #pragma once
+
 #include <iostream>
 #include <dsn/utility/filesystem.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/dist/block_service.h>
-#include <dsn/cpp/auto_codes.h>
 #include <dsn/cpp/clientlet.h>
-#include "../../../lib/replica_context.h"
-#include "replication_service_test_app.h"
+#include "dist/replication/lib/replica_context.h"
+#include "dist/replication/test/replica_test/unit_test/replication_service_test_app.h"
+
 using namespace ::dsn;
 using namespace ::dsn::dist::block_service;
 using namespace ::dsn::replication;

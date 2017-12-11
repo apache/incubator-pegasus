@@ -42,7 +42,7 @@
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/cpp/callocator.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_writer.h>
 

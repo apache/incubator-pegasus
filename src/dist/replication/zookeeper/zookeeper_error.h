@@ -33,7 +33,7 @@
  */
 #pragma once
 
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 
 namespace dsn {
 namespace dist {

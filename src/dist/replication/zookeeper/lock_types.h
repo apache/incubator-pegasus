@@ -36,7 +36,7 @@
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/dist/distributed_lock_service.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 
 namespace dsn {
 namespace dist {

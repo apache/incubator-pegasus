@@ -24,47 +24,33 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_reader.h>
 #include <dsn/utility/binary_writer.h>
+
 #include <dsn/tool-api/rpc_message.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/service_api_c.h>
-#include <dsn/cpp/auto_codes.h>
 
 namespace dsn {
-/*!
-@addtogroup rpc-msg
-@{
-*/
-class rpc_read_stream;
-class rpc_write_stream;
-typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
-typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
 
-class rpc_read_stream : public safe_handle<dsn_msg_release_ref>, public binary_reader
+// rpc_read_stream is a bridge between binary_reader and rpc_message, with which you can
+// easily visit rpc_message's buffer in binary_reader's manner.
+class rpc_read_stream : public binary_reader
 {
 public:
     rpc_read_stream(dsn_message_t msg) { set_read_msg(msg); }
 
-    rpc_read_stream() {}
+    rpc_read_stream() : _msg(nullptr) {}
 
     void set_read_msg(dsn_message_t msg)
     {
-        assign(msg, false);
+        _msg = msg;
 
         ::dsn::blob bb;
-        bool r = ((::dsn::message_ex *)msg)->read_next(bb);
+        bool r = ((::dsn::message_ex *)_msg)->read_next(bb);
         dassert(r, "read msg must have one segment of buffer ready");
 
         init(std::move(bb));
@@ -72,20 +58,25 @@ public:
 
     ~rpc_read_stream()
     {
-        if (native_handle()) {
-            dsn_msg_read_commit(native_handle(), (size_t)(total_size() - get_remaining_size()));
+        if (_msg) {
+            dsn_msg_read_commit(_msg, (size_t)(total_size() - get_remaining_size()));
         }
     }
-};
 
-class rpc_write_stream : public safe_handle<dsn_msg_release_ref>, public binary_writer
+private:
+    dsn_message_t _msg;
+};
+typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
+
+// rpc_write_stream is a bridge between binary_writer and rpc_message, with which you can
+// easily store data to rpc_message's buffer in binary_writer's manner.
+class rpc_write_stream : public binary_writer
 {
 public:
     // for response
-    rpc_write_stream(dsn_message_t msg) : safe_handle<dsn_msg_release_ref>(msg, false)
+    rpc_write_stream(dsn_message_t msg)
+        : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
     {
-        _last_write_next_committed = true;
-        _last_write_next_total_size = 0;
     }
 
     // for request
@@ -93,11 +84,10 @@ public:
                      int timeout_ms = 0,
                      int thread_hash = 0,
                      uint64_t partition_hash = 0)
-        : safe_handle<dsn_msg_release_ref>(
-              dsn_msg_create_request(code, timeout_ms, thread_hash, partition_hash), false)
+        : _msg(dsn_msg_create_request(code, timeout_ms, thread_hash, partition_hash)),
+          _last_write_next_committed(true),
+          _last_write_next_total_size(0)
     {
-        _last_write_next_committed = true;
-        _last_write_next_total_size = 0;
     }
 
     // write buffer for rpc_write_stream is allocated from
@@ -109,8 +99,7 @@ public:
     void commit_buffer()
     {
         if (!_last_write_next_committed) {
-            dsn_msg_write_commit(native_handle(),
-                                 (size_t)(total_size() - _last_write_next_total_size));
+            dsn_msg_write_commit(_msg, (size_t)(total_size() - _last_write_next_total_size));
             _last_write_next_committed = true;
         }
     }
@@ -130,7 +119,7 @@ private:
 
         void *ptr;
         size_t sz;
-        dsn_msg_write_next(native_handle(), &ptr, &sz, size);
+        dsn_msg_write_next(_msg, &ptr, &sz, size);
         dbg_dassert(sz >= size, "allocated buffer size must be not less than the required size");
         bb.assign((const char *)ptr, 0, (int)sz);
 
@@ -139,8 +128,9 @@ private:
     }
 
 private:
+    dsn_message_t _msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
 };
-/*@}*/
+typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
 }

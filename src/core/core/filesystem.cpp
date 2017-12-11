@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/c/api_utilities.h>
 #include <dsn/utility/filesystem.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -1034,7 +1035,9 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
             } else {
                 int err = ferror(fp);
                 derror("md5sum error: read file %s failed: errno = %d (%s)",
-                       file_path.c_str(), err, strerror(err));
+                       file_path.c_str(),
+                       err,
+                       strerror(err));
                 fclose(fp);
                 MD5_Final(out, &c);
                 return ERR_FILE_OPERATION_FAILED;
@@ -1045,7 +1048,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     MD5_Final(out, &c);
 
     char str[MD5_DIGEST_LENGTH * 2 + 1];
-    for(int n = 0; n < MD5_DIGEST_LENGTH; n++)
+    for (int n = 0; n < MD5_DIGEST_LENGTH; n++)
         sprintf(str + n + n, "%02x", out[n]);
     result.assign(str);
 #endif

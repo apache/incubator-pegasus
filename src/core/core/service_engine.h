@@ -41,7 +41,7 @@
 #include <dsn/utility/singleton.h>
 #include <dsn/tool-api/global_config.h>
 #include <dsn/tool-api/task.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/utility/synchronize.h>
 
