@@ -626,7 +626,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                 uint64_t partition_hash = pegasus_key_hash(key);
                 dassert(msg->header->client.partition_hash == partition_hash,
                         "inconsistent partition hash");
-                int thread_hash = dsn_gpid_to_thread_hash(_gpid);
+                int thread_hash = _gpid.thread_hash();
                 dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
             }
 
