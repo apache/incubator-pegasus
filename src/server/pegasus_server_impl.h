@@ -49,6 +49,9 @@ public:
 
     // the following methods are for stateful apps with layer 2 support
 
+    // input:
+    //  - argc = 0 : re-open the db
+    //  - argc = 2n + 1, n >= 0; normal open the db
     // returns:
     //  - ERR_OK
     //  - ERR_FILE_OPERATION_FAILED

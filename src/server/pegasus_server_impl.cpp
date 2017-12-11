@@ -2142,24 +2142,19 @@ std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int a
     std::pair<std::string, bool> res;
     res.first = std::string();
     res.second = false;
-    if (argc != 2) {
-        dassert(false,
-                "%s: parse restore info from env failed, because invalid argc = %d",
-                _replica_name.c_str(),
-                argc);
+    if (argc <= 0 || ((argc - 1) % 2 != 0) || argv == nullptr) {
+        derror("%s: parse restore info from env failed, because invalid argc = %d",
+               _replica_name.c_str(),
+               argc);
         return res;
     }
     // env is compounded in replication_app_base::open() function
-    std::vector<std::string> envs;
-    ::dsn::utils::split_args(argv[1], envs, ',');
     std::map<std::string, std::string> env_kvs;
-    for (const auto &env : envs) {
-        auto pos = env.find(':');
-        if (pos == std::string::npos) {
-            dwarn("%s: invalid env, env = %s", _replica_name.c_str(), env.c_str());
-        } else {
-            env_kvs.insert(std::make_pair(env.substr(0, pos), env.substr(pos + 1)));
-        }
+    int idx = 1;
+    while (idx < argc) {
+        std::string key = std::string(argv[idx++]);
+        std::string value = std::string(argv[idx++]);
+        env_kvs.insert(std::make_pair(key, value));
     }
 
     auto it = env_kvs.find("force_restore");
