@@ -1,11 +1,13 @@
 Notices For Client Library Development
 ==========
 
-Currently C++&Java are supported to visit Pegasus cluster. You may want to refer to [C++ documentations](https://github.com/XiaoMi/pegasus/wiki/Cpp%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3) or [Java documentation](https://github.com/XiaoMi/pegasus/wiki/Java%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3) for details.
+Currently C++ and Java are supported to visit Pegasus cluster. You may want to refer to [C++ documentations](https://github.com/XiaoMi/pegasus/wiki/Cpp%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3) or [Java documentation](https://github.com/XiaoMi/pegasus/wiki/Java%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3) for details.
 
 Here we give some notices on the client library, which may be helpful to development of other language bindings.
 
 ## message protocol
+
+### request to server
 
 Message format sent to some single server of Pegasus Cluster:
 
@@ -47,6 +49,22 @@ You should write a thrift "TMessage" in TMessageBegin, the structure of TMessage
 * name: the RPC name (please refer to Java client for detail)
 * type: TMessage.CALL
 * seqid: the seqid int
+
+### response from server
+
+responsed got from pegasus server:
+
+`
+total_response_length(4 bytes) +  error_code_thrift_struct + response_body
+`
+
+Some notes on the above response:
+
+* **error_code_thrift_struct** is an error_code struct in thrift binary protocol, usually it indicates some error of service status than the response of some specific rpc call. For example, for a meta server, this error may indicate "the meta server is not leader"; for a read/write request to replica server, this error may indicate that the replica server is not a primary or don't serve the partition"
+* **response_body** is a standard thrift rpc response of the rpc call, with the format as follows:
+  * TMessageBegin: rpc_name, TMessage.T_REPLY, seqid_integer
+  * response_args
+  * TMessageEnd
 
 ## write/read request process
 
