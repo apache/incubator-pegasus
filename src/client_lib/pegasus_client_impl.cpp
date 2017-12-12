@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <dsn/tool-api/auto_codes.h>
+#include <dsn/tool-api/group_address.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb.types.h>
@@ -29,8 +30,8 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
     : _cluster_name(cluster_name), _app_name(app_name)
 {
     _server_uri = "dsn://" + _cluster_name + "/" + _app_name;
-    _server_address.assign_uri(dsn_uri_build(_server_uri.c_str()));
-    _client = new ::dsn::apps::rrdb_client(_server_address);
+    _server_uri_address.assign_uri(_server_uri.c_str());
+    _client = new ::dsn::apps::rrdb_client(_server_uri_address);
 
     std::string section = "uri-resolver.dsn://" + _cluster_name;
     std::string server_list = dsn_config_get_value_string(section.c_str(), "arguments", "", "");
@@ -51,17 +52,13 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
             "no meta server specified in config [%s].arguments",
             section.c_str());
 
-    _meta_server.assign_group(dsn_group_build("meta-servers"));
+    _meta_server.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        dsn_group_add(_meta_server.group_handle(), ms.c_addr());
+        _meta_server.group_address()->add(ms);
     }
 }
 
-pegasus_client_impl::~pegasus_client_impl()
-{
-    delete _client;
-    dsn_uri_destroy(_server_address.group_handle());
-}
+pegasus_client_impl::~pegasus_client_impl() { delete _client; }
 
 const char *pegasus_client_impl::get_cluster_name() const { return _cluster_name.c_str(); }
 

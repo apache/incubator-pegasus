@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "info_collector.h"
+#include <dsn/tool-api/group_address.h>
 #include <pegasus_utils.h>
 #include <iostream>
 #include <functional>
@@ -26,9 +27,9 @@ info_collector::info_collector()
     std::vector<::dsn::rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
-    _meta_servers.assign_group(dsn_group_build("meta-servers"));
+    _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        dsn_group_add(_meta_servers.group_handle(), ms.c_addr());
+        _meta_servers.group_address()->add(ms);
     }
 
     _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
@@ -49,7 +50,6 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    dsn_group_destroy(_meta_servers.group_handle());
 }
 
 void info_collector::start()
