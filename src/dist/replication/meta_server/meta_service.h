@@ -95,11 +95,11 @@ public:
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
     virtual void send_message(const rpc_address &target, dsn_message_t request)
     {
-        dsn_rpc_call_one_way(target.c_addr(), request);
+        dsn_rpc_call_one_way(target, request);
     }
     virtual void send_request(dsn_message_t /*req*/, const rpc_address &target, task_ptr callback)
     {
-        dsn_rpc_call(target.c_addr(), callback->native_handle());
+        dsn_rpc_call(target, callback->native_handle());
     }
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock

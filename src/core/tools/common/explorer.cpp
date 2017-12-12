@@ -56,7 +56,7 @@ public:
     {
         ++_msg_count;
         utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-        ++_ins[msg->header->from_address.c_addr().u.value][caller];
+        ++_ins[msg->header->from_address.value()][caller];
     }
 
     void on_local_call(dsn::task_code callee)
@@ -252,8 +252,8 @@ public:
 
                         // with external partners
                         else {
-                            dsn_address_t remote;
-                            remote.u.value = kv.first;
+                            dsn::rpc_address remote;
+                            remote.value() = kv.first;
 
                             ss << "\t" << kv.first << " [label=\""
                                << rpc_address(remote).to_std_string() << "\"];" << std::endl;
@@ -290,7 +290,7 @@ public:
             service_app *se = all[i];
             auto &exp = _explorers[se->info().entity_id];
             exp.set_id(se->info().entity_id, se->primary_address(), se->info().full_name);
-            _explorers_by_addr[exp.address().c_addr().u.value] = &exp;
+            _explorers_by_addr[exp.address().value()] = &exp;
         }
     }
 
@@ -327,7 +327,7 @@ public:
         for (auto &exp : _explorers) {
             std::unordered_set<int> ots;
             std::unordered_set<int> *ptr = &ots;
-            auto it = outgoing_tasks.find(exp.address().c_addr().u.value);
+            auto it = outgoing_tasks.find(exp.address().value());
             if (it != outgoing_tasks.end()) {
                 ptr = &it->second;
             }

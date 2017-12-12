@@ -83,7 +83,7 @@ public:
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
                 next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
-                dsn_rpc_forward(message, next_addr.c_addr());
+                dsn_rpc_forward(message, next_addr);
             } else {
                 reply(message, std::string(next_addr.to_string()));
             }

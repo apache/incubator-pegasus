@@ -149,7 +149,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
         dir_node *n = new dir_node(tags[i], norm_path);
         _dir_nodes.emplace_back(n);
         ddebug("%s: mark data dir(%s) as tag(%s)",
-               dsn_address_to_string(dsn_primary_address()),
+               dsn_primary_address().to_string(),
                norm_path.c_str(),
                tags[i].c_str());
     }
@@ -176,7 +176,7 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
     dir_node *n = get_dir_node(pid_dir);
     if (nullptr == n) {
         derror("%s: dir(%s) of gpid(%d.%d) haven't registered",
-               dsn_address_to_string(dsn_primary_address()),
+               dsn_primary_address().to_string(),
                pid_dir.c_str(),
                pid.get_app_id(),
                pid.get_partition_index());
@@ -186,13 +186,13 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
         auto result = replicas_for_app.emplace(pid);
         if (!result.second) {
             dwarn("%s: gpid(%d.%d) already in the dir_node(%s)",
-                  dsn_address_to_string(dsn_primary_address()),
+                  dsn_primary_address().to_string(),
                   pid.get_app_id(),
                   pid.get_partition_index(),
                   n->tag.c_str());
         } else {
             ddebug("%s: add gpid(%d.%d) to dir_node(%s)",
-                   dsn_address_to_string(dsn_primary_address()),
+                   dsn_primary_address().to_string(),
                    pid.get_app_id(),
                    pid.get_partition_index(),
                    n->tag.c_str());
@@ -234,7 +234,7 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
 
     ddebug(
         "%s: put pid(%d.%d) to dir(%s), which has %u replicas of current app, %u replicas totally",
-        dsn_address_to_string(dsn_primary_address()),
+        dsn_primary_address().to_string(),
         pid.get_app_id(),
         pid.get_partition_index(),
         selected->tag.c_str(),
@@ -258,7 +258,7 @@ void fs_manager::remove_replica(const gpid &pid)
                 n->tag.c_str());
         if (r != 0) {
             ddebug("%s: remove gpid(%d.%d) from dir(%s)",
-                   dsn_address_to_string(dsn_primary_address()),
+                   dsn_primary_address().to_string(),
                    pid.get_app_id(),
                    pid.get_partition_index(),
                    n->tag.c_str());

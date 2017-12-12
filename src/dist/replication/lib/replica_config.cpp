@@ -459,8 +459,7 @@ void replica::on_update_configuration_on_meta_server_reply(
                                 err, request, response, std::move(req2));
                         },
                         get_gpid().thread_hash());
-                    dsn_rpc_call(target.c_addr(),
-                                 _primary_states.reconfiguration_task->native_handle());
+                    dsn_rpc_call(target, _primary_states.reconfiguration_task->native_handle());
                     dsn_msg_release_ref(request);
                 },
                 get_gpid().thread_hash(),

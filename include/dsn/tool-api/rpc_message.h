@@ -40,10 +40,10 @@
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/dlib.h>
 #include <dsn/utility/blob.h>
+#include <dsn/utility/link.h>
 #include <dsn/cpp/callocator.h>
 #include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/address.h>
-#include <dsn/utility/link.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/global_config.h>
 
 namespace dsn {
@@ -79,11 +79,15 @@ typedef struct message_header
     dsn::gpid gpid;     // global partition id
     dsn_msg_context_t context;
 
-    // always ipv4/v6 address,
+    // Attention:
+    //      here, from_address must be IPv4 address, namely we can regard from_address as a
+    //      POD-type structure, so no memory-leak will occur even if we don't call it's
+    //      destructor.
+    //
     // generally, it is the from_node's primary address, except the
     // case described in message_ex::create_response()'s ATTENTION comment.
-    // the from_address is always the orignal client's address, it will
-    // not be changed in forwarding request.
+    //
+    // in the forwarding case, the from_address is always the orignal client's address
     rpc_address from_address;
 
     struct
@@ -98,6 +102,9 @@ typedef struct message_header
         char error_name[DSN_MAX_ERROR_CODE_NAME_LENGTH];
         fast_code error_code; // dsn::error_code
     } server;
+
+    message_header() = default;
+    ~message_header() = default;
 } message_header;
 
 class message_ex : public ref_counter,
@@ -161,6 +168,7 @@ public:
 private:
     DSN_API message_ex();
     DSN_API void prepare_buffer_header();
+    DSN_API void release_buffer_header();
 
 private:
     static std::atomic<uint64_t> _id;

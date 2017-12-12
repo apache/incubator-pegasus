@@ -35,6 +35,7 @@
 
 #include "client.h"
 #include "case.h"
+#include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/replication_other_types.h>
 
 #include <sstream>
@@ -48,13 +49,7 @@ simple_kv_client_app::simple_kv_client_app(const service_app_info *info)
 {
 }
 
-simple_kv_client_app::~simple_kv_client_app()
-{
-    stop();
-    if (_meta_server_group.group_handle()) {
-        dsn_group_destroy(_meta_server_group.group_handle());
-    }
-}
+simple_kv_client_app::~simple_kv_client_app() { stop(); }
 
 ::dsn::error_code simple_kv_client_app::start(const std::vector<std::string> &args)
 {
@@ -64,13 +59,14 @@ simple_kv_client_app::~simple_kv_client_app()
     std::vector<rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
-    _meta_server_group.assign_group(dsn_group_build("meta-servers"));
+    _meta_server_group.assign_group("meta_servers");
+    rpc_group_address *g = _meta_server_group.group_address();
     for (auto &ms : meta_servers) {
-        dsn_group_add(_meta_server_group.group_handle(), ms.c_addr());
+        g->add(ms);
     }
 
     // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-    _service_addr = url_host_address(args[1].c_str());
+    _service_addr.assign_uri(args[1].c_str());
     _simple_kv_client.reset(new simple_kv_client(_service_addr));
 
     dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST, this, std::bind(&simple_kv_client_app::run, this));
@@ -155,7 +151,7 @@ void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
 
     dsn::marshall(req, request);
 
-    dsn_rpc_call_one_way(_meta_server_group.c_addr(), req);
+    dsn_rpc_call_one_way(_meta_server_group, req);
 }
 
 struct read_context

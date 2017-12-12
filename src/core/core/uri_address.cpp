@@ -33,7 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "uri_address.h"
 #include "rpc_engine.h"
 #include <dsn/utility/singleton.h>
 #include <unordered_map>
@@ -41,6 +40,8 @@
 #include <dsn/utility/configuration.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/task.h>
+#include <dsn/tool-api/group_address.h>
+#include <dsn/tool-api/uri_address.h>
 
 namespace dsn {
 void uri_resolver_manager::setup_resolvers()
@@ -127,21 +128,18 @@ rpc_uri_address::rpc_uri_address(const char *uri) : _uri(uri)
     if (r1.get()) {
         _resolver = r1->get_app_resolver(get_uri_components().second.c_str());
     }
-    _uri_address.assign_uri(this);
 }
 
 rpc_uri_address::rpc_uri_address(const rpc_uri_address &other)
 {
     _resolver = other._resolver;
     _uri = other._uri;
-    _uri_address.assign_uri(this);
 }
 
 rpc_uri_address &rpc_uri_address::operator=(const rpc_uri_address &other)
 {
     _resolver = other._resolver;
     _uri = other._uri;
-    _uri_address.assign_uri(this);
     return *this;
 }
 
@@ -166,7 +164,7 @@ std::pair<std::string, std::string> rpc_uri_address::get_uri_components()
 uri_resolver::uri_resolver(const char *name, const char *factory, const char *arguments)
     : _name(name), _factory(factory), _arguments(arguments)
 {
-    _meta_server.assign_group(dsn_group_build(name));
+    _meta_server.assign_group(name);
 
     std::vector<std::string> args;
     utils::split_args(arguments, args, ',');
@@ -175,12 +173,12 @@ uri_resolver::uri_resolver(const char *name, const char *factory, const char *ar
         auto pos1 = arg.find_first_of(':');
         if (pos1 != std::string::npos) {
             ::dsn::rpc_address ep(arg.substr(0, pos1).c_str(), atoi(arg.substr(pos1 + 1).c_str()));
-            dsn_group_add(_meta_server.group_handle(), ep.c_addr());
+            _meta_server.group_address()->add(ep);
         }
     }
 }
 
-uri_resolver::~uri_resolver() { dsn_group_destroy(_meta_server.group_handle()); }
+uri_resolver::~uri_resolver() {}
 
 dist::partition_resolver_ptr uri_resolver::get_app_resolver(const char *app)
 {

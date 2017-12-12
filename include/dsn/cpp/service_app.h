@@ -37,7 +37,7 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/factory_store.h>
 #include <vector>
 #include <string>

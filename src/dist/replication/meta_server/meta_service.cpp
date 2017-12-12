@@ -323,7 +323,7 @@ int meta_service::check_leader(dsn_message_t req)
 
         dinfo("leader address: %s", leader.to_string());
         if (!leader.is_invalid()) {
-            dsn_rpc_forward(req, leader.c_addr());
+            dsn_rpc_forward(req, leader);
             return 0;
         } else {
             return -1;

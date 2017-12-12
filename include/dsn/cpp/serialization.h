@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/utility/utils.h>
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/cpp/rpc_stream.h>
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION

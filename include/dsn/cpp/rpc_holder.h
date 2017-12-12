@@ -155,7 +155,7 @@ public:
                 cb_fwd(err);
             },
             reply_thread_hash);
-        dsn_rpc_call(server.c_addr(), t->native_handle());
+        dsn_rpc_call(server, t->native_handle());
         return t;
     }
 

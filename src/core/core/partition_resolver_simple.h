@@ -35,8 +35,11 @@
 
 #pragma once
 
-#include <dsn/dist/partition_resolver.h>
+#include <dsn/tool-api/partition_resolver.h>
+#include <dsn/service_api_c.h>
 #include <dsn/cpp/zlocks.h>
+#include <dsn/cpp/clientlet.h>
+#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
 
 namespace dsn {
 namespace dist {

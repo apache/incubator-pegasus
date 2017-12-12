@@ -119,14 +119,14 @@ DSN_API void dsn_msg_add_ref(dsn_message_t msg) { ((::dsn::message_ex *)msg)->ad
 
 DSN_API void dsn_msg_release_ref(dsn_message_t msg) { ((::dsn::message_ex *)msg)->release_ref(); }
 
-DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
+DSN_API dsn::rpc_address dsn_msg_from_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex *)msg)->header->from_address.c_addr();
+    return ((::dsn::message_ex *)msg)->header->from_address;
 }
 
-DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
+DSN_API dsn::rpc_address dsn_msg_to_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex *)msg)->to_address.c_addr();
+    return ((::dsn::message_ex *)msg)->to_address;
 }
 
 DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg)
@@ -214,6 +214,13 @@ message_ex::message_ex()
 
 message_ex::~message_ex()
 {
+    // when recv a request, message_header is hidden ahead of buffer(see@create_receive_message
+    // function), if you call copy_and_prepare_send() function, then a new request will be create,
+    // but new request share the same header with the old_request, so if old_request release header,
+    // then new request's header is invalid, so we don't release_buffer_header(), and there will not
+    // lead any problem, see@ Attention of message_header
+
+    // release_buffer_header();
     if (!_is_read) {
         dassert(_rw_committed, "message write is not committed");
     }
@@ -288,14 +295,15 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
-    // - if this message is a written message, set copied message's write pointer to the end, then
-    // you
-    //   can continue to append data to the copied message.
+    // - if this message is a written message, set copied message's write pointer to the end,
+    //   then you can continue to append data to the copied message.
+    //
     // - if this message is a read message, set copied message's read pointer to the beginning,
     //   then you can read data from the beginning.
+    //
     // - if copy_for_receive is set, it means that we want to make a receiving message from a
-    // sending message.
-    //   which is usually useful when you want to write mock for modules which use rpc.
+    //   sending message. which is usually useful when you want to
+    //   write mock for modules which use rpc.
 
     message_ex *msg = new message_ex();
     msg->to_address = to_address;
@@ -465,7 +473,16 @@ void message_ex::prepare_buffer_header()
     this->_rw_offset = (int)sizeof(message_header);
     this->buffers.push_back(buffer);
 
+    // here, we should call placement new, because message_header contain variable that is not
+    // POD-type, such as rpc_address, so we should call these variable's construct
+    new (ptr)(message_header);
     header = (message_header *)ptr;
+}
+
+void message_ex::release_buffer_header()
+{
+    // message_header contain variable that is not POD-type, so we call these variable's destructor
+    header->~message_header();
 }
 
 void message_ex::write_next(void **ptr, size_t *size, size_t min_size)

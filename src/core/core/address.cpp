@@ -57,15 +57,16 @@
 
 #include <dsn/utility/ports.h>
 #include <dsn/utility/fixed_size_buffer_pool.h>
-#include <dsn/service_api_c.h>
-#include <dsn/cpp/address.h>
+
+#include <dsn/c/api_utilities.h>
+
+#include <dsn/tool-api/rpc_address.h>
+#include <dsn/tool-api/uri_address.h>
+#include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/task.h>
-#include "group_address.h"
-#include "uri_address.h"
 
 namespace dsn {
-const rpc_address rpc_group_address::_invalid;
-}
+const rpc_address rpc_address::sInvalid;
 
 #ifdef _WIN32
 static void net_init()
@@ -82,8 +83,8 @@ static void net_init()
 }
 #endif
 
-// name to ip etc.
-DSN_API uint32_t dsn_ipv4_from_host(const char *name)
+/*static*/
+uint32_t rpc_address::ipv4_from_host(const char *name)
 {
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -111,9 +112,10 @@ DSN_API uint32_t dsn_ipv4_from_host(const char *name)
     return (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
+/*static*/
 // if network_interface is "", then return the first
 // site-local ipv4 address: 10.*.*.*, 172.16.*.*, 192.168.*.*
-DSN_API uint32_t dsn_ipv4_local(const char *network_interface)
+DSN_API uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
 {
     uint32_t ret = 0;
 
@@ -153,8 +155,91 @@ DSN_API uint32_t dsn_ipv4_local(const char *network_interface)
     return ret;
 }
 
+rpc_address::~rpc_address() { clear(); }
+
+rpc_address::rpc_address(const rpc_address &another) { *this = another; }
+
+rpc_address &rpc_address::operator=(const rpc_address &another)
+{
+    if (this == &another) {
+        // avoid memory leak
+        return *this;
+    }
+    clear();
+    _addr = another._addr;
+    switch (another.type()) {
+    case HOST_TYPE_GROUP:
+        group_address()->add_ref();
+        break;
+    case HOST_TYPE_URI:
+        uri_address()->add_ref();
+        break;
+    default:
+        break;
+    }
+    return *this;
+}
+
+void rpc_address::assign_uri(const char *host_uri)
+{
+    clear();
+    _addr.uri.type = HOST_TYPE_URI;
+    dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(host_uri);
+    // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
+    addr->add_ref();
+    _addr.uri.uri = (uint64_t)addr;
+}
+
+void rpc_address::assign_group(const char *name)
+{
+    clear();
+    _addr.group.type = HOST_TYPE_GROUP;
+    dsn::rpc_group_address *addr = new dsn::rpc_group_address(name);
+    // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
+    addr->add_ref();
+    _addr.group.group = (uint64_t)addr;
+}
+
+rpc_address rpc_address::clone() const
+{
+    rpc_address new_address;
+
+    if (type() == HOST_TYPE_IPV4) {
+        new_address._addr = _addr;
+    } else if (type() == HOST_TYPE_URI) {
+        dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(*uri_address());
+        addr->add_ref();
+        new_address._addr.uri.uri = (uint64_t)addr;
+        new_address._addr.uri.type = HOST_TYPE_URI;
+    } else if (type() == HOST_TYPE_GROUP) {
+        dsn::rpc_group_address *addr = new dsn::rpc_group_address(*group_address());
+        addr->add_ref();
+        new_address._addr.group.group = (uint64_t)addr;
+        new_address._addr.group.type = HOST_TYPE_GROUP;
+    } else {
+        new_address.clear();
+    }
+
+    return new_address;
+}
+
+void rpc_address::clear()
+{
+    switch (type()) {
+    case HOST_TYPE_GROUP:
+        group_address()->release_ref();
+        break;
+    case HOST_TYPE_URI:
+        uri_address()->release_ref();
+        break;
+    default:
+        break;
+    }
+    _addr.value = 0;
+}
+
 static __thread fixed_size_buffer_pool<8, 256> bf;
-DSN_API const char *dsn_address_to_string(dsn_address_t addr)
+const char *rpc_address::to_string() const
 {
     char *p = bf.next();
     auto sz = bf.get_chunk_size();
@@ -165,23 +250,23 @@ DSN_API const char *dsn_address_to_string(dsn_address_t addr)
     int ip_len;
 #endif
 
-    switch (addr.u.v4.type) {
+    switch (_addr.v4.type) {
     case HOST_TYPE_IPV4:
-        net_addr.s_addr = htonl((uint32_t)addr.u.v4.ip);
+        net_addr.s_addr = htonl(ip());
 #ifdef _WIN32
         ip_str = inet_ntoa(net_addr);
         snprintf_p(p, sz, "%s:%hu", ip_str, (uint16_t)addr.u.v4.port);
 #else
         inet_ntop(AF_INET, &net_addr, p, sz);
         ip_len = strlen(p);
-        snprintf_p(p + ip_len, sz - ip_len, ":%hu", (uint16_t)addr.u.v4.port);
+        snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
 #endif
         break;
     case HOST_TYPE_URI:
-        p = (char *)(uintptr_t)addr.u.uri.uri;
+        p = (char *)uri_address()->uri();
         break;
     case HOST_TYPE_GROUP:
-        p = (char *)(((dsn::rpc_group_address *)(uintptr_t)(addr.u.group.group))->name());
+        p = (char *)group_address()->name();
         break;
     default:
         p = (char *)"invalid address";
@@ -190,124 +275,4 @@ DSN_API const char *dsn_address_to_string(dsn_address_t addr)
 
     return (const char *)p;
 }
-
-DSN_API dsn_address_t dsn_address_build(const char *host, uint16_t port)
-{
-    dsn::rpc_address addr(host, port);
-    return addr.c_addr();
 }
-
-DSN_API dsn_address_t dsn_address_build_ipv4(uint32_t ipv4, uint16_t port)
-{
-    dsn::rpc_address addr(ipv4, port);
-    return addr.c_addr();
-}
-
-DSN_API dsn_address_t dsn_address_build_group(dsn_group_t g)
-{
-    dsn::rpc_address addr;
-    addr.assign_group(g);
-    return addr.c_addr();
-}
-
-DSN_API dsn_address_t dsn_address_build_uri(dsn_uri_t uri)
-{
-    dsn::rpc_address addr;
-    addr.assign_uri(uri);
-    return addr.c_addr();
-}
-
-DSN_API dsn_group_t dsn_group_build(const char *name) // must be paired with release later
-{
-    return new ::dsn::rpc_group_address(name);
-}
-
-DSN_API dsn_group_t dsn_group_clone(dsn_group_t g) // must be paired with release later
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    return new ::dsn::rpc_group_address(*grp);
-}
-
-DSN_API int dsn_group_count(dsn_group_t g)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    return grp->count();
-}
-
-DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t ep)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    ::dsn::rpc_address addr(ep);
-    return grp->add(addr);
-}
-
-DSN_API void dsn_group_set_leader(dsn_group_t g, dsn_address_t ep)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    ::dsn::rpc_address addr(ep);
-    grp->set_leader(addr);
-}
-
-DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    return grp->leader().c_addr();
-}
-
-DSN_API bool dsn_group_is_leader(dsn_group_t g, dsn_address_t ep)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    return grp->leader() == ep;
-}
-
-DSN_API bool dsn_group_is_update_leader_automatically(dsn_group_t g)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    return grp->is_update_leader_automatically();
-}
-
-DSN_API void dsn_group_set_update_leader_automatically(dsn_group_t g, bool v)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    grp->set_update_leader_automatically(v);
-}
-
-DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    ::dsn::rpc_address addr(ep);
-    return grp->next(addr).c_addr();
-}
-
-DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    grp->leader_forward();
-    return grp->leader().c_addr();
-}
-
-DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t ep)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    ::dsn::rpc_address addr(ep);
-    return grp->remove(addr);
-}
-
-DSN_API void dsn_group_destroy(dsn_group_t g)
-{
-    auto grp = (::dsn::rpc_group_address *)(g);
-    delete grp;
-}
-
-DSN_API dsn_uri_t dsn_uri_build(const char *url) // must be paired with destroy later
-{
-    return (dsn_uri_t) new ::dsn::rpc_uri_address(url);
-}
-
-DSN_API dsn_uri_t dsn_uri_clone(dsn_uri_t uri) // must be paired with destroy later
-{
-    auto u = (::dsn::rpc_uri_address *)(uri);
-    return (dsn_uri_t) new ::dsn::rpc_uri_address(*u);
-}
-
-DSN_API void dsn_uri_destroy(dsn_uri_t uri) { delete (::dsn::rpc_uri_address *)(uri); }

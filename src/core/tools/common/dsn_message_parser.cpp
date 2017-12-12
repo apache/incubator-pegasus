@@ -86,13 +86,11 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
                 msg->hdr_format = NET_HDR_DSN;
                 return msg;
             }
-        } else // buf_len < msg_sz
-        {
+        } else { // buf_len < msg_sz
             read_next = msg_sz - buf_len;
             return nullptr;
         }
-    } else // buf_len < sizeof(message_header)
-    {
+    } else { // buf_len < sizeof(message_header)
         read_next = sizeof(message_header) - buf_len;
         return nullptr;
     }
