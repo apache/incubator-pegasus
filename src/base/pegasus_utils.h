@@ -8,7 +8,7 @@
 #include <cctype>
 #include <cstring>
 #include <boost/lexical_cast.hpp>
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 
 namespace pegasus {
 namespace utils {

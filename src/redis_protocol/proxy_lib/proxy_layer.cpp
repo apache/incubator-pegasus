@@ -2,6 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include <dsn/tool-api/uri_address.h>
 #include "proxy_layer.h"
 
 namespace pegasus {
@@ -10,7 +11,7 @@ namespace proxy {
 proxy_stub::proxy_stub(const proxy_session::factory &factory, const char *uri)
     : serverlet<proxy_stub>("proxy_stub"), _factory(factory)
 {
-    _uri_address.assign_uri(dsn_uri_build(uri));
+    _uri_address.assign_uri(uri);
     open_service();
 }
 
