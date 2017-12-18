@@ -116,6 +116,7 @@ done
 
 mkdir -p ${pack}/DSN_ROOT
 cp -v -r ./DSN_ROOT/* ${pack}/DSN_ROOT
+cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib
 cp -v ./run.sh ${pack}/
 
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/

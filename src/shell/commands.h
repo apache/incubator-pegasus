@@ -3460,7 +3460,7 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
         case 'b':
             backup_info_cnt = atoi(optarg);
             if (backup_info_cnt <= 0) {
-                fprintf(stderr, "invalid backup_info_cnt %s to int failed\n", optarg);
+                fprintf(stderr, "invalid backup_info_cnt %s\n", optarg);
                 return false;
             }
             break;
