@@ -7704,6 +7704,10 @@ void backup_response::__set_backup_id(const int64_t val) {
   this->backup_id = val;
 }
 
+void backup_response::__set_checkpoint_total_size(const int64_t val) {
+  this->checkpoint_total_size = val;
+}
+
 uint32_t backup_response::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -7765,6 +7769,14 @@ uint32_t backup_response::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 6:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->checkpoint_total_size);
+          this->__isset.checkpoint_total_size = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -7802,6 +7814,10 @@ uint32_t backup_response::write(::apache::thrift::protocol::TProtocol* oprot) co
   xfer += oprot->writeI64(this->backup_id);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("checkpoint_total_size", ::apache::thrift::protocol::T_I64, 6);
+  xfer += oprot->writeI64(this->checkpoint_total_size);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -7814,6 +7830,7 @@ void swap(backup_response &a, backup_response &b) {
   swap(a.progress, b.progress);
   swap(a.policy_name, b.policy_name);
   swap(a.backup_id, b.backup_id);
+  swap(a.checkpoint_total_size, b.checkpoint_total_size);
   swap(a.__isset, b.__isset);
 }
 
@@ -7823,6 +7840,7 @@ backup_response::backup_response(const backup_response& other314) {
   progress = other314.progress;
   policy_name = other314.policy_name;
   backup_id = other314.backup_id;
+  checkpoint_total_size = other314.checkpoint_total_size;
   __isset = other314.__isset;
 }
 backup_response::backup_response( backup_response&& other315) {
@@ -7831,6 +7849,7 @@ backup_response::backup_response( backup_response&& other315) {
   progress = std::move(other315.progress);
   policy_name = std::move(other315.policy_name);
   backup_id = std::move(other315.backup_id);
+  checkpoint_total_size = std::move(other315.checkpoint_total_size);
   __isset = std::move(other315.__isset);
 }
 backup_response& backup_response::operator=(const backup_response& other316) {
@@ -7839,6 +7858,7 @@ backup_response& backup_response::operator=(const backup_response& other316) {
   progress = other316.progress;
   policy_name = other316.policy_name;
   backup_id = other316.backup_id;
+  checkpoint_total_size = other316.checkpoint_total_size;
   __isset = other316.__isset;
   return *this;
 }
@@ -7848,6 +7868,7 @@ backup_response& backup_response::operator=(backup_response&& other317) {
   progress = std::move(other317.progress);
   policy_name = std::move(other317.policy_name);
   backup_id = std::move(other317.backup_id);
+  checkpoint_total_size = std::move(other317.checkpoint_total_size);
   __isset = std::move(other317.__isset);
   return *this;
 }
@@ -7859,6 +7880,7 @@ void backup_response::printTo(std::ostream& out) const {
   out << ", " << "progress=" << to_string(progress);
   out << ", " << "policy_name=" << to_string(policy_name);
   out << ", " << "backup_id=" << to_string(backup_id);
+  out << ", " << "checkpoint_total_size=" << to_string(checkpoint_total_size);
   out << ")";
 }
 

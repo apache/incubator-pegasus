@@ -158,6 +158,28 @@ struct backup_progress
     std::map<gpid, int32_t> partition_progress;
     std::map<gpid, dsn::task_ptr> backup_requests;
     std::map<app_id, int32_t> unfished_partitions_per_app;
+    // <app_id, <partition_id, checkpoint size>>
+    std::map<app_id, std::map<int, int64_t>> app_chkpt_size;
+    // if app is dropped when starting a new backup or under backuping, we just skip backup this app
+    std::map<app_id, bool> is_app_skipped;
+
+    backup_progress() : unfinished_apps(0) {}
+
+    void reset()
+    {
+        unfinished_apps = 0;
+        partition_progress.clear();
+        backup_requests.clear();
+        unfished_partitions_per_app.clear();
+        app_chkpt_size.clear();
+        is_app_skipped.clear();
+    }
+};
+
+struct backup_flag
+{
+    int64_t total_checkpoint_size;
+    DEFINE_JSON_SERIALIZATION(total_checkpoint_size)
 };
 
 class policy_context
@@ -195,6 +217,7 @@ mock_private :
 
     mock_virtual bool
     update_partition_progress_unlocked(gpid pid, int32_t progress, const rpc_address &source);
+    mock_virtual void record_partition_checkpoint_size_unlock(const gpid& pid, int64_t size);
 
     mock_virtual void start_backup_app_meta_unlocked(int32_t app_id);
     mock_virtual void start_backup_app_partitions_unlocked(int32_t app_id);

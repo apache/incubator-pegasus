@@ -23,6 +23,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
             buffer = dsn::json::json_forwarder<app_info>::encode(*app);
         }
     }
+
+    // if app is dropped when app is under backuping, we just skip backup this app this time, and
+    // also we will not write backup-finish-flag on fds
     if (!app_available) {
         dwarn("%s: can't encode app_info for app(%d), perhaps removed, treat it as backup finished",
               _backup_sig.c_str(),
@@ -32,6 +35,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                 "%s: can't find app(%d) in unfished_map",
                 _backup_sig.c_str(),
                 app_id);
+        _progress.is_app_skipped[app_id] = true;
         int total_partitions = iter->second;
         for (int32_t pidx = 0; pidx < total_partitions; ++pidx) {
             update_partition_progress_unlocked(
@@ -129,6 +133,21 @@ void policy_context::start_backup_app_partitions_unlocked(int32_t app_id)
 void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                                                            dsn::task_ptr write_callback)
 {
+    if (_progress.is_app_skipped[app_id]) {
+        dwarn("app is unavaliable, skip write finish flag for this app(app_id = %d)", app_id);
+        if (write_callback != nullptr) {
+            write_callback->enqueue();
+        }
+        return;
+    }
+
+    backup_flag flag;
+    flag.total_checkpoint_size = 0;
+
+    for (const auto &pair : _progress.app_chkpt_size[app_id]) {
+        flag.total_checkpoint_size += pair.second;
+    }
+
     dsn::error_code err;
     dist::block_service::block_file_ptr remote_file;
 
@@ -180,8 +199,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         return;
     }
 
-    const char *complete_flag = "succeed";
-    blob buf(complete_flag, 0, strlen(complete_flag));
+    blob buf = ::dsn::json::json_forwarder<backup_flag>::encode(flag);
 
     remote_file->write(
         dist::block_service::write_request{buf},
@@ -343,8 +361,7 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
               pid.get_app_id(),
               pid.get_partition_index());
     }
-    // for debug
-    ddebug("%s: partition progress is %d", _backup_sig.c_str(), progress);
+
     recorded_progress = progress;
     dinfo("%s: gpid(%d.%d)'s progress to (%d) from(%s)",
           _backup_sig.c_str(),
@@ -373,6 +390,11 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
     return recorded_progress == cold_backup_constant::PROGRESS_FINISHED;
 }
 
+void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, int64_t size)
+{
+    _progress.app_chkpt_size[pid.get_app_id()][pid.get_partition_index()] = size;
+}
+
 void policy_context::start_backup_partition_unlocked(gpid pid)
 {
     dsn::rpc_address partition_primary;
@@ -381,10 +403,13 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
         const app_state *app = _backup_service->get_state()->get_app(pid.get_app_id()).get();
+
         if (app == nullptr || app->status == app_status::AS_DROPPED) {
+            // skip backup app this time
             dwarn("%s: app(%lld) is not available any more, just ignore this app",
                   _backup_sig.c_str(),
                   pid.get_app_id());
+            _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
                 pid, cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
             return;
@@ -476,6 +501,7 @@ void policy_context::on_backup_reply(error_code err,
                   pid.get_partition_index(),
                   primary.to_string());
         } else {
+            record_partition_checkpoint_size_unlock(pid, response.checkpoint_total_size);
             // NOTICE: if a partition is finished, we don't try to resend the command again
             if (update_partition_progress_unlocked(pid, response.progress, primary)) {
                 return;
@@ -505,10 +531,7 @@ void policy_context::on_backup_reply(error_code err,
 
 void policy_context::initialize_backup_progress_unlocked()
 {
-    _progress.unfinished_apps = 0;
-    _progress.backup_requests.clear();
-    _progress.unfished_partitions_per_app.clear();
-    _progress.partition_progress.clear();
+    _progress.reset();
 
     zauto_read_lock l;
     _backup_service->get_state()->lock_read(l);
@@ -518,6 +541,7 @@ void policy_context::initialize_backup_progress_unlocked()
     _progress.unfinished_apps = _cur_backup.app_ids.size();
     for (const int32_t &app_id : _cur_backup.app_ids) {
         const std::shared_ptr<app_state> &app = _backup_service->get_state()->get_app(app_id);
+        _progress.is_app_skipped[app_id] = true;
         if (app == nullptr) {
             dwarn("%s: app id(%d) is invalid", _policy.policy_name.c_str(), app_id);
         } else if (app->status != app_status::AS_AVAILABLE) {
@@ -527,11 +551,15 @@ void policy_context::initialize_backup_progress_unlocked()
                   enum_to_string(app->status));
         } else {
             // NOTICE: only available apps have entry in
-            // unfinished_partitions_per_app & partition_progress
+            // unfinished_partitions_per_app & partition_progress & app_chkpt_size
             _progress.unfished_partitions_per_app[app_id] = app->partition_count;
+            std::map<int, int64_t> partition_chkpt_size;
             for (const partition_configuration &pc : app->partitions) {
                 _progress.partition_progress[pc.pid] = 0;
+                partition_chkpt_size[pc.pid.get_app_id()] = 0;
             }
+            _progress.app_chkpt_size[app_id] = std::move(partition_chkpt_size);
+            _progress.is_app_skipped[app_id] = false;
         }
     }
 }

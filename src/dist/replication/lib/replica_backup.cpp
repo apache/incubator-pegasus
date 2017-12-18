@@ -151,6 +151,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         }
 
         response.progress = backup_context->progress();
+        response.checkpoint_total_size = backup_context->get_checkpoint_total_size();
         ddebug("%s: backup progress is %d", backup_context->name, response.progress);
     } else {
         derror(

@@ -468,6 +468,7 @@ struct backup_response
     3:i32               progress;  // the progress of the cold_backup
     4:string            policy_name;
     5:i64               backup_id;
+    6:i64               checkpoint_total_size;
 }
 
 struct configuration_modify_backup_policy_request

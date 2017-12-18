@@ -3375,12 +3375,13 @@ inline std::ostream& operator<<(std::ostream& out, const backup_request& obj)
 }
 
 typedef struct _backup_response__isset {
-  _backup_response__isset() : err(false), pid(false), progress(false), policy_name(false), backup_id(false) {}
+  _backup_response__isset() : err(false), pid(false), progress(false), policy_name(false), backup_id(false), checkpoint_total_size(false) {}
   bool err :1;
   bool pid :1;
   bool progress :1;
   bool policy_name :1;
   bool backup_id :1;
+  bool checkpoint_total_size :1;
 } _backup_response__isset;
 
 class backup_response {
@@ -3390,7 +3391,7 @@ class backup_response {
   backup_response(backup_response&&);
   backup_response& operator=(const backup_response&);
   backup_response& operator=(backup_response&&);
-  backup_response() : progress(0), policy_name(), backup_id(0) {
+  backup_response() : progress(0), policy_name(), backup_id(0), checkpoint_total_size(0) {
   }
 
   virtual ~backup_response() throw();
@@ -3399,6 +3400,7 @@ class backup_response {
   int32_t progress;
   std::string policy_name;
   int64_t backup_id;
+  int64_t checkpoint_total_size;
 
   _backup_response__isset __isset;
 
@@ -3412,6 +3414,8 @@ class backup_response {
 
   void __set_backup_id(const int64_t val);
 
+  void __set_checkpoint_total_size(const int64_t val);
+
   bool operator == (const backup_response & rhs) const
   {
     if (!(err == rhs.err))
@@ -3423,6 +3427,8 @@ class backup_response {
     if (!(policy_name == rhs.policy_name))
       return false;
     if (!(backup_id == rhs.backup_id))
+      return false;
+    if (!(checkpoint_total_size == rhs.checkpoint_total_size))
       return false;
     return true;
   }

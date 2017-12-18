@@ -416,6 +416,8 @@ public:
     uint64_t get_start_time_ms() { return _start_time_ms; }
 
     uint64_t get_upload_file_size() { return _upload_file_size.load(); }
+
+    int64_t get_checkpoint_total_size() { return checkpoint_file_total_size; }
 private:
     void read_current_chkpt_file(const dist::block_service::block_file_ptr &file_handle);
     void remote_chkpt_dir_exist(const std::string &chkpt_dirname);
