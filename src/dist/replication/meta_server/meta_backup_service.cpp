@@ -1201,38 +1201,37 @@ void backup_service::add_new_policy(dsn_message_t msg)
 
     if (app_ids.size() > 0) {
         {
-            {
-                // if request is valid, we just modify _pilicy_states fastly, then release the lock
-                zauto_lock l(_lock);
-                if (!is_valid_policy_name_unlocked(request.policy_name)) {
-                    response.err = ERR_INVALID_PARAMETERS;
-                    should_create_new_policy = false;
-                } else {
-                    policy_context_ptr = _factory(this);
-                }
+            // if request is valid, we just modify _pilicy_states fastly, then release the lock
+            zauto_lock l(_lock);
+            if (!is_valid_policy_name_unlocked(request.policy_name)) {
+                response.err = ERR_INVALID_PARAMETERS;
+                should_create_new_policy = false;
+            } else {
+                policy_context_ptr = _factory(this);
             }
-            {
-                block_service_manager _block_service_manager;
-                if (_block_service_manager.get_block_filesystem(request.backup_provider_type) ==
-                    nullptr) {
-                    derror("invalid backup_provider_type(%s)",
-                           request.backup_provider_type.c_str());
-                    response.err = ERR_INVALID_PARAMETERS;
-                    should_create_new_policy = false;
-                }
+        }
+
+        {
+            block_service_manager _block_service_manager;
+            if (_block_service_manager.get_block_filesystem(request.backup_provider_type) ==
+                nullptr) {
+                derror("invalid backup_provider_type(%s)", request.backup_provider_type.c_str());
+                response.err = ERR_INVALID_PARAMETERS;
+                should_create_new_policy = false;
             }
-            if (should_create_new_policy) {
-                policy p;
-                ddebug("add backup polciy, policy_name = %s", request.policy_name.c_str());
-                p.policy_name = request.policy_name;
-                p.backup_provider_type = request.backup_provider_type;
-                p.backup_interval_seconds = request.backup_interval_seconds;
-                p.backup_history_count_to_keep = request.backup_history_count_to_keep;
-                p.start_time.parse_from(request.start_time);
-                p.app_ids = app_ids;
-                p.app_names = app_names;
-                policy_context_ptr->set_policy(std::move(p));
-            }
+        }
+
+        if (should_create_new_policy) {
+            policy p;
+            ddebug("add backup polciy, policy_name = %s", request.policy_name.c_str());
+            p.policy_name = request.policy_name;
+            p.backup_provider_type = request.backup_provider_type;
+            p.backup_interval_seconds = request.backup_interval_seconds;
+            p.backup_history_count_to_keep = request.backup_history_count_to_keep;
+            p.start_time.parse_from(request.start_time);
+            p.app_ids = app_ids;
+            p.app_names = app_names;
+            policy_context_ptr->set_policy(std::move(p));
         }
     } else {
         should_create_new_policy = false;
