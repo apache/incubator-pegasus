@@ -1442,7 +1442,13 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         bool force_restore = restore_info.second;
         if (restore_dir.empty()) {
             // case 2
-            dinfo("%s: open a new db, path = %s", _replica_name.c_str(), path.c_str());
+            if (force_restore) {
+                derror("%s: try to restore, but we can't combine restore_dir from envs",
+                       _replica_name.c_str());
+                return ::dsn::ERR_FILE_OPERATION_FAILED;
+            } else {
+                dinfo("%s: open a new db, path = %s", _replica_name.c_str(), path.c_str());
+            }
         } else {
             // case 3
             ddebug("%s: try to restore from restore_dir = %s",
