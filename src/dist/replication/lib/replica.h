@@ -282,6 +282,7 @@ private:
                                           /*out*/ std::string &remote_chkpt_dir);
     dsn::error_code restore_checkpoint();
 
+    dsn::error_code skip_restore_partition(const std::string &restore_dir);
     void tell_meta_to_restore_rollback();
 
     void report_restore_status_to_meta();

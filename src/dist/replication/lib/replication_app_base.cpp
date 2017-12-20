@@ -397,6 +397,11 @@ error_code replication_app_base::open_new_internal(replica *r,
     if (err == ERR_OK) {
         int argc = 1;
         argc += (2 * info->envs.size());
+
+        // check whether replica have some extra envs that meta don't known
+        const std::map<std::string, std::string> &extra_envs = _replica->get_replica_extra_envs();
+        argc += (2 * extra_envs.size());
+
         std::unique_ptr<char *[]> argvs = make_unique<char *[]>(argc);
         char **argv = argvs.get();
         dassert(argv != nullptr, "");
@@ -404,6 +409,12 @@ error_code replication_app_base::open_new_internal(replica *r,
         argv[idx++] = (char *)(info->app_name.c_str());
         if (argc > 1) {
             for (auto &kv : info->envs) {
+                argv[idx++] = (char *)(kv.first.c_str());
+                argv[idx++] = (char *)(kv.second.c_str());
+            }
+
+            // combine extra envs
+            for (auto &kv : extra_envs) {
                 argv[idx++] = (char *)(kv.first.c_str());
                 argv[idx++] = (char *)(kv.second.c_str());
             }

@@ -448,39 +448,43 @@ dsn::error_code replica::restore_checkpoint()
         if (err != ERR_OK) {
             if (_restore_status == ERR_CORRUPTION) {
                 if (skip_bad_partition) {
-                    // clear the restore_dir, then continue restore
-                    if (!utils::filesystem::remove_path(restore_dir)) {
-                        derror("remove dir %s failed", restore_dir.c_str());
-                        err = ERR_FILE_OPERATION_FAILED;
-                    } else {
-                        ddebug("%s: remove restore_dir(%s) succeed", name(), restore_dir.c_str());
-                        _restore_status = ERR_IGNORE_BAD_DATA;
-                        _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
-                        err = ERR_OK;
-                    }
+                    err = skip_restore_partition(restore_dir);
                 } else {
                     tell_meta_to_restore_rollback();
                     return ERR_CORRUPTION;
                 }
             }
         }
-        // else download checkpoint succeed
     } else { // find valid checkpoint failed
         if (err == ERR_OBJECT_NOT_FOUND) {
             if (skip_bad_partition) {
-                _restore_status = ERR_IGNORE_BAD_DATA;
-                _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
-                // ignore the bad partition, return ERR_OK
-                err = ERR_OK;
+                err = skip_restore_partition(restore_dir);
             } else {
                 // current_checkpoint doesn't exist, we think partition is damaged
                 tell_meta_to_restore_rollback();
                 _restore_status = ERR_CORRUPTION;
+                return ERR_CORRUPTION;
             }
         }
     }
     report_restore_status_to_meta();
     return err;
+}
+
+dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
+{
+    // Attention: when skip restore partition, we should not delete restore_dir, but we must clear
+    // it because we use restore_dir to tell storage engine that start an app from restore
+    if (utils::filesystem::remove_path(restore_dir) &&
+        utils::filesystem::create_directory(restore_dir)) {
+        ddebug("%s: clear restore_dir(%s) succeed", name(), restore_dir.c_str());
+        _restore_status = ERR_IGNORE_BAD_DATA;
+        _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
+        return ERR_OK;
+    } else {
+        derror("clear dir %s failed", restore_dir.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
 }
 
 void replica::tell_meta_to_restore_rollback()
