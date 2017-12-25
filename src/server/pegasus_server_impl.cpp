@@ -1707,7 +1707,10 @@ private:
     if (!token_helper.token_got())
         return ::dsn::ERR_WRONG_TIMING;
 
-    if (last_durable_decree() == _db->GetLastFlushedDecree()) {
+    // last_durable_decree must less than or equal to _db->GetLastFlushedDecree()
+    // if last_durable_decree == _db->GetLastFlushedDecree(), we should flush it first
+    int64_t last_flushed_decree = static_cast<int64_t>(_db->GetLastFlushedDecree());
+    if (last_durable_decree() == last_flushed_decree) {
         if (is_emergency) {
             // trigger flushing memtable, but not wait
             rocksdb::FlushOptions options;
@@ -1731,14 +1734,10 @@ private:
         }
     }
 
-    rocksdb::Checkpoint *chkpt = nullptr;
-    auto status = rocksdb::Checkpoint::Create(_db, &chkpt);
-    if (!status.ok()) {
-        derror("%s: create Checkpoint object failed, error = %s",
-               _replica_name.c_str(),
-               status.ToString().c_str());
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
+    dassert(last_durable_decree() < last_flushed_decree,
+            "%" PRId64 " VS %" PRId64 "",
+            last_durable_decree(),
+            last_flushed_decree);
 
     char buf[256];
     sprintf(buf, "checkpoint.tmp.%" PRIu64 "", dsn_now_us());
@@ -1754,24 +1753,17 @@ private:
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
     }
-
-    uint64_t ci = last_durable_decree();
-    status = chkpt->CreateCheckpointQuick(tmp_dir, &ci);
-    delete chkpt;
-    chkpt = nullptr;
-    if (!status.ok()) {
-        derror("%s: async create checkpoint failed, error = %s",
+    int64_t checkpoint_decree = 0;
+    ::dsn::error_code err = copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree);
+    if (err != ::dsn::ERR_OK) {
+        derror("%s: call copy_checkpoint_to_dir_unsafe failed with err = %s",
                _replica_name.c_str(),
-               status.ToString().c_str());
-        if (!::dsn::utils::filesystem::remove_path(tmp_dir)) {
-            derror("%s: remove temporary checkpoint directory %s failed",
-                   _replica_name.c_str(),
-                   tmp_dir.c_str());
-        }
-        return status.IsNoNeedOperate() ? ::dsn::ERR_NO_NEED_OPERATE : ::dsn::ERR_LOCAL_APP_FAILURE;
+               err.to_string());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
 
-    auto chkpt_dir = ::dsn::utils::filesystem::path_combine(_data_dir, chkpt_get_dir_name(ci));
+    auto chkpt_dir =
+        ::dsn::utils::filesystem::path_combine(_data_dir, chkpt_get_dir_name(checkpoint_decree));
     if (::dsn::utils::filesystem::directory_exists(chkpt_dir)) {
         ddebug("%s: checkpoint directory %s already exist, remove it first",
                _replica_name.c_str(),
@@ -1804,13 +1796,17 @@ private:
 
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-        dassert(
-            ci > last_durable_decree(), "%" PRId64 " VS %" PRId64 "", ci, last_durable_decree());
+        dassert(checkpoint_decree > last_durable_decree(),
+                "%" PRId64 " VS %" PRId64 "",
+                checkpoint_decree,
+                last_durable_decree());
         if (!_checkpoints.empty()) {
-            dassert(
-                ci > _checkpoints.back(), "%" PRId64 " VS %" PRId64 "", ci, _checkpoints.back());
+            dassert(checkpoint_decree > _checkpoints.back(),
+                    "%" PRId64 " VS %" PRId64 "",
+                    checkpoint_decree,
+                    _checkpoints.back());
         }
-        _checkpoints.push_back(ci);
+        _checkpoints.push_back(checkpoint_decree);
         set_last_durable_decree(_checkpoints.back());
     }
 
@@ -1819,6 +1815,70 @@ private:
            last_durable_decree());
 
     gc_checkpoints();
+
+    return ::dsn::ERR_OK;
+}
+
+// Must be thread safe.
+::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                                              /*output*/ int64_t *last_decree)
+{
+    CheckpointingTokenHelper token_helper(_is_checkpointing);
+    if (!token_helper.token_got()) {
+        return ::dsn::ERR_WRONG_TIMING;
+    }
+
+    return copy_checkpoint_to_dir_unsafe(checkpoint_dir, last_decree);
+}
+
+// not thread safe, should be protected by caller
+::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
+                                                                     int64_t *checkpoint_decree)
+{
+    rocksdb::Checkpoint *chkpt = nullptr;
+    rocksdb::Status status = rocksdb::Checkpoint::Create(_db, &chkpt);
+    if (!status.ok()) {
+        if (chkpt != nullptr)
+            delete chkpt, chkpt = nullptr;
+        derror("%s: create Checkpoint object failed, error = %s",
+               _replica_name.c_str(),
+               status.ToString().c_str());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+
+    if (::dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
+        ddebug("%s: checkpoint directory %s is already exist, remove it first",
+               _replica_name.c_str(),
+               checkpoint_dir);
+        if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+            derror(
+                "%s: remove checkpoint directory %s failed", _replica_name.c_str(), checkpoint_dir);
+            return ::dsn::ERR_FILE_OPERATION_FAILED;
+        }
+    }
+
+    uint64_t ci = 0;
+    status = chkpt->CreateCheckpointQuick(checkpoint_dir, &ci);
+    delete chkpt, chkpt = nullptr;
+
+    if (!status.ok()) {
+        derror("%s: async create checkpoint failed, error = %s",
+               _replica_name.c_str(),
+               status.ToString().c_str());
+        if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+            derror(
+                "%s: remove checkpoint directory %s failed", _replica_name.c_str(), checkpoint_dir);
+        }
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+
+    ddebug("%s: copy checkpoint to dir(%s) succeed, last_decree = %" PRId64 "",
+           _replica_name.c_str(),
+           checkpoint_dir,
+           ci);
+    if (checkpoint_decree != nullptr) {
+        *checkpoint_decree = static_cast<int64_t>(ci);
+    }
 
     return ::dsn::ERR_OK;
 }

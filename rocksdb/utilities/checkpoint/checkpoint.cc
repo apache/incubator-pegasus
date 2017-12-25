@@ -21,13 +21,13 @@
 #include "db/filename.h"
 #include "db/log_writer.h"
 #include "db/wal_manager.h"
+#include "port/port.h"
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
 #include "rocksdb/transaction_log.h"
 #include "util/coding.h"
-#include "util/file_util.h"
 #include "util/file_reader_writer.h"
-#include "port/port.h"
+#include "util/file_util.h"
 
 namespace rocksdb {
 
@@ -49,8 +49,9 @@ class CheckpointImpl : public Checkpoint {
   // Quickly build an openable snapshot of RocksDB.
   // Useful when there is only one column family in the RocksDB.
   using Checkpoint::CreateCheckpointQuick;
-  virtual Status CreateCheckpointQuick(const std::string& checkpoint_dir,
-                                       uint64_t* decree) override;
+  virtual Status CreateCheckpointQuick(
+      const std::string& checkpoint_dir,
+      /*output*/ uint64_t* checkpoint_decree) override;
 
  private:
   DB* db_;
@@ -66,7 +67,7 @@ Status Checkpoint::CreateCheckpoint(const std::string& checkpoint_dir) {
 }
 
 Status Checkpoint::CreateCheckpointQuick(const std::string& checkpoint_dir,
-                                         uint64_t* decree) {
+                                         uint64_t* checkpoint_decree) {
   return Status::NotSupported("");
 }
 
@@ -236,8 +237,7 @@ struct LogReporter : public log::Reader::Reporter {
     if (this->status->ok()) *this->status = s;
   }
 };
-static Status ModifyMenifestFileLastSeq(Env* env,
-                                        const DBOptions& db_options,
+static Status ModifyMenifestFileLastSeq(Env* env, const DBOptions& db_options,
                                         const std::string& file_name,
                                         SequenceNumber last_seq) {
   Status s;
@@ -266,14 +266,14 @@ static Status ModifyMenifestFileLastSeq(Env* env,
     }
     file->SetPreallocationBlockSize(db_options.manifest_preallocation_size);
     unique_ptr<WritableFileWriter> writer(
-                new WritableFileWriter(std::move(file), opt_env_opts));
+        new WritableFileWriter(std::move(file), opt_env_opts));
     file_writer.reset(new log::Writer(std::move(writer)));
   }
   {
     LogReporter reporter;
     reporter.status = &s;
-    log::Reader reader(std::move(file_reader), &reporter,
-                       true /*checksum*/, 0 /*initial_offset*/);
+    log::Reader reader(std::move(file_reader), &reporter, true /*checksum*/,
+                       0 /*initial_offset*/);
     Slice record;
     std::string scratch;
     while (reader.ReadRecord(&record, &scratch) && s.ok()) {
@@ -308,7 +308,7 @@ static Status ModifyMenifestFileLastSeq(Env* env,
 }
 
 Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
-                                             uint64_t* decree) {
+                                             uint64_t* checkpoint_decree) {
   Status s;
   std::vector<std::string> live_files;
   uint64_t manifest_file_size = 0;
@@ -327,14 +327,8 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
   s = db_->DisableFileDeletions();
   if (s.ok()) {
     // this will return live_files prefixed with "/"
-    s = db_->GetLiveFilesQuick(live_files, &manifest_file_size,
-                               &last_sequence, &last_decree);
-  }
-  if (s.ok()) {
-    // check if need to checkpoint
-    if (last_sequence == 0 || last_decree == 0 || last_decree <= *decree) {
-      s = Status::NoNeedOperate();
-    }
+    s = db_->GetLiveFilesQuick(live_files, &manifest_file_size, &last_sequence,
+                               &last_decree);
   }
   if (!s.ok()) {
     db_->EnableFileDeletions(false);
@@ -434,7 +428,10 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
       "Snapshot DONE. All is good. seqno: %" PRIu64 ", decree: %" PRIu64 "",
       last_sequence, last_decree);
 
-  *decree = last_decree;
+  if (checkpoint_decree != nullptr) {
+    *checkpoint_decree = last_decree;
+  }
+
   return s;
 }
 }  // namespace rocksdb

@@ -87,6 +87,21 @@ public:
     //  - ERR_TRY_AGAIN: need try again later
     virtual ::dsn::error_code async_checkpoint(int64_t last_commit, bool is_emergency) override;
 
+    //
+    // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
+    // copied will be assigned to checkpoint_decree if checkpoint_decree not null
+    //
+    // must be thread safe
+    // don't need call flush(), just copy even if the app is empty
+    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                                     /*output*/ int64_t *last_decree) override;
+
+    //
+    // help function, just copy checkpoint to specified dir and ignore _is_checkpointing
+    // if checkpoint_dir already exist, this function will delete it first
+    ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
+                                                    /**output*/ int64_t *checkpoint_decree);
+
     virtual int64_t get_last_checkpoint_decree() override { return last_durable_decree(); }
 
     // get the last checkpoint
