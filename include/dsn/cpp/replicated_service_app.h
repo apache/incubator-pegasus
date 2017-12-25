@@ -192,6 +192,15 @@ public:
                                                int64_t local_commit,
                                                const dsn_app_learn_state &state) = 0;
 
+    //
+    // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
+    // copied will be assigned to checkpoint_decree if checkpoint_decree not null
+    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                                     /*output*/ int64_t *checkpoint_decree)
+    {
+        return ERR_NOT_IMPLEMENTED;
+    }
+
 public:
     static void app_on_batched_write_requests(
         void *app, int64_t decree, int64_t timestamp, dsn_message_t *requests, int count)
@@ -214,6 +223,13 @@ public:
     {
         return reinterpret_cast<replicated_service_app_type_1 *>(app)->async_checkpoint(
             last_commit, is_emergency);
+    }
+
+    static dsn_error_t
+    app_copy_checkpoint_to_dir(void *app, const char *checkpoint_dir, int64_t *last_decree)
+    {
+        return reinterpret_cast<replicated_service_app_type_1 *>(app)->copy_checkpoint_to_dir(
+            checkpoint_dir, last_decree);
     }
 
     static int64_t app_get_last_checkpoint_decree(void *app)
@@ -268,6 +284,8 @@ void register_app_with_type_1_replication_support(const char *type_name)
         replicated_service_app_type_1::app_get_physical_error;
     app.layer2.apps.calls.sync_checkpoint = replicated_service_app_type_1::app_sync_checkpoint;
     app.layer2.apps.calls.async_checkpoint = replicated_service_app_type_1::app_async_checkpoint;
+    app.layer2.apps.calls.copy_checkpoint_to_dir =
+        replicated_service_app_type_1::app_copy_checkpoint_to_dir;
     app.layer2.apps.calls.get_last_checkpoint_decree =
         replicated_service_app_type_1::app_get_last_checkpoint_decree;
     app.layer2.apps.calls.prepare_get_checkpoint =

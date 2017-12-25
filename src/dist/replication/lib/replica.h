@@ -257,7 +257,7 @@ private:
     void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
     void trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
     void wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
-    void local_copy_backup_checkpoint(cold_backup_context_ptr backup_context);
+    void local_create_backup_checkpoint(cold_backup_context_ptr backup_context);
     void send_backup_request_to_secondary(const backup_request &request);
     // set all cold_backup_state cancel/pause
     void set_backup_context_cancel();

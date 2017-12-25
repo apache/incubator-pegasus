@@ -188,6 +188,112 @@ static std::string backup_get_dir_name(const std::string &policy_name,
     return std::string(buffer);
 }
 
+static std::pair<bool, std::string>
+is_related_or_valid_checkpoint(const std::string &chkpt_dirname,
+                               const cold_backup_context_ptr &backup_context)
+{
+    std::pair<bool, std::string> res;
+    res.first = false;
+    res.second = std::string();
+    std::vector<std::string> strs;
+    ::dsn::utils::split_args(chkpt_dirname.c_str(), strs, '.');
+    if (strs.size() == 5) {
+        if (strs[0] == std::string("backup") &&
+            strs[1] == backup_context->request.policy.policy_name) {
+            // related checkpoint dir
+            res.first = true;
+
+            int64_t backup_id = boost::lexical_cast<int64_t>(strs[2]);
+            // here, we only need policy_name and backup_id to verify whether chkpt_dirname belong
+            // to this backup_context
+            if (backup_id == backup_context->request.backup_id) {
+                res.second = chkpt_dirname;
+            }
+        }
+    } else if (strs.size() > 5) {
+        int64_t backup_id = boost::lexical_cast<int64_t>(strs[2]);
+        if (strs[0] == std::string("backup") &&
+            strs[1] == backup_context->request.policy.policy_name &&
+            backup_id < backup_context->request.backup_id) {
+            // maybe directory backup.<policy_name>.<backup_id>.<decree>.<timestamp>.tmp and it
+            // belongs to old backup_context, we can remove it safely
+            //
+            // for example, when rocksdb generate checkpoint under directory A, it will create A.tmp
+            // directory first and rename A.tmp to A when finish;
+            res.first = true;
+        }
+    } else { // strs.size() < 5, this is unknown dir, we shouldn't remove it
+        dwarn(
+            "%s: found a invalid checkpoint dir(%s)", backup_context->name, chkpt_dirname.c_str());
+    }
+    return res;
+}
+
+// filter backup checkpoint under 'dir'
+//  - find the valid backup checkpoint dir if exist
+//  - find all the backup checkpoint belong to this policy, mainly obsolete backup checkpoint
+static bool filter_checkpoint(const std::string &dir,
+                              const cold_backup_context_ptr &backup_context,
+                              /*out*/ std::vector<std::string> &related_chkpt_dirs,
+                              /*out*/ std::string &valid_chkpt_dir)
+{
+    valid_chkpt_dir.clear();
+    related_chkpt_dirs.clear();
+    // list sub dirs
+    std::vector<std::string> sub_dirs;
+    if (!dsn::utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
+        derror("%s: list sub dirs of dir %s failed", backup_context->name, dir.c_str());
+        return false;
+    }
+
+    for (std::string &d : sub_dirs) {
+        std::string dirname = ::dsn::utils::filesystem::get_file_name(d);
+        auto pair = is_related_or_valid_checkpoint(dirname, backup_context);
+        if (pair.first) {
+            if (pair.second.empty()) {
+                related_chkpt_dirs.emplace_back(std::move(dirname));
+            } else {
+                dassert(valid_chkpt_dir.empty(),
+                        "%s: there are two valid backup checkpoint dir, %s VS %s",
+                        backup_context->name,
+                        valid_chkpt_dir.c_str(),
+                        pair.second.c_str());
+                valid_chkpt_dir = pair.second;
+            }
+        }
+    }
+    return true;
+}
+
+static bool
+statistic_file_infos_under_dir(const std::string &dir,
+                               /*out*/ std::vector<std::pair<std::string, int64_t>> &file_infos,
+                               /*out*/ int64_t &total_size)
+{
+    std::vector<std::string> sub_files;
+    if (!dsn::utils::filesystem::get_subfiles(dir, sub_files, false)) {
+        derror("list sub files of dir %s failed", dir.c_str());
+        return false;
+    }
+
+    total_size = 0;
+    file_infos.clear();
+
+    for (std::string &file : sub_files) {
+        std::pair<std::string, int64_t> file_info;
+
+        if (!::dsn::utils::filesystem::file_size(file, file_info.second)) {
+            derror("get file size of %s failed", file.c_str());
+            return false;
+        }
+        file_info.first = ::dsn::utils::filesystem::get_file_name(file);
+        total_size += file_info.second;
+
+        file_infos.emplace_back(std::move(file_info));
+    }
+    return true;
+}
+
 static bool backup_parse_dir_name(const char *name,
                                   std::string &policy_name,
                                   int64_t &backup_id,
@@ -208,72 +314,6 @@ static bool backup_parse_dir_name(const char *name,
     }
 }
 
-// backup/backup.<policy_name>.<backup_id>.<decree>.<timestamp>.tmp.<timestamp>
-static std::string backup_get_temp_dir_name(const std::string &policy_name,
-                                            int64_t backup_id,
-                                            int64_t decree,
-                                            int64_t timestamp,
-                                            int64_t temp_timestamp)
-{
-    char buffer[256];
-    sprintf(buffer,
-            "backup.%s.%" PRId64 ".%" PRId64 ".%" PRId64 ".tmp.%" PRId64,
-            policy_name.c_str(),
-            backup_id,
-            decree,
-            timestamp,
-            temp_timestamp);
-    return std::string(buffer);
-}
-
-static bool backup_parse_temp_dir_name(const char *name,
-                                       std::string &policy_name,
-                                       int64_t &backup_id,
-                                       int64_t &decree,
-                                       int64_t &timestamp,
-                                       int64_t &temp_timestamp)
-{
-    std::vector<std::string> strs;
-    ::dsn::utils::split_args(name, strs, '.');
-    if (strs.size() < 7) {
-        return false;
-    } else {
-        policy_name = strs[1];
-        backup_id = boost::lexical_cast<int64_t>(strs[2]);
-        decree = boost::lexical_cast<int64_t>(strs[3]);
-        timestamp = boost::lexical_cast<int64_t>(strs[4]);
-        temp_timestamp = boost::lexical_cast<int64_t>(strs[6]);
-        return (
-            std::string(name) ==
-            backup_get_temp_dir_name(policy_name, backup_id, decree, timestamp, temp_timestamp));
-    }
-}
-
-// data/checkpoint.<decree>
-static std::string checkpoint_get_dir_name(int64_t decree)
-{
-    char buffer[256];
-    sprintf(buffer, "checkpoint.%" PRId64 "", decree);
-    return std::string(buffer);
-}
-
-static bool checkpoint_parse_dir_name(const char *name, int64_t &decree)
-{
-    return 1 == sscanf(name, "checkpoint.%" PRId64 "", &decree) &&
-           std::string(name) == checkpoint_get_dir_name(decree);
-}
-
-struct backup_dir_info
-{
-    std::string checkpoint_dir; // full path
-    std::string policy_name;
-    int64_t backup_id;
-    int64_t decree;
-    int64_t timestamp;
-    int64_t temp_timestamp;
-    backup_dir_info() : backup_id(0), decree(0), timestamp(0), temp_timestamp(0) {}
-};
-
 // run in REPLICATION_LONG thread
 // Effection:
 // - may ignore_checkpoint() if in invalid status
@@ -281,10 +321,6 @@ struct backup_dir_info
 // - may complete_checkpoint() and schedule on_cold_backup() if backup checkpoint dir is already
 // exist
 // - may schedule trigger_async_checkpoint_for_backup() if backup checkpoint dir is not exist
-
-// FIX: if replica is secondary call generate_backup_checkpoint, then it's be upgrade to primary
-// and then call generate_backup_checkpoint again, this will may be generate two backup_checkpoint
-// how to solve this, problem
 void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
 {
     if (backup_context->status() != ColdBackupCheckpointing) {
@@ -304,98 +340,58 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
         return;
     }
 
-    // list sub dirs of back/
-    std::vector<std::string> sub_dirs;
-    if (!dsn::utils::filesystem::get_subdirectories(backup_dir, sub_dirs, false)) {
-        derror(
-            "%s: list sub dirs of backup dir %s failed", backup_context->name, backup_dir.c_str());
-        backup_context->fail_checkpoint("list sub dirs of backup dir failed");
+    std::vector<std::string> related_backup_chkpt_dirname;
+    std::string valid_backup_chkpt_dirname;
+    if (!filter_checkpoint(
+            backup_dir, backup_context, related_backup_chkpt_dirname, valid_backup_chkpt_dirname)) {
+        // encounter some error, just return
+        backup_context->fail_checkpoint("list sub backup dir failed");
         return;
     }
+    if (!valid_backup_chkpt_dirname.empty()) {
+        std::vector<std::pair<std::string, int64_t>> file_infos;
+        int64_t total_size = 0;
+        std::string valid_chkpt_full_path =
+            ::dsn::utils::filesystem::path_combine(backup_dir, valid_backup_chkpt_dirname);
+        // parse checkpoint dirname
+        std::string policy_name;
+        int64_t backup_id, decree, timestamp;
+        dassert(backup_parse_dir_name(
+                    valid_backup_chkpt_dirname.c_str(), policy_name, backup_id, decree, timestamp),
+                "%s: valid chekpoint dirname %s",
+                backup_context->name,
+                valid_backup_chkpt_dirname.c_str());
 
-    // parse sub dirs of back/
-    std::vector<backup_dir_info> backup_checkpoint_dirs;
-    std::vector<backup_dir_info> backup_checkpoint_temp_dirs;
-    for (std::string &d : sub_dirs) {
-        std::string d1 = d.substr(backup_dir.size() + 1);
-        backup_dir_info info;
-        if (backup_parse_dir_name(
-                d1.c_str(), info.policy_name, info.backup_id, info.decree, info.timestamp)) {
-            info.checkpoint_dir = d;
-            backup_checkpoint_dirs.push_back(std::move(info));
-        } else if (backup_parse_temp_dir_name(d1.c_str(),
-                                              info.policy_name,
-                                              info.backup_id,
-                                              info.decree,
-                                              info.timestamp,
-                                              info.temp_timestamp)) {
-            info.checkpoint_dir = d;
-            backup_checkpoint_temp_dirs.push_back(std::move(info));
-        } else {
-            dwarn("%s: unrecognized dir %s", backup_context->name, d.c_str());
-        }
-    }
+        if (statistic_file_infos_under_dir(valid_chkpt_full_path, file_infos, total_size)) {
 
-    // find proper dir
-    backup_dir_info checkpoint_info;
-    for (backup_dir_info &b : backup_checkpoint_dirs) {
-        if (b.policy_name == backup_context->request.policy.policy_name &&
-            b.backup_id == backup_context->request.backup_id) {
-            checkpoint_info = b;
-            break;
-        }
-    }
+            backup_context->checkpoint_decree = decree;
+            backup_context->checkpoint_timestamp = timestamp;
+            backup_context->checkpoint_dir = valid_chkpt_full_path;
+            for (std::pair<std::string, int64_t> &p : file_infos) {
+                backup_context->checkpoint_files.emplace_back(std::move(p.first));
+                backup_context->checkpoint_file_sizes.emplace_back(std::move(p.second));
+            }
+            backup_context->checkpoint_file_total_size = total_size;
+            backup_context->complete_checkpoint();
 
-    if (!checkpoint_info.checkpoint_dir.empty()) {
-        // list sub files of backup checkpoint dir
-        std::vector<std::string> sub_files;
-        if (!dsn::utils::filesystem::get_subfiles(
-                checkpoint_info.checkpoint_dir, sub_files, false)) {
-            derror("%s: list sub files of backup checkpoint dir %s failed",
+            ddebug("%s: backup checkpoint aleady exist, dir = %s, file_count = %d, total_size = "
+                   "%" PRId64,
                    backup_context->name,
-                   checkpoint_info.checkpoint_dir.c_str());
-            backup_context->fail_checkpoint("list sub files of backup checkpoint dir failed");
+                   backup_context->checkpoint_dir.c_str(),
+                   (int)file_infos.size(),
+                   total_size);
+            // TODO: in primary, this will make the request send to secondary again
+            tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
+                             this,
+                             [this, backup_context]() {
+                                 backup_response response;
+                                 on_cold_backup(backup_context->request, response);
+                             },
+                             gpid_to_thread_hash(get_gpid()));
+        } else {
+            backup_context->fail_checkpoint("statistic file info under checkpoint failed");
             return;
         }
-
-        std::vector<std::string> backup_checkpoint_files;
-        std::vector<int64_t> backup_checkpoint_file_sizes;
-        int64_t backup_checkpoint_file_total_size = 0;
-        for (std::string &f : sub_files) {
-            int64_t file_size = 0;
-            if (!::dsn::utils::filesystem::file_size(f, file_size)) {
-                derror("%s: get file size of %s failed", backup_context->name, f.c_str());
-                backup_context->fail_checkpoint("get file size failed");
-                return;
-            }
-            std::string f1 = f.substr(checkpoint_info.checkpoint_dir.size() + 1);
-            backup_checkpoint_files.push_back(f1);
-            backup_checkpoint_file_sizes.push_back(file_size);
-            backup_checkpoint_file_total_size += file_size;
-        }
-
-        backup_context->checkpoint_decree = checkpoint_info.decree;
-        backup_context->checkpoint_timestamp = checkpoint_info.timestamp;
-        backup_context->checkpoint_dir = checkpoint_info.checkpoint_dir;
-        backup_context->checkpoint_files = std::move(backup_checkpoint_files);
-        backup_context->checkpoint_file_sizes = std::move(backup_checkpoint_file_sizes);
-        backup_context->checkpoint_file_total_size = backup_checkpoint_file_total_size;
-        backup_context->complete_checkpoint();
-
-        ddebug(
-            "%s: backup checkpoint aleady exist, dir = %s, file_count = %d, total_size = %" PRId64,
-            backup_context->name,
-            backup_context->checkpoint_dir.c_str(),
-            (int)backup_checkpoint_files.size(),
-            backup_checkpoint_file_total_size);
-        // TODO: in primary, this will make the request send to secondary again
-        tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
-                         this,
-                         [this, backup_context]() {
-                             backup_response response;
-                             on_cold_backup(backup_context->request, response);
-                         },
-                         gpid_to_thread_hash(get_gpid()));
     } else {
         ddebug("%s: backup checkpoint not exist, start to trigger async checkpoint",
                backup_context->name);
@@ -406,40 +402,16 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
             gpid_to_thread_hash(get_gpid()));
     }
 
-    // clear old dirs
-    for (backup_dir_info &b : backup_checkpoint_dirs) {
-        ddebug("%s: found old backup dir(%s), backup_id(%" PRId64 ")",
+    // clear related but not valid checkpoint
+    for (const std::string &dirname : related_backup_chkpt_dirname) {
+        std::string full_path = ::dsn::utils::filesystem::path_combine(backup_dir, dirname);
+        ddebug("%s: found obsolete backup checkpoint dir(%s), remove it",
                backup_context->name,
-               b.checkpoint_dir.c_str(),
-               b.backup_id);
-        if (b.policy_name == backup_context->request.policy.policy_name &&
-            b.backup_id < backup_context->request.backup_id) {
-            if (dsn::utils::filesystem::remove_path(b.checkpoint_dir))
-                ddebug("%s: removed old checkpoint dir %s",
-                       backup_context->name,
-                       b.checkpoint_dir.c_str());
-            else
-                dwarn("%s: remove old checkpoint dir %s failed",
-                      backup_context->name,
-                      b.checkpoint_dir.c_str());
-        }
-    }
-
-    for (backup_dir_info &b : backup_checkpoint_temp_dirs) {
-        ddebug("%s: found old backup dir(%s), backup_id(%" PRId64 ")",
-               backup_context->name,
-               b.checkpoint_dir.c_str(),
-               b.backup_id);
-        if (b.policy_name == backup_context->request.policy.policy_name &&
-            b.backup_id < backup_context->request.backup_id) {
-            if (dsn::utils::filesystem::remove_path(b.checkpoint_dir))
-                ddebug("%s: removed old checkpoint temp dir %s",
-                       backup_context->name,
-                       b.checkpoint_dir.c_str());
-            else
-                dwarn("%s: remove old checkpoint temp dir %s failed",
-                      backup_context->name,
-                      b.checkpoint_dir.c_str());
+               full_path.c_str());
+        if (!dsn::utils::filesystem::remove_path(full_path)) {
+            dwarn("%s: remove obsolete backup checkpoint dir(%s) failed",
+                  backup_context->name,
+                  full_path.c_str());
         }
     }
 }
@@ -501,7 +473,7 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
 // - may ignore_checkpoint() if in invalid status
 // - may delay some time and schedule trigger_async_checkpoint_for_backup() if async checkpoint not
 // completed
-// - may schedule local_copy_backup_checkpoint if async checkpoint completed
+// - may schedule local_create_backup_checkpoint if async checkpoint completed
 void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context)
 {
     check_hashed_access();
@@ -542,24 +514,10 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
                du,
                backup_context->checkpoint_decree);
         tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, this, [this, backup_context]() {
-            local_copy_backup_checkpoint(backup_context);
+            local_create_backup_checkpoint(backup_context);
         });
     }
 }
-
-class dir_auto_deleter
-{
-public:
-    dir_auto_deleter(const std::string &dir) : _dir(dir) {}
-    ~dir_auto_deleter()
-    {
-        if (::dsn::utils::filesystem::directory_exists(_dir))
-            ::dsn::utils::filesystem::remove_path(_dir);
-    }
-
-private:
-    std::string _dir;
-};
 
 // run in REPLICATION_LONG thread
 // Effection:
@@ -567,9 +525,7 @@ private:
 // - may fail_checkpoint() if some error occurs
 // - may complete_checkpoint() and schedule on_cold_backup() if checkpoint dir is successfully
 // copied
-// - may delay some time and schedule generate_backup_checkpoint() if no proper checkpoint exist for
-// backup
-void replica::local_copy_backup_checkpoint(cold_backup_context_ptr backup_context)
+void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_context)
 {
     if (backup_context->status() != ColdBackupCheckpointing) {
         ddebug("%s: ignore generating backup checkpoint because backup_status = %s",
@@ -580,241 +536,65 @@ void replica::local_copy_backup_checkpoint(cold_backup_context_ptr backup_contex
     }
 
     // prepare backup checkpoint variables
-    std::string backup_checkpoint_dir = ::dsn::utils::filesystem::path_combine(
+    std::string backup_checkpoint_dir_path = ::dsn::utils::filesystem::path_combine(
         _app->backup_dir(),
         backup_get_dir_name(backup_context->request.policy.policy_name,
                             backup_context->request.backup_id,
                             backup_context->checkpoint_decree,
                             backup_context->checkpoint_timestamp));
-    std::vector<std::string> backup_checkpoint_files;
-    std::vector<int64_t> backup_checkpoint_file_sizes;
-    int64_t backup_checkpoint_file_total_size = 0;
 
-    // create temp dir
-    std::string backup_checkpoint_temp_dir = ::dsn::utils::filesystem::path_combine(
-        _app->backup_dir(),
-        backup_get_temp_dir_name(backup_context->request.policy.policy_name,
-                                 backup_context->request.backup_id,
-                                 backup_context->checkpoint_decree,
-                                 backup_context->checkpoint_timestamp,
-                                 dsn_now_ms()));
-    if (!::dsn::utils::filesystem::create_directory(backup_checkpoint_temp_dir)) {
-        derror("%s: create temp dir %s failed",
+    int64_t last_decree = 0;
+    dsn::error_code err =
+        _app->copy_checkpoint_to_dir(backup_checkpoint_dir_path.c_str(), &last_decree);
+    if (err != ERR_OK) {
+        // try local_create_backup_checkpoint 10s later
+        ddebug("%s: create backup checkpoint failed with err = %s, try call "
+               "local_create_backup_checkpoint 10s later",
                backup_context->name,
-               backup_checkpoint_temp_dir.c_str());
-        backup_context->fail_checkpoint("create temp dir failed");
+               err.to_string());
+        tasking::enqueue(
+            LPC_BACKGROUND_COLD_BACKUP,
+            this,
+            [this, backup_context]() { local_create_backup_checkpoint(backup_context); },
+            0,
+            std::chrono::seconds(10));
         return;
-    }
-    dir_auto_deleter temp_dir_deleter(backup_checkpoint_temp_dir);
-
-    dassert(backup_context->checkpoint_timestamp > 0, "");
-    if (backup_context->checkpoint_decree > 0) {
-        // list checkpoint dirs under data/
-        auto data_dir = _app->data_dir();
-        std::vector<std::string> sub_dirs;
-        if (!::dsn::utils::filesystem::get_subdirectories(data_dir, sub_dirs, false)) {
-            derror("%s: list sub directories of data dir %s failed",
+    } else {
+        dassert(last_decree >= backup_context->checkpoint_decree,
+                "%" PRId64 " VS %" PRId64 "",
+                last_decree,
+                backup_context->checkpoint_decree);
+        std::vector<std::pair<std::string, int64_t>> file_infos;
+        int64_t total_size = 0;
+        if (!statistic_file_infos_under_dir(backup_checkpoint_dir_path, file_infos, total_size)) {
+            derror("%s: statistic file info under dir(%s) failed",
                    backup_context->name,
-                   data_dir.c_str());
-            backup_context->fail_checkpoint("list sub files of data dir failed");
+                   backup_checkpoint_dir_path.c_str());
+            backup_context->fail_checkpoint("statistic file info under dir failed");
             return;
         }
 
-        // parse dirs
-        std::vector<int64_t> checkpoint_decrees;
-        for (std::string &d : sub_dirs) {
-            std::string d1 = d.substr(data_dir.size() + 1);
-            int64_t ci;
-            if (checkpoint_parse_dir_name(d1.c_str(), ci)) {
-                checkpoint_decrees.push_back(ci);
-            }
-        }
-        std::sort(checkpoint_decrees.begin(), checkpoint_decrees.end());
-
-        // find proper dir (minimal decree which is no less than checkpoint_decree)
-        int64_t proper_decree = 0;
-        for (int64_t d : checkpoint_decrees) {
-            if (d >= backup_context->checkpoint_decree) {
-                proper_decree = d;
-                break;
-            }
-        }
-
-        // no proper dir
-        if (proper_decree == 0) {
-            ddebug("%s: no proper checkpoint exist for backup, retry to generate again after 30 "
-                   "seconds, "
-                   "checkpoint_decree = %" PRId64 ", checkpoint_timestamp = %" PRId64,
-                   backup_context->name,
-                   backup_context->checkpoint_decree,
-                   backup_context->checkpoint_timestamp);
-            tasking::enqueue(
-                LPC_BACKGROUND_COLD_BACKUP,
-                this,
-                [this, backup_context]() { generate_backup_checkpoint(backup_context); },
-                0,
-                std::chrono::seconds(30));
-            return;
-        }
-
-        // list sub files in checkpoint dir
-        std::string checkpoint_dir = ::dsn::utils::filesystem::path_combine(
-            data_dir, checkpoint_get_dir_name(proper_decree));
-        std::vector<std::string> sub_files;
-        if (!::dsn::utils::filesystem::get_subfiles(checkpoint_dir, sub_files, false)) {
-            derror("%s: list sub files of checkpoint dir %s failed",
-                   backup_context->name,
-                   checkpoint_dir.c_str());
-            backup_context->fail_checkpoint("list sub files of checkpoint dir failed");
-            return;
-        }
-        std::sort(sub_files.begin(), sub_files.end());
-
-        // get file sizes in checkpoint dir
-        std::vector<int64_t> sub_file_sizes;
-        for (std::string &f : sub_files) {
-            int64_t file_size = 0;
-            if (!::dsn::utils::filesystem::file_size(f, file_size)) {
-                derror("%s: get file size of %s failed", backup_context->name, f.c_str());
-                backup_context->fail_checkpoint("get file size failed");
-                return;
-            }
-            sub_file_sizes.push_back(file_size);
-        }
-
-        // hard link files
-        for (std::string &from_file : sub_files) {
-            std::string f = from_file.substr(checkpoint_dir.size() + 1);
-            std::string to_file =
-                ::dsn::utils::filesystem::path_combine(backup_checkpoint_temp_dir, f);
-            if (!::dsn::utils::filesystem::link_file(from_file, to_file)) {
-                derror("%s: link file from %s to %s failed",
-                       backup_context->name,
-                       from_file.c_str(),
-                       to_file.c_str());
-                backup_context->fail_checkpoint("link file failed");
-                return;
-            }
-        }
-
-        // list sub files in temp dir
-        std::vector<std::string> temp_sub_files;
-        if (!::dsn::utils::filesystem::get_subfiles(
-                backup_checkpoint_temp_dir, temp_sub_files, false)) {
-            derror("%s: list sub files of temp dir %s failed",
-                   backup_context->name,
-                   backup_checkpoint_temp_dir.c_str());
-            backup_context->fail_checkpoint("list sub files of temp dir failed");
-            return;
-        }
-        std::sort(temp_sub_files.begin(), temp_sub_files.end());
-
-        // get file sizes in temp dir
-        std::vector<int64_t> temp_sub_file_sizes;
-        for (std::string &f : temp_sub_files) {
-            int64_t file_size = 0;
-            if (!::dsn::utils::filesystem::file_size(f, file_size)) {
-                derror("%s: get file size of %s failed", backup_context->name, f.c_str());
-                backup_context->fail_checkpoint("get file size failed");
-                return;
-            }
-            temp_sub_file_sizes.push_back(file_size);
-        }
-
-        // check consistency
-        if (temp_sub_files.size() != sub_files.size()) {
-            derror("%s: check consistency of temp dir %s with checkpoint dir %s failed, "
-                   "temp_dir_file_count = %d, checkpoint_dir_file_count = %d",
-                   backup_context->name,
-                   backup_checkpoint_temp_dir.c_str(),
-                   checkpoint_dir.c_str(),
-                   (int)temp_sub_files.size(),
-                   (int)sub_files.size());
-            backup_context->fail_checkpoint("check consistency of temp dir failed");
-            return;
-        }
-        for (int i = 0; i < sub_files.size(); ++i) {
-            std::string temp_file = temp_sub_files[i].substr(backup_checkpoint_temp_dir.size() + 1);
-            std::string checkpoint_file = sub_files[i].substr(checkpoint_dir.size() + 1);
-            if (temp_file != checkpoint_file || temp_sub_file_sizes[i] != sub_file_sizes[i]) {
-                derror("%s: check consistency of temp dir %s with checkpoint dir %s failed, "
-                       "temp_file_name = %s, temp_file_size = %" PRId64 ", "
-                       "checkpoint_file_name = %s, checkpoint_file_size = %" PRId64 "",
-                       backup_context->name,
-                       backup_checkpoint_temp_dir.c_str(),
-                       checkpoint_dir.c_str(),
-                       temp_file.c_str(),
-                       temp_sub_file_sizes[i],
-                       checkpoint_file.c_str(),
-                       sub_file_sizes[i]);
-                backup_context->fail_checkpoint("check consistency of temp dir failed");
-                return;
-            }
-            backup_checkpoint_files.push_back(temp_file);
-            backup_checkpoint_file_sizes.push_back(temp_sub_file_sizes[i]);
-            backup_checkpoint_file_total_size += temp_sub_file_sizes[i];
-        }
-
-        // list sub files in checkpoint dir again
-        std::vector<std::string> sub_files_2;
-        if (!::dsn::utils::filesystem::get_subfiles(checkpoint_dir, sub_files_2, false)) {
-            derror("%s: list sub files of checkpoint dir %s failed",
-                   backup_context->name,
-                   checkpoint_dir.c_str());
-            backup_context->fail_checkpoint("list sub files of checkpoint dir failed");
-            return;
-        }
-        std::sort(sub_files_2.begin(), sub_files_2.end());
-
-        // compare sub_files and sub_files_2, if not equal, means the checkpoint dir is under
-        // deletion,
-        // so it is possiable that the copied temp dir is not complete, we should discard it and
-        // retry later.
-        if (sub_files != sub_files_2) {
-            derror("%s: checkpoint dir %s may be under deletion, retry to generate again after 30 "
-                   "seconds, "
-                   "checkpoint_decree = %" PRId64 ", checkpoint_timestamp = %" PRId64,
-                   backup_context->name,
-                   checkpoint_dir.c_str(),
-                   backup_context->checkpoint_decree,
-                   backup_context->checkpoint_timestamp);
-            tasking::enqueue(
-                LPC_BACKGROUND_COLD_BACKUP,
-                this,
-                [this, backup_context]() { generate_backup_checkpoint(backup_context); },
-                0,
-                std::chrono::seconds(30));
-            return;
-        }
-    }
-
-    if (!::dsn::utils::filesystem::rename_path(backup_checkpoint_temp_dir, backup_checkpoint_dir)) {
-        derror("%s: rename temp directory %s to %s failed",
+        ddebug("%s: generate backup checkpoint succeed, dir = %s, file_count = %d, total_size = "
+               "%" PRId64,
                backup_context->name,
-               backup_checkpoint_temp_dir.c_str(),
-               backup_checkpoint_dir.c_str());
-        backup_context->fail_checkpoint("rename temp directory failed");
-        return;
+               backup_checkpoint_dir_path.c_str(),
+               (int)file_infos.size(),
+               total_size);
+        backup_context->checkpoint_dir = backup_checkpoint_dir_path;
+        for (std::pair<std::string, int64_t> &pair : file_infos) {
+            backup_context->checkpoint_files.emplace_back(std::move(pair.first));
+            backup_context->checkpoint_file_sizes.emplace_back(std::move(pair.second));
+        }
+        backup_context->checkpoint_file_total_size = total_size;
+        backup_context->complete_checkpoint();
+        tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
+                         this,
+                         [this, backup_context]() {
+                             backup_response response;
+                             on_cold_backup(backup_context->request, response);
+                         },
+                         gpid_to_thread_hash(get_gpid()));
     }
-
-    ddebug(
-        "%s: generate backup checkpoint succeed, dir = %s, file_count = %d, total_size = %" PRId64,
-        backup_context->name,
-        backup_checkpoint_dir.c_str(),
-        (int)backup_checkpoint_files.size(),
-        backup_checkpoint_file_total_size);
-    backup_context->checkpoint_dir = backup_checkpoint_dir;
-    backup_context->checkpoint_files = std::move(backup_checkpoint_files);
-    backup_context->checkpoint_file_sizes = std::move(backup_checkpoint_file_sizes);
-    backup_context->checkpoint_file_total_size = backup_checkpoint_file_total_size;
-    backup_context->complete_checkpoint();
-    tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
-                     this,
-                     [this, backup_context]() {
-                         backup_response response;
-                         on_cold_backup(backup_context->request, response);
-                     },
-                     gpid_to_thread_hash(get_gpid()));
 }
 
 void replica::set_backup_context_cancel()

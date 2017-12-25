@@ -183,6 +183,19 @@ public:
     ::dsn::error_code apply_checkpoint(dsn_chkpt_apply_mode mode, const learn_state &state);
 
     //
+    // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
+    // copied will be assigned to checkpoint_decree if checkpoint_decree not null
+    //
+    // must be thread safe
+    //
+    ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                             /*output*/ int64_t *last_decree)
+    {
+        return _callbacks.calls.copy_checkpoint_to_dir(
+            _app_context_callbacks, checkpoint_dir, last_decree);
+    }
+
+    //
     // Query methods.
     //
     ::dsn::replication::decree last_durable_decree()

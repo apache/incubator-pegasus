@@ -735,7 +735,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
         case partition_status::PS_ERROR:
             _primary_states.cleanup(true);
             // only load balance will occur primary -> secondary
-            // and we just stop upload and release the _cold_backup_state, and let new primary to
+            // and we just stop upload and release the cold_backup_state, and let new primary to
             // upload
             set_backup_context_cancel();
             clear_cold_backup_state();
@@ -749,12 +749,14 @@ bool replica::update_local_configuration(const replica_configuration &config,
         break;
     case partition_status::PS_SECONDARY:
         cleanup_preparing_mutations(false);
-        if (config.status != partition_status::PS_PRIMARY ||
-            config.status != partition_status::PS_SECONDARY) {
-            // if secondary upgrade to primary, shouldn't clear cold_backup_state
-            // because primary will reuse the cold_backup_state
-            // and secondary will upload the checkpoint, so we don't need cancel/pause all
-            // backup_context
+        if (config.status != partition_status::PS_SECONDARY) {
+            // if primary change the ballot, secondary will update ballot from A to
+            // A+1, we don't need clear cold backup context when this case
+            //
+            // if secondary upgrade to primary, we must cancel & clear cold_backup_state, because
+            // new-primary must check whether backup is already completed by previous-primary
+
+            set_backup_context_cancel();
             clear_cold_backup_state();
         }
         switch (config.status) {
@@ -809,8 +811,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
         break;
     case partition_status::PS_INACTIVE:
         if (config.status != partition_status::PS_PRIMARY || !_inactive_is_transient) {
-            // not case 1, we need stop uploading backup checkpoint
-            // case 2 will stop uploading here
+            // except for case 1, we need stop uploading backup checkpoint
             set_backup_context_cancel();
             clear_cold_backup_state();
         }

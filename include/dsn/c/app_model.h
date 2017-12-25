@@ -198,6 +198,17 @@ typedef dsn_error_t (*dsn_app_sync_checkpoint)(void *app, int64_t last_decree);
 typedef dsn_error_t (*dsn_app_async_checkpoint)(void *app, int64_t last_decree, bool is_emergency);
 
 /*!
+    checkpoint the application asynchronously to specified directory, used by frameworks,
+   implemented by apps
+    \param app   context returned by dsn_app_create
+    \param checkpoint_dir    specified directory
+    \param checkpoint_decree   output parameter, the decree of checkpoint copied
+ */
+typedef dsn_error_t (*dsn_app_copy_checkpoint_to_dir)(void *app,
+                                                      const char *checkpoint_dir,
+                                                      int64_t *checkpoint_decree);
+
+/*!
     get the decree of last done checkpoint, used by frameworks, implemented by apps
 
     \param app    context returned by dsn_app_create
@@ -289,6 +300,7 @@ typedef union dsn_app_callbacks
         dsn_app_prepare_get_checkpoint prepare_get_checkpoint;
         dsn_app_get_checkpoint get_checkpoint;
         dsn_app_apply_checkpoint apply_checkpoint;
+        dsn_app_copy_checkpoint_to_dir copy_checkpoint_to_dir;
     } calls;
 } dsn_app_callbacks;
 
