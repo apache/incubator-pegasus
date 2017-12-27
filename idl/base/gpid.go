@@ -1,0 +1,34 @@
+package base
+
+import (
+	"fmt"
+
+	"github.com/apache/thrift/lib/go/thrift"
+)
+
+type Gpid struct {
+	Appid, PartitionIndex int32
+}
+
+func (id *Gpid) Read(iprot thrift.TProtocol) error {
+	v, err := iprot.ReadI64()
+	if err != nil {
+		return err
+	}
+
+	id.Appid = int32(v & int64(0x00000000ffffffff))
+	id.PartitionIndex = int32(v >> 32)
+	return nil
+}
+
+func (id *Gpid) Write(oprot thrift.TProtocol) error {
+	v := int64(id.Appid) + int64(id.PartitionIndex<<32)
+	return oprot.WriteI64(v)
+}
+
+func (id *Gpid) String() string {
+	if id == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Gpid(%+v)", *id)
+}
