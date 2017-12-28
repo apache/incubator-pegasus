@@ -644,6 +644,60 @@ void policy_context::continue_current_backup_unlocked()
     }
 }
 
+bool policy_context::should_start_backup_unlocked()
+{
+    uint64_t now = dsn_now_ms();
+    uint64_t recent_backup_start_time_ms = 0;
+    if (!_backup_history.empty()) {
+        recent_backup_start_time_ms = _backup_history.rbegin()->second.start_time_ms;
+    }
+
+    // the true start time of recent backup have drifted away with the origin start time of
+    // policy,
+    // so we should take the drift into consideration; if user change the start time of the
+    // policy,
+    // we just think the change of start time as drift
+    int32_t hour = 0, min = 0, sec = 0;
+    if (recent_backup_start_time_ms == 0) {
+        //  the first time to backup, just consider the start time
+        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+        return _policy.start_time.should_start_backup(hour, min);
+    } else {
+        uint64_t next_backup_time_ms =
+            recent_backup_start_time_ms + _policy.backup_interval_seconds * 1000;
+        if (_policy.start_time.hour != 24) {
+            // user have specify the time point to start backup, so we should take the the
+            // time-drift into consideration
+
+            // compute the time-drift
+            ::dsn::utils::time_ms_to_date_time(recent_backup_start_time_ms, hour, min, sec);
+            int64_t time_dirft_ms = _policy.start_time.compute_time_drift_ms(hour, min);
+
+            if (time_dirft_ms >= 0) {
+                // hour:min(the true start time) >= policy.start_time :
+                //      1, user move up the start time of policy, such as 20:00 to 2:00, we just
+                //      think this case as time drift
+                //      2, the true start time of backup is delayed, compared the origin start time
+                //      of policy, we should process this case
+                //      3, the true start time of backup is the same with the origin start time of
+                //      policy
+                next_backup_time_ms -= time_dirft_ms;
+            } else {
+                // hour:min(the true start time) < policy.start_time:
+                //      1, user delay the start time of policy, such as 2:00 to 23:00
+                //
+                // these case has already been handled, we do nothing
+            }
+        }
+        if (next_backup_time_ms <= now) {
+            ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+            return _policy.start_time.should_start_backup(hour, min);
+        } else {
+            return false;
+        }
+    }
+}
+
 void policy_context::issue_new_backup_unlocked()
 {
     // before issue new backup, we check whether the policy is dropped
@@ -661,27 +715,8 @@ void policy_context::issue_new_backup_unlocked()
             std::chrono::milliseconds(_backup_service->backup_option().issue_backup_interval_ms));
         return;
     }
-    uint64_t now = dsn_now_ms();
-    int32_t hour = 0, min = 0, sec = 0;
-    dsn::utils::time_ms_to_date_time(now, hour, min, sec);
-    bool issue_backup_later = false;
-    if (!_backup_history.empty()) {
-        const backup_info &recent_backup = _backup_history.rbegin()->second;
-        uint64_t next_backup_moment =
-            recent_backup.start_time_ms + _policy.backup_interval_seconds * 1000;
-        if (next_backup_moment > now) {
-            issue_backup_later = true;
-        } else if (!_policy.start_time.should_start_backup(hour, min, sec)) {
-            issue_backup_later = true;
-        }
-    } else {
-        if (!_policy.start_time.should_start_backup(hour, min, sec)) {
-            issue_backup_later = true;
-        } else {
-            ddebug("%s: start first backup for this policy", _policy.policy_name.c_str());
-        }
-    }
-    if (issue_backup_later) {
+
+    if (!should_start_backup_unlocked()) {
         tasking::enqueue(
             LPC_DEFAULT_CALLBACK,
             nullptr,

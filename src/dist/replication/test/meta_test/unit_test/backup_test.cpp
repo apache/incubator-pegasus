@@ -518,6 +518,115 @@ void meta_service_test_app::policy_context_test()
             ->wait();
         ASSERT_EQ(dsn::ERR_OK, ec);
     }
+
+    // test should_start_backup_unlock()
+    {
+        std::cout << "test should_start_backup_unlock()" << std::endl;
+        uint64_t now = dsn_now_ms();
+        int32_t hour = 0, min = 0, sec = 0;
+        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+        while (min == 59) {
+            std::this_thread::sleep_for(std::chrono::minutes(1));
+            now = dsn_now_ms();
+            ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+        }
+
+        int64_t oneday_sec = 1 * 24 * 60 * 60;
+        mp._policy.start_time.hour = hour;
+        mp._policy.start_time.minute = 0;
+        mp._policy.backup_interval_seconds = oneday_sec; // oneday
+        mp._backup_history.clear();
+
+        backup_info info;
+
+        {
+            std::cout << "first backup & no limit to start_time" << std::endl;
+            mp._policy.start_time.hour = 24;
+            ASSERT_TRUE(mp.should_start_backup_unlocked());
+        }
+
+        {
+            std::cout << "first backup & cur_time.hour == start_time.hour" << std::endl;
+            ASSERT_TRUE(mp.should_start_backup_unlocked());
+        }
+
+        {
+
+            std::cout << "first backup & cur_time.hour != start_time.hour" << std::endl;
+            mp._policy.start_time.hour = hour + 100;
+            ASSERT_FALSE(mp.should_start_backup_unlocked());
+            mp._policy.start_time.hour = 25 - hour;
+            ASSERT_FALSE(mp.should_start_backup_unlocked());
+        }
+
+        {
+            std::cout << "not first backup & recent backup delay 20min to start" << std::endl;
+            info.start_time_ms = now - (oneday_sec * 1000) + 20 * 60 * 1000;
+            info.end_time_ms = info.start_time_ms + 10;
+            mp.add_backup_history(info);
+            // if we set start_time to 24:00, then will not start backup
+            mp._policy.start_time.hour = 24;
+            ASSERT_FALSE(mp.should_start_backup_unlocked());
+            // if we set start_time to hour:00, then will start backup, even if the interval <
+            // policy.backup_interval
+            mp._policy.start_time.hour = hour;
+            ASSERT_TRUE(mp.should_start_backup_unlocked());
+        }
+
+        {
+            std::cout << "not first backup & recent backup start time is equal with start_time"
+                      << std::endl;
+            mp._policy.start_time.hour = hour;
+            mp._backup_history.clear();
+            info.start_time_ms = now - (oneday_sec * 1000) - (min * 60 * 1000);
+            info.start_time_ms = (info.start_time_ms / 1000) * 1000;
+            info.end_time_ms = info.start_time_ms + 10;
+            mp.add_backup_history(info);
+            ASSERT_TRUE(mp.should_start_backup_unlocked());
+        }
+
+        {
+            // delay the start_time
+            std::cout << "not first backup & delay the start time of policy" << std::endl;
+            mp._policy.start_time.hour = hour + 1;
+            mp._backup_history.clear();
+            // make sure the start time of recent backup is litte than policy's start_time, so we
+            // minus more 3min
+            info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 1000;
+            info.end_time_ms = info.start_time_ms + 10;
+            mp.add_backup_history(info);
+            if (mp._policy.start_time.hour == 24) {
+                // if hour = 23, then policy.start_time.hour = 24, we should start next backup,
+                // because now - info.start_time_ms > policy.backup_interval
+                ASSERT_TRUE(mp.should_start_backup_unlocked());
+            } else {
+                // should not start, even if now - info.start_time_ms > policy.backup_interval, but
+                // not reach the time-point that policy.start_time limit
+                ASSERT_FALSE(mp.should_start_backup_unlocked());
+            }
+        }
+
+        {
+            std::cout << "not first backup & no limit to start time & should start backup"
+                      << std::endl;
+            mp._policy.start_time.hour = 24;
+            mp._backup_history.clear();
+            info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 60;
+            info.end_time_ms = info.start_time_ms + 10;
+            mp.add_backup_history(info);
+            ASSERT_TRUE(mp.should_start_backup_unlocked());
+        }
+
+        {
+            std::cout << "not first backup & no limit to start time & should not start backup"
+                      << std::endl;
+            mp._backup_history.clear();
+            info.start_time_ms = now - (oneday_sec * 1000) + 3 * 60 * 60;
+            info.end_time_ms = info.start_time_ms + 10;
+            mp.add_backup_history(info);
+            ASSERT_FALSE(mp.should_start_backup_unlocked());
+        }
+    }
 }
 
 void meta_service_test_app::backup_service_test()

@@ -57,6 +57,9 @@ struct backup_info
 
 // Attention: backup_start_time == 24:00 is represent no limit for start_time, 24:00 is mainly saved
 // for testing
+//
+// current, we don't support accurating to minute, only support accurating to hour, so
+// we just set minute to 0
 struct backup_start_time
 {
     int32_t hour;   // [0 ~24)
@@ -95,20 +98,32 @@ struct backup_start_time
         }
         return true;
     }
+
+    // return the interval between new_hour:new_min and start_time,
+    // namely new_hour:new_min - start_time;
+    // unit is ms
+    int64_t compute_time_drift_ms(int32_t new_hour, int32_t new_min)
+    {
+        int64_t res = 0;
+        // unit is hour
+        res += (new_hour - hour);
+        // unit is minute
+        res *= 60;
+        res += (new_min - minute);
+        // unit is ms
+        return (res * 60 * 1000);
+    }
+
     // judge whether we should start backup base current time
-    bool should_start_backup(int32_t cur_hour, int32_t cur_min, int32_t cur_sec)
+    bool should_start_backup(int32_t cur_hour, int32_t cur_min)
     {
         if (hour == 24) {
             // erase the restrict of backup_start_time, just for testing
             return true;
         }
-        // NOTICE : if you want more precisely, you can use cur_min and cur_sec to implement
+        // NOTICE : if you want more precisely, you can use cur_min to implement
         // now, we just ignore
-        if (cur_hour == hour) {
-            return true;
-        } else {
-            return false;
-        }
+        return (cur_hour == hour);
     }
     DEFINE_JSON_SERIALIZATION(hour, minute)
 };
@@ -237,6 +252,9 @@ mock_private :
     mock_virtual void initialize_backup_progress_unlocked();
     mock_virtual void prepare_current_backup_on_new_unlocked();
     mock_virtual void issue_new_backup_unlocked();
+    // returns:
+    //  - true, should start backup right now, otherwise don't start backup
+    mock_virtual bool should_start_backup_unlocked();
     mock_virtual void continue_current_backup_unlocked();
 
     mock_virtual void on_backup_reply(dsn::error_code err,
