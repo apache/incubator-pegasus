@@ -1,14 +1,22 @@
 #pragma once
-#include <rrdb/rrdb.code.definition.h>
 #include <iostream>
+#include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/dist/replication/storage_serverlet.h>
+#include <rrdb/rrdb.code.definition.h>
 
 namespace dsn {
 namespace apps {
-class rrdb_service : public ::dsn::serverlet<rrdb_service>
+class rrdb_service : public replication::replication_app_base,
+                     public replication::storage_serverlet<rrdb_service>
 {
 public:
-    rrdb_service() : ::dsn::serverlet<rrdb_service>("rrdb") {}
+    rrdb_service(replication::replica *r) : replication::replication_app_base(r) {}
     virtual ~rrdb_service() {}
+    virtual int on_request(dsn_message_t request) override
+    {
+        handle_request(request);
+        return 0;
+    }
 
 protected:
     // all service handlers to be implemented further
@@ -93,42 +101,81 @@ protected:
         std::cout << "... exec RPC_RRDB_RRDB_CLEAR_SCANNER ... (not implemented) " << std::endl;
     }
 
-public:
-    void open_service(dsn_gpid gpid)
+    static void register_rpc_handlers()
     {
-        this->register_async_rpc_handler(RPC_RRDB_RRDB_PUT, "put", &rrdb_service::on_put, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_MULTI_PUT, "multi_put", &rrdb_service::on_multi_put, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_REMOVE, "remove", &rrdb_service::on_remove, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_MULTI_REMOVE, "multi_remove", &rrdb_service::on_multi_remove, gpid);
-        this->register_async_rpc_handler(RPC_RRDB_RRDB_GET, "get", &rrdb_service::on_get, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_MULTI_GET, "multi_get", &rrdb_service::on_multi_get, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", &rrdb_service::on_sortkey_count, gpid);
-        this->register_async_rpc_handler(RPC_RRDB_RRDB_TTL, "ttl", &rrdb_service::on_ttl, gpid);
-        this->register_async_rpc_handler(
-            RPC_RRDB_RRDB_GET_SCANNER, "get_scanner", &rrdb_service::on_get_scanner, gpid);
-        this->register_async_rpc_handler(RPC_RRDB_RRDB_SCAN, "scan", &rrdb_service::on_scan, gpid);
-        this->register_rpc_handler(
-            RPC_RRDB_RRDB_CLEAR_SCANNER, "clear_scanner", &rrdb_service::on_clear_scanner, gpid);
+        register_async_rpc_handler(RPC_RRDB_RRDB_PUT, "put", on_put);
+        register_async_rpc_handler(RPC_RRDB_RRDB_MULTI_PUT, "multi_put", on_multi_put);
+        register_async_rpc_handler(RPC_RRDB_RRDB_REMOVE, "remove", on_multi_remove);
+        register_async_rpc_handler(RPC_RRDB_RRDB_GET, "get", on_get);
+        register_async_rpc_handler(RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
+        register_async_rpc_handler(RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
+        register_async_rpc_handler(RPC_RRDB_RRDB_TTL, "ttl", on_ttl);
+        register_async_rpc_handler(RPC_RRDB_RRDB_GET_SCANNER, "get_scanner", on_get_scanner);
+        register_async_rpc_handler(RPC_RRDB_RRDB_SCAN, "scan", on_scan);
+        register_async_rpc_handler(RPC_RRDB_RRDB_CLEAR_SCANNER, "clear_scanner", on_clear_scanner);
     }
 
-    void close_service(dsn_gpid gpid)
+private:
+    static void on_put(rrdb_service *svc,
+                       const update_request &args,
+                       ::dsn::rpc_replier<update_response> &reply)
     {
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_PUT, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_MULTI_PUT, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_REMOVE, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_MULTI_REMOVE, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_GET, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_MULTI_GET, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_SORTKEY_COUNT, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_TTL, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_GET_SCANNER, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_SCAN, gpid);
-        this->unregister_rpc_handler(RPC_RRDB_RRDB_CLEAR_SCANNER, gpid);
+        svc->on_put(args, reply);
+    }
+    static void on_multi_put(rrdb_service *svc,
+                             const multi_put_request &args,
+                             ::dsn::rpc_replier<update_response> &reply)
+    {
+        svc->on_multi_put(args, reply);
+    }
+    static void on_remove(rrdb_service *svc,
+                          const ::dsn::blob &args,
+                          ::dsn::rpc_replier<update_response> &reply)
+    {
+        svc->on_remove(args, reply);
+    }
+    static void on_multi_remove(rrdb_service *svc,
+                                const multi_remove_request &args,
+                                ::dsn::rpc_replier<multi_remove_response> &reply)
+    {
+        svc->on_multi_remove(args, reply);
+    }
+    static void
+    on_get(rrdb_service *svc, const ::dsn::blob &args, ::dsn::rpc_replier<read_response> &reply)
+    {
+        svc->on_get(args, reply);
+    }
+    static void on_multi_get(rrdb_service *svc,
+                             const multi_get_request &args,
+                             ::dsn::rpc_replier<multi_get_response> &reply)
+    {
+        svc->on_multi_get(args, reply);
+    }
+    static void on_sortkey_count(rrdb_service *svc,
+                                 const ::dsn::blob &args,
+                                 ::dsn::rpc_replier<count_response> &reply)
+    {
+        svc->on_sortkey_count(args, reply);
+    }
+    static void
+    on_ttl(rrdb_service *svc, const ::dsn::blob &args, ::dsn::rpc_replier<ttl_response> &reply)
+    {
+        svc->on_ttl(args, reply);
+    }
+    static void on_get_scanner(rrdb_service *svc,
+                               const get_scanner_request &args,
+                               ::dsn::rpc_replier<scan_response> &reply)
+    {
+        svc->on_get_scanner(args, reply);
+    }
+    static void
+    on_scan(rrdb_service *svc, const scan_request &args, ::dsn::rpc_replier<scan_response> &reply)
+    {
+        svc->on_scan(args, reply);
+    }
+    static void on_clear_scanner(rrdb_service *svc, const int64_t &args)
+    {
+        svc->on_clear_scanner(args);
     }
 };
 }

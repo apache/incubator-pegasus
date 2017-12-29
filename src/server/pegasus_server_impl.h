@@ -8,7 +8,6 @@
 #include "pegasus_scan_context.h"
 #include <rocksdb/db.h>
 #include <rrdb/rrdb.server.h>
-#include <dsn/cpp/replicated_service_app.h>
 #include <vector>
 #include <dsn/cpp/perf_counter_.h>
 #include <dsn/dist/replication/replication.codes.h>
@@ -16,11 +15,16 @@
 namespace pegasus {
 namespace server {
 
-class pegasus_server_impl : public ::dsn::apps::rrdb_service,
-                            public ::dsn::replicated_service_app_type_1
+class pegasus_server_impl : public ::dsn::apps::rrdb_service
 {
 public:
-    explicit pegasus_server_impl(dsn_gpid gpid);
+    static void register_service()
+    {
+        replication_app_base::register_storage_engine(
+            "pegasus", replication_app_base::create<pegasus::server::pegasus_server_impl>);
+        register_rpc_handlers();
+    }
+    explicit pegasus_server_impl(dsn::replication::replica *r);
     virtual ~pegasus_server_impl() {}
 
     // the following methods may set physical error if internal error occurs
@@ -47,8 +51,6 @@ public:
                          ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
     virtual void on_clear_scanner(const int64_t &args) override;
 
-    // the following methods are for stateful apps with layer 2 support
-
     // input:
     //  - argc = 0 : re-open the db
     //  - argc = 2n + 1, n >= 0; normal open the db
@@ -63,20 +65,22 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     virtual ::dsn::error_code stop(bool clear_state) override;
 
-    virtual void on_batched_write_requests(int64_t decree,
-                                           int64_t timestamp,
-                                           dsn_message_t *requests,
-                                           int count) override;
+    virtual int on_batched_write_requests(int64_t decree,
+                                          int64_t timestamp,
+                                          dsn_message_t *requests,
+                                          int count) override;
 
-    virtual int get_physical_error() override { return _physical_error; }
-
+    virtual ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
+    {
+        return ::dsn::ERR_OK;
+    }
     // returns:
     //  - ERR_OK
     //  - ERR_WRONG_TIMING
     //  - ERR_NO_NEED_OPERATE
     //  - ERR_LOCAL_APP_FAILURE
     //  - ERR_FILE_OPERATION_FAILED
-    virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) override;
+    virtual ::dsn::error_code sync_checkpoint() override;
 
     // returns:
     //  - ERR_OK
@@ -85,7 +89,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     //  - ERR_TRY_AGAIN: need try again later
-    virtual ::dsn::error_code async_checkpoint(int64_t last_commit, bool is_emergency) override;
+    virtual ::dsn::error_code async_checkpoint(bool is_emergency) override;
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
@@ -102,8 +106,6 @@ public:
     ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
                                                     /**output*/ int64_t *checkpoint_decree);
 
-    virtual int64_t get_last_checkpoint_decree() override { return last_durable_decree(); }
-
     // get the last checkpoint
     // if succeed:
     //  - the checkpoint files path are put into "state.files"
@@ -114,10 +116,8 @@ public:
     //  - ERR_OBJECT_NOT_FOUND
     //  - ERR_FILE_OPERATION_FAILED
     virtual ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                             int64_t local_commit,
-                                             void *learn_request,
-                                             int learn_request_size,
-                                             app_learn_state &state) override;
+                                             const dsn::blob &learn_request,
+                                             dsn::replication::learn_state &state) override;
 
     // apply checkpoint, this will clear and recreate the db
     // if succeed:
@@ -128,9 +128,11 @@ public:
     //  - error code of close()
     //  - error code of open()
     //  - error code of checkpoint()
-    virtual ::dsn::error_code apply_checkpoint(dsn_chkpt_apply_mode mode,
-                                               int64_t local_commit,
-                                               const dsn_app_learn_state &state) override;
+    virtual ::dsn::error_code
+    storage_apply_checkpoint(chkpt_apply_mode mode,
+                             const dsn::replication::learn_state &state) override;
+
+    virtual int64_t last_durable_decree() const { return _last_durable_decree.load(); }
 
 private:
     // parse checkpoint directories in the data dir
@@ -140,7 +142,6 @@ private:
     // garbage collection checkpoints
     void gc_checkpoints();
 
-    int64_t last_durable_decree() { return _last_durable_decree.load(); }
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
     // return 1 if value is appended
@@ -187,10 +188,8 @@ private:
     std::pair<std::string, bool> get_restore_dir_from_env(int argc, char **argv);
 
 private:
-    dsn_gpid _gpid;
+    dsn::gpid _gpid;
     std::string _primary_address;
-    std::string _replica_name;
-    std::string _data_dir;
     bool _verbose_log;
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;

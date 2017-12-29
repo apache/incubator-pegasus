@@ -10,7 +10,6 @@
 
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
-#include <dsn/cpp/replicated_service_app.h>
 #include <dsn/tool_api.h>
 #include <dsn/tool-api/command.h>
 
@@ -36,20 +35,20 @@
 #define PEGASUS_BUILD_TYPE STR(DSN_BUILD_TYPE)
 #endif
 
+using namespace dsn;
+using namespace dsn::replication;
+
 void dsn_app_registration_pegasus()
 {
-    // register all possible service apps
     dsn_task_code_register(
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
     dsn_task_code_register(
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
-    ::dsn::register_layer2_framework<::pegasus::server::pegasus_replication_service_app>(
-        "replica", DSN_APP_MASK_FRAMEWORK);
+    register_app<::pegasus::server::pegasus_replication_service_app>("replica");
+    register_app<::pegasus::server::pegasus_meta_service_app>("meta");
+    register_app<::pegasus::server::info_collector_app>("collector");
 
-    ::dsn::register_app<::pegasus::server::pegasus_meta_service_app>("meta");
-    ::dsn::register_app_with_type_1_replication_support<::pegasus::server::pegasus_server_impl>(
-        "pegasus");
-    ::dsn::register_app<::pegasus::server::info_collector_app>("collector");
+    pegasus::server::pegasus_server_impl::register_service();
 
     ::dsn::tools::internal_use_only::register_component_provider(
         "pegasus::server::pegasus_perf_counter",
