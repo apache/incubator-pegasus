@@ -49,8 +49,7 @@ dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
     dsn_task_code_register(
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
-    dsn::register_layer2_framework<::dsn::replication::replication_service_app>(
-        "replica", DSN_APP_MASK_FRAMEWORK);
+    dsn::register_app<::dsn::replication::replication_service_app>("replica");
     return dsn::ERR_OK;
 }
 }
@@ -58,7 +57,7 @@ dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
 namespace dsn {
 namespace replication {
 
-replication_service_app::replication_service_app(dsn_gpid gpid) : layer2_handler(gpid)
+replication_service_app::replication_service_app(dsn_gpid gpid) : service_app(gpid)
 {
     _stub = new replica_stub();
 }
@@ -86,7 +85,9 @@ error_code replication_service_app::stop(bool cleanup)
     return ERR_OK;
 }
 
-void replication_service_app::on_request(dsn_gpid gpid, bool is_write, dsn_message_t msg)
+void replication_service_app::on_intercepted_request(dsn_gpid gpid,
+                                                     bool is_write,
+                                                     dsn_message_t msg)
 {
     if (is_write) {
         _stub->on_client_write(gpid, msg);

@@ -1056,6 +1056,22 @@ NORETURN DSN_API void dsn_exit(int code)
 #endif
 }
 
+DSN_API bool dsn_register_app(dsn_app *app_type)
+{
+    dsn_app *app;
+    auto &store = ::dsn::utils::singleton_store<std::string, dsn_app *>::instance();
+    if (store.get(app_type->type_name, app)) {
+        dassert(false, "app type %s is already registered", app_type->type_name);
+        return false;
+    }
+
+    app = new dsn_app();
+    *app = *app_type;
+    auto r = store.put(app_type->type_name, app);
+    dassert(r, "app type %s is already registered", app_type->type_name);
+    return r;
+}
+
 DSN_API bool dsn_mimic_app(const char *app_name, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
@@ -1106,9 +1122,10 @@ DSN_API dsn_app_info *dsn_get_app_info_ptr(dsn_gpid gpid)
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr) {
         if (gpid.value == 0)
-            return cnode->get_l1_info();
+            return cnode->get_app_info();
         else {
-            return cnode->get_l2_handler().get_app_info(gpid);
+            dassert(false, "");
+            return nullptr;
         }
     } else
         return nullptr;

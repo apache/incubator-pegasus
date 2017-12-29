@@ -39,7 +39,7 @@
 #include "mutation.h"
 #include <dsn/cpp/json_helper.h>
 #include <dsn/tool-api/command.h>
-#include "replication_app_base.h"
+#include <dsn/dist/replication/replication_app_base.h>
 #include <vector>
 #include <deque>
 

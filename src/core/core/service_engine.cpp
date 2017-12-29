@@ -47,7 +47,6 @@
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool_api.h>
 #include <dsn/tool/node_scoper.h>
-#include <dsn/dist/layer2_handler.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -62,9 +61,7 @@ DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAU
 DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 service_node::service_node(service_app_spec &app_spec)
-    : _layer2_handler(this),
-      _layer2_rpc_read_handler(RPC_L2_CLIENT_READ),
-      _layer2_rpc_write_handler(RPC_L2_CLIENT_WRITE)
+    : _intercepted_read(RPC_L2_CLIENT_READ), _intercepted_write(RPC_L2_CLIENT_WRITE)
 {
     _computation = nullptr;
     _app_spec = app_spec;
@@ -78,21 +75,21 @@ service_node::service_node(service_app_spec &app_spec)
     strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
     strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
 
-    _layer2_rpc_read_handler.name = "RPC_L2_CLIENT_READ";
-    _layer2_rpc_read_handler.c_handler = [](dsn_message_t req, void *this_) {
+    _intercepted_read.name = "RPC_L2_CLIENT_READ";
+    _intercepted_read.c_handler = [](dsn_message_t req, void *this_) {
         auto req2 = (message_ex *)req;
-        ((service_node *)this_)->handle_l2_rpc_request(req2->header->gpid, false, req);
+        ((service_node *)this_)->handle_intercepted_request(req2->header->gpid, false, req);
     };
-    _layer2_rpc_read_handler.parameter = this;
-    _layer2_rpc_read_handler.add_ref(); // release in handler::run
+    _intercepted_read.parameter = this;
+    _intercepted_read.add_ref(); // release in handler::run
 
-    _layer2_rpc_write_handler.name = "RPC_L2_CLIENT_WRITE";
-    _layer2_rpc_write_handler.c_handler = [](dsn_message_t req, void *this_) {
+    _intercepted_write.name = "RPC_L2_CLIENT_WRITE";
+    _intercepted_write.c_handler = [](dsn_message_t req, void *this_) {
         auto req2 = (message_ex *)req;
-        ((service_node *)this_)->handle_l2_rpc_request(req2->header->gpid, true, req);
+        ((service_node *)this_)->handle_intercepted_request(req2->header->gpid, true, req);
     };
-    _layer2_rpc_write_handler.parameter = this;
-    _layer2_rpc_write_handler.add_ref(); // release in handler::run
+    _intercepted_write.parameter = this;
+    _intercepted_write.add_ref(); // release in handler::run
 }
 
 bool service_node::rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid)
@@ -106,7 +103,7 @@ bool service_node::rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid
             }
         }
     } else {
-        _layer2_handler.rpc_register_handler(gpid, handler);
+        dassert(false, "");
     }
     return true;
 }
@@ -129,7 +126,8 @@ rpc_handler_info *service_node::rpc_unregister_handler(dsn_task_code_t rpc_code,
 
         return ret;
     } else {
-        return _layer2_handler.rpc_unregister_handler(gpid, rpc_code);
+        dassert(false, "");
+        return nullptr;
     }
 }
 
@@ -261,7 +259,7 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine &io)
 dsn_error_t service_node::start_app()
 {
     return start_app(
-        _app_info.app.app_context_ptr, spec().arguments, _app_spec.role->layer1.start, spec().name);
+        _app_info.app.app_context_ptr, spec().arguments, _app_spec.role->start, spec().name);
 }
 
 dsn_error_t service_node::start_app(void *app_context,
@@ -341,7 +339,7 @@ error_code service_node::start()
     {
         ::dsn::tools::node_scoper scoper(this);
         _app_info.app.app_context_ptr =
-            _app_spec.role->layer1.create(_app_spec.role->type_name, dsn_gpid{0});
+            _app_spec.role->create(_app_spec.role->type_name, dsn_gpid{0});
     }
 
     // start rpc serving
@@ -422,23 +420,23 @@ void service_node::get_queue_info(
     ss << "]}";
 }
 
-void service_node::handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req)
+void service_node::handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req)
 {
-    auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
+    auto cb = _app_spec.role->intercepted_request;
     cb(_app_info.app.app_context_ptr, gpid, is_write, req);
 }
 
-rpc_request_task *service_node::generate_l2_rpc_request_task(message_ex *req)
+rpc_request_task *service_node::generate_intercepted_request_task(message_ex *req)
 {
-    auto cb = _app_spec.role->layer2.frameworks.on_rpc_request;
+    auto cb = _app_spec.role->intercepted_request;
     if (nullptr != cb) {
         rpc_request_task *t;
         if (task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation) {
-            _layer2_rpc_write_handler.add_ref(); // release in handler::run
-            t = new rpc_request_task(req, &_layer2_rpc_write_handler, this);
+            _intercepted_write.add_ref(); // release in handler::run
+            t = new rpc_request_task(req, &_intercepted_write, this);
         } else {
-            _layer2_rpc_read_handler.add_ref(); // release in handler::run
-            t = new rpc_request_task(req, &_layer2_rpc_read_handler, this);
+            _intercepted_read.add_ref(); // release in handler::run
+            t = new rpc_request_task(req, &_intercepted_read, this);
         }
         t->spec().on_task_create.execute(nullptr, t);
         return t;

@@ -43,13 +43,16 @@ bool simple_kv_service_impl::s_simple_kv_close_fail = false;
 bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
 bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 
-simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
-    : replicated_service_app_type_1(gpid), _lock(true)
+simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
+{
+    reset_state();
+    ddebug("simple_kv_service_impl inited");
+}
+
+void simple_kv_service_impl::reset_state()
 {
     _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
     _last_durable_decree = 0;
-
-    ddebug("simple_kv_service_impl inited");
 }
 
 // RPC_SIMPLE_KV_READ
@@ -98,9 +101,6 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
 ::dsn::error_code simple_kv_service_impl::start(int argc, char **argv)
 {
-    _data_dir = dsn_get_app_data_dir(get_gpid());
-    open_service(get_gpid());
-
     if (s_simple_kv_open_fail) {
         return ERR_CORRUPTION;
     }
@@ -117,14 +117,13 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
         return ERR_CORRUPTION;
     }
 
-    close_service(get_gpid());
     dsn::service::zauto_lock l(_lock);
     if (clear_state) {
-        if (!dsn::utils::filesystem::remove_path(data_dir())) {
-            dassert(false, "Fail to delete directory %s.", data_dir());
+        if (!dsn::utils::filesystem::remove_path(data_dir().c_str())) {
+            dassert(false, "Fail to delete directory %s.", data_dir().c_str());
         }
         _store.clear();
-        // reset_states();
+        reset_state();
     }
     ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
     return ERR_OK;
@@ -202,10 +201,11 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::sync_checkpoint(int64_t last_commit)
+::dsn::error_code simple_kv_service_impl::sync_checkpoint()
 {
     dsn::service::zauto_lock l(_lock);
 
+    int64_t last_commit = last_committed_decree();
     if (last_commit == last_durable_decree()) {
         ddebug("simple_kv_service_impl no need to create checkpoint, "
                "checkpoint already the latest, last_durable_decree = %" PRId64 "",
@@ -215,7 +215,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     // TODO: should use async write instead
     char name[256];
-    sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_commit);
+    sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), last_commit);
     std::ofstream os(name, std::ios::binary);
 
     uint64_t count = (uint64_t)_store.size();
@@ -245,29 +245,27 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(int64_t last_commit, bool is_emergency)
+::dsn::error_code simple_kv_service_impl::async_checkpoint(bool is_emergency)
 {
-    return sync_checkpoint(last_commit);
+    return sync_checkpoint();
 }
 
 // helper routines to accelerate learning
 ::dsn::error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
-                                                         int64_t local_commit,
-                                                         void *learn_request,
-                                                         int learn_request_size,
-                                                         app_learn_state &state)
+                                                         const dsn::blob &learn_request,
+                                                         /*out*/ learn_state &state)
 {
     if (s_simple_kv_get_checkpoint_fail) {
         return ERR_CORRUPTION;
     }
 
     if (last_durable_decree() == 0) {
-        sync_checkpoint(local_commit);
+        sync_checkpoint();
     }
 
     if (last_durable_decree() > 0) {
         char name[256];
-        sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_durable_decree());
+        sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), last_durable_decree());
 
         state.from_decree_excluded = 0;
         state.to_decree_included = last_durable_decree();
@@ -284,26 +282,25 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::apply_checkpoint(dsn_chkpt_apply_mode mode,
-                                                           int64_t local_commit,
-                                                           const dsn_app_learn_state &state)
+::dsn::error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                                   const learn_state &state)
 {
     if (s_simple_kv_apply_checkpoint_fail) {
         return ERR_CORRUPTION;
     }
 
-    if (mode == DSN_CHKPT_LEARN) {
+    if (mode == replication_app_base::chkpt_apply_mode::learn) {
         recover(state.files[0], state.to_decree_included);
         // ddebug("simple_kv_service_impl learn checkpoint succeed, last_committed_decree = %"
         // PRId64 "", last_committed_decree());
         return ERR_OK;
     } else {
-        dassert(DSN_CHKPT_COPY == mode, "invalid mode %d", (int)mode);
+        dassert(replication_app_base::chkpt_apply_mode::copy == mode, "invalid mode %d", (int)mode);
         dassert(state.to_decree_included > last_durable_decree(),
                 "checkpoint's decree is smaller than current");
 
         char name[256];
-        sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), state.to_decree_included);
+        sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), state.to_decree_included);
         std::string lname(name);
 
         if (!utils::filesystem::rename_path(state.files[0], lname)) {

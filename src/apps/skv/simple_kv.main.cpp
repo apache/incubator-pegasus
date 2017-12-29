@@ -38,38 +38,25 @@
 #include "simple_kv.server.impl.h"
 
 // framework specific tools
+#include <dsn/dist/replication/meta_service_app.h>
+#include <dsn/dist/replication/replication_service_app.h>
 #include <dsn/dist/replication/replication.global_check.h>
 
 static void dsn_app_registration_simple_kv()
 {
-    // register all possible services
-    dsn::register_app_with_type_1_replication_support<
-        ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
+    dsn::replication::application::simple_kv_service_impl::register_service();
 
-    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
+    dsn_meta_server_bridge(0, nullptr);
+    dsn_layer2_stateful_type1_bridge(0, nullptr);
+
+    dsn::register_app<dsn::replication::application::simple_kv_client_app>("client");
     dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>(
         "client.perf.test");
-
-    // dsn::replication::install_checkers();
 }
-
-#if defined(DSN_RUN_USE_SVCHOST)
-
-#include <dsn/utility/module_init.cpp.h>
-
-MODULE_INIT_BEGIN(simple_kv)
-dsn_app_registration_simple_kv();
-MODULE_INIT_END
-
-#else
 
 int main(int argc, char **argv)
 {
     dsn_app_registration_simple_kv();
-
-    // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);
     return 0;
 }
-
-#endif

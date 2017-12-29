@@ -52,7 +52,6 @@
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/cpp/serialization.h>
 #include <set>
-#include <dsn/dist/layer2_handler.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -652,8 +651,8 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
         rpc_request_task *tsk = nullptr;
 
         // handle replication
-        if (msg->header->gpid.value != 0) {
-            tsk = _node->generate_l2_rpc_request_task(msg);
+        if (msg->header->gpid.u.app_id > 0) {
+            tsk = _node->generate_intercepted_request_task(msg);
         }
 
         if (tsk == nullptr) {

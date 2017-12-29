@@ -48,10 +48,15 @@ namespace dsn {
 namespace replication {
 namespace application {
 
-simple_kv_service_impl::simple_kv_service_impl(dsn_gpid gpid)
-    : ::dsn::replicated_service_app_type_1(gpid), _lock(true)
+simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {
-    _test_file_learning = false;
+    reset_state();
+    ddebug("simple_kv_service_impl inited");
+}
+
+void simple_kv_service_impl::reset_state()
+{
+    _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
     _last_durable_decree = 0;
 }
 
@@ -102,30 +107,23 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
 ::dsn::error_code simple_kv_service_impl::start(int argc, char **argv)
 {
-    _data_dir = dsn_get_app_data_dir(get_gpid());
-
     {
         zauto_lock l(_lock);
         set_last_durable_decree(0);
         recover();
     }
-
-    open_service(get_gpid());
     return ERR_OK;
 }
 
 ::dsn::error_code simple_kv_service_impl::stop(bool clear_state)
 {
-    close_service(get_gpid());
-
     {
         zauto_lock l(_lock);
         if (clear_state) {
-            dsn_get_app_data_dir(get_gpid());
-
-            if (!dsn::utils::filesystem::remove_path(data_dir())) {
-                dassert(false, "Fail to delete directory %s.", data_dir());
+            if (!dsn::utils::filesystem::remove_path(_dir_data)) {
+                dassert(false, "Fail to delete directory %s.", _dir_data.c_str());
             }
+            reset_state();
         }
     }
 
@@ -143,7 +141,7 @@ void simple_kv_service_impl::recover()
     std::string name;
 
     std::vector<std::string> sub_list;
-    std::string path = data_dir();
+    std::string path = _dir_data;
     if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false)) {
         dassert(false, "Fail to get subfiles in %s.", path.c_str());
     }
@@ -203,10 +201,11 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     is.close();
 }
 
-::dsn::error_code simple_kv_service_impl::sync_checkpoint(int64_t last_commit)
+::dsn::error_code simple_kv_service_impl::sync_checkpoint()
 {
     char name[256];
-    sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_commit);
+    int64_t last_commit = _last_committed_decree.load();
+    sprintf(name, "%s/checkpoint.%" PRId64, _dir_data.c_str(), last_commit);
 
     zauto_lock l(_lock);
 
@@ -244,21 +243,19 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(int64_t last_commit, bool is_emergency)
+::dsn::error_code simple_kv_service_impl::async_checkpoint(bool is_emergency)
 {
-    return sync_checkpoint(last_commit);
+    return sync_checkpoint();
 }
 
 // helper routines to accelerate learning
 ::dsn::error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
-                                                         int64_t local_commit,
-                                                         void *learn_request,
-                                                         int learn_request_size,
-                                                         app_learn_state &state)
+                                                         const dsn::blob &learn_request,
+                                                         /*out*/ learn_state &state)
 {
     if (last_durable_decree() > 0) {
         char name[256];
-        sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), last_durable_decree());
+        sprintf(name, "%s/checkpoint.%" PRId64, _dir_data.c_str(), last_durable_decree());
 
         state.from_decree_excluded = 0;
         state.to_decree_included = last_durable_decree();
@@ -271,20 +268,19 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::apply_checkpoint(dsn_chkpt_apply_mode mode,
-                                                           int64_t commit,
-                                                           const dsn_app_learn_state &state)
+::dsn::error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                                   const learn_state &state)
 {
-    if (mode == DSN_CHKPT_LEARN) {
+    if (mode == chkpt_apply_mode::learn) {
         recover(state.files[0], state.to_decree_included);
         return ERR_OK;
     } else {
-        dassert(DSN_CHKPT_COPY == mode, "invalid mode %d", (int)mode);
+        dassert(chkpt_apply_mode::copy == mode, "invalid mode %d", (int)mode);
         dassert(state.to_decree_included > last_durable_decree(),
                 "checkpoint's decree is smaller than current");
 
         char name[256];
-        sprintf(name, "%s/checkpoint.%" PRId64, data_dir(), state.to_decree_included);
+        sprintf(name, "%s/checkpoint.%" PRId64, _dir_data.c_str(), state.to_decree_included);
         std::string lname(name);
 
         if (!utils::filesystem::rename_path(state.files[0], lname))

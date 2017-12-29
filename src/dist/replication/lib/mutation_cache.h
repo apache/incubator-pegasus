@@ -36,6 +36,7 @@
 #pragma once
 
 #include "../client_lib/replication_common.h"
+#include "mutation.h"
 #include <vector>
 #include <atomic>
 

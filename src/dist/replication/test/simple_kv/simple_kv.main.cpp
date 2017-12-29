@@ -46,14 +46,12 @@
 
 void dsn_app_registration_simple_kv()
 {
-    // register simple-kv type here
-    dsn_layer2_stateful_type1_bridge(0, nullptr);
+    dsn::replication::test::simple_kv_service_impl::register_service();
+
     dsn_meta_server_bridge(0, nullptr);
+    dsn_layer2_stateful_type1_bridge(0, nullptr);
 
     dsn::register_app<dsn::replication::test::simple_kv_client_app>("client");
-    dsn::register_app_with_type_1_replication_support<
-        ::dsn::replication::test::simple_kv_service_impl>("simple_kv");
-
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");
     dsn::replication::test::install_checkers();
 }

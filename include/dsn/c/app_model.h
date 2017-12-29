@@ -128,181 +128,10 @@ typedef dsn_error_t (*dsn_app_destroy)(void *app, bool cleanup);
     \param is_write_operation whether the incoming rpc reqeust is a write operation or not
     \param request incoming rpc request message
  */
-typedef void (*dsn_framework_rpc_request_handler)(void *app,
-                                                  dsn_gpid gpid,
-                                                  bool is_write_operation,
-                                                  dsn_message_t request);
-
-/*! basic structure for state (e.g., full/delta checkpoint) transfer across nodes for an app, used
- * by frameworks */
-struct dsn_app_learn_state
-{
-    int total_learn_state_size;   ///< memory used in the given buffer by this learn-state
-    int64_t from_decree_excluded; ///< the start decree(sequence number, version) of the state
-    int64_t to_decree_included;   ///< the end decree of the state
-    int meta_state_size;          ///< in-memory state size as stored in \ref meta_state_ptr below
-    int file_state_count;         ///< on-disk file count to be transferred
-    void *meta_state_ptr;         ///< in-memory state
-    const char **files;           ///< on-disk file path array, end with nullptr
-};
-
-/*! checkpoint apply mode, see \ref dsn_app_apply_checkpoint, used by frameworks*/
-enum dsn_chkpt_apply_mode
-{
-    DSN_CHKPT_COPY, ///< simply a checkpoint from remote machine is given, do not change the local
-                    /// state
-    DSN_CHKPT_LEARN ///< given a checkpoint from remote machine, prepare to change the local state
-};
-
-/*!
-    batched rpc request from frameworks, used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-    \param decree sequence number for this request batch (when request batches are sent to the apps
-   in order)
-    \param timestamp    the timestamp when write request arrived server (in microseconds)
-    \param requests incoming rpc request array ptr
-    \param request_count request count in this array
- */
-typedef void (*dsn_app_on_batched_write_requests)(
-    void *app, int64_t decree, int64_t timestamp, dsn_message_t *requests, int request_count);
-
-/*!
-    get physical error (e.g., disk failure) from the app, used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-    \return physical error code, e.g., disk failure, that is not always reproducible on another
-   machine with the same input
- */
-typedef int (*dsn_app_get_physical_error)(void *app);
-
-/*!
-    checkpoint the application synchronously, used by frameworks, implemented by apps
-
-    \param app          context returned by dsn_app_create
-    \param last_decree  decree of the last request/request-batch applied to this app
-
-    \return error code for the checkpoint operation
- */
-typedef dsn_error_t (*dsn_app_sync_checkpoint)(void *app, int64_t last_decree);
-
-/*!
-    checkpoint the application asynchronously, used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-    \param last_decree  decree of the last request/request-batch applied to this app
-    \param is_emergency  if it is emergency to checkpoint the application
-
-    \return error code for the checkpoint operation
- */
-typedef dsn_error_t (*dsn_app_async_checkpoint)(void *app, int64_t last_decree, bool is_emergency);
-
-/*!
-    checkpoint the application asynchronously to specified directory, used by frameworks,
-   implemented by apps
-    \param app   context returned by dsn_app_create
-    \param checkpoint_dir    specified directory
-    \param checkpoint_decree   output parameter, the decree of checkpoint copied
- */
-typedef dsn_error_t (*dsn_app_copy_checkpoint_to_dir)(void *app,
-                                                      const char *checkpoint_dir,
-                                                      int64_t *checkpoint_decree);
-
-/*!
-    get the decree of last done checkpoint, used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-
-    \return decree of the last successfully done checkpoint (see last_decree parameter when doing
-   checkpoint)
- */
-typedef int64_t (*dsn_app_get_last_checkpoint_decree)(void *app);
-
-/*!
-    learner prepares a get checkpoint request for better fitting the local state (e.g., for delta
-   learning),
-    the request will be used by \ref dsn_app_get_checkpoint below,
-    used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-    \param request_buffer a memory buffer to be filled with a custom learn request
-    \param capcity buffer size, in bytes
-    \param used_size this is the output value telling how many bytes are written by this custom
-   learn request
-
-    \return error code for this operation
- */
-typedef dsn_error_t (*dsn_app_prepare_get_checkpoint)(void *app,
-                                                      void *request_buffer,
-                                                      int capacity,
-                                                      /*out*/ int *used_size);
-
-/*!
-    get checkpoint information from learnee, used by frameworks, implemented by apps
-
-    can be used for both delta checkpoint [learn_start_decree, infinite), or full checkpoint.
-
-    \param app                  context returned by dsn_app_create
-    \param learn_start_decree   the first start decree we want to get for this (if delta) checkpoint
-    \param local_last_decree    decree of the last request/request-batched that are applied locally
-    \param learn_request        learn reqeust as prepared by \ref dsn_app_prepare_get_checkpoint
-   above
-    \param learn_request_size   buffer size (in bytes) of the learn request
-    \param learn_state_buffer   output learn state, see \ref dsn_app_learn_state, to be used by
-   dsn_app_apply_checkpoint below
-    \param capacity             output learn state buffer size (in bytes)
-
-    \return error code for this operation
- */
-typedef dsn_error_t (*dsn_app_get_checkpoint)(void *app,
-                                              int64_t learn_start_decree,
-                                              int64_t local_last_decree,
-                                              void *learn_request,
-                                              int learn_request_size,
-                                              dsn_app_learn_state *learn_state_buffer,
-                                              int capacity);
-
-/*!
-    apply checkpoint from remote nodes, used by frameworks, implemented by apps
-
-    \param app    context returned by dsn_app_create
-    \param mode   see \ref dsn_chkpt_apply_mode
-    \param local_last_decree decree of the last request/request-batched that are applied locally
-    \param learn_state as returned from \ref dsn_app_get_checkpoint above
-
-    \return error code for this operation
- */
-typedef dsn_error_t (*dsn_app_apply_checkpoint)(void *app,
-                                                dsn_chkpt_apply_mode mode,
-                                                int64_t local_last_decree,
-                                                const dsn_app_learn_state *learn_state);
-
-#define DSN_APP_MASK_APP 0x01       ///< app mask
-#define DSN_APP_MASK_FRAMEWORK 0x02 ///< framework mask
-
-#pragma pack(push, 4)
-
-/*!
-  callbacks needed by the frameworks, application developers
-  need to implement some of them so that certain frameworks
-  will work (see each individual framework for its requirements)
- */
-typedef union dsn_app_callbacks
-{
-    dsn_app_create placeholder[DSN_MAX_CALLBAC_COUNT];
-    struct app_callbacks
-    {
-        dsn_app_on_batched_write_requests on_batched_write_requests;
-        dsn_app_get_physical_error get_physical_error;
-        dsn_app_sync_checkpoint sync_checkpoint;
-        dsn_app_async_checkpoint async_checkpoint;
-        dsn_app_get_last_checkpoint_decree get_last_checkpoint_decree;
-        dsn_app_prepare_get_checkpoint prepare_get_checkpoint;
-        dsn_app_get_checkpoint get_checkpoint;
-        dsn_app_apply_checkpoint apply_checkpoint;
-        dsn_app_copy_checkpoint_to_dir copy_checkpoint_to_dir;
-    } calls;
-} dsn_app_callbacks;
+typedef void (*data_engine_interceptor)(void *app,
+                                        dsn_gpid gpid,
+                                        bool is_write_operation,
+                                        dsn_message_t request);
 
 /*!
 developers define the following dsn_app data structure, and passes it
@@ -311,30 +140,15 @@ the app appropriately.
 
 Click into the corresponding types for what are the callback means.
 */
+#pragma pack(push, 4)
 typedef struct dsn_app
 {
-    uint64_t mask;                                ///< application capability mask
     char type_name[DSN_MAX_APP_TYPE_NAME_LENGTH]; ///< type
 
-    /*! app definition, mask = DSN_APP_MASK_APP */
-    struct layer1_callbacks
-    {
-        dsn_app_create create;   ///< callback to create the context for the app
-        dsn_app_start start;     ///< callback to start the app, similar to ```main```
-        dsn_app_destroy destroy; ///< callback to stop and destroy the app
-    } layer1;
-
-    struct
-    {
-        /*! framework model */
-        struct layer2_framework_callbacks
-        {
-            dsn_framework_rpc_request_handler on_rpc_request;
-        } frameworks;
-
-        /*! app model (for integration with frameworks) */
-        dsn_app_callbacks apps;
-    } layer2;
+    dsn_app_create create;   ///< callback to create the context for the app
+    dsn_app_start start;     ///< callback to start the app, similar to ```main```
+    dsn_app_destroy destroy; ///< callback to stop and destroy the app
+    data_engine_interceptor intercepted_request; ///< callback to data engine's request
 } dsn_app;
 #pragma pack(pop)
 
@@ -374,27 +188,15 @@ typedef struct dsn_app_info
  <PRE>
      dsn_app app;
      memset(&app, 0, sizeof(app));
-     app.mask = DSN_APP_MASK_APP;
      strncpy(app.type_name, type_name, sizeof(app.type_name));
-     app.layer1.create = service_app::app_create<TServiceApp>;
-     app.layer1.start = service_app::app_start;
-     app.layer1.destroy = service_app::app_destroy;
-
+     app.create = service_app::app_create<TServiceApp>;
+     app.start = service_app::app_start;
+     app.destroy = service_app::app_destroy;
+     app.interceted_request = service_app::on_intercepted_request;
      dsn_register_app(&app);
  </PRE>
  */
 extern DSN_API bool dsn_register_app(dsn_app *app_type);
-
-/*!
- get application callbacks registered into rDSN runtime
-
- \param name app type name
-
- \param callbacks  output callbacks
-
- \return true it it exists, false otherwise
- */
-extern DSN_API bool dsn_get_app_callbacks(const char *name, /* out */ dsn_app_callbacks *callbacks);
 
 /*!
  mimic an app as if the following execution in the current thread are

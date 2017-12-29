@@ -37,7 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "replication_app_base.h"
+#include <dsn/dist/replication/replication_app_base.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -283,7 +283,7 @@ void replica::on_copy_checkpoint_file_completed(error_code err,
             dassert(filename.find_last_of("/\\") == std::string::npos, "invalid file name");
             filename = utils::filesystem::path_combine(chk_dir, filename);
         }
-        _app->apply_checkpoint(DSN_CHKPT_COPY, resp->state);
+        _app->apply_checkpoint(replication_app_base::chkpt_apply_mode::copy, resp->state);
         _app->reset_counters_after_learning();
     }
 
@@ -418,7 +418,7 @@ void replica::on_checkpoint_completed(error_code err)
             for (auto d = _app->last_committed_decree() + 1; d <= c; d++) {
                 auto mu = _prepare_list->get_mutation_by_decree(d);
                 dassert(nullptr != mu, "invalid mutation, decree = %" PRId64, d);
-                err = _app->write_internal(mu);
+                err = _app->apply_mutation(mu);
                 if (ERR_OK != err) {
                     _secondary_states.checkpoint_is_running = false;
                     handle_local_failure(err);

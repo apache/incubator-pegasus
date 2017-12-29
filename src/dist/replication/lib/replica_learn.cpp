@@ -38,7 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/utility/factory_store.h>
-#include "replication_app_base.h"
+#include <dsn/dist/replication/replication_app_base.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -129,7 +129,7 @@ void replica::init_learn(uint64_t signature)
                             dassert(nullptr != mu,
                                     "mutation must not be nullptr, decree = %" PRId64 "",
                                     d);
-                            auto err = _app->write_internal(mu);
+                            auto err = _app->apply_mutation(mu);
                             if (ERR_OK != err) {
                                 handle_learning_error(err, true);
                                 return;
@@ -934,7 +934,7 @@ void replica::on_copy_remote_state_completed(error_code err,
         // apply app learning
         if (resp.type == learn_type::LT_APP) {
             auto start_ts = dsn_now_ns();
-            err = _app->apply_checkpoint(DSN_CHKPT_LEARN, lstate);
+            err = _app->apply_checkpoint(replication_app_base::chkpt_apply_mode::learn, lstate);
             if (err == ERR_OK) {
                 _app->reset_counters_after_learning();
 
@@ -1355,7 +1355,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                        _options->max_mutation_count_in_prepare_list,
                        [this, &err](mutation_ptr &mu) {
                            if (mu->data.header.decree == _app->last_committed_decree() + 1) {
-                               _app->write_internal(mu).end_tracking();
+                               _app->apply_mutation(mu).end_tracking();
                            }
                        });
 

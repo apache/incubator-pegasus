@@ -26,13 +26,12 @@
 #pragma once
 
 #include "simple_kv.server.h"
-#include <dsn/cpp/replicated_service_app.h>
 
 namespace dsn {
 namespace replication {
 namespace test {
 
-class simple_kv_service_impl : public simple_kv_service, public replicated_service_app_type_1
+class simple_kv_service_impl : public simple_kv_service
 {
 public:
     static bool s_simple_kv_open_fail;
@@ -40,8 +39,15 @@ public:
     static bool s_simple_kv_get_checkpoint_fail;
     static bool s_simple_kv_apply_checkpoint_fail;
 
+    static void register_service()
+    {
+        replication_app_base::register_storage_engine(
+            "simple_kv", replication_app_base::create<simple_kv_service_impl>);
+        simple_kv_service::register_rpc_handlers();
+    }
+
 public:
-    simple_kv_service_impl(dsn_gpid gpid);
+    simple_kv_service_impl(replica *r);
 
     // RPC_SIMPLE_KV_READ
     virtual void on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply);
@@ -54,28 +60,33 @@ public:
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-    virtual ::dsn::error_code sync_checkpoint(int64_t last_commit) override;
+    virtual int64_t last_durable_decree() const override { return _last_durable_decree; }
 
-    virtual ::dsn::error_code async_checkpoint(int64_t last_commit, bool is_emergency) override;
+    virtual ::dsn::error_code sync_checkpoint() override;
 
-    virtual int64_t get_last_checkpoint_decree() override { return last_durable_decree(); }
+    virtual ::dsn::error_code prepare_get_checkpoint(blob &learn_req) { return dsn::ERR_OK; }
+
+    virtual ::dsn::error_code async_checkpoint(bool is_emergency) override;
+
+    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                                     int64_t *last_decree) override
+    {
+        return ERR_NOT_IMPLEMENTED;
+    }
 
     virtual ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                             int64_t local_commit,
-                                             void *learn_request,
-                                             int learn_request_size,
-                                             app_learn_state &state) override;
+                                             const dsn::blob &learn_request,
+                                             /*out*/ learn_state &state) override;
 
-    virtual ::dsn::error_code apply_checkpoint(dsn_chkpt_apply_mode mode,
-                                               int64_t local_commit,
-                                               const dsn_app_learn_state &state) override;
+    virtual ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                       const learn_state &state) override;
 
 private:
     void recover();
     void recover(const std::string &name, int64_t version);
-    const char *data_dir() const { return _data_dir.c_str(); }
-    int64_t last_durable_decree() const { return _last_durable_decree; }
     void set_last_durable_decree(int64_t d) { _last_durable_decree = d; }
+
+    void reset_state();
 
 private:
     typedef std::map<std::string, std::string> simple_kv;
@@ -83,7 +94,6 @@ private:
     ::dsn::service::zlock _lock;
     bool _test_file_learning;
 
-    std::string _data_dir;
     int64_t _last_durable_decree;
 };
 }

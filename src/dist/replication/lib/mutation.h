@@ -48,6 +48,9 @@
 namespace dsn {
 namespace replication {
 
+class mutation;
+typedef dsn::ref_ptr<mutation> mutation_ptr;
+
 class mutation : public ref_counter
 {
 public:
@@ -155,6 +158,7 @@ private:
     static std::atomic<uint64_t> s_tid;
 };
 
+class replica;
 class mutation_queue
 {
 public:

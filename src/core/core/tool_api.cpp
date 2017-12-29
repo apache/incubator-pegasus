@@ -72,7 +72,7 @@ public:
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
         } else {
-            sp.role->layer1.destroy(_node->get_app_context_ptr(), _cleanup);
+            sp.role->destroy(_node->get_app_context_ptr(), _cleanup);
         }
     }
 

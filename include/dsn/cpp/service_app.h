@@ -58,6 +58,10 @@ public:
 
     virtual ::dsn::error_code stop(bool cleanup = false) = 0;
 
+    virtual void on_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t msg)
+    {
+        dassert(false, "not supported");
+    }
     //
     // inquery routines
     //
@@ -104,6 +108,12 @@ public:
             sapp->_started = false;
         return err;
     }
+
+    static void on_intercepted_request(void *app, dsn_gpid gpid, bool is_write, dsn_message_t msg)
+    {
+        auto sapp = (service_app *)app;
+        return sapp->on_intercepted_request(gpid, is_write, msg);
+    }
 };
 
 /*! C++ wrapper of the \ref dsn_register_app function*/
@@ -112,11 +122,11 @@ void register_app(const char *type_name)
 {
     dsn_app app;
     memset(&app, 0, sizeof(app));
-    app.mask = DSN_APP_MASK_APP;
     strncpy(app.type_name, type_name, sizeof(app.type_name));
-    app.layer1.create = service_app::app_create<TServiceApp>;
-    app.layer1.start = service_app::app_start;
-    app.layer1.destroy = service_app::app_destroy;
+    app.create = service_app::app_create<TServiceApp>;
+    app.start = service_app::app_start;
+    app.destroy = service_app::app_destroy;
+    app.intercepted_request = service_app::on_intercepted_request;
 
     dsn_register_app(&app);
 }

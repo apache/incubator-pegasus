@@ -38,7 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/cpp/json_helper.h>
-#include "replication_app_base.h"
+#include <dsn/dist/replication/replication_app_base.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -100,10 +100,6 @@ void replica::update_commit_statistics(int count)
 
 void replica::init_state()
 {
-    memset(&_app_callbacks, 0, sizeof(_app_callbacks));
-    bool r = dsn_get_app_callbacks(_app_info.app_type.c_str(), &_app_callbacks);
-    dassert(r, "app '%s' must be registered at this point", _app_info.app_type.c_str());
-
     _inactive_is_transient = false;
     _is_initializing = false;
     _prepare_list =
@@ -165,8 +161,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     }
 
     dassert(_app != nullptr, "");
-
-    dsn_hosted_app_commit_rpc_request(_app->app_context(), request, true);
+    _app->on_request(request);
 }
 
 void replica::response_client_message(bool is_read, dsn_message_t request, error_code error)
@@ -270,7 +265,7 @@ void replica::execute_mutation(mutation_ptr &mu)
     switch (status()) {
     case partition_status::PS_INACTIVE:
         if (_app->last_committed_decree() + 1 == d) {
-            err = _app->write_internal(mu);
+            err = _app->apply_mutation(mu);
         } else {
             dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                   name(),
@@ -285,7 +280,7 @@ void replica::execute_mutation(mutation_ptr &mu)
                 "app commit: %" PRId64 ", mutation decree: %" PRId64 "",
                 _app->last_committed_decree(),
                 d);
-        err = _app->write_internal(mu);
+        err = _app->apply_mutation(mu);
     } break;
 
     case partition_status::PS_SECONDARY:
@@ -295,7 +290,7 @@ void replica::execute_mutation(mutation_ptr &mu)
                     "%" PRId64 " VS %" PRId64 "",
                     _app->last_committed_decree() + 1,
                     d);
-            err = _app->write_internal(mu);
+            err = _app->apply_mutation(mu);
         } else {
             dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                   name(),
@@ -316,7 +311,7 @@ void replica::execute_mutation(mutation_ptr &mu)
                     "%" PRId64 " VS %" PRId64 "",
                     _app->last_committed_decree() + 1,
                     d);
-            err = _app->write_internal(mu);
+            err = _app->apply_mutation(mu);
         } else {
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,

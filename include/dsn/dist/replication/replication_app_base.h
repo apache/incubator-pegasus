@@ -52,6 +52,7 @@ namespace dsn {
 namespace replication {
 
 class mutation;
+class replica;
 
 class replica_init_info
 {
@@ -94,14 +95,26 @@ public:
 class replication_app_base
 {
 public:
-    explicit replication_app_base(::dsn::replication::replica *replica);
-    ~replication_app_base() {}
+    enum chkpt_apply_mode
+    {
+        copy,
+        learn
+    };
+    template <typename T>
+    static replication_app_base *create(replica *r)
+    {
+        return new T(r);
+    }
+    typedef replication_app_base *factory(replica *r);
+    static void register_storage_engine(const std::string &name, factory f);
+    static replication_app_base *new_storage_instance(const std::string &name, replica *r);
+
+    virtual ~replication_app_base() {}
 
     //
     // Open the app.
     //
     ::dsn::error_code open();
-
     //
     // Close the app.
     // If `clear_state' is true, means clear the app state after close it.
@@ -109,7 +122,12 @@ public:
     // Must be thread safe.
     //
     ::dsn::error_code close(bool clear_state);
+    ::dsn::error_code apply_checkpoint(chkpt_apply_mode mode, const learn_state &state);
+    ::dsn::error_code apply_mutation(const mutation *mu);
 
+    // methods need to implement on storage engine side
+    virtual ::dsn::error_code start(int argc, char **argv) = 0;
+    virtual ::dsn::error_code stop(bool clear_state) = 0;
     //
     // synchonously checkpoint, and update last_durable_decree internally.
     // which stops replication writes to the app concurrently.
@@ -117,12 +135,7 @@ public:
     // Postconditions:
     // * last_committed_decree() == last_durable_decree()
     //
-    ::dsn::error_code sync_checkpoint()
-    {
-        return _callbacks.calls.sync_checkpoint(_app_context_callbacks,
-                                                _last_committed_decree.load());
-    }
-
+    virtual ::dsn::error_code sync_checkpoint() = 0;
     //
     // asynchonously checkpoint, which will not stall the normal write ops.
     // replication layer will check last_durable_decree() later.
@@ -132,18 +145,12 @@ public:
     // It is not always necessary for the apps to implement this method,
     // but if it is implemented, the checkpoint logic in replication will be much simpler.
     //
-    ::dsn::error_code async_checkpoint(bool is_emergency)
-    {
-        return _callbacks.calls.async_checkpoint(
-            _app_context_callbacks, _last_committed_decree.load(), is_emergency);
-    }
-
+    virtual ::dsn::error_code async_checkpoint(bool is_emergency) = 0;
     //
-    // prepare an app-specific learning request (on learner, to be sent to learneee
+    // prepare an app-specific learning request (on learner, to be sent to learnee
     // and used by method get_checkpoint), so that the learning process is more efficient
     //
-    ::dsn::error_code prepare_get_checkpoint(/*out*/ ::dsn::blob &learn_req);
-
+    virtual ::dsn::error_code prepare_get_checkpoint(/*out*/ ::dsn::blob &learn_req) = 0;
     //
     // Learn [start, infinite) from remote replicas (learner)
     //
@@ -158,10 +165,9 @@ public:
     // get the
     // full path of the files.
     //
-    ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                     const ::dsn::blob &learn_request,
-                                     /*out*/ learn_state &state);
-
+    virtual ::dsn::error_code get_checkpoint(int64_t learn_start,
+                                             const ::dsn::blob &learn_request,
+                                             /*out*/ learn_state &state) = 0;
     //
     // [DSN_CHKPT_LEARN]
     // after learn the state from learner, apply the learned state to the local app
@@ -180,36 +186,37 @@ public:
     // * if mode == DSN_CHKPT_LEARN, after apply_checkpoint() succeed:
     //   last_committed_decree() == last_durable_decree() == state.to_decree_included
     //
-    ::dsn::error_code apply_checkpoint(dsn_chkpt_apply_mode mode, const learn_state &state);
-
+    virtual ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                       const learn_state &state) = 0;
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
     // copied will be assigned to checkpoint_decree if checkpoint_decree not null
     //
     // must be thread safe
     //
-    ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                             /*output*/ int64_t *last_decree)
-    {
-        return _callbacks.calls.copy_checkpoint_to_dir(
-            _app_context_callbacks, checkpoint_dir, last_decree);
-    }
+    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                             /*output*/ int64_t *last_decree) = 0;
 
     //
     // Query methods.
     //
-    ::dsn::replication::decree last_durable_decree()
-    {
-        return _app_context_callbacks
-                   ? _callbacks.calls.get_last_checkpoint_decree(_app_context_callbacks)
-                   : 0;
-    }
+    virtual ::dsn::replication::decree last_durable_decree() const = 0;
+    // return the error generated by storage engine
+    virtual int on_request(dsn_message_t request) = 0;
+
+    // for batch_write, the base class give a naive implementation that just call on_request
+    // repeatly. storage engine may override this function to get better performance
+    virtual int on_batched_write_requests(int64_t decree,
+                                          int64_t timstamp,
+                                          dsn_message_t *requests,
+                                          int request_length);
 
 public:
     //
     // utility functions to be used by app
     //
     const char *replica_name() const;
+    gpid get_gpid() const;
     const std::string &data_dir() const { return _dir_data; }
     const std::string &learn_dir() const { return _dir_learn; }
     const std::string &backup_dir() const { return _dir_backup; }
@@ -217,7 +224,6 @@ public:
     {
         return _last_committed_decree.load();
     }
-    void *app_context() { return _app_context; }
     void reset_counters_after_learning();
 
 private:
@@ -229,8 +235,6 @@ private:
     ::dsn::error_code
     open_new_internal(replica *r, int64_t shared_log_start, int64_t private_log_start);
 
-    ::dsn::error_code write_internal(mutation_ptr &mu);
-
     const replica_init_info &init_info() const { return _info; }
     ::dsn::error_code update_init_info(replica *r,
                                        int64_t shared_log_offset,
@@ -239,18 +243,15 @@ private:
     ::dsn::error_code update_init_info_ballot_and_decree(replica *r);
     void install_perf_counters();
 
-private:
-    void *_app_context;
-    void *_app_context_callbacks;
-    dsn_app_callbacks _callbacks;
-
-private:
-    std::string _dir_data;   // ${replica_dir}/data
-    std::string _dir_learn;  // ${replica_dir}/learn
+protected:
+    std::string _dir_data;  // ${replica_dir}/data
+    std::string _dir_learn; // ${replica_dir}/learn
     std::string _dir_backup; // ${replica_dir}/backup
     replica *_replica;
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;
+
+    explicit replication_app_base(::dsn::replication::replica *replica);
 };
 
 //------------------ inline implementation ---------------------

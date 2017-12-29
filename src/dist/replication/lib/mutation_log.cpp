@@ -1842,10 +1842,7 @@ private:
         task_ptr _task;
 
         buffer_t()
-            : _buffer(new char[block_size_bytes]),
-              _begin(0),
-              _end(0),
-              _file_offset_of_buffer(0),
+            : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _file_offset_of_buffer(0),
               _have_ongoing_task(false)
         {
         }

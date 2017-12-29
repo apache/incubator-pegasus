@@ -1,6 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <thread>
 
 #include <gtest/gtest.h>
 #include <dsn/dist/replication/replication_service_app.h>

@@ -34,20 +34,24 @@
  */
 
 #pragma once
+#include <iostream>
+
+#include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/dist/replication/storage_serverlet.h>
+
 #include "simple_kv.code.definition.h"
 #include "simple_kv.types.h"
-#include <iostream>
 
 namespace dsn {
 namespace replication {
 namespace application {
-class simple_kv_service : public ::dsn::serverlet<simple_kv_service>
+class simple_kv_service : public replication_app_base, public storage_serverlet<simple_kv_service>
 {
 public:
-    simple_kv_service() : ::dsn::serverlet<simple_kv_service>("simple_kv") {}
-
+    simple_kv_service(replica *r) : replication_app_base(r) {}
     virtual ~simple_kv_service() {}
 
+    virtual int on_request(dsn_message_t request) override { return handle_request(request); }
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ
@@ -72,22 +76,28 @@ protected:
         reply(resp);
     }
 
-public:
-    void open_service(dsn_gpid gpid)
+    static void register_rpc_handlers()
     {
-        this->register_async_rpc_handler(
-            RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", &simple_kv_service::on_read, gpid);
-        this->register_async_rpc_handler(
-            RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", &simple_kv_service::on_write, gpid);
-        this->register_async_rpc_handler(
-            RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", &simple_kv_service::on_append, gpid);
+        register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, "read", on_read);
+        register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, "write", on_write);
+        register_async_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, "append", on_append);
     }
 
-    void close_service(dsn_gpid gpid)
+private:
+    static void
+    on_read(simple_kv_service *svc, const std::string &key, dsn::rpc_replier<std::string> &reply)
     {
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_READ, gpid);
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_WRITE, gpid);
-        this->unregister_rpc_handler(RPC_SIMPLE_KV_SIMPLE_KV_APPEND, gpid);
+        svc->on_read(key, reply);
+    }
+    static void
+    on_write(simple_kv_service *svc, const kv_pair &pr, dsn::rpc_replier<int32_t> &reply)
+    {
+        svc->on_write(pr, reply);
+    }
+    static void
+    on_append(simple_kv_service *svc, const kv_pair &pr, dsn::rpc_replier<int32_t> &reply)
+    {
+        svc->on_append(pr, reply);
     }
 };
 }

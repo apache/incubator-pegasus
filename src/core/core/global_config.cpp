@@ -38,8 +38,8 @@
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/network.h>
 #include <dsn/utility/singleton_store.h>
+#include <dsn/utility/configuration.h>
 #include "library_utils.h"
-#include "app_manager.h"
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -424,11 +424,11 @@ bool service_spec::init_app_specs()
     // register mimic app
     dsn_app dapp;
     memset(&dapp, 0, sizeof(dapp));
-    dapp.mask = DSN_APP_MASK_APP;
     strcpy(dapp.type_name, mimic_app_role_name);
-    dapp.layer1.create = mimic_app_create;
-    dapp.layer1.destroy = mimic_app_destroy;
-    dapp.layer1.start = mimic_app_start;
+    dapp.create = mimic_app_create;
+    dapp.destroy = mimic_app_destroy;
+    dapp.start = mimic_app_start;
+    dapp.intercepted_request = nullptr;
     dsn_register_app(&dapp);
 
     // init service apps

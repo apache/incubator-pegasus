@@ -35,13 +35,14 @@
 
 #pragma once
 
+#include <sstream>
+
 #include <dsn/utility/ports.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/tool-api/global_config.h>
+#include <dsn/tool-api/task.h>
 #include <dsn/cpp/auto_codes.h>
-#include <sstream>
 #include <dsn/utility/synchronize.h>
-#include "app_manager.h"
 
 namespace dsn {
 
@@ -110,10 +111,9 @@ public:
     bool rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid);
     rpc_handler_info *rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
 
-    dsn_app_info *get_l1_info() { return &_app_info; }
-    app_manager &get_l2_handler() { return _layer2_handler; }
-    void handle_l2_rpc_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
-    rpc_request_task *generate_l2_rpc_request_task(message_ex *req);
+    dsn_app_info *get_app_info() { return &_app_info; }
+    void handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
+    rpc_request_task *generate_intercepted_request_task(message_ex *req);
 
     static dsn_error_t start_app(void *app_context,
                                  const std::string &args,
@@ -130,10 +130,8 @@ private:
     std::unordered_map<task_queue *, io_engine> _per_queue_ios;
     std::list<io_engine> _ios; // all ios
 
-    // when this app is hosted by a layer2 handler app
-    app_manager _layer2_handler;
-    rpc_handler_info _layer2_rpc_read_handler;
-    rpc_handler_info _layer2_rpc_write_handler;
+    rpc_handler_info _intercepted_read;
+    rpc_handler_info _intercepted_write;
 
 private:
     error_code init_io_engine(io_engine &io, ioe_mode mode);

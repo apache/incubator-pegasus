@@ -38,7 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/utility/factory_store.h>
-#include "replication_app_base.h"
+#include <dsn/dist/replication/replication_app_base.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -197,7 +197,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     error_code err;
     std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
-    _app.reset(new replication_app_base(this));
+    _app.reset(replication_app_base::new_storage_instance(_app_info.app_type, this));
     dassert(nullptr == _private_log, "private log must not be initialized yet");
 
     if (create_new) {

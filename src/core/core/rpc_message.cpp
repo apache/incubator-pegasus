@@ -68,6 +68,9 @@ DSN_API dsn_message_t dsn_msg_create_received_request(dsn_task_code_t rpc_code,
     ::dsn::blob bb((const char *)buffer, 0, size);
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
+    const char *name = dsn_task_code_to_string(rpc_code);
+    strncpy(msg->header->rpc_name, name, strlen(name));
+
     msg->header->client.thread_hash = thread_hash;
     msg->header->client.partition_hash = partition_hash;
     msg->header->context.u.serialize_format = serialization_type;

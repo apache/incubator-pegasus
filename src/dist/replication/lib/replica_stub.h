@@ -44,6 +44,7 @@
 #include "../client_lib/replication_common.h"
 #include "../client_lib/fs_manager.h"
 #include "../client_lib/block_service_manager.h"
+#include "replica.h"
 
 #include <dsn/cpp/perf_counter_.h>
 #include <dsn/dist/failure_detector_multimaster.h>
@@ -62,6 +63,9 @@ typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(
     ::dsn::rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
     replica_state_subscriber;
+
+class replica_stub;
+typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {

@@ -119,6 +119,7 @@ public:
 //
 // this class is thread safe
 //
+class replica;
 class mutation_log : public ref_counter, public virtual clientlet
 {
 public:
@@ -368,15 +369,14 @@ private:
                                      // used for limiting garbage collection of shared log, because
                                      // the ending of private log should be covered by shared log
 };
+typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
 
 class mutation_log_shared : public mutation_log
 {
 public:
     mutation_log_shared(const std::string &dir, int32_t max_log_file_mb, bool force_flush)
-        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
-          _is_writing(false),
-          _pending_write_start_offset(0),
-          _force_flush(force_flush)
+        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr), _is_writing(false),
+          _pending_write_start_offset(0), _force_flush(force_flush)
     {
     }
 
@@ -426,8 +426,7 @@ public:
                          uint32_t batch_buffer_bytes,
                          uint32_t batch_buffer_max_count,
                          uint64_t batch_buffer_flush_interval_ms)
-        : mutation_log(dir, max_log_file_mb, gpid, r),
-          _batch_buffer_bytes(batch_buffer_bytes),
+        : mutation_log(dir, max_log_file_mb, gpid, r), _batch_buffer_bytes(batch_buffer_bytes),
           _batch_buffer_max_count(batch_buffer_max_count),
           _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
     {

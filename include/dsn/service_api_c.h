@@ -98,5 +98,3 @@
 // command line interface registration and invocation,
 // etc.
 #include <dsn/c/api_utilities.h>
-
-#include <dsn/c/api_layer2.h>

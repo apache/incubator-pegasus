@@ -3,10 +3,11 @@
 
 #include <dsn/utility/factory_store.h>
 #include <dsn/dist/error_code.h>
+#include <dsn/dist/replication/replication_app_base.h>
+
 #include "replica.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "replication_app_base.h"
 #include "../client_lib/block_service_manager.h"
 
 #ifdef __TITLE__
