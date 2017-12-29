@@ -86,6 +86,10 @@ func (p *pegasusClient) Del(ctx context.Context, tableName string, hashKey []byt
 // it will reuse the previous connection to the table.
 func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {
 	tb, err := func() (TableConnector, error) {
+		// ensure there's only one goroutine trying to connect this table.
+		p.mu.Lock()
+		defer p.mu.Unlock()
+
 		if tb := p.findTable(tableName); tb != nil {
 			return tb, nil
 		}
@@ -95,21 +99,14 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 		if err != nil {
 			return nil, err
 		}
-
-		p.mu.Lock()
 		p.tables[tableName] = tb
-		p.mu.Unlock()
 
 		return tb, nil
 	}()
 	return tb, wrapError(err, OpQueryConfig)
 }
 
-//
 func (p *pegasusClient) findTable(tableName string) TableConnector {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
 	if tb, ok := p.tables[tableName]; ok {
 		return tb
 	}

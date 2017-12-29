@@ -62,16 +62,21 @@ func connectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		return nil, err
 	}
 
-	p.tom.Go(p.loopForAutoUpdate)
+	// p.tom.Go(p.loopForAutoUpdate)
 	return p, nil
 }
 
 func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	resp, err := p.meta.QueryConfig(ctx, p.tableName)
+	defer func() {
+		p.lastConfUpdateTime = time.Now()
+	}()
+
 	if err != nil {
 		return fmt.Errorf("connect table(%s): %s", p.tableName, err)
 	}
 	if resp.Err.Errno != base.ERR_OK.String() {
+		// TODO(wutao1): convert Errno(type string) to base.ErrType
 		return fmt.Errorf("connect table(%s): %s", p.tableName, resp.Err.Errno)
 	}
 
@@ -87,8 +92,6 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 		p.parts[pconf.Pid.PartitionIndex] = r
 	}
 	p.mu.Unlock()
-
-	p.lastConfUpdateTime = time.Now()
 
 	return nil
 }
@@ -135,12 +138,7 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 		}
 
 		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid := p.getGpid(hashKey)
-
-		part, err := p.getPartitionOrFail(gpid.PartitionIndex)
-		if err != nil {
-			return nil, err
-		}
+		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Get(ctx, gpid, key)
 		if err != nil {
@@ -157,7 +155,6 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 }
 
 func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
-	var gpid *base.Gpid
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
 			return err
@@ -165,12 +162,7 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 
 		key := encodeHashKeySortKey(hashKey, sortKey)
 		val := &base.Blob{Data: value}
-		gpid = p.getGpid(hashKey)
-
-		part, err := p.getPartitionOrFail(gpid.PartitionIndex)
-		if err != nil {
-			return err
-		}
+		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Put(ctx, gpid, key, val)
 		if err != nil {
@@ -189,12 +181,7 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		}
 
 		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid := p.getGpid(hashKey)
-
-		part, err := p.getPartitionOrFail(gpid.PartitionIndex)
-		if err != nil {
-			return err
-		}
+		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Del(ctx, gpid, key)
 		if err != nil {
@@ -206,15 +193,17 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 	return wrapError(err, OpDel)
 }
 
-func (p *pegasusTableConnector) getPartitionOrFail(partIdx int32) (*session.ReplicaSession, error) {
+func (p *pegasusTableConnector) getPartition(hashKey []byte) (*base.Gpid, *session.ReplicaSession) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if int(partIdx) >= len(p.parts) {
-		return nil, p.handleErrorCode(base.ERR_OBJECT_NOT_FOUND)
+	gpid := &base.Gpid{
+		Appid:          p.appId,
+		PartitionIndex: int32(crc64Hash(hashKey) % uint64(len(p.parts))),
 	}
+	part := p.parts[gpid.PartitionIndex].session
 
-	return p.parts[partIdx].session, nil
+	return gpid, part
 }
 
 func (p *pegasusTableConnector) Close() error {
@@ -277,6 +266,7 @@ func (p *pegasusTableConnector) doHandleError(respErr base.ErrType, err error) e
 // 	- Every [5, 10) seconds it will query meta for configuration.
 //  - When a table operation encountered error, it will trigger a
 //	  new round of self update if there's no one in progress.
+//  -
 //
 func (p *pegasusTableConnector) loopForAutoUpdate() error {
 	for {
@@ -288,22 +278,25 @@ func (p *pegasusTableConnector) loopForAutoUpdate() error {
 		case <-p.tom.Dying():
 			return nil
 		}
-	}
-	return nil
-}
 
-func (p *pegasusTableConnector) selfUpdate() {
-	if time.Now().Sub(p.lastConfUpdateTime) < time.Second {
 		// sleep a while
 		select {
 		case <-time.After(time.Second):
 		case <-p.tom.Dying():
-			return
+			return nil
 		}
+	}
+	return nil
+}
+
+func (p *pegasusTableConnector) selfUpdate() bool {
+	if time.Now().Sub(p.lastConfUpdateTime) < 5*time.Second {
+		return false
 	}
 
 	// ignore the returned error
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*200)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	p.updateConf(ctx)
 
 	// flush confUpdateCh
@@ -311,4 +304,6 @@ func (p *pegasusTableConnector) selfUpdate() {
 	case <-p.confUpdateCh:
 	default:
 	}
+
+	return true
 }

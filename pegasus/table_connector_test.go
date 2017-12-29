@@ -6,6 +6,7 @@ package pegasus
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -56,6 +57,7 @@ func TestPegasusTableConnector_Del(t *testing.T) {
 	assert.Nil(t, value)
 }
 
+// Ensure that table connector will update configuration after at most 10 second.
 func TestPegasusTableConnector_AutoUpdate(t *testing.T) {
 	defer leaktest.CheckTimeout(t, time.Second*11)()
 
@@ -74,4 +76,59 @@ func TestPegasusTableConnector_AutoUpdate(t *testing.T) {
 
 	time.Sleep(time.Second * 10)
 	assert.Equal(t, len(ptb.parts), 8)
+}
+
+func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	ptb.handleError(errors.New("not nil"))
+	<-ptb.confUpdateCh
+
+	ptb.handleErrorCode(base.ERR_OBJECT_NOT_FOUND)
+	<-ptb.confUpdateCh
+
+	ptb.handleErrorCode(base.ERR_INVALID_STATE)
+	<-ptb.confUpdateCh
+
+	// self update can not be triggered by other error codes.
+	ptb.handleErrorCode(base.ERR_CLIENT_FAILED)
+	select {
+	case <-ptb.confUpdateCh:
+	default:
+		assert.True(t, true)
+	}
+}
+
+func TestPegasusTableConnector_SubsequentSelfUpdate(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	count := 0
+	for i := 0; i < 10; i++ {
+		if ptb.selfUpdate() {
+			count++
+		}
+	}
+	assert.Equal(t, count, 0)
 }

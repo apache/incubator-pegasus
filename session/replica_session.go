@@ -6,9 +6,10 @@ package session
 
 import (
 	"context"
+	"sync"
+
 	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/pegasus-go-client/idl/rrdb"
-	"sync"
 )
 
 // ReplicaSession represents the network session between client and
@@ -37,6 +38,7 @@ func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Bl
 func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, key *base.Blob, value *base.Blob) (*rrdb.UpdateResponse, error) {
 	update := &rrdb.UpdateRequest{Key: key, Value: value}
 	args := &rrdb.RrdbPutArgs{Update: update}
+
 	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_PUT")
 	if err != nil {
 		return nil, err
