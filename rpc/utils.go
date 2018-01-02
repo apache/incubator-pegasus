@@ -9,6 +9,7 @@ import (
 	"net"
 )
 
+// err requires to be non-nil
 func IsRetryableError(err error) bool {
 	opErr, ok := err.(*net.OpError)
 	if ok {

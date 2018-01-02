@@ -151,7 +151,7 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 	}
 }
 
-func TestPegasusClient_ConcurrentSet(t *testing.T) {
+func TestPegasusClient_ConcurrentDel(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	cfg := Config{
@@ -161,8 +161,11 @@ func TestPegasusClient_ConcurrentSet(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
+	client.OpenTable(context.Background(), "temp")
+	time.Sleep(time.Second)
+
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 
 		id := i
@@ -170,9 +173,8 @@ func TestPegasusClient_ConcurrentSet(t *testing.T) {
 			ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 			hashKey := []byte(fmt.Sprintf("h%d", id))
 			sortKey := []byte(fmt.Sprintf("s%d", id))
-			value := []byte(fmt.Sprintf("v%d", id))
 
-			err := client.Set(ctx, "temp", hashKey, sortKey, value)
+			err := client.Del(ctx, "temp", hashKey, sortKey)
 			assert.Nil(t, err)
 
 			wg.Done()

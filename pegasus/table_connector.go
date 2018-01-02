@@ -62,7 +62,7 @@ func connectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		return nil, err
 	}
 
-	// p.tom.Go(p.loopForAutoUpdate)
+	p.tom.Go(p.loopForAutoUpdate)
 	return p, nil
 }
 
@@ -94,13 +94,6 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	p.mu.Unlock()
 
 	return nil
-}
-
-func (p *pegasusTableConnector) getGpid(hashKey []byte) *base.Gpid {
-	return &base.Gpid{
-		Appid:          p.appId,
-		PartitionIndex: int32(crc64Hash(hashKey) % uint64(len(p.parts))),
-	}
 }
 
 func validateHashKey(hashKey []byte) error {
@@ -193,13 +186,17 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 	return wrapError(err, OpDel)
 }
 
+func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
+	return int32(crc64Hash(hashKey) % uint64(partitionCount))
+}
+
 func (p *pegasusTableConnector) getPartition(hashKey []byte) (*base.Gpid, *session.ReplicaSession) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	gpid := &base.Gpid{
 		Appid:          p.appId,
-		PartitionIndex: int32(crc64Hash(hashKey) % uint64(len(p.parts))),
+		PartitionIndex: getPartitionIndex(hashKey, len(p.parts)),
 	}
 	part := p.parts[gpid.PartitionIndex].session
 

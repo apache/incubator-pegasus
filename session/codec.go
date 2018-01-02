@@ -64,7 +64,9 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 
 	iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
 	ec := &base.ErrorCode{}
-	ec.Read(iprot)
+	if err := ec.Read(iprot); err != nil {
+		return err
+	}
 	if ec.Errno != base.ERR_OK.String() {
 		err := fmt.Errorf("[%s] request failed with error: %s", r.name, ec.Errno)
 		return err

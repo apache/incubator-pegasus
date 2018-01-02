@@ -9,9 +9,11 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/fortytw2/leaktest"
 	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/pegasus-go-client/idl/replication"
@@ -74,7 +76,7 @@ func TestNodeSession_LoopForResponse(t *testing.T) {
 	defer n.Close()
 
 	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, 0)
+	binary.BigEndian.PutUint32(buf, 4)
 	reader.Write(buf)
 
 	// reading a response with seqid = 1
@@ -193,6 +195,7 @@ func TestCodec_Marshal(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+// TODO(wutao1): We didn't pass this test.
 // In this test we send the rpc request to an echo server,
 // and verify that if nodeSession correctly receives the response.
 func TestNodeSession_CallToEcho(t *testing.T) {
@@ -236,4 +239,58 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 
 	assert.Equal(t, expected, actual)
 	n.Close()
+}
+
+// Ensure that concurrent calls won't cause error.
+// The only difference between this test and TestNodeSession_ConcurrentCall is
+// that it sends rpc to echo server rather than meta server.
+func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	// start echo server first
+	meta := newMetaSession("0.0.0.0:8800")
+
+	mockCodec := &MockCodec{}
+	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
+		r, _ := v.(*rpcCall)
+		marshaled, _ := PegasusCodec{}.Marshal(r)
+
+		// prefixed with length
+		buf := make([]byte, 4+len(marshaled))
+		binary.BigEndian.PutUint32(buf, uint32(len(marshaled)))
+		copy(buf[4:], marshaled)
+
+		return buf, nil
+	})
+	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
+		r, _ := v.(*rpcCall)
+
+		assert.True(t, len(data) > thriftHeaderBytesLen)
+		data = data[thriftHeaderBytesLen:]
+		iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
+		_, _, seqId, err := iprot.ReadMessageBegin()
+		if err != nil {
+			return err
+		}
+		r.seqId = seqId
+		r.result = rrdb.NewMetaQueryCfgResult()
+
+		return nil
+	})
+	meta.codec = mockCodec
+
+	// wait for connection becoming ready
+	time.Sleep(time.Millisecond * 500)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			meta.queryConfig(context.Background(), "temp")
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	meta.Close()
 }

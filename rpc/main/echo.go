@@ -12,7 +12,8 @@ import (
 )
 
 // This is an echo server(localhost:8800) we used for testing
-// the rpc implementation.
+// the rpc implementation. For debugging purpose we don't use
+// the inetd echo service (port 7).
 
 func main() {
 	log.Printf("echo-server listening on tcp port 8800")

@@ -230,20 +230,26 @@ func (n *nodeSession) writeRequest(r *rpcCall) error {
 
 // readResponse returns nil rpcCall if error encountered.
 func (n *nodeSession) readResponse() (*rpcCall, error) {
-	buf, err := n.conn.Read(4)
-	if err != nil && len(buf) < 4 {
+	// read length field
+	lenBuf, err := n.conn.Read(4)
+	if err != nil && len(lenBuf) < 4 {
 		return nil, err
 	}
-	resplen := binary.BigEndian.Uint32(buf)
-	buf, err = n.conn.Read(int(resplen))
+	resplen := binary.BigEndian.Uint32(lenBuf)
+	if resplen < 4 {
+		return nil, fmt.Errorf("response length(%d) smaller than 4 bytes", resplen)
+	}
+	resplen -= 4 // 4 bytes for length
+
+	// read data field
+	buf, err := n.conn.Read(int(resplen))
 	if err != nil && len(buf) != int(resplen) {
 		return nil, err
 	}
 
 	r := &rpcCall{}
-	err = n.codec.Unmarshal(buf, r)
-
-	if err != nil {
+	if err := n.codec.Unmarshal(buf, r); err != nil {
+		n.logger.Printf("failed to unmarshal response [%s, %s]: %s", n.ntype, n.addr, err)
 		return nil, err
 	}
 	return r, nil

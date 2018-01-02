@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/fortytw2/leaktest"
@@ -52,4 +53,24 @@ func TestMetaSession_MustQueryLeader(t *testing.T) {
 	ms.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
+}
+
+// Ensure that concurrent query_config calls won't make errors.
+func TestNodeSession_ConcurrentCall(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	meta := newMetaSession("0.0.0.0:34601")
+	defer meta.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			_, err := meta.queryConfig(context.Background(), "temp")
+			assert.Nil(t, err)
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
