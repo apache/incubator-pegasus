@@ -547,15 +547,17 @@ void meta_service_test_app::policy_context_test()
 
         {
             std::cout << "first backup & cur_time.hour == start_time.hour" << std::endl;
+            mp._policy.start_time.hour = hour;
             ASSERT_TRUE(mp.should_start_backup_unlocked());
         }
 
         {
-
             std::cout << "first backup & cur_time.hour != start_time.hour" << std::endl;
-            mp._policy.start_time.hour = hour + 100;
+            mp._policy.start_time.hour = hour + 100; // invalid time
             ASSERT_FALSE(mp.should_start_backup_unlocked());
-            mp._policy.start_time.hour = 25 - hour;
+            mp._policy.start_time.hour = (hour + 1) % 24; // valid, but not reach
+            ASSERT_FALSE(mp.should_start_backup_unlocked());
+            mp._policy.start_time.hour = hour - 1; // time passed(also, include -1)
             ASSERT_FALSE(mp.should_start_backup_unlocked());
         }
 
