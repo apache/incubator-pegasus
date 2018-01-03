@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 #include <boost/lexical_cast.hpp>
 
+#include "global_env.h"
+
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
@@ -19,7 +21,9 @@ class restore_test : public testing::Test
 public:
     virtual void SetUp() override
     {
-        get_pegasus_root_dir();
+        pegasus_root_dir = global_env::instance()._pegasus_root;
+        working_root_dir = global_env::instance()._working_dir;
+
         chdir(pegasus_root_dir.c_str());
         cluster_name = utils::filesystem::path_combine(pegasus_root_dir, backup_data_dir);
         system("pwd");
@@ -30,8 +34,10 @@ public:
         cmd = cmd + std::string("\" src/server/config-server.ini");
         system(cmd.c_str());
         std::this_thread::sleep_for(std::chrono::seconds(3));
-        system("./run.sh clear_onebox 1>/dev/null 2>&1; echo clear_onebox $?; "
-               "./run.sh start_onebox 1>/dev/null 2>&1; echo start_onebox $?");
+        system("./run.sh clear_onebox");
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        system("./run.sh start_onebox");
+        std::this_thread::sleep_for(std::chrono::seconds(3));
 
         std::vector<dsn::rpc_address> meta_list;
         replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
@@ -68,15 +74,18 @@ public:
 
     virtual void TearDown() override
     {
-        system("./run.sh clear_onebox 1>/dev/null 2>&1; echo clear_onebox $?");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        system("./run.sh clear_onebox");
+        std::this_thread::sleep_for(std::chrono::seconds(3));
         // TODO: when teardown must recover config-server.ini
         system("git checkout -- src/server/config-server.ini");
-        system("./run.sh start_onebox 1>/dev/null 2>&1; echo start_onebox $?");
-        std::cout << "sleep 20s to restart onebox" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(20));
+        system("./run.sh start_onebox");
+        std::cout << "sleep 10s to restart onebox" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(10));
         std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
+
+        // go back to working dir
+        chdir(working_root_dir.c_str());
     }
 
     void write_data()
@@ -132,9 +141,9 @@ public:
 
     bool restore()
     {
-        system("./run.sh clear_onebox 1>/dev/null 2>&1; echo clear_onebox $?");
+        system("./run.sh clear_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
-        system("./run.sh start_onebox 1>/dev/null 2>&1;  echo start_onebox $?");
+        system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
         time_stamp = get_first_backup_timestamp();
         std::cout << "first backup_timestamp = " << time_stamp << std::endl;
@@ -153,38 +162,6 @@ public:
             // sleep for at most 2min to wait app is fully healthy
             bool ret = wait_app_healthy(120);
             return ret;
-        }
-    }
-
-    // utils function
-    // get current dir and the project root
-    void get_pegasus_root_dir()
-    {
-        const char *cmd = "readlink /proc/`ps aux | grep pegasus_server | grep @ | sed -n \"1p\" | "
-                          "awk '{print $2}'`/cwd";
-        std::stringstream ss;
-        pipe_execute(cmd, ss);
-
-        // get the dir of a process in onebox, say: $PEGASUS/onebox/meta1
-        char task_target[512];
-        ss >> task_target;
-
-        pegasus_root_dir = dirname(dirname(task_target));
-        std::cout << "get project root: " << pegasus_root_dir << std::endl;
-
-        dassert(getcwd(task_target, sizeof(task_target)) != nullptr, "");
-        working_root_dir = task_target;
-    }
-
-    // exec command and get the stdout of the command
-    static void pipe_execute(const char *command, std::stringstream &output)
-    {
-        std::array<char, 256> buffer;
-
-        std::shared_ptr<FILE> command_pipe(popen(command, "r"), pclose);
-        while (!feof(command_pipe.get())) {
-            if (fgets(buffer.data(), 256, command_pipe.get()) != NULL)
-                output << buffer.data();
         }
     }
 
@@ -241,7 +218,6 @@ public:
     bool wait_backup_complete(int64_t seconds)
     {
         // wait backup the first backup complete at most (seconds)second
-
         int64_t sleep_time = 0;
         bool is_backup_complete = false;
         while (seconds > 0 && !is_backup_complete) {
@@ -268,7 +244,7 @@ public:
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
-        pipe_execute(cmd.c_str(), ss);
+        global_env::pipe_execute(cmd.c_str(), ss);
         std::string result = ss.str();
         // should remove \n character
         int32_t index = result.size();
