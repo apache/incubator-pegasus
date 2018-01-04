@@ -1,4 +1,5 @@
 #include <dsn/utility/extensible_object.h>
+#include <boost/lexical_cast.hpp>
 #include "server_load_balancer.h"
 
 #ifdef __TITLE__
@@ -746,6 +747,50 @@ pc_status simple_load_balancer::on_redundant_secondary(meta_view &view, const ds
     // TODO: treat remove as cure proposals too
     get_config_context(*view.apps, gpid)->lb_actions.assign_balancer_proposals({action});
     return pc_status::ill;
+}
+
+static void free_string_in_cli_reply(dsn_cli_reply reply)
+{
+    std::string *s = reinterpret_cast<std::string *>(reply.context);
+    delete s;
+}
+
+void simple_load_balancer::register_ctrl_commands()
+{
+    _ctrl_assign_delay_ms =
+        dsn_cli_app_register("lb.assign_delay_ms",
+                             "control the replica_assign_delay_ms_for_dropouts config",
+                             "lb.assign_delay_ms [num | DEFAULT]",
+                             (void *)this,
+                             [](void *context, int argc, const char **argv, dsn_cli_reply *reply) {
+                                 simple_load_balancer *lb =
+                                     reinterpret_cast<simple_load_balancer *>(context);
+                                 lb->ctrl_assign_delay_ms(argc, argv, reply);
+                             },
+                             free_string_in_cli_reply);
+}
+
+void simple_load_balancer::ctrl_assign_delay_ms(int argc, const char **argv, dsn_cli_reply *reply)
+{
+    std::string *ret_msg = new std::string("OK");
+    if (argc <= 0) {
+        *ret_msg = boost::lexical_cast<std::string>(replica_assign_delay_ms_for_dropouts);
+    } else {
+        if (strcmp(argv[0], "DEFAULT") == 0) {
+            replica_assign_delay_ms_for_dropouts =
+                _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
+        } else {
+            int v = atoi(argv[0]);
+            if (v <= 0) {
+                *ret_msg = "ERR: invalid arguments";
+            } else {
+                replica_assign_delay_ms_for_dropouts = v;
+            }
+        }
+    }
+    reply->context = ret_msg;
+    reply->message = (const char *)ret_msg->c_str();
+    reply->size = ret_msg->size();
 }
 
 pc_status simple_load_balancer::cure(meta_view view,

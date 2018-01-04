@@ -60,7 +60,7 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : simple_load_bal
         _only_move_primary = false;
     }
 
-    register_ctrl_commands();
+    greedy_load_balancer::register_ctrl_commands();
 }
 
 greedy_load_balancer::~greedy_load_balancer()

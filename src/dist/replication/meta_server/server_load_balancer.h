@@ -175,7 +175,14 @@ public:
             mutation_2pc_min_replica_count = 0;
             replica_assign_delay_ms_for_dropouts = 0;
         }
+
+        register_ctrl_commands();
     }
+    virtual ~simple_load_balancer()
+    {
+        dsn_cli_deregister(_ctrl_assign_delay_ms);
+    }
+
     bool balance(meta_view, migration_list &list) override
     {
         list.clear();
@@ -208,8 +215,13 @@ protected:
     pc_status on_missing_secondary(meta_view &view, const dsn::gpid &gpid);
     pc_status on_redundant_secondary(meta_view &view, const dsn::gpid &gpid);
 
+    void register_ctrl_commands();
+    void ctrl_assign_delay_ms(int argc, const char **argv, dsn_cli_reply *reply);
+
     int32_t mutation_2pc_min_replica_count;
     uint64_t replica_assign_delay_ms_for_dropouts;
+
+    dsn_handle_t _ctrl_assign_delay_ms;
 };
 }
 }
