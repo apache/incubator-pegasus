@@ -33,9 +33,8 @@ func TestNodeSession_Call(t *testing.T) {
 	meta := newMetaSession("0.0.0.0:34601")
 	defer meta.Close()
 
-	resp, err := meta.queryConfig(context.Background(), "temp")
+	_, err := meta.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
-	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 }
 
 func TestMetaSession_MustQueryLeader(t *testing.T) {

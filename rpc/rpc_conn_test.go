@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"context"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/tomb.v2"
@@ -124,4 +125,12 @@ func TestRpcConn_WriteAndRead(t *testing.T) {
 	actual, err = conn.Read(5)
 	assert.Nil(t, err)
 	assert.Equal(t, data, actual)
+}
+
+func Test_IsRetryableError(t *testing.T) {
+	// timeout error but not a network error
+	assert.False(t, IsRetryableError(context.DeadlineExceeded))
+
+	err := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:12321").TryConnect()
+	assert.True(t, IsRetryableError(err))
 }

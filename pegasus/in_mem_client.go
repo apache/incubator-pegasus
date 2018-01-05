@@ -2,17 +2,16 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-package pegatest
+package pegasus
 
 import (
 	"context"
 
 	"github.com/pegasus-kv/pegasus-go-client/pegalog"
-	"github.com/pegasus-kv/pegasus-go-client/pegasus"
 )
 
 // Create a fake client to pegasus which keeps everything in memory.
-func NewClientInMemory() pegasus.Client {
+func NewClientInMemory() Client {
 	return &inMemClient{
 		tables: make(map[string]*inMemTableConnector),
 		logger: pegalog.GetLogger(),
@@ -40,7 +39,7 @@ func (p *inMemClient) Del(ctx context.Context, tableName string, hashKey []byte,
 	return tb.Del(ctx, hashKey, sortKey)
 }
 
-func (p *inMemClient) OpenTable(ctx context.Context, tableName string) (pegasus.TableConnector, error) {
+func (p *inMemClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {
 	tb, ok := p.tables[tableName]
 	if !ok {
 		tb = &inMemTableConnector{

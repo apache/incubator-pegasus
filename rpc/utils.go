@@ -5,12 +5,12 @@
 package rpc
 
 import (
-	"io"
 	"net"
 )
 
 // err requires to be non-nil
 func IsRetryableError(err error) bool {
+	// if it's a network timeout error
 	opErr, ok := err.(*net.OpError)
 	if ok {
 		return opErr.Timeout()
@@ -21,5 +21,5 @@ func IsRetryableError(err error) bool {
 		return true
 	}
 
-	return err == io.EOF
+	return false
 }

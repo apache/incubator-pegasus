@@ -69,25 +69,14 @@ type ReplicaManager struct {
 }
 
 // Create a new session to the replica server if no existing one.
-func (rm *ReplicaManager) GetReplica(addr string) (rs *ReplicaSession) {
-	if rs = rm.findReplica(addr); rs == nil {
-		// unable to create connection to the replica
-		rm.Lock()
-		defer rm.Unlock()
-		rs = newReplicaSession(addr)
-		rm.replicas[addr] = rs
-		return
-	}
-	return
-}
+func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
+	rm.Lock()
+	defer rm.Unlock()
 
-func (rm *ReplicaManager) findReplica(addr string) (rs *ReplicaSession) {
-	rm.RLock()
-	defer rm.RUnlock()
-	if rs, ok := rm.replicas[addr]; ok {
-		return rs
+	if _, ok := rm.replicas[addr]; !ok {
+		rm.replicas[addr] = newReplicaSession(addr)
 	}
-	return nil
+	return rm.replicas[addr]
 }
 
 func NewReplicaManager() *ReplicaManager {
@@ -101,9 +90,7 @@ func (rm *ReplicaManager) Close() error {
 	defer rm.Unlock()
 
 	for _, r := range rm.replicas {
-		if err := r.Close(); err != nil {
-			return err
-		}
+		<-r.Close()
 	}
 	return nil
 }

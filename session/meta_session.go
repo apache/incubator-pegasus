@@ -112,9 +112,7 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 
 func (m *MetaManager) Close() error {
 	for _, ns := range m.metas {
-		if err := ns.Close(); err != nil {
-			return err
-		}
+		<-ns.Close()
 	}
 	return nil
 }

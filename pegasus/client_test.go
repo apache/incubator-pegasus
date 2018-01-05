@@ -7,6 +7,7 @@ package pegasus
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -175,6 +176,41 @@ func TestPegasusClient_ConcurrentDel(t *testing.T) {
 			sortKey := []byte(fmt.Sprintf("s%d", id))
 
 			err := client.Del(ctx, "temp", hashKey, sortKey)
+			assert.Nil(t, err)
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
+func TestPegasusClient_ConcurrentSetAndDel(t *testing.T) {
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+
+		// sleep from 50ms to 150ms
+		randTime := time.Duration((rand.Intn(3) + 1) * 50)
+		time.Sleep(randTime * time.Millisecond)
+
+		id := i
+		go func() {
+			ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+			hashKey := []byte(fmt.Sprintf("h%d", id))
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			value := []byte(fmt.Sprintf("v%d", id))
+
+			err := client.Set(ctx, "temp", hashKey, sortKey, value)
+			assert.Nil(t, err)
+
+			err = client.Del(ctx, "temp", hashKey, sortKey)
 			assert.Nil(t, err)
 
 			wg.Done()

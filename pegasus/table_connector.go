@@ -66,6 +66,7 @@ func connectTable(ctx context.Context, tableName string, meta *session.MetaManag
 	return p, nil
 }
 
+// Update configuration of this table.
 func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	resp, err := p.meta.QueryConfig(ctx, p.tableName)
 	defer func() {
@@ -103,6 +104,8 @@ func validateHashKey(hashKey []byte) error {
 	return nil
 }
 
+// Wraps up the internal errors for ensuring that all types of errors
+// returned by public interfaces are pegasus.PError.
 func wrapError(err error, op OpType) error {
 	if err != nil {
 		if pe, ok := err.(*PError); ok {
@@ -209,9 +212,7 @@ func (p *pegasusTableConnector) Close() error {
 		err := p.meta.Close()
 		if err == nil {
 			for _, r := range p.parts {
-				if err = r.session.Close(); err != nil {
-					return err
-				}
+				<-r.session.Close()
 			}
 		}
 		return err
@@ -260,10 +261,9 @@ func (p *pegasusTableConnector) doHandleError(respErr base.ErrType, err error) e
 // version of configuration from meta server automatically.
 // The configuration update strategy can be stated as follow:
 //
-// 	- Every [5, 10) seconds it will query meta for configuration.
+//  - Every [5, 10) seconds it will query meta for configuration.
 //  - When a table operation encountered error, it will trigger a
-//	  new round of self update if there's no one in progress.
-//  -
+//    new round of self update if there's no one in progress.
 //
 func (p *pegasusTableConnector) loopForAutoUpdate() error {
 	for {

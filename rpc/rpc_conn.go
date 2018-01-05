@@ -16,36 +16,43 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-// TODO(wutao1): support connection backoff.
-// see (https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md) for details
-// about connection backoff algorithm implemented in grpc.
-
+// TODO(wutao1): make these parameters configurable
 const (
 	RpcConnKeepAliveInterval = time.Second * 30
 	RpcConnDialTimeout       = time.Second * 5
-	RpcConnMaxRetryNum       = 3
 	RpcConnReadTimeout       = time.Second
+	RpcConnWriteTimeout      = time.Second
 )
 
 type ConnState int
 
 const (
-	ConnStateIdle ConnState = iota
+	// The state that a connection starts from.
+	ConnStateInit ConnState = iota
+
 	ConnStateConnecting
+
 	ConnStateReady
+
+	// The state that indicates some error occurred in the previous operations.
 	ConnStateTransientFailure
+
+	// The state that RpcConn will turn into after Close() is called.
+	ConnStateClosed
 )
 
 func (s ConnState) String() string {
 	switch s {
-	case ConnStateIdle:
-		return "ConnStateIdle"
+	case ConnStateInit:
+		return "ConnStateInit"
 	case ConnStateConnecting:
 		return "ConnStateConnecting"
 	case ConnStateReady:
 		return "ConnStateReady"
 	case ConnStateTransientFailure:
 		return "ConnStateTransientFailure"
+	case ConnStateClosed:
+		return "ConnStateClosed"
 	default:
 		panic("no such state")
 	}
@@ -79,34 +86,45 @@ func (rc *RpcConn) GetState() ConnState {
 	return rc.cstate
 }
 
-// This function is thread-safe.
-func (rc *RpcConn) dial() (err error) {
-	// set state to ConnStateConnecting to
-	// make sure that only 1 goroutine is permitted to dial.
+func (rc *RpcConn) setState(state ConnState) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	if rc.cstate != ConnStateReady && rc.cstate != ConnStateConnecting {
-		rc.cstate = ConnStateConnecting
-		rc.mu.Unlock()
+	rc.cstate = state
+}
 
-		// unlock for blocking call
-		d := &net.Dialer{
-			KeepAlive: RpcConnKeepAliveInterval,
-			Timeout:   RpcConnDialTimeout,
-		}
-		rc.conn, err = d.DialContext(rc.tom.Context(context.Background()), "tcp", rc.Endpoint)
-
+// This function is thread-safe.
+func (rc *RpcConn) TryConnect() (err error) {
+	err = func() error {
+		// set state to ConnStateConnecting to
+		// make sure there's only 1 goroutine dialing simultaneously.
 		rc.mu.Lock()
-		if err != nil {
-			rc.cstate = ConnStateTransientFailure
-			return
-		}
+		defer rc.mu.Unlock()
+		if rc.cstate != ConnStateReady && rc.cstate != ConnStateConnecting {
+			rc.cstate = ConnStateConnecting
+			rc.mu.Unlock()
 
-		tcpConn, _ := rc.conn.(*net.TCPConn)
-		tcpConn.SetNoDelay(true)
-		rc.setReady(rc.conn, rc.conn)
+			// unlock for blocking call
+			d := &net.Dialer{
+				KeepAlive: RpcConnKeepAliveInterval,
+				Timeout:   RpcConnDialTimeout,
+			}
+			rc.conn, err = d.DialContext(rc.tom.Context(context.Background()), "tcp", rc.Endpoint)
+
+			rc.mu.Lock()
+			if err != nil {
+				return err
+			}
+			tcpConn, _ := rc.conn.(*net.TCPConn)
+			tcpConn.SetNoDelay(true)
+			rc.setReady(rc.conn, rc.conn)
+		}
+		return err
+	}()
+
+	if err != nil {
+		rc.setState(ConnStateTransientFailure)
 	}
-	return
+	return err
 }
 
 // This function is thread-safe.
@@ -114,7 +132,7 @@ func (rc *RpcConn) Close() (err error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	rc.cstate = ConnStateIdle
+	rc.cstate = ConnStateClosed
 	if rc.conn != nil {
 		err = rc.conn.Close()
 	}
@@ -124,29 +142,22 @@ func (rc *RpcConn) Close() (err error) {
 }
 
 func (rc *RpcConn) Write(msgBytes []byte) (err error) {
-	for retryNum := 1; retryNum <= RpcConnMaxRetryNum; retryNum++ {
-		// In each Write we impose a read lock on cstate and tom.Go
-		// to prevent Close called right before it starting a goroutine,
-		// since the tom will raise a panic when it runs goroutine
-		// after closed.
+	err = func() error {
 		if rc.GetState() != ConnStateReady {
 			return ErrConnectionNotReady
 		}
 
-		err = rc.wstream.Write(msgBytes)
-		if err != nil {
-			rc.logger.Printf("failed to write [retry %d]: %s", retryNum, err)
-		} else {
-			return nil
+		tcpConn, ok := rc.conn.(*net.TCPConn)
+		if ok {
+			tcpConn.SetWriteDeadline(time.Now().Add(RpcConnWriteTimeout))
 		}
 
-		select {
-		case <-rc.tom.Dying():
-			return rc.tom.Err()
-		default:
-		}
+		return rc.wstream.Write(msgBytes)
+	}()
+
+	if err != nil {
+		rc.setState(ConnStateTransientFailure)
 	}
-
 	return err
 }
 
@@ -157,16 +168,23 @@ func (rc *RpcConn) Write(msgBytes []byte) (err error) {
 // fail and return error immediately.
 // This function is thread-safe.
 func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
-	if rc.GetState() != ConnStateReady {
-		return nil, ErrConnectionNotReady
-	}
+	bytes, err = func() ([]byte, error) {
+		if rc.GetState() != ConnStateReady {
+			return nil, ErrConnectionNotReady
+		}
 
-	tcpConn, ok := rc.conn.(*net.TCPConn)
-	if ok {
-		tcpConn.SetReadDeadline(time.Now().Add(RpcConnReadTimeout))
-	}
+		tcpConn, ok := rc.conn.(*net.TCPConn)
+		if ok {
+			tcpConn.SetReadDeadline(time.Now().Add(RpcConnReadTimeout))
+		}
 
-	bytes, err = rc.rstream.Next(size)
+		bytes, err = rc.rstream.Next(size)
+		return bytes, err
+	}()
+
+	if err != nil && !IsRetryableError(err) {
+		rc.setState(ConnStateTransientFailure)
+	}
 	return bytes, err
 }
 
@@ -175,7 +193,7 @@ func NewRpcConn(parent *tomb.Tomb, addr string) *RpcConn {
 	return &RpcConn{
 		Endpoint: addr,
 		logger:   pegalog.GetLogger(),
-		cstate:   ConnStateIdle,
+		cstate:   ConnStateInit,
 		tom:      parent,
 	}
 }
@@ -191,9 +209,4 @@ func NewFakeRpcConn(parent *tomb.Tomb, reader io.Reader, writer io.Writer) *RpcC
 	conn := NewRpcConn(parent, "")
 	conn.setReady(reader, writer)
 	return conn
-}
-
-// This function is thread-safe.
-func (rc *RpcConn) TryConnect() error {
-	return rc.dial()
 }
