@@ -1,0 +1,240 @@
+#! /usr/bin/env python
+# coding=utf-8
+
+import commands
+from pgclient import *
+from twisted.trial import unittest
+
+
+class ServerOperator(object):
+    shell_path = '/home/mi/dev/pegasus'
+
+    @classmethod
+    def modify_conf(cls, old_conf, new_conf):
+        origin_conf_file = cls.shell_path + '/src/server/config-server.ini'
+        status, output = commands.getstatusoutput('sed -i "s/%s/%s/" %s'
+                                                  % (old_conf, new_conf, origin_conf_file))
+        # print(status, output)
+
+    @classmethod
+    def start_cluster(cls, meta_count, replica_count):
+        status, output = commands.getstatusoutput('cd %s && ./run.sh start_onebox -m %s -r %s'
+                                                  % (cls.shell_path, meta_count, replica_count))
+        # print(status, output)
+        cls.wait_until_cluster_health()
+
+    @classmethod
+    def stop_and_clear_cluster(cls):
+        status, output = commands.getstatusoutput('cd %s && ./run.sh stop_onebox'
+                                                  % cls.shell_path)
+        # print(status, output)
+
+        status, output = commands.getstatusoutput('cd %s && ./run.sh clear_onebox'
+                                                  % cls.shell_path)
+        # print(status, output)
+
+    @classmethod
+    def operate_1_server(cls, op_type, server_type, index):
+        status, output = commands.getstatusoutput('cd %s && ./run.sh %s_onebox_instance -%s %s'
+                                                  % (cls.shell_path, op_type, server_type, index))
+        # print(status, output)
+
+    @classmethod
+    def stop_1_replica(cls, index):
+        cls.operate_1_server('stop', 'r', index)
+
+    @classmethod
+    def start_1_replica(cls, index):
+        cls.operate_1_server('start', 'r', index)
+
+    @classmethod
+    def restart_1_replica(cls, index):
+        cls.operate_1_server('restart', 'r', index)
+
+    @classmethod
+    def stop_1_meta(cls, index):
+        cls.operate_1_server('stop', 'm', index)
+
+    @classmethod
+    def start_1_meta(cls, index):
+        cls.operate_1_server('start', 'm', index)
+
+    @classmethod
+    def wait_until_cluster_health(cls):
+        while True:
+            status, output = commands.getstatusoutput(
+                'cd %s && echo "app temp -d" | ./run.sh shell |'
+                ' grep fully_healthy_partition_count | awk \'{print $NF}\''
+                % cls.shell_path)
+            if status == 0 and output == '8':           # TODO '8' should fix
+                break
+
+
+class TestIntegration(unittest.TestCase):
+    TEST_HKEY = 'test_hkey_1'
+    TEST_SKEY = 'test_skey_1'
+    TEST_VALUE = 'test_value_1'
+    DATA_COUNT = 1000
+    MAX_RETRY_COUNT = 30
+
+    def setUp(self):
+        ServerOperator.stop_and_clear_cluster()
+
+    def tearDown(self):
+        self.c.close()
+        ServerOperator.stop_and_clear_cluster()
+
+    @inlineCallbacks
+    def init(self, meta_count, replica_count, confs=None):
+        if isinstance(confs, dict):
+            for old_conf, new_conf in confs.iteritems():
+                ServerOperator.modify_conf(old_conf, new_conf)
+        ServerOperator.start_cluster(meta_count, replica_count)
+        self.c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+        ret = yield self.c.init()
+        self.assertTrue(ret)
+
+    @inlineCallbacks
+    def loop_op(self):
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.get(self.TEST_HKEY + str(i), self.TEST_SKEY, 200)
+            if not isinstance(ret, tuple) or ret[0] != error_types.ERR_OK.value or ret[1] != self.TEST_VALUE:
+                defer.returnValue(False)
+        defer.returnValue(True)
+
+    @inlineCallbacks
+    def check_data(self):
+        wait_times = 0
+        while True:
+            ret = yield self.loop_op()
+            if not ret:
+                wait_times += 1
+                time.sleep(1)
+                if wait_times >= self.MAX_RETRY_COUNT:
+                    self.assertTrue(False)
+            else:
+                break
+
+    @inlineCallbacks
+    def test_can_not_connect(self):
+        self.c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+        ret = yield self.c.init()
+        self.assertEqual(ret, None)
+
+    @inlineCallbacks
+    def test_1of3_replica_restart(self):
+        yield self.init(3, 3)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        ServerOperator.restart_1_replica(1)
+
+        yield self.check_data()
+
+    @inlineCallbacks
+    def test_3of3_replica_restart(self):
+        yield self.init(3, 3)
+        ServerOperator.wait_until_cluster_health()
+
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        for i in range(1, 4):
+            ServerOperator.restart_1_replica(i)
+
+            yield self.check_data()
+
+    @inlineCallbacks
+    def test_1of5_replica_restart(self):
+        yield self.init(3, 5)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        ServerOperator.restart_1_replica(1)
+
+        yield self.check_data()
+
+    @inlineCallbacks
+    def test_1of5_replica_stop_and_start(self):
+        yield self.init(3, 5)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        ServerOperator.stop_1_replica(1)
+
+        yield self.check_data()
+
+        ServerOperator.start_1_replica(1)
+
+        yield self.check_data()
+
+    @inlineCallbacks
+    def test_5of5_replica_restart(self):
+        yield self.init(3, 5)
+        ServerOperator.wait_until_cluster_health()
+
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        for i in range(1, 6):
+            ServerOperator.restart_1_replica(i)
+
+            yield self.check_data()
+
+    @inlineCallbacks
+    def test_1of5_replica_stop(self):
+        yield self.init(3, 5)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        ServerOperator.stop_1_replica(1)
+
+        wait_times = 0
+        while True:
+            ret = yield self.loop_op()
+            if not ret:
+                wait_times += 1
+                time.sleep(wait_times)
+                if wait_times >= 20:
+                    self.assertTrue(False)
+            else:
+                break
+
+    @inlineCallbacks
+    def test_2of5_replica_stop(self):
+        yield self.init(3, 5)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        for i in range(1, 3):
+            ServerOperator.stop_1_replica(i)
+
+            yield self.check_data()
+
+    @inlineCallbacks
+    def test_1of5_replica_stop_and_start_with_meta_stop_and_start(self):
+        confs = {'timeout_ms = 60000': 'timeout_ms = 2000'}
+        yield self.init(2, 5, confs)
+        for i in range(self.DATA_COUNT):
+            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            self.assertEqual(ret, error_types.ERR_OK.value)
+
+        for i in range(2):
+            ServerOperator.stop_1_replica(1)
+            ServerOperator.stop_1_meta(i+1)
+            time.sleep(3)
+
+            yield self.check_data()
+
+            ServerOperator.start_1_meta(i+1)
+            ServerOperator.start_1_replica(1)
+            time.sleep(3)
+
+            yield self.check_data()
