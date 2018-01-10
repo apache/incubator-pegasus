@@ -2,6 +2,10 @@
 
 import time
 import struct
+from base.ttypes import (
+    rocksdb_error_types,
+    error_types
+)
 
 epoch_begin = 1451606400            # seconds since 2016.01.01-00:00:00 GMT
 
@@ -16,6 +20,17 @@ def epoch_now():
 
 def get_ttl(ttl):
     return 0 if ttl == 0 else epoch_now() + ttl
+
+
+def convert_error_type(rdb_err):
+    if rdb_err == rocksdb_error_types.kNotFound.value:
+        return error_types.ERR_DATA_NOT_EXIST.value
+    elif rdb_err == rocksdb_error_types.kIncomplete.value:
+        return error_types.ERR_DATA_NOT_EXIST.ERR_INCOMPLETE_DATA.value
+    elif rdb_err == rocksdb_error_types.kOk.value:
+        return error_types.ERR_DATA_NOT_EXIST.ERR_OK.value
+    else:
+        return rdb_err
 
 
 class ScanOptions(object):

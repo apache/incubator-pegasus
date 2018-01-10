@@ -1,6 +1,7 @@
 import struct
 import ctypes
 import base.ttypes
+import utils
 
 from thrift.Thrift import TMessageType
 
@@ -93,10 +94,8 @@ class RrdbTtlOperator(ClientOperator):
 
     @staticmethod
     def parse_result(resp):
-        if resp.error == 1:
-            return base.ttypes.error_types.ERR_DATA_NOT_EXIST.value, resp.ttl_seconds
-        else:
-            return resp.error, resp.ttl_seconds
+        resp.error = utils.tools.convert_error_type(resp.error)
+        return resp.error, resp.ttl_seconds
 
 
 class RrdbGetOperator(ClientOperator):
@@ -111,6 +110,7 @@ class RrdbGetOperator(ClientOperator):
 
     @staticmethod
     def parse_result(resp):
+        resp.error = utils.tools.convert_error_type(resp.error)
         return resp.error, resp.value.data
 
 
@@ -127,9 +127,12 @@ class RrdbMultiGetOperator(ClientOperator):
     @staticmethod
     def parse_result(resp):
         data = {}
-        if resp.error == 0 or resp.error == 7:      # 7: has more data
+        if resp.error == base.ttypes.rocksdb_error_types.kOk.value\
+           or resp.error == base.ttypes.rocksdb_error_types.kIncomplete.value:
             for kv in resp.kvs:
                 data[kv.key.data] = kv.value.data
+
+        resp.error = utils.tools.convert_error_type(resp.error)
 
         return resp.error, data
 

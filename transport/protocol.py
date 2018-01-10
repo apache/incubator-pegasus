@@ -33,7 +33,7 @@ class TPegasusTransport(TTwisted.TCallbackTransport):
         self.__rbuf_size = rbuf_size
 
     def get_peer_addr(self):
-        return self.__trans.addr[0] + ':' + str(self.__trans.addr[1])
+        return self.__trans.getPeer()
 
     def isOpen(self):
         return self.__trans.isOpen()

@@ -36,6 +36,9 @@ class TestBasics(unittest.TestCase):
         ret = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
+        (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
+        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
+
     @inlineCallbacks
     def test_exist_ok(self):
         ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
@@ -67,7 +70,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.get(self.TEST_HKEY, self.TEST_SKEY)
-        self.assertNotEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
 
     @inlineCallbacks
     def test_ttl_forever(self):
@@ -94,7 +97,7 @@ class TestBasics(unittest.TestCase):
         ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
-        period = 3
+        period = 2
         d = defer.Deferred()
         reactor.callLater(period, d.callback, 'ok')
         yield d
@@ -102,6 +105,20 @@ class TestBasics(unittest.TestCase):
         (rc, v) = yield self.c.ttl(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(v, ttl - period)
+
+    @inlineCallbacks
+    def test_ttl_expired(self):
+        ttl = 1
+        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        period = 1.5
+        d = defer.Deferred()
+        reactor.callLater(period, d.callback, 'ok')
+        yield d
+
+        (rc, v) = yield self.c.ttl(self.TEST_HKEY, self.TEST_SKEY)
+        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
 
     @inlineCallbacks
     def test_multi_set_ok(self):
@@ -123,6 +140,29 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_1by1_ok(self):
+        count = 5
+        ks = {self.TEST_SKEY + str(x) for x in range(count)}
+        kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        get_count = 0
+        while ks:
+            (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks, 1)
+            if rc == error_types.ERR_INCOMPLETE_DATA.value\
+               or rc == error_types.ERR_OK.value:
+                for (k, v) in get_kvs.items():
+                    get_count += 1
+                    self.assertIn(k, ks)
+                    ks.remove(k)
+                    self.assertIn(k, kvs)
+                    self.assertEqual(v, kvs[k])
+
+        self.assertEqual(get_count, len(kvs))
 
     @inlineCallbacks
     def test_multi_del_ok(self):

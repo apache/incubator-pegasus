@@ -56,6 +56,24 @@ class blob:
       return len(self.data)
 
 
+class rocksdb_error_types(Enum):
+    kOk = 0
+    kNotFound = 1
+    kCorruption = 2
+    kNotSupported = 3
+    kInvalidArgument = 4
+    kIOError = 5
+    kMergeInProgress = 6
+    kIncomplete = 7
+    kShutdownInProgress = 8
+    kTimedOut = 9
+    kAborted = 10
+    kBusy = 11
+    kExpired = 12
+    kTryAgain = 13
+    kNoNeedOperate = 101
+
+
 class error_types(Enum):
     ERR_OK = 0
     ERR_UNKNOWN = 1
@@ -245,7 +263,7 @@ class rpc_address:
     return host, port
 
   def read(self, iprot):
-    self.address = iprot.readI64()
+    self.address = iprot.readI64() & 0xFFFFFFFFFFFFFFFF
 
   def write(self, oprot):
     oprot.writeI64(self.address)
