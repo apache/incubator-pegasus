@@ -17,11 +17,14 @@ class ServerOperator(object):
         # print(status, output)
 
     @classmethod
-    def start_cluster(cls, meta_count, replica_count):
+    def start_cluster(cls, meta_count, replica_count, check_health):
         status, output = commands.getstatusoutput('cd %s && ./run.sh start_onebox -m %s -r %s'
                                                   % (cls.shell_path, meta_count, replica_count))
         # print(status, output)
-        cls.wait_until_cluster_health()
+        if check_health:
+            cls.wait_until_cluster_health()
+        else:
+            time.sleep(1)   # wait a while for meta ready
 
     @classmethod
     def stop_and_clear_cluster(cls):
@@ -76,6 +79,7 @@ class TestIntegration(unittest.TestCase):
     TEST_VALUE = 'test_value_1'
     DATA_COUNT = 1000
     MAX_RETRY_COUNT = 30
+    check_health = True
 
     def setUp(self):
         ServerOperator.stop_and_clear_cluster()
@@ -89,8 +93,8 @@ class TestIntegration(unittest.TestCase):
         if isinstance(confs, dict):
             for old_conf, new_conf in confs.iteritems():
                 ServerOperator.modify_conf(old_conf, new_conf)
-        ServerOperator.start_cluster(meta_count, replica_count)
-        self.c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+        ServerOperator.start_cluster(meta_count, replica_count, self.check_health)
+        self.c = Pegasus(['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
         ret = yield self.c.init()
         self.assertTrue(ret)
 
@@ -125,7 +129,7 @@ class TestIntegration(unittest.TestCase):
     def test_1of3_replica_restart(self):
         yield self.init(3, 3)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         ServerOperator.restart_1_replica(1)
@@ -138,7 +142,7 @@ class TestIntegration(unittest.TestCase):
         ServerOperator.wait_until_cluster_health()
 
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         for i in range(1, 4):
@@ -150,7 +154,7 @@ class TestIntegration(unittest.TestCase):
     def test_1of5_replica_restart(self):
         yield self.init(3, 5)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         ServerOperator.restart_1_replica(1)
@@ -161,7 +165,7 @@ class TestIntegration(unittest.TestCase):
     def test_1of5_replica_stop_and_start(self):
         yield self.init(3, 5)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         ServerOperator.stop_1_replica(1)
@@ -178,7 +182,7 @@ class TestIntegration(unittest.TestCase):
         ServerOperator.wait_until_cluster_health()
 
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         for i in range(1, 6):
@@ -190,7 +194,7 @@ class TestIntegration(unittest.TestCase):
     def test_1of5_replica_stop(self):
         yield self.init(3, 5)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         ServerOperator.stop_1_replica(1)
@@ -210,7 +214,7 @@ class TestIntegration(unittest.TestCase):
     def test_2of5_replica_stop(self):
         yield self.init(3, 5)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         for i in range(1, 3):
@@ -223,7 +227,7 @@ class TestIntegration(unittest.TestCase):
         confs = {'timeout_ms = 60000': 'timeout_ms = 2000'}
         yield self.init(2, 5, confs)
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
+            (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         for i in range(2):
@@ -238,3 +242,16 @@ class TestIntegration(unittest.TestCase):
             time.sleep(3)
 
             yield self.check_data()
+
+    @inlineCallbacks
+    def test_0_replica_scan_exception(self):
+        self.check_health = False
+        yield self.init(3, 0)
+        o = ScanOptions()
+        s = self.c.get_scanner(self.TEST_HKEY, b'\x00\x00', b'\xFF\xFF', o)
+        try:
+            ret = yield s.get_next()
+            self.assertEqual(ret, None)
+            s.close()
+        except Exception, e:
+            self.assertEqual(e.args[0], 'session or packet error!')

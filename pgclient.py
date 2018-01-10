@@ -5,7 +5,7 @@ import logging.config
 
 from twisted.internet import defer
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, succeed, fail
 from twisted.internet.protocol import ClientCreator
 
 from base.ttypes import *
@@ -64,7 +64,7 @@ class BaseSession(object):
         self._container.update_state(ec)
         logger.warning('peer: %s, time: %s s, timeout',
                        self.get_peer_addr(), seconds)
-        return ec.value
+        return ec.value, None
 
     def operate(self, op, timeout=None):
         if not isinstance(timeout, int) or timeout <= 0:
@@ -213,6 +213,9 @@ class SessionManager(object):
         for session in self.session_dict.values():
             session.close()
 
+    def update_state(self, ec):
+        pass
+
 
 class MetaSessionManager(SessionManager):
 
@@ -243,7 +246,9 @@ class MetaSessionManager(SessionManager):
 
     def got_results(self, res):
         for (suc, result) in res:
-            if suc and result.is_stateful:
+            if suc                                                              \
+               and isinstance(result, replication.ttypes.query_cfg_response)    \
+               and result.is_stateful:
                 logger.info('table: %s, partition result: %s',
                             self.name, result)
                 return result
@@ -349,6 +354,8 @@ class Table(SessionManager):
             replica_addr = self.partition_dict[pidx]
             if replica_addr in self.session_dict.keys():
                 return self.session_dict[replica_addr]
+
+        self.container.update_state(error_types.ERR_OBJECT_NOT_FOUND)
         return None
 
 
@@ -436,6 +443,8 @@ class PegasusScanner(object):
         request.batch_size = self._scan_options.batch_size
         op = RrdbGetScannerOperator(self._gpid, request)
         session = self._table.get_session(self._gpid)
+        if not session or not op:
+            raise Exception('session or packet error!')
 
         ret = session.operate(op, self._scan_options.timeout_millis)
         ret.addCallbacks(self.scan_cb, self.scan_err_cb)
@@ -445,6 +454,8 @@ class PegasusScanner(object):
         request = scan_request(self._context_id)
         op = RrdbScanOperator(self._gpid, request)
         session = self._table.get_session(self._gpid)
+        if not session or not op:
+            raise Exception('session or packet error!')
 
         ret = session.operate(op, self._scan_options.timeout_millis)
         ret.addCallbacks(self.scan_cb, self.scan_err_cb)
@@ -455,6 +466,8 @@ class PegasusScanner(object):
             op = RrdbClearScannerOperator(self._gpid, self._context_id)
             session = self._table.get_session(self._gpid)
             self._context_id = self.CONTEXT_ID_COMPLETED
+            if not session or not op:
+                raise Exception('session or packet error!')
 
             session.operate(op, self._scan_options.timeout_millis)
 
@@ -604,7 +617,7 @@ class Pegasus(object):
         session = self.table.get_session(peer_gpid)
         op = RrdbTtlOperator(peer_gpid, blob_key)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -617,7 +630,7 @@ class Pegasus(object):
         session = self.table.get_session(peer_gpid)
         op = RrdbGetOperator(peer_gpid, blob_key)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -627,7 +640,7 @@ class Pegasus(object):
         session = self.table.get_session(peer_gpid)
         op = RrdbPutOperator(peer_gpid, update_request(blob_key, blob(value), get_ttl(ttl)))
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -637,7 +650,7 @@ class Pegasus(object):
         session = self.table.get_session(peer_gpid)
         op = RrdbRemoveOperator(peer_gpid, blob_key)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -646,7 +659,7 @@ class Pegasus(object):
         session = self.table.get_session(peer_gpid)
         op = RrdbSortkeyCountOperator(peer_gpid, blob(hash_key))
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -658,7 +671,7 @@ class Pegasus(object):
         req = multi_put_request(blob(hash_key), kvs, ttl)
         op = RrdbMultiPutOperator(peer_gpid, req)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -676,14 +689,14 @@ class Pegasus(object):
         elif isinstance(sortkey_set, set):
             ks = [blob(str(k)) for k in sortkey_set]
         else:
-            return error_types.ERR_INVALID_PARAMETERS
+            return error_types.ERR_INVALID_PARAMETERS.value, 0
 
         req = multi_get_request(blob(hash_key), ks,
                                 max_kv_count, max_kv_size,
                                 no_value)
         op = RrdbMultiGetOperator(peer_gpid, req)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 
@@ -702,12 +715,12 @@ class Pegasus(object):
         if isinstance(sortkey_set, set):
             ks = [blob(str(k)) for k in sortkey_set]
         else:
-            return error_types.ERR_INVALID_PARAMETERS
+            return error_types.ERR_INVALID_PARAMETERS.value, 0
 
         req = multi_remove_request(blob(hash_key), ks)     # 100 limit?
         op = RrdbMultiRemoveOperator(peer_gpid, req)
         if not session or not op:
-            return error_types.ERR_INVALID_STATE
+            return error_types.ERR_INVALID_STATE.value, 0
 
         return session.operate(op, timeout)
 

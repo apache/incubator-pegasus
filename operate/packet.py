@@ -149,7 +149,7 @@ class RrdbPutOperator(ClientOperator):
 
     @staticmethod
     def parse_result(resp):
-        return resp.error
+        return resp.error, None
 
 
 class RrdbMultiPutOperator(ClientOperator):
@@ -164,7 +164,7 @@ class RrdbMultiPutOperator(ClientOperator):
 
     @staticmethod
     def parse_result(resp):
-        return resp.error
+        return resp.error, None
 
 
 class RrdbRemoveOperator(ClientOperator):
@@ -179,7 +179,7 @@ class RrdbRemoveOperator(ClientOperator):
 
     @staticmethod
     def parse_result(resp):
-        return resp.error
+        return resp.error, None
 
 
 class RrdbMultiRemoveOperator(ClientOperator):

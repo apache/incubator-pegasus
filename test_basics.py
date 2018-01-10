@@ -14,7 +14,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+        self.c = Pegasus(['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
         ret = yield self.c.init()
         self.assertTrue(ret)
 
@@ -23,17 +23,17 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_set_ok(self):
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
     @inlineCallbacks
     def test_set_timeout(self):
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*100000, 0, 10)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*100000, 0, 10)
         self.assertEqual(ret, error_types.ERR_TIMEOUT.value)
 
     @inlineCallbacks
     def test_remove_ok(self):
-        ret = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
+        (ret, ign) = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
@@ -41,7 +41,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_exist_ok(self):
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
@@ -49,7 +49,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_exist_none(self):
-        ret = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
+        (ret, ign) = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
@@ -57,7 +57,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_get_ok(self):
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.get(self.TEST_HKEY, self.TEST_SKEY)
@@ -66,7 +66,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_get_none(self):
-        ret = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
+        (ret, ign) = yield self.c.remove(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.get(self.TEST_HKEY, self.TEST_SKEY)
@@ -74,7 +74,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_ttl_forever(self):
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.ttl(self.TEST_HKEY, self.TEST_SKEY)
@@ -84,7 +84,7 @@ class TestBasics(unittest.TestCase):
     @inlineCallbacks
     def test_ttl_N(self):
         ttl = 60
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.ttl(self.TEST_HKEY, self.TEST_SKEY)
@@ -94,7 +94,7 @@ class TestBasics(unittest.TestCase):
     @inlineCallbacks
     def test_ttl_N_with_phase(self):
         ttl = 10
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         period = 2
@@ -109,7 +109,7 @@ class TestBasics(unittest.TestCase):
     @inlineCallbacks
     def test_ttl_expired(self):
         ttl = 1
-        ret = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE, ttl)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         period = 1.5
@@ -124,7 +124,7 @@ class TestBasics(unittest.TestCase):
     def test_multi_set_ok(self):
         count = 50
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
-        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
     @inlineCallbacks
@@ -133,7 +133,7 @@ class TestBasics(unittest.TestCase):
         ks = {self.TEST_SKEY + str(x) for x in range(count)}
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
-        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks)
@@ -147,7 +147,7 @@ class TestBasics(unittest.TestCase):
         ks = {self.TEST_SKEY + str(x) for x in range(count)}
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
-        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         get_count = 0
@@ -179,7 +179,7 @@ class TestBasics(unittest.TestCase):
         ks = {self.TEST_SKEY + str(x) for x in range(count/2)}
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
-        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks)
@@ -200,7 +200,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(del_count, len(ks))
 
-        ret = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks)
@@ -236,7 +236,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(del_count, len(ks))
 
-        ret = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, get_ks) = yield self.c.get_sort_keys(self.TEST_HKEY + rand_key)
@@ -258,7 +258,7 @@ class TestBasics(unittest.TestCase):
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
         rand_key = uuid.uuid1().hex
-        ret = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         o = ScanOptions()
@@ -295,7 +295,7 @@ class TestBasics(unittest.TestCase):
         sub_kvs = {self.TEST_SKEY + str(x).zfill(count_len): self.TEST_VALUE + str(x) for x in range(1, count-1)}
 
         rand_key = uuid.uuid1().hex
-        ret = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         o = ScanOptions()
@@ -349,7 +349,7 @@ class TestBasics(unittest.TestCase):
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
         for hk in hks:
-            ret = yield self.c.multi_set(hk, kvs)
+            (ret, ign) = yield self.c.multi_set(hk, kvs)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         split_count = 5

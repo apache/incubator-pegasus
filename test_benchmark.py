@@ -20,7 +20,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+        self.c = Pegasus(['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
         ret = yield self.c.init()
         self.assertTrue(ret)
 
