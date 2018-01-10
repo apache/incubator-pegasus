@@ -10,11 +10,12 @@ from twisted.internet.defer import inlineCallbacks, Deferred
 @inlineCallbacks
 def basic_test():
     # init
-    c = Pegasus(['127.0.1.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
+    c = Pegasus(['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
 
     suc = yield c.init()
     if not suc:
         reactor.stop()
+        print('ERROR: connect pegasus server failed')
         return
 
     # set
