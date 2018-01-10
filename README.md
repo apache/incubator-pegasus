@@ -42,3 +42,23 @@ The test result on my personal PC (CPU: Intel i7-7700 3.60GHz, mem: 8G) is:
 10000 remove cost: 7.61887693405 s, 0.000761887693405 s per op
 10000 set cost: 6.26366090775 s, 0.000626366090775 s per op
 ```
+FAQ
+---
+### Q: When I run sample.py, error occured as following:
+```
+Traceback (most recent call last):
+  File "./sample.py", line 3, in <module>
+    from pgclient import *
+  File "/home/lai/dev/pegasus-python-client/pgclient.py", line 7, in <module>
+    from twisted.internet import reactor
+  ...
+  File "/usr/local/lib/python2.7/dist-packages/twisted/internet/_sslverify.py", line 38, in <module>
+    TLSVersion.TLSv1_1: SSL.OP_NO_TLSv1_1,
+AttributeError: 'module' object has no attribute 'OP_NO_TLSv1_1'
+```
+### A: pyOpenSSL version too low
+the twisted version we used is 17.9.0, which requires pyOpenSSL>=16.0.0, you can
+
+`pip install --upgrade pyopenssl`
+
+ref: https://github.com/scrapy/scrapy/issues/2473
