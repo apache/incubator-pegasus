@@ -32,7 +32,7 @@ Test
 
 `python -m twisted.trial test_integration.py`
 
-ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#10).
+ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#L10).
 
 ## Benchmark test:
 
