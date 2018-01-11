@@ -7,7 +7,7 @@ from twisted.trial import unittest
 
 
 class ServerOperator(object):
-    shell_path = '/home/mi/dev/pegasus'
+    shell_path = '/home/mi/git.xiaomi/Pegasus/pegasus'
 
     @classmethod
     def modify_conf(cls, old_conf, new_conf):

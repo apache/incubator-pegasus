@@ -24,6 +24,8 @@ There are some basic guide in  [`sample.py`](sample.py).
 
 Test
 ----
+Before testing, you should firstly start an onebox cluster, referring to [`how to start an onebox cluster`](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4).
+
 ## Basic interfaces test:
 
 `python -m twisted.trial test_basics.py`
