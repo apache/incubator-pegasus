@@ -50,6 +50,7 @@ func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*repl
 	ms.logger.Printf("querying configuration of table(%s) from [%s, %s]\n", tableName, ms.addr, ms.ntype)
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX")
 	if err != nil {
+		ms.logger.Printf("failed to query configuration from meta %s: %s\n", ms.addr, err)
 		return nil, err
 	}
 
@@ -73,8 +74,6 @@ func NewMetaManager(addrs []string) *MetaManager {
 }
 
 func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
-	m.logger.Printf("querying configuration of table(%s)\n", tableName)
-
 	meta := m.metas[m.currentLeader]
 	resp, err := meta.queryConfig(ctx, tableName)
 

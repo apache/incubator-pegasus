@@ -10,6 +10,7 @@ type ErrorCode struct {
 	Errno string
 }
 
+//go:generate enumer -type=ErrType -output=err_type_string.go
 type ErrType int32
 
 const (
@@ -88,27 +89,6 @@ const (
 	// server side.
 	ERR_CLIENT_FAILED
 )
-
-var errnoToStringMap = map[ErrType]string{
-	ERR_OK: "ERR_OK",
-
-	ERR_UNKNOWN:            "ERR_UNKNOWN",
-	ERR_APP_NOT_EXIST:      "ERR_APP_NOT_EXIST",
-	ERR_EXPIRED:            "ERR_EXPIRED",
-	ERR_SERVICE_NOT_ACTIVE: "ERR_SERVICE_NOT_ACTIVE",
-	ERR_BUSY:               "ERR_BUSY",
-	ERR_FORWARD_TO_OTHERS:  "ERR_FORWARD_TO_OTHERS",
-	ERR_OBJECT_NOT_FOUND:   "ERR_OBJECT_NOT_FOUND",
-	ERR_INVALID_PARAMETERS: "ERR_INVALID_PARAMETERS",
-	ERR_CAPACITY_EXCEEDED:  "ERR_CAPACITY_EXCEEDED",
-	ERR_INVALID_STATE:      "ERR_INVALID_STATE",
-	ERR_INVALID_DATA:       "ERR_INVALID_DATA",
-	ERR_CLIENT_FAILED:      "ERR_CLIENT_FAILED",
-}
-
-func (e ErrType) String() string {
-	return errnoToStringMap[e]
-}
 
 func (e ErrType) Error() string {
 	return e.String()

@@ -16,10 +16,5 @@ func IsRetryableError(err error) bool {
 		return opErr.Timeout()
 	}
 
-	// if it's not ready, retry until the connection established
-	if err == ErrConnectionNotReady {
-		return true
-	}
-
 	return false
 }

@@ -7,12 +7,10 @@ package pegasus
 import (
 	"context"
 	"errors"
-	"testing"
-	"time"
-
 	"github.com/fortytw2/leaktest"
 	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 // This is the integration test of the client. Please start the pegasus onebox
@@ -55,27 +53,6 @@ func TestPegasusTableConnector_Del(t *testing.T) {
 
 	assert.Equal(t, base.ERR_UNKNOWN, err.(*PError).Code)
 	assert.Nil(t, value)
-}
-
-// Ensure that table connector will update configuration after at most 10 second.
-func TestPegasusTableConnector_AutoUpdate(t *testing.T) {
-	defer leaktest.CheckTimeout(t, time.Second*11)()
-
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-	client := NewClient(cfg)
-	defer client.Close()
-
-	tb, _ := client.OpenTable(context.Background(), "temp")
-	ptb := tb.(*pegasusTableConnector)
-
-	ptb.mu.Lock()
-	ptb.parts = make([]*replicaNode, 0)
-	ptb.mu.Unlock()
-
-	time.Sleep(time.Second * 10)
-	assert.Equal(t, len(ptb.parts), 8)
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {

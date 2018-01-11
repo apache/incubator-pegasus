@@ -44,6 +44,8 @@ type nodeSession struct {
 	lastDialTime time.Time
 
 	codec rpc.Codec
+
+	onReplyDsnErrFunc func(errType base.ErrType)
 }
 
 type reqItem struct {
@@ -196,7 +198,7 @@ func (n *nodeSession) loopForRequest() error {
 			n.mu.Unlock()
 
 			if err := n.writeRequest(item.call); err != nil {
-				n.logger.Printf("failed to send request to [%s]: %s", n.ntype, err)
+				n.logger.Printf("failed to send request to [%s, %s]: %s", n.addr, n.ntype, err)
 
 				// notify the rpc caller.
 				item.err = err
@@ -232,8 +234,15 @@ func (n *nodeSession) loopForResponse() error {
 				case <-n.tom.Dying():
 					return n.tom.Err()
 				}
+			} else if dsnErr, ok := err.(base.ErrType); ok {
+				if n.onReplyDsnErrFunc != nil {
+					n.onReplyDsnErrFunc(dsnErr)
+				} else {
+					n.logger.Printf("received error replied from [%s, %s]: %s\n", n.addr, n.ntype, err)
+				}
+				return err
 			} else {
-				n.logger.Printf("failed to read response from [%s]: %s", n.ntype, err)
+				n.logger.Printf("failed to read response from [%s, %s]: %s", n.addr, n.ntype, err)
 				return err
 			}
 		}
@@ -316,7 +325,6 @@ func (n *nodeSession) readResponse() (*rpcCall, error) {
 
 	r := &rpcCall{}
 	if err := n.codec.Unmarshal(buf, r); err != nil {
-		n.logger.Printf("failed to unmarshal response [%s, %s]: %s", n.ntype, n.addr, err)
 		return nil, err
 	}
 	return r, nil

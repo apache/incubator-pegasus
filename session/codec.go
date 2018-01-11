@@ -67,8 +67,13 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	if err := ec.Read(iprot); err != nil {
 		return err
 	}
+
 	if ec.Errno != base.ERR_OK.String() {
-		err := fmt.Errorf("[%s] request failed with error: %s", r.name, ec.Errno)
+		// convert string to base.ErrType
+		err, parseErr := base.ErrTypeString(ec.Errno)
+		if parseErr != nil {
+			panic(parseErr)
+		}
 		return err
 	}
 

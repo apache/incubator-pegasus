@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -72,7 +71,6 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	defer func() {
 		p.lastConfUpdateTime = time.Now()
 	}()
-
 	if err != nil {
 		return fmt.Errorf("connect table(%s): %s", p.tableName, err)
 	}
@@ -261,16 +259,15 @@ func (p *pegasusTableConnector) doHandleError(respErr base.ErrType, err error) e
 // version of configuration from meta server automatically.
 // The configuration update strategy can be stated as follow:
 //
-//  - Every [5, 10) seconds it will query meta for configuration.
 //  - When a table operation encountered error, it will trigger a
 //    new round of self update if there's no one in progress.
+//  - The interval of two subsequent config updates should be larger
+//	  than 5 sec.
 //
 func (p *pegasusTableConnector) loopForAutoUpdate() error {
 	for {
 		select {
 		case <-p.confUpdateCh:
-			p.selfUpdate()
-		case <-time.After(time.Second * time.Duration(5+rand.Intn(5))):
 			p.selfUpdate()
 		case <-p.tom.Dying():
 			return nil
@@ -292,8 +289,7 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	}
 
 	// ignore the returned error
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*2)
 	p.updateConf(ctx)
 
 	// flush confUpdateCh
