@@ -380,6 +380,11 @@ error_code server_state::initialize_default_apps()
             default_app.app_id = _all_apps.size() + 1;
 
             default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "app name");
+            if (default_app.app_name.length() == 0) {
+                dwarn("'[%s] app_name' not specified, ignore this section", sections[i]);
+                continue;
+            }
+
             default_app.app_type = dsn_config_get_value_string(s, "app_type", "", "app type-name");
             default_app.partition_count = (int)dsn_config_get_value_uint64(
                 s, "partition_count", 1, "how many partitions the app should have");
@@ -389,7 +394,6 @@ error_code server_state::initialize_default_apps()
                 s, "max_replica_count", 3, "max_replica count in app");
             // TODO: setup envs
 
-            dassert(default_app.app_name.length() > 0, "'[%s] app_name' not specified", s);
             dassert(default_app.app_type.length() > 0, "'[%s] app_type' not specified", s);
             dassert(default_app.partition_count > 0,
                     "partition_count should > 0, partition_count = %d",
