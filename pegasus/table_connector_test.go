@@ -7,10 +7,11 @@ package pegasus
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/fortytw2/leaktest"
 	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // This is the integration test of the client. Please start the pegasus onebox
@@ -69,17 +70,20 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	assert.Nil(t, err)
 	ptb, _ := tb.(*pegasusTableConnector)
 
-	ptb.handleError(errors.New("not nil"))
+	err = ptb.handleError(nil, nil, nil)
+	assert.Nil(t, err)
+
+	ptb.handleError(errors.New("not nil"), nil, nil)
 	<-ptb.confUpdateCh
 
-	ptb.handleErrorCode(base.ERR_OBJECT_NOT_FOUND)
+	ptb.handleError(base.ERR_OBJECT_NOT_FOUND, nil, nil)
 	<-ptb.confUpdateCh
 
-	ptb.handleErrorCode(base.ERR_INVALID_STATE)
+	ptb.handleError(base.ERR_INVALID_STATE, nil, nil)
 	<-ptb.confUpdateCh
 
 	// self update can not be triggered by other error codes.
-	ptb.handleErrorCode(base.ERR_CLIENT_FAILED)
+	ptb.handleError(base.ERR_CLIENT_FAILED, nil, nil)
 	select {
 	case <-ptb.confUpdateCh:
 	default:

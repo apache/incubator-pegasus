@@ -94,6 +94,14 @@ func (e ErrType) Error() string {
 	return e.String()
 }
 
+func NewDsnErrFromInt(e int32) error {
+	err := ErrType(e)
+	if err == ERR_OK {
+		return nil
+	}
+	return err
+}
+
 func (ec *ErrorCode) Read(iprot thrift.TProtocol) (err error) {
 	ec.Errno, err = iprot.ReadString()
 	return

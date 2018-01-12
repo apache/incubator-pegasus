@@ -50,23 +50,3 @@ func (e *PError) Error() string {
 	}
 	return estr
 }
-
-func newPError(err error, code base.ErrType) *PError {
-	return &PError{Err: err, Code: code}
-}
-
-func newPErrorGpid(err error, code base.ErrType, gpid *base.Gpid) *PError {
-	return &PError{Err: &replicaError{
-		err:  err,
-		gpid: gpid,
-	}, Code: code}
-}
-
-type replicaError struct {
-	err  error
-	gpid *base.Gpid
-}
-
-func (re *replicaError) Error() string {
-	return re.gpid.String() + " " + re.err.Error()
-}

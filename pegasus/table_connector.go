@@ -135,14 +135,10 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Get(ctx, gpid, key)
-		if err != nil {
-			return nil, p.handleError(err)
+		if err = p.handleError(err, gpid, part); err != nil {
+			return nil, err
 		} else {
-			if err = p.handleErrorCode(base.ErrType(resp.Error)); err != nil {
-				return nil, err
-			} else {
-				return resp.Value.Data, nil
-			}
+			return resp.Value.Data, nil
 		}
 	}()
 	return bytes, wrapError(err, OpGet)
@@ -159,11 +155,10 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Put(ctx, gpid, key, val)
-		if err != nil {
-			return p.handleError(err)
-		} else {
-			return p.handleErrorCode(base.ErrType(resp.Error))
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
 		}
+		return p.handleError(err, gpid, part)
 	}()
 	return wrapError(err, OpSet)
 }
@@ -178,11 +173,10 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Del(ctx, gpid, key)
-		if err != nil {
-			return p.handleError(err)
-		} else {
-			return p.handleErrorCode(base.ErrType(resp.Error))
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
 		}
+		return p.handleError(err, gpid, part)
 	}()
 	return wrapError(err, OpDel)
 }
@@ -218,41 +212,27 @@ func (p *pegasusTableConnector) Close() error {
 	return wrapError(err, OpClose)
 }
 
-// TODO(wutao1): make gpid included in the returned error.
-func (p *pegasusTableConnector) handleErrorCode(respErr base.ErrType) error {
-	return p.doHandleError(respErr, nil)
-}
-
-func (p *pegasusTableConnector) handleError(err error) error {
-	return p.doHandleError(base.ERR_OK, err)
-}
-
-func (p *pegasusTableConnector) doHandleError(respErr base.ErrType, err error) error {
-	if err != nil ||
-		respErr == base.ERR_OBJECT_NOT_FOUND ||
-		respErr == base.ERR_INVALID_STATE {
-
+func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
+	if err != nil {
 		// when err != nil, it means the network connection between client and replicas
 		// may be illed, hence we need to check if there's newer configuration.
-		// when respErr == ERR_OBJECT_NOT_FOUND, it means the replica server doesn't
-		// serve this gpid.
-		// when respErr == ERR_INVALID_STATE, it indicates that replica server is not
-		// primary.
 
 		// trigger configuration update
-		select {
-		case p.confUpdateCh <- true:
-		default:
-		}
-	}
+		p.tryConfUpdate()
 
-	if err != nil {
-		return err
-	}
-	if respErr != base.ERR_OK {
-		return respErr
+		// add gpid and remote address to error
+		perr := wrapError(err, 0).(*PError)
+		perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
+		return perr
 	}
 	return nil
+}
+
+func (p *pegasusTableConnector) tryConfUpdate() {
+	select {
+	case p.confUpdateCh <- true:
+	default:
+	}
 }
 
 // For each table there's a background worker pulling down the latest

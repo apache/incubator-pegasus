@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pegasus-kv/pegasus-go-client/idl/base"
@@ -57,6 +58,10 @@ func (rs *ReplicaSession) Del(ctx context.Context, gpid *base.Gpid, key *base.Bl
 
 	ret, _ := result.(*rrdb.RrdbRemoveResult)
 	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) String() string {
+	return fmt.Sprintf("replica(%s)", rs.addr)
 }
 
 // ReplicaManager manages the pool of sessions to replica servers, so that
