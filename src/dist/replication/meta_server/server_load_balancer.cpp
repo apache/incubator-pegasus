@@ -757,6 +757,8 @@ static void free_string_in_cli_reply(dsn_cli_reply reply)
 
 void simple_load_balancer::register_ctrl_commands()
 {
+    server_load_balancer::register_ctrl_commands();
+
     _ctrl_assign_delay_ms =
         dsn_cli_app_register("lb.assign_delay_ms",
                              "control the replica_assign_delay_ms_for_dropouts config",
@@ -768,6 +770,12 @@ void simple_load_balancer::register_ctrl_commands()
                                  lb->ctrl_assign_delay_ms(argc, argv, reply);
                              },
                              free_string_in_cli_reply);
+}
+
+void simple_load_balancer::unregister_ctrl_commands()
+{
+    unregister_helper(_ctrl_assign_delay_ms);
+    server_load_balancer::unregister_ctrl_commands();
 }
 
 void simple_load_balancer::ctrl_assign_delay_ms(int argc, const char **argv, dsn_cli_reply *reply)

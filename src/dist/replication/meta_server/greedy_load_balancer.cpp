@@ -48,7 +48,11 @@
 namespace dsn {
 namespace replication {
 
-greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : simple_load_balancer(_svc)
+greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
+    : simple_load_balancer(_svc),
+      _ctrl_balancer_in_turn(nullptr),
+      _ctrl_only_primary_balancer(nullptr),
+      _ctrl_only_move_primary(nullptr)
 {
     if (_svc != nullptr) {
         _balancer_in_turn = _svc->get_meta_options()._lb_opts.balancer_in_turn;
@@ -59,15 +63,13 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : simple_load_bal
         _only_primary_balancer = false;
         _only_move_primary = false;
     }
-
-    greedy_load_balancer::register_ctrl_commands();
 }
 
 greedy_load_balancer::~greedy_load_balancer()
 {
-    dsn_cli_deregister(_ctrl_balancer_in_turn);
-    dsn_cli_deregister(_ctrl_only_primary_balancer);
-    dsn_cli_deregister(_ctrl_only_move_primary);
+    unregister_helper(_ctrl_balancer_in_turn);
+    unregister_helper(_ctrl_only_move_primary);
+    unregister_helper(_ctrl_only_move_primary);
 }
 
 static void free_string_in_cli_reply(dsn_cli_reply reply)
@@ -116,6 +118,9 @@ void greedy_load_balancer::ctrl_only_primary_balancer(int argc,
 
 void greedy_load_balancer::register_ctrl_commands()
 {
+    // register command that belong to simple_load_balancer
+    simple_load_balancer::register_ctrl_commands();
+
     _ctrl_balancer_in_turn =
         dsn_cli_app_register("lb.balancer_in_turn",
                              "control whether do app balancer in turn",
@@ -151,6 +156,15 @@ void greedy_load_balancer::register_ctrl_commands()
                                  lb->ctrl_only_move_primary(argc, argv, reply);
                              },
                              free_string_in_cli_reply);
+}
+
+void greedy_load_balancer::unregister_ctrl_commands()
+{
+    unregister_helper(_ctrl_balancer_in_turn);
+    unregister_helper(_ctrl_only_move_primary);
+    unregister_helper(_ctrl_only_move_primary);
+
+    simple_load_balancer::unregister_ctrl_commands();
 }
 
 std::shared_ptr<configuration_balancer_request>

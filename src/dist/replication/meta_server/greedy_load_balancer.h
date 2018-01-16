@@ -47,6 +47,9 @@ public:
     virtual ~greedy_load_balancer();
     bool balance(meta_view view, migration_list &list) override;
 
+    void register_ctrl_commands() override;
+    void unregister_ctrl_commands() override;
+
 private:
     enum class balance_type
     {
@@ -79,8 +82,6 @@ private:
     dsn_handle_t _ctrl_only_move_primary;
 
 private:
-    void register_ctrl_commands();
-
     void ctrl_balancer_in_turn(int argc, const char **argv, dsn_cli_reply *reply);
     void ctrl_only_primary_balancer(int argc, const char **argv, dsn_cli_reply *reply);
     void ctrl_only_move_primary(int argc, const char **argv, dsn_cli_reply *reply);

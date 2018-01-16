@@ -241,6 +241,8 @@ error_code meta_service::start()
     server_load_balancer *balancer = utils::factory_store<server_load_balancer>::create(
         _meta_opts._lb_opts.server_load_balancer_type.c_str(), PROVIDER_TYPE_MAIN, this);
     _balancer.reset(balancer);
+    // register control command to singleton-container for load balancer
+    _balancer->register_ctrl_commands();
 
     // initializing the backup_handler should after remote_storage be initialized,
     // because we should use _cluster_root
