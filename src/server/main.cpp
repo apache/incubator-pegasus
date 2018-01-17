@@ -11,7 +11,7 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <dsn/tool_api.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 
 #include <cstdio>
 #include <cstring>
@@ -57,8 +57,8 @@ void dsn_app_registration_pegasus()
         pegasus::server::pegasus_perf_counter_factory,
         ::dsn::PROVIDER_TYPE_MAIN);
 
-    ::dsn::register_command(
-        "server-info",
+    ::dsn::command_manager::instance().register_command(
+        {"server-info"},
         "server-info - query server information",
         "server-info",
         [](const std::vector<std::string> &args) {

@@ -6,7 +6,7 @@
 #include "pegasus_io_service.h"
 #include <pegasus_utils.h>
 #include <counter_utils.h>
-#include <dsn/tool-api/command.h>
+#include <dsn/tool-api/command_manager.h>
 #include <iomanip>
 #include <regex>
 
@@ -119,16 +119,16 @@ pegasus_counter_updater::pegasus_counter_updater()
       _brief_stat_count(0),
       _last_timestamp(0)
 {
-    ::dsn::register_command(
-        "server-stat",
+    ::dsn::command_manager::instance().register_command(
+        {"server-stat"},
         "server-stat - query server statistics",
         "server-stat",
         [](const std::vector<std::string> &args) {
             return ::pegasus::server::pegasus_counter_updater::instance().get_brief_stat();
         });
 
-    ::dsn::register_command(
-        "perf-counters",
+    ::dsn::command_manager::instance().register_command(
+        {"perf-counters"},
         "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
         "perf-counters [name-filter]...",
         [](const std::vector<std::string> &args) {
