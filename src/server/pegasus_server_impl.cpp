@@ -161,90 +161,93 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // register the perf counters
     snprintf(buf, 255, "get_qps@%s", str_gpid);
-    _pfc_get_qps.init("app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of GET request");
+    _pfc_get_qps.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of GET request");
 
     snprintf(buf, 255, "multi_get_qps@%s", str_gpid);
-    _pfc_multi_get_qps.init(
+    _pfc_multi_get_qps.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of MULTI_GET request");
 
     snprintf(buf, 255, "scan_qps@%s", str_gpid);
-    _pfc_scan_qps.init("app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
+    _pfc_scan_qps.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
 
     snprintf(buf, 255, "put_qps@%s", str_gpid);
-    _pfc_put_qps.init("app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of PUT request");
+    _pfc_put_qps.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of PUT request");
 
     snprintf(buf, 255, "multi_put_qps@%s", str_gpid);
-    _pfc_multi_put_qps.init(
+    _pfc_multi_put_qps.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of MULTI_PUT request");
 
     snprintf(buf, 255, "remove_qps@%s", str_gpid);
-    _pfc_remove_qps.init(
+    _pfc_remove_qps.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of REMOVE request");
 
     snprintf(buf, 255, "multi_remove_qps@%s", str_gpid);
-    _pfc_multi_remove_qps.init(
+    _pfc_multi_remove_qps.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_RATE, "statistic the qps of MULTI_REMOVE request");
 
     snprintf(buf, 255, "get_latency@%s", str_gpid);
-    _pfc_get_latency.init("app.pegasus",
-                          buf,
-                          COUNTER_TYPE_NUMBER_PERCENTILES,
-                          "statistic the latency of GET request");
+    _pfc_get_latency.init_app_counter("app.pegasus",
+                                      buf,
+                                      COUNTER_TYPE_NUMBER_PERCENTILES,
+                                      "statistic the latency of GET request");
 
     snprintf(buf, 255, "multi_get_latency@%s", str_gpid);
-    _pfc_multi_get_latency.init("app.pegasus",
-                                buf,
-                                COUNTER_TYPE_NUMBER_PERCENTILES,
-                                "statistic the latency of MULTI_GET request");
+    _pfc_multi_get_latency.init_app_counter("app.pegasus",
+                                            buf,
+                                            COUNTER_TYPE_NUMBER_PERCENTILES,
+                                            "statistic the latency of MULTI_GET request");
 
     snprintf(buf, 255, "scan_latency@%s", str_gpid);
-    _pfc_scan_latency.init("app.pegasus",
-                           buf,
-                           COUNTER_TYPE_NUMBER_PERCENTILES,
-                           "statistic the latency of SCAN request");
+    _pfc_scan_latency.init_app_counter("app.pegasus",
+                                       buf,
+                                       COUNTER_TYPE_NUMBER_PERCENTILES,
+                                       "statistic the latency of SCAN request");
 
     snprintf(buf, 255, "put_latency@%s", str_gpid);
-    _pfc_put_latency.init("app.pegasus",
-                          buf,
-                          COUNTER_TYPE_NUMBER_PERCENTILES,
-                          "statistic the latency of PUT request");
+    _pfc_put_latency.init_app_counter("app.pegasus",
+                                      buf,
+                                      COUNTER_TYPE_NUMBER_PERCENTILES,
+                                      "statistic the latency of PUT request");
 
     snprintf(buf, 255, "multi_put_latency@%s", str_gpid);
-    _pfc_multi_put_latency.init("app.pegasus",
-                                buf,
-                                COUNTER_TYPE_NUMBER_PERCENTILES,
-                                "statistic the latency of MULTI_PUT request");
+    _pfc_multi_put_latency.init_app_counter("app.pegasus",
+                                            buf,
+                                            COUNTER_TYPE_NUMBER_PERCENTILES,
+                                            "statistic the latency of MULTI_PUT request");
 
     snprintf(buf, 255, "remove_latency@%s", str_gpid);
-    _pfc_remove_latency.init("app.pegasus",
-                             buf,
-                             COUNTER_TYPE_NUMBER_PERCENTILES,
-                             "statistic the latency of REMOVE request");
+    _pfc_remove_latency.init_app_counter("app.pegasus",
+                                         buf,
+                                         COUNTER_TYPE_NUMBER_PERCENTILES,
+                                         "statistic the latency of REMOVE request");
 
     snprintf(buf, 255, "multi_remove_latency@%s", str_gpid);
-    _pfc_multi_remove_latency.init("app.pegasus",
-                                   buf,
-                                   COUNTER_TYPE_NUMBER_PERCENTILES,
-                                   "statistic the latency of MULTI_REMOVE request");
+    _pfc_multi_remove_latency.init_app_counter("app.pegasus",
+                                               buf,
+                                               COUNTER_TYPE_NUMBER_PERCENTILES,
+                                               "statistic the latency of MULTI_REMOVE request");
 
     snprintf(buf, 255, "recent.expire.count@%s", str_gpid);
-    _pfc_recent_expire_count.init("app.pegasus",
-                                  buf,
-                                  COUNTER_TYPE_VOLATILE_NUMBER,
-                                  "statistic the recent expired value read count");
+    _pfc_recent_expire_count.init_app_counter("app.pegasus",
+                                              buf,
+                                              COUNTER_TYPE_VOLATILE_NUMBER,
+                                              "statistic the recent expired value read count");
 
     snprintf(buf, 255, "recent.filter.count@%s", str_gpid);
-    _pfc_recent_filter_count.init("app.pegasus",
-                                  buf,
-                                  COUNTER_TYPE_VOLATILE_NUMBER,
-                                  "statistic the recent filtered value read count");
+    _pfc_recent_filter_count.init_app_counter("app.pegasus",
+                                              buf,
+                                              COUNTER_TYPE_VOLATILE_NUMBER,
+                                              "statistic the recent filtered value read count");
 
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
-    _pfc_sst_count.init(
+    _pfc_sst_count.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
 
     snprintf(buf, 255, "disk.storage.sst(MB)@%s", str_gpid);
-    _pfc_sst_size.init(
+    _pfc_sst_size.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
 
     updating_rocksdb_sstsize();
@@ -422,7 +425,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     if (count == 1 &&
         ((::dsn::message_ex *)requests[0])->local_rpc_code ==
             ::dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        _pfc_multi_put_qps.increment();
+        _pfc_multi_put_qps->increment();
         dsn_message_t request = requests[0];
 
         ::dsn::apps::update_response resp;
@@ -478,7 +481,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
         ::dsn::rpc_replier<::dsn::apps::update_response> replier(dsn_msg_create_response(request));
         if (!replier.is_empty()) {
-            _pfc_multi_put_latency.set(dsn_now_ns() - start_time);
+            _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
             resp.error = status.code();
             replier(resp);
         }
@@ -488,7 +491,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     } else if (count == 1 &&
                ((::dsn::message_ex *)requests[0])->local_rpc_code ==
                    ::dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
-        _pfc_multi_remove_qps.increment();
+        _pfc_multi_remove_qps->increment();
         dsn_message_t request = requests[0];
 
         ::dsn::apps::multi_remove_response resp;
@@ -540,7 +543,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
         ::dsn::rpc_replier<::dsn::apps::multi_remove_response> replier(
             dsn_msg_create_response(request));
         if (!replier.is_empty()) {
-            _pfc_multi_remove_latency.set(dsn_now_ns() - start_time);
+            _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
             resp.error = status.code();
             replier(resp);
         }
@@ -554,7 +557,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
             ::dsn::message_ex *msg = (::dsn::message_ex *)request;
             ::dsn::blob key;
             if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_PUT) {
-                _pfc_put_qps.increment();
+                _pfc_put_qps->increment();
                 ::dsn::apps::update_request update;
                 ::dsn::unmarshall(request, update);
                 key = update.key;
@@ -571,15 +574,15 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
                 _batch.Put(skey, svalue);
                 _batch_repliers.emplace_back(dsn_msg_create_response(request));
-                _batch_perfcounters.push_back(_pfc_put_latency.get_handle());
+                _batch_perfcounters.push_back(_pfc_put_latency.get());
             } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-                _pfc_remove_qps.increment();
+                _pfc_remove_qps->increment();
                 ::dsn::unmarshall(request, key);
 
                 rocksdb::Slice skey(key.data(), key.length());
                 _batch.Delete(skey);
                 _batch_repliers.emplace_back(dsn_msg_create_response(request));
-                _batch_perfcounters.push_back(_pfc_remove_latency.get_handle());
+                _batch_perfcounters.push_back(_pfc_remove_latency.get());
             } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
                        msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
                 dassert(false,
@@ -649,7 +652,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     uint64_t latency = dsn_now_ns() - start_time;
     for (unsigned int i = 0; i != _batch_repliers.size(); ++i) {
         if (!_batch_repliers[i].is_empty()) {
-            dsn_perf_counter_set(_batch_perfcounters[i], latency);
+            _batch_perfcounters[i]->set(latency);
             _batch_repliers[i](resp);
         }
     }
@@ -690,7 +693,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                                  ::dsn::rpc_replier<::dsn::apps::read_response> &reply)
 {
     dassert(_is_open, "");
-    _pfc_get_qps.increment();
+    _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
     ::dsn::apps::read_response resp;
@@ -705,7 +708,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     if (status.ok()) {
         uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, *value);
         if (expire_ts > 0 && expire_ts <= ::pegasus::utils::epoch_now()) {
-            _pfc_recent_expire_count.increment();
+            _pfc_recent_expire_count->increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get", replica_name());
             }
@@ -735,7 +738,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_value_schema_version, std::move(value), resp.value);
     }
 
-    _pfc_get_latency.set(dsn_now_ns() - start_time);
+    _pfc_get_latency->set(dsn_now_ns() - start_time);
     reply(resp);
 }
 
@@ -743,7 +746,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                                        ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply)
 {
     dassert(_is_open, "");
-    _pfc_multi_get_qps.increment();
+    _pfc_multi_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
     ::dsn::apps::multi_get_response resp;
@@ -756,7 +759,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                replica_name(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
+        _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
     }
@@ -829,7 +832,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
-            _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
+            _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
             reply(resp);
             return;
         }
@@ -981,13 +984,13 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     }
 
     if (expire_count > 0) {
-        _pfc_recent_expire_count.add(expire_count);
+        _pfc_recent_expire_count->add(expire_count);
     }
     if (filter_count > 0) {
-        _pfc_recent_filter_count.add(filter_count);
+        _pfc_recent_filter_count->add(filter_count);
     }
 
-    _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
+    _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
     reply(resp);
 }
 
@@ -1027,7 +1030,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         it->Next();
     }
     if (expire_count > 0) {
-        _pfc_recent_expire_count.add(expire_count);
+        _pfc_recent_expire_count->add(expire_count);
     }
 
     resp.error = it->status().code();
@@ -1068,7 +1071,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     if (status.ok()) {
         expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
         if (expire_ts > 0 && expire_ts <= now_ts) {
-            _pfc_recent_expire_count.increment();
+            _pfc_recent_expire_count->increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for ttl", replica_name());
             }
@@ -1111,7 +1114,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                                          ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
     dassert(_is_open, "");
-    _pfc_scan_qps.increment();
+    _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
     ::dsn::apps::scan_response resp;
@@ -1169,7 +1172,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _pfc_multi_get_latency.set(dsn_now_ns() - start_time);
+        _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
     }
@@ -1277,13 +1280,13 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     }
 
     if (expire_count > 0) {
-        _pfc_recent_expire_count.add(expire_count);
+        _pfc_recent_expire_count->add(expire_count);
     }
     if (filter_count > 0) {
-        _pfc_recent_filter_count.add(filter_count);
+        _pfc_recent_filter_count->add(filter_count);
     }
 
-    _pfc_scan_latency.set(dsn_now_ns() - start_time);
+    _pfc_scan_latency->set(dsn_now_ns() - start_time);
     reply(resp);
 }
 
@@ -1291,7 +1294,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                                   ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
     dassert(_is_open, "");
-    _pfc_scan_qps.increment();
+    _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
     ::dsn::apps::scan_response resp;
@@ -1385,16 +1388,16 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         }
 
         if (expire_count > 0) {
-            _pfc_recent_expire_count.add(expire_count);
+            _pfc_recent_expire_count->add(expire_count);
         }
         if (filter_count > 0) {
-            _pfc_recent_filter_count.add(filter_count);
+            _pfc_recent_filter_count->add(filter_count);
         }
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    _pfc_scan_latency.set(dsn_now_ns() - start_time);
+    _pfc_scan_latency->set(dsn_now_ns() - start_time);
     reply(resp);
 }
 
@@ -1575,8 +1578,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
                 "%s: clear directory %s failed when stop app", replica_name(), data_dir().c_str());
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
-        _pfc_sst_count.set(0);
-        _pfc_sst_size.set(0);
+        _pfc_sst_count->set(0);
+        _pfc_sst_size->set(0);
     }
 
     return ::dsn::ERR_OK;
@@ -2176,8 +2179,8 @@ void pegasus_server_impl::updating_rocksdb_sstsize()
                sst_size.first,
                sst_size.second,
                sst_size_mb);
-        _pfc_sst_count.set(sst_size.first);
-        _pfc_sst_size.set(sst_size_mb);
+        _pfc_sst_count->set(sst_size.first);
+        _pfc_sst_size->set(sst_size_mb);
     }
 }
 

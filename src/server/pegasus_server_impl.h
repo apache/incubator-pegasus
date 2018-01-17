@@ -9,7 +9,7 @@
 #include <rocksdb/db.h>
 #include <rrdb/rrdb.server.h>
 #include <vector>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 
 namespace pegasus {
@@ -204,7 +204,7 @@ private:
 
     rocksdb::WriteBatch _batch;
     std::vector<::dsn::rpc_replier<::dsn::apps::update_response>> _batch_repliers;
-    std::vector<dsn_handle_t> _batch_perfcounters;
+    std::vector<::dsn::perf_counter *> _batch_perfcounters;
 
     std::string _write_buf;
     std::vector<rocksdb::Slice> _write_slices;
@@ -222,26 +222,26 @@ private:
     ::dsn::task_ptr _updating_task;
 
     // perf counters
-    ::dsn::perf_counter_ _pfc_get_qps;
-    ::dsn::perf_counter_ _pfc_multi_get_qps;
-    ::dsn::perf_counter_ _pfc_scan_qps;
-    ::dsn::perf_counter_ _pfc_put_qps;
-    ::dsn::perf_counter_ _pfc_multi_put_qps;
-    ::dsn::perf_counter_ _pfc_remove_qps;
-    ::dsn::perf_counter_ _pfc_multi_remove_qps;
+    ::dsn::perf_counter_wrapper _pfc_get_qps;
+    ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
+    ::dsn::perf_counter_wrapper _pfc_scan_qps;
+    ::dsn::perf_counter_wrapper _pfc_put_qps;
+    ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
+    ::dsn::perf_counter_wrapper _pfc_remove_qps;
+    ::dsn::perf_counter_wrapper _pfc_multi_remove_qps;
 
-    ::dsn::perf_counter_ _pfc_get_latency;
-    ::dsn::perf_counter_ _pfc_multi_get_latency;
-    ::dsn::perf_counter_ _pfc_scan_latency;
-    ::dsn::perf_counter_ _pfc_put_latency;
-    ::dsn::perf_counter_ _pfc_multi_put_latency;
-    ::dsn::perf_counter_ _pfc_remove_latency;
-    ::dsn::perf_counter_ _pfc_multi_remove_latency;
+    ::dsn::perf_counter_wrapper _pfc_get_latency;
+    ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
+    ::dsn::perf_counter_wrapper _pfc_scan_latency;
+    ::dsn::perf_counter_wrapper _pfc_put_latency;
+    ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
+    ::dsn::perf_counter_wrapper _pfc_remove_latency;
+    ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
 
-    ::dsn::perf_counter_ _pfc_recent_expire_count;
-    ::dsn::perf_counter_ _pfc_recent_filter_count;
-    ::dsn::perf_counter_ _pfc_sst_count;
-    ::dsn::perf_counter_ _pfc_sst_size;
+    ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
+    ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
+    ::dsn::perf_counter_wrapper _pfc_sst_count;
+    ::dsn::perf_counter_wrapper _pfc_sst_size;
 };
 }
 } // namespace

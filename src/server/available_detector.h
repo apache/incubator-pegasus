@@ -6,7 +6,7 @@
 
 #include <pegasus/client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 namespace pegasus {
 namespace server {
@@ -76,15 +76,15 @@ private:
     std::string _old_day;
     std::string _old_hour;
     std::string _old_minute;
-    ::dsn::perf_counter_ _pfc_detect_times_day;
-    ::dsn::perf_counter_ _pfc_fail_times_day;
-    ::dsn::perf_counter_ _pfc_available_day;
-    ::dsn::perf_counter_ _pfc_detect_times_hour;
-    ::dsn::perf_counter_ _pfc_fail_times_hour;
-    ::dsn::perf_counter_ _pfc_available_hour;
-    ::dsn::perf_counter_ _pfc_detect_times_minute;
-    ::dsn::perf_counter_ _pfc_fail_times_minute;
-    ::dsn::perf_counter_ _pfc_available_minute;
+    ::dsn::perf_counter_wrapper _pfc_detect_times_day;
+    ::dsn::perf_counter_wrapper _pfc_fail_times_day;
+    ::dsn::perf_counter_wrapper _pfc_available_day;
+    ::dsn::perf_counter_wrapper _pfc_detect_times_hour;
+    ::dsn::perf_counter_wrapper _pfc_fail_times_hour;
+    ::dsn::perf_counter_wrapper _pfc_available_hour;
+    ::dsn::perf_counter_wrapper _pfc_detect_times_minute;
+    ::dsn::perf_counter_wrapper _pfc_fail_times_minute;
+    ::dsn::perf_counter_wrapper _pfc_available_minute;
 };
 }
 }

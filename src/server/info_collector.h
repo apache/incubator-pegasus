@@ -7,7 +7,7 @@
 #include <dsn/cpp/clientlet.h>
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 #include <stdlib.h>
 #include <signal.h>
@@ -28,19 +28,19 @@ class info_collector : public virtual ::dsn::clientlet
 public:
     struct AppStatCounters
     {
-        ::dsn::perf_counter_ get_qps;
-        ::dsn::perf_counter_ multi_get_qps;
-        ::dsn::perf_counter_ put_qps;
-        ::dsn::perf_counter_ multi_put_qps;
-        ::dsn::perf_counter_ remove_qps;
-        ::dsn::perf_counter_ multi_remove_qps;
-        ::dsn::perf_counter_ scan_qps;
-        ::dsn::perf_counter_ recent_expire_count;
-        ::dsn::perf_counter_ recent_filter_count;
-        ::dsn::perf_counter_ storage_mb;
-        ::dsn::perf_counter_ storage_count;
-        ::dsn::perf_counter_ read_qps;
-        ::dsn::perf_counter_ write_qps;
+        ::dsn::perf_counter_wrapper get_qps;
+        ::dsn::perf_counter_wrapper multi_get_qps;
+        ::dsn::perf_counter_wrapper put_qps;
+        ::dsn::perf_counter_wrapper multi_put_qps;
+        ::dsn::perf_counter_wrapper remove_qps;
+        ::dsn::perf_counter_wrapper multi_remove_qps;
+        ::dsn::perf_counter_wrapper scan_qps;
+        ::dsn::perf_counter_wrapper recent_expire_count;
+        ::dsn::perf_counter_wrapper recent_filter_count;
+        ::dsn::perf_counter_wrapper storage_mb;
+        ::dsn::perf_counter_wrapper storage_count;
+        ::dsn::perf_counter_wrapper read_qps;
+        ::dsn::perf_counter_wrapper write_qps;
     };
 
     info_collector();

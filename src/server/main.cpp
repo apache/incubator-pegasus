@@ -44,6 +44,8 @@ void dsn_app_registration_pegasus()
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
     dsn_task_code_register(
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
+    dsn_meta_sever_register_providers();
+
     register_app<::pegasus::server::pegasus_replication_service_app>("replica");
     register_app<::pegasus::server::pegasus_meta_service_app>("meta");
     register_app<::pegasus::server::info_collector_app>("collector");
@@ -66,22 +68,6 @@ void dsn_app_registration_pegasus()
             oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
                 << PEGASUS_BUILD_TYPE << ", Started at " << str;
             return oss.str();
-        });
-
-    ::dsn::register_command(
-        "server-stat",
-        "server-stat - query server statistics",
-        "server-stat",
-        [](const std::vector<std::string> &args) {
-            return ::pegasus::server::pegasus_counter_updater::instance().get_brief_stat();
-        });
-
-    ::dsn::register_command(
-        "perf-counters",
-        "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
-        "perf-counters [name-filter]...",
-        [](const std::vector<std::string> &args) {
-            return ::pegasus::server::pegasus_counter_updater::instance().get_perf_counters(args);
         });
 }
 

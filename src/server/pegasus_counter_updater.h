@@ -8,7 +8,7 @@
 #include <dsn/utility/synchronize.h>
 #include <dsn/c/api_utilities.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/tool-api/perf_counter.h>
 
 #include <boost/asio.hpp>
@@ -49,8 +49,6 @@ public:
     virtual ~pegasus_counter_updater();
     void start();
     void stop();
-    bool register_handler(::dsn::perf_counter *pc);
-    bool unregister_handler(::dsn::perf_counter *pc);
     std::string get_brief_stat();
     std::string get_perf_counters(const std::vector<std::string> &args);
 
@@ -76,10 +74,7 @@ private:
                          const boost::system::error_code &ec);
     static void http_request_done(struct evhttp_request *req, void *arg);
 
-    typedef std::unordered_map<dsn::perf_counter *, dsn_perf_counter_type_t> perf_counter_map;
     mutable ::dsn::utils::rw_lock_nr _lock;
-    perf_counter_map _perf_counters;
-
     std::string _local_host;
     uint16_t _local_port;
     std::string _app_name;
@@ -109,8 +104,8 @@ private:
     int64_t _last_timestamp;
 
     // perf counters
-    ::dsn::perf_counter_ _pfc_memused_virt;
-    ::dsn::perf_counter_ _pfc_memused_res;
+    ::dsn::perf_counter_wrapper _pfc_memused_virt;
+    ::dsn::perf_counter_wrapper _pfc_memused_res;
 
 private:
     static const char *perf_counter_type(dsn_perf_counter_type_t type,

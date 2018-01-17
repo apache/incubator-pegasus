@@ -75,45 +75,48 @@ available_detector::available_detector()
                                         "; bash sendmail.sh availability_info " +
                                         _alert_email_address + " " + _cluster_name + " ";
 
-    _pfc_detect_times_day.init("app.pegasus",
-                               "cluster.available.detect.times.day",
-                               COUNTER_TYPE_NUMBER,
-                               "statistic the available detect total times every day");
-    _pfc_fail_times_day.init("app.pegasus",
-                             "cluster.available.fail.times.day",
-                             COUNTER_TYPE_NUMBER,
-                             "statistic the available detect fail times every day");
-    _pfc_available_day.init("app.pegasus",
-                            "cluster.available.day",
-                            COUNTER_TYPE_NUMBER,
-                            "statistic the availability of cluster every day");
-    _pfc_detect_times_hour.init("app.pegasus",
-                                "cluster.available.detect.times.hour",
-                                COUNTER_TYPE_NUMBER,
-                                "statistic the available detect total times every hour");
-    _pfc_fail_times_hour.init("app.pegasus",
-                              "cluster.available.fail.times.hour",
-                              COUNTER_TYPE_NUMBER,
-                              "statistic the available detect fail times every hour");
-    _pfc_available_hour.init("app.pegasus",
-                             "cluster.available.hour",
-                             COUNTER_TYPE_NUMBER,
-                             "statistic the availability of cluster every hour");
-    _pfc_detect_times_minute.init("app.pegasus",
-                                  "cluster.available.detect.times.minute",
-                                  COUNTER_TYPE_NUMBER,
-                                  "statistic the available detect total times every minute");
-    _pfc_fail_times_minute.init("app.pegasus",
-                                "cluster.available.fail.times.minute",
-                                COUNTER_TYPE_NUMBER,
-                                "statistic the available detect fail times every minute");
-    _pfc_available_minute.init("app.pegasus",
-                               "cluster.available.minute",
-                               COUNTER_TYPE_NUMBER,
-                               "statistic the availability of cluster every minute");
-    _pfc_available_day.set(1000000);    // init to 100%
-    _pfc_available_hour.set(1000000);   // init to 100%
-    _pfc_available_minute.set(1000000); // init to 100%
+    _pfc_detect_times_day.init_app_counter("app.pegasus",
+                                           "cluster.available.detect.times.day",
+                                           COUNTER_TYPE_NUMBER,
+                                           "statistic the available detect total times every day");
+    _pfc_fail_times_day.init_app_counter("app.pegasus",
+                                         "cluster.available.fail.times.day",
+                                         COUNTER_TYPE_NUMBER,
+                                         "statistic the available detect fail times every day");
+    _pfc_available_day.init_app_counter("app.pegasus",
+                                        "cluster.available.day",
+                                        COUNTER_TYPE_NUMBER,
+                                        "statistic the availability of cluster every day");
+    _pfc_detect_times_hour.init_app_counter(
+        "app.pegasus",
+        "cluster.available.detect.times.hour",
+        COUNTER_TYPE_NUMBER,
+        "statistic the available detect total times every hour");
+    _pfc_fail_times_hour.init_app_counter("app.pegasus",
+                                          "cluster.available.fail.times.hour",
+                                          COUNTER_TYPE_NUMBER,
+                                          "statistic the available detect fail times every hour");
+    _pfc_available_hour.init_app_counter("app.pegasus",
+                                         "cluster.available.hour",
+                                         COUNTER_TYPE_NUMBER,
+                                         "statistic the availability of cluster every hour");
+    _pfc_detect_times_minute.init_app_counter(
+        "app.pegasus",
+        "cluster.available.detect.times.minute",
+        COUNTER_TYPE_NUMBER,
+        "statistic the available detect total times every minute");
+    _pfc_fail_times_minute.init_app_counter(
+        "app.pegasus",
+        "cluster.available.fail.times.minute",
+        COUNTER_TYPE_NUMBER,
+        "statistic the available detect fail times every minute");
+    _pfc_available_minute.init_app_counter("app.pegasus",
+                                           "cluster.available.minute",
+                                           COUNTER_TYPE_NUMBER,
+                                           "statistic the availability of cluster every minute");
+    _pfc_available_day->set(1000000);    // init to 100%
+    _pfc_available_hour->set(1000000);   // init to 100%
+    _pfc_available_minute->set(1000000); // init to 100%
 }
 
 available_detector::~available_detector()
@@ -395,9 +398,9 @@ void available_detector::on_day_report()
         value = oss.str();
     }
 
-    _pfc_detect_times_day.set(detect_times);
-    _pfc_fail_times_day.set(fail_times);
-    _pfc_available_day.set(available);
+    _pfc_detect_times_day->set(detect_times);
+    _pfc_fail_times_day->set(fail_times);
+    _pfc_available_day->set(available);
 
     ddebug("start to send availability email, date = %s", _old_day.c_str());
     int r = system((_send_availability_info_email_cmd + std::to_string(detect_times) + " " +
@@ -438,9 +441,9 @@ void available_detector::on_hour_report()
         value = oss.str();
     }
 
-    _pfc_detect_times_hour.set(detect_times);
-    _pfc_fail_times_hour.set(fail_times);
-    _pfc_available_hour.set(available);
+    _pfc_detect_times_hour->set(detect_times);
+    _pfc_fail_times_hour->set(fail_times);
+    _pfc_available_hour->set(available);
 
     set_detect_result(hash_key, sort_key, value, 3);
 }
@@ -462,9 +465,9 @@ void available_detector::on_minute_report()
         value = oss.str();
     }
 
-    _pfc_detect_times_minute.set(detect_times);
-    _pfc_fail_times_minute.set(fail_times);
-    _pfc_available_minute.set(available);
+    _pfc_detect_times_minute->set(detect_times);
+    _pfc_fail_times_minute->set(fail_times);
+    _pfc_available_minute->set(available);
 
     set_detect_result(hash_key, sort_key, value, 3);
 }

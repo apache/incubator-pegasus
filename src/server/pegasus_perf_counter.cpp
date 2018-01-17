@@ -3,7 +3,6 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_perf_counter.h"
-#include "pegasus_counter_updater.h"
 #include "pegasus_io_service.h"
 
 #include <atomic>
@@ -39,12 +38,8 @@ public:
         for (int i = 0; i < DIVIDE_CONTAINER; i++) {
             _val[i].store(0);
         }
-        pegasus_counter_updater::instance().register_handler(this);
     }
-    ~pegasus_perf_counter_number_atomic(void)
-    {
-        pegasus_counter_updater::instance().unregister_handler(this);
-    }
+    ~pegasus_perf_counter_number_atomic(void) {}
 
     virtual void increment()
     {
@@ -145,12 +140,8 @@ public:
         for (int i = 0; i < DIVIDE_CONTAINER; i++) {
             _val[i].store(0, std::memory_order_relaxed);
         }
-        pegasus_counter_updater::instance().register_handler(this);
     }
-    ~pegasus_perf_counter_rate_atomic(void)
-    {
-        pegasus_counter_updater::instance().unregister_handler(this);
-    }
+    ~pegasus_perf_counter_rate_atomic(void) {}
 
     virtual void increment()
     {
@@ -235,14 +226,9 @@ public:
                                      this,
                                      _timer,
                                      std::placeholders::_1));
-        pegasus_counter_updater::instance().register_handler(this);
     }
 
-    ~pegasus_perf_counter_number_percentile_atomic(void)
-    {
-        pegasus_counter_updater::instance().unregister_handler(this);
-        _timer->cancel();
-    }
+    ~pegasus_perf_counter_number_percentile_atomic(void) { _timer->cancel(); }
 
     virtual void increment() { dassert(false, "invalid execution flow"); }
     virtual void decrement() { dassert(false, "invalid execution flow"); }

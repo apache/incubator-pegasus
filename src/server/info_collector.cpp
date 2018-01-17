@@ -100,19 +100,19 @@ void info_collector::on_app_stat()
         for (int i = 0; i < rows.size(); ++i) {
             row_data &row = rows[i];
             AppStatCounters *counters = get_app_counters(row.row_name);
-            counters->get_qps.set(row.get_qps);
-            counters->multi_get_qps.set(row.multi_get_qps);
-            counters->put_qps.set(row.put_qps);
-            counters->multi_put_qps.set(row.multi_put_qps);
-            counters->remove_qps.set(row.remove_qps);
-            counters->multi_remove_qps.set(row.multi_remove_qps);
-            counters->scan_qps.set(row.scan_qps);
-            counters->recent_expire_count.set(row.recent_expire_count);
-            counters->recent_filter_count.set(row.recent_filter_count);
-            counters->storage_mb.set(row.storage_mb);
-            counters->storage_count.set(row.storage_count);
-            counters->read_qps.set(read_qps[i]);
-            counters->write_qps.set(write_qps[i]);
+            counters->get_qps->set(row.get_qps);
+            counters->multi_get_qps->set(row.multi_get_qps);
+            counters->put_qps->set(row.put_qps);
+            counters->multi_put_qps->set(row.multi_put_qps);
+            counters->remove_qps->set(row.remove_qps);
+            counters->multi_remove_qps->set(row.multi_remove_qps);
+            counters->scan_qps->set(row.scan_qps);
+            counters->recent_expire_count->set(row.recent_expire_count);
+            counters->recent_filter_count->set(row.recent_filter_count);
+            counters->storage_mb->set(row.storage_mb);
+            counters->storage_count->set(row.storage_count);
+            counters->read_qps->set(read_qps[i]);
+            counters->write_qps->set(write_qps[i]);
         }
         ddebug("stat apps succeed, app_count = %d, total_read_qps = %" PRId64
                ", total_write_qps = %" PRId64,
@@ -138,7 +138,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     do {                                                                                           \
         sprintf(buf1, "app.stat." #type "#%s", app_name.c_str());                                  \
         sprintf(buf2, "statistic the " #type " of app %s", app_name.c_str());                      \
-        counters->type.init("app.pegasus", buf1, COUNTER_TYPE_NUMBER, buf2);                       \
+        counters->type.init_app_counter("app.pegasus", buf1, COUNTER_TYPE_NUMBER, buf2);           \
     } while (0)
     INIT_COUNER(get_qps);
     INIT_COUNER(multi_get_qps);
