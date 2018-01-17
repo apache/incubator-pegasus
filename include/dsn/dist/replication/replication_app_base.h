@@ -45,7 +45,6 @@
 #include <dsn/dist/replication/replication.types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/dist/replication/replication.codes.h>
-#include <dsn/cpp/perf_counter_.h>
 #include <atomic>
 
 namespace dsn {

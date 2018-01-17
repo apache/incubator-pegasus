@@ -48,14 +48,15 @@ nfs_service_impl::nfs_service_impl(nfs_opts &opts)
         [this] { close_file(); },
         std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
 
-    _recent_copy_data_size.init("eon.nfs_server",
-                                "recent_copy_data_size",
-                                COUNTER_TYPE_VOLATILE_NUMBER,
-                                "nfs server copy data size in the recent period");
-    _recent_copy_fail_count.init("eon.nfs_server",
-                                 "recent_copy_fail_count",
-                                 COUNTER_TYPE_VOLATILE_NUMBER,
-                                 "nfs server copy fail count count in the recent period");
+    _recent_copy_data_size.init_app_counter("eon.nfs_server",
+                                            "recent_copy_data_size",
+                                            COUNTER_TYPE_VOLATILE_NUMBER,
+                                            "nfs server copy data size in the recent period");
+    _recent_copy_fail_count.init_app_counter(
+        "eon.nfs_server",
+        "recent_copy_fail_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "nfs server copy fail count count in the recent period");
 }
 
 void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
@@ -133,9 +134,9 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
     if (err != ERR_OK) {
         derror(
             "{nfs_service} read file %s failed, err = %s", cp.file_path.c_str(), err.to_string());
-        _recent_copy_fail_count.increment();
+        _recent_copy_fail_count->increment();
     } else {
-        _recent_copy_data_size.add(sz);
+        _recent_copy_data_size->add(sz);
     }
 
     ::dsn::service::copy_response resp;

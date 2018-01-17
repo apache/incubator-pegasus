@@ -46,22 +46,24 @@ nfs_client_impl::nfs_client_impl(nfs_opts &opts) : _opts(opts)
     _buffered_local_write_count = 0;
     _high_priority_remaining_time = _opts.high_priority_speed_rate;
 
-    _recent_copy_data_size.init("eon.nfs_client",
-                                "recent_copy_data_size",
-                                COUNTER_TYPE_VOLATILE_NUMBER,
-                                "nfs client copy data size in the recent period");
-    _recent_copy_fail_count.init("eon.nfs_client",
-                                 "recent_copy_fail_count",
-                                 COUNTER_TYPE_VOLATILE_NUMBER,
-                                 "nfs client copy fail count count in the recent period");
-    _recent_write_data_size.init("eon.nfs_client",
-                                 "recent_write_data_size",
-                                 COUNTER_TYPE_VOLATILE_NUMBER,
-                                 "nfs client write data size in the recent period");
-    _recent_write_fail_count.init("eon.nfs_client",
-                                  "recent_write_fail_count",
-                                  COUNTER_TYPE_VOLATILE_NUMBER,
-                                  "nfs client write fail count count in the recent period");
+    _recent_copy_data_size.init_app_counter("eon.nfs_client",
+                                            "recent_copy_data_size",
+                                            COUNTER_TYPE_VOLATILE_NUMBER,
+                                            "nfs client copy data size in the recent period");
+    _recent_copy_fail_count.init_app_counter(
+        "eon.nfs_client",
+        "recent_copy_fail_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "nfs client copy fail count count in the recent period");
+    _recent_write_data_size.init_app_counter("eon.nfs_client",
+                                             "recent_write_data_size",
+                                             COUNTER_TYPE_VOLATILE_NUMBER,
+                                             "nfs client write data size in the recent period");
+    _recent_write_fail_count.init_app_counter(
+        "eon.nfs_client",
+        "recent_write_fail_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "nfs client write fail count count in the recent period");
 }
 
 void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
@@ -273,11 +275,11 @@ void nfs_client_impl::end_copy(::dsn::error_code err, const copy_response &resp,
                reqc->file_ctx->user_req->file_size_req.source_dir.c_str(),
                reqc->file_ctx->file_name.c_str(),
                err.to_string());
-        _recent_copy_fail_count.increment();
+        _recent_copy_fail_count->increment();
         handle_completion(reqc->file_ctx->user_req, err);
         return;
     } else {
-        _recent_copy_data_size.add(resp.size);
+        _recent_copy_data_size->add(resp.size);
     }
 
     reqc->response = resp;
@@ -419,10 +421,10 @@ void nfs_client_impl::local_write_callback(error_code err,
                reqc->file_ctx->user_req->file_size_req.dst_dir.c_str(),
                reqc->file_ctx->file_name.c_str(),
                err.to_string());
-        _recent_write_fail_count.increment();
+        _recent_write_fail_count->increment();
         completed = true;
     } else {
-        _recent_write_data_size.add(sz);
+        _recent_write_data_size->add(sz);
         zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
         if (++reqc->file_ctx->finished_segments == (int)reqc->file_ctx->copy_requests.size()) {
             // close file immediately after write done to release resouces quickly

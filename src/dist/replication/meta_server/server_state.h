@@ -39,8 +39,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/cpp/perf_counter_.h>
 #include <dsn/dist/block_service.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 #include "dist/replication/client_lib/replication_common.h"
 #include "dist/replication/meta_server/meta_data.h"
@@ -305,14 +305,14 @@ private:
     dsn_handle_t _cli_json_state_handle;
     dsn_handle_t _cli_dump_handle;
 
-    perf_counter_ _dead_partition_count;
-    perf_counter_ _unreadable_partition_count;
-    perf_counter_ _unwritable_partition_count;
-    perf_counter_ _writable_ill_partition_count;
-    perf_counter_ _healthy_partition_count;
-    perf_counter_ _recent_update_config_count;
-    perf_counter_ _recent_partition_change_unwritable_count;
-    perf_counter_ _recent_partition_change_writable_count;
+    perf_counter_wrapper _dead_partition_count;
+    perf_counter_wrapper _unreadable_partition_count;
+    perf_counter_wrapper _unwritable_partition_count;
+    perf_counter_wrapper _writable_ill_partition_count;
+    perf_counter_wrapper _healthy_partition_count;
+    perf_counter_wrapper _recent_update_config_count;
+    perf_counter_wrapper _recent_partition_change_unwritable_count;
+    perf_counter_wrapper _recent_partition_change_writable_count;
 
 public:
     void json_state(std::stringstream &out) const;

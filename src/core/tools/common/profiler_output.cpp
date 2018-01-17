@@ -79,7 +79,7 @@ void profiler_output_top(std::stringstream &ss,
     // Load data
     for (int i = 0; i <= dsn_task_code_max(); _tmp[i].id = i, i++) {
         if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) ||
-            (s_spec_profilers[i].ptr[counter_type] == nullptr))
+            (s_spec_profilers[i].ptr[counter_type].get() == nullptr))
             continue;
 
         if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {
@@ -138,7 +138,7 @@ void profiler_output_infomation_line(std::stringstream &ss,
     for (int i = 0; i < PREF_COUNTER_COUNT; i++) {
         // The middle line, print the data of all counter type
         if (full_data == true) {
-            if (s_spec_profilers[task_id].ptr[i] == nullptr) {
+            if (s_spec_profilers[task_id].ptr[i].get() == nullptr) {
                 ss << profiler_output_data->none;
             } else if (counter_info_ptr[i]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {
                 ss << std::setw(data_width)
@@ -151,7 +151,7 @@ void profiler_output_infomation_line(std::stringstream &ss,
         else {
             if (counter_info_ptr[i]->type != COUNTER_TYPE_NUMBER_PERCENTILES) {
                 ss << profiler_output_data->blank_data;
-            } else if (s_spec_profilers[task_id].ptr[i] != nullptr) {
+            } else if (s_spec_profilers[task_id].ptr[i].get() != nullptr) {
                 ss << std::setw(data_width)
                    << s_spec_profilers[task_id].ptr[i]->get_percentile(percentile_type) << "|";
             } else {
@@ -369,7 +369,7 @@ void profiler_data_top(std::stringstream &ss,
     // Load data
     for (int i = 0; i <= dsn_task_code_max(); _tmp[i].id = i, i++) {
         if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) ||
-            (s_spec_profilers[i].ptr[counter_type] == nullptr))
+            (s_spec_profilers[i].ptr[counter_type].get() == nullptr))
             continue;
 
         if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {

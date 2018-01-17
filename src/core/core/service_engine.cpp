@@ -38,13 +38,13 @@
 #include "disk_engine.h"
 #include "rpc_engine.h"
 #include "uri_address.h"
-#include "perf_counters.h"
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/command.h>
 #include <dsn/tool-api/perf_counter.h>
+#include <dsn/tool-api/perf_counters.h>
 #include <dsn/tool_api.h>
 #include <dsn/tool/node_scoper.h>
 

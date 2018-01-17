@@ -97,7 +97,7 @@ void replica::init_learn(uint64_t signature)
             return;
         }
 
-        _stub->_counter_replicas_learning_recent_start_count.increment();
+        _stub->_counter_replicas_learning_recent_start_count->increment();
 
         _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
@@ -139,7 +139,7 @@ void replica::init_learn(uint64_t signature)
 
                     // missed ones need to be loaded via private logs
                     else {
-                        _stub->_counter_replicas_learning_recent_round_start_count.increment();
+                        _stub->_counter_replicas_learning_recent_round_start_count->increment();
                         _potential_secondary_states.learning_round_is_running = true;
                         _potential_secondary_states.catchup_with_private_log_task =
                             tasking::create_task(LPC_CATCHUP_WITH_PRIVATE_LOGS,
@@ -193,7 +193,7 @@ void replica::init_learn(uint64_t signature)
         return;
     }
 
-    _stub->_counter_replicas_learning_recent_round_start_count.increment();
+    _stub->_counter_replicas_learning_recent_round_start_count->increment();
     _potential_secondary_states.learning_round_is_running = true;
 
     learn_request request;
@@ -525,7 +525,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
            enum_to_string(_potential_secondary_states.learning_status));
 
     _potential_secondary_states.learning_copy_buffer_size += resp.state.meta.length();
-    _stub->_counter_replicas_learning_recent_copy_buffer_size.add(resp.state.meta.length());
+    _stub->_counter_replicas_learning_recent_copy_buffer_size->add(resp.state.meta.length());
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE) {
@@ -578,7 +578,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
               _app->last_committed_decree(),
               resp.last_committed_decree);
 
-        _stub->_counter_replicas_learning_recent_learn_reset_count.increment();
+        _stub->_counter_replicas_learning_recent_learn_reset_count->increment();
 
         // close app
         auto err = _app->close(true);
@@ -671,13 +671,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     switch (resp.type) {
     case learn_type::LT_CACHE:
-        _stub->_counter_replicas_learning_recent_learn_cache_count.increment();
+        _stub->_counter_replicas_learning_recent_learn_cache_count->increment();
         break;
     case learn_type::LT_APP:
-        _stub->_counter_replicas_learning_recent_learn_app_count.increment();
+        _stub->_counter_replicas_learning_recent_learn_app_count->increment();
         break;
     case learn_type::LT_LOG:
-        _stub->_counter_replicas_learning_recent_learn_log_count.increment();
+        _stub->_counter_replicas_learning_recent_learn_log_count->increment();
         break;
     default:
         // do nothing
@@ -906,8 +906,8 @@ void replica::on_copy_remote_state_completed(error_code err,
     if (err == ERR_OK) {
         _potential_secondary_states.learning_copy_file_count += resp.state.files.size();
         _potential_secondary_states.learning_copy_file_size += size;
-        _stub->_counter_replicas_learning_recent_copy_file_count.add(resp.state.files.size());
-        _stub->_counter_replicas_learning_recent_copy_file_size.add(size);
+        _stub->_counter_replicas_learning_recent_copy_file_count->add(resp.state.files.size());
+        _stub->_counter_replicas_learning_recent_copy_file_size->add(size);
     }
 
     if (err != ERR_OK) {
@@ -1130,7 +1130,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
            err.to_string(),
            is_local_error ? "local_error" : "remote error");
 
-    _stub->_counter_replicas_learning_recent_learn_fail_count.increment();
+    _stub->_counter_replicas_learning_recent_learn_fail_count->increment();
 
     update_local_configuration_with_no_ballot_change(
         is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
@@ -1313,7 +1313,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
             handle_learning_error(resp.err, false);
         }
     } else {
-        _stub->_counter_replicas_learning_recent_learn_succ_count.increment();
+        _stub->_counter_replicas_learning_recent_learn_succ_count->increment();
     }
 }
 

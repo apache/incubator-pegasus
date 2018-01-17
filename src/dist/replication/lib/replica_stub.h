@@ -45,8 +45,7 @@
 #include "../client_lib/fs_manager.h"
 #include "../client_lib/block_service_manager.h"
 #include "replica.h"
-
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/failure_detector_multimaster.h>
 
 namespace dsn {
@@ -254,46 +253,46 @@ private:
     block_service_manager _block_service_manager;
 
     // performance counters
-    perf_counter_ _counter_replicas_count;
-    perf_counter_ _counter_replicas_opening_count;
-    perf_counter_ _counter_replicas_closing_count;
-    perf_counter_ _counter_replicas_total_commit_throught;
+    perf_counter_wrapper _counter_replicas_count;
+    perf_counter_wrapper _counter_replicas_opening_count;
+    perf_counter_wrapper _counter_replicas_closing_count;
+    perf_counter_wrapper _counter_replicas_total_commit_throught;
 
-    perf_counter_ _counter_replicas_learning_count;
-    perf_counter_ _counter_replicas_learning_max_duration_time_ms;
-    perf_counter_ _counter_replicas_learning_max_copy_file_size;
-    perf_counter_ _counter_replicas_learning_recent_start_count;
-    perf_counter_ _counter_replicas_learning_recent_round_start_count;
-    perf_counter_ _counter_replicas_learning_recent_copy_file_count;
-    perf_counter_ _counter_replicas_learning_recent_copy_file_size;
-    perf_counter_ _counter_replicas_learning_recent_copy_buffer_size;
-    perf_counter_ _counter_replicas_learning_recent_learn_cache_count;
-    perf_counter_ _counter_replicas_learning_recent_learn_app_count;
-    perf_counter_ _counter_replicas_learning_recent_learn_log_count;
-    perf_counter_ _counter_replicas_learning_recent_learn_reset_count;
-    perf_counter_ _counter_replicas_learning_recent_learn_fail_count;
-    perf_counter_ _counter_replicas_learning_recent_learn_succ_count;
+    perf_counter_wrapper _counter_replicas_learning_count;
+    perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;
+    perf_counter_wrapper _counter_replicas_learning_max_copy_file_size;
+    perf_counter_wrapper _counter_replicas_learning_recent_start_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_round_start_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_size;
+    perf_counter_wrapper _counter_replicas_learning_recent_copy_buffer_size;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_cache_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_app_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_log_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_reset_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_fail_count;
+    perf_counter_wrapper _counter_replicas_learning_recent_learn_succ_count;
 
-    perf_counter_ _counter_replicas_recent_prepare_fail_count;
-    perf_counter_ _counter_replicas_recent_replica_move_error_count;
-    perf_counter_ _counter_replicas_recent_replica_move_garbage_count;
-    perf_counter_ _counter_replicas_recent_replica_remove_dir_count;
-    perf_counter_ _counter_replicas_error_replica_dir_count;
-    perf_counter_ _counter_replicas_garbage_replica_dir_count;
+    perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
+    perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
+    perf_counter_wrapper _counter_replicas_recent_replica_move_garbage_count;
+    perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
+    perf_counter_wrapper _counter_replicas_error_replica_dir_count;
+    perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
 
-    perf_counter_ _counter_shared_log_size;
+    perf_counter_wrapper _counter_shared_log_size;
 
-    perf_counter_ _counter_cold_backup_running_count;
-    perf_counter_ _counter_cold_backup_recent_start_count;
-    perf_counter_ _counter_cold_backup_recent_succ_count;
-    perf_counter_ _counter_cold_backup_recent_fail_count;
-    perf_counter_ _counter_cold_backup_recent_cancel_count;
-    perf_counter_ _counter_cold_backup_recent_pause_count;
-    perf_counter_ _counter_cold_backup_recent_upload_file_succ_count;
-    perf_counter_ _counter_cold_backup_recent_upload_file_fail_count;
-    perf_counter_ _counter_cold_backup_recent_upload_file_size;
-    perf_counter_ _counter_cold_backup_max_duration_time_ms;
-    perf_counter_ _counter_cold_backup_max_upload_file_size;
+    perf_counter_wrapper _counter_cold_backup_running_count;
+    perf_counter_wrapper _counter_cold_backup_recent_start_count;
+    perf_counter_wrapper _counter_cold_backup_recent_succ_count;
+    perf_counter_wrapper _counter_cold_backup_recent_fail_count;
+    perf_counter_wrapper _counter_cold_backup_recent_cancel_count;
+    perf_counter_wrapper _counter_cold_backup_recent_pause_count;
+    perf_counter_wrapper _counter_cold_backup_recent_upload_file_succ_count;
+    perf_counter_wrapper _counter_cold_backup_recent_upload_file_fail_count;
+    perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
+    perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
+    perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
 
 private:
     void response_client_error(gpid gpid, bool is_read, dsn_message_t request, error_code error);

@@ -43,7 +43,8 @@
 //
 
 #include <dsn/cpp/serverlet.h>
-#include "../client_lib/replication_common.h"
+#include <dsn/cpp/perf_counter_wrapper.h>
+#include "dist/replication/client_lib/replication_common.h"
 #include "mutation.h"
 #include "mutation_log.h"
 #include "prepare_list.h"
@@ -350,7 +351,7 @@ private:
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
 
     // perf counters
-    perf_counter_ _counter_private_log_size;
+    perf_counter_wrapper _counter_private_log_size;
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 }

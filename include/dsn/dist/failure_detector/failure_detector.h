@@ -64,7 +64,7 @@
 
 #include <dsn/dist/failure_detector/fd.client.h>
 #include <dsn/dist/failure_detector/fd.server.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 namespace dsn {
 namespace fd {
@@ -212,7 +212,7 @@ private:
     bool _use_allow_list;
     allow_list _allow_list;
 
-    perf_counter_ _recent_beacon_fail_count;
+    perf_counter_wrapper _recent_beacon_fail_count;
 
 protected:
     mutable service::zlock _lock;

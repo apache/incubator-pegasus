@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
 
@@ -108,8 +108,8 @@ private:
 
     ::dsn::task_ptr _file_close_timer;
 
-    perf_counter_ _recent_copy_data_size;
-    perf_counter_ _recent_copy_fail_count;
+    perf_counter_wrapper _recent_copy_data_size;
+    perf_counter_wrapper _recent_copy_fail_count;
 };
 }
 }

@@ -179,7 +179,7 @@ public:
 
 protected:
     meta_service *_svc;
-    perf_counter_ _recent_choose_primary_fail_count;
+    perf_counter_wrapper _recent_choose_primary_fail_count;
 };
 
 class simple_load_balancer : public server_load_balancer

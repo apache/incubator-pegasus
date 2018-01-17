@@ -54,10 +54,11 @@ failure_detector::failure_detector()
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING, pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING_ACK, pool);
 
-    _recent_beacon_fail_count.init("eon.failure_detector",
-                                   "recent_beacon_fail_count",
-                                   COUNTER_TYPE_VOLATILE_NUMBER,
-                                   "failure detector beacon fail count in the recent period");
+    _recent_beacon_fail_count.init_app_counter(
+        "eon.failure_detector",
+        "recent_beacon_fail_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "failure detector beacon fail count in the recent period");
 
     _is_started = false;
 }
@@ -366,7 +367,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
               node.to_string(),
               _beacon_timeout_milliseconds,
               err.to_string());
-        _recent_beacon_fail_count.increment();
+        _recent_beacon_fail_count->increment();
     }
 
     master_map::iterator itr = _masters.find(node);

@@ -35,7 +35,7 @@
 
 #include <dsn/tool-api/task_queue.h>
 #include "task_engine.h"
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/tool-api/perf_counters.h>
 #include <dsn/tool-api/network.h>
 #include <cstdio>
 #include "rpc_engine.h"
@@ -57,17 +57,21 @@ task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_prov
     _name.append(num);
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
-    _queue_length_counter = perf_counter::get_counter(_pool->node()->name(),
-                                                      "engine",
-                                                      (_name + ".queue.length").c_str(),
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "task queue length",
-                                                      true);
+    _queue_length_counter =
+        perf_counters::instance().get_global_counter(_pool->node()->name(),
+                                                     "engine",
+                                                     (_name + ".queue.length").c_str(),
+                                                     COUNTER_TYPE_NUMBER,
+                                                     "task queue length",
+                                                     true);
     _virtual_queue_length = 0;
     _spec = (threadpool_spec *)&pool->spec();
 }
 
-task_queue::~task_queue() { perf_counter::remove_counter(_queue_length_counter->full_name()); }
+task_queue::~task_queue()
+{
+    perf_counters::instance().remove_counter(_queue_length_counter->full_name());
+}
 
 void task_queue::enqueue_internal(task *task)
 {

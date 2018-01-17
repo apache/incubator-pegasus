@@ -39,7 +39,7 @@
 
 #include <dsn/cpp/serverlet.h>
 #include <dsn/dist/meta_state_service.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 #include "dist/replication/client_lib/replication_common.h"
 #include "dist/replication/meta_server/meta_options.h"
@@ -185,8 +185,8 @@ private:
 
     std::string _cluster_root;
 
-    perf_counter_ _recent_disconnect_count;
-    perf_counter_ _unalive_nodes_count;
+    perf_counter_wrapper _recent_disconnect_count;
+    perf_counter_wrapper _unalive_nodes_count;
 };
 }
 }

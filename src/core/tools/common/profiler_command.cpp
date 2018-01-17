@@ -205,7 +205,7 @@ std::string profiler_data_handler(const std::vector<std::string> &args)
         percentile_type = find_percentail_type(val[2]);
 
         if ((task_id != TASK_CODE_INVALID) && (counter_type != PREF_COUNTER_INVALID) &&
-            (s_spec_profilers[task_id].ptr[counter_type] != NULL) &&
+            (s_spec_profilers[task_id].ptr[counter_type].get() != nullptr) &&
             (s_spec_profilers[task_id].is_profile != false)) {
             ss << dsn_task_code_to_string(task_id) << ":" << counter_info_ptr[counter_type]->title
                << ":" << percentail_counter_string[percentile_type] << ":";
@@ -218,7 +218,7 @@ std::string profiler_data_handler(const std::vector<std::string> &args)
         } else if ((task_id != TASK_CODE_INVALID) && (val[1] == "AllPercentile") &&
                    (s_spec_profilers[task_id].is_profile != false)) {
             for (int j = 0; j < PREF_COUNTER_COUNT; j++) {
-                if ((s_spec_profilers[task_id].ptr[j] != NULL) &&
+                if ((s_spec_profilers[task_id].ptr[j].get() != nullptr) &&
                     (counter_info_ptr[j]->type == COUNTER_TYPE_NUMBER_PERCENTILES)) {
                     ss << dsn_task_code_to_string(i) << ":" << counter_info_ptr[j]->title << ":"
                        << percentail_counter_string[percentile_type] << ":"
@@ -301,7 +301,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 for (int k = 0; k < PREF_COUNTER_COUNT; k++) {
                     counter_type = static_cast<perf_counter_ptr_type>(k);
 
-                    if (s_spec_profilers[task_id].ptr[counter_type] == NULL) {
+                    if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL) {
                         ss << ",\"\"";
                     } else {
                         if (counter_info_ptr[counter_type]->type ==
@@ -373,7 +373,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {
                     counter_sample_resp resp;
 
-                    if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                    if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL)
                         continue;
 
                     char name[20] = {0};
@@ -461,7 +461,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 perf_counter_ptr_type counter_type = static_cast<perf_counter_ptr_type>(k);
 
                 if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {
-                    if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                    if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL)
                         continue;
 
                     double timeGet = 0;
@@ -550,7 +550,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 perf_counter_ptr_type counter_type = static_cast<perf_counter_ptr_type>(k);
 
                 if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES) {
-                    if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                    if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL)
                         continue;
 
                     char name[20] = {0};

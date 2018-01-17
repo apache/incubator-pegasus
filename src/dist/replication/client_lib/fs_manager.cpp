@@ -99,26 +99,26 @@ void dir_node::update_disk_stat()
 fs_manager::fs_manager(bool for_test)
 {
     if (!for_test) {
-        _counter_capacity_total_mb.init("eon.replica_stub",
-                                        "disk.capacity.total(MB)",
-                                        COUNTER_TYPE_NUMBER,
-                                        "total disk capacity in MB");
-        _counter_available_total_mb.init("eon.replica_stub",
-                                         "disk.available.total(MB)",
-                                         COUNTER_TYPE_NUMBER,
-                                         "total disk available in MB");
-        _counter_available_total_ratio.init("eon.replica_stub",
-                                            "disk.available.total.ratio",
-                                            COUNTER_TYPE_NUMBER,
-                                            "total disk available ratio");
-        _counter_available_min_ratio.init("eon.replica_stub",
-                                          "disk.available.min.ratio",
-                                          COUNTER_TYPE_NUMBER,
-                                          "minimal disk available ratio in all disks");
-        _counter_available_max_ratio.init("eon.replica_stub",
-                                          "disk.available.max.ratio",
-                                          COUNTER_TYPE_NUMBER,
-                                          "maximal disk available ratio in all disks");
+        _counter_capacity_total_mb.init_app_counter("eon.replica_stub",
+                                                    "disk.capacity.total(MB)",
+                                                    COUNTER_TYPE_NUMBER,
+                                                    "total disk capacity in MB");
+        _counter_available_total_mb.init_app_counter("eon.replica_stub",
+                                                     "disk.available.total(MB)",
+                                                     COUNTER_TYPE_NUMBER,
+                                                     "total disk available in MB");
+        _counter_available_total_ratio.init_app_counter("eon.replica_stub",
+                                                        "disk.available.total.ratio",
+                                                        COUNTER_TYPE_NUMBER,
+                                                        "total disk available ratio");
+        _counter_available_min_ratio.init_app_counter("eon.replica_stub",
+                                                      "disk.available.min.ratio",
+                                                      COUNTER_TYPE_NUMBER,
+                                                      "minimal disk available ratio in all disks");
+        _counter_available_max_ratio.init_app_counter("eon.replica_stub",
+                                                      "disk.available.max.ratio",
+                                                      COUNTER_TYPE_NUMBER,
+                                                      "maximal disk available ratio in all disks");
     }
 }
 
@@ -308,11 +308,11 @@ void fs_manager::update_disk_stat()
            available_total_ratio,
            available_min_ratio,
            available_max_ratio);
-    _counter_capacity_total_mb.set(capacity_total_mb);
-    _counter_available_total_mb.set(available_total_mb);
-    _counter_available_total_ratio.set(available_total_ratio);
-    _counter_available_min_ratio.set(available_min_ratio);
-    _counter_available_max_ratio.set(available_max_ratio);
+    _counter_capacity_total_mb->set(capacity_total_mb);
+    _counter_available_total_mb->set(available_total_mb);
+    _counter_available_total_ratio->set(available_total_ratio);
+    _counter_available_min_ratio->set(available_min_ratio);
+    _counter_available_max_ratio->set(available_max_ratio);
 }
 }
 }

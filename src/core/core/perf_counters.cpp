@@ -34,66 +34,12 @@
  */
 
 #include <dsn/tool-api/perf_counter.h>
+#include <dsn/tool-api/perf_counters.h>
 #include <dsn/service_api_c.h>
 #include <dsn/tool-api/command.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/cpp/json_helper.h>
 #include "service_engine.h"
-#include "perf_counters.h"
-
-DSN_API dsn_handle_t dsn_perf_counter_create(const char *section,
-                                             const char *name,
-                                             dsn_perf_counter_type_t type,
-                                             const char *description)
-{
-    auto cnode = dsn::task::get_current_node2();
-    dassert(cnode != nullptr, "cannot get current service node!");
-    auto c = dsn::perf_counters::instance().get_counter(
-        cnode->name(), section, name, type, description, true);
-    c->add_ref();
-    return c.get();
-}
-
-DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
-{
-    auto sptr = reinterpret_cast<dsn::perf_counter *>(handle);
-    if (dsn::perf_counters::instance().remove_counter(sptr->full_name())) {
-        sptr->release_ref();
-    } else {
-        dwarn("cannot remove counter %s as it is not found in our repo", sptr->full_name());
-    }
-}
-
-DSN_API void dsn_perf_counter_increment(dsn_handle_t handle)
-{
-    reinterpret_cast<dsn::perf_counter *>(handle)->increment();
-}
-
-DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle)
-{
-    reinterpret_cast<dsn::perf_counter *>(handle)->decrement();
-}
-DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val)
-{
-    reinterpret_cast<dsn::perf_counter *>(handle)->add(val);
-}
-DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val)
-{
-    reinterpret_cast<dsn::perf_counter *>(handle)->set(val);
-}
-DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle)
-{
-    return reinterpret_cast<dsn::perf_counter *>(handle)->get_value();
-}
-DSN_API uint64_t dsn_perf_counter_get_integer_value(dsn_handle_t handle)
-{
-    return reinterpret_cast<dsn::perf_counter *>(handle)->get_integer_value();
-}
-DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle,
-                                               dsn_perf_counter_percentile_type_t type)
-{
-    return reinterpret_cast<dsn::perf_counter *>(handle)->get_percentile(type);
-}
 
 namespace dsn {
 
@@ -117,12 +63,55 @@ perf_counters::perf_counters(void)
 
 perf_counters::~perf_counters(void) {}
 
-perf_counter_ptr perf_counters::get_counter(const char *app,
-                                            const char *section,
-                                            const char *name,
-                                            dsn_perf_counter_type_t flags,
-                                            const char *dsptr,
-                                            bool create_if_not_exist /*= false*/)
+perf_counter_ptr perf_counters::new_app_counter(const char *section,
+                                                const char *name,
+                                                dsn_perf_counter_type_t flags,
+                                                const char *dsptr)
+{
+    dsn_app_info info;
+    dsn_get_current_app_info(&info);
+    return new_global_counter(info.name, section, name, flags, dsptr);
+}
+
+perf_counter_ptr perf_counters::new_global_counter(const char *app,
+                                                   const char *section,
+                                                   const char *name,
+                                                   dsn_perf_counter_type_t flags,
+                                                   const char *dsptr)
+{
+    std::string full_name;
+    perf_counter::build_full_name(app, section, name, full_name);
+    {
+        utils::auto_write_lock l(_lock);
+        auto it = _counters.find(full_name);
+        if (it == _counters.end()) {
+            perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
+            _counters.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(full_name),
+                              std::forward_as_tuple(counter));
+            return counter;
+        } else
+            return nullptr;
+    }
+}
+
+perf_counter_ptr perf_counters::get_app_counter(const char *section,
+                                                const char *name,
+                                                dsn_perf_counter_type_t flags,
+                                                const char *dsptr,
+                                                bool create_if_not_exist)
+{
+    auto cnode = dsn::task::get_current_node2();
+    dassert(cnode != nullptr, "cannot get current service node!");
+    return get_global_counter(cnode->name(), section, name, flags, dsptr, create_if_not_exist);
+}
+
+perf_counter_ptr perf_counters::get_global_counter(const char *app,
+                                                   const char *section,
+                                                   const char *name,
+                                                   dsn_perf_counter_type_t flags,
+                                                   const char *dsptr,
+                                                   bool create_if_not_exist)
 {
     std::string full_name;
     perf_counter::build_full_name(app, section, name, full_name);
@@ -181,6 +170,16 @@ bool perf_counters::remove_counter(const char *full_name)
 
     dinfo("performance counter %s is removed", full_name);
     return true;
+}
+
+void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *counter_vec)
+{
+    counter_vec->clear();
+    utils::auto_read_lock l(_lock);
+    counter_vec->reserve(_counters.size());
+    for (auto &cp : _counters) {
+        counter_vec->push_back(cp.second);
+    }
 }
 
 void perf_counters::register_factory(perf_counter::factory factory)

@@ -48,62 +48,66 @@
 
 #include "meta_service.h"
 
+static bool register_component_provider(const char *name,
+                                        dsn::dist::distributed_lock_service::factory f)
+{
+    return dsn::utils::factory_store<dsn::dist::distributed_lock_service>::register_factory(
+        name, f, dsn::PROVIDER_TYPE_MAIN);
+}
+
+static bool register_component_provider(const char *name, dsn::dist::meta_state_service::factory f)
+{
+    return dsn::utils::factory_store<dsn::dist::meta_state_service>::register_factory(
+        name, f, dsn::PROVIDER_TYPE_MAIN);
+}
+
+static bool register_component_provider(const char *name,
+                                        dsn::replication::server_load_balancer::factory f)
+{
+    return dsn::utils::factory_store<dsn::replication::server_load_balancer>::register_factory(
+        name, f, dsn::PROVIDER_TYPE_MAIN);
+}
+
 extern "C" {
+void dsn_meta_sever_register_providers()
+{
+    register_component_provider(
+        "distributed_lock_service_simple",
+        dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>);
+    register_component_provider(
+        "meta_state_service_simple",
+        dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_simple>);
+
+    register_component_provider(
+        "distributed_lock_service_zookeeper",
+        dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_zookeeper>);
+    register_component_provider(
+        "meta_state_service_zookeeper",
+        dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>);
+
+    register_component_provider(
+        "simple_load_balancer",
+        dsn::replication::server_load_balancer::create<dsn::replication::simple_load_balancer>);
+    register_component_provider(
+        "greedy_load_balancer",
+        dsn::replication::server_load_balancer::create<dsn::replication::greedy_load_balancer>);
+}
+
 dsn_error_t dsn_meta_server_bridge(int argc, char **argv)
 {
     dsn::register_app<::dsn::service::meta_service_app>("meta");
+    dsn_meta_sever_register_providers();
     return dsn::ERR_OK;
 }
 }
 
 namespace dsn {
 namespace service {
-static bool register_component_provider(const char *name, dist::distributed_lock_service::factory f)
-{
-    return utils::factory_store<dist::distributed_lock_service>::register_factory(
-        name, f, PROVIDER_TYPE_MAIN);
-}
-
-static bool register_component_provider(const char *name, dist::meta_state_service::factory f)
-{
-    return utils::factory_store<dist::meta_state_service>::register_factory(
-        name, f, PROVIDER_TYPE_MAIN);
-}
-
-static bool register_component_provider(const char *name,
-                                        replication::server_load_balancer::factory f)
-{
-    return utils::factory_store<replication::server_load_balancer>::register_factory(
-        name, f, PROVIDER_TYPE_MAIN);
-}
 
 meta_service_app::meta_service_app(dsn_gpid gpid) : service_app(gpid)
 {
     // create in constructor because it may be used in checker before started
     _service.reset(new replication::meta_service());
-
-    register_component_provider(
-        "distributed_lock_service_simple",
-        dist::distributed_lock_service::create<dist::distributed_lock_service_simple>);
-    register_component_provider("meta_state_service_simple",
-                                dist::meta_state_service::create<dist::meta_state_service_simple>);
-
-    register_component_provider(
-        "distributed_lock_service_zookeeper",
-        dist::distributed_lock_service::create<dist::distributed_lock_service_zookeeper>);
-    register_component_provider(
-        "meta_state_service_zookeeper",
-        dist::meta_state_service::create<dist::meta_state_service_zookeeper>);
-
-    register_component_provider(
-        "simple_load_balancer",
-        replication::server_load_balancer::create<replication::simple_load_balancer>);
-    register_component_provider(
-        "greedy_load_balancer",
-        replication::server_load_balancer::create<replication::greedy_load_balancer>);
-    /////////////////////////////////////////////////////
-    //// register more provides here used by meta servers
-    /////////////////////////////////////////////////////
 }
 
 meta_service_app::~meta_service_app() {}

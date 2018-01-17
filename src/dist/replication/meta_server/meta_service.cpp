@@ -71,11 +71,12 @@ meta_service::meta_service()
         }
     }
 
-    _recent_disconnect_count.init("eon.meta_service",
-                                  "recent_disconnect_count",
-                                  COUNTER_TYPE_VOLATILE_NUMBER,
-                                  "replica server disconnect count in the recent period");
-    _unalive_nodes_count.init(
+    _recent_disconnect_count.init_app_counter(
+        "eon.meta_service",
+        "recent_disconnect_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "replica server disconnect count in the recent period");
+    _unalive_nodes_count.init_app_counter(
         "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
 }
 
@@ -136,8 +137,8 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
         }
     }
 
-    _recent_disconnect_count.add(is_alive ? 0 : nodes.size());
-    _unalive_nodes_count.set(_dead_set.size());
+    _recent_disconnect_count->add(is_alive ? 0 : nodes.size());
+    _unalive_nodes_count->set(_dead_set.size());
 
     if (!_started) {
         return;

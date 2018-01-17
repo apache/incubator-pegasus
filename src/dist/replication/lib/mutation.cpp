@@ -300,12 +300,6 @@ mutation_queue::mutation_queue(gpid gpid,
                                bool batch_write_disabled /*= false*/)
     : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
-    std::stringstream ss;
-    ss << "running_2pc(Count)@" << gpid.get_app_id() << "." << gpid.get_partition_index();
-    //_current_op_counter.init("eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current
-    // running 2pc#");
-    //_current_op_counter.set(0);
-
     _current_op_count = 0;
     _pending_mutation = nullptr;
     dassert(gpid.get_app_id() != 0, "invalid gpid");

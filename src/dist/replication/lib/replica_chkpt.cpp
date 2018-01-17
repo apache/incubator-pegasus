@@ -82,7 +82,7 @@ void replica::on_checkpoint_timer()
                                  (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
                                  (int64_t)_options->log_private_reserve_max_time_seconds);
                              if (status() == partition_status::PS_PRIMARY)
-                                 _counter_private_log_size.set(_private_log->size() / 1000000);
+                                 _counter_private_log_size->set(_private_log->size() / 1000000);
                          });
     }
 }

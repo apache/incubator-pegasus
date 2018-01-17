@@ -39,7 +39,6 @@
 #include <list>
 #include <atomic>
 #include <dsn/utility/link.h>
-#include <dsn/cpp/perf_counter_.h>
 
 #ifndef __linux__
 #pragma warning(disable : 4201)
@@ -204,8 +203,6 @@ private:
     volatile int *_pcount;
     mutation_ptr _pending_mutation;
     slist<mutation> _hdr;
-
-    // perf_counter_  _current_op_counter;
 };
 
 // ---------------------- inline implementation ----------------------------

@@ -138,10 +138,11 @@ local_module_initializer local_module_initializer::_instance;
 
 server_load_balancer::server_load_balancer(meta_service *svc) : _svc(svc)
 {
-    _recent_choose_primary_fail_count.init("eon.server_load_balancer",
-                                           "recent_choose_primary_fail_count",
-                                           COUNTER_TYPE_VOLATILE_NUMBER,
-                                           "choose primary fail count in the recent period");
+    _recent_choose_primary_fail_count.init_app_counter(
+        "eon.server_load_balancer",
+        "recent_choose_primary_fail_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "choose primary fail count in the recent period");
 }
 
 void server_load_balancer::register_proposals(meta_view view,
@@ -564,7 +565,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
             dwarn("%s: don't select any node for security reason, administrator can select "
                   "a proper one by shell",
                   gpid_name);
-            _recent_choose_primary_fail_count.increment();
+            _recent_choose_primary_fail_count->increment();
         }
 
         result = pc_status::dead;

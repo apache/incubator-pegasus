@@ -4,7 +4,6 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/meta_service_app.h>
-
 #include "dist/replication/meta_server/server_state.h"
 #include "dist/replication/meta_server/meta_service.h"
 
@@ -66,10 +65,10 @@ inline void destroy_message(dsn_message_t msg)
         dsn_msg_release_ref(context->response);                                                    \
     } while (0)
 
-class meta_service_test_app : public dsn::service::meta_service_app
+class meta_service_test_app : public dsn::service_app
 {
 public:
-    meta_service_test_app(dsn_gpid pid) : dsn::service::meta_service_app(pid) {}
+    meta_service_test_app(dsn_gpid pid) : service_app(pid) {}
 
 public:
     virtual dsn::error_code start(int, char **argv) override;

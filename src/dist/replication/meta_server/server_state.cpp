@@ -37,6 +37,7 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/tool-api/task.h>
+#include <dsn/tool-api/command.h>
 #include <sstream>
 #include <cinttypes>
 #include <string>
@@ -103,36 +104,36 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
     _meta_svc = meta_svc;
     _apps_root = apps_root;
 
-    _dead_partition_count.init("eon.server_state",
-                               "dead_partition_count",
-                               COUNTER_TYPE_NUMBER,
-                               "current dead partition count");
-    _unreadable_partition_count.init("eon.server_state",
-                                     "unreadable_partition_count",
-                                     COUNTER_TYPE_NUMBER,
-                                     "current unreadable partition count");
-    _unwritable_partition_count.init("eon.server_state",
-                                     "unwritable_partition_count",
-                                     COUNTER_TYPE_NUMBER,
-                                     "current unwritable partition count");
-    _writable_ill_partition_count.init("eon.server_state",
-                                       "writable_ill_partition_count",
-                                       COUNTER_TYPE_NUMBER,
-                                       "current writable ill partition count");
-    _healthy_partition_count.init("eon.server_state",
-                                  "healthy_partition_count",
-                                  COUNTER_TYPE_NUMBER,
-                                  "current healthy partition count");
-    _recent_update_config_count.init("eon.server_state",
-                                     "recent_update_config_count",
-                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                     "update configuration count in the recent period");
-    _recent_partition_change_unwritable_count.init(
+    _dead_partition_count.init_app_counter("eon.server_state",
+                                           "dead_partition_count",
+                                           COUNTER_TYPE_NUMBER,
+                                           "current dead partition count");
+    _unreadable_partition_count.init_app_counter("eon.server_state",
+                                                 "unreadable_partition_count",
+                                                 COUNTER_TYPE_NUMBER,
+                                                 "current unreadable partition count");
+    _unwritable_partition_count.init_app_counter("eon.server_state",
+                                                 "unwritable_partition_count",
+                                                 COUNTER_TYPE_NUMBER,
+                                                 "current unwritable partition count");
+    _writable_ill_partition_count.init_app_counter("eon.server_state",
+                                                   "writable_ill_partition_count",
+                                                   COUNTER_TYPE_NUMBER,
+                                                   "current writable ill partition count");
+    _healthy_partition_count.init_app_counter("eon.server_state",
+                                              "healthy_partition_count",
+                                              COUNTER_TYPE_NUMBER,
+                                              "current healthy partition count");
+    _recent_update_config_count.init_app_counter("eon.server_state",
+                                                 "recent_update_config_count",
+                                                 COUNTER_TYPE_VOLATILE_NUMBER,
+                                                 "update configuration count in the recent period");
+    _recent_partition_change_unwritable_count.init_app_counter(
         "eon.server_state",
         "recent_partition_change_unwritable_count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "partition change to unwritable count in the recent period");
-    _recent_partition_change_writable_count.init(
+    _recent_partition_change_writable_count.init_app_counter(
         "eon.server_state",
         "recent_partition_change_writable_count",
         COUNTER_TYPE_VOLATILE_NUMBER,
@@ -1429,12 +1430,12 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    _recent_update_config_count.increment();
+    _recent_update_config_count->increment();
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        _recent_partition_change_unwritable_count.increment();
+        _recent_partition_change_unwritable_count->increment();
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        _recent_partition_change_writable_count.increment();
+        _recent_partition_change_writable_count->increment();
     }
 }
 
@@ -2246,11 +2247,11 @@ void server_state::update_partition_perf_counter()
         return true;
     };
     for_each_available_app(_all_apps, func);
-    _dead_partition_count.set(counters[HS_DEAD]);
-    _unreadable_partition_count.set(counters[HS_UNREADABLE]);
-    _unwritable_partition_count.set(counters[HS_UNWRITABLE]);
-    _writable_ill_partition_count.set(counters[HS_WRITABLE_ILL]);
-    _healthy_partition_count.set(counters[HS_HEALTHY]);
+    _dead_partition_count->set(counters[HS_DEAD]);
+    _unreadable_partition_count->set(counters[HS_UNREADABLE]);
+    _unwritable_partition_count->set(counters[HS_UNWRITABLE]);
+    _writable_ill_partition_count->set(counters[HS_WRITABLE_ILL]);
+    _healthy_partition_count->set(counters[HS_HEALTHY]);
 }
 
 bool server_state::check_all_partitions()

@@ -36,7 +36,7 @@
 #include "nfs_client.h"
 #include <queue>
 #include <dsn/tool-api/nfs.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 namespace dsn {
 namespace service {
@@ -216,10 +216,10 @@ private:
     zlock _local_writes_lock;
     std::queue<::dsn::ref_ptr<copy_request_ex>> _local_writes;
 
-    perf_counter_ _recent_copy_data_size;
-    perf_counter_ _recent_copy_fail_count;
-    perf_counter_ _recent_write_data_size;
-    perf_counter_ _recent_write_fail_count;
+    perf_counter_wrapper _recent_copy_data_size;
+    perf_counter_wrapper _recent_copy_fail_count;
+    perf_counter_wrapper _recent_write_data_size;
+    perf_counter_wrapper _recent_write_fail_count;
 };
 }
 }

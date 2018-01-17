@@ -36,7 +36,7 @@
 
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include <memory>
 #include "dist/replication/client_lib/replication_common.h"
 
@@ -98,11 +98,11 @@ private:
     mutable zrwlock_nr _lock;
     std::vector<std::unique_ptr<dir_node>> _dir_nodes;
 
-    perf_counter_ _counter_capacity_total_mb;
-    perf_counter_ _counter_available_total_mb;
-    perf_counter_ _counter_available_total_ratio;
-    perf_counter_ _counter_available_min_ratio;
-    perf_counter_ _counter_available_max_ratio;
+    perf_counter_wrapper _counter_capacity_total_mb;
+    perf_counter_wrapper _counter_available_total_mb;
+    perf_counter_wrapper _counter_available_total_ratio;
+    perf_counter_wrapper _counter_available_min_ratio;
+    perf_counter_wrapper _counter_available_max_ratio;
 };
 }
 }

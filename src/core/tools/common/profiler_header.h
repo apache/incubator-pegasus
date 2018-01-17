@@ -38,7 +38,7 @@
 
 #pragma once
 #include <iomanip>
-#include "shared_io_service.h"
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 namespace dsn {
 namespace tools {
@@ -215,7 +215,7 @@ public:
 
 struct task_spec_profiler
 {
-    perf_counter *ptr[PREF_COUNTER_COUNT];
+    perf_counter_wrapper ptr[PREF_COUNTER_COUNT];
     bool collect_call_count;
     bool is_profile;
     std::atomic<int64_t> *call_counts;

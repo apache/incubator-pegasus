@@ -4,7 +4,7 @@
 
 #include <functional>
 #include <dsn/dist/block_service.h>
-#include <dsn/cpp/perf_counter_.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 #include "meta_data.h"
 
@@ -284,7 +284,7 @@ mock_private :
     backup_progress _progress;
     std::string _backup_sig; // policy_name@backup_id, used when print backup related log
 
-    perf_counter_ _counter_policy_recent_backup_duration_ms;
+    perf_counter_wrapper _counter_policy_recent_backup_duration_ms;
 //clang-format on
 };
 

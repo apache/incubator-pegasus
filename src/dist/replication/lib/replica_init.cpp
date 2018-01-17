@@ -183,7 +183,7 @@ error_code replica::initialize_on_load()
             dwarn("load_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
                   dir,
                   rename_dir);
-            stub->_counter_replicas_recent_replica_move_error_count.increment();
+            stub->_counter_replicas_recent_replica_move_error_count->increment();
             stub->_fs_manager.remove_replica(gpid);
         }
 

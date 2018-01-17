@@ -68,7 +68,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/tool-api/command.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -141,7 +141,7 @@ static void profiler_on_task_enqueue(task *caller, task *callee)
 
     task_ext_for_profiler::get(callee) = dsn_now_ns();
     if (callee->delay_milliseconds() == 0) {
-        auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE];
+        auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE].get();
         if (ptr != nullptr)
             ptr->increment();
     }
@@ -154,12 +154,12 @@ static void profiler_on_task_begin(task *this_)
 
     uint64_t &qts = task_ext_for_profiler::get(this_);
     uint64_t now = dsn_now_ns();
-    auto ptr = s_spec_profilers[code].ptr[TASK_QUEUEING_TIME_NS];
+    auto ptr = s_spec_profilers[code].ptr[TASK_QUEUEING_TIME_NS].get();
     if (ptr != nullptr)
         ptr->set(now - qts);
     qts = now;
 
-    ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE];
+    ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE].get();
     if (ptr != nullptr)
         ptr->decrement();
 }
@@ -171,11 +171,11 @@ static void profiler_on_task_end(task *this_)
 
     uint64_t qts = task_ext_for_profiler::get(this_);
     uint64_t now = dsn_now_ns();
-    auto ptr = s_spec_profilers[code].ptr[TASK_EXEC_TIME_NS];
+    auto ptr = s_spec_profilers[code].ptr[TASK_EXEC_TIME_NS].get();
     if (ptr != nullptr)
         ptr->set(now - qts);
 
-    ptr = s_spec_profilers[code].ptr[TASK_THROUGHPUT];
+    ptr = s_spec_profilers[code].ptr[TASK_THROUGHPUT].get();
     if (ptr != nullptr)
         ptr->increment();
 }
@@ -185,7 +185,7 @@ static void profiler_on_task_cancelled(task *this_)
     auto code = this_->spec().code;
     dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
 
-    auto ptr = s_spec_profilers[code].ptr[TASK_CANCELLED];
+    auto ptr = s_spec_profilers[code].ptr[TASK_CANCELLED].get();
     if (ptr != nullptr)
         ptr->increment();
 }
@@ -223,12 +223,12 @@ static void profiler_on_aio_enqueue(aio_task *this_)
     uint64_t &ats = task_ext_for_profiler::get(this_);
     uint64_t now = dsn_now_ns();
 
-    auto ptr = s_spec_profilers[code].ptr[AIO_LATENCY_NS];
+    auto ptr = s_spec_profilers[code].ptr[AIO_LATENCY_NS].get();
     if (ptr != nullptr)
         ptr->set(now - ats);
     ats = now;
 
-    ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE];
+    ptr = s_spec_profilers[code].ptr[TASK_IN_QUEUE].get();
     if (ptr != nullptr)
         ptr->increment();
 }
@@ -264,7 +264,7 @@ static void profiler_on_rpc_request_enqueue(rpc_request_task *callee)
     task_ext_for_profiler::get(callee) = now;
     message_ext_for_profiler::get(callee->get_request()) = now;
 
-    auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE];
+    auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE].get();
     if (ptr != nullptr)
         ptr->increment();
 }
@@ -294,7 +294,7 @@ static void profiler_on_rpc_reply(task *caller, message_ex *msg)
     dassert(spec != nullptr, "task_spec cannot be null, code = %d", msg->local_rpc_code);
     auto code = spec->rpc_paired_code;
     dassert(code >= 0 && code <= s_task_code_max, "code = %d", code);
-    auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS];
+    auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS].get();
     if (ptr != nullptr)
         ptr->set(now - qts);
 }
@@ -308,17 +308,17 @@ static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
     uint64_t now = dsn_now_ns();
 
     if (resp->get_response() != nullptr) {
-        auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS];
+        auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS].get();
         if (ptr != nullptr)
             ptr->set(now - cts);
     } else {
-        auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT];
+        auto ptr = s_spec_profilers[resp_code].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT].get();
         if (ptr != nullptr)
             ptr->increment();
     }
     cts = now;
 
-    auto ptr = s_spec_profilers[resp_code].ptr[TASK_IN_QUEUE];
+    auto ptr = s_spec_profilers[resp_code].ptr[TASK_IN_QUEUE].get();
     if (ptr != nullptr)
         ptr->increment();
 }
@@ -339,19 +339,6 @@ void register_command_profiler()
     textp << "      p|P|profile|Profile info [all|$task]" << std::endl;
     textp << "  show the top N task kinds sort by counter_name:" << std::endl;
     textp << "      p|P|profile|Profile top $N $counter_name [$percentile]" << std::endl;
-
-    /*
-    textpjs << "NAME:" << std::endl;
-    textpjs << "  profile javascript - collect performance data and show as chart by javascript" <<
-    std::endl;
-    textpjs << "SYNOPSIS:" << std::endl;
-    textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type task|t $task_name
-    [$percentile] [$counter_name $counter_name ...]" << std::endl;
-    textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type counter|c $counter_name
-    [$percentile] $task_name $task_name ..." << std::endl;
-    textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript top $N $counter_name [$percentile]" <<
-    std::endl;
-    */
 
     textpd << "NAME:" << std::endl;
     textpd << "  profiler data - get appointed data, using by pjs" << std::endl;
@@ -406,9 +393,7 @@ void register_command_profiler()
                      "profile|Profile|p|P - performance profiling",
                      textp.str().c_str(),
                      profiler_output_handler);
-    // register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr },
-    // "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript",
-    // textpjs.str().c_str(), profiler_js_handler);
+
     register_command({"pd", "PD", "profiledata", "ProfileData"},
                      "profiler data - get appointed data, using by pjs",
                      textpd.str().c_str(),
@@ -466,110 +451,102 @@ void profiler::install(service_spec &spec)
                 "profiler::inqueue",
                 true,
                 "whether to profile the number of this kind of tasks in all queues"))
-            s_spec_profilers[i].ptr[TASK_IN_QUEUE] =
-                perf_counter::get_counter("zion",
-                                          "profiler",
-                                          (name + std::string(".inqueue")).c_str(),
-                                          COUNTER_TYPE_NUMBER,
-                                          "task number in all queues",
-                                          true);
+            s_spec_profilers[i].ptr[TASK_IN_QUEUE].init_global_counter(
+                "zion",
+                "profiler",
+                (name + std::string(".inqueue")).c_str(),
+                COUNTER_TYPE_NUMBER,
+                "task number in all queues");
 
         if (dsn_config_get_value_bool(section_name.c_str(),
                                       "profiler::queue",
                                       true,
                                       "whether to profile the queuing time of a task"))
-            s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] =
-                perf_counter::get_counter("zion",
-                                          "profiler",
-                                          (name + std::string(".queue(ns)")).c_str(),
-                                          COUNTER_TYPE_NUMBER_PERCENTILES,
-                                          "latency due to waiting in the queue",
-                                          true);
+            s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS].init_global_counter(
+                "zion",
+                "profiler",
+                (name + std::string(".queue(ns)")).c_str(),
+                COUNTER_TYPE_NUMBER_PERCENTILES,
+                "latency due to waiting in the queue");
 
         if (dsn_config_get_value_bool(section_name.c_str(),
                                       "profiler::exec",
                                       true,
                                       "whether to profile the executing time of a task"))
-            s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] =
-                perf_counter::get_counter("zion",
-                                          "profiler",
-                                          (name + std::string(".exec(ns)")).c_str(),
-                                          COUNTER_TYPE_NUMBER_PERCENTILES,
-                                          "latency due to executing tasks",
-                                          true);
+            s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS].init_global_counter(
+                "zion",
+                "profiler",
+                (name + std::string(".exec(ns)")).c_str(),
+                COUNTER_TYPE_NUMBER_PERCENTILES,
+                "latency due to executing tasks");
 
         if (dsn_config_get_value_bool(section_name.c_str(),
                                       "profiler::qps",
                                       true,
                                       "whether to profile the qps of a task"))
-            s_spec_profilers[i].ptr[TASK_THROUGHPUT] =
-                perf_counter::get_counter("zion",
-                                          "profiler",
-                                          (name + std::string(".qps")).c_str(),
-                                          COUNTER_TYPE_RATE,
-                                          "task numbers per second",
-                                          true);
+            s_spec_profilers[i].ptr[TASK_THROUGHPUT].init_global_counter(
+                "zion",
+                "profiler",
+                (name + std::string(".qps")).c_str(),
+                COUNTER_TYPE_RATE,
+                "task numbers per second");
 
         if (dsn_config_get_value_bool(section_name.c_str(),
                                       "profiler::cancelled",
                                       true,
                                       "whether to profile the cancelled times of a task"))
-            s_spec_profilers[i].ptr[TASK_CANCELLED] =
-                perf_counter::get_counter("zion",
-                                          "profiler",
-                                          (name + std::string(".cancelled")).c_str(),
-                                          COUNTER_TYPE_NUMBER,
-                                          "cancelled times of a specific task type",
-                                          true);
+            s_spec_profilers[i].ptr[TASK_CANCELLED].init_global_counter(
+                "zion",
+                "profiler",
+                (name + std::string(".cancelled")).c_str(),
+                COUNTER_TYPE_NUMBER,
+                "cancelled times of a specific task type");
 
         if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST) {
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency.server",
                                           true,
                                           "whether to profile the server latency of a task"))
-                s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS] = perf_counter::get_counter(
+                s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS].init_global_counter(
                     "zion",
                     "profiler",
                     (name + std::string(".latency.server")).c_str(),
                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                    "latency from enqueue point to reply point on the server side for RPC tasks",
-                    true);
+                    "latency from enqueue point to reply point on the server side for RPC "
+                    "tasks");
         } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency.client",
                                           true,
                                           "whether to profile the client latency of a task"))
-                s_spec_profilers[i].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS] =
-                    perf_counter::get_counter(
-                        "zion",
-                        "profiler",
-                        (name + std::string(".latency.client(ns)")).c_str(),
-                        COUNTER_TYPE_NUMBER_PERCENTILES,
-                        "latency from call point to enqueue point on the client side for RPC tasks",
-                        true);
+                s_spec_profilers[i].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS].init_global_counter(
+                    "zion",
+                    "profiler",
+                    (name + std::string(".latency.client(ns)")).c_str(),
+                    COUNTER_TYPE_NUMBER_PERCENTILES,
+                    "latency from call point to enqueue point on the client side for RPC "
+                    "tasks");
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::timeout.qps",
                                           true,
                                           "whether to profile the timeout qps of a task"))
-                s_spec_profilers[i].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT] =
-                    perf_counter::get_counter("zion",
-                                              "profiler",
-                                              (name + std::string(".timeout.qps")).c_str(),
-                                              COUNTER_TYPE_RATE,
-                                              "time-out task numbers per second for RPC tasks",
-                                              true);
+                s_spec_profilers[i].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT].init_global_counter(
+                    "zion",
+                    "profiler",
+                    (name + std::string(".timeout.qps")).c_str(),
+                    COUNTER_TYPE_RATE,
+                    "time-out task numbers per second for RPC tasks");
         } else if (spec->type == dsn_task_type_t::TASK_TYPE_AIO) {
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency",
                                           true,
                                           "whether to profile the latency of an AIO task"))
-                s_spec_profilers[i].ptr[AIO_LATENCY_NS] = perf_counter::get_counter(
+                s_spec_profilers[i].ptr[AIO_LATENCY_NS].init_global_counter(
                     "zion",
                     "profiler",
                     (name + std::string(".latency(ns)")).c_str(),
                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                    "latency from call point to enqueue point for AIO tasks",
-                    true);
+                    "latency from call point to enqueue point for AIO tasks");
         }
 
         // we don't use perf_counter_ptr but perf_counter* in ptr[xxx] to avoid unnecessary memory
@@ -578,7 +555,7 @@ void profiler::install(service_spec &spec)
         // release_ref should be done when the profiler exits (which never happens right now so we
         // omit that for the time being)
         for (size_t j = 0; j < sizeof(s_spec_profilers[i].ptr) / sizeof(perf_counter *); j++) {
-            if (s_spec_profilers[i].ptr[j] != nullptr) {
+            if (s_spec_profilers[i].ptr[j].get() != nullptr) {
                 s_spec_profilers[i].ptr[j]->add_ref();
             }
         }
