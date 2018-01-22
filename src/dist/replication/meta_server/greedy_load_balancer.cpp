@@ -80,24 +80,24 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _ctrl_balancer_in_turn = dsn::command_manager::instance().register_app_command(
         {"lb.balancer_in_turn"},
-        "control whether do app balancer in turn",
         "lb.balancer_in_turn <true|false>",
+        "control whether do app balancer in turn",
         [this](const std::vector<std::string> &args) {
             HANDLE_CLI_FLAGS(_balancer_in_turn, args);
         });
 
     _ctrl_only_primary_balancer = dsn::command_manager::instance().register_app_command(
         {"lb.only_primary_balancer"},
-        "control whether do only primary balancer",
         "lb.only_primary_balancer <true|false>",
+        "control whether do only primary balancer",
         [this](const std::vector<std::string> &args) {
             HANDLE_CLI_FLAGS(_only_primary_balancer, args);
         });
 
     _ctrl_only_move_primary = dsn::command_manager::instance().register_app_command(
         {"lb.only_move_primary"},
-        "control whether only move primary in balancer",
         "lb.only_move_primary <true|false>",
+        "control whether only move primary in balancer",
         [this](const std::vector<std::string> &args) {
             HANDLE_CLI_FLAGS(_only_move_primary, args);
         });
