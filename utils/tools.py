@@ -24,11 +24,11 @@ def get_ttl(ttl):
 
 def convert_error_type(rdb_err):
     if rdb_err == rocksdb_error_types.kNotFound.value:
-        return error_types.ERR_DATA_NOT_EXIST.value
+        return error_types.ERR_OBJECT_NOT_FOUND.value
     elif rdb_err == rocksdb_error_types.kIncomplete.value:
-        return error_types.ERR_DATA_NOT_EXIST.ERR_INCOMPLETE_DATA.value
+        return error_types.ERR_OBJECT_NOT_FOUND.ERR_INCOMPLETE_DATA.value
     elif rdb_err == rocksdb_error_types.kOk.value:
-        return error_types.ERR_DATA_NOT_EXIST.ERR_OK.value
+        return error_types.ERR_OBJECT_NOT_FOUND.ERR_OK.value
     else:
         return rdb_err
 
