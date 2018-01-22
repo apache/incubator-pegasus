@@ -37,7 +37,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
-        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
+        self.assertEqual(rc, error_types.ERR_OBJECT_NOT_FOUND.value)
 
     @inlineCallbacks
     def test_exist_ok(self):
@@ -53,7 +53,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.exist(self.TEST_HKEY, self.TEST_SKEY)
-        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
+        self.assertEqual(rc, error_types.ERR_OBJECT_NOT_FOUND.value)
 
     @inlineCallbacks
     def test_get_ok(self):
@@ -70,7 +70,7 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         (rc, v) = yield self.c.get(self.TEST_HKEY, self.TEST_SKEY)
-        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
+        self.assertEqual(rc, error_types.ERR_OBJECT_NOT_FOUND.value)
 
     @inlineCallbacks
     def test_ttl_forever(self):
@@ -118,7 +118,7 @@ class TestBasics(unittest.TestCase):
         yield d
 
         (rc, v) = yield self.c.ttl(self.TEST_HKEY, self.TEST_SKEY)
-        self.assertEqual(rc, error_types.ERR_DATA_NOT_EXIST.value)
+        self.assertEqual(rc, error_types.ERR_OBJECT_NOT_FOUND.value)
 
     @inlineCallbacks
     def test_multi_set_ok(self):

@@ -148,7 +148,6 @@ class error_types(Enum):
     ERR_READ_TABLE_FAILED = 70
     ERR_SESSION_RESET = 71
     ERR_META_RESET = 72
-    ERR_DATA_NOT_EXIST = 73             # added by python client
 
 class error_code:
 
