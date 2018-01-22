@@ -63,14 +63,14 @@ inline int exec_tests()
 class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_app
 {
 public:
-    test_client(dsn_gpid gpid)
-        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
+    test_client(const service_app_info *info)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(info)
     {
     }
 
     void on_rpc_test(const int &test_id, ::dsn::rpc_replier<std::string> &replier)
     {
-        std::string r = dsn_get_app_data_dir();
+        std::string r = _info->data_dir;
         replier(std::move(r));
     }
 
@@ -97,10 +97,10 @@ public:
         }
     }
 
-    ::dsn::error_code start(int argc, char **argv)
+    ::dsn::error_code start(const std::vector<std::string> &args)
     {
         // server
-        if (argc == 1) {
+        if (args.size() == 1) {
             register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
             register_rpc_handler(RPC_TEST_STRING_COMMAND,
                                  "rpc.test.string.command",

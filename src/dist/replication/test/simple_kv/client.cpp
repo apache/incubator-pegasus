@@ -48,8 +48,8 @@ namespace dsn {
 namespace replication {
 namespace test {
 
-simple_kv_client_app::simple_kv_client_app(dsn_gpid gpid)
-    : ::dsn::service_app(gpid), _simple_kv_client(nullptr)
+simple_kv_client_app::simple_kv_client_app(const service_app_info *info)
+    : ::dsn::service_app(info), _simple_kv_client(nullptr)
 {
 }
 
@@ -61,9 +61,9 @@ simple_kv_client_app::~simple_kv_client_app()
     }
 }
 
-::dsn::error_code simple_kv_client_app::start(int argc, char **argv)
+::dsn::error_code simple_kv_client_app::start(const std::vector<std::string> &args)
 {
-    if (argc < 2)
+    if (args.size() < 2)
         return ::dsn::ERR_INVALID_PARAMETERS;
 
     std::vector<rpc_address> meta_servers;
@@ -75,7 +75,7 @@ simple_kv_client_app::~simple_kv_client_app()
     }
 
     // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-    _service_addr = url_host_address(argv[1]);
+    _service_addr = url_host_address(args[1].c_str());
     _simple_kv_client.reset(new simple_kv_client(_service_addr));
 
     dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST, this, std::bind(&simple_kv_client_app::run, this));

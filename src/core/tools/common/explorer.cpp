@@ -37,6 +37,7 @@
 #include <dsn/toollet/explorer.h>
 #include <dsn/service_api_c.h>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/tool/simulator.h>
 
 namespace dsn {
 namespace tools {
@@ -129,7 +130,7 @@ public:
         _explorers.clear();
     }
 
-    void set_id(int nid, rpc_address addr, const char *name)
+    void set_id(int nid, rpc_address addr, const std::string &name)
     {
         _node_id = nid;
         _address = addr;
@@ -281,16 +282,14 @@ class all_task_explorer : public utils::singleton<all_task_explorer>
 public:
     all_task_explorer()
     {
-        int count = dsn_get_all_apps(nullptr, 0) + 1;
-        _explorers.resize((size_t)count);
+        std::vector<service_app *> all;
+        service_app::get_all_service_apps(&all);
+        _explorers.resize(all.size());
 
-        dsn_app_info *apps = (dsn_app_info *)alloca(sizeof(dsn_app_info) * count);
-        memset(apps, 0, sizeof(dsn_app_info) * count);
-        count = dsn_get_all_apps(apps, count - 1);
-
-        for (int i = 0; i < count; i++) {
-            auto &exp = _explorers[apps[i].app_id];
-            exp.set_id(apps[i].app_id, apps[i].primary_address, apps[i].name);
+        for (int i = 0; i < all.size(); i++) {
+            service_app *se = all[i];
+            auto &exp = _explorers[se->info().entity_id];
+            exp.set_id(se->info().entity_id, se->primary_address(), se->info().full_name);
             _explorers_by_addr[exp.address().c_addr().u.value] = &exp;
         }
     }
@@ -450,14 +449,15 @@ void explorer::install(service_spec &spec)
 
     message_ext_for_explorer::register_ext();
     task_ext_for_explorer::register_ext();
-    ::dsn::command_manager::instance().register_command({"explore", "exp"},
-                            "explore the task dependencies as GraphViz dot graph",
-                            "explore the task dependencies as GraphViz dot graph",
-                            [](const std::vector<std::string> &args) {
-                                std::stringstream ss;
-                                all_task_explorer::instance().get_dot_graph(ss, args);
-                                return ss.str();
-                            });
+    ::dsn::command_manager::instance().register_command(
+        {"explore", "exp"},
+        "explore the task dependencies as GraphViz dot graph",
+        "explore the task dependencies as GraphViz dot graph",
+        [](const std::vector<std::string> &args) {
+            std::stringstream ss;
+            all_task_explorer::instance().get_dot_graph(ss, args);
+            return ss.str();
+        });
 }
 
 explorer::explorer(const char *name) : toollet(name) {}

@@ -34,7 +34,7 @@
  */
 
 #include <dsn/dist/replication/replication.global_check.h>
-#include <dsn/tool/global_checker.h>
+#include <dsn/tool/simulator.h>
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
 
@@ -57,14 +57,15 @@ namespace replication {
 class replication_checker : public ::dsn::tools::checker
 {
 public:
-    replication_checker(const char *name, dsn_app_info *info, int count)
-        : ::dsn::tools::checker(name, info, count)
+    replication_checker() : ::dsn::tools::checker() {}
+
+    virtual void initialize(const std::string &name, const std::vector<service_app *> &apps)
     {
-        for (auto &app : _apps) {
-            if (0 == strcmp(app.type, "meta")) {
-                _meta_servers.push_back((meta_service_app *)app.app.app_context_ptr);
-            } else if (0 == strcmp(app.type, "replica")) {
-                _replica_servers.push_back((replication_service_app *)app.app.app_context_ptr);
+        for (service_app *app : apps) {
+            if (0 == strcmp(app->info().type.c_str(), "meta")) {
+                _meta_servers.push_back((meta_service_app *)app);
+            } else if (0 == strcmp(app->info().type.c_str(), "replica")) {
+                _replica_servers.push_back((replication_service_app *)app);
             }
         }
     }
@@ -231,9 +232,8 @@ private:
 
 void install_checkers()
 {
-    dsn_register_app_checker("replication.global-checker",
-                             ::dsn::tools::checker::create<replication_checker>,
-                             ::dsn::tools::checker::apply);
+    tools::simulator::register_checker("replication.global-checker",
+                                       tools::checker::create<replication_checker>);
 }
 }
 }

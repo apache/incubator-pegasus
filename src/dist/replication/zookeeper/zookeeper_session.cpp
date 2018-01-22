@@ -138,7 +138,10 @@ const char *zookeeper_session::string_zoo_state(int zoo_state)
 
 zookeeper_session::~zookeeper_session() {}
 
-zookeeper_session::zookeeper_session(dsn_app_info *node) : _handle(nullptr) { _srv_node = *node; }
+zookeeper_session::zookeeper_session(const service_app_info &node) : _handle(nullptr)
+{
+    _srv_node = node;
+}
 
 int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
@@ -279,7 +282,7 @@ void zookeeper_session::init_non_dsn_thread()
 {
     static __thread int dsn_context_init = 0;
     if (dsn_context_init == 0) {
-        dsn_mimic_app(_srv_node.role, _srv_node.index);
+        dsn_mimic_app(_srv_node.role_name.c_str(), _srv_node.index);
         dsn_context_init = 1;
     }
 }

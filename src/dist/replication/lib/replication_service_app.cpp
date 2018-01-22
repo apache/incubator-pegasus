@@ -49,7 +49,7 @@ dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
         "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
     dsn_task_code_register(
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
+    dsn::service_app::register_factory<::dsn::replication::replication_service_app>("replica");
     return dsn::ERR_OK;
 }
 }
@@ -57,14 +57,14 @@ dsn_error_t dsn_layer2_stateful_type1_bridge(int argc, char **argv)
 namespace dsn {
 namespace replication {
 
-replication_service_app::replication_service_app(dsn_gpid gpid) : service_app(gpid)
+replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)
 {
     _stub = new replica_stub();
 }
 
 replication_service_app::~replication_service_app(void) {}
 
-error_code replication_service_app::start(int argc, char **argv)
+error_code replication_service_app::start(const std::vector<std::string> &args)
 {
     replication_options opts;
     opts.initialize();

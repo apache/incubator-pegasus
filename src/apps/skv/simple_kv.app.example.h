@@ -47,17 +47,17 @@ namespace application {
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    simple_kv_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
 
     ~simple_kv_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
-        if (argc < 2)
+        if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        _server = url_host_address(argv[1]);
+        _server = url_host_address(args[1].c_str());
         _simple_kv_client.reset(new simple_kv_client2(_server));
 
         _timer = ::dsn::tasking::enqueue_timer(
@@ -127,18 +127,18 @@ private:
 class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_perf_test_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    simple_kv_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
 
     ~simple_kv_perf_test_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
-        if (argc < 2)
+        if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
         rpc_address service_addr;
-        service_addr.assign_uri(dsn_uri_build(argv[1]));
+        service_addr.assign_uri(dsn_uri_build(args[1].c_str()));
 
         _simple_kv_client.reset(new simple_kv_perf_test_client(service_addr));
         _simple_kv_client->start_test("simple_kv.perf-test.case", 3);

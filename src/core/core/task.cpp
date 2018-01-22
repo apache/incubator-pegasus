@@ -72,15 +72,15 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
         if (worker != nullptr) {
             dassert(worker->pool()->node() == node,
                     "worker not belonging to the given node: %s vs %s",
-                    worker->pool()->node()->name(),
-                    node->name());
+                    worker->pool()->node()->full_name(),
+                    node->full_name());
         }
 
         if (queue != nullptr) {
             dassert(queue->pool()->node() == node,
                     "queue not belonging to the given node: %s vs %s",
-                    queue->pool()->node()->name(),
-                    node->name());
+                    queue->pool()->node()->full_name(),
+                    node->full_name());
         }
 
         tls_dsn.node = node;
@@ -372,7 +372,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
 const char *task::get_current_node_name()
 {
     auto n = get_current_node2();
-    return n ? n->name() : "unknown";
+    return n ? n->full_name() : "unknown";
 }
 
 void task::enqueue()

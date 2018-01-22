@@ -52,10 +52,15 @@ extern void fd_test_init();
 class test_client : public ::dsn::service_app
 {
 public:
-    test_client(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    test_client(const dsn::service_app_info *info) : ::dsn::service_app(info) {}
 
-    ::dsn::error_code start(int argc, char **argv)
+    ::dsn::error_code start(const std::vector<std::string> &args)
     {
+        int argc = args.size();
+        char *argv[20];
+        for (int i = 0; i < argc; ++i) {
+            argv[i] = (char *)(args[i].c_str());
+        }
         testing::InitGoogleTest(&argc, argv);
         g_test_ret = RUN_ALL_TESTS();
         g_test_count = 1;
@@ -78,7 +83,7 @@ GTEST_API_ int main(int argc, char **argv)
     testing::InitGoogleTest(&argc, argv);
 
     // register all possible services
-    dsn::register_app<test_client>("test");
+    dsn::service_app::register_factory<test_client>("test");
     lock_test_init();
     fd_test_init();
 

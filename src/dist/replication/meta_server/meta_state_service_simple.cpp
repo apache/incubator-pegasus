@@ -232,7 +232,8 @@ error_code meta_state_service_simple::apply_transaction(
 
 error_code meta_state_service_simple::initialize(const std::vector<std::string> &args)
 {
-    const char *work_dir = args.empty() ? dsn_get_app_data_dir() : args[0].c_str();
+    const char *work_dir =
+        args.empty() ? service_app::current_service_app_info().data_dir.c_str() : args[0].c_str();
 
     _offset = 0;
     std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");

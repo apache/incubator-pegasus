@@ -44,7 +44,7 @@ GTEST_API_ int main(int argc, char **argv)
     testing::InitGoogleTest(&argc, argv);
 
     // register all possible services
-    dsn::register_app<test_client>("test");
+    dsn::service_app::register_factory<test_client>("test");
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, false);

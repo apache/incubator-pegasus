@@ -34,6 +34,7 @@
  */
 
 #include <dsn/utility/singleton_store.h>
+#include <dsn/service_api_cpp.h>
 #include <string>
 
 #pragma once
@@ -46,7 +47,7 @@ class zookeeper_session_mgr : public utils::singleton<zookeeper_session_mgr>
 {
 public:
     zookeeper_session_mgr();
-    zookeeper_session *get_session(dsn_app_info *node);
+    zookeeper_session *get_session(const service_app_info &info);
     const char *zoo_hosts() const { return _zoo_hosts.c_str(); }
     int timeout() const { return _timeout_ms; }
     const char *zoo_logfile() const { return _zoo_logfile.c_str(); }

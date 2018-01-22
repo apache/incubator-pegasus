@@ -147,32 +147,27 @@ void test_checker::control_balancer(bool disable_it)
     }
 }
 
-bool test_checker::init(const char *name, dsn_app_info *info, int count)
+bool test_checker::init(const std::string &name, const std::vector<service_app *> apps)
 {
     if (s_inited)
         return false;
 
-    _apps.resize(count);
-    for (int i = 0; i < count; i++) {
-        _apps[i] = info[i];
-    }
-
+    _apps = apps;
     utils::factory_store<replication::server_load_balancer>::register_factory(
         "checker_load_balancer",
         replication::server_load_balancer::create<checker_load_balancer>,
         PROVIDER_TYPE_MAIN);
 
     for (auto &app : _apps) {
-        if (0 == strcmp(app.type, "meta")) {
-            meta_service_app *meta_app = (meta_service_app *)app.app.app_context_ptr;
+        if (0 == strcmp(app->info().type.c_str(), "meta")) {
+            meta_service_app *meta_app = (meta_service_app *)app;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             meta_app->_service->_meta_opts._lb_opts.server_load_balancer_type =
                 "checker_load_balancer";
             _meta_servers.push_back(meta_app);
-        } else if (0 == strcmp(app.type, "replica")) {
-            replication_service_app *replica_app =
-                (replication_service_app *)app.app.app_context_ptr;
+        } else if (0 == strcmp(app->info().type.c_str(), "replica")) {
+            replication_service_app *replica_app = (replication_service_app *)app;
             replica_app->_stub->set_replica_state_subscriber_for_test(
                 std::bind(&test_checker::on_replica_state_change,
                           this,
@@ -187,7 +182,7 @@ bool test_checker::init(const char *name, dsn_app_info *info, int count)
     auto nodes = ::dsn::service_engine::fast_instance().get_all_nodes();
     for (auto &node : nodes) {
         int id = node.second->id();
-        std::string name = node.second->name();
+        std::string name = node.second->full_name();
         rpc_address paddr = node.second->rpc(nullptr)->primary_address();
         int port = paddr.port();
         _node_to_address[name] = paddr;
@@ -285,7 +280,7 @@ void test_checker::get_current_states(state_snapshot &states)
         for (auto &kv : app->_stub->_replicas) {
             replica_ptr r = kv.second;
             dassert(kv.first == r->get_gpid(), "");
-            replica_id id(r->get_gpid(), app->name());
+            replica_id id(r->get_gpid(), app->info().full_name);
             replica_state &rs = states.state_map[id];
             rs.id = id;
             rs.status = r->status();
@@ -377,9 +372,8 @@ rpc_address test_checker::node_name_to_address(const std::string &name)
 
 void install_checkers()
 {
-    dsn_register_app_checker("simple_kv.checker",
-                             ::dsn::tools::checker::create<wrap_checker>,
-                             ::dsn::tools::checker::apply);
+    dsn::tools::simulator::register_checker("simple_kv.checker",
+                                            dsn::tools::checker::create<wrap_checker>);
 }
 }
 }

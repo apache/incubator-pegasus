@@ -68,10 +68,10 @@ inline void destroy_message(dsn_message_t msg)
 class meta_service_test_app : public dsn::service_app
 {
 public:
-    meta_service_test_app(dsn_gpid pid) : service_app(pid) {}
+    meta_service_test_app(const dsn::service_app_info *info) : service_app(info) {}
 
 public:
-    virtual dsn::error_code start(int, char **argv) override;
+    virtual dsn::error_code start(const std::vector<std::string> &args) override;
     virtual dsn::error_code stop(bool /*cleanup*/) { return dsn::ERR_OK; }
     void state_sync_test();
     void data_definition_op_test();

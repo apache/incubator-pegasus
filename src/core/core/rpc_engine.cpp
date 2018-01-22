@@ -554,14 +554,14 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
 
             if (ctx.queue) {
                 ddebug("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
-                       node()->name(),
+                       node()->full_name(),
                        ctx.queue->get_name().c_str(),
                        (uint32_t)(cs.port + ctx.port_shift_value),
                        cs.channel.to_string(),
                        client_hdr_format.to_string());
             } else {
                 ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
-                       node()->name(),
+                       node()->full_name(),
                        (uint32_t)(cs.port + ctx.port_shift_value),
                        cs.channel.to_string(),
                        client_hdr_format.to_string());
@@ -595,13 +595,13 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
 
         if (ctx.queue) {
             dwarn("[%s.%s] network server started at port %u, channel = %s, ...",
-                  node()->name(),
+                  node()->full_name(),
                   ctx.queue->get_name().c_str(),
                   (uint32_t)(port + ctx.port_shift_value),
                   sp.second.channel.to_string());
         } else {
             dwarn("[%s] network server started at port %u, channel = %s, ...",
-                  node()->name(),
+                  node()->full_name(),
                   (uint32_t)(port + ctx.port_shift_value),
                   sp.second.channel.to_string());
         }
@@ -614,7 +614,7 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
         aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
     ddebug("=== service_node=[%s], primary_address=[%s] ===",
-           _node->name(),
+           _node->full_name(),
            _local_primary_address.to_string());
 
     _is_running = true;

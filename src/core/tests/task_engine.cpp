@@ -74,7 +74,7 @@ TEST(core, task_engine)
         return;
     service_node *node = task::get_current_node2();
     ASSERT_NE(nullptr, node);
-    ASSERT_STREQ("client", node->name());
+    ASSERT_STREQ("client", node->full_name());
 
     task_engine *engine = node->computation();
     ASSERT_NE(nullptr, engine);

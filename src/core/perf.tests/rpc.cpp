@@ -127,7 +127,7 @@ TEST(core, lpc_perf_test_sync)
         results.resize(concurrency);
         for (auto j = 0; j < concurrency; j++) {
             auto task = tasking::enqueue(LPC_TEST_HASH, nullptr, [&results, j]() {
-                std::string r = dsn_get_app_data_dir();
+                std::string r = service_app::current_service_app_info().data_dir;
                 results[j] = std::move(r);
             });
             tasks.push_back(task);

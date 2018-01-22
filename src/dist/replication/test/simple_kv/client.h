@@ -44,10 +44,10 @@ namespace test {
 class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    simple_kv_client_app(dsn_gpid gpid);
+    simple_kv_client_app(const service_app_info *info);
     virtual ~simple_kv_client_app();
 
-    virtual ::dsn::error_code start(int argc, char **argv) override;
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
     void run();

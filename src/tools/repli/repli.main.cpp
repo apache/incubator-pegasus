@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     }
 
     // register all possible service apps
-    dsn::register_app<::dsn::service::repli_app>("repli");
+    dsn::service_app::register_factory<::dsn::service::repli_app>("repli");
 
     dsn::service::repli_app::set_args(argc - 1, argv + 1);
 

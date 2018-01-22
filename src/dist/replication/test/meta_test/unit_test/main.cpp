@@ -61,7 +61,7 @@ TEST(meta, policy_context_test) { g_app->policy_context_test(); }
 
 TEST(meta, backup_service_test) { g_app->backup_service_test(); }
 
-dsn::error_code meta_service_test_app::start(int argc, char **argv)
+dsn::error_code meta_service_test_app::start(const std::vector<std::string> &args)
 {
     uint32_t seed =
         (uint32_t)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed");
@@ -70,6 +70,12 @@ dsn::error_code meta_service_test_app::start(int argc, char **argv)
         derror("initial seed: %u", seed);
     }
     srand(seed);
+
+    int argc = args.size();
+    char *argv[20];
+    for (int i = 0; i < argc; ++i) {
+        argv[i] = (char *)(args[i].c_str());
+    }
     testing::InitGoogleTest(&argc, argv);
     g_app = this;
     gtest_ret = RUN_ALL_TESTS();
@@ -79,7 +85,7 @@ dsn::error_code meta_service_test_app::start(int argc, char **argv)
 
 GTEST_API_ int main(int argc, char **argv)
 {
-    dsn::register_app<meta_service_test_app>("test_meta");
+    dsn::service_app::register_factory<meta_service_test_app>("test_meta");
     dsn_meta_server_bridge(0, nullptr);
     if (argc < 2)
         dassert(dsn_run_config("config-test.ini", false), "");

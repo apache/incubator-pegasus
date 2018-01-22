@@ -33,10 +33,12 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/global_config.h>
 #include <thread>
+
+#include <dsn/tool-api/global_config.h>
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/network.h>
+#include <dsn/cpp/service_app.h>
 #include <dsn/utility/singleton_store.h>
 #include <dsn/utility/configuration.h>
 #include "library_utils.h"
@@ -264,7 +266,7 @@ bool service_app_spec::init(const char *section,
     id = 0;
     index = 0;
     role_name = std::string(role_name_);
-    name = role_name;
+    full_name = role_name;
     config_section = std::string(section);
 
     if (!read_config(section, *this, default_value))
@@ -337,124 +339,23 @@ bool service_spec::init()
     return true;
 }
 
-extern "C" {
-typedef dsn_error_t (*dsn_app_bridge_t)(int, const char **);
-}
-
-void service_spec::load_app_shared_libraries()
-{
-    std::vector<std::string> all_section_names;
-    get_main_config()->get_all_sections(all_section_names);
-
-    std::vector<std::pair<std::string, std::string>> modules;
-    for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it) {
-        if (it->substr(0, strlen("apps.")) == std::string("apps.")) {
-            std::string module =
-                dsn_config_get_value_string(it->c_str(),
-                                            "dmodule",
-                                            "",
-                                            "path of a dynamic library which implement this app "
-                                            "role, and register itself upon loaded");
-            if (module.length() > 0) {
-                std::string bridge_args = dsn_config_get_value_string(
-                    it->c_str(),
-                    "dmodule_bridge_arguments",
-                    "",
-                    "\n; when the service cannot automatically register its app types into rdsn \n"
-                    "; through %dmoudule%'s dllmain or attribute(constructor), we require the "
-                    "%dmodule% \n"
-                    "; implement an exporte function called \"dsn_error_t "
-                    "DMODULE_NAME_bridge(const char* "
-                    "args);\", \n"
-                    "; which loads the real target (e.g., a python/Java/php module), that "
-                    "registers their \n"
-                    "; app types and factories.");
-
-                modules.push_back(std::make_pair(module, bridge_args));
-            }
-        }
-    }
-
-    for (auto m : modules) {
-        auto hmod = ::dsn::utils::load_dynamic_library(m.first.c_str());
-        if (nullptr == hmod) {
-            dassert(
-                false, "cannot load shared library %s specified in config file", m.first.c_str());
-            break;
-        }
-
-        std::string bridge_symbol = m.first + "_bridge";
-        dsn_app_bridge_t bridge_ptr =
-            (dsn_app_bridge_t)::dsn::utils::load_symbol(hmod, bridge_symbol.c_str());
-        if (bridge_ptr != nullptr) {
-            ddebug("call %s_bridge(...%s...)", m.first.c_str(), m.second.c_str());
-
-            std::vector<std::string> args;
-            std::vector<const char *> args_ptr;
-            utils::split_args(m.second.c_str(), args);
-
-            for (auto &arg : args) {
-                args_ptr.push_back(arg.c_str());
-            }
-
-            bridge_ptr((int)args_ptr.size(), &args_ptr[0]);
-        } else {
-            if (m.second.length() > 0) {
-                dassert(false,
-                        "can't find bridge_symbol(%s) though arguments set(%s)",
-                        bridge_symbol.c_str(),
-                        m.second.c_str());
-            } else {
-                dwarn("can't find bridge_symbol(%s)", m.second.c_str());
-            }
-        }
-    }
-}
-
-#define mimic_app_role_name "dsn.app.mimic"
-
-static void *mimic_app_create(const char *, dsn_gpid) { return nullptr; }
-
-static dsn_error_t mimic_app_start(void *ctx, int argc, char **argv) { return ::dsn::ERR_OK; }
-
-static dsn_error_t mimic_app_destroy(void *ctx, bool clean_up) { return ::dsn::ERR_OK; }
-
 bool service_spec::init_app_specs()
 {
-    // register mimic app
-    dsn_app dapp;
-    memset(&dapp, 0, sizeof(dapp));
-    strcpy(dapp.type_name, mimic_app_role_name);
-    dapp.create = mimic_app_create;
-    dapp.destroy = mimic_app_destroy;
-    dapp.start = mimic_app_start;
-    dapp.intercepted_request = nullptr;
-    dsn_register_app(&dapp);
-
-    // init service apps
-    service_app_spec default_app;
-    if (!default_app.init("apps..default",
-                          ".default",
-                          nullptr,
-                          &this->network_default_client_cfs,
-                          &this->network_default_server_cfs))
-        return false;
-
     std::vector<std::string> all_section_names;
     get_main_config()->get_all_sections(all_section_names);
 
     // check mimic app
+    const char *mimic_app_role_name = "dsn.app.mimic";
+    service_app::register_factory<service_app>(mimic_app_role_name);
     if (enable_default_app_mimic) {
         std::string mimic_section_name("apps.mimic");
         if (std::find(all_section_names.begin(), all_section_names.end(), mimic_section_name) ==
             all_section_names.end()) {
-            get_main_config()->set(
-                "apps.mimic", "type", mimic_app_role_name, "must be " mimic_app_role_name);
+            get_main_config()->set("apps.mimic", "type", mimic_app_role_name, "");
             get_main_config()->set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
             all_section_names.push_back("apps.mimic");
         } else {
-            auto type = dsn_config_get_value_string(
-                "apps.mimic", "type", "", "app type, must be " mimic_app_role_name);
+            auto type = dsn_config_get_value_string("apps.mimic", "type", "", "");
             if (strcmp(type, mimic_app_role_name) != 0) {
                 printf("invalid config value '%s' for [apps.mimic] type", type);
                 return false;
@@ -463,6 +364,14 @@ bool service_spec::init_app_specs()
     }
 
     // init all apps
+    service_app_spec default_app;
+    if (!default_app.init("apps..default",
+                          ".default",
+                          nullptr,
+                          &this->network_default_client_cfs,
+                          &this->network_default_server_cfs))
+        return false;
+
     int app_id = 0;
     for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it) {
         if (it->substr(0, strlen("apps.")) == std::string("apps.") &&
@@ -491,24 +400,15 @@ bool service_spec::init_app_specs()
                 break;
             }
 
-            auto &store = ::dsn::utils::singleton_store<std::string, dsn_app *>::instance();
-            dsn_app *role;
-            if (!store.get(app.type, role)) {
-                printf("service type '%s' not registered\n", app.type.c_str());
-                return false;
-            }
-
-            app.role = role;
-
             auto ports = app.ports;
             auto nsc = app.network_server_confs;
             for (int i = 1; i <= app.count; i++) {
                 char buf[16];
                 sprintf(buf, "%u", i);
-                app.name = (app.count > 1 ? (app.role_name + buf) : app.role_name);
+                app.full_name = (app.count > 1 ? (app.role_name + buf) : app.role_name);
                 app.id = ++app_id;
                 app.index = i;
-                app.data_dir = utils::filesystem::path_combine(data_dir, app.name);
+                app.data_dir = utils::filesystem::path_combine(data_dir, app.full_name);
 
                 // add app
                 app_specs.push_back(app);

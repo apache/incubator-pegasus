@@ -21,7 +21,7 @@ using namespace dsn::fd;
 
 DEFINE_TASK_CODE_RPC(RPC_MASTER_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
 
-volatile int started_apps = 0;
+std::atomic_int started_apps(0);
 class worker_fd_test : public ::dsn::dist::slave_failure_detector_with_multimaster
 {
 private:
@@ -128,9 +128,9 @@ public:
 class test_worker : public service_app, public serverlet<test_worker>
 {
 public:
-    test_worker(dsn_gpid gpid) : service_app(gpid), serverlet("test_worker") {}
+    test_worker(const service_app_info *info) : service_app(info), serverlet("test_worker") {}
 
-    error_code start(int argc, char **argv) override
+    error_code start(const std::vector<std::string> &args) override
     {
         std::vector<rpc_address> master_group;
         for (int i = 0; i < 3; ++i)
@@ -166,9 +166,9 @@ private:
 class test_master : public service_app
 {
 public:
-    test_master(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    test_master(const service_app_info *info) : ::dsn::service_app(info) {}
 
-    error_code start(int, char **) override
+    error_code start(const std::vector<std::string> &args) override
     {
         _opts.stable_rs_min_running_seconds = 10;
         _opts.max_succssive_unstable_restart = 10;
@@ -201,38 +201,32 @@ bool spin_wait_condition(const std::function<bool()> &pred, int seconds)
 
 void fd_test_init()
 {
-    dsn::register_app<test_worker>("worker");
-    dsn::register_app<test_master>("master");
+    dsn::service_app::register_factory<test_worker>("worker");
+    dsn::service_app::register_factory<test_master>("master");
     srand(time(0));
 }
 
 bool get_worker_and_master(test_worker *&worker, std::vector<test_master *> &masters)
 {
-    started_apps = 0;
-    bool ans = spin_wait_condition([]() { return started_apps = MCOUNT + 1; }, 30);
+    bool ans = spin_wait_condition([]() { return started_apps == MCOUNT + 1; }, 30);
     if (!ans)
         return false;
 
-    dsn_app_info *all_apps = new dsn_app_info[128];
-    int total_apps_in_tst = dsn_get_all_apps(all_apps, 128);
-    if (total_apps_in_tst > 128) {
-        derror("too much apps for this test case");
-        return false;
-    }
-
-    worker = nullptr;
+    std::vector<service_app *> apps;
+    service_app::get_all_service_apps(&apps);
     masters.resize(MCOUNT, nullptr);
+    worker = nullptr;
 
-    for (int i = 0; i != total_apps_in_tst; ++i) {
-        if (strcmp(all_apps[i].type, "worker") == 0) {
+    for (int i = 0; i != apps.size(); ++i) {
+        if (strcmp(apps[i]->info().type.c_str(), "worker") == 0) {
             if (worker != nullptr)
                 return false;
-            worker = reinterpret_cast<test_worker *>(all_apps[i].app.app_context_ptr);
-        } else if (strcmp(all_apps[i].type, "master") == 0) {
-            int index = all_apps[i].index - 1;
+            worker = reinterpret_cast<test_worker *>(apps[i]);
+        } else if (strcmp(apps[i]->info().type.c_str(), "master") == 0) {
+            int index = apps[i]->info().index - 1;
             if (index >= masters.size() || masters[index] != nullptr)
                 return false;
-            masters[index] = reinterpret_cast<test_master *>(all_apps[i].app.app_context_ptr);
+            masters[index] = reinterpret_cast<test_master *>(apps[i]);
         }
     }
 

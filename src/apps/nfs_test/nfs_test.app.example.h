@@ -44,9 +44,9 @@ namespace application {
 class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    nfs_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    nfs_server_app(const service_app_info *info) : ::dsn::service_app(info) {}
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
         // use builtin nfs_service by set [core] start_nfs = true
         return ::dsn::ERR_OK;
@@ -59,7 +59,7 @@ public:
 class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    nfs_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid)
+    nfs_client_app(const service_app_info *info) : ::dsn::service_app(info)
     {
         _req_index = 0;
         _is_copying = false;
@@ -67,12 +67,12 @@ public:
 
     ~nfs_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
-        if (argc < 2)
+        if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(args[1].c_str(), (uint16_t)atoi(args[2].c_str()));
 
         // on_request_timer();
         _request_timer = ::dsn::tasking::enqueue_timer(::dsn::service::LPC_NFS_REQUEST_TIMER,

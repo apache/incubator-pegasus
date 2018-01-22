@@ -39,6 +39,7 @@
 
 #include <dsn/utility/utils.h>
 #include <dsn/cpp/rpc_stream.h>
+#include <dsn/cpp/service_app.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/tool-api/command_manager.h>
@@ -59,9 +60,7 @@ dsn_handle_t command_manager::register_app_command(const std::vector<std::string
                                                    const std::string &help_long,
                                                    command_handler handler)
 {
-    dsn_app_info info;
-    dsn_get_current_app_info(&info);
-    std::string app_tag = std::string(info.name) + ".";
+    std::string app_tag = std::string(service_app::current_service_app_info().full_name) + ".";
     std::vector<std::string> commands_with_app_tag;
     commands_with_app_tag.reserve(commands.size());
     for (const std::string &c : commands) {

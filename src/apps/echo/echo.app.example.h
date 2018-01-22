@@ -43,9 +43,9 @@ namespace example {
 class echo_server_app : public ::dsn::service_app
 {
 public:
-    echo_server_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    echo_server_app(const ::dsn::service_app_info *info) : ::dsn::service_app(info) {}
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
         _echo_svc.open_service();
         return ::dsn::ERR_OK;
@@ -65,16 +65,16 @@ private:
 class echo_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    echo_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    echo_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
 
     ~echo_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
-        if (argc < 3)
+        if (args.size() < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(args[1].c_str(), (uint16_t)atoi(args[2].c_str()));
         _echo_client.reset(new echo_client(_server));
         _timer = ::dsn::tasking::enqueue_timer(
             LPC_ECHO_TEST_TIMER, this, [this] { on_test_timer(); }, std::chrono::seconds(1));
@@ -113,16 +113,19 @@ private:
 class echo_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    echo_perf_test_client_app(dsn_gpid gpid) : ::dsn::service_app(gpid) { _echo_client = nullptr; }
+    echo_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info)
+    {
+        _echo_client = nullptr;
+    }
 
     ~echo_perf_test_client_app() { stop(); }
 
-    virtual ::dsn::error_code start(int argc, char **argv)
+    virtual ::dsn::error_code start(const std::vector<std::string> &args)
     {
-        if (argc < 2)
+        if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(args[1].c_str(), (uint16_t)atoi(args[2].c_str()));
 
         _echo_client = new echo_perf_test_client(_server);
         _echo_client->start_test("echo.perf-test.case", 1);

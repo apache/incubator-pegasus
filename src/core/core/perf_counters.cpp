@@ -35,7 +35,7 @@
 
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool-api/perf_counters.h>
-#include <dsn/service_api_c.h>
+#include <dsn/cpp/service_app.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/cpp/json_helper.h>
@@ -71,9 +71,8 @@ perf_counter_ptr perf_counters::new_app_counter(const char *section,
                                                 dsn_perf_counter_type_t flags,
                                                 const char *dsptr)
 {
-    dsn_app_info info;
-    dsn_get_current_app_info(&info);
-    return new_global_counter(info.name, section, name, flags, dsptr);
+    return new_global_counter(
+        service_app::current_service_app_info().full_name.c_str(), section, name, flags, dsptr);
 }
 
 perf_counter_ptr perf_counters::new_global_counter(const char *app,
@@ -106,7 +105,7 @@ perf_counter_ptr perf_counters::get_app_counter(const char *section,
 {
     auto cnode = dsn::task::get_current_node2();
     dassert(cnode != nullptr, "cannot get current service node!");
-    return get_global_counter(cnode->name(), section, name, flags, dsptr, create_if_not_exist);
+    return get_global_counter(cnode->full_name(), section, name, flags, dsptr, create_if_not_exist);
 }
 
 perf_counter_ptr perf_counters::get_global_counter(const char *app,

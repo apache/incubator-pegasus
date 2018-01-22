@@ -47,7 +47,7 @@ namespace service {
 
 using namespace ::dsn::replication;
 
-repli_app::repli_app(dsn_gpid gpid) : service_app(gpid) {}
+repli_app::repli_app(const service_app_info *info) : service_app(info) {}
 
 void repli_app::usage()
 {
@@ -58,7 +58,7 @@ void repli_app::usage()
     std::cout << "---------------------------------" << std::endl;
 }
 
-error_code repli_app::start(int argc, char **argv)
+error_code repli_app::start(const std::vector<std::string> &args)
 {
     if (s_args.size() == 0) {
         g_done = true;

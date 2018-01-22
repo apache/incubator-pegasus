@@ -64,8 +64,6 @@ extern "C" {
 #define TIME_MS_MAX 0xffffffff
 #define CRC_INVALID 0x0
 
-struct dsn_app_info;
-typedef struct dsn_app_info dsn_app_info; ///< rDSN app information
 typedef int dsn_error_t;
 typedef int dsn_task_code_t;
 typedef int dsn_threadpool_code_t;

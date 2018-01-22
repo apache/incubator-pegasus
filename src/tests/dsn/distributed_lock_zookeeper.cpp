@@ -26,13 +26,13 @@ int64_t result = 0;
 class simple_adder_server : public dsn::service_app
 {
 public:
-    simple_adder_server(dsn_gpid gpid) : ::dsn::service_app(gpid) {}
+    simple_adder_server(const service_app_info *info) : ::dsn::service_app(info) {}
 
-    error_code start(int argc, char **argv)
+    error_code start(const std::vector<std::string> &args)
     {
-        ddebug("name: %s, argc=%d", name().c_str(), argc);
-        for (int i = 0; i != argc; ++i)
-            ddebug("argv: %s", argv[i]);
+        ddebug("name: %s, argc=%u", info().full_name.c_str(), args.size());
+        for (const std::string &s : args)
+            ddebug("argv: %s", s.c_str());
         while (!ss_start)
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -43,11 +43,11 @@ public:
         while (!ss_finish) {
             std::pair<task_ptr, task_ptr> task_pair = _dlock_service->lock(
                 "test_lock",
-                name(),
+                info().full_name,
                 DLOCK_CALLBACK,
                 [this](error_code ec, const std::string &name, int version) {
                     EXPECT_TRUE(ERR_OK == ec);
-                    EXPECT_TRUE(name == this->name());
+                    EXPECT_TRUE(name == this->info().full_name);
                     ddebug("lock: error_code: %s, name: %s, lock version: %d",
                            ec.to_string(),
                            name.c_str(),
@@ -65,7 +65,7 @@ public:
                 result += q[pos++];
             }
             task_ptr unlock_task = _dlock_service->unlock(
-                "test_lock", name(), true, DLOCK_CALLBACK, [this](error_code ec) {
+                "test_lock", info().full_name, true, DLOCK_CALLBACK, [this](error_code ec) {
                     EXPECT_TRUE(ERR_OK == ec);
                     ddebug("unlock, error code: %s", ec.to_string());
                 });
@@ -198,4 +198,4 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     tsk->wait();
 }
 
-void lock_test_init() { dsn::register_app<simple_adder_server>("adder"); }
+void lock_test_init() { dsn::service_app::register_factory<simple_adder_server>("adder"); }

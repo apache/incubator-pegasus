@@ -1056,31 +1056,15 @@ NORETURN DSN_API void dsn_exit(int code)
 #endif
 }
 
-DSN_API bool dsn_register_app(dsn_app *app_type)
-{
-    dsn_app *app;
-    auto &store = ::dsn::utils::singleton_store<std::string, dsn_app *>::instance();
-    if (store.get(app_type->type_name, app)) {
-        dassert(false, "app type %s is already registered", app_type->type_name);
-        return false;
-    }
-
-    app = new dsn_app();
-    *app = *app_type;
-    auto r = store.put(app_type->type_name, app);
-    dassert(r, "app type %s is already registered", app_type->type_name);
-    return r;
-}
-
-DSN_API bool dsn_mimic_app(const char *app_name, int index)
+DSN_API bool dsn_mimic_app(const char *app_role, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
     dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
 
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr) {
-        const std::string &name = cnode->spec().name;
-        if (cnode->spec().role_name == std::string(app_name) && cnode->spec().index == index) {
+        const std::string &name = cnode->spec().full_name;
+        if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
             return true;
         } else {
             derror("current thread is already attached to another rDSN app %s", name.c_str());
@@ -1090,51 +1074,16 @@ DSN_API bool dsn_mimic_app(const char *app_name, int index)
 
     auto nodes = ::dsn::service_engine::instance().get_all_nodes();
     for (auto &n : nodes) {
-        if (n.second->spec().role_name == std::string(app_name) &&
+        if (n.second->spec().role_name == std::string(app_role) &&
             n.second->spec().index == index) {
             ::dsn::task::set_tls_dsn_context(n.second, nullptr, nullptr);
             return true;
         }
     }
 
-    derror("cannot find host app %s with index %d", app_name, index);
+    derror("cannot find host app %s with index %d", app_role, index);
     return false;
 }
-
-DSN_API const char *dsn_get_app_data_dir(dsn_gpid gpid)
-{
-    auto info = dsn_get_app_info_ptr(gpid);
-    return info ? info->data_dir : nullptr;
-}
-
-DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info *app_info)
-{
-    auto info = dsn_get_app_info_ptr(dsn_gpid{0});
-    if (info) {
-        memcpy(app_info, info, sizeof(*info));
-        return true;
-    } else
-        return false;
-}
-
-DSN_API dsn_app_info *dsn_get_app_info_ptr(dsn_gpid gpid)
-{
-    auto cnode = ::dsn::task::get_current_node2();
-    if (cnode != nullptr) {
-        if (gpid.value == 0)
-            return cnode->get_app_info();
-        else {
-            dassert(false, "");
-            return nullptr;
-        }
-    } else
-        return nullptr;
-}
-
-::dsn::utils::notify_event s_loader_event;
-DSN_API void dsn_app_loader_signal() { s_loader_event.notify(); }
-
-DSN_API void dsn_app_loader_wait() { s_loader_event.wait(); }
 
 //
 // run the system with arguments
@@ -1248,10 +1197,6 @@ bool run(const char *config_file,
 #endif
         getchar();
     }
-
-    // regiser external app roles by loading all shared libraries
-    // so all code and app factories are automatically registered
-    dsn::service_spec::load_app_shared_libraries();
 
     for (int i = 0; i <= dsn_task_code_max(); i++) {
         dsn_all.task_specs.push_back(::dsn::task_spec::get(i));
@@ -1430,27 +1375,33 @@ bool run(const char *config_file,
     return true;
 }
 
-DSN_API int dsn_get_all_apps(dsn_app_info *info_buffer, int count)
-{
-    auto &as = ::dsn::service_engine::fast_instance().get_all_nodes();
-    int i = 0;
-    for (auto &kv : as) {
-        if (i >= count)
-            return (int)as.size();
-
-        dsn::service_node *node = kv.second;
-        dsn_app_info &info = info_buffer[i++];
-        info.app.app_context_ptr = node->get_app_context_ptr();
-        info.app_id = node->id();
-        info.index = node->spec().index;
-        info.primary_address = node->rpc(nullptr)->primary_address().c_addr();
-        strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));
-        strncpy(info.type, node->spec().type.c_str(), sizeof(info.type));
-        strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));
-    }
-    return i;
+namespace dsn {
+configuration_ptr get_main_config() { return dsn_all.config; }
 }
 
 namespace dsn {
-configuration_ptr get_main_config() { return dsn_all.config; }
+service_app *service_app::new_service_app(const std::string &type,
+                                          const dsn::service_app_info *info)
+{
+    return dsn::utils::factory_store<service_app>::create(
+        type.c_str(), dsn::PROVIDER_TYPE_MAIN, info);
+}
+
+service_app::service_app(const dsn::service_app_info *info) : _info(info), _started(false) {}
+
+const service_app_info &service_app::info() const { return *_info; }
+
+const service_app_info &service_app::current_service_app_info()
+{
+    return tls_dsn.node->get_service_app_info();
+}
+
+void service_app::get_all_service_apps(std::vector<service_app *> *apps)
+{
+    const service_nodes_by_app_id &nodes = dsn_all.engine->get_all_nodes();
+    for (const auto &kv : nodes) {
+        const service_node *node = kv.second;
+        apps->push_back(const_cast<service_app *>(node->get_service_app()));
+    }
+}
 }

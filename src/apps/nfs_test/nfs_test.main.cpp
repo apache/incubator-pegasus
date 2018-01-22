@@ -38,8 +38,8 @@
 
 int main(int argc, char **argv)
 {
-    dsn::register_app<::dsn::replication::application::nfs_client_app>("client");
-    dsn::register_app<::dsn::replication::application::nfs_server_app>("server");
+    dsn::service_app::register_factory<::dsn::replication::application::nfs_client_app>("client");
+    dsn::service_app::register_factory<::dsn::replication::application::nfs_server_app>("server");
 
     // specify what services and tools will run in config file, then run
     dsn_run_config("config.ini", true);

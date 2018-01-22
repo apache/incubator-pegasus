@@ -74,7 +74,7 @@ task_worker::task_worker(task_worker_pool *pool,
     _native_tid = ::dsn::utils::get_invalid_tid();
 
     char name[256];
-    sprintf(name, "%5s.%s.%u", pool->node()->name(), pool->spec().name.c_str(), index);
+    sprintf(name, "%5s.%s.%u", pool->node()->full_name(), pool->spec().name.c_str(), index);
     _name = std::string(name);
     _is_running = false;
 

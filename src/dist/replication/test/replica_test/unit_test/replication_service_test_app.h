@@ -7,8 +7,10 @@ using ::dsn::error_code;
 class replication_service_test_app : public replication_service_app
 {
 public:
-    replication_service_test_app(dsn_gpid pid) : replication_service_app(pid) {}
-    virtual error_code start(int argc, char **argv) override;
+    replication_service_test_app(const dsn::service_app_info *info) : replication_service_app(info)
+    {
+    }
+    virtual error_code start(const std::vector<std::string> &args) override;
     virtual dsn::error_code stop(bool /*cleanup*/) { return dsn::ERR_OK; }
 
     // test for cold_backup_context

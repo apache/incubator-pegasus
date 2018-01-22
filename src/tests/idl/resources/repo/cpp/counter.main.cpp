@@ -14,9 +14,9 @@ void mysleep() { sleep(3); }
 void dsn_app_registration_counter()
 {
     // register all possible service apps
-    dsn::register_app<::dsn::example::counter_server_app>("server");
-    dsn::register_app<::dsn::example::counter_client_app>("client");
-    dsn::register_app<::dsn::example::counter_perf_test_client_app>("client.perf.counter");
+    dsn::service_app::register_factory<::dsn::example::counter_server_app>("server");
+    dsn::service_app::register_factory<::dsn::example::counter_client_app>("client");
+    dsn::service_app::register_factory<::dsn::example::counter_perf_test_client_app>("client.perf.counter");
 }
 
 #ifndef DSN_RUN_USE_SVCHOST

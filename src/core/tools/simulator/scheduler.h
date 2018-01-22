@@ -36,6 +36,7 @@
 #pragma once
 
 #include <dsn/tool_api.h>
+#include <dsn/tool/simulator.h>
 #include <dsn/utility/synchronize.h>
 
 namespace dsn {
@@ -100,7 +101,7 @@ public:
 
     // TODO: time delay for true, true
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
-    void add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply);
+    void add_checker(const std::string &name, checker::factory f);
     static bool is_scheduling() { return _is_scheduling; }
 
 public:
@@ -128,11 +129,10 @@ private:
     struct checker_info
     {
         std::string name;
-        dsn_checker_create create;
-        dsn_checker_apply apply;
-        void *checker_ptr;
+        checker::factory creator;
+        std::unique_ptr<checker> instance;
     };
-    std::vector<checker_info *> _checkers;
+    std::vector<checker_info> _checkers;
 
 private:
     void schedule();

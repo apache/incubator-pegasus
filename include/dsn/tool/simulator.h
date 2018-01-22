@@ -36,20 +36,39 @@
 #pragma once
 
 #include <dsn/tool_api.h>
+#include <dsn/cpp/service_app.h>
 
 namespace dsn {
 namespace tools {
+
+class checker
+{
+public:
+    typedef checker *(*factory)();
+    template <typename T>
+    static checker *create()
+    {
+        return new T();
+    }
+
+public:
+    checker() {}
+    virtual ~checker() {}
+    virtual void initialize(const std::string &name, const std::vector<service_app *> &apps) = 0;
+    virtual void check() = 0;
+    const std::string &name() const { return _name; }
+protected:
+    std::vector<service_app *> _apps;
+    std::string _name;
+};
 
 class simulator : public tool_app
 {
 public:
     simulator(const char *name) : tool_app(name) {}
-
     virtual void install(service_spec &s) override;
-
     virtual void run() override;
-
-    void add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply);
+    static void register_checker(const std::string &name, checker::factory f);
 
 private:
     static void on_system_exit(sys_exit_type st);

@@ -44,8 +44,8 @@ namespace service {
 class cli : public service_app
 {
 public:
-    cli(dsn_gpid gpid);
-    virtual ::dsn::error_code start(int argc, char **argv);
+    cli(const service_app_info *info);
+    virtual ::dsn::error_code start(const std::vector<std::string> &args);
     virtual ::dsn::error_code stop(bool cleanup = false);
 
 private:

@@ -28,8 +28,14 @@ TEST(cold_backup_context, write_metadata_file) { app->write_backup_metadata_test
 
 TEST(cold_backup_context, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
 
-error_code replication_service_test_app::start(int argc, char **argv)
+error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {
+    int argc = args.size();
+    char *argv[20];
+    for (int i = 0; i < argc; ++i) {
+        argv[i] = (char *)(args[i].c_str());
+    }
+
     testing::InitGoogleTest(&argc, argv);
     app = this;
     gtest_ret = RUN_ALL_TESTS();
@@ -39,7 +45,7 @@ error_code replication_service_test_app::start(int argc, char **argv)
 
 GTEST_API_ int main(int argc, char **argv)
 {
-    dsn::register_app<replication_service_test_app>("replica");
+    dsn::service_app::register_factory<replication_service_test_app>("replica");
     if (argc < 2)
         dassert(dsn_run_config("config-test.ini", false), "");
     else

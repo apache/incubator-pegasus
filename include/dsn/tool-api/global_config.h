@@ -84,41 +84,31 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 //  - app_type
 struct service_app_spec
 {
-    int id;    // global id for all roles, assigned by rDSN automatically, also named as "app_id"
+    int id;    // global id for all roles, assigned by rDSN automatically
     int index; // local index for the current role (1,2,3,...), also named as "role_index"
     std::string data_dir;       // data dir for the app. it is auto-set as
                                 // ${service_spec.data_dir}/${service_app_spec.name}.
     std::string config_section; // [apps.${role_name}]
     std::string role_name;      // role name of [apps.${role_name}], also named as "app_name"
-    std::string name; // combined by role_name and role_index, also named as "app_full_name"
-                      // e.g., if role_name = meta and role_index = 1, then app_full_name = meta1
-                      // specially, if role count is 1, then app_full_name equals to role_name
-                      // it is usually used for printing log
+
+    // combined by role_name and role_index, also named as "app_full_name"
+    // e.g., if role_name = meta and role_index = 1, then app_full_name = meta1
+    // specially, if role count is 1, then app_full_name equals to role_name
+    // it is usually used for printing log
+    std::string full_name;
     std::string type; // registered type name, alse named as "app_type"
     std::string arguments;
     std::vector<int> ports;
     std::list<dsn_threadpool_code_t> pools;
     int delay_seconds;
     bool run;
-    int count;           // index = 1,2,...,count
-    int ports_gap;       // when count > 1 or service_spec.io_mode != IOE_PER_NODE
-    std::string dmodule; // when the service is a dynamcially loaded module
-
-    //
-    // when the service cannot automatically register its app types into rdsn
-    // through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule%
-    // implement an exported function called "dsn_error_t dsn_app_bridge(int argc, const char**
-    // argv);",
-    // which loads the real target (e.g., a python/Java/php module), that registers their
-    // app types and factories.
-    //
-    std::string dmodule_bridge_arguments;
-    dsn_app *role;
+    int count;     // index = 1,2,...,count
+    int ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
 
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
 
-    service_app_spec() : role(nullptr) {}
+    service_app_spec() {}
     /*service_app_spec(const service_app_spec& r);*/
     DSN_API bool init(const char *section,
                       const char *role_name_,
@@ -130,18 +120,6 @@ struct service_app_spec
 CONFIG_BEGIN(service_app_spec)
 CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
 CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
-CONFIG_FLD_STRING(
-    dmodule,
-    "",
-    "path of a dynamic library which implement this app role, and register itself upon loaded")
-CONFIG_FLD_STRING(
-    dmodule_bridge_arguments,
-    "",
-    "\n; when the service cannot automatically register its app types into rdsn \n"
-    "; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule% \n"
-    "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* args);\", \n"
-    "; which loads the real target (e.g., a python/Java/php module), that registers their \n"
-    "; app types and factories.");
 CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
 CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
 CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
@@ -216,7 +194,6 @@ struct service_spec
     DSN_API bool init();
     DSN_API bool init_app_specs();
     DSN_API int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
-    DSN_API static void load_app_shared_libraries();
 };
 
 CONFIG_BEGIN(service_spec)

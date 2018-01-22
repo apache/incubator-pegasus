@@ -468,18 +468,15 @@ TEST(core, dsn_system)
     }
 
     {
-        dsn_app_info apps[20];
-        int count = dsn_get_all_apps(apps, 20);
-        ASSERT_EQ(app_count, count);
+        std::vector<service_app *> apps;
+        service_app::get_all_service_apps(&apps);
+        ASSERT_EQ(app_count, apps.size());
         std::map<std::string, int> type_to_count;
-        for (int i = 0; i < count; ++i) {
-            type_to_count[apps[i].type] += 1;
+        for (int i = 0; i < apps.size(); ++i) {
+            type_to_count[apps[i]->info().type] += 1;
         }
 
         ASSERT_EQ(type_count, static_cast<int>(type_to_count.size()));
         ASSERT_EQ(5, type_to_count["test"]);
-
-        count = dsn_get_all_apps(apps, 3);
-        ASSERT_EQ(app_count, count);
     }
 }

@@ -70,8 +70,8 @@ inline void exec_tests()
 class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_app
 {
 public:
-    test_client(dsn_gpid gpid)
-        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(gpid)
+    test_client(const service_app_info *info)
+        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(info)
     {
     }
 
@@ -109,10 +109,10 @@ public:
         }
     }
 
-    ::dsn::error_code start(int argc, char **argv)
+    ::dsn::error_code start(const std::vector<std::string> &args)
     {
         // server
-        if (argc == 1) {
+        if (args.size() == 1) {
             register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
             // used for corrupted message test
             register_async_rpc_handler(RPC_TEST_HASH1, "rpc.test.hash1", &test_client::on_rpc_test);

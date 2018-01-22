@@ -40,45 +40,14 @@
 #include <map>
 
 namespace dsn {
-class service_objects : public ::dsn::utils::singleton<service_objects>
-{
-public:
-    void add(clientlet *obj)
-    {
-        std::lock_guard<std::mutex> l(_lock);
-        _services.insert(obj);
-    }
-
-    void remove(clientlet *obj)
-    {
-        std::lock_guard<std::mutex> l(_lock);
-        _services.erase(obj);
-    }
-
-    void add_app(service_app *obj)
-    {
-        std::lock_guard<std::mutex> l(_lock);
-        _apps[obj->name()] = obj;
-    }
-
-private:
-    std::mutex _lock;
-    std::set<clientlet *> _services;
-    std::map<std::string, service_app *> _apps;
-};
 
 clientlet::clientlet(int task_bucket_count)
 {
     _tracker = dsn_task_tracker_create(task_bucket_count);
     _access_thread_id_inited = false;
-    service_objects::instance().add(this);
 }
 
-clientlet::~clientlet()
-{
-    dsn_task_tracker_destroy(_tracker);
-    service_objects::instance().remove(this);
-}
+clientlet::~clientlet() { dsn_task_tracker_destroy(_tracker); }
 
 void clientlet::check_hashed_access()
 {

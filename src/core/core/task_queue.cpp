@@ -58,7 +58,7 @@ task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_prov
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
     _queue_length_counter =
-        perf_counters::instance().get_global_counter(_pool->node()->name(),
+        perf_counters::instance().get_global_counter(_pool->node()->full_name(),
                                                      "engine",
                                                      (_name + ".queue.length").c_str(),
                                                      COUNTER_TYPE_NUMBER,

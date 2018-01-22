@@ -81,51 +81,6 @@ void dsn_core_init()
     dsn::dist::register_common_providers();
 }
 
-//
-// global checker implementation
-//
-void sys_init_for_add_global_checker();
-class global_checker_store : public ::dsn::utils::singleton<global_checker_store>
-{
-public:
-    struct global_checker
-    {
-        std::string name;
-        dsn_checker_create create;
-        dsn_checker_apply apply;
-    };
-
-public:
-    global_checker_store()
-    {
-        ::dsn::tools::sys_init_after_app_created.put_back(sys_init_for_add_global_checker,
-                                                          "checkers.install");
-    }
-
-    std::list<global_checker> checkers;
-};
-
-void sys_init_for_add_global_checker()
-{
-    auto t = dynamic_cast<dsn::tools::simulator *>(::dsn::tools::get_current_tool());
-    if (t != nullptr) {
-        for (auto &c : global_checker_store::instance().checkers) {
-            t->add_checker(c.name.c_str(), c.create, c.apply);
-        }
-    }
-}
-
-DSN_API void
-dsn_register_app_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply)
-{
-    global_checker_store::global_checker ck;
-    ck.name = name;
-    ck.create = create;
-    ck.apply = apply;
-
-    global_checker_store::instance().checkers.push_back(ck);
-}
-
 #if defined(__linux__)
 #include <dsn/version.h>
 #include <dsn/git_commit.h>

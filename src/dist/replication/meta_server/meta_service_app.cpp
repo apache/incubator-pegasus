@@ -95,7 +95,7 @@ void dsn_meta_sever_register_providers()
 
 dsn_error_t dsn_meta_server_bridge(int argc, char **argv)
 {
-    dsn::register_app<::dsn::service::meta_service_app>("meta");
+    dsn::service_app::register_factory<::dsn::service::meta_service_app>("meta");
     dsn_meta_sever_register_providers();
     return dsn::ERR_OK;
 }
@@ -104,7 +104,7 @@ dsn_error_t dsn_meta_server_bridge(int argc, char **argv)
 namespace dsn {
 namespace service {
 
-meta_service_app::meta_service_app(dsn_gpid gpid) : service_app(gpid)
+meta_service_app::meta_service_app(const service_app_info *info) : service_app(info)
 {
     // create in constructor because it may be used in checker before started
     _service.reset(new replication::meta_service());
@@ -112,7 +112,7 @@ meta_service_app::meta_service_app(dsn_gpid gpid) : service_app(gpid)
 
 meta_service_app::~meta_service_app() {}
 
-error_code meta_service_app::start(int argc, char **argv)
+error_code meta_service_app::start(const std::vector<std::string> &args)
 {
     // TODO: handle the load & restore
     return _service->start();

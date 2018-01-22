@@ -38,7 +38,7 @@
 #include "common.h"
 
 #include <dsn/utility/singleton.h>
-#include <dsn/tool/global_checker.h>
+#include <dsn/tool/simulator.h>
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
 
@@ -58,7 +58,7 @@ public:
 public:
     test_checker();
 
-    bool init(const char *name, dsn_app_info *info, int count);
+    bool init(const std::string &name, const std::vector<service_app *> apps);
 
     void exit();
 
@@ -84,7 +84,7 @@ public:
     bool get_current_config(parti_config &config);
 
 private:
-    std::vector<dsn_app_info> _apps;
+    std::vector<service_app *> _apps;
     std::vector<meta_service_app *> _meta_servers;
     std::vector<replication_service_app *> _replica_servers;
 
@@ -98,16 +98,16 @@ private:
 class wrap_checker : public dsn::tools::checker
 {
 public:
-    wrap_checker(const char *name, dsn_app_info *info, int count)
-        : dsn::tools::checker(name, info, count)
+    wrap_checker() : dsn::tools::checker() {}
+
+    virtual void initialize(const std::string &name, const std::vector<service_app *> &apps)
     {
         _checker = &test_checker::instance();
-        if (!_checker->init(name, info, count)) {
+        if (!_checker->init(name, apps)) {
             g_done = true;
             g_fail = true;
         }
     }
-
     virtual void check() override { _checker->check(); }
 
 private:

@@ -110,7 +110,7 @@ void task_worker_pool::start()
 
     ddebug("[%s] thread pool [%s] started, pool_code = %s, worker_count = %d, worker_share_core = "
            "%s, partitioned = %s, ...",
-           _node->name(),
+           _node->full_name(),
            _spec.name.c_str(),
            dsn_threadpool_code_to_string(_spec.pool_code),
            _spec.worker_count,

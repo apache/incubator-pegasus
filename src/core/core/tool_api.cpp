@@ -72,7 +72,7 @@ public:
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
         } else {
-            sp.role->destroy(_node->get_app_context_ptr(), _cleanup);
+            ddebug("stop app result(%s)", dsn_error_to_string(_node->stop_app(_cleanup)));
         }
     }
 
@@ -113,7 +113,7 @@ const service_spec &tool_app::get_service_spec() { return service_engine::fast_i
 
 const service_spec &spec() { return service_engine::fast_instance().spec(); }
 
-const char *get_service_node_name(service_node *node) { return node->name(); }
+const char *get_service_node_name(service_node *node) { return node->full_name(); }
 
 join_point<void> sys_init_before_app_created("system.init.1");
 join_point<void> sys_init_after_app_created("system.init.2");

@@ -111,11 +111,9 @@ replication_options::~replication_options() {}
 
 void replication_options::initialize()
 {
-    dsn_app_info app_info;
-    bool r = dsn_get_current_app_info(&app_info);
-    dassert(r, "get current app info failed");
-    app_name = app_info.name;
-    app_dir = app_info.data_dir;
+    const service_app_info &info = service_app::current_service_app_info();
+    app_name = info.full_name;
+    app_dir = info.data_dir;
 
     // slog_dir:
     // - if config[slog_dir] is empty: "app_dir/slog"

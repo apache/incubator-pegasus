@@ -42,6 +42,7 @@
 #include <dsn/tool-api/global_config.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/cpp/auto_codes.h>
+#include <dsn/cpp/service_app.h>
 #include <dsn/utility/synchronize.h>
 
 namespace dsn {
@@ -102,26 +103,22 @@ public:
 
     ::dsn::error_code start();
     dsn_error_t start_app();
+    dsn_error_t stop_app(bool cleanup);
 
     int id() const { return _app_spec.id; }
-    const char *name() const { return _app_spec.name.c_str(); }
+    const char *full_name() const { return _app_spec.full_name.c_str(); }
     const service_app_spec &spec() const { return _app_spec; }
-    void *get_app_context_ptr() const { return _app_info.app.app_context_ptr; }
-
+    const service_app_info &get_service_app_info() const { return _info; }
+    const service_app *get_service_app() const { return _entity.get(); }
     bool rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid);
     rpc_handler_info *rpc_unregister_handler(dsn_task_code_t rpc_code, dsn_gpid gpid);
 
-    dsn_app_info *get_app_info() { return &_app_info; }
     void handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
     rpc_request_task *generate_intercepted_request_task(message_ex *req);
 
-    static dsn_error_t start_app(void *app_context,
-                                 const std::string &args,
-                                 dsn_app_start start,
-                                 const std::string &app_name);
-
 private:
-    dsn_app_info _app_info;
+    service_app_info _info;
+    std::unique_ptr<service_app> _entity;
 
     service_app_spec _app_spec;
     task_engine *_computation;
@@ -134,6 +131,10 @@ private:
     rpc_handler_info _intercepted_write;
 
 private:
+    // the service entity is initialized after the engine
+    // is initialized, so this should be call in start()
+    void init_service_app();
+
     error_code init_io_engine(io_engine &io, ioe_mode mode);
     error_code start_io_engine_in_main(const io_engine &io);
     void get_io(ioe_mode mode, task_queue *q, /*out*/ io_engine &io) const;

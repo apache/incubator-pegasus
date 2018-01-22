@@ -46,8 +46,8 @@ namespace service {
 class repli_app : public service_app
 {
 public:
-    repli_app(dsn_gpid gpid);
-    virtual ::dsn::error_code start(int argc, char **argv);
+    repli_app(const service_app_info *info);
+    virtual ::dsn::error_code start(const std::vector<std::string> &args);
     virtual ::dsn::error_code stop(bool cleanup = false);
 
     static void set_args(int argc, char **argv);

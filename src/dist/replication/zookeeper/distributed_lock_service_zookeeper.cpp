@@ -100,13 +100,8 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     }
     const char *lock_root = args[0].c_str();
 
-    dsn_app_info node;
-    if (!dsn_get_current_app_info(&node)) {
-        derror("get current app info failed, can not init distributed_lock_service_zookeeper");
-        return ERR_CORRUPTION;
-    }
-
-    _session = zookeeper_session_mgr::instance().get_session(&node);
+    _session =
+        zookeeper_session_mgr::instance().get_session(service_app::current_service_app_info());
     _zoo_state = _session->attach(this,
                                   std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
                                             lock_srv_ptr(this),

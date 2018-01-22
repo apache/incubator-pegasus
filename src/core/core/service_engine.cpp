@@ -66,15 +66,6 @@ service_node::service_node(service_app_spec &app_spec)
     _computation = nullptr;
     _app_spec = app_spec;
 
-    memset(&_app_info, 0, sizeof(_app_info));
-    _app_info.app.app_context_ptr = nullptr;
-    _app_info.app_id = id();
-    _app_info.index = spec().index;
-    strncpy(_app_info.role, spec().role_name.c_str(), sizeof(_app_info.role));
-    strncpy(_app_info.type, spec().type.c_str(), sizeof(_app_info.type));
-    strncpy(_app_info.name, spec().name.c_str(), sizeof(_app_info.name));
-    strncpy(_app_info.data_dir, spec().data_dir.c_str(), sizeof(_app_info.data_dir));
-
     _intercepted_read.name = "RPC_L2_CLIENT_READ";
     _intercepted_read.c_handler = [](dsn_message_t req, void *this_) {
         auto req2 = (message_ex *)req;
@@ -258,34 +249,39 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine &io)
 
 dsn_error_t service_node::start_app()
 {
-    return start_app(
-        _app_info.app.app_context_ptr, spec().arguments, _app_spec.role->start, spec().name);
+    dassert(_entity.get(), "entity hasn't initialized");
+    _entity->set_address(node_rpc()->primary_address());
+
+    std::vector<std::string> args;
+    utils::split_args(spec().arguments.c_str(), args);
+    args.insert(args.begin(), spec().full_name);
+    dsn_error_t res = _entity->start(args);
+    if (res == dsn::ERR_OK) {
+        _entity->set_started(true);
+    }
+    return res;
 }
 
-dsn_error_t service_node::start_app(void *app_context,
-                                    const std::string &sargs,
-                                    dsn_app_start start,
-                                    const std::string &app_name)
+dsn_error_t service_node::stop_app(bool cleanup)
 {
-    std::vector<std::string> args;
-    std::vector<char *> args_ptr;
-
-    utils::split_args(sargs.c_str(), args);
-
-    int argc = static_cast<int>(args.size()) + 1;
-    args_ptr.resize(argc);
-    args.resize(argc);
-    for (int i = argc - 1; i >= 0; i--) {
-        if (0 == i) {
-            args[0] = app_name;
-        } else {
-            args[i] = args[i - 1];
-        }
-
-        args_ptr[i] = ((char *)args[i].c_str());
+    dassert(_entity.get(), "entity hasn't initialized");
+    dsn_error_t res = _entity->stop(cleanup);
+    if (res == dsn::ERR_OK) {
+        _entity->set_started(false);
     }
+    return res;
+}
 
-    return start(app_context, argc, &args_ptr[0]);
+void service_node::init_service_app()
+{
+    _info.entity_id = _app_spec.id;
+    _info.index = _app_spec.index;
+    _info.role_name = _app_spec.role_name;
+    _info.type = _app_spec.type;
+    _info.full_name = _app_spec.full_name;
+    _info.data_dir = _app_spec.data_dir;
+
+    _entity.reset(service_app::new_service_app(_app_spec.type, &_info));
 }
 
 error_code service_node::start()
@@ -335,11 +331,10 @@ error_code service_node::start()
     _computation->start();
     dassert(_computation->is_started(), "task engine must be started at this point");
 
-    // create app
+    // create service_app
     {
         ::dsn::tools::node_scoper scoper(this);
-        _app_info.app.app_context_ptr =
-            _app_spec.role->create(_app_spec.role->type_name, dsn_gpid{0});
+        init_service_app();
     }
 
     // start rpc serving
@@ -406,7 +401,7 @@ void service_node::get_runtime_info(const std::string &indent,
                                     const std::vector<std::string> &args,
                                     /*out*/ std::stringstream &ss)
 {
-    ss << indent << name() << ":" << std::endl;
+    ss << indent << full_name() << ":" << std::endl;
 
     std::string indent2 = indent + "\t";
     _computation->get_runtime_info(indent2, args, ss);
@@ -415,34 +410,28 @@ void service_node::get_runtime_info(const std::string &indent,
 void service_node::get_queue_info(
     /*out*/ std::stringstream &ss)
 {
-    ss << "{\"app_name\":\"" << name() << "\",\n\"thread_pool\":[\n";
+    ss << "{\"app_name\":\"" << full_name() << "\",\n\"thread_pool\":[\n";
     _computation->get_queue_info(ss);
     ss << "]}";
 }
 
 void service_node::handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req)
 {
-    auto cb = _app_spec.role->intercepted_request;
-    cb(_app_info.app.app_context_ptr, gpid, is_write, req);
+    _entity->on_intercepted_request(gpid, is_write, req);
 }
 
 rpc_request_task *service_node::generate_intercepted_request_task(message_ex *req)
 {
-    auto cb = _app_spec.role->intercepted_request;
-    if (nullptr != cb) {
-        rpc_request_task *t;
-        if (task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation) {
-            _intercepted_write.add_ref(); // release in handler::run
-            t = new rpc_request_task(req, &_intercepted_write, this);
-        } else {
-            _intercepted_read.add_ref(); // release in handler::run
-            t = new rpc_request_task(req, &_intercepted_read, this);
-        }
-        t->spec().on_task_create.execute(nullptr, t);
-        return t;
+    rpc_request_task *t;
+    if (task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation) {
+        _intercepted_write.add_ref(); // release in handler::run
+        t = new rpc_request_task(req, &_intercepted_write, this);
     } else {
-        return nullptr;
+        _intercepted_read.add_ref(); // release in handler::run
+        t = new rpc_request_task(req, &_intercepted_read, this);
     }
+    t->spec().on_task_create.execute(nullptr, t);
+    return t;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -556,8 +545,8 @@ service_node *service_engine::start_node(service_app_spec &app_spec)
                         "network port %d usage confliction for %s vs %s, "
                         "please reconfig",
                         p,
-                        n->name(),
-                        app_spec.name.c_str());
+                        n->full_name(),
+                        app_spec.full_name.c_str());
             }
         }
 
@@ -581,7 +570,7 @@ std::string service_engine::get_runtime_info(const std::vector<std::string> &arg
         ss << "" << service_engine::fast_instance()._nodes_by_app_id.size()
            << " nodes available:" << std::endl;
         for (auto &kv : service_engine::fast_instance()._nodes_by_app_id) {
-            ss << "\t" << kv.second->id() << "." << kv.second->name() << std::endl;
+            ss << "\t" << kv.second->id() << "." << kv.second->full_name() << std::endl;
         }
     } else {
         std::string indent = "";

@@ -39,7 +39,7 @@
 namespace dsn {
 namespace service {
 
-cli::cli(dsn_gpid gpid) : service_app(gpid)
+cli::cli(const service_app_info *info) : service_app(info)
 {
     _timeout = std::chrono::seconds(10); // 10 seconds by default
 }
@@ -56,7 +56,7 @@ void usage()
     std::cout << "---------------------------------" << std::endl;
 }
 
-error_code cli::start(int argc, char **argv)
+error_code cli::start(const std::vector<std::string> &args)
 {
 
     std::cout << "dsn remote cli begin ..." << std::endl;

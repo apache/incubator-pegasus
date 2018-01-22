@@ -191,32 +191,32 @@ void scheduler::add_system_event(uint64_t ts_ns, std::function<void()> t)
 void scheduler::start()
 {
     // init all checkers
-    dsn_app_info apps[DSN_MAX_APP_COUNT_IN_SAME_PROCESS]; // maximum apps
-    int count = dsn_get_all_apps(apps, DSN_MAX_APP_COUNT_IN_SAME_PROCESS);
-    for (auto &c : _checkers) {
-        c->checker_ptr = c->create(c->name.c_str(), apps, count);
+    std::vector<service_app *> apps;
+    service_app::get_all_service_apps(&apps);
+    for (checker_info &c : _checkers) {
+        checker *a_checker = c.creator();
+        a_checker->initialize(c.name, apps);
+        c.instance.reset(a_checker);
     }
 
     // set flag
     _running = true;
 }
 
-void scheduler::add_checker(const char *name, dsn_checker_create create, dsn_checker_apply apply)
+void scheduler::add_checker(const std::string &name, checker::factory f)
 {
-    auto chker = new checker_info();
-    chker->name = name;
-    chker->create = create;
-    chker->apply = apply;
-    chker->checker_ptr = nullptr;
+    checker_info info;
+    info.name = name;
+    info.creator = f;
 
-    _checkers.push_back(chker);
+    _checkers.emplace_back(std::move(info));
 }
 
 void scheduler::check()
 {
-    for (auto &c : _checkers) {
-        if (c->checker_ptr != nullptr)
-            c->apply(c->checker_ptr);
+    for (checker_info &c : _checkers) {
+        if (c.instance != nullptr)
+            c.instance->check();
     }
 }
 

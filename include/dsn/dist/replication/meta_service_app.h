@@ -58,10 +58,10 @@ namespace service {
 class meta_service_app : public service_app
 {
 public:
-    meta_service_app(dsn_gpid gpid);
+    meta_service_app(const service_app_info *info);
     virtual ~meta_service_app();
 
-    virtual ::dsn::error_code start(int argc, char **argv) override;
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
