@@ -106,7 +106,7 @@ template <typename T> // where T : serverlet<T>
 class serverlet : public virtual clientlet
 {
 public:
-    serverlet(const char *nm, int task_bucket_count = 8);
+    serverlet(const char *nm, int task_bucket_count = 1);
     virtual ~serverlet();
 
 protected:

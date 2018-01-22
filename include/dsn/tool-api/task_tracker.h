@@ -90,7 +90,7 @@ private:
 class task_tracker
 {
 public:
-    explicit task_tracker(int task_bucket_count = 13);
+    explicit task_tracker(int task_bucket_count = 1);
     virtual ~task_tracker();
 
     void cancel_outstanding_tasks();
