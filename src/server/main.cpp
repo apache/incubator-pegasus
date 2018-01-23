@@ -46,9 +46,9 @@ void dsn_app_registration_pegasus()
         "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
     dsn_meta_sever_register_providers();
 
-    register_app<::pegasus::server::pegasus_replication_service_app>("replica");
-    register_app<::pegasus::server::pegasus_meta_service_app>("meta");
-    register_app<::pegasus::server::info_collector_app>("collector");
+    service_app::register_factory<::pegasus::server::pegasus_replication_service_app>("replica");
+    service_app::register_factory<::pegasus::server::pegasus_meta_service_app>("meta");
+    service_app::register_factory<::pegasus::server::info_collector_app>("collector");
 
     pegasus::server::pegasus_server_impl::register_service();
 

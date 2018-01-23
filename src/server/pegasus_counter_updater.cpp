@@ -7,6 +7,7 @@
 #include <pegasus_utils.h>
 #include <counter_utils.h>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/cpp/service_app.h>
 #include <iomanip>
 #include <regex>
 
@@ -193,9 +194,7 @@ void pegasus_counter_updater::start()
     _local_host = buf;
     _local_port = addr.port();
 
-    dsn_app_info info;
-    dsn_get_current_app_info(&info);
-    _app_name = info.name;
+    _app_name = dsn::service_app::current_service_app_info().full_name;
 
     _cluster_name = dsn_config_get_value_string(
         "pegasus.server", "perf_counter_cluster_name", "", "perf_counter_cluster_name");

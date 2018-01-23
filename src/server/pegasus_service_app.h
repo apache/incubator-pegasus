@@ -15,17 +15,17 @@ namespace server {
 class pegasus_replication_service_app : public ::dsn::replication::replication_service_app
 {
 public:
-    pegasus_replication_service_app(dsn_gpid pid)
-        : ::dsn::replication::replication_service_app::replication_service_app(pid),
+    pegasus_replication_service_app(const dsn::service_app_info *info)
+        : ::dsn::replication::replication_service_app::replication_service_app(info),
           _updater_started(false)
     {
     }
 
     virtual ~pegasus_replication_service_app() {}
 
-    virtual ::dsn::error_code start(int argc, char **argv) override
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
-        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(argc, argv);
+        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args);
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_updater::instance().start();
             _updater_started = true;
@@ -49,16 +49,16 @@ private:
 class pegasus_meta_service_app : public ::dsn::service::meta_service_app
 {
 public:
-    pegasus_meta_service_app(dsn_gpid pid)
-        : ::dsn::service::meta_service_app::meta_service_app(pid), _updater_started(false)
+    pegasus_meta_service_app(const dsn::service_app_info *info)
+        : ::dsn::service::meta_service_app::meta_service_app(info), _updater_started(false)
     {
     }
 
     virtual ~pegasus_meta_service_app() {}
 
-    virtual ::dsn::error_code start(int argc, char **argv) override
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
-        ::dsn::error_code ret = ::dsn::service::meta_service_app::start(argc, argv);
+        ::dsn::error_code ret = ::dsn::service::meta_service_app::start(args);
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_updater::instance().start();
             _updater_started = true;

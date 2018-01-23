@@ -17,10 +17,10 @@ DEFINE_TASK_CODE(LPC_PEGASUS_COLLECTOR_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREA
 class info_collector_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-    info_collector_app(dsn_gpid pid);
+    info_collector_app(const dsn::service_app_info *info);
     virtual ~info_collector_app(void);
 
-    virtual ::dsn::error_code start(int argc, char **argv) override;
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
 private:

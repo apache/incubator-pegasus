@@ -20,11 +20,14 @@
 namespace pegasus {
 namespace server {
 
-info_collector_app::info_collector_app(dsn_gpid pid) : service_app(pid), _updater_started(false) {}
+info_collector_app::info_collector_app(const dsn::service_app_info *info)
+    : service_app(info), _updater_started(false)
+{
+}
 
 info_collector_app::~info_collector_app() {}
 
-::dsn::error_code info_collector_app::start(int argc, char **argv)
+::dsn::error_code info_collector_app::start(const std::vector<std::string> &args)
 {
     pegasus_counter_updater::instance().start();
     _updater_started = true;

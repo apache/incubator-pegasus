@@ -35,8 +35,12 @@ echo "#define ROCKSDB_MALLOC_USABLE_SIZE" >>$CONFIG_OUT
 INCLUDES_OUT="${PREFIX}.includes"
 echo "Generate $INCLUDES_OUT"
 rm $INCLUDES_OUT &>/dev/null
-echo "rdsn/ext" >>$INCLUDES_OUT
+echo "/usr/include" >>$INCLUDES_OUT
+echo "/usr/include/c++/4.8" >>$INCLUDES_OUT
+echo "/usr/include/x86_64-linux-gnu" >>$INCLUDES_OUT
+echo "/usr/include/x86_64-linux-gnu/c++/4.8" >>$INCLUDES_OUT
 echo "rdsn/include" >>$INCLUDES_OUT
+echo "rdsn/thirdparty/output/include" >>$INCLUDES_OUT
 echo "rdsn/include/dsn/dist/failure_detector" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/client_lib" >>$INCLUDES_OUT
 echo "rdsn/src/dist/replication/lib" >>$INCLUDES_OUT
@@ -51,7 +55,6 @@ echo "rocksdb/include" >>$INCLUDES_OUT
 echo "src/include" >>$INCLUDES_OUT
 echo "src/base" >>$INCLUDES_OUT
 echo "src/redis_protocol/proxy_lib" >>$INCLUDES_OUT
-echo "src/ext/libevent/include" >>$INCLUDES_OUT
 
 # files
 FILES_OUT="${PREFIX}.files"
@@ -68,6 +71,5 @@ do
     find $i -name '*.h' -o -name '*.cpp' -o -name '*.c' -o -name '*.cc' \
         -o -name '*.thrift' -o -name '*.ini' -o -name '*.act' \
         -o -name 'CMakeLists.txt' -o -name '*.sh' \
-        | grep -v '\<rdsn/thirdparty/src\>' >>$FILES_OUT
+        | grep -v '\<builder\>\|rdsn\/thirdparty\|\.zk_install' >>$FILES_OUT
 done
-

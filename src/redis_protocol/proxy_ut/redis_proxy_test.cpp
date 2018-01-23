@@ -25,17 +25,17 @@ using namespace ::pegasus::proxy;
 class proxy_app : public ::dsn::service_app
 {
 public:
-    proxy_app(dsn_gpid gpid) : service_app(gpid) {}
+    proxy_app(const dsn::service_app_info *info) : service_app(info) {}
     virtual ~proxy_app() {}
 
-    virtual ::dsn::error_code start(int argc, char **argv) override
+    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
-        if (argc < 2)
+        if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
         proxy_session::factory f = [](proxy_stub *p, ::dsn::rpc_address remote) {
             return std::make_shared<redis_parser>(p, remote);
         };
-        _proxy.reset(new proxy_stub(f, argv[1]));
+        _proxy.reset(new proxy_stub(f, args[1].c_str()));
         return ::dsn::ERR_OK;
     }
     virtual ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
@@ -472,7 +472,7 @@ TEST(proxy, connection)
 
 void dsn_init()
 {
-    dsn::register_app<proxy_app>("proxy");
+    dsn::service_app::register_factory<proxy_app>("proxy");
     dsn_run_config("config.ini", false);
 }
 
