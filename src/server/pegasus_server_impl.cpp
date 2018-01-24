@@ -342,7 +342,7 @@ void pegasus_server_impl::gc_checkpoints()
             to_delete_list.push_back(del_d);
             delete_max_index = i;
         }
-        if (delete_max_index > 0) {
+        if (delete_max_index >= 0) {
             _checkpoints.erase(_checkpoints.begin(), _checkpoints.begin() + delete_max_index + 1);
         }
 
@@ -380,8 +380,9 @@ void pegasus_server_impl::gc_checkpoints()
         }
     }
 
-    // put back checkpoints which is not deleted
-    // ATTENTION: the put back checkpoint may be incomplete, which will cause failure on load.
+    // put back checkpoints which is not deleted, to make it delete again in the next gc time.
+    // ATTENTION: the put back checkpoint may be incomplete, which will cause failure on load. But
+    // it would not cause data lost, because incomplete checkpoint can not be loaded successfully.
     if (!put_back_list.empty()) {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
         if (_checkpoints.empty() || put_back_list.back() < _checkpoints.front()) {
