@@ -258,8 +258,6 @@ const char *cold_backup_status_to_string(cold_backup_status status)
     return "ColdBackupXXX";
 }
 
-cold_backup_context::~cold_backup_context() { ddebug("%s: cold backup context destructed", name); }
-
 void cold_backup_context::cancel()
 {
     _status.store(ColdBackupCanceled);

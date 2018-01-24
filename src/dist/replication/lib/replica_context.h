@@ -251,6 +251,7 @@ public:
           block_service(nullptr),
           checkpoint_decree(0),
           checkpoint_timestamp(0),
+          durable_decree_when_checkpoint(-1),
           checkpoint_file_total_size(0),
           _status(ColdBackupInvalid),
           _progress(0),
@@ -273,7 +274,7 @@ public:
         memset(_reason, 0, sizeof(_reason));
     }
 
-    ~cold_backup_context();
+    ~cold_backup_context() {}
 
     // cancel backup.
     //   {*} --> ColdBackupCanceled
@@ -461,6 +462,7 @@ public:
     std::string backup_root;
     decree checkpoint_decree;
     int64_t checkpoint_timestamp;
+    decree durable_decree_when_checkpoint;
     std::string checkpoint_dir;
     std::vector<std::string> checkpoint_files;
     std::vector<int64_t> checkpoint_file_sizes;

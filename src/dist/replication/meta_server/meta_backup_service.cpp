@@ -5,6 +5,11 @@
 #include "dist/replication/meta_server/server_state.h"
 #include "dist/replication/client_lib/block_service_manager.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "meta.backup.service"
+
 namespace dsn {
 namespace replication {
 

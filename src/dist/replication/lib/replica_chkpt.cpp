@@ -43,7 +43,7 @@
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
-#define __TITLE__ "replica.chkpoint"
+#define __TITLE__ "replica.chkpt"
 
 namespace dsn {
 namespace replication {

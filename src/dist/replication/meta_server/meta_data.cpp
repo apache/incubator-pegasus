@@ -36,6 +36,11 @@
 #include <dsn/service_api_cpp.h>
 #include "dist/replication/meta_server/meta_data.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "meta.data"
+
 namespace dsn {
 namespace replication {
 

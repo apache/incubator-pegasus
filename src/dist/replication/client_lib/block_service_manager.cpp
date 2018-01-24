@@ -4,6 +4,11 @@
 #include "../../block_service/fds/fds_service.h"
 #include "../../block_service/local/local_service.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "block.service.manager"
+
 using namespace dsn::dist::block_service;
 
 namespace dsn {

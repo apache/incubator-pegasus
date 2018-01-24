@@ -21,7 +21,7 @@
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
-#define __TITLE__ "fds.service.impl"
+#define __TITLE__ "block.service.fds"
 
 namespace dsn {
 namespace dist {

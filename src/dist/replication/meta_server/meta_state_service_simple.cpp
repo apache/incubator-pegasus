@@ -41,6 +41,11 @@
 #include <stack>
 #include <utility>
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "meta.state.service.simple"
+
 namespace dsn {
 namespace dist {
 // path: /, /n1/n2, /n1/n2/, /n2/n2/n3

@@ -36,6 +36,11 @@
 #include "dist/replication/client_lib/replication_common.h"
 #include "distributed_lock_service_simple.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "lock.service.simple"
+
 namespace dsn {
 namespace dist {
 DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
