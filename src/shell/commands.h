@@ -3305,7 +3305,6 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
                 "query restore status failed, restore_app_id(%d), err = %s\n",
                 restore_app_id,
                 ret.to_string());
-        ret.end_tracking();
         return false;
     } else {
         return true;
@@ -3411,7 +3410,6 @@ inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments 
                                                               start_time);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "add backup policy failed, err = %s\n", ret.to_string());
-        ret.end_tracking();
         return false;
     } else {
         return true;
@@ -3475,7 +3473,6 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
     ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-        ret.end_tracking();
         return false;
     } else {
         std::cout << std::endl << "query backup policy succeed" << std::endl;

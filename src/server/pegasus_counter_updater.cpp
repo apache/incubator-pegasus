@@ -426,13 +426,18 @@ void pegasus_counter_updater::update()
 
     std::vector<dsn::perf_counter_ptr> metrics;
     std::vector<double> values;
-    int64_t timestamp = 0;
 
     ::dsn::perf_counters::instance().get_all_counters(&metrics);
     if (metrics.empty()) {
         ddebug("no need update, coz no counters added");
         return;
     }
+
+    uint64_t now = dsn_now_ms();
+    dinfo("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
+    _last_report_time_ms = now;
+
+    int64_t timestamp = now / 1000;
     values.reserve(metrics.size());
 
     // in case the get_xxx functions for the perf counters had SIDE EFFECTS

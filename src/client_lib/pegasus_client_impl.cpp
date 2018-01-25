@@ -364,7 +364,6 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
         ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
     {
         if (user_callback == nullptr) {
-            err.end_tracking();
             return;
         }
         std::map<std::string, std::string> values;
@@ -380,7 +379,7 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
                                std::string(kv.value.data(), kv.value.length()));
         }
         int ret =
-            get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : err.get());
+            get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : int(err));
         user_callback(ret, std::move(values), std::move(info));
     };
     _client->multi_get(req,
