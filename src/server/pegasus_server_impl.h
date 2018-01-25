@@ -93,16 +93,17 @@ public:
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
-    // copied will be assigned to checkpoint_decree if checkpoint_decree not null
+    // copied will be assigned to checkpoint_decree if checkpoint_decree is not null.
+    // if checkpoint_dir already exist, this function will delete it first.
     //
     // must be thread safe
-    // don't need call flush(), just copy even if the app is empty
+    // this method will not trigger flush(), just copy even if the app is empty.
     virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
                                                      /*output*/ int64_t *last_decree) override;
 
     //
-    // help function, just copy checkpoint to specified dir and ignore _is_checkpointing
-    // if checkpoint_dir already exist, this function will delete it first
+    // help function, just copy checkpoint to specified dir and ignore _is_checkpointing.
+    // if checkpoint_dir already exist, this function will delete it first.
     ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
                                                     /**output*/ int64_t *checkpoint_decree);
 
