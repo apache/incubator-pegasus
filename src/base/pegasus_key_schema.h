@@ -8,6 +8,9 @@
 #include <string.h>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/blob.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/crc.h>
 
 namespace pegasus {
 
@@ -23,7 +26,7 @@ void pegasus_generate_key(::dsn::blob &key, const T &hash_key, const T &sort_key
     dassert(hash_key.length() < UINT16_MAX, "hash key length must be less than UINT16_MAX");
 
     int len = 2 + hash_key.length() + sort_key.length();
-    std::shared_ptr<char> buf(::dsn::make_shared_array<char>(len));
+    std::shared_ptr<char> buf(::dsn::utils::make_shared_array<char>(len));
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = hash_key.length();
@@ -47,7 +50,7 @@ void pegasus_generate_next_blob(::dsn::blob &next, const T &hash_key)
     dassert(hash_key.length() < UINT16_MAX, "hash key length must be less than UINT16_MAX");
 
     int hash_key_len = hash_key.length();
-    std::shared_ptr<char> buf(::dsn::make_shared_array<char>(hash_key_len + 2));
+    std::shared_ptr<char> buf(::dsn::utils::make_shared_array<char>(hash_key_len + 2));
 
     *((int16_t *)buf.get()) = htobe16((int16_t)hash_key_len);
     ::memcpy(buf.get() + 2, hash_key.data(), hash_key_len);
@@ -139,10 +142,10 @@ inline uint64_t pegasus_key_hash(const ::dsn::blob &key)
         // hash_key_len > 0, compute hash from hash_key
         dassert(key.length() >= 2 + hash_key_len,
                 "key length must be no less than (2 + hash_key_len)");
-        return dsn_crc64_compute(key.buffer_ptr() + 2, hash_key_len, 0);
+        return dsn::utils::crc64_calc(key.buffer_ptr() + 2, hash_key_len, 0);
     } else {
         // hash_key_len == 0, compute hash from sort_key
-        return dsn_crc64_compute(key.buffer_ptr() + 2, key.length() - 2, 0);
+        return dsn::utils::crc64_calc(key.buffer_ptr() + 2, key.length() - 2, 0);
     }
 }
 

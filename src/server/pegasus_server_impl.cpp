@@ -7,6 +7,7 @@
 #include <pegasus_value_schema.h>
 #include <pegasus_utils.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/table.h>
 #include <boost/lexical_cast.hpp>
@@ -2077,7 +2078,7 @@ int pegasus_server_impl::append_key_value_for_scan(
             return 3;
         }
     }
-    std::shared_ptr<char> key_buf(::dsn::make_shared_array<char>(raw_key.length()));
+    std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
     ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
     kv.key.assign(std::move(key_buf), 0, raw_key.length());
 
@@ -2121,7 +2122,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         }
         return 3;
     }
-    std::shared_ptr<char> sort_key_buf(::dsn::make_shared_array<char>(sort_key.length()));
+    std::shared_ptr<char> sort_key_buf(::dsn::utils::make_shared_array<char>(sort_key.length()));
     ::memcpy(sort_key_buf.get(), sort_key.data(), sort_key.length());
     kv.key.assign(std::move(sort_key_buf), 0, sort_key.length());
 

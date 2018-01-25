@@ -1,5 +1,6 @@
 #include <libgen.h>
 
+#include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>

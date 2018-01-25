@@ -16,6 +16,7 @@
 #include <pegasus/error.h>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <rrdb/rrdb.code.definition.h>

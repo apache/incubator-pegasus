@@ -10,6 +10,8 @@
 #include <vector>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/blob.h>
+#include <dsn/service_api_c.h>
 #include <rocksdb/slice.h>
 
 namespace pegasus {
