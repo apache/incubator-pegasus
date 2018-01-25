@@ -250,7 +250,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
 
     // error occured
     auto ret =
-        get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : err.get());
+        get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : int(err));
     internal_info info = _info;
     std::list<async_scan_next_callback_t> temp;
     _lock.lock();

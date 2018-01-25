@@ -63,7 +63,7 @@ inline bool query_cluster_info(command_executor *e, shell_context *sc, arguments
     if (err == ::dsn::ERR_OK)
         std::cout << "get cluster info succeed" << std::endl;
     else
-        std::cout << "get cluster info failed, error=" << dsn_error_to_string(err) << std::endl;
+        std::cout << "get cluster info failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -119,7 +119,7 @@ inline bool query_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "list app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "list app " << app_name << " failed, error=" << dsn_error_to_string(err)
+        std::cout << "list app " << app_name << " failed, error=" << err.to_string()
                   << std::endl;
     return true;
 }
@@ -174,7 +174,7 @@ inline bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "list apps succeed" << std::endl;
     else
-        std::cout << "list apps failed, error=" << dsn_error_to_string(err) << std::endl;
+        std::cout << "list apps failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -231,7 +231,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::error_code err = sc->ddl_client->list_nodes(s, detailed, output_file);
     if (err != ::dsn::ERR_OK)
-        std::cout << "list nodes failed, error=" << dsn_error_to_string(err) << std::endl;
+        std::cout << "list nodes failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -277,7 +277,7 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "create app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "create app " << app_name << " failed, error=" << dsn_error_to_string(err)
+        std::cout << "create app " << app_name << " failed, error=" << err.to_string()
                   << std::endl;
     return true;
 }
@@ -317,7 +317,7 @@ inline bool drop_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "drop app " << app_name << " failed, error=" << dsn_error_to_string(err)
+        std::cout << "drop app " << app_name << " failed, error=" << err.to_string()
                   << std::endl;
     return true;
 }
@@ -630,7 +630,7 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
             sc->ddl_client->list_app(sc->current_app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
             std::cout << "list app [" << sc->current_app_name
-                      << "] failed, error=" << dsn_error_to_string(err) << std::endl;
+                      << "] failed, error=" << err.to_string() << std::endl;
             return true;
         }
         uint64_t partition_index = key_hash % (uint64_t)partition_count;
@@ -2670,7 +2670,6 @@ inline bool recover(command_executor *e, shell_context *sc, arguments args)
     if (!output_file.empty()) {
         std::cout << "recover complete with err = " << ec.to_string() << std::endl;
     }
-    ec.end_tracking();
     return true;
 }
 
@@ -2867,7 +2866,7 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     std::vector<dsn::partition_configuration> partitions;
     dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "ERROR: list app " << app_name << " failed, error=" << dsn_error_to_string(err)
+        std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
                   << std::endl;
         return true;
     }

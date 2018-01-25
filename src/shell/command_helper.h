@@ -336,7 +336,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     std::vector<::dsn::app_info> apps;
     dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (err != dsn::ERR_OK) {
-        derror("list apps failed, error = %s", dsn_error_to_string(err));
+        derror("list apps failed, error = %s", err.to_string());
         return true;
     }
 
@@ -381,7 +381,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 app.app_name, app_id, partition_count, app_partitions[app.app_id]);
             if (err != ::dsn::ERR_OK) {
                 derror(
-                    "list app %s failed, error = %s", app_name.c_str(), dsn_error_to_string(err));
+                    "list app %s failed, error = %s", app_name.c_str(), err.to_string());
                 return true;
             }
             dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
@@ -445,7 +445,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         dsn::error_code err =
             sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
-            derror("list app %s failed, error = %s", app_name.c_str(), dsn_error_to_string(err));
+            derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
             return true;
         }
         dassert(app_id == app_info->app_id, "%d VS %d", app_id, app_info->app_id);
