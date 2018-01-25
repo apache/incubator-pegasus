@@ -38,6 +38,7 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
+#include <dsn/utility/crc.h>
 #include <cstdio>
 #include <cerrno>
 #include <iostream>
@@ -96,7 +97,7 @@ public:
         dassert(_is_write, "call append when open file with read mode");
 
         block_header hdr = {data_length, 0};
-        hdr.crc32 = dsn_crc32_compute(data, data_length, _crc);
+        hdr.crc32 = dsn::utils::crc32_calc(data, data_length, _crc);
         _crc = hdr.crc32;
         size_t len = fwrite(&hdr, sizeof(hdr), 1, _file_handle);
         if (len < 1) {
@@ -130,7 +131,7 @@ public:
             }
         }
 
-        std::shared_ptr<char> ptr(dsn::make_shared_array<char>(hdr.length));
+        std::shared_ptr<char> ptr(dsn::utils::make_shared_array<char>(hdr.length));
         char *raw_mem = ptr.get();
         len = 0;
         while (len < hdr.length) {
@@ -146,7 +147,7 @@ public:
             }
             len += cnt;
         }
-        _crc = dsn_crc32_compute(raw_mem, len, _crc);
+        _crc = dsn::utils::crc32_calc(raw_mem, len, _crc);
         if (_crc != hdr.crc32) {
             derror("file %s data error, block offset(%ld)",
                    _filename.c_str(),

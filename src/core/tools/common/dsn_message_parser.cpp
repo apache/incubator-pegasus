@@ -35,6 +35,7 @@
 
 #include "dsn_message_parser.h"
 #include <dsn/service_api_c.h>
+#include <dsn/utility/crc.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -135,8 +136,8 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
                     sz = (size_t)buffers[i].length();
                 }
 
-                lcrc = dsn_crc32_compute(ptr, sz, crc32);
-                crc32 = dsn_crc32_concatenate(0, 0, crc32, len, crc32, lcrc, sz);
+                lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
+                crc32 = dsn::utils::crc32_concat(0, 0, crc32, len, crc32, lcrc, sz);
 
                 len += sz;
             }
@@ -147,7 +148,7 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
 
         // always compute header crc
         header->hdr_crc32 = CRC_INVALID;
-        header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header), 0);
+        header->hdr_crc32 = dsn::utils::crc32_calc(header, sizeof(message_header), 0);
     }
 }
 
@@ -173,7 +174,7 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
     uint32_t crc32 = *pcrc;
     if (crc32 != CRC_INVALID) {
         *pcrc = CRC_INVALID;
-        bool r = (crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
+        bool r = (crc32 == dsn::utils::crc32_calc(hdr, sizeof(message_header), 0));
         *pcrc = crc32;
         if (!r) {
             derror("dsn message header crc check failed");
@@ -200,8 +201,8 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
             const void *ptr = (const void *)buffers[i].data();
             size_t sz = (size_t)buffers[i].length();
 
-            uint32_t lcrc = dsn_crc32_compute(ptr, sz, crc32);
-            crc32 = dsn_crc32_concatenate(0, 0, crc32, len, crc32, lcrc, sz);
+            uint32_t lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
+            crc32 = dsn::utils::crc32_concat(0, 0, crc32, len, crc32, lcrc, sz);
 
             len += sz;
         }

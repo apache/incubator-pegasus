@@ -41,7 +41,7 @@
 #include <dsn/cpp/service_app.h>
 #include <dsn/utility/singleton_store.h>
 #include <dsn/utility/configuration.h>
-#include "library_utils.h"
+#include <dsn/utility/filesystem.h>
 
 #ifdef __TITLE__
 #undef __TITLE__

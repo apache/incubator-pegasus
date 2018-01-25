@@ -35,6 +35,7 @@
 
 #include "simple_logger.h"
 #include <sstream>
+#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace tools {

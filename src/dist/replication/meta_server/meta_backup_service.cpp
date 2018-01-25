@@ -1,3 +1,5 @@
+#include <dsn/utility/filesystem.h>
+
 #include "meta_backup_service.h"
 #include "dist/replication/meta_server/meta_service.h"
 #include "dist/replication/meta_server/server_state.h"
@@ -768,10 +770,10 @@ void policy_context::start()
 
     std::string counter_name = _policy.policy_name + ".recent.backup.duration(ms)";
     _counter_policy_recent_backup_duration_ms.init_app_counter(
-                "eon.meta.policy",
-                counter_name.c_str(),
-                COUNTER_TYPE_NUMBER,
-                "policy recent backup duration time");
+        "eon.meta.policy",
+        counter_name.c_str(),
+        COUNTER_TYPE_NUMBER,
+        "policy recent backup duration time");
 
     issue_gc_backup_info_task_unlocked();
     ddebug("%s: start gc backup info task succeed", _policy.policy_name.c_str());

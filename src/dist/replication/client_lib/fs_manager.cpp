@@ -34,6 +34,7 @@
 
 #include "fs_manager.h"
 #include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
 #include <thread>
 
 #ifdef __TITLE__

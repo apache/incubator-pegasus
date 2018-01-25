@@ -34,6 +34,7 @@
  */
 
 #include <dsn/tool-api/aio_provider.h>
+#include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include "test_utils.h"

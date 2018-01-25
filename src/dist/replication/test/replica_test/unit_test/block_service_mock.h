@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <dsn/utility/filesystem.h>
 #include <dsn/dist/block_service.h>
 #include <dsn/cpp/auto_codes.h>
 #include <dsn/cpp/clientlet.h>
@@ -113,7 +114,7 @@ public:
     void set_context(const std::string &value)
     {
         auto len = value.length();
-        std::shared_ptr<char> buf = make_shared_array<char>(len);
+        std::shared_ptr<char> buf = utils::make_shared_array<char>(len);
         ::memcpy(buf.get(), value.c_str(), len);
         blob write_buf(std::move(buf), static_cast<unsigned int>(len));
         context = std::move(write_buf);

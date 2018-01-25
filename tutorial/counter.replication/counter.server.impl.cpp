@@ -26,7 +26,8 @@
 
 #include "counter.server.impl.h"
 #include <fstream>
-#include <dsn/cpp/utils.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace example {

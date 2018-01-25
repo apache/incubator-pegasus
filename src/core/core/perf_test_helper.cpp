@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include <dsn/cpp/perf_test_helper.h>
+#include <dsn/utility/filesystem.h>
 #include <fstream>
 
 #ifdef __TITLE__

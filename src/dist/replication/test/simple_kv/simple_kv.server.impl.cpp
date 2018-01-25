@@ -26,6 +26,7 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
+#include <dsn/utility/filesystem.h>
 
 #ifdef __TITLE__
 #undef __TITLE__

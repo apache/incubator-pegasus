@@ -36,6 +36,8 @@
 #pragma once
 
 #include <dsn/utility/utils.h>
+#include <dsn/utility/binary_reader.h>
+#include <dsn/utility/binary_writer.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/auto_codes.h>
 

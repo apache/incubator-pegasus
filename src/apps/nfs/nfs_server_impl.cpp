@@ -35,6 +35,7 @@
 #include "nfs_server_impl.h"
 #include <cstdlib>
 #include <sys/stat.h>
+#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace service {
@@ -106,7 +107,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     }
 
     callback_para cp(std::move(reply));
-    cp.bb = blob(dsn::make_shared_array<char>(request.size), request.size);
+    cp.bb = blob(dsn::utils::make_shared_array<char>(request.size), request.size);
     cp.dst_dir = std::move(request.dst_dir);
     cp.file_path = std::move(file_path);
     cp.hfile = hfile;

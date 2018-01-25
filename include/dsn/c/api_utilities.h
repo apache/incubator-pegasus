@@ -239,53 +239,6 @@ extern DSN_API void dsn_coredump();
     } while (0)
 
 /*!
-@defgroup checksum Checksum
-@ingroup service-api-utilities
-
-Checksum
-
-@{
-*/
-extern DSN_API uint32_t dsn_crc32_compute(const void *ptr, size_t size, uint32_t init_crc);
-
-//
-// Given
-//      x_final = dsn_crc32_compute (x_ptr, x_size, x_init);
-// and
-//      y_final = dsn_crc32_compute (y_ptr, y_size, y_init);
-// compute CRC of concatenation of A and B
-//      x##y_crc = dsn_crc32_compute (x##y, x_size + y_size, xy_init);
-// without touching A and B
-//
-extern DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init,
-                                              uint32_t x_init,
-                                              uint32_t x_final,
-                                              size_t x_size,
-                                              uint32_t y_init,
-                                              uint32_t y_final,
-                                              size_t y_size);
-
-extern DSN_API uint64_t dsn_crc64_compute(const void *ptr, size_t size, uint64_t init_crc);
-
-//
-// Given
-//      x_final = dsn_crc64_compute (x_ptr, x_size, x_init);
-// and
-//      y_final = dsn_crc64_compute (y_ptr, y_size, y_init);
-// compute CRC of concatenation of A and B
-//      x##y_crc = dsn_crc64_compute (x##y, x_size + y_size, xy_init);
-// without touching A and B
-//
-
-extern DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init,
-                                              uint64_t x_init,
-                                              uint64_t x_final,
-                                              size_t x_size,
-                                              uint64_t y_init,
-                                              uint64_t y_final,
-                                              size_t y_size);
-
-/*!
 @defgroup memory Memory Management
 @ingroup service-api-utilities
 

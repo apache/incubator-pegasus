@@ -34,10 +34,11 @@
  */
 
 #include <dsn/utility/ports.h>
+#include <dsn/utility/crc.h>
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/tool-api/network.h>
 #include <dsn/tool-api/message_parser.h>
-#include <cctype> // for isprint()
+#include <cctype>
 
 #include "task_engine.h"
 #include "transient_memory.h"
@@ -328,7 +329,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
         msg->buffers = buffers;
     } else {
         int total_length = body_size() + sizeof(dsn::message_header);
-        std::shared_ptr<char> recv_buffer(dsn::make_shared_array<char>(total_length));
+        std::shared_ptr<char> recv_buffer(dsn::utils::make_shared_array<char>(total_length));
         char *ptr = recv_buffer.get();
         int i = 0;
 

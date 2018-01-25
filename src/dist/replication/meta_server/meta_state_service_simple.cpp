@@ -36,6 +36,7 @@
 
 #include "meta_state_service_simple.h"
 #include <dsn/tool-api/task.h>
+#include <dsn/utility/filesystem.h>
 
 #include <stack>
 #include <utility>
@@ -247,7 +248,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                 if (header.magic != log_header::default_magic) {
                     break;
                 }
-                std::shared_ptr<char> buffer(dsn::make_shared_array<char>(header.size));
+                std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(header.size));
                 if (fread(buffer.get(), header.size, 1, fd) != 1) {
                     break;
                 }
@@ -393,7 +394,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             cb_code, tracker, [=]() { cb_transaction(ERR_INCONSISTENT_STATE); });
     } else {
         // apply
-        std::shared_ptr<char> batch(dsn::make_shared_array<char>(total_size));
+        std::shared_ptr<char> batch(dsn::utils::make_shared_array<char>(total_size));
         char *dest = batch.get();
         std::for_each(batch_buffer.begin(), batch_buffer.end(), [&dest](const blob &entry) {
             memcpy(dest, entry.data(), entry.length());

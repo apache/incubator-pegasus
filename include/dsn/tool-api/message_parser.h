@@ -41,6 +41,7 @@
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/blob.h>
 #include <dsn/utility/dlib.h>
 #include <vector>
 

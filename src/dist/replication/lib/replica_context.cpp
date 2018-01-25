@@ -33,6 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/utils.h>
+
 #include "replica_context.h"
 #include "replica.h"
 #include "replica_stub.h"
@@ -1095,7 +1098,7 @@ void cold_backup_context::write_current_chkpt_file(const std::string &value)
             if (resp.err == ERR_OK) {
                 dassert(resp.file_handle != nullptr, "");
                 auto len = value.length();
-                std::shared_ptr<char> buf = make_shared_array<char>(len);
+                std::shared_ptr<char> buf = utils::make_shared_array<char>(len);
                 ::memcpy(buf.get(), value.c_str(), len);
                 blob write_buf(std::move(buf), static_cast<unsigned int>(len));
                 ddebug("%s: create current checkpoint file succeed, start write file ,file = %s",

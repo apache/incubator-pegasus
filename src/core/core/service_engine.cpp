@@ -42,6 +42,7 @@
 #include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool-api/perf_counters.h>

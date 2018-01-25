@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+
+#include <dsn/utility/filesystem.h>
 #include <dsn/dist/block_service.h>
 #include <dsn/dist/error_code.h>
 #include <memory>
@@ -31,7 +33,7 @@ static void pipe_execute(const char *command, std::stringstream &output)
 static void file_eq_compare(const std::string &fname1, const std::string &fname2)
 {
     static const int length = 4096;
-    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(length * 2));
+    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(length * 2));
     char *buf1 = buffer.get(), *buf2 = buffer.get() + length;
 
     std::ifstream ifile1(fname1.c_str(), std::ios::in | std::ios::binary);

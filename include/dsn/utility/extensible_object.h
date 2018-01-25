@@ -38,6 +38,7 @@
 #include <dsn/utility/utils.h>
 #include <vector>
 #include <atomic>
+#include <cstring>
 #include <cassert>
 
 namespace dsn {

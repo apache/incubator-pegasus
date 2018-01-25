@@ -38,6 +38,8 @@
 #include <dsn/service_api_c.h>
 #include <string>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/binary_reader.h>
+#include <dsn/utility/binary_writer.h>
 #include <dsn/tool-api/task.h>
 
 namespace dsn {

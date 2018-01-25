@@ -35,6 +35,7 @@
 
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/utility/utils.h>
+#include <dsn/c/api_utilities.h>
 #include <chrono>
 
 namespace dsn {

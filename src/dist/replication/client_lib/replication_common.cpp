@@ -34,7 +34,7 @@
  */
 
 #include "replication_common.h"
-
+#include <dsn/utility/filesystem.h>
 #include <fstream>
 
 #ifdef __TITLE__

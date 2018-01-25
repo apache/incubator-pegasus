@@ -5,7 +5,7 @@
 TEST(dump_file, read_write)
 {
     unsigned int total_length = 4096;
-    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(total_length));
+    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(total_length));
     char *ptr = buffer.get();
     for (int i = 0; i != total_length; ++i)
         ptr[i] = i % 256;
@@ -36,7 +36,7 @@ TEST(dump_file, read_write)
         std::shared_ptr<dump_file> f = dump_file::open_file("test_file", false);
         ASSERT_TRUE(f != nullptr);
 
-        std::shared_ptr<char> out_buffer(dsn::make_shared_array<char>(total_length));
+        std::shared_ptr<char> out_buffer(dsn::utils::make_shared_array<char>(total_length));
         ptr = out_buffer.get();
         dsn::blob bb;
         int block_offset = 0;

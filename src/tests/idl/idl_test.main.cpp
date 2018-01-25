@@ -34,6 +34,7 @@
  */
 
 #include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <dsn/cpp/serialization.h>
 

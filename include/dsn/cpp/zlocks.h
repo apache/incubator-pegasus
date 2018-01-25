@@ -36,6 +36,7 @@
 #pragma once
 
 #include <dsn/service_api_c.h>
+#include <dsn/utility/utils.h>
 #include <atomic>
 #include <algorithm>
 

@@ -37,6 +37,7 @@
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/serialization_helper/thrift_helper.h>
 #include <dsn/utility/ports.h>
+#include <dsn/utility/crc.h>
 
 #ifdef __TITLE__
 #undef __TITLE__

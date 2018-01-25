@@ -37,6 +37,8 @@
 #include "mutation.h"
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/crc.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/smart_pointers.h>
 #include <fstream>
@@ -134,7 +136,7 @@ error_code replica_init_info::load_binary(const char *file)
 
     auto fcrc = crc;
     crc = 0; // set for crc computation
-    auto lcrc = dsn_crc32_compute((const void *)this, sizeof(*this), 0);
+    auto lcrc = dsn::utils::crc32_calc((const void *)this, sizeof(*this), 0);
     crc = fcrc; // recover
 
     if (lcrc != fcrc) {
@@ -159,7 +161,7 @@ error_code replica_init_info::store_binary(const char *file)
 
     // compute crc
     crc = 0;
-    crc = dsn_crc32_compute((const void *)this, sizeof(*this), 0);
+    crc = dsn::utils::crc32_calc((const void *)this, sizeof(*this), 0);
 
     os.write((const char *)this, sizeof(*this));
     os.close();
@@ -186,7 +188,7 @@ error_code replica_init_info::load_json(const char *file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(sz));
+    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(sz));
     is.read((char *)buffer.get(), sz);
     if (is.bad()) {
         derror("read file %s failed", file);
@@ -253,7 +255,7 @@ error_code replica_app_info::load(const char *file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    std::shared_ptr<char> buffer(dsn::make_shared_array<char>(sz));
+    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(sz));
     is.read((char *)buffer.get(), sz);
     is.close();
 

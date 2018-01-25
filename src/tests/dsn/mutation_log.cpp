@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include "dist/replication/lib/mutation_log.h"
+#include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <cstdio>
 

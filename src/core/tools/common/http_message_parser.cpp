@@ -35,8 +35,9 @@
 */
 
 #include <dsn/utility/ports.h>
-#include <dsn/tool-api/rpc_message.h>
 #include <dsn/utility/singleton.h>
+#include <dsn/utility/crc.h>
+#include <dsn/tool-api/rpc_message.h>
 #include <vector>
 #include <iomanip>
 #include "http_message_parser.h"

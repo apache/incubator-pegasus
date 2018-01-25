@@ -44,6 +44,12 @@
 #include <dsn/cpp/callocator.h>
 #include <dsn/cpp/auto_codes.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/binary_writer.h>
+
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "task"
 
 namespace dsn {
 
@@ -405,7 +411,7 @@ public:
     void collapse()
     {
         if (!_unmerged_write_buffers.empty()) {
-            std::shared_ptr<char> buffer(dsn::make_shared_array<char>(_aio->buffer_size));
+            std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(_aio->buffer_size));
             _merged_write_buffer_holder.assign(buffer, 0, _aio->buffer_size);
             _aio->buffer = buffer.get();
             copy_to(buffer.get());

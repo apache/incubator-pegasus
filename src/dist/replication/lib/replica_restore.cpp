@@ -2,6 +2,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/utils.h>
+
 #include <dsn/dist/error_code.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
@@ -68,7 +71,7 @@ bool replica::read_cold_backup_metadata(const std::string &file,
         derror("%s: get file(%s) size failed", name(), file.c_str());
         return false;
     }
-    std::shared_ptr<char> buf = make_shared_array<char>(file_sz + 1);
+    std::shared_ptr<char> buf = utils::make_shared_array<char>(file_sz + 1);
 
     std::ifstream fin(file, std::ifstream::in);
     if (!fin.is_open()) {

@@ -34,8 +34,13 @@
  */
 
 #include <dsn/utility/utils.h>
+#include <dsn/utility/strings.h>
+#include <dsn/utility/binary_reader.h>
+#include <dsn/utility/binary_writer.h>
 #include <dsn/utility/link.h>
+#include <dsn/utility/crc.h>
 #include <dsn/utility/autoref_ptr.h>
+#include <dsn/c/api_layer1.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -57,10 +62,10 @@ TEST(core, crc)
         buffer[i] = dsn_random32(0, 200);
     }
 
-    auto c1 = dsn_crc32_compute(buffer, 12, 0);
-    auto c2 = dsn_crc32_compute(buffer + 12, 12, c1);
-    auto c3 = dsn_crc32_compute(buffer, 24, 0);
-    auto c4 = dsn_crc32_concatenate(0, 0, c1, 12, c1, c2, 12);
+    auto c1 = dsn::utils::crc32_calc(buffer, 12, 0);
+    auto c2 = dsn::utils::crc32_calc(buffer + 12, 12, c1);
+    auto c3 = dsn::utils::crc32_calc(buffer, 24, 0);
+    auto c4 = dsn::utils::crc32_concat(0, 0, c1, 12, c1, c2, 12);
     EXPECT_TRUE(c3 == c4);
 }
 

@@ -38,6 +38,8 @@
 #include <io.h>
 #endif
 #include "replica.h"
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/crc.h>
 
 #ifdef __TITLE__
 #undef __TITLE__
@@ -1842,7 +1844,10 @@ private:
         task_ptr _task;
 
         buffer_t()
-            : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _file_offset_of_buffer(0),
+            : _buffer(new char[block_size_bytes]),
+              _begin(0),
+              _end(0),
+              _file_offset_of_buffer(0),
               _have_ongoing_task(false)
         {
         }
@@ -2074,7 +2079,7 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
         return err;
     }
 
-    auto crc = dsn_crc32_compute(
+    auto crc = dsn::utils::crc32_calc(
         static_cast<const void *>(bb.data()), static_cast<size_t>(hdr.length), _crc32);
     if (crc != hdr.body_crc) {
         derror("crc checking failed");
@@ -2127,9 +2132,9 @@ log_block *log_file::prepare_log_block()
 
         // skip block header
         if (i > 0) {
-            hdr->body_crc = dsn_crc32_compute(static_cast<const void *>(blk.data()),
-                                              static_cast<size_t>(blk.length()),
-                                              hdr->body_crc);
+            hdr->body_crc = dsn::utils::crc32_calc(static_cast<const void *>(blk.data()),
+                                                   static_cast<size_t>(blk.length()),
+                                                   hdr->body_crc);
         }
     }
     _crc32 = hdr->body_crc;

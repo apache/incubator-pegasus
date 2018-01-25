@@ -39,6 +39,7 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/dlib.h>
+#include <dsn/utility/blob.h>
 #include <dsn/cpp/callocator.h>
 #include <dsn/cpp/auto_codes.h>
 #include <dsn/cpp/address.h>

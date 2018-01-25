@@ -35,6 +35,8 @@
 
 #include <dsn/utility/configuration.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/strings.h>
 #include <cassert>
 #include <errno.h>
 #include <iostream>

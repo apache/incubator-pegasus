@@ -61,8 +61,6 @@ extern "C" {
 #define DSN_MAX_CALLBAC_COUNT 32
 #define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 #define DSN_MAX_PATH 1024
-#define TIME_MS_MAX 0xffffffff
-#define CRC_INVALID 0x0
 
 typedef int dsn_error_t;
 typedef int dsn_task_code_t;

@@ -1,5 +1,6 @@
 #include <memory>
 
+#include <dsn/utility/filesystem.h>
 #include <dsn/dist/error_code.h>
 #include "local_service.h"
 

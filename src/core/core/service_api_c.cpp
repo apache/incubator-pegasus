@@ -48,13 +48,13 @@
 #include <dsn/utility/utils.h>
 
 #include <dsn/utility/configuration.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
 #include "service_engine.h"
 #include "rpc_engine.h"
 #include "disk_engine.h"
 #include "task_engine.h"
 #include "coredump.h"
-#include "crc.h"
 #include "transient_memory.h"
 #include <fstream>
 
@@ -315,40 +315,6 @@ DSN_API void dsn_coredump()
 {
     ::dsn::utils::coredump::write();
     ::abort();
-}
-
-DSN_API uint32_t dsn_crc32_compute(const void *ptr, size_t size, uint32_t init_crc)
-{
-    return ::dsn::utils::crc32::compute(ptr, size, init_crc);
-}
-
-DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init,
-                                       uint32_t x_init,
-                                       uint32_t x_final,
-                                       size_t x_size,
-                                       uint32_t y_init,
-                                       uint32_t y_final,
-                                       size_t y_size)
-{
-    return ::dsn::utils::crc32::concatenate(
-        0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
-}
-
-DSN_API uint64_t dsn_crc64_compute(const void *ptr, size_t size, uint64_t init_crc)
-{
-    return ::dsn::utils::crc64::compute(ptr, size, init_crc);
-}
-
-DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init,
-                                       uint64_t x_init,
-                                       uint64_t x_final,
-                                       size_t x_size,
-                                       uint64_t y_init,
-                                       uint64_t y_final,
-                                       size_t y_size)
-{
-    return ::dsn::utils::crc64::concatenate(
-        0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
 }
 
 DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code,

@@ -34,6 +34,7 @@
  */
 
 #include <dsn/toollet/tracer.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
 
 #ifdef __TITLE__

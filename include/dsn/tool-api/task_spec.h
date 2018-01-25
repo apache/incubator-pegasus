@@ -46,6 +46,7 @@
 #include <dsn/utility/exp_delay.h>
 #include <dsn/utility/dlib.h>
 #include <dsn/tool-api/perf_counter.h>
+#include <dsn/cpp/auto_codes.h>
 
 ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
 ENUM_REG(LOG_LEVEL_INFORMATION)

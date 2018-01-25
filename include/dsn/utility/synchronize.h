@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/utility/ports.h>
-
+#include <dsn/utility/utils.h>
 // using high performance versions from https://github.com/preshing/cpp11-on-multicore
 
 #include <dsn/ext/hpc-locks/benaphore.h>

@@ -1,6 +1,5 @@
-#pragma once
-
-#include <cstdint>
+#include <cstdio>
+#include <dsn/utility/crc.h>
 
 namespace dsn {
 namespace utils {
@@ -278,9 +277,6 @@ struct crc_generator
 typedef crc_generator<uint32_t, crc32_POLY> crc32;
 typedef crc_generator<uint64_t, crc64_POLY> crc64;
 
-extern crc32 PdiCrc32;
-extern crc64 PdiCrc64;
-
 template <>
 uint32_t crc32::_uX2N[sizeof(crc32::_uX2N) / sizeof(crc32::_uX2N[0])] = {
     0x00800000, 0x00008000, 0x82f63b78, 0x6ea2d55c, 0x18b8ea18, 0x510ac59a, 0xb82be955, 0xb8fdb1e7,
@@ -418,4 +414,42 @@ uint64_t crc64::_crc_table[sizeof(crc64::_crc_table) / sizeof(crc64::_crc_table[
 #undef BIT64
 #undef BIT32
 }
-} // end namespace
+}
+
+namespace dsn {
+namespace utils {
+uint32_t crc32_calc(const void *ptr, size_t size, uint32_t init_crc)
+{
+    return dsn::utils::crc32::compute(ptr, size, init_crc);
+}
+
+uint32_t crc32_concat(uint32_t xy_init,
+                      uint32_t x_init,
+                      uint32_t x_final,
+                      size_t x_size,
+                      uint32_t y_init,
+                      uint32_t y_final,
+                      size_t y_size)
+{
+    return dsn::utils::crc32::concatenate(
+        0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
+}
+
+uint64_t crc64_calc(const void *ptr, size_t size, uint64_t init_crc)
+{
+    return dsn::utils::crc64::compute(ptr, size, init_crc);
+}
+
+uint64_t crc64_concat(uint32_t xy_init,
+                      uint64_t x_init,
+                      uint64_t x_final,
+                      size_t x_size,
+                      uint64_t y_init,
+                      uint64_t y_final,
+                      size_t y_size)
+{
+    return ::dsn::utils::crc64::concatenate(
+        0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
+}
+}
+}

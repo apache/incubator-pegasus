@@ -155,7 +155,7 @@ public:
                                 const char *dsptr)
         : perf_counter(app, section, name, type, dsptr), _rate(0)
     {
-        _last_time = ::dsn::utils::get_current_rdtsc();
+        _last_time = ::dsn::utils::get_current_physical_time_ns();
         for (int i = 0; i < DIVIDE_CONTAINER; i++) {
             _val[i].store(0, std::memory_order_relaxed);
         }
@@ -180,7 +180,7 @@ public:
     virtual void set(uint64_t val) { dassert(false, "invalid execution flow"); }
     virtual double get_value()
     {
-        uint64_t now = ::dsn::utils::get_current_rdtsc();
+        uint64_t now = ::dsn::utils::get_current_physical_time_ns();
         double interval = (now - _last_time) / 1e9;
         if (interval <= 0.1)
             return _rate;

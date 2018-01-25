@@ -35,6 +35,7 @@
 
 #include "repli.app.h"
 #include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
 #include <iostream>
 #include <thread>
 #if !defined(_WIN32)

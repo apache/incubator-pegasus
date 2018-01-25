@@ -34,6 +34,7 @@
  */
 
 #include <dsn/tool-api/rpc_message.h>
+#include <dsn/utility/crc.h>
 #include <../core/transient_memory.h>
 #include <gtest/gtest.h>
 

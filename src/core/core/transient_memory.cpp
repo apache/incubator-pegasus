@@ -64,7 +64,7 @@ void tls_trans_mem_alloc(size_t min_size)
     tls_trans_memory.remain_bytes =
         (min_size > tls_trans_mem_default_block_bytes ? min_size
                                                       : tls_trans_mem_default_block_bytes);
-    *tls_trans_memory.block = ::dsn::make_shared_array<char>(tls_trans_memory.remain_bytes);
+    *tls_trans_memory.block = ::dsn::utils::make_shared_array<char>(tls_trans_memory.remain_bytes);
     tls_trans_memory.next = tls_trans_memory.block->get();
 }
 
