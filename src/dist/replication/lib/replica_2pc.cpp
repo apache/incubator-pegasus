@@ -233,6 +233,12 @@ void replica::do_possible_commit_on_primary(mutation_ptr &mu)
 
     if (mu->is_ready_for_commit()) {
         _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
+
+        if (status() != partition_status::PS_ERROR) {
+            // write mutation to private log
+            // so it is ensured that there are only committed mutation logs in private log
+            _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
+        }
     }
 }
 
@@ -439,11 +445,6 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
     if (err != ERR_OK) {
         // mutation log failure, propagate to all replicas
         _stub->handle_log_failure(err);
-    }
-
-    // write local private log if necessary
-    if (err == ERR_OK && status() != partition_status::PS_ERROR) {
-        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
     }
 }
 
