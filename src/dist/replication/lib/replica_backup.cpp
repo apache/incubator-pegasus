@@ -687,7 +687,6 @@ void replica::set_backup_context_pause()
 
 void replica::clear_cold_backup_state()
 {
-    ddebug("%s: clear cold_backup_states", name());
     _cold_backup_contexts.clear();
 }
 

@@ -230,5 +230,13 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
                          gpid_to_thread_hash(get_gpid()),
                          std::chrono::milliseconds(delay_milliseconds));
 }
+
+void replica::inject_error(error_code err)
+{
+    tasking::enqueue(LPC_REPLICATION_ERROR,
+                     this,
+                     [this, err]() { handle_local_failure(err); },
+                     gpid_to_thread_hash(get_gpid()));
+}
 }
 } // end namepspace

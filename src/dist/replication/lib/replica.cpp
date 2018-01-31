@@ -312,15 +312,16 @@ void replica::execute_mutation(mutation_ptr &mu)
                     d);
             err = _app->apply_mutation(mu);
         } else {
-            // prepare also happens with learner_status::LearningWithPrepare, in this case
-            // make sure private log saves the state,
-            // catch-up will be done later after the checkpoint task is finished
-
             dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                   name(),
                   mu->name(),
                   enum_to_string(status()),
                   _app->last_committed_decree());
+
+            // prepare also happens with learner_status::LearningWithPrepare, in this case
+            // make sure private log saves the state,
+            // catch-up will be done later after the checkpoint task is finished
+            dassert(_private_log != nullptr, "");
         }
         break;
     case partition_status::PS_ERROR:

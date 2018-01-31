@@ -119,11 +119,6 @@ void meta_options::initialize()
         "add_secondary_max_count_for_one_node",
         10,
         "add secondary max count for one node when flow control enabled");
-    add_secondary_proposal_alive_time_seconds =
-        dsn_config_get_value_uint64("meta_server",
-                                    "add_secondary_proposal_alive_time_seconds",
-                                    900,
-                                    "add secondary proposal alive time in seconds");
 
     /// failure detector options
     _fd_opts.distributed_lock_service_type =

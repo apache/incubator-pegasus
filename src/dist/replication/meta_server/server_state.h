@@ -302,7 +302,11 @@ private:
     config_change_subscriber _config_change_subscriber;
     replica_migration_subscriber _replica_migration_subscriber;
 
+    bool _add_secondary_enable_flow_control;
+    int32_t _add_secondary_max_count_for_one_node;
     dsn_handle_t _cli_dump_handle;
+    dsn_handle_t _ctrl_add_secondary_enable_flow_control;
+    dsn_handle_t _ctrl_add_secondary_max_count_for_one_node;
 
     perf_counter_wrapper _dead_partition_count;
     perf_counter_wrapper _unreadable_partition_count;

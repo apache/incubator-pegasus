@@ -679,12 +679,12 @@ bool replica::update_local_configuration(const replica_configuration &config,
     if (_config.ballot > old_ballot) {
         dsn::error_code result = _app->update_init_info_ballot_and_decree(this);
         if (result == dsn::ERR_OK) {
-            ddebug("%s: update ballot and decree to init file from %" PRId64 " to %" PRId64 " OK",
+            ddebug("%s: update ballot to init file from %" PRId64 " to %" PRId64 " OK",
                    name(),
                    old_ballot,
                    _config.ballot);
         } else {
-            dwarn("%s: update ballot and decree to init file from %" PRId64 " to %" PRId64 " %s",
+            dwarn("%s: update ballot to init file from %" PRId64 " to %" PRId64 " %s",
                   name(),
                   old_ballot,
                   _config.ballot,

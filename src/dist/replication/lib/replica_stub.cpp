@@ -613,15 +613,31 @@ void replica_stub::initialize_start()
 
 dsn::error_code replica_stub::on_kill_replica(gpid pid)
 {
-    error_code err = ERR_INVALID_PARAMETERS;
-    replica_ptr r = get_replica(pid);
-    if (r == nullptr) {
-        err = ERR_OBJECT_NOT_FOUND;
-    } else {
-        r->inject_error(ERR_INJECTED);
-        err = ERR_OK;
+    ddebug("kill replica: gpid = %d.%d", pid.get_app_id(), pid.get_partition_index());
+    if (pid.get_app_id() == -1 || pid.get_partition_index() == -1) {
+        replicas rs;
+        {
+            zauto_lock l(_replicas_lock);
+            rs = _replicas;
+        }
+        for (auto it = rs.begin(); it != rs.end(); ++it) {
+            replica_ptr &r = it->second;
+            if (pid.get_app_id() == -1 || pid.get_app_id() == r->get_gpid().get_app_id())
+                r->inject_error(ERR_INJECTED);
+        }
+        return ERR_OK;
     }
-    return err;
+    else {
+        error_code err = ERR_INVALID_PARAMETERS;
+        replica_ptr r = get_replica(pid);
+        if (r == nullptr) {
+            err = ERR_OBJECT_NOT_FOUND;
+        } else {
+            r->inject_error(ERR_INJECTED);
+            err = ERR_OK;
+        }
+        return err;
+    }
 }
 
 replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const app_info *app)
@@ -1374,14 +1390,13 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
 
 void replica_stub::on_gc()
 {
-    ddebug("start to garbage collection");
     uint64_t start = dsn_now_ns();
-
     replicas rs;
     {
         zauto_lock l(_replicas_lock);
         rs = _replicas;
     }
+    ddebug("start to garbage collection, replica_count = %d", (int)rs.size());
 
     // statistic learning info
     uint64_t learning_count = 0;
@@ -1843,16 +1858,25 @@ void replica_stub::open_service()
 
     _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
         {"kill_partition"},
-        "kill_partition <app_id> <partition_index>",
-        "kill_partition: kill partition with its global partition id",
+        "kill_partition [app_id [partition_index]]",
+        "kill_partition: kill partitions by (all, one app, one partition)",
         [this](const std::vector<std::string> &args) {
-            if (args.size() != 2)
-                return std::string(ERR_INVALID_PARAMETERS.to_string());
             dsn::gpid pid;
-            pid.set_app_id(atoi(args[0].c_str()));
-            pid.set_partition_index(atoi(args[1].c_str()));
-            if (pid.get_app_id() <= 0 || pid.get_partition_index() < 0)
+            if (args.size() == 0) {
+                pid.set_app_id(-1);
+                pid.set_partition_index(-1);
+            }
+            else if (args.size() == 1) {
+                pid.set_app_id(atoi(args[0].c_str()));
+                pid.set_partition_index(-1);
+            }
+            else if (args.size() == 2) {
+                pid.set_app_id(atoi(args[0].c_str()));
+                pid.set_partition_index(atoi(args[1].c_str()));
+            }
+            else {
                 return std::string(ERR_INVALID_PARAMETERS.to_string());
+            }
             dsn::error_code e = this->on_kill_replica(pid);
             return std::string(e.to_string());
         });

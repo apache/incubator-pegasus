@@ -62,13 +62,31 @@ namespace replication {
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
-server_state::server_state() : _meta_svc(nullptr), _cli_dump_handle(nullptr) {}
+server_state::server_state()
+    : _meta_svc(nullptr),
+      _add_secondary_enable_flow_control(false),
+      _add_secondary_max_count_for_one_node(0),
+      _cli_dump_handle(nullptr),
+      _ctrl_add_secondary_enable_flow_control(nullptr),
+      _ctrl_add_secondary_max_count_for_one_node(nullptr)
+{
+}
 
 server_state::~server_state()
 {
     if (_cli_dump_handle != nullptr) {
         dsn::command_manager::instance().deregister_command(_cli_dump_handle);
         _cli_dump_handle = nullptr;
+    }
+    if (_ctrl_add_secondary_enable_flow_control != nullptr) {
+        dsn::command_manager::instance().deregister_command(
+            _ctrl_add_secondary_enable_flow_control);
+        _ctrl_add_secondary_enable_flow_control = nullptr;
+    }
+    if (_ctrl_add_secondary_max_count_for_one_node != nullptr) {
+        dsn::command_manager::instance().deregister_command(
+            _ctrl_add_secondary_max_count_for_one_node);
+        _ctrl_add_secondary_max_count_for_one_node = nullptr;
     }
 }
 
@@ -98,12 +116,51 @@ void server_state::register_cli_commands()
             return std::string(err.to_string());
         });
     dassert(_cli_dump_handle != nullptr, "register cli handler failed");
+
+    _ctrl_add_secondary_enable_flow_control = dsn::command_manager::instance().register_app_command(
+        {"lb.add_secondary_enable_flow_control"},
+        "lb.add_secondary_enable_flow_control <true|false>",
+        "control whether enable add secondary flow control",
+        [this](const std::vector<std::string> &args) {
+            HANDLE_CLI_FLAGS(_add_secondary_enable_flow_control, args);
+        });
+    dassert(_ctrl_add_secondary_enable_flow_control, "register cli handler failed");
+
+    _ctrl_add_secondary_max_count_for_one_node =
+        dsn::command_manager::instance().register_app_command(
+            {"lb.add_secondary_max_count_for_one_node"},
+            "lb.add_secondary_max_count_for_one_node [num | DEFAULT]",
+            "control the max count to add secondary for one node",
+            [this](const std::vector<std::string> &args) {
+                std::string result("OK");
+                if (args.size() <= 0) {
+                    result = std::to_string(_add_secondary_max_count_for_one_node);
+                } else {
+                    if (args[0] == "DEFAULT") {
+                        _add_secondary_max_count_for_one_node =
+                            _meta_svc->get_meta_options().add_secondary_max_count_for_one_node;
+                    } else {
+                        int v = atoi(args[0].c_str());
+                        if (v < 0) {
+                            result = std::string("ERR: invalid arguments");
+                        } else {
+                            _add_secondary_max_count_for_one_node = v;
+                        }
+                    }
+                }
+                return result;
+            });
+    dassert(_ctrl_add_secondary_max_count_for_one_node, "register cli handler failed");
 }
 
 void server_state::initialize(meta_service *meta_svc, const std::string &apps_root)
 {
     _meta_svc = meta_svc;
     _apps_root = apps_root;
+    _add_secondary_enable_flow_control =
+        _meta_svc->get_meta_options().add_secondary_enable_flow_control;
+    _add_secondary_max_count_for_one_node =
+        _meta_svc->get_meta_options().add_secondary_max_count_for_one_node;
 
     _dead_partition_count.init_app_counter("eon.server_state",
                                            "dead_partition_count",
@@ -1517,10 +1574,10 @@ void server_state::on_update_configuration_on_remote_reply(
             configuration_proposal_action action;
             _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, gpid, action);
             if (action.type != config_type::CT_INVALID) {
-                if (_meta_svc->get_meta_options().add_secondary_enable_flow_control &&
+                if (_add_secondary_enable_flow_control &&
                     (action.type == config_type::CT_ADD_SECONDARY ||
                      action.type == config_type::CT_ADD_SECONDARY_FOR_LB)) {
-                    // ignore adding secondary is add_secondary_enable_flow_control = true
+                    // ignore adding secondary if add_secondary_enable_flow_control = true
                 } else {
                     config_request->type = action.type;
                     config_request->node = action.node;
@@ -2273,8 +2330,8 @@ bool server_state::check_all_partitions()
     }
     ddebug("start to check all partitions, add_secondary_enable_flow_control = %s, "
            "add_secondary_max_count_for_one_node = %d",
-           _meta_svc->get_meta_options().add_secondary_enable_flow_control ? "true" : "false",
-           _meta_svc->get_meta_options().add_secondary_max_count_for_one_node);
+           _add_secondary_enable_flow_control ? "true" : "false",
+           _add_secondary_max_count_for_one_node);
     int send_proposal_count = 0;
     std::vector<configuration_proposal_action> add_secondary_actions;
     std::vector<gpid> add_secondary_gpids;
@@ -2331,9 +2388,8 @@ bool server_state::check_all_partitions()
         partition_configuration &pc = *get_config(_all_apps, pid);
         if (!add_secondary_proposed[i] && pc.secondaries.empty()) {
             configuration_proposal_action &action = add_secondary_actions[i];
-            if (_meta_svc->get_meta_options().add_secondary_enable_flow_control &&
-                add_secondary_running_nodes[action.node] >=
-                    _meta_svc->get_meta_options().add_secondary_max_count_for_one_node) {
+            if (_add_secondary_enable_flow_control &&
+                add_secondary_running_nodes[action.node] >= _add_secondary_max_count_for_one_node) {
                 // ignore
                 continue;
             }
@@ -2351,9 +2407,8 @@ bool server_state::check_all_partitions()
             configuration_proposal_action &action = add_secondary_actions[i];
             gpid pid = add_secondary_gpids[i];
             partition_configuration &pc = *get_config(_all_apps, pid);
-            if (_meta_svc->get_meta_options().add_secondary_enable_flow_control &&
-                add_secondary_running_nodes[action.node] >=
-                    _meta_svc->get_meta_options().add_secondary_max_count_for_one_node) {
+            if (_add_secondary_enable_flow_control &&
+                add_secondary_running_nodes[action.node] >= _add_secondary_max_count_for_one_node) {
                 ddebug("do not send %s proposal for gpid(%d.%d) for flow control reason, target = "
                        "%s, node = %s",
                        ::dsn::enum_to_string(action.type),

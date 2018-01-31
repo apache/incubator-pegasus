@@ -253,7 +253,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string> &arg
 {
     std::stringstream ss;
 
-    uint64_t ts = dsn_now_ns();
+    uint64_t ts = 0;
     double value = 0;
 
     if (args.size() < 1) {
@@ -270,6 +270,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string> &arg
         }
     }
 
+    ts = dsn_now_ns();
     value_resp{value, ts, args[0]}.encode_json_state(ss);
     return ss.str();
 }
@@ -278,7 +279,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string> &ar
 {
     std::stringstream ss;
 
-    uint64_t ts = dsn_now_ns();
+    uint64_t ts = 0;
     uint64_t sample = 0;
 
     if (args.size() < 1) {
@@ -292,6 +293,8 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string> &ar
     if (counter) {
         sample = counter->get_latest_sample();
     }
+
+    ts = dsn_now_ns();
     sample_resp{sample, ts, args[0]}.encode_json_state(ss);
     return ss.str();
 }

@@ -757,8 +757,8 @@ void simple_load_balancer::register_ctrl_commands()
 
     _ctrl_assign_delay_ms = dsn::command_manager::instance().register_app_command(
         {"lb.assign_delay_ms"},
-        "control the replica_assign_delay_ms_for_dropouts config",
         "lb.assign_delay_ms [num | DEFAULT]",
+        "control the replica_assign_delay_ms_for_dropouts config",
         [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); });
 }
 

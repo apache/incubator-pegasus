@@ -450,7 +450,8 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
 void replica::set_inactive_state_transient(bool t)
 {
     if (status() == partition_status::PS_INACTIVE) {
-        ddebug("set inactive_is_transient from %s to %s",
+        ddebug("%s: set inactive_is_transient from %s to %s",
+               name(),
                _inactive_is_transient ? "true" : "false",
                t ? "true" : "false");
         _inactive_is_transient = t;
