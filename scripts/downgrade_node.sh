@@ -70,6 +70,7 @@ do
 
     if [ "$type" = "run" ]
     then
+      cat /tmp/pegasus.cmd.$app
       cat /tmp/pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
       echo
       echo

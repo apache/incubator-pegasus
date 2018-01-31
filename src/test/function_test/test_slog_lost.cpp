@@ -38,11 +38,22 @@ static void truncate_recent_file(const std::string &path)
     std::string file_name;
     ss >> file_length >> file_name;
 
-    std::cout << "get file with size: (" << file_name << ", " << file_length << ")" << std::endl;
+    std::cout << "truncate file with size: (" << file_name << ", " << file_length << ")"
+              << std::endl;
+
     snprintf(
         command, 512, "truncate -s %lu %s/%s", file_length / 3, path.c_str(), file_name.c_str());
     std::cout << command << std::endl;
     system(command);
+
+    snprintf(command, 512, "ls -l %s/%s | awk '{print $5}'", path.c_str(), file_name.c_str());
+    std::stringstream ss2;
+    global_env::pipe_execute(command, ss2);
+    size_t new_file_length;
+    ss2 >> new_file_length;
+
+    ASSERT_LT(new_file_length, file_length);
+    std::cout << "after truncated file size: " << new_file_length << std::endl;
 }
 
 TEST(lost_log, slog)
@@ -84,7 +95,7 @@ TEST(lost_log, slog)
     system("./run.sh stop_onebox");
 
     std::cout << "truncate slog for replica1" << std::endl;
-    truncate_recent_file("onebox/replica1/data/replica1/slog");
+    truncate_recent_file("onebox/replica1/data/replica/slog");
 
     std::cout << "restart onebox again" << std::endl;
     system("./run.sh start_onebox");

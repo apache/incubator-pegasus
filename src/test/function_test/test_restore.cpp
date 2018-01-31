@@ -75,18 +75,16 @@ public:
 
     virtual void TearDown() override
     {
+        chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
-        // TODO: when teardown must recover config-server.ini
         system("git checkout -- src/server/config-server.ini");
         system("./run.sh start_onebox");
         std::cout << "sleep 10s to restart onebox" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(10));
         std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
-
-        // go back to working dir
-        chdir(working_root_dir.c_str());
+        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void write_data()

@@ -1558,6 +1558,16 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         return ::dsn::ERR_OK;
     }
 
+    if (!clear_state) {
+        rocksdb::FlushOptions options;
+        options.wait = true;
+        auto status = _db->Flush(options);
+        if (!status.ok()) {
+            derror("%s: flush memtable failed: %s",
+                   replica_name(), status.ToString().c_str());
+        }
+    }
+
     _context_cache.clear();
 
     // when stop the, should stop the timer_task.
@@ -1584,6 +1594,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         _pfc_sst_size->set(0);
     }
 
+    ddebug("%s: close app succeed, clear_state = %s",
+           replica_name(), clear_state ? "true" : "false");
     return ::dsn::ERR_OK;
 }
 

@@ -69,6 +69,11 @@ if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
   exit -1
 fi
+pmeta=`grep primary_meta_server /tmp/pegasus.rolling_update.cluster_info | grep -o '[0-9.:]*$'`
+if [ "$pmeta" == "" ]; then
+  echo "ERROR: extract primary_meta_server by shell failed"
+  exit -1
+fi
 
 echo "Generating /tmp/pegasus.rolling_update.nodes..."
 echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.nodes
@@ -108,6 +113,14 @@ do
   echo "servicing_replica_count=$serving_replica_count"
   echo
 
+  echo "Set lb.add_secondary_max_count_for_one_node to 0..."
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 0" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
+    exit -1
+  fi
+
   echo "Migrating primary replicas out of node..."
   ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.migrate_node
   echo "Wait [$node] to migrate done..."
@@ -124,7 +137,7 @@ do
     fi
   done
   echo
-  sleep 3
+  sleep 1
 
   echo "Downgrading replicas on node..."
   ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.downgrade_node
@@ -142,7 +155,52 @@ do
     fi
   done
   echo
-  sleep 3
+  sleep 1
+
+  echo "Send kill_partition to node..."
+  grep '^propose ' /tmp/pegasus.rolling_update.downgrade_node >/tmp/pegasus.rolling_update.downgrade_node.propose
+  while read line2 
+  do
+    gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
+    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.kill_partition
+  done </tmp/pegasus.rolling_update.downgrade_node.propose
+  echo "Sent kill_partition to `cat /tmp/pegasus.rolling_update.downgrade_node.propose | wc -l` partitions"
+  echo
+  sleep 1
+
+  echo "Checking replicas closed on node..."
+  sleeped=0
+  while true
+  do
+    echo "remote_command -l $node perf-counters '.*replica(Count)'" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.replica_count_perf_counters
+    serving_count=`grep -o 'replica_stub.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    opening_count=`grep -o 'replica_stub.opening.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    closing_count=`grep -o 'replica_stub.closing.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    if [ "$serving_count" = "" -o "$opening_count" = "" -o "$closing_count" = "" ]; then
+      echo "ERROR: extract replica count from perf counters failed"
+      exit -1
+    fi
+    rep_count=$((serving_count + opening_count + closing_count))
+    if [ $rep_count -eq 0 -o $sleeped -gt 20 ]; then
+      break
+    else
+      echo "Still $rep_count replicas not closed on $node"
+      sleep 1
+      sleeped=$((sleeped+1))
+    fi
+  done
+  echo
+  sleep 1
+
+  echo "remote_command -l $node flush-log" | ./run.sh shell --cluster $meta_list &>/dev/null
+
+  echo "Set lb.add_secondary_max_count_for_one_node to 100..."
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
+    exit -1
+  fi
 
   echo "Rolling update by minos..."
   cd $minos_client_dir
@@ -150,11 +208,7 @@ do
   cd $shell_dir
   echo "Rolling update by minos done."
   echo
-
-  echo "Sleep 20 seconds for server restarting..."
-  sleep 20
-  echo "Sleep done."
-  echo
+  sleep 1
 
   echo "Wait [$node] to become alive..."
   while true
@@ -168,21 +222,21 @@ do
     fi
   done
   echo
+  sleep 1
 
   echo "Wait cluster to become healthy..."
   while true
   do
     unhealthy_count=`echo "ls -d" | ./run.sh shell --cluster $meta_list | awk 'f{ if($NF<7){f=0} else if($3!=$4){print} } /fully_healthy_num/{f=1}' | wc -l`
     if [ $unhealthy_count -eq 0 ]; then
-      echo "Cluster becomes healthy, sleep 10 seconds before stepping next..."
-      sleep 10
+      echo "Cluster becomes healthy."
       break
     else
       sleep 1
     fi
   done
-  echo "Sleep done."
   echo
+  sleep 1
 
   finish_time=$((`date +%s`))
   echo "Rolling update replica server task $task_id of [$node_name] [$node] done."
@@ -190,21 +244,28 @@ do
   echo
 
   if [ "$type" = "one" ]; then
-    echo "Finish time: `date`"
-    all_finish_time=$((`date +%s`))
-    echo "Rolling update one done, elasped time is $((all_finish_time - all_start_time)) seconds."
-    exit 0
+    break
   fi
 done </tmp/pegasus.rolling_update.rs.list
 
-echo "=================================================================="
-echo "=================================================================="
-echo "Rolling update meta servers and collectors..."
-cd $minos_client_dir
-./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 $update_options --job meta collector
-cd $shell_dir
-echo
+echo "Set lb.add_secondary_max_count_for_one_node to DEFAULT..."
+echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
+set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set lb.add_secondary_max_count_for_one_node to DEFAULT failed"
+  exit -1
+fi
+
+if [ "$type" = "all" ]; then
+  echo "=================================================================="
+  echo "=================================================================="
+  echo "Rolling update meta servers and collectors..."
+  cd $minos_client_dir
+  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 $update_options --job meta collector
+  cd $shell_dir
+  echo
+fi
 
 echo "Finish time: `date`"
 all_finish_time=$((`date +%s`))
-echo "Rolling update all done, elasped time is $((all_finish_time - all_start_time)) seconds."
+echo "Rolling update $type done, elasped time is $((all_finish_time - all_start_time)) seconds."
