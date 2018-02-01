@@ -5,11 +5,6 @@
 #include "pegasus_client_impl.h"
 #include <pegasus_const.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.scanner.impl"
-
 using namespace ::dsn;
 using namespace pegasus;
 

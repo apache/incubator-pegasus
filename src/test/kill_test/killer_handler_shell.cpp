@@ -10,11 +10,6 @@
 #include <fstream>
 #include <dsn/c/api_utilities.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "killer.handler.shell"
-
 namespace pegasus {
 namespace test {
 

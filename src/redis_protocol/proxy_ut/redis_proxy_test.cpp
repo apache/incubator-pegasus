@@ -13,12 +13,6 @@
 #include "proxy_layer.h"
 #include "redis_parser.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-
-#define __TITLE__ "pegasus.rproxy.test"
-
 using namespace boost::asio;
 using namespace ::pegasus::proxy;
 

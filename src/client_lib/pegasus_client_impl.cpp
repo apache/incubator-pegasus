@@ -15,11 +15,6 @@
 #include <pegasus_utils.h>
 #include "pegasus_client_impl.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.client.impl"
-
 using namespace ::dsn;
 
 namespace pegasus {

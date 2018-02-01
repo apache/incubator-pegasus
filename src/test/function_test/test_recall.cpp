@@ -18,11 +18,6 @@
 
 #include "utils.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.recall"
-
 using namespace dsn::replication;
 
 TEST(drop_and_recall, simple)

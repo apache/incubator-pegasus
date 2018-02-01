@@ -18,11 +18,6 @@
 #include "global_env.h"
 #include "utils.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.recall"
-
 using namespace dsn::replication;
 
 static const std::string table_for_lost_log = "table_for_lost_log";

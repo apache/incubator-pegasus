@@ -10,11 +10,6 @@
 #include <pegasus_utils.h>
 #include "redis_parser.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.rproxy.parser"
-
 #define CR '\015'
 #define LF '\012'
 

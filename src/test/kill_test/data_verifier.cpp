@@ -45,11 +45,6 @@ static const long stat_p999_pos = stat_batch - stat_batch / 1000 - 1;
 static const long stat_p9999_pos = stat_batch - stat_batch / 10000 - 1;
 static const long stat_max_pos = stat_batch - 1;
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.verifier"
-
 // return time in us.
 long get_time()
 {

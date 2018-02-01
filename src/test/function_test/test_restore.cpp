@@ -8,11 +8,6 @@
 
 #include "global_env.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.restore"
-
 using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;

@@ -4,11 +4,6 @@
 
 #include "job.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "killtest.job"
-
 namespace pegasus {
 namespace test {
 

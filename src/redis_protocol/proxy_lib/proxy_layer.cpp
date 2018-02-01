@@ -4,11 +4,6 @@
 
 #include "proxy_layer.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.rproxy.layer"
-
 namespace pegasus {
 namespace proxy {
 

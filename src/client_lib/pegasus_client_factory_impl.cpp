@@ -4,11 +4,6 @@
 
 #include "pegasus_client_factory_impl.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.client.factory.impl"
-
 namespace pegasus {
 namespace client {
 

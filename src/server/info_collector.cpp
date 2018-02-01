@@ -11,11 +11,6 @@
 #include <cstdlib>
 #include <iomanip>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "info.collector"
-
 #define METRICSNUM 3
 
 using namespace ::dsn;

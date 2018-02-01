@@ -9,11 +9,6 @@
 #include <iomanip>
 #include <algorithm>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "available.detector"
-
 namespace pegasus {
 namespace server {
 

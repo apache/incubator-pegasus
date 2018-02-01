@@ -21,11 +21,6 @@
 #include "kill_testor.h"
 #include "process_killer.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.killer"
-
 using namespace std;
 using namespace ::pegasus;
 using namespace ::pegasus::test;

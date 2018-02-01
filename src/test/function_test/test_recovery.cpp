@@ -18,11 +18,6 @@
 
 #include "global_env.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.recovery"
-
 using namespace dsn::replication;
 
 class recovery_test : public testing::Test

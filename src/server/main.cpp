@@ -22,11 +22,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.server.main"
-
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
 #ifndef DSN_BUILD_TYPE

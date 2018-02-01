@@ -12,11 +12,6 @@
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.scan"
-
 using namespace ::pegasus;
 
 extern pegasus_client *client;

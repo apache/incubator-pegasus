@@ -18,11 +18,6 @@
 using namespace std;
 using namespace ::pegasus;
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.pressure.test"
-
 DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
 //[min, max], min and max is unsigned

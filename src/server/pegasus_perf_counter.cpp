@@ -7,11 +7,6 @@
 
 #include <atomic>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.perf.counter"
-
 using namespace ::dsn;
 using namespace ::dsn::tools;
 

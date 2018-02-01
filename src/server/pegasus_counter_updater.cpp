@@ -18,11 +18,6 @@
 #include <fstream>
 #endif
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.counter.updater"
-
 using namespace ::dsn;
 
 namespace pegasus {
@@ -62,7 +57,7 @@ static void libevent_log(int severity, const char *msg)
         level = LOG_LEVEL_WARNING;
     else
         level = LOG_LEVEL_ERROR;
-    dlog(level, __TITLE__, msg);
+    dlog(level, msg);
 }
 
 #if defined(__linux__)

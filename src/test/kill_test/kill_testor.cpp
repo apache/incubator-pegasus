@@ -8,11 +8,6 @@
 
 #include "kill_testor.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "kill.testor"
-
 namespace pegasus {
 namespace test {
 

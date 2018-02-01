@@ -13,11 +13,6 @@
 #include <boost/lexical_cast.hpp>
 #include <algorithm>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.server.impl"
-
 namespace pegasus {
 namespace server {
 

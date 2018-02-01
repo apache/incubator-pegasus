@@ -14,11 +14,6 @@
 #include <gtest/gtest.h>
 #include <atomic>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "function.test.basic"
-
 using namespace ::pegasus;
 
 extern pegasus_client *client;

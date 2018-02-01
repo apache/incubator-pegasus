@@ -12,11 +12,6 @@
 #include <fstream>
 #include <iomanip>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "info.collector.app"
-
 namespace pegasus {
 namespace server {
 
