@@ -60,7 +60,6 @@ public:
                           const char *function,
                           const int line,
                           dsn_log_level_t log_level,
-                          const char *title,
                           const char *fmt,
                           va_list args);
 

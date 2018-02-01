@@ -583,6 +583,7 @@ function(dsn_add_pseudo_projects)
 endfunction(dsn_add_pseudo_projects)
 
 function(dsn_common_setup)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(notdir $(abspath $<))\"'")
     if(NOT WIN32)
         execute_process(COMMAND sh -c "rm -rf ${CMAKE_SOURCE_DIR}/.matchfile")
     endif()

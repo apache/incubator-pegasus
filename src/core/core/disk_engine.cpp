@@ -39,11 +39,6 @@
 #include <dsn/utility/utils.h>
 #include "transient_memory.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "disk_engine"
-
 using namespace dsn::utils;
 
 namespace dsn {

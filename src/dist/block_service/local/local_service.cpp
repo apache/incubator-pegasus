@@ -4,11 +4,6 @@
 #include <dsn/utility/error_code.h>
 #include "local_service.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "block.service.local"
-
 static const int max_length = 2048; // max data length read from file each time
 
 namespace dsn {

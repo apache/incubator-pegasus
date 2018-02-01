@@ -36,11 +36,6 @@
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/network.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "raw.message.parser"
-
 namespace dsn {
 
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)

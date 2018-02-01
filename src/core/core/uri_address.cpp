@@ -42,11 +42,6 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/task.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "uri_address"
-
 namespace dsn {
 void uri_resolver_manager::setup_resolvers()
 {

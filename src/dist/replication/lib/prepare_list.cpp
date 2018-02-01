@@ -36,11 +36,6 @@
 #include "prepare_list.h"
 #include "mutation.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "prepare_list"
-
 namespace dsn {
 namespace replication {
 

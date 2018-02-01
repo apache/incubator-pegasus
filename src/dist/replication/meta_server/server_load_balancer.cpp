@@ -3,11 +3,6 @@
 #include <boost/lexical_cast.hpp>
 #include "server_load_balancer.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "server.load.balancer"
-
 namespace dsn {
 namespace replication {
 

@@ -40,11 +40,6 @@
 #include "env.sim.h"
 #include <set>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simulator"
-
 namespace dsn {
 namespace tools {
 

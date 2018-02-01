@@ -35,11 +35,6 @@
 
 #include "replication_admission_controller.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.AC"
-
 namespace dsn {
 namespace replication {
 

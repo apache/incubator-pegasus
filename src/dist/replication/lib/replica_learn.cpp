@@ -41,11 +41,6 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.learn"
-
 namespace dsn {
 namespace replication {
 

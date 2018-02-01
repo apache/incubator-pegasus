@@ -39,11 +39,6 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/crc.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "thrift.message.parser"
-
 namespace dsn {
 void thrift_message_parser::reset() { _header_parsed = false; }
 

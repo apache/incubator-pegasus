@@ -41,19 +41,18 @@ TEST(core, logging)
 {
     dsn_log_level_t level = dsn_log_get_start_level();
     std::cout << "logging start level = " << level << std::endl;
-    dsn_logf(__FILE__,
+    dsn_logf(__FILENAME__,
              __FUNCTION__,
              __LINE__,
              dsn_log_level_t::LOG_LEVEL_DEBUG,
-             "test logging",
              "in TEST(core, logging)");
-    dsn_log(__FILE__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "test logging");
+    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG);
 }
 
 TEST(core, logging_big_log)
 {
     std::string big_str(128000, 'x');
-    dsn_logf(__FILE__,
+    dsn_logf(__FILENAME__,
              __FUNCTION__,
              __LINE__,
              dsn_log_level_t::LOG_LEVEL_DEBUG,

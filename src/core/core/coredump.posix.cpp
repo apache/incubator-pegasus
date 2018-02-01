@@ -40,11 +40,6 @@
 #include <sys/types.h>
 #include <signal.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "coredump"
-
 namespace dsn {
 namespace utils {
 

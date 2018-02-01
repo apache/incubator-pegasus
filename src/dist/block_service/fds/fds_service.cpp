@@ -18,11 +18,6 @@
 #include <fstream>
 #include <string.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "block.service.fds"
-
 namespace dsn {
 namespace dist {
 namespace block_service {

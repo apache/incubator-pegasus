@@ -43,11 +43,6 @@
 #include <dsn/utility/configuration.h>
 #include <dsn/utility/filesystem.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "ConfigFile"
-
 namespace dsn {
 
 static bool build_client_network_confs(const char *section,

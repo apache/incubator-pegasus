@@ -39,11 +39,6 @@
 #include "client.h"
 #include "simple_kv.server.impl.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.main"
-
 void dsn_app_registration_simple_kv()
 {
     dsn::replication::test::simple_kv_service_impl::register_service();

@@ -40,11 +40,6 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica"
-
 namespace dsn {
 namespace replication {
 

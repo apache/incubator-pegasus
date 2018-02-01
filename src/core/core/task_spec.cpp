@@ -41,11 +41,6 @@
 #include <vector>
 #include <thread>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task_spec"
-
 namespace dsn {
 
 void task_spec::register_task_code(task_code code,

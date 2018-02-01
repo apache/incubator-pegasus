@@ -37,11 +37,6 @@
 #include <dsn/tool-api/task.h>
 #include <dsn/tool_api.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task_tracker"
-
 namespace dsn {
 
 task_tracker::task_tracker(int task_bucket_count) : _task_bucket_count(task_bucket_count)

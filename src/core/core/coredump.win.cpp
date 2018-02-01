@@ -45,11 +45,6 @@
 #include <PsApi.h>
 #pragma comment(lib, "PsApi.lib")
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "coredump"
-
 namespace dsn {
 namespace utils {
 

@@ -89,11 +89,6 @@
 
 #endif
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "dsn.file_utils"
-
 namespace dsn {
 namespace utils {
 namespace filesystem {

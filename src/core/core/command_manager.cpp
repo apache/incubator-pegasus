@@ -48,11 +48,6 @@
 #include "service_engine.h"
 #include "rpc_engine.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "command_manager"
-
 namespace dsn {
 
 dsn_handle_t command_manager::register_app_command(const std::vector<std::string> &commands,

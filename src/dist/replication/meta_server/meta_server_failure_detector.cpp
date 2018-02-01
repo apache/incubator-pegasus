@@ -42,11 +42,6 @@
 #include <chrono>
 #include <thread>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "meta.server.FD"
-
 namespace dsn {
 namespace replication {
 

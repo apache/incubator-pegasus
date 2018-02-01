@@ -40,11 +40,6 @@
 #include <cstdio>
 #include "rpc_engine.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task_queue"
-
 namespace dsn {
 
 task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)

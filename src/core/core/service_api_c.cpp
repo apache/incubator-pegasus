@@ -65,11 +65,6 @@
 #include <TlHelp32.h>
 #endif
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "service_api_c"
-
 //
 // global state
 //

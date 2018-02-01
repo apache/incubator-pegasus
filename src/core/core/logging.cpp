@@ -116,15 +116,14 @@ DSN_API void dsn_logv(const char *file,
                       const char *function,
                       const int line,
                       dsn_log_level_t log_level,
-                      const char *title,
                       const char *fmt,
                       va_list args)
 {
     ::dsn::logging_provider *logger = ::dsn::service_engine::instance().logging();
     if (logger != nullptr) {
-        logger->dsn_logv(file, function, line, log_level, title, fmt, args);
+        logger->dsn_logv(file, function, line, log_level, fmt, args);
     } else {
-        printf("%s:%d:%s():", title, line, function);
+        printf("%s:%d:%s():", file, line, function);
         vprintf(fmt, args);
         printf("\n");
     }
@@ -134,21 +133,17 @@ DSN_API void dsn_logf(const char *file,
                       const char *function,
                       const int line,
                       dsn_log_level_t log_level,
-                      const char *title,
                       const char *fmt,
                       ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    dsn_logv(file, function, line, log_level, title, fmt, ap);
+    dsn_logv(file, function, line, log_level, fmt, ap);
     va_end(ap);
 }
 
-DSN_API void dsn_log(const char *file,
-                     const char *function,
-                     const int line,
-                     dsn_log_level_t log_level,
-                     const char *title)
+DSN_API void
+dsn_log(const char *file, const char *function, const int line, dsn_log_level_t log_level)
 {
-    dsn_logf(file, function, line, log_level, title, "");
+    dsn_logf(file, function, line, log_level, "");
 }

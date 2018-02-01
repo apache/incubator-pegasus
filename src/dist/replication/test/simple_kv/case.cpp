@@ -49,11 +49,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.case"
-
 namespace dsn {
 namespace replication {
 namespace test {

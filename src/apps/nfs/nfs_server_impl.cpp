@@ -37,11 +37,6 @@
 #include <sys/stat.h>
 #include <dsn/utility/filesystem.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "nfs.server.impl"
-
 namespace dsn {
 namespace service {
 

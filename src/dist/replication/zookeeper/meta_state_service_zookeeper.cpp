@@ -41,11 +41,6 @@
 #include "zookeeper_session.h"
 #include "zookeeper_error.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "meta.state.service.zk"
-
 namespace dsn {
 namespace dist {
 

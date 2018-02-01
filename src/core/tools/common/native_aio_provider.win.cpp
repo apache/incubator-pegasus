@@ -42,11 +42,6 @@
 #include <io.h>
 #include <stdio.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "aio.provider.native"
-
 namespace dsn {
 namespace tools {
 

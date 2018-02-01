@@ -39,11 +39,6 @@
 #include <fcntl.h>
 #include <cstdlib>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "aio.provider.native"
-
 namespace dsn {
 namespace tools {
 

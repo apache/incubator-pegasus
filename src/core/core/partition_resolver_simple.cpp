@@ -36,11 +36,6 @@
 #include "partition_resolver_simple.h"
 #include <dsn/utility/utils.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "partition.resolver.simple"
-
 namespace dsn {
 namespace dist {
 //------------------------------------------------------------------------------------

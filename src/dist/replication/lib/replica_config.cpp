@@ -40,11 +40,6 @@
 #include "replica_stub.h"
 #include <dsn/dist/replication/replication_app_base.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.config"
-
 namespace dsn {
 namespace replication {
 

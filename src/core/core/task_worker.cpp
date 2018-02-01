@@ -53,11 +53,6 @@
 
 #endif
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task.worker"
-
 namespace dsn {
 
 join_point<void, task_worker *> task_worker::on_start("task_worker::on_start");

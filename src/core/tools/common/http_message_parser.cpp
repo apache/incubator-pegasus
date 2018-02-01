@@ -43,11 +43,6 @@
 #include "http_message_parser.h"
 #include <dsn/cpp/serialization.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "http.message.parser"
-
 namespace dsn {
 
 template <typename T, size_t N>

@@ -37,11 +37,6 @@
 #include "mutation_log.h"
 #include "replica.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "mutation"
-
 namespace dsn {
 namespace replication {
 

@@ -53,11 +53,6 @@
 
 #include <dsn/tool_api.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.checker"
-
 namespace dsn {
 namespace replication {
 namespace test {

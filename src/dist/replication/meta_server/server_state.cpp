@@ -47,11 +47,6 @@
 #include "server_state.h"
 #include "server_load_balancer.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "server.state"
-
 #include "dump_file.h"
 
 using namespace dsn;

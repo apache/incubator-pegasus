@@ -45,11 +45,6 @@
 
 using namespace dsn::utils;
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "rpc.message"
-
 DSN_API dsn_message_t dsn_msg_create_request(dsn::task_code rpc_code,
                                              int timeout_milliseconds,
                                              int thread_hash,

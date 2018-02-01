@@ -39,11 +39,6 @@
 #include "service_engine.h"
 #include "message_parser_manager.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "tool_api"
-
 namespace dsn {
 
 DEFINE_TASK_CODE(LPC_CONTROL_SERVICE_APP, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)

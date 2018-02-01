@@ -100,7 +100,6 @@ void screen_logger::dsn_logv(const char *file,
                              const char *function,
                              const int line,
                              dsn_log_level_t log_level,
-                             const char *title,
                              const char *fmt,
                              va_list args)
 {
@@ -108,7 +107,7 @@ void screen_logger::dsn_logv(const char *file,
 
     print_header(stdout, log_level);
     if (!_short_header) {
-        printf("%s:%d:%s(): ", title, line, function);
+        printf("%s:%d:%s(): ", file, line, function);
     }
     vprintf(fmt, args);
     printf("\n");
@@ -219,7 +218,6 @@ void simple_logger::dsn_logv(const char *file,
                              const char *function,
                              const int line,
                              dsn_log_level_t log_level,
-                             const char *title,
                              const char *fmt,
                              va_list args)
 {
@@ -232,7 +230,7 @@ void simple_logger::dsn_logv(const char *file,
 
     print_header(_log, log_level);
     if (!_short_header) {
-        fprintf(_log, "%s:%d:%s(): ", title, line, function);
+        fprintf(_log, "%s:%d:%s(): ", file, line, function);
     }
     vfprintf(_log, fmt, args);
     fprintf(_log, "\n");
@@ -243,7 +241,7 @@ void simple_logger::dsn_logv(const char *file,
     if (log_level >= _stderr_start_level) {
         print_header(stdout, log_level);
         if (!_short_header) {
-            printf("%s:%d:%s(): ", title, line, function);
+            printf("%s:%d:%s(): ", file, line, function);
         }
         vprintf(fmt, args2);
         printf("\n");

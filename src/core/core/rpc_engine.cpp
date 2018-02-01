@@ -53,11 +53,6 @@
 #include <dsn/cpp/serialization.h>
 #include <set>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "rpc.engine"
-
 namespace dsn {
 
 DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)

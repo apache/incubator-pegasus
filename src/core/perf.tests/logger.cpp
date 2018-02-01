@@ -55,7 +55,7 @@ void logv(dsn::logging_provider *logger, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    logger->dsn_logv(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, "log.test", str, ap);
+    logger->dsn_logv(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, str, ap);
     va_end(ap);
 }
 

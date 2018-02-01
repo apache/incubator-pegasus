@@ -37,11 +37,6 @@
 #include <dsn/utility/filesystem.h>
 #include <queue>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "nfs.client.impl"
-
 namespace dsn {
 namespace service {
 

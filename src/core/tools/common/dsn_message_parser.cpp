@@ -37,11 +37,6 @@
 #include <dsn/service_api_c.h>
 #include <dsn/utility/crc.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "dsn.message.parser"
-
 namespace dsn {
 void dsn_message_parser::reset() { _header_checked = false; }
 

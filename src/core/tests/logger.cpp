@@ -90,7 +90,7 @@ void log_print(logging_provider *logger, const char *fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
-    logger->dsn_logv(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_INFORMATION, "test", fmt, vl);
+    logger->dsn_logv(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_INFORMATION, fmt, vl);
     va_end(vl);
 }
 

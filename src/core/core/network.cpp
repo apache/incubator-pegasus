@@ -41,11 +41,6 @@
 #include "message_parser_manager.h"
 #include "rpc_engine.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "network"
-
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");

@@ -6,12 +6,6 @@
 #include <dsn/service_api_cpp.h>
 #include <vector>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-
-#define __TITLE__ "fd.test"
-
 using namespace dsn;
 using namespace dsn::fd;
 

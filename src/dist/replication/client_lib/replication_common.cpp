@@ -37,11 +37,6 @@
 #include <dsn/utility/filesystem.h>
 #include <fstream>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replication.common"
-
 namespace dsn {
 namespace replication {
 

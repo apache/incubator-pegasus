@@ -41,11 +41,6 @@
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.common"
-
 namespace dsn {
 namespace replication {
 namespace test {

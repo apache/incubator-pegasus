@@ -35,11 +35,6 @@
 
 #include "simple_task_queue.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task.queue.simple"
-
 namespace dsn {
 namespace tools {
 simple_timer_service::simple_timer_service(service_node *node, timer_service *inner_provider)

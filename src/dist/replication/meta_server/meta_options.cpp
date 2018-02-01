@@ -34,11 +34,6 @@
  */
 #include "meta_options.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "meta.options"
-
 namespace dsn {
 namespace replication {
 

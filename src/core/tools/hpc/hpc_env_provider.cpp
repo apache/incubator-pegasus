@@ -35,11 +35,6 @@
 
 #include "hpc_env_provider.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "env.provider.hpc"
-
 namespace dsn {
 namespace tools {
 hpc_env_provider::hpc_env_provider(env_provider *inner_provider) : env_provider(inner_provider)

@@ -39,11 +39,6 @@
 #include <MSWSock.h>
 #include "mix_all_io_looper.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "network.provider.hpc"
-
 namespace dsn {
 namespace tools {
 static socket_t create_tcp_socket(sockaddr_in *addr)

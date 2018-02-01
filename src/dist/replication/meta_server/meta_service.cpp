@@ -47,11 +47,6 @@
 #include "meta_server_failure_detector.h"
 #include "server_load_balancer.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "meta.service"
-
 namespace dsn {
 namespace replication {
 

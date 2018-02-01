@@ -37,11 +37,6 @@
 #include <chrono>
 #include <ctime>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "failure_detector"
-
 using namespace ::dsn::service;
 
 namespace dsn {

@@ -48,11 +48,6 @@
 
 #include "meta_service.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "meta.service.app"
-
 static bool register_component_provider(const char *name,
                                         dsn::dist::distributed_lock_service::factory f)
 {

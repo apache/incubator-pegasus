@@ -37,12 +37,6 @@
 #include "zookeeper_session.h"
 #include "zookeeper_session_mgr.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-
-#define __TITLE__ "zookeeper_session"
-
 namespace dsn {
 namespace dist {
 

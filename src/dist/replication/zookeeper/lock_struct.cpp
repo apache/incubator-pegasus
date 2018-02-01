@@ -46,10 +46,6 @@
 #include "zookeeper_session.h"
 #include "zookeeper_error.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#define __TITLE__ "dlock.lock_struct"
-#endif
 
 namespace dsn {
 namespace dist {

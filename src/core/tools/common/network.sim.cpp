@@ -39,11 +39,6 @@
 #include <dsn/tool/node_scoper.h>
 #include "network.sim.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "net.provider.sim"
-
 namespace dsn {
 namespace tools {
 

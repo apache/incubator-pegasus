@@ -53,11 +53,6 @@
 
 //# include <dsn/thrift_helper.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "core.main"
-
 void dsn_core_init()
 {
     // register all providers

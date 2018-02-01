@@ -43,11 +43,6 @@
 
 #include <iostream>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.injector"
-
 namespace dsn {
 namespace replication {
 namespace test {

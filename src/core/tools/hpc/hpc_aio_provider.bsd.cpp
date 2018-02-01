@@ -43,11 +43,6 @@
 #include <stdio.h>
 #include "mix_all_io_looper.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "aio.provider.hpc"
-
 namespace dsn {
 namespace tools {
 

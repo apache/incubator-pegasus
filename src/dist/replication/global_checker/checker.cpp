@@ -46,11 +46,6 @@
 #include "dist/replication/meta_server/meta_server_failure_detector.h"
 #include "dist/replication/meta_server/server_state.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replication.global.check"
-
 namespace dsn {
 namespace replication {
 

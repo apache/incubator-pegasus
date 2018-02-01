@@ -28,11 +28,6 @@
 #include <sstream>
 #include <dsn/utility/filesystem.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "simple_kv.server_impl"
-
 #define VALUE_NOT_EXIST "<<not-exist>>"
 
 namespace dsn {

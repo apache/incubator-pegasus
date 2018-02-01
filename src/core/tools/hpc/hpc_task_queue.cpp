@@ -36,11 +36,6 @@
 #include "hpc_task_queue.h"
 #include <boost/function_output_iterator.hpp>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task.queue.hpc"
-
 namespace dsn {
 namespace tools {
 hpc_task_queue::hpc_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)

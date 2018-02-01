@@ -36,11 +36,6 @@
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "asio.net.provider"
-
 namespace dsn {
 namespace tools {
 

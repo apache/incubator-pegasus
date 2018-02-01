@@ -35,11 +35,6 @@
 
 #include "diske.sim.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "aio_provider"
-
 namespace dsn {
 namespace tools {
 

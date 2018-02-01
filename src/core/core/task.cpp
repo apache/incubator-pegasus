@@ -47,11 +47,6 @@
 #include "disk_engine.h"
 #include "rpc_engine.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task"
-
 namespace dsn {
 __thread struct __tls_dsn__ tls_dsn;
 __thread uint16_t tls_dsn_lower32_task_id_mask = 0;

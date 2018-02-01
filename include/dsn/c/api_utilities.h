@@ -104,38 +104,34 @@ extern DSN_API void dsn_logv(const char *file,
                              const char *function,
                              const int line,
                              dsn_log_level_t log_level,
-                             const char *title,
                              const char *fmt,
                              va_list args);
 extern DSN_API void dsn_logf(const char *file,
                              const char *function,
                              const int line,
                              dsn_log_level_t log_level,
-                             const char *title,
                              const char *fmt,
                              ...);
-extern DSN_API void dsn_log(const char *file,
-                            const char *function,
-                            const int line,
-                            dsn_log_level_t log_level,
-                            const char *title);
+extern DSN_API void
+dsn_log(const char *file, const char *function, const int line, dsn_log_level_t log_level);
 extern DSN_API void dsn_coredump();
 
-#define dlog(level, title, ...)                                                                    \
+// __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
+#define dlog(level, ...)                                                                           \
     do {                                                                                           \
         if (level >= dsn_log_start_level)                                                          \
-            dsn_logf(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__);                 \
+            dsn_logf(__FILENAME__, __FUNCTION__, __LINE__, level, __VA_ARGS__);                    \
     } while (false)
-#define dinfo(...) dlog(LOG_LEVEL_INFORMATION, __TITLE__, __VA_ARGS__)
-#define ddebug(...) dlog(LOG_LEVEL_DEBUG, __TITLE__, __VA_ARGS__)
-#define dwarn(...) dlog(LOG_LEVEL_WARNING, __TITLE__, __VA_ARGS__)
-#define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
-#define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
+#define dinfo(...) dlog(LOG_LEVEL_INFORMATION, __VA_ARGS__)
+#define ddebug(...) dlog(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define dwarn(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define derror(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define dfatal(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
 #define dassert(x, ...)                                                                            \
     do {                                                                                           \
         if (!(x)) {                                                                                \
-            dlog(LOG_LEVEL_FATAL, __FILE__, "assertion expression: " #x);                          \
-            dlog(LOG_LEVEL_FATAL, __FILE__, __VA_ARGS__);                                          \
+            dlog(LOG_LEVEL_FATAL, "assertion expression: " #x);                                    \
+            dlog(LOG_LEVEL_FATAL, __VA_ARGS__);                                                    \
             dsn_coredump();                                                                        \
         }                                                                                          \
     } while (false)
@@ -170,7 +166,7 @@ extern DSN_API void dsn_coredump();
 #define dverify_logged(exp, level, ...)                                                            \
     do {                                                                                           \
         if (!(exp)) {                                                                              \
-            dlog(level, __TITLE__, __VA_ARGS__);                                                   \
+            dlog(level, __VA_ARGS__);                                                              \
             return false;                                                                          \
         }                                                                                          \
     } while (0)
@@ -181,7 +177,7 @@ extern DSN_API void dsn_coredump();
 #define dstop_on_false_logged(exp, level, ...)                                                     \
     do {                                                                                           \
         if (!(exp)) {                                                                              \
-            dlog(level, __TITLE__, __VA_ARGS__);                                                   \
+            dlog(level, __VA_ARGS__);                                                              \
             return;                                                                                \
         }                                                                                          \
     } while (0)

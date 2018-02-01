@@ -37,11 +37,6 @@
 #include <dsn/utility/filesystem.h>
 #include <thread>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "fs_manager"
-
 namespace dsn {
 namespace replication {
 

@@ -13,11 +13,6 @@
 #include "replica_stub.h"
 #include "../client_lib/block_service_manager.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.restore"
-
 using namespace dsn::dist::block_service;
 
 namespace dsn {

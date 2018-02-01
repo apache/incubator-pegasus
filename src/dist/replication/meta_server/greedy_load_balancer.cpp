@@ -41,11 +41,6 @@
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "lb.greedy"
-
 namespace dsn {
 namespace replication {
 

@@ -35,11 +35,6 @@
 
 #include "transient_memory.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "transient_memory"
-
 namespace dsn {
 __thread tls_transient_memory_t tls_trans_memory;
 

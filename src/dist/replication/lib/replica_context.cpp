@@ -43,11 +43,6 @@
 #include "mutation_log.h"
 #include "../client_lib/block_service_manager.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.context"
-
 namespace dsn {
 namespace replication {
 

@@ -41,11 +41,6 @@
 #include <atomic>
 #include <vector>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "perf.test.helper"
-
 #define INVALID_DURATION_US 0xdeadbeefdeadbeefULL
 
 namespace dsn {

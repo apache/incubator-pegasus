@@ -37,11 +37,6 @@
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/utility/factory_store.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task_engine"
-
 using namespace dsn::utils;
 
 namespace dsn {

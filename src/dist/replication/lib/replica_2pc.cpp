@@ -39,11 +39,6 @@
 #include "replica_stub.h"
 #include <dsn/dist/replication/replication_app_base.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "replica.2pc"
-
 namespace dsn {
 namespace replication {
 
@@ -104,7 +99,6 @@ void replica::init_prepare(mutation_ptr &mu)
     }
 
     dlog(level,
-         __TITLE__,
          "%s: mutation %s init_prepare, mutation_tid=%" PRIu64,
          name(),
          mu->name(),

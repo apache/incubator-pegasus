@@ -41,11 +41,6 @@
 #include <fcntl.h>
 #include <cstdlib>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "aio.provider.posix"
-
 namespace dsn {
 namespace tools {
 

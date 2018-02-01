@@ -46,11 +46,6 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_writer.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "task"
-
 namespace dsn {
 
 namespace lock_checker {

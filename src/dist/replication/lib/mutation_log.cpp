@@ -41,11 +41,6 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "mutation_log"
-
 namespace dsn {
 namespace replication {
 
