@@ -16,15 +16,25 @@ set(MY_PROJ_LIBS gtest
                  dsn_layer2_stateful_type1
                  dsn_meta_server
                  dsn.replication.clientlib
+                 dsn.block_service.local
+                 dsn.block_service.fds
                  dsn.failure_detector.multimaster
                  dsn.failure_detector
                  dsn.replication.zookeeper_provider
                  zookeeper_mt
-)
+                 galaxy-fds-sdk-cpp
+                 PocoNet
+                 PocoFoundation
+                 PocoNetSSL
+                 PocoJSON
+                 crypto
+                 )
 
 set(MY_PROJ_LIB_PATH 
         ${GTEST_LIB_DIR}
         ${ZOOKEEPER_LIB_DIR}
+        ${LIBFDS_LIB_DIR}
+        ${POCO_LIB_DIR}
         )
 
 # Extra files that will be installed

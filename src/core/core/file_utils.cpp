@@ -36,6 +36,7 @@
 #include <dsn/utility/utils.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdio.h>
 #include <boost/filesystem.hpp>
 
 #ifdef _WIN32
@@ -67,6 +68,8 @@
 #endif
 
 #else
+
+#include <openssl/md5.h>
 
 #if defined(__FreeBSD__)
 #include <sys/types.h>
@@ -985,6 +988,92 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info)
         info.available = in.available;
         return true;
     }
+}
+
+bool link_file(const std::string &src, const std::string &target)
+{
+    if (src.empty() || target.empty())
+        return false;
+    if (!file_exists(src) || file_exists(target))
+        return false;
+    int err = 0;
+#if defined(_WIN32)
+#error not implemented yet
+#else
+    err = ::link(src.c_str(), target.c_str());
+#endif
+    return (err == 0);
+}
+
+error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
+{
+    result.clear();
+    // if file not exist, we return ERR_OBJECT_NOT_FOUND
+    if (!::dsn::utils::filesystem::file_exists(file_path)) {
+        derror("md5sum error: file %s not exist", file_path.c_str());
+        return ERR_OBJECT_NOT_FOUND;
+    }
+
+#if defined(_WIN32)
+#error not implemented yet
+#else
+    FILE *fp = fopen(file_path.c_str(), "rb");
+    if (fp == nullptr) {
+        derror("md5sum error: open file %s failed", file_path.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    char buf[4096];
+    unsigned char out[MD5_DIGEST_LENGTH];
+    MD5_CTX c;
+    MD5_Init(&c);
+    while (true) {
+        size_t ret_code = fread(buf, sizeof(char), 4096, fp);
+        if (ret_code == 4096) {
+            MD5_Update(&c, buf, 4096);
+        } else {
+            if (feof(fp)) {
+                if (ret_code > 0)
+                    MD5_Update(&c, buf, ret_code);
+                break;
+            } else {
+                int err = ferror(fp);
+                derror("md5sum error: read file %s failed: errno = %d (%s)",
+                       file_path.c_str(), err, strerror(err));
+                fclose(fp);
+                MD5_Final(out, &c);
+                return ERR_FILE_OPERATION_FAILED;
+            }
+        }
+    }
+    fclose(fp);
+    MD5_Final(out, &c);
+
+    char str[MD5_DIGEST_LENGTH * 2 + 1];
+    for(int n = 0; n < MD5_DIGEST_LENGTH; n++)
+        sprintf(str + n + n, "%02x", out[n]);
+    result.assign(str);
+#endif
+
+    return ERR_OK;
+}
+
+std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
+{
+    std::pair<error_code, bool> res;
+    res.first = ERR_OK;
+#if defined(_WIN32)
+#error not implemented yet
+#else
+    std::vector<std::string> subfiles;
+    std::vector<std::string> subdirs;
+    if (get_subfiles(dirname, subfiles, false) && get_subdirectories(dirname, subdirs, false)) {
+        res.second = subfiles.empty() && subdirs.empty();
+    } else {
+        res.first = ERR_FILE_OPERATION_FAILED;
+    }
+#endif
+    return res;
 }
 }
 }

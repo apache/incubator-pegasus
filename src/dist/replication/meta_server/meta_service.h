@@ -43,6 +43,8 @@
 
 #include "dist/replication/client_lib/replication_common.h"
 #include "dist/replication/meta_server/meta_options.h"
+#include "dist/replication/meta_server/meta_backup_service.h"
+#include "dist/replication/client_lib/block_service_manager.h"
 
 class meta_service_test_app;
 namespace dsn {
@@ -56,6 +58,8 @@ namespace test {
 class test_checker;
 }
 
+DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+
 class meta_service : public serverlet<meta_service>
 {
 public:
@@ -67,19 +71,35 @@ public:
     const replication_options &get_options() const { return _opts; }
     const meta_options &get_meta_options() const { return _meta_opts; }
     dist::meta_state_service *get_remote_storage() { return _storage.get(); }
+    server_state *get_server_state() { return _state.get(); }
     server_load_balancer *get_balancer() { return _balancer.get(); }
+    block_service_manager &get_block_service_manager() { return _block_service_manager; }
+
     meta_function_level::type get_function_level()
     {
         meta_function_level::type level = _function_level.load();
-        if (level > meta_function_level::fl_freezed && check_freeze())
+        if (level > meta_function_level::fl_freezed && check_freeze()) {
             level = meta_function_level::fl_freezed;
+        }
         return level;
+    }
+
+    template <typename TResponse>
+    void reply_data(dsn_message_t request, const TResponse &data)
+    {
+        dsn_message_t response = dsn_msg_create_response(request);
+        dsn::marshall(response, data);
+        reply_message(request, response);
     }
 
     virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
     virtual void send_message(const rpc_address &target, dsn_message_t request)
     {
         dsn_rpc_call_one_way(target.c_addr(), request);
+    }
+    virtual void send_request(dsn_message_t /*req*/, const rpc_address &target, task_ptr callback)
+    {
+        dsn_rpc_call(target.c_addr(), callback->native_handle());
     }
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock
@@ -117,6 +137,12 @@ private:
     // meta control
     void on_control_meta_level(dsn_message_t req);
     void on_start_recovery(dsn_message_t req);
+    void on_start_restore(dsn_message_t req);
+    void on_add_backup_policy(dsn_message_t req);
+    void on_query_backup_policy(dsn_message_t req);
+    void on_modify_backup_policy(dsn_message_t req);
+    void on_report_restore_status(dsn_message_t req);
+    void on_query_restore_status(dsn_message_t req);
 
     // common routines
     // ret:
@@ -139,6 +165,11 @@ private:
     std::shared_ptr<meta_server_failure_detector> _failure_detector;
     std::shared_ptr<dist::meta_state_service> _storage;
     std::shared_ptr<server_load_balancer> _balancer;
+    std::shared_ptr<backup_service> _backup_handler;
+
+    // handle all the block filesystems for current meta service
+    // (in other words, current service node)
+    block_service_manager _block_service_manager;
 
     // [
     // this is protected by failure_detector::_lock

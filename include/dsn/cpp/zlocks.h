@@ -37,6 +37,7 @@
 
 #include <dsn/service_api_c.h>
 #include <atomic>
+#include <algorithm>
 
 namespace dsn {
 namespace service {
@@ -151,30 +152,72 @@ private:
 class zauto_lock
 {
 public:
-    zauto_lock(zlock &lock) : _lock(&lock) { _lock->lock(); }
-    ~zauto_lock() { _lock->unlock(); }
+    zauto_lock() : _locked(false), _lock(nullptr) {}
+    zauto_lock(zlock &lock) : _locked(true), _lock(&lock) { _lock->lock(); }
+    ~zauto_lock()
+    {
+        if (_locked) {
+            _lock->unlock();
+            _locked = false;
+        }
+    }
+
+    void swap(zauto_lock &other)
+    {
+        std::swap(_locked, other._locked);
+        std::swap(_lock, other._lock);
+    }
 
 private:
+    bool _locked;
     zlock *_lock;
 };
 
 class zauto_read_lock
 {
 public:
-    zauto_read_lock(zrwlock_nr &lock) : _lock(&lock) { _lock->lock_read(); }
-    ~zauto_read_lock() { _lock->unlock_read(); }
+    zauto_read_lock() : _locked(false), _lock(nullptr) {}
+    zauto_read_lock(zrwlock_nr &lock) : _locked(true), _lock(&lock) { _lock->lock_read(); }
+    ~zauto_read_lock()
+    {
+        if (_locked) {
+            _lock->unlock_read();
+            _locked = false;
+        }
+    }
+
+    void swap(zauto_read_lock &other)
+    {
+        std::swap(_locked, other._locked);
+        std::swap(_lock, other._lock);
+    }
 
 private:
+    bool _locked;
     zrwlock_nr *_lock;
 };
 
 class zauto_write_lock
 {
 public:
-    zauto_write_lock(zrwlock_nr &lock) : _lock(&lock) { _lock->lock_write(); }
-    ~zauto_write_lock() { _lock->unlock_write(); }
+    zauto_write_lock() : _locked(false), _lock(nullptr) {}
+    zauto_write_lock(zrwlock_nr &lock) : _locked(true), _lock(&lock) { _lock->lock_write(); }
+    ~zauto_write_lock()
+    {
+        if (_locked) {
+            _lock->unlock_write();
+            _locked = false;
+        }
+    }
+
+    void swap(zauto_write_lock &other)
+    {
+        std::swap(_locked, other._locked);
+        std::swap(_lock, other._lock);
+    }
 
 private:
+    bool _locked;
     zrwlock_nr *_lock;
 };
 }

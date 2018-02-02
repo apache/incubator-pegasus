@@ -46,6 +46,8 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>
+#include <dsn/cpp/zlocks.h>
+#include <dsn/dist/block_service.h>
 
 namespace dsn {
 namespace replication {
@@ -266,6 +268,14 @@ struct partition_configuration_stateless
     bool is_member(const rpc_address &node) const { return is_host(node) || is_worker(node); }
 };
 
+struct restore_state
+{
+    dsn::error_code restore_status;
+    int32_t progress;
+    std::string reason;
+    restore_state() : restore_status(dsn::ERR_OK), progress(0), reason() {}
+};
+
 class app_state;
 class app_state_helper
 {
@@ -274,6 +284,7 @@ public:
     std::atomic_int partitions_in_progress;
     std::vector<config_context> contexts;
     dsn_message_t pending_response;
+    std::vector<restore_state> restore_states;
 
 public:
     app_state_helper() : owner(nullptr), partitions_in_progress(0)
@@ -290,6 +301,19 @@ public:
     }
 };
 
+/*
+ * NOTICE: several keys in envs are reserved for recover from cold_backup:
+ * envs["block_service_provider"] = <block_service_provider>
+ * envs["cluster_name"] = <cluster_name>
+ * envs["policy_name"] = <policy_name>
+ * envs["app_name"] = <app_name>
+ * envs["app_id"] = <app_id>
+ * envs["backup_id"] = <backup_id>
+ * envs["skip_bad_partition"] = <"true" or "false">
+ *
+ * after a newly assigned primary get these envs from app_info, it will try to
+ * init a replica with data stored on the block_device
+ */
 class app_state : public app_info
 {
 protected:
@@ -503,9 +527,9 @@ inline void json_encode(std::stringstream &out, const replication::app_state &st
     json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info &)state);
 }
 
-inline void json_decode(dsn::json::string_tokenizer &in, replication::app_state &state)
+inline bool json_decode(dsn::json::string_tokenizer &in, replication::app_state &state)
 {
-    json_forwarder<dsn::app_info>::decode(in, (dsn::app_info &)state);
+    return json_forwarder<dsn::app_info>::decode(in, (dsn::app_info &)state);
 }
 }
 }

@@ -373,6 +373,7 @@ void app_state_helper::on_init_partitions()
     }
 
     partitions_in_progress.store(owner->partition_count);
+    restore_states.resize(owner->partition_count);
 }
 
 app_state::app_state(const app_info &info) : app_info(info), helpers(new app_state_helper())

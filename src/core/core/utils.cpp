@@ -217,6 +217,16 @@ void time_ms_to_date_time(uint64_t ts_ms, char *str, int len)
     auto ret = localtime_r(&t, &tmp);
     strftime(str, len, "%Y-%m-%d %H:%M:%S", ret);
 }
+
+void time_ms_to_date_time(uint64_t ts_ms, int32_t &hour, int32_t &min, int32_t &sec)
+{
+    auto t = (time_t)(ts_ms / 1000);
+    struct tm tmp;
+    auto ret = localtime_r(&t, &tmp);
+    hour = ret->tm_hour;
+    min = ret->tm_min;
+    sec = ret->tm_sec;
+}
 }
 }
 

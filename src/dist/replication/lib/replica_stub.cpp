@@ -192,6 +192,59 @@ void replica_stub::install_perf_counters()
 
     _counter_shared_log_size.init(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
+
+    _counter_cold_backup_running_count.init("eon.replica_stub",
+                                            "cold.backup.running.count",
+                                            COUNTER_TYPE_NUMBER,
+                                            "current cold backup count");
+    _counter_cold_backup_recent_start_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.start.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup start count in the recent period");
+    _counter_cold_backup_recent_succ_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.succ.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup succeed count in the recent period");
+    _counter_cold_backup_recent_fail_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.fail.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup fail count in the recent period");
+    _counter_cold_backup_recent_cancel_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.cancel.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup cancel count in the recent period");
+    _counter_cold_backup_recent_pause_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.pause.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup pause count in the recent period");
+    _counter_cold_backup_recent_upload_file_succ_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.upload.file.succ.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup upload file succeed count in the recent period");
+    _counter_cold_backup_recent_upload_file_fail_count.init(
+        "eon.replica_stub",
+        "cold.backup.recent.upload.file.fail.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup upload file failed count in the recent period");
+    _counter_cold_backup_recent_upload_file_size.init(
+        "eon.replica_stub",
+        "cold.backup.recent.upload.file.size",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "current cold backup upload file size in the recent perriod");
+    _counter_cold_backup_max_duration_time_ms.init("eon.replica_stub",
+                                                   "cold.backup.max.duration.time.ms",
+                                                   COUNTER_TYPE_NUMBER,
+                                                   "current cold backup max duration time");
+    _counter_cold_backup_max_upload_file_size.init("eon.replica_stub",
+                                                   "cold.backup.max.upload.file.size",
+                                                   COUNTER_TYPE_NUMBER,
+                                                   "current cold backup max upload file size");
 }
 
 void replica_stub::initialize(bool clear /* = false*/)
@@ -588,7 +641,7 @@ replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const a
             return nullptr;
         } else {
             dassert(app, "");
-            replica *rep = replica::newr(this, gpid, *app);
+            replica *rep = replica::newr(this, gpid, *app, false);
             if (rep != nullptr) {
                 add_replica(rep);
                 _closed_replicas.erase(gpid);
@@ -769,6 +822,41 @@ void replica_stub::on_query_app_info(const query_app_info_request &req,
                 visited_apps.insert(info.app_id);
             }
         }
+    }
+}
+
+void replica_stub::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
+{
+    ddebug("received cold backup request: backup{%d.%d.%s.%" PRId64 "}",
+           request.pid.get_app_id(),
+           request.pid.get_partition_index(),
+           request.policy.policy_name.c_str(),
+           request.backup_id);
+    response.pid = request.pid;
+    response.policy_name = request.policy.policy_name;
+    response.backup_id = request.backup_id;
+
+    if (_options.cold_backup_root.empty()) {
+        derror("backup{%d.%d.%s.%" PRId64
+               "}: cold_backup_root is empty, response ERR_OPERATION_DISABLED",
+               request.pid.get_app_id(),
+               request.pid.get_partition_index(),
+               request.policy.policy_name.c_str(),
+               request.backup_id);
+        response.err = ERR_OPERATION_DISABLED;
+        return;
+    }
+
+    replica_ptr rep = get_replica(request.pid);
+    if (rep != nullptr) {
+        rep->on_cold_backup(request, response);
+    } else {
+        derror("backup{%d.%d.%s.%" PRId64 "}: replica not found, response ERR_OBJECT_NOT_FOUND",
+               request.pid.get_app_id(),
+               request.pid.get_partition_index(),
+               request.policy.policy_name.c_str(),
+               request.backup_id);
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 
@@ -1333,6 +1421,9 @@ void replica_stub::on_gc()
     uint64_t learning_count = 0;
     uint64_t learning_max_duration_time_ms = 0;
     uint64_t learning_max_copy_file_size = 0;
+    uint64_t cold_backup_running_count = 0;
+    uint64_t cold_backup_max_duration_time_ms = 0;
+    uint64_t cold_backup_max_upload_file_size = 0;
     for (auto it = rs.begin(); it != rs.end(); ++it) {
         replica_ptr &r = it->second;
         if (r->status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -1343,11 +1434,21 @@ void replica_stub::on_gc()
                 std::max(learning_max_copy_file_size,
                          r->_potential_secondary_states.learning_copy_file_size);
         }
+        if (r->status() == partition_status::PS_PRIMARY ||
+            r->status() == partition_status::PS_SECONDARY) {
+            cold_backup_running_count += r->_cold_backup_running_count.load();
+            cold_backup_max_duration_time_ms = std::max(
+                cold_backup_max_duration_time_ms, r->_cold_backup_max_duration_time_ms.load());
+            cold_backup_max_upload_file_size = std::max(
+                cold_backup_max_upload_file_size, r->_cold_backup_max_upload_file_size.load());
+        }
     }
     _counter_replicas_learning_count.set(learning_count);
     _counter_replicas_learning_max_duration_time_ms.set(learning_max_duration_time_ms);
     _counter_replicas_learning_max_copy_file_size.set(learning_max_copy_file_size);
-
+    _counter_cold_backup_running_count.set(cold_backup_running_count);
+    _counter_cold_backup_max_duration_time_ms.set(cold_backup_max_duration_time_ms);
+    _counter_cold_backup_max_upload_file_size.set(cold_backup_max_upload_file_size);
     // gc shared prepare log
     //
     // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when
@@ -1594,6 +1695,9 @@ void replica_stub::open_replica(const app_info &app,
     std::string dir = get_replica_dir(app.app_type.c_str(), gpid, false);
     replica_ptr rep = nullptr;
     if (!dir.empty()) {
+        // NOTICE: if partition is DDD, and meta select one replica as primary, it will execute the
+        // load-process because of a.b.pegasus is exist, so it will never execute the restore
+        // process below
         ddebug("%d.%d@%s: start to load replica %s group check, dir = %s",
                gpid.get_app_id(),
                gpid.get_partition_index(),
@@ -1604,7 +1708,26 @@ void replica_stub::open_replica(const app_info &app,
     }
 
     if (rep == nullptr) {
-        rep = replica::newr(this, gpid, app);
+        // NOTICE: only new_replica_group's assign_primary will execute this; if server restart when
+        // download restore-data from cold backup media, the a.b.pegasus will move to
+        // a.b.pegasus.timestamp.err when replica-server load all the replicas, so restore-flow will
+        // do it again
+
+        bool restore_if_necessary =
+            ((req2 != nullptr) && (req2->type == config_type::CT_ASSIGN_PRIMARY) &&
+             (app.envs.find(cold_backup_constant::POLICY_NAME) != app.envs.end()));
+
+        // NOTICE: when we don't need execute restore-process, we should remove a.b.pegasus
+        // directory because it don't contain the valid data dir and also we need create a new
+        // replica(if contain valid data, it will execute load-process)
+
+        if (!restore_if_necessary && ::dsn::utils::filesystem::directory_exists(dir)) {
+            if (!::dsn::utils::filesystem::remove_path(dir)) {
+                dassert(false, "remove use directory(%s) failed", dir.c_str());
+                return;
+            }
+        }
+        rep = replica::newr(this, gpid, app, restore_if_necessary);
     }
 
     if (rep == nullptr) {
@@ -1749,6 +1872,9 @@ void replica_stub::open_service()
         RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 
     register_rpc_handler(RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
+
+    register_rpc_handler(RPC_COLD_BACKUP, "ColdBackup", &replica_stub::on_cold_backup);
+
     /*_cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of
     replica_stub on this node", "",
         this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);

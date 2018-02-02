@@ -52,13 +52,18 @@ using namespace dsn::service;
 
 error_code replica::initialize_on_new()
 {
-    if (dsn::utils::filesystem::directory_exists(_dir) &&
-        !dsn::utils::filesystem::remove_path(_dir)) {
-        derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
-        return ERR_PATH_ALREADY_EXIST;
-    }
-
-    if (!dsn::utils::filesystem::create_directory(_dir)) {
+    // if (dsn::utils::filesystem::directory_exists(_dir) &&
+    //    !dsn::utils::filesystem::remove_path(_dir))
+    //{
+    //    derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
+    //    return ERR_PATH_ALREADY_EXIST;
+    //}
+    //
+    // TODO: check if _dir contain other file or directory except for
+    // "restore.policy_name.backup_id"
+    // which is applied to restore from cold backup
+    if (!dsn::utils::filesystem::directory_exists(_dir) &&
+        !dsn::utils::filesystem::create_directory(_dir)) {
         derror("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -75,11 +80,21 @@ error_code replica::initialize_on_new()
     return init_app_and_prepare_list(true);
 }
 
-/*static*/ replica *replica::newr(replica_stub *stub, gpid gpid, const app_info &app)
+/*static*/ replica *
+replica::newr(replica_stub *stub, gpid gpid, const app_info &app, bool restore_if_necessary)
 {
     std::string dir = stub->get_replica_dir(app.app_type.c_str(), gpid);
-    replica *rep = new replica(stub, gpid, app, dir.c_str());
-    error_code err = rep->initialize_on_new();
+    replica *rep = new replica(stub, gpid, app, dir.c_str(), restore_if_necessary);
+    error_code err;
+    if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
+        ddebug("try to restore replica %s failed, error(%s)", rep->name(), err.to_string());
+        // clear work on failure
+        utils::filesystem::remove_path(dir);
+        stub->_fs_manager.remove_replica(gpid);
+        return nullptr;
+    }
+
+    err = rep->initialize_on_new();
     if (err == ERR_OK) {
         dinfo("%s: new replica succeed", rep->name());
         return rep;
@@ -147,7 +162,7 @@ error_code replica::initialize_on_load()
         return nullptr;
     }
 
-    replica *rep = new replica(stub, gpid, info, dir);
+    replica *rep = new replica(stub, gpid, info, dir, false);
 
     err = rep->initialize_on_load();
     if (err == ERR_OK) {
@@ -187,6 +202,16 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
     if (create_new) {
         err = _app->open_new_internal(this, _stub->_log->on_partition_reset(get_gpid(), 0), 0);
+        // two case:
+        //      1, just open a new app, in this case, the last_committed_decree and
+        //      last_durable_decree
+        //         and committed_decree of prepare_list are all equal, and is 0
+        //      2, open app with some data, but don't have slog and plog and also don't have
+        //      app_info;
+        //         in this case, last_committed_decree = last_durable_decree >= 0, but
+        //         last_committed_decree
+        //         in prepare_list is 0, so should make it equal to last_committed_decree in app
+        _prepare_list->reset(_app->last_committed_decree());
     } else {
         err = _app->open_internal(this);
         if (err == ERR_OK) {
@@ -321,6 +346,14 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                                        this,
                                        [this] { on_checkpoint_timer(); },
                                        std::chrono::seconds(_options->checkpoint_interval_seconds),
+                                       gpid_to_thread_hash(get_gpid()));
+        }
+        if (_collect_info_timer == nullptr) {
+            _collect_info_timer =
+                tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
+                                       this,
+                                       [this]() { collect_backup_info(); },
+                                       std::chrono::milliseconds(_options->gc_interval_ms),
                                        gpid_to_thread_hash(get_gpid()));
         }
     }

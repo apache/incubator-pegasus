@@ -303,9 +303,12 @@ replication_app_base::replication_app_base(replica *replica)
 {
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
+    _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
     _last_committed_decree = 0;
     _replica = replica;
     _callbacks = replica->get_app_callbacks();
+    _app_context = nullptr;
+    _app_context_callbacks = nullptr;
 
     install_perf_counters();
 }
@@ -369,7 +372,7 @@ error_code replication_app_base::open_new_internal(replica *r,
 
     auto err = open();
     if (err == ERR_OK) {
-        _last_committed_decree = 0;
+        _last_committed_decree = last_durable_decree();
         err = update_init_info(_replica, shared_log_start, private_log_start, 0);
     }
 
@@ -399,6 +402,10 @@ error_code replication_app_base::open_new_internal(replica *r,
                 return ERR_INVALID_PARAMETERS;
             }
             env_string += (kv.first + ':' + kv.second + ',');
+        }
+        const std::map<std::string, std::string> &extra_envs = _replica->get_replica_extra_envs();
+        for (const auto &pair : extra_envs) {
+            env_string += (pair.first + ':' + pair.second + ',');
         }
         if (!env_string.empty()) {
             env_string.back() = '\0';

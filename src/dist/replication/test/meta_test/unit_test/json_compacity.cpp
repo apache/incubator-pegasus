@@ -59,4 +59,15 @@ void meta_service_test_app::json_compacity()
     ASSERT_EQ(0, strcmp(pc.secondaries[0].to_string(), "127.0.0.1:6"));
     ASSERT_EQ(157, pc.last_committed_decree);
     ASSERT_EQ(0, pc.partition_flags);
+
+    // 5. not valid json
+    const char *json4 = "{\"pid\":\"1.1\",\"ballot\":234,\"max_replica_count\":3,"
+                        "\"primary\":\"invalid address\",\"secondaries\":[\"127.0.0.1:6\","
+                        "\"last_drops\":[],\"last_committed_decree\":157}";
+    dsn::json::string_tokenizer in(json4, 0, strlen(json4));
+    bool result = dsn::json::json_forwarder<dsn::partition_configuration>::decode(in, pc);
+    ASSERT_FALSE(result);
+    if (!result) {
+        std::cout << "invalid pos: " << json4 + in.tell() << std::endl;
+    }
 }

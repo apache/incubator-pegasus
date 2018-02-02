@@ -119,6 +119,39 @@ public:
     // a.b.c.d:port1,e.f.g.h:port2 -> hostname1:port2,hostname2:port2
     static std::string list_hostname_from_ip_port(const char *ip_port_list);
 
+    dsn::error_code do_restore(const std::string &backup_provider_name,
+                               const std::string &cluster_name,
+                               const std::string &policy_name,
+                               int64_t timestamp /*backup_id*/,
+                               const std::string &old_app_name,
+                               int32_t old_app_id,
+                               /* paras above is used to combine the path on block service*/
+                               const std::string &new_app_name,
+                               bool skip_bad_partition);
+
+    dsn::error_code query_restore(int32_t restore_app_id);
+
+    dsn::error_code add_backup_policy(const std::string &policy_name,
+                                      const std::string &backup_provider_type,
+                                      const std::vector<int32_t> &app_ids,
+                                      int64_t backup_interval_seconds,
+                                      int32_t backup_history_cnt,
+                                      const std::string &start_time);
+
+    dsn::error_code disable_backup_policy(const std::string &policy_name);
+
+    dsn::error_code enable_backup_policy(const std::string &policy_name);
+
+    dsn::error_code query_backup_policy(const std::vector<std::string> &policy_names,
+                                        int backup_info_cnt);
+
+    dsn::error_code update_backup_policy(const std::string &policy_name,
+                                         const std::vector<int32_t> &add_appids,
+                                         const std::vector<int32_t> &removal_appids,
+                                         int64_t new_backup_interval_sec,
+                                         int32_t backup_history_count_to_keep = 0,
+                                         const std::string &start_time = std::string());
+
 private:
     bool static valid_app_char(int c);
 

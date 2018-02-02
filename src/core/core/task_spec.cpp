@@ -180,6 +180,10 @@ bool task_spec::init()
         if (!read_config(section_name.c_str(), *spec, &default_spec))
             return false;
 
+        if (code == TASK_CODE_EXEC_INLINED) {
+            spec->allow_inline = true;
+        }
+
         dassert(spec->rpc_request_delays_milliseconds.size() == 0 ||
                     spec->rpc_request_delays_milliseconds.size() == 6,
                 "invalid length of rpc_request_delays_milliseconds, must be of length 6");

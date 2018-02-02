@@ -16,9 +16,9 @@
 
 #include <thrift/cxxfunctional.h>
 
-namespace dsn {
-namespace example {
-}
-} // namespace
+
+namespace dsn { namespace example {
+
+}} // namespace
 
 #endif

@@ -198,21 +198,26 @@ void meta_service::start_service()
                            std::chrono::milliseconds(_opts.lb_interval_ms),
                            server_state::sStateHash,
                            std::chrono::milliseconds(_opts.lb_interval_ms));
+
+    if (!_meta_opts.cold_backup_disabled) {
+        ddebug("start backup service");
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         nullptr,
+                         std::bind(&backup_service::start, _backup_handler.get()));
+    }
 }
 
+// the start function is executed in threadpool default
 error_code meta_service::start()
 {
     dassert(!_started, "meta service is already started");
     error_code err;
 
     err = remote_storage_initialize();
-    if (err != ERR_OK) {
-        derror("init remote storage failed, err = %s", err.to_string());
-        return err;
-    }
+    dreturn_not_ok_logged(err, "init remote storage failed, err = %s", err.to_string());
     ddebug("remote storage is successfully initialized");
 
-    // we should start the FD service to response to the workers fd request
+    // start failure detector, and try to acqure the leader lock
     _failure_detector.reset(new meta_server_failure_detector(this));
     err = _failure_detector->start(_opts.fd_check_interval_seconds,
                                    _opts.fd_beacon_interval_seconds,
@@ -220,10 +225,7 @@ error_code meta_service::start()
                                    _opts.fd_grace_seconds,
                                    false);
 
-    if (err != ERR_OK) {
-        derror("start failure_detector failed, err = %s", err.to_string());
-        return err;
-    }
+    dreturn_not_ok_logged(err, "start failure_detector failed, err = %s", err.to_string());
     ddebug("meta service failure detector is successfully started");
 
     // should register rpc handlers before acquiring leader lock, so that this meta service
@@ -235,11 +237,24 @@ error_code meta_service::start()
     ddebug("%s got the primary lock, start to recover server state from remote storage",
            primary_address().to_string());
 
-    _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
+    // initialize the load balancer
     server_load_balancer *balancer = utils::factory_store<server_load_balancer>::create(
         _meta_opts._lb_opts.server_load_balancer_type.c_str(), PROVIDER_TYPE_MAIN, this);
     _balancer.reset(balancer);
 
+    // initializing the backup_handler should after remote_storage be initialized,
+    // because we should use _cluster_root
+    if (!_meta_opts.cold_backup_disabled) {
+        ddebug("initialize backup handler");
+        _backup_handler = std::make_shared<backup_service>(
+            this,
+            meta_options::concat_path_unix_style(_cluster_root, "backup_policy"),
+            _opts.cold_backup_root,
+            [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
+    }
+
+    // initialize the server_state
+    _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
     while ((err = _state->initialize_data_structure()) != ERR_OK) {
         if (err == ERR_OBJECT_NOT_FOUND && _meta_opts.recover_from_replica_server) {
             ddebug("can't find apps from remote storage, and "
@@ -256,6 +271,7 @@ error_code meta_service::start()
     start_service();
 
     ddebug("start meta_service succeed");
+
     return ERR_OK;
 }
 
@@ -282,6 +298,20 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(
         RPC_CM_CONTROL_META, "control_meta_level", &meta_service::on_control_meta_level);
     register_rpc_handler(RPC_CM_START_RECOVERY, "start_recovery", &meta_service::on_start_recovery);
+    register_rpc_handler(RPC_CM_START_RESTORE, "start_restore", &meta_service::on_start_restore);
+    register_rpc_handler(
+        RPC_CM_ADD_BACKUP_POLICY, "add_backup_policy", &meta_service::on_add_backup_policy);
+    register_rpc_handler(
+        RPC_CM_QUERY_BACKUP_POLICY, "query_backup_policy", &meta_service::on_query_backup_policy);
+    register_rpc_handler(RPC_CM_MODIFY_BACKUP_POLICY,
+                         "modify_backup_policy",
+                         &meta_service::on_modify_backup_policy);
+    register_rpc_handler(RPC_CM_REPORT_RESTORE_STATUS,
+                         "report_restore_status",
+                         &meta_service::on_report_restore_status);
+    register_rpc_handler(RPC_CM_QUERY_RESTORE_STATUS,
+                         "query_restore_status",
+                         &meta_service::on_query_restore_status);
 }
 
 int meta_service::check_leader(dsn_message_t req)
@@ -578,6 +608,89 @@ void meta_service::on_start_recovery(dsn_message_t req)
         }
     }
     reply(req, response);
+}
+
+void meta_service::on_start_restore(dsn_message_t req)
+{
+    configuration_create_app_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    dsn_msg_add_ref(req);
+    tasking::enqueue(
+        LPC_RESTORE_BACKGROUND, nullptr, std::bind(&server_state::restore_app, _state.get(), req));
+}
+
+void meta_service::on_add_backup_policy(dsn_message_t req)
+{
+    configuration_add_backup_policy_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    if (_backup_handler == nullptr) {
+        derror("meta doesn't enable backup service");
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+    } else {
+        dsn_msg_add_ref(req);
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         nullptr,
+                         std::bind(&backup_service::add_new_policy, _backup_handler.get(), req));
+    }
+}
+
+void meta_service::on_query_backup_policy(dsn_message_t req)
+{
+    configuration_query_backup_policy_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    if (_backup_handler == nullptr) {
+        derror("meta doesn't enable backup service");
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+    } else {
+        dsn_msg_add_ref(req);
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         nullptr,
+                         std::bind(&backup_service::query_policy, _backup_handler.get(), req));
+    }
+}
+
+void meta_service::on_modify_backup_policy(dsn_message_t req)
+{
+    configuration_modify_backup_policy_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    if (_backup_handler == nullptr) {
+        derror("meta doesn't enable backup service");
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+    } else {
+        dsn_msg_add_ref(req);
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         nullptr,
+                         std::bind(&backup_service::modify_policy, _backup_handler.get(), req));
+    }
+}
+
+void meta_service::on_report_restore_status(dsn_message_t req)
+{
+    configuration_report_restore_status_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     nullptr,
+                     std::bind(&server_state::on_recv_restore_report, _state.get(), req));
+}
+
+void meta_service::on_query_restore_status(dsn_message_t req)
+{
+    configuration_query_restore_response response;
+    RPC_CHECK_STATUS(req, response);
+
+    dsn_msg_add_ref(req);
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     nullptr,
+                     std::bind(&server_state::on_query_restore_status, _state.get(), req));
 }
 }
 }

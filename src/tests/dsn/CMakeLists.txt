@@ -4,9 +4,9 @@ set(MY_PROJ_NAME dsn.tests)
 # You can manually set MY_PROJ_SRC to include source files under other directories.
 set(MY_PROJ_SRC "")
 
-# Search mode for source files under CURRENT project directory?
-# "GLOB_RECURSE" for recursive search
-# "GLOB" for non-recursive search
+#  Search mode for source files under CURRENT project directory?
+#  "GLOB_RECURSE" for recursive search
+#  "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 if (UNIX)
@@ -19,10 +19,18 @@ set(MY_PROJ_LIBS
     dsn_meta_server
     dsn_layer2_stateful_type1
     dsn.replication.clientlib
+    dsn.block_service.local
+    dsn.block_service.fds
     dsn.failure_detector.multimaster
     dsn.failure_detector
     dsn.replication.zookeeper_provider
     zookeeper_mt
+    galaxy-fds-sdk-cpp
+    PocoNet
+    PocoFoundation
+    PocoNetSSL
+    PocoJSON
+    crypto
     ${MY_PROJ_LIBS}
     )
 

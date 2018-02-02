@@ -274,10 +274,26 @@ extern DSN_API void dsn_coredump();
         }                                                                                          \
     } while (false)
 
+#define dreturn_not_ok_logged(err, ...)                                                            \
+    do {                                                                                           \
+        if ((err) != dsn::ERR_OK) {                                                                \
+            derror(__VA_ARGS__);                                                                   \
+            return err;                                                                            \
+        }                                                                                          \
+    } while (0)
+
 #ifndef NDEBUG
 #define dbg_dassert dassert
 #else
 #define dbg_dassert(x, ...)
+#endif
+
+#ifdef DSN_MOCK_TEST
+#define mock_private public
+#define mock_virtual virtual
+#else
+#define mock_private private
+#define mock_virtual
 #endif
 
 /*@}*/

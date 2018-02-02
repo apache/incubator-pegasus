@@ -17,111 +17,97 @@
 
 #include <thrift/cxxfunctional.h>
 
-namespace dsn {
-namespace replication {
 
-struct partition_status
-{
-    enum type
-    {
-        PS_INVALID = 0,
-        PS_INACTIVE = 1,
-        PS_ERROR = 2,
-        PS_PRIMARY = 3,
-        PS_SECONDARY = 4,
-        PS_POTENTIAL_SECONDARY = 5
-    };
+namespace dsn { namespace replication {
+
+struct partition_status {
+  enum type {
+    PS_INVALID = 0,
+    PS_INACTIVE = 1,
+    PS_ERROR = 2,
+    PS_PRIMARY = 3,
+    PS_SECONDARY = 4,
+    PS_POTENTIAL_SECONDARY = 5
+  };
 };
 
-extern const std::map<int, const char *> _partition_status_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _partition_status_VALUES_TO_NAMES;
 
-struct read_semantic
-{
-    enum type
-    {
-        ReadInvalid = 0,
-        ReadLastUpdate = 1,
-        ReadOutdated = 2,
-        ReadSnapshot = 3
-    };
+struct read_semantic {
+  enum type {
+    ReadInvalid = 0,
+    ReadLastUpdate = 1,
+    ReadOutdated = 2,
+    ReadSnapshot = 3
+  };
 };
 
-extern const std::map<int, const char *> _read_semantic_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _read_semantic_VALUES_TO_NAMES;
 
-struct learn_type
-{
-    enum type
-    {
-        LT_INVALID = 0,
-        LT_CACHE = 1,
-        LT_APP = 2,
-        LT_LOG = 3
-    };
+struct learn_type {
+  enum type {
+    LT_INVALID = 0,
+    LT_CACHE = 1,
+    LT_APP = 2,
+    LT_LOG = 3
+  };
 };
 
-extern const std::map<int, const char *> _learn_type_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _learn_type_VALUES_TO_NAMES;
 
-struct learner_status
-{
-    enum type
-    {
-        LearningInvalid = 0,
-        LearningWithoutPrepare = 1,
-        LearningWithPrepareTransient = 2,
-        LearningWithPrepare = 3,
-        LearningSucceeded = 4,
-        LearningFailed = 5
-    };
+struct learner_status {
+  enum type {
+    LearningInvalid = 0,
+    LearningWithoutPrepare = 1,
+    LearningWithPrepareTransient = 2,
+    LearningWithPrepare = 3,
+    LearningSucceeded = 4,
+    LearningFailed = 5
+  };
 };
 
-extern const std::map<int, const char *> _learner_status_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _learner_status_VALUES_TO_NAMES;
 
-struct config_type
-{
-    enum type
-    {
-        CT_INVALID = 0,
-        CT_ASSIGN_PRIMARY = 1,
-        CT_UPGRADE_TO_PRIMARY = 2,
-        CT_ADD_SECONDARY = 3,
-        CT_UPGRADE_TO_SECONDARY = 4,
-        CT_DOWNGRADE_TO_SECONDARY = 5,
-        CT_DOWNGRADE_TO_INACTIVE = 6,
-        CT_REMOVE = 7,
-        CT_ADD_SECONDARY_FOR_LB = 8,
-        CT_PRIMARY_FORCE_UPDATE_BALLOT = 9,
-        CT_DROP_PARTITION = 10
-    };
+struct config_type {
+  enum type {
+    CT_INVALID = 0,
+    CT_ASSIGN_PRIMARY = 1,
+    CT_UPGRADE_TO_PRIMARY = 2,
+    CT_ADD_SECONDARY = 3,
+    CT_UPGRADE_TO_SECONDARY = 4,
+    CT_DOWNGRADE_TO_SECONDARY = 5,
+    CT_DOWNGRADE_TO_INACTIVE = 6,
+    CT_REMOVE = 7,
+    CT_ADD_SECONDARY_FOR_LB = 8,
+    CT_PRIMARY_FORCE_UPDATE_BALLOT = 9,
+    CT_DROP_PARTITION = 10
+  };
 };
 
-extern const std::map<int, const char *> _config_type_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _config_type_VALUES_TO_NAMES;
 
-struct node_status
-{
-    enum type
-    {
-        NS_INVALID = 0,
-        NS_ALIVE = 1,
-        NS_UNALIVE = 2
-    };
+struct node_status {
+  enum type {
+    NS_INVALID = 0,
+    NS_ALIVE = 1,
+    NS_UNALIVE = 2
+  };
 };
 
-extern const std::map<int, const char *> _node_status_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _node_status_VALUES_TO_NAMES;
 
-struct meta_function_level
-{
-    enum type
-    {
-        fl_stopped = 100,
-        fl_blind = 200,
-        fl_freezed = 300,
-        fl_steady = 400,
-        fl_lively = 500,
-        fl_invalid = 10000
-    };
+struct meta_function_level {
+  enum type {
+    fl_stopped = 100,
+    fl_blind = 200,
+    fl_freezed = 300,
+    fl_steady = 400,
+    fl_lively = 500,
+    fl_invalid = 10000
+  };
 };
 
-extern const std::map<int, const char *> _meta_function_level_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _meta_function_level_VALUES_TO_NAMES;
 
 class mutation_header;
 
@@ -221,2957 +207,4023 @@ class configuration_recovery_request;
 
 class configuration_recovery_response;
 
-typedef struct _mutation_header__isset
-{
-    _mutation_header__isset()
-        : pid(false),
-          ballot(false),
-          decree(false),
-          log_offset(false),
-          last_committed_decree(false),
-          timestamp(false)
-    {
-    }
-    bool pid : 1;
-    bool ballot : 1;
-    bool decree : 1;
-    bool log_offset : 1;
-    bool last_committed_decree : 1;
-    bool timestamp : 1;
+class policy_info;
+
+class configuration_restore_request;
+
+class backup_request;
+
+class backup_response;
+
+class configuration_modify_backup_policy_request;
+
+class configuration_modify_backup_policy_response;
+
+class configuration_add_backup_policy_request;
+
+class configuration_add_backup_policy_response;
+
+class policy_entry;
+
+class backup_entry;
+
+class configuration_query_backup_policy_request;
+
+class configuration_query_backup_policy_response;
+
+class configuration_report_restore_status_request;
+
+class configuration_report_restore_status_response;
+
+class configuration_query_restore_request;
+
+class configuration_query_restore_response;
+
+typedef struct _mutation_header__isset {
+  _mutation_header__isset() : pid(false), ballot(false), decree(false), log_offset(false), last_committed_decree(false), timestamp(false) {}
+  bool pid :1;
+  bool ballot :1;
+  bool decree :1;
+  bool log_offset :1;
+  bool last_committed_decree :1;
+  bool timestamp :1;
 } _mutation_header__isset;
 
-class mutation_header
-{
-public:
-    mutation_header(const mutation_header &);
-    mutation_header(mutation_header &&);
-    mutation_header &operator=(const mutation_header &);
-    mutation_header &operator=(mutation_header &&);
-    mutation_header() : ballot(0), decree(0), log_offset(0), last_committed_decree(0), timestamp(0)
-    {
-    }
+class mutation_header {
+ public:
 
-    virtual ~mutation_header() throw();
-    ::dsn::gpid pid;
-    int64_t ballot;
-    int64_t decree;
-    int64_t log_offset;
-    int64_t last_committed_decree;
-    int64_t timestamp;
+  mutation_header(const mutation_header&);
+  mutation_header(mutation_header&&);
+  mutation_header& operator=(const mutation_header&);
+  mutation_header& operator=(mutation_header&&);
+  mutation_header() : ballot(0), decree(0), log_offset(0), last_committed_decree(0), timestamp(0) {
+  }
 
-    _mutation_header__isset __isset;
+  virtual ~mutation_header() throw();
+   ::dsn::gpid pid;
+  int64_t ballot;
+  int64_t decree;
+  int64_t log_offset;
+  int64_t last_committed_decree;
+  int64_t timestamp;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _mutation_header__isset __isset;
 
-    void __set_ballot(const int64_t val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_decree(const int64_t val);
+  void __set_ballot(const int64_t val);
 
-    void __set_log_offset(const int64_t val);
+  void __set_decree(const int64_t val);
 
-    void __set_last_committed_decree(const int64_t val);
+  void __set_log_offset(const int64_t val);
 
-    void __set_timestamp(const int64_t val);
+  void __set_last_committed_decree(const int64_t val);
 
-    bool operator==(const mutation_header &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(ballot == rhs.ballot))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(log_offset == rhs.log_offset))
-            return false;
-        if (!(last_committed_decree == rhs.last_committed_decree))
-            return false;
-        if (!(timestamp == rhs.timestamp))
-            return false;
-        return true;
-    }
-    bool operator!=(const mutation_header &rhs) const { return !(*this == rhs); }
+  void __set_timestamp(const int64_t val);
 
-    bool operator<(const mutation_header &) const;
+  bool operator == (const mutation_header & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(ballot == rhs.ballot))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(log_offset == rhs.log_offset))
+      return false;
+    if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    if (!(timestamp == rhs.timestamp))
+      return false;
+    return true;
+  }
+  bool operator != (const mutation_header &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const mutation_header & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(mutation_header &a, mutation_header &b);
 
-inline std::ostream &operator<<(std::ostream &out, const mutation_header &obj)
+inline std::ostream& operator<<(std::ostream& out, const mutation_header& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _mutation_update__isset
-{
-    _mutation_update__isset() : code(false), serialization_type(false), data(false) {}
-    bool code : 1;
-    bool serialization_type : 1;
-    bool data : 1;
+typedef struct _mutation_update__isset {
+  _mutation_update__isset() : code(false), serialization_type(false), data(false) {}
+  bool code :1;
+  bool serialization_type :1;
+  bool data :1;
 } _mutation_update__isset;
 
-class mutation_update
-{
-public:
-    mutation_update(const mutation_update &);
-    mutation_update(mutation_update &&);
-    mutation_update &operator=(const mutation_update &);
-    mutation_update &operator=(mutation_update &&);
-    mutation_update() : serialization_type(0) {}
+class mutation_update {
+ public:
 
-    virtual ~mutation_update() throw();
-    ::dsn::task_code code;
-    int32_t serialization_type;
-    ::dsn::blob data;
+  mutation_update(const mutation_update&);
+  mutation_update(mutation_update&&);
+  mutation_update& operator=(const mutation_update&);
+  mutation_update& operator=(mutation_update&&);
+  mutation_update() : serialization_type(0) {
+  }
 
-    _mutation_update__isset __isset;
+  virtual ~mutation_update() throw();
+   ::dsn::task_code code;
+  int32_t serialization_type;
+   ::dsn::blob data;
 
-    void __set_code(const ::dsn::task_code &val);
+  _mutation_update__isset __isset;
 
-    void __set_serialization_type(const int32_t val);
+  void __set_code(const  ::dsn::task_code& val);
 
-    void __set_data(const ::dsn::blob &val);
+  void __set_serialization_type(const int32_t val);
 
-    bool operator==(const mutation_update &rhs) const
-    {
-        if (!(code == rhs.code))
-            return false;
-        if (!(serialization_type == rhs.serialization_type))
-            return false;
-        if (!(data == rhs.data))
-            return false;
-        return true;
-    }
-    bool operator!=(const mutation_update &rhs) const { return !(*this == rhs); }
+  void __set_data(const  ::dsn::blob& val);
 
-    bool operator<(const mutation_update &) const;
+  bool operator == (const mutation_update & rhs) const
+  {
+    if (!(code == rhs.code))
+      return false;
+    if (!(serialization_type == rhs.serialization_type))
+      return false;
+    if (!(data == rhs.data))
+      return false;
+    return true;
+  }
+  bool operator != (const mutation_update &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const mutation_update & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(mutation_update &a, mutation_update &b);
 
-inline std::ostream &operator<<(std::ostream &out, const mutation_update &obj)
+inline std::ostream& operator<<(std::ostream& out, const mutation_update& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _mutation_data__isset
-{
-    _mutation_data__isset() : header(false), updates(false) {}
-    bool header : 1;
-    bool updates : 1;
+typedef struct _mutation_data__isset {
+  _mutation_data__isset() : header(false), updates(false) {}
+  bool header :1;
+  bool updates :1;
 } _mutation_data__isset;
 
-class mutation_data
-{
-public:
-    mutation_data(const mutation_data &);
-    mutation_data(mutation_data &&);
-    mutation_data &operator=(const mutation_data &);
-    mutation_data &operator=(mutation_data &&);
-    mutation_data() {}
+class mutation_data {
+ public:
 
-    virtual ~mutation_data() throw();
-    mutation_header header;
-    std::vector<mutation_update> updates;
+  mutation_data(const mutation_data&);
+  mutation_data(mutation_data&&);
+  mutation_data& operator=(const mutation_data&);
+  mutation_data& operator=(mutation_data&&);
+  mutation_data() {
+  }
 
-    _mutation_data__isset __isset;
+  virtual ~mutation_data() throw();
+  mutation_header header;
+  std::vector<mutation_update>  updates;
 
-    void __set_header(const mutation_header &val);
+  _mutation_data__isset __isset;
 
-    void __set_updates(const std::vector<mutation_update> &val);
+  void __set_header(const mutation_header& val);
 
-    bool operator==(const mutation_data &rhs) const
-    {
-        if (!(header == rhs.header))
-            return false;
-        if (!(updates == rhs.updates))
-            return false;
-        return true;
-    }
-    bool operator!=(const mutation_data &rhs) const { return !(*this == rhs); }
+  void __set_updates(const std::vector<mutation_update> & val);
 
-    bool operator<(const mutation_data &) const;
+  bool operator == (const mutation_data & rhs) const
+  {
+    if (!(header == rhs.header))
+      return false;
+    if (!(updates == rhs.updates))
+      return false;
+    return true;
+  }
+  bool operator != (const mutation_data &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const mutation_data & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(mutation_data &a, mutation_data &b);
 
-inline std::ostream &operator<<(std::ostream &out, const mutation_data &obj)
+inline std::ostream& operator<<(std::ostream& out, const mutation_data& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _replica_configuration__isset
-{
-    _replica_configuration__isset()
-        : pid(false), ballot(false), primary(false), status(true), learner_signature(false)
-    {
-    }
-    bool pid : 1;
-    bool ballot : 1;
-    bool primary : 1;
-    bool status : 1;
-    bool learner_signature : 1;
+typedef struct _replica_configuration__isset {
+  _replica_configuration__isset() : pid(false), ballot(false), primary(false), status(true), learner_signature(false) {}
+  bool pid :1;
+  bool ballot :1;
+  bool primary :1;
+  bool status :1;
+  bool learner_signature :1;
 } _replica_configuration__isset;
 
-class replica_configuration
-{
-public:
-    replica_configuration(const replica_configuration &);
-    replica_configuration(replica_configuration &&);
-    replica_configuration &operator=(const replica_configuration &);
-    replica_configuration &operator=(replica_configuration &&);
-    replica_configuration() : ballot(0), status((partition_status::type)0), learner_signature(0)
-    {
-        status = (partition_status::type)0;
-    }
+class replica_configuration {
+ public:
 
-    virtual ~replica_configuration() throw();
-    ::dsn::gpid pid;
-    int64_t ballot;
-    ::dsn::rpc_address primary;
-    partition_status::type status;
-    int64_t learner_signature;
+  replica_configuration(const replica_configuration&);
+  replica_configuration(replica_configuration&&);
+  replica_configuration& operator=(const replica_configuration&);
+  replica_configuration& operator=(replica_configuration&&);
+  replica_configuration() : ballot(0), status((partition_status::type)0), learner_signature(0) {
+    status = (partition_status::type)0;
 
-    _replica_configuration__isset __isset;
+  }
 
-    void __set_pid(const ::dsn::gpid &val);
+  virtual ~replica_configuration() throw();
+   ::dsn::gpid pid;
+  int64_t ballot;
+   ::dsn::rpc_address primary;
+  partition_status::type status;
+  int64_t learner_signature;
 
-    void __set_ballot(const int64_t val);
+  _replica_configuration__isset __isset;
 
-    void __set_primary(const ::dsn::rpc_address &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_status(const partition_status::type val);
+  void __set_ballot(const int64_t val);
 
-    void __set_learner_signature(const int64_t val);
+  void __set_primary(const  ::dsn::rpc_address& val);
 
-    bool operator==(const replica_configuration &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(ballot == rhs.ballot))
-            return false;
-        if (!(primary == rhs.primary))
-            return false;
-        if (!(status == rhs.status))
-            return false;
-        if (!(learner_signature == rhs.learner_signature))
-            return false;
-        return true;
-    }
-    bool operator!=(const replica_configuration &rhs) const { return !(*this == rhs); }
+  void __set_status(const partition_status::type val);
 
-    bool operator<(const replica_configuration &) const;
+  void __set_learner_signature(const int64_t val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const replica_configuration & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(ballot == rhs.ballot))
+      return false;
+    if (!(primary == rhs.primary))
+      return false;
+    if (!(status == rhs.status))
+      return false;
+    if (!(learner_signature == rhs.learner_signature))
+      return false;
+    return true;
+  }
+  bool operator != (const replica_configuration &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const replica_configuration & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(replica_configuration &a, replica_configuration &b);
 
-inline std::ostream &operator<<(std::ostream &out, const replica_configuration &obj)
+inline std::ostream& operator<<(std::ostream& out, const replica_configuration& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _prepare_msg__isset
-{
-    _prepare_msg__isset() : config(false), mu(false) {}
-    bool config : 1;
-    bool mu : 1;
+typedef struct _prepare_msg__isset {
+  _prepare_msg__isset() : config(false), mu(false) {}
+  bool config :1;
+  bool mu :1;
 } _prepare_msg__isset;
 
-class prepare_msg
-{
-public:
-    prepare_msg(const prepare_msg &);
-    prepare_msg(prepare_msg &&);
-    prepare_msg &operator=(const prepare_msg &);
-    prepare_msg &operator=(prepare_msg &&);
-    prepare_msg() {}
+class prepare_msg {
+ public:
 
-    virtual ~prepare_msg() throw();
-    replica_configuration config;
-    mutation_data mu;
+  prepare_msg(const prepare_msg&);
+  prepare_msg(prepare_msg&&);
+  prepare_msg& operator=(const prepare_msg&);
+  prepare_msg& operator=(prepare_msg&&);
+  prepare_msg() {
+  }
 
-    _prepare_msg__isset __isset;
+  virtual ~prepare_msg() throw();
+  replica_configuration config;
+  mutation_data mu;
 
-    void __set_config(const replica_configuration &val);
+  _prepare_msg__isset __isset;
 
-    void __set_mu(const mutation_data &val);
+  void __set_config(const replica_configuration& val);
 
-    bool operator==(const prepare_msg &rhs) const
-    {
-        if (!(config == rhs.config))
-            return false;
-        if (!(mu == rhs.mu))
-            return false;
-        return true;
-    }
-    bool operator!=(const prepare_msg &rhs) const { return !(*this == rhs); }
+  void __set_mu(const mutation_data& val);
 
-    bool operator<(const prepare_msg &) const;
+  bool operator == (const prepare_msg & rhs) const
+  {
+    if (!(config == rhs.config))
+      return false;
+    if (!(mu == rhs.mu))
+      return false;
+    return true;
+  }
+  bool operator != (const prepare_msg &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const prepare_msg & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(prepare_msg &a, prepare_msg &b);
 
-inline std::ostream &operator<<(std::ostream &out, const prepare_msg &obj)
+inline std::ostream& operator<<(std::ostream& out, const prepare_msg& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _read_request_header__isset
-{
-    _read_request_header__isset() : pid(false), code(false), semantic(true), version_decree(true) {}
-    bool pid : 1;
-    bool code : 1;
-    bool semantic : 1;
-    bool version_decree : 1;
+typedef struct _read_request_header__isset {
+  _read_request_header__isset() : pid(false), code(false), semantic(true), version_decree(true) {}
+  bool pid :1;
+  bool code :1;
+  bool semantic :1;
+  bool version_decree :1;
 } _read_request_header__isset;
 
-class read_request_header
-{
-public:
-    read_request_header(const read_request_header &);
-    read_request_header(read_request_header &&);
-    read_request_header &operator=(const read_request_header &);
-    read_request_header &operator=(read_request_header &&);
-    read_request_header() : semantic((read_semantic::type)1), version_decree(-1LL)
-    {
-        semantic = (read_semantic::type)1;
-    }
+class read_request_header {
+ public:
 
-    virtual ~read_request_header() throw();
-    ::dsn::gpid pid;
-    ::dsn::task_code code;
-    read_semantic::type semantic;
-    int64_t version_decree;
+  read_request_header(const read_request_header&);
+  read_request_header(read_request_header&&);
+  read_request_header& operator=(const read_request_header&);
+  read_request_header& operator=(read_request_header&&);
+  read_request_header() : semantic((read_semantic::type)1), version_decree(-1LL) {
+    semantic = (read_semantic::type)1;
 
-    _read_request_header__isset __isset;
+  }
 
-    void __set_pid(const ::dsn::gpid &val);
+  virtual ~read_request_header() throw();
+   ::dsn::gpid pid;
+   ::dsn::task_code code;
+  read_semantic::type semantic;
+  int64_t version_decree;
 
-    void __set_code(const ::dsn::task_code &val);
+  _read_request_header__isset __isset;
 
-    void __set_semantic(const read_semantic::type val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_version_decree(const int64_t val);
+  void __set_code(const  ::dsn::task_code& val);
 
-    bool operator==(const read_request_header &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(code == rhs.code))
-            return false;
-        if (!(semantic == rhs.semantic))
-            return false;
-        if (!(version_decree == rhs.version_decree))
-            return false;
-        return true;
-    }
-    bool operator!=(const read_request_header &rhs) const { return !(*this == rhs); }
+  void __set_semantic(const read_semantic::type val);
 
-    bool operator<(const read_request_header &) const;
+  void __set_version_decree(const int64_t val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const read_request_header & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(code == rhs.code))
+      return false;
+    if (!(semantic == rhs.semantic))
+      return false;
+    if (!(version_decree == rhs.version_decree))
+      return false;
+    return true;
+  }
+  bool operator != (const read_request_header &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const read_request_header & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(read_request_header &a, read_request_header &b);
 
-inline std::ostream &operator<<(std::ostream &out, const read_request_header &obj)
+inline std::ostream& operator<<(std::ostream& out, const read_request_header& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _write_request_header__isset
-{
-    _write_request_header__isset() : pid(false), code(false) {}
-    bool pid : 1;
-    bool code : 1;
+typedef struct _write_request_header__isset {
+  _write_request_header__isset() : pid(false), code(false) {}
+  bool pid :1;
+  bool code :1;
 } _write_request_header__isset;
 
-class write_request_header
-{
-public:
-    write_request_header(const write_request_header &);
-    write_request_header(write_request_header &&);
-    write_request_header &operator=(const write_request_header &);
-    write_request_header &operator=(write_request_header &&);
-    write_request_header() {}
+class write_request_header {
+ public:
 
-    virtual ~write_request_header() throw();
-    ::dsn::gpid pid;
-    ::dsn::task_code code;
+  write_request_header(const write_request_header&);
+  write_request_header(write_request_header&&);
+  write_request_header& operator=(const write_request_header&);
+  write_request_header& operator=(write_request_header&&);
+  write_request_header() {
+  }
 
-    _write_request_header__isset __isset;
+  virtual ~write_request_header() throw();
+   ::dsn::gpid pid;
+   ::dsn::task_code code;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _write_request_header__isset __isset;
 
-    void __set_code(const ::dsn::task_code &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    bool operator==(const write_request_header &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(code == rhs.code))
-            return false;
-        return true;
-    }
-    bool operator!=(const write_request_header &rhs) const { return !(*this == rhs); }
+  void __set_code(const  ::dsn::task_code& val);
 
-    bool operator<(const write_request_header &) const;
+  bool operator == (const write_request_header & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(code == rhs.code))
+      return false;
+    return true;
+  }
+  bool operator != (const write_request_header &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const write_request_header & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(write_request_header &a, write_request_header &b);
 
-inline std::ostream &operator<<(std::ostream &out, const write_request_header &obj)
+inline std::ostream& operator<<(std::ostream& out, const write_request_header& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _rw_response_header__isset
-{
-    _rw_response_header__isset() : err(false) {}
-    bool err : 1;
+typedef struct _rw_response_header__isset {
+  _rw_response_header__isset() : err(false) {}
+  bool err :1;
 } _rw_response_header__isset;
 
-class rw_response_header
-{
-public:
-    rw_response_header(const rw_response_header &);
-    rw_response_header(rw_response_header &&);
-    rw_response_header &operator=(const rw_response_header &);
-    rw_response_header &operator=(rw_response_header &&);
-    rw_response_header() {}
+class rw_response_header {
+ public:
 
-    virtual ~rw_response_header() throw();
-    ::dsn::error_code err;
+  rw_response_header(const rw_response_header&);
+  rw_response_header(rw_response_header&&);
+  rw_response_header& operator=(const rw_response_header&);
+  rw_response_header& operator=(rw_response_header&&);
+  rw_response_header() {
+  }
 
-    _rw_response_header__isset __isset;
+  virtual ~rw_response_header() throw();
+   ::dsn::error_code err;
 
-    void __set_err(const ::dsn::error_code &val);
+  _rw_response_header__isset __isset;
 
-    bool operator==(const rw_response_header &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        return true;
-    }
-    bool operator!=(const rw_response_header &rhs) const { return !(*this == rhs); }
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator<(const rw_response_header &) const;
+  bool operator == (const rw_response_header & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    return true;
+  }
+  bool operator != (const rw_response_header &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const rw_response_header & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(rw_response_header &a, rw_response_header &b);
 
-inline std::ostream &operator<<(std::ostream &out, const rw_response_header &obj)
+inline std::ostream& operator<<(std::ostream& out, const rw_response_header& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _prepare_ack__isset
-{
-    _prepare_ack__isset()
-        : pid(false),
-          err(false),
-          ballot(false),
-          decree(false),
-          last_committed_decree_in_app(false),
-          last_committed_decree_in_prepare_list(false)
-    {
-    }
-    bool pid : 1;
-    bool err : 1;
-    bool ballot : 1;
-    bool decree : 1;
-    bool last_committed_decree_in_app : 1;
-    bool last_committed_decree_in_prepare_list : 1;
+typedef struct _prepare_ack__isset {
+  _prepare_ack__isset() : pid(false), err(false), ballot(false), decree(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false) {}
+  bool pid :1;
+  bool err :1;
+  bool ballot :1;
+  bool decree :1;
+  bool last_committed_decree_in_app :1;
+  bool last_committed_decree_in_prepare_list :1;
 } _prepare_ack__isset;
 
-class prepare_ack
-{
-public:
-    prepare_ack(const prepare_ack &);
-    prepare_ack(prepare_ack &&);
-    prepare_ack &operator=(const prepare_ack &);
-    prepare_ack &operator=(prepare_ack &&);
-    prepare_ack()
-        : ballot(0),
-          decree(0),
-          last_committed_decree_in_app(0),
-          last_committed_decree_in_prepare_list(0)
-    {
-    }
+class prepare_ack {
+ public:
 
-    virtual ~prepare_ack() throw();
-    ::dsn::gpid pid;
-    ::dsn::error_code err;
-    int64_t ballot;
-    int64_t decree;
-    int64_t last_committed_decree_in_app;
-    int64_t last_committed_decree_in_prepare_list;
+  prepare_ack(const prepare_ack&);
+  prepare_ack(prepare_ack&&);
+  prepare_ack& operator=(const prepare_ack&);
+  prepare_ack& operator=(prepare_ack&&);
+  prepare_ack() : ballot(0), decree(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
+  }
 
-    _prepare_ack__isset __isset;
+  virtual ~prepare_ack() throw();
+   ::dsn::gpid pid;
+   ::dsn::error_code err;
+  int64_t ballot;
+  int64_t decree;
+  int64_t last_committed_decree_in_app;
+  int64_t last_committed_decree_in_prepare_list;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _prepare_ack__isset __isset;
 
-    void __set_err(const ::dsn::error_code &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_ballot(const int64_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    void __set_decree(const int64_t val);
+  void __set_ballot(const int64_t val);
 
-    void __set_last_committed_decree_in_app(const int64_t val);
+  void __set_decree(const int64_t val);
 
-    void __set_last_committed_decree_in_prepare_list(const int64_t val);
+  void __set_last_committed_decree_in_app(const int64_t val);
 
-    bool operator==(const prepare_ack &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(err == rhs.err))
-            return false;
-        if (!(ballot == rhs.ballot))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
-            return false;
-        if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
-            return false;
-        return true;
-    }
-    bool operator!=(const prepare_ack &rhs) const { return !(*this == rhs); }
+  void __set_last_committed_decree_in_prepare_list(const int64_t val);
 
-    bool operator<(const prepare_ack &) const;
+  bool operator == (const prepare_ack & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(err == rhs.err))
+      return false;
+    if (!(ballot == rhs.ballot))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
+      return false;
+    if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
+      return false;
+    return true;
+  }
+  bool operator != (const prepare_ack &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const prepare_ack & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(prepare_ack &a, prepare_ack &b);
 
-inline std::ostream &operator<<(std::ostream &out, const prepare_ack &obj)
+inline std::ostream& operator<<(std::ostream& out, const prepare_ack& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _learn_state__isset
-{
-    _learn_state__isset()
-        : from_decree_excluded(false), to_decree_included(false), meta(false), files(false)
-    {
-    }
-    bool from_decree_excluded : 1;
-    bool to_decree_included : 1;
-    bool meta : 1;
-    bool files : 1;
+typedef struct _learn_state__isset {
+  _learn_state__isset() : from_decree_excluded(false), to_decree_included(false), meta(false), files(false) {}
+  bool from_decree_excluded :1;
+  bool to_decree_included :1;
+  bool meta :1;
+  bool files :1;
 } _learn_state__isset;
 
-class learn_state
-{
-public:
-    learn_state(const learn_state &);
-    learn_state(learn_state &&);
-    learn_state &operator=(const learn_state &);
-    learn_state &operator=(learn_state &&);
-    learn_state() : from_decree_excluded(0), to_decree_included(0) {}
+class learn_state {
+ public:
 
-    virtual ~learn_state() throw();
-    int64_t from_decree_excluded;
-    int64_t to_decree_included;
-    ::dsn::blob meta;
-    std::vector<std::string> files;
+  learn_state(const learn_state&);
+  learn_state(learn_state&&);
+  learn_state& operator=(const learn_state&);
+  learn_state& operator=(learn_state&&);
+  learn_state() : from_decree_excluded(0), to_decree_included(0) {
+  }
 
-    _learn_state__isset __isset;
+  virtual ~learn_state() throw();
+  int64_t from_decree_excluded;
+  int64_t to_decree_included;
+   ::dsn::blob meta;
+  std::vector<std::string>  files;
 
-    void __set_from_decree_excluded(const int64_t val);
+  _learn_state__isset __isset;
 
-    void __set_to_decree_included(const int64_t val);
+  void __set_from_decree_excluded(const int64_t val);
 
-    void __set_meta(const ::dsn::blob &val);
+  void __set_to_decree_included(const int64_t val);
 
-    void __set_files(const std::vector<std::string> &val);
+  void __set_meta(const  ::dsn::blob& val);
 
-    bool operator==(const learn_state &rhs) const
-    {
-        if (!(from_decree_excluded == rhs.from_decree_excluded))
-            return false;
-        if (!(to_decree_included == rhs.to_decree_included))
-            return false;
-        if (!(meta == rhs.meta))
-            return false;
-        if (!(files == rhs.files))
-            return false;
-        return true;
-    }
-    bool operator!=(const learn_state &rhs) const { return !(*this == rhs); }
+  void __set_files(const std::vector<std::string> & val);
 
-    bool operator<(const learn_state &) const;
+  bool operator == (const learn_state & rhs) const
+  {
+    if (!(from_decree_excluded == rhs.from_decree_excluded))
+      return false;
+    if (!(to_decree_included == rhs.to_decree_included))
+      return false;
+    if (!(meta == rhs.meta))
+      return false;
+    if (!(files == rhs.files))
+      return false;
+    return true;
+  }
+  bool operator != (const learn_state &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const learn_state & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(learn_state &a, learn_state &b);
 
-inline std::ostream &operator<<(std::ostream &out, const learn_state &obj)
+inline std::ostream& operator<<(std::ostream& out, const learn_state& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _learn_request__isset
-{
-    _learn_request__isset()
-        : pid(false),
-          learner(false),
-          signature(false),
-          last_committed_decree_in_app(false),
-          last_committed_decree_in_prepare_list(false),
-          app_specific_learn_request(false)
-    {
-    }
-    bool pid : 1;
-    bool learner : 1;
-    bool signature : 1;
-    bool last_committed_decree_in_app : 1;
-    bool last_committed_decree_in_prepare_list : 1;
-    bool app_specific_learn_request : 1;
+typedef struct _learn_request__isset {
+  _learn_request__isset() : pid(false), learner(false), signature(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), app_specific_learn_request(false) {}
+  bool pid :1;
+  bool learner :1;
+  bool signature :1;
+  bool last_committed_decree_in_app :1;
+  bool last_committed_decree_in_prepare_list :1;
+  bool app_specific_learn_request :1;
 } _learn_request__isset;
 
-class learn_request
-{
-public:
-    learn_request(const learn_request &);
-    learn_request(learn_request &&);
-    learn_request &operator=(const learn_request &);
-    learn_request &operator=(learn_request &&);
-    learn_request()
-        : signature(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0)
-    {
-    }
+class learn_request {
+ public:
 
-    virtual ~learn_request() throw();
-    ::dsn::gpid pid;
-    ::dsn::rpc_address learner;
-    int64_t signature;
-    int64_t last_committed_decree_in_app;
-    int64_t last_committed_decree_in_prepare_list;
-    ::dsn::blob app_specific_learn_request;
+  learn_request(const learn_request&);
+  learn_request(learn_request&&);
+  learn_request& operator=(const learn_request&);
+  learn_request& operator=(learn_request&&);
+  learn_request() : signature(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
+  }
 
-    _learn_request__isset __isset;
+  virtual ~learn_request() throw();
+   ::dsn::gpid pid;
+   ::dsn::rpc_address learner;
+  int64_t signature;
+  int64_t last_committed_decree_in_app;
+  int64_t last_committed_decree_in_prepare_list;
+   ::dsn::blob app_specific_learn_request;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _learn_request__isset __isset;
 
-    void __set_learner(const ::dsn::rpc_address &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_signature(const int64_t val);
+  void __set_learner(const  ::dsn::rpc_address& val);
 
-    void __set_last_committed_decree_in_app(const int64_t val);
+  void __set_signature(const int64_t val);
 
-    void __set_last_committed_decree_in_prepare_list(const int64_t val);
+  void __set_last_committed_decree_in_app(const int64_t val);
 
-    void __set_app_specific_learn_request(const ::dsn::blob &val);
+  void __set_last_committed_decree_in_prepare_list(const int64_t val);
 
-    bool operator==(const learn_request &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(learner == rhs.learner))
-            return false;
-        if (!(signature == rhs.signature))
-            return false;
-        if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
-            return false;
-        if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
-            return false;
-        if (!(app_specific_learn_request == rhs.app_specific_learn_request))
-            return false;
-        return true;
-    }
-    bool operator!=(const learn_request &rhs) const { return !(*this == rhs); }
+  void __set_app_specific_learn_request(const  ::dsn::blob& val);
 
-    bool operator<(const learn_request &) const;
+  bool operator == (const learn_request & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(learner == rhs.learner))
+      return false;
+    if (!(signature == rhs.signature))
+      return false;
+    if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
+      return false;
+    if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
+      return false;
+    if (!(app_specific_learn_request == rhs.app_specific_learn_request))
+      return false;
+    return true;
+  }
+  bool operator != (const learn_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const learn_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(learn_request &a, learn_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const learn_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const learn_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _learn_response__isset
-{
-    _learn_response__isset()
-        : err(false),
-          config(false),
-          last_committed_decree(false),
-          prepare_start_decree(false),
-          type(true),
-          state(false),
-          address(false),
-          base_local_dir(false)
-    {
-    }
-    bool err : 1;
-    bool config : 1;
-    bool last_committed_decree : 1;
-    bool prepare_start_decree : 1;
-    bool type : 1;
-    bool state : 1;
-    bool address : 1;
-    bool base_local_dir : 1;
+typedef struct _learn_response__isset {
+  _learn_response__isset() : err(false), config(false), last_committed_decree(false), prepare_start_decree(false), type(true), state(false), address(false), base_local_dir(false) {}
+  bool err :1;
+  bool config :1;
+  bool last_committed_decree :1;
+  bool prepare_start_decree :1;
+  bool type :1;
+  bool state :1;
+  bool address :1;
+  bool base_local_dir :1;
 } _learn_response__isset;
 
-class learn_response
-{
-public:
-    learn_response(const learn_response &);
-    learn_response(learn_response &&);
-    learn_response &operator=(const learn_response &);
-    learn_response &operator=(learn_response &&);
-    learn_response()
-        : last_committed_decree(0),
-          prepare_start_decree(0),
-          type((learn_type::type)0),
-          base_local_dir()
-    {
-        type = (learn_type::type)0;
-    }
+class learn_response {
+ public:
 
-    virtual ~learn_response() throw();
-    ::dsn::error_code err;
-    replica_configuration config;
-    int64_t last_committed_decree;
-    int64_t prepare_start_decree;
-    learn_type::type type;
-    learn_state state;
-    ::dsn::rpc_address address;
-    std::string base_local_dir;
+  learn_response(const learn_response&);
+  learn_response(learn_response&&);
+  learn_response& operator=(const learn_response&);
+  learn_response& operator=(learn_response&&);
+  learn_response() : last_committed_decree(0), prepare_start_decree(0), type((learn_type::type)0), base_local_dir() {
+    type = (learn_type::type)0;
 
-    _learn_response__isset __isset;
+  }
 
-    void __set_err(const ::dsn::error_code &val);
+  virtual ~learn_response() throw();
+   ::dsn::error_code err;
+  replica_configuration config;
+  int64_t last_committed_decree;
+  int64_t prepare_start_decree;
+  learn_type::type type;
+  learn_state state;
+   ::dsn::rpc_address address;
+  std::string base_local_dir;
 
-    void __set_config(const replica_configuration &val);
+  _learn_response__isset __isset;
 
-    void __set_last_committed_decree(const int64_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    void __set_prepare_start_decree(const int64_t val);
+  void __set_config(const replica_configuration& val);
 
-    void __set_type(const learn_type::type val);
+  void __set_last_committed_decree(const int64_t val);
 
-    void __set_state(const learn_state &val);
+  void __set_prepare_start_decree(const int64_t val);
 
-    void __set_address(const ::dsn::rpc_address &val);
+  void __set_type(const learn_type::type val);
 
-    void __set_base_local_dir(const std::string &val);
+  void __set_state(const learn_state& val);
 
-    bool operator==(const learn_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(config == rhs.config))
-            return false;
-        if (!(last_committed_decree == rhs.last_committed_decree))
-            return false;
-        if (!(prepare_start_decree == rhs.prepare_start_decree))
-            return false;
-        if (!(type == rhs.type))
-            return false;
-        if (!(state == rhs.state))
-            return false;
-        if (!(address == rhs.address))
-            return false;
-        if (!(base_local_dir == rhs.base_local_dir))
-            return false;
-        return true;
-    }
-    bool operator!=(const learn_response &rhs) const { return !(*this == rhs); }
+  void __set_address(const  ::dsn::rpc_address& val);
 
-    bool operator<(const learn_response &) const;
+  void __set_base_local_dir(const std::string& val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const learn_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(config == rhs.config))
+      return false;
+    if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    if (!(prepare_start_decree == rhs.prepare_start_decree))
+      return false;
+    if (!(type == rhs.type))
+      return false;
+    if (!(state == rhs.state))
+      return false;
+    if (!(address == rhs.address))
+      return false;
+    if (!(base_local_dir == rhs.base_local_dir))
+      return false;
+    return true;
+  }
+  bool operator != (const learn_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const learn_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(learn_response &a, learn_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const learn_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const learn_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _learn_notify_response__isset
-{
-    _learn_notify_response__isset() : pid(false), err(false), signature(false) {}
-    bool pid : 1;
-    bool err : 1;
-    bool signature : 1;
+typedef struct _learn_notify_response__isset {
+  _learn_notify_response__isset() : pid(false), err(false), signature(false) {}
+  bool pid :1;
+  bool err :1;
+  bool signature :1;
 } _learn_notify_response__isset;
 
-class learn_notify_response
-{
-public:
-    learn_notify_response(const learn_notify_response &);
-    learn_notify_response(learn_notify_response &&);
-    learn_notify_response &operator=(const learn_notify_response &);
-    learn_notify_response &operator=(learn_notify_response &&);
-    learn_notify_response() : signature(0) {}
+class learn_notify_response {
+ public:
 
-    virtual ~learn_notify_response() throw();
-    ::dsn::gpid pid;
-    ::dsn::error_code err;
-    int64_t signature;
+  learn_notify_response(const learn_notify_response&);
+  learn_notify_response(learn_notify_response&&);
+  learn_notify_response& operator=(const learn_notify_response&);
+  learn_notify_response& operator=(learn_notify_response&&);
+  learn_notify_response() : signature(0) {
+  }
 
-    _learn_notify_response__isset __isset;
+  virtual ~learn_notify_response() throw();
+   ::dsn::gpid pid;
+   ::dsn::error_code err;
+  int64_t signature;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _learn_notify_response__isset __isset;
 
-    void __set_err(const ::dsn::error_code &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_signature(const int64_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const learn_notify_response &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(err == rhs.err))
-            return false;
-        if (!(signature == rhs.signature))
-            return false;
-        return true;
-    }
-    bool operator!=(const learn_notify_response &rhs) const { return !(*this == rhs); }
+  void __set_signature(const int64_t val);
 
-    bool operator<(const learn_notify_response &) const;
+  bool operator == (const learn_notify_response & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(err == rhs.err))
+      return false;
+    if (!(signature == rhs.signature))
+      return false;
+    return true;
+  }
+  bool operator != (const learn_notify_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const learn_notify_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(learn_notify_response &a, learn_notify_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const learn_notify_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const learn_notify_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _group_check_request__isset
-{
-    _group_check_request__isset()
-        : app(false), node(false), config(false), last_committed_decree(false)
-    {
-    }
-    bool app : 1;
-    bool node : 1;
-    bool config : 1;
-    bool last_committed_decree : 1;
+typedef struct _group_check_request__isset {
+  _group_check_request__isset() : app(false), node(false), config(false), last_committed_decree(false) {}
+  bool app :1;
+  bool node :1;
+  bool config :1;
+  bool last_committed_decree :1;
 } _group_check_request__isset;
 
-class group_check_request
-{
-public:
-    group_check_request(const group_check_request &);
-    group_check_request(group_check_request &&);
-    group_check_request &operator=(const group_check_request &);
-    group_check_request &operator=(group_check_request &&);
-    group_check_request() : last_committed_decree(0) {}
+class group_check_request {
+ public:
 
-    virtual ~group_check_request() throw();
-    ::dsn::app_info app;
-    ::dsn::rpc_address node;
-    replica_configuration config;
-    int64_t last_committed_decree;
+  group_check_request(const group_check_request&);
+  group_check_request(group_check_request&&);
+  group_check_request& operator=(const group_check_request&);
+  group_check_request& operator=(group_check_request&&);
+  group_check_request() : last_committed_decree(0) {
+  }
 
-    _group_check_request__isset __isset;
+  virtual ~group_check_request() throw();
+   ::dsn::app_info app;
+   ::dsn::rpc_address node;
+  replica_configuration config;
+  int64_t last_committed_decree;
 
-    void __set_app(const ::dsn::app_info &val);
+  _group_check_request__isset __isset;
 
-    void __set_node(const ::dsn::rpc_address &val);
+  void __set_app(const  ::dsn::app_info& val);
 
-    void __set_config(const replica_configuration &val);
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    void __set_last_committed_decree(const int64_t val);
+  void __set_config(const replica_configuration& val);
 
-    bool operator==(const group_check_request &rhs) const
-    {
-        if (!(app == rhs.app))
-            return false;
-        if (!(node == rhs.node))
-            return false;
-        if (!(config == rhs.config))
-            return false;
-        if (!(last_committed_decree == rhs.last_committed_decree))
-            return false;
-        return true;
-    }
-    bool operator!=(const group_check_request &rhs) const { return !(*this == rhs); }
+  void __set_last_committed_decree(const int64_t val);
 
-    bool operator<(const group_check_request &) const;
+  bool operator == (const group_check_request & rhs) const
+  {
+    if (!(app == rhs.app))
+      return false;
+    if (!(node == rhs.node))
+      return false;
+    if (!(config == rhs.config))
+      return false;
+    if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    return true;
+  }
+  bool operator != (const group_check_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const group_check_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(group_check_request &a, group_check_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const group_check_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const group_check_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _group_check_response__isset
-{
-    _group_check_response__isset()
-        : pid(false),
-          err(false),
-          last_committed_decree_in_app(false),
-          last_committed_decree_in_prepare_list(false),
-          learner_status_(true),
-          learner_signature(false),
-          node(false)
-    {
-    }
-    bool pid : 1;
-    bool err : 1;
-    bool last_committed_decree_in_app : 1;
-    bool last_committed_decree_in_prepare_list : 1;
-    bool learner_status_ : 1;
-    bool learner_signature : 1;
-    bool node : 1;
+typedef struct _group_check_response__isset {
+  _group_check_response__isset() : pid(false), err(false), last_committed_decree_in_app(false), last_committed_decree_in_prepare_list(false), learner_status_(true), learner_signature(false), node(false) {}
+  bool pid :1;
+  bool err :1;
+  bool last_committed_decree_in_app :1;
+  bool last_committed_decree_in_prepare_list :1;
+  bool learner_status_ :1;
+  bool learner_signature :1;
+  bool node :1;
 } _group_check_response__isset;
 
-class group_check_response
-{
-public:
-    group_check_response(const group_check_response &);
-    group_check_response(group_check_response &&);
-    group_check_response &operator=(const group_check_response &);
-    group_check_response &operator=(group_check_response &&);
-    group_check_response()
-        : last_committed_decree_in_app(0),
-          last_committed_decree_in_prepare_list(0),
-          learner_status_((learner_status::type)0),
-          learner_signature(0)
-    {
-        learner_status_ = (learner_status::type)0;
-    }
+class group_check_response {
+ public:
 
-    virtual ~group_check_response() throw();
-    ::dsn::gpid pid;
-    ::dsn::error_code err;
-    int64_t last_committed_decree_in_app;
-    int64_t last_committed_decree_in_prepare_list;
-    learner_status::type learner_status_;
-    int64_t learner_signature;
-    ::dsn::rpc_address node;
+  group_check_response(const group_check_response&);
+  group_check_response(group_check_response&&);
+  group_check_response& operator=(const group_check_response&);
+  group_check_response& operator=(group_check_response&&);
+  group_check_response() : last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0), learner_status_((learner_status::type)0), learner_signature(0) {
+    learner_status_ = (learner_status::type)0;
 
-    _group_check_response__isset __isset;
+  }
 
-    void __set_pid(const ::dsn::gpid &val);
+  virtual ~group_check_response() throw();
+   ::dsn::gpid pid;
+   ::dsn::error_code err;
+  int64_t last_committed_decree_in_app;
+  int64_t last_committed_decree_in_prepare_list;
+  learner_status::type learner_status_;
+  int64_t learner_signature;
+   ::dsn::rpc_address node;
 
-    void __set_err(const ::dsn::error_code &val);
+  _group_check_response__isset __isset;
 
-    void __set_last_committed_decree_in_app(const int64_t val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_last_committed_decree_in_prepare_list(const int64_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    void __set_learner_status_(const learner_status::type val);
+  void __set_last_committed_decree_in_app(const int64_t val);
 
-    void __set_learner_signature(const int64_t val);
+  void __set_last_committed_decree_in_prepare_list(const int64_t val);
 
-    void __set_node(const ::dsn::rpc_address &val);
+  void __set_learner_status_(const learner_status::type val);
 
-    bool operator==(const group_check_response &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(err == rhs.err))
-            return false;
-        if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
-            return false;
-        if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
-            return false;
-        if (!(learner_status_ == rhs.learner_status_))
-            return false;
-        if (!(learner_signature == rhs.learner_signature))
-            return false;
-        if (!(node == rhs.node))
-            return false;
-        return true;
-    }
-    bool operator!=(const group_check_response &rhs) const { return !(*this == rhs); }
+  void __set_learner_signature(const int64_t val);
 
-    bool operator<(const group_check_response &) const;
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const group_check_response & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(err == rhs.err))
+      return false;
+    if (!(last_committed_decree_in_app == rhs.last_committed_decree_in_app))
+      return false;
+    if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
+      return false;
+    if (!(learner_status_ == rhs.learner_status_))
+      return false;
+    if (!(learner_signature == rhs.learner_signature))
+      return false;
+    if (!(node == rhs.node))
+      return false;
+    return true;
+  }
+  bool operator != (const group_check_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const group_check_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(group_check_response &a, group_check_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const group_check_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const group_check_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _node_info__isset
-{
-    _node_info__isset() : status(true), address(false) {}
-    bool status : 1;
-    bool address : 1;
+typedef struct _node_info__isset {
+  _node_info__isset() : status(true), address(false) {}
+  bool status :1;
+  bool address :1;
 } _node_info__isset;
 
-class node_info
-{
-public:
-    node_info(const node_info &);
-    node_info(node_info &&);
-    node_info &operator=(const node_info &);
-    node_info &operator=(node_info &&);
-    node_info() : status((node_status::type)0) { status = (node_status::type)0; }
+class node_info {
+ public:
 
-    virtual ~node_info() throw();
-    node_status::type status;
-    ::dsn::rpc_address address;
+  node_info(const node_info&);
+  node_info(node_info&&);
+  node_info& operator=(const node_info&);
+  node_info& operator=(node_info&&);
+  node_info() : status((node_status::type)0) {
+    status = (node_status::type)0;
 
-    _node_info__isset __isset;
+  }
 
-    void __set_status(const node_status::type val);
+  virtual ~node_info() throw();
+  node_status::type status;
+   ::dsn::rpc_address address;
 
-    void __set_address(const ::dsn::rpc_address &val);
+  _node_info__isset __isset;
 
-    bool operator==(const node_info &rhs) const
-    {
-        if (!(status == rhs.status))
-            return false;
-        if (!(address == rhs.address))
-            return false;
-        return true;
-    }
-    bool operator!=(const node_info &rhs) const { return !(*this == rhs); }
+  void __set_status(const node_status::type val);
 
-    bool operator<(const node_info &) const;
+  void __set_address(const  ::dsn::rpc_address& val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const node_info & rhs) const
+  {
+    if (!(status == rhs.status))
+      return false;
+    if (!(address == rhs.address))
+      return false;
+    return true;
+  }
+  bool operator != (const node_info &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const node_info & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(node_info &a, node_info &b);
 
-inline std::ostream &operator<<(std::ostream &out, const node_info &obj)
+inline std::ostream& operator<<(std::ostream& out, const node_info& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_update_request__isset
-{
-    _configuration_update_request__isset()
-        : info(false), config(false), type(true), node(false), host_node(false)
-    {
-    }
-    bool info : 1;
-    bool config : 1;
-    bool type : 1;
-    bool node : 1;
-    bool host_node : 1;
+typedef struct _configuration_update_request__isset {
+  _configuration_update_request__isset() : info(false), config(false), type(true), node(false), host_node(false) {}
+  bool info :1;
+  bool config :1;
+  bool type :1;
+  bool node :1;
+  bool host_node :1;
 } _configuration_update_request__isset;
 
-class configuration_update_request
-{
-public:
-    configuration_update_request(const configuration_update_request &);
-    configuration_update_request(configuration_update_request &&);
-    configuration_update_request &operator=(const configuration_update_request &);
-    configuration_update_request &operator=(configuration_update_request &&);
-    configuration_update_request() : type((config_type::type)0) { type = (config_type::type)0; }
+class configuration_update_request {
+ public:
 
-    virtual ~configuration_update_request() throw();
-    ::dsn::app_info info;
-    ::dsn::partition_configuration config;
-    config_type::type type;
-    ::dsn::rpc_address node;
-    ::dsn::rpc_address host_node;
+  configuration_update_request(const configuration_update_request&);
+  configuration_update_request(configuration_update_request&&);
+  configuration_update_request& operator=(const configuration_update_request&);
+  configuration_update_request& operator=(configuration_update_request&&);
+  configuration_update_request() : type((config_type::type)0) {
+    type = (config_type::type)0;
 
-    _configuration_update_request__isset __isset;
+  }
 
-    void __set_info(const ::dsn::app_info &val);
+  virtual ~configuration_update_request() throw();
+   ::dsn::app_info info;
+   ::dsn::partition_configuration config;
+  config_type::type type;
+   ::dsn::rpc_address node;
+   ::dsn::rpc_address host_node;
 
-    void __set_config(const ::dsn::partition_configuration &val);
+  _configuration_update_request__isset __isset;
 
-    void __set_type(const config_type::type val);
+  void __set_info(const  ::dsn::app_info& val);
 
-    void __set_node(const ::dsn::rpc_address &val);
+  void __set_config(const  ::dsn::partition_configuration& val);
 
-    void __set_host_node(const ::dsn::rpc_address &val);
+  void __set_type(const config_type::type val);
 
-    bool operator==(const configuration_update_request &rhs) const
-    {
-        if (!(info == rhs.info))
-            return false;
-        if (!(config == rhs.config))
-            return false;
-        if (!(type == rhs.type))
-            return false;
-        if (!(node == rhs.node))
-            return false;
-        if (!(host_node == rhs.host_node))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_update_request &rhs) const { return !(*this == rhs); }
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    bool operator<(const configuration_update_request &) const;
+  void __set_host_node(const  ::dsn::rpc_address& val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const configuration_update_request & rhs) const
+  {
+    if (!(info == rhs.info))
+      return false;
+    if (!(config == rhs.config))
+      return false;
+    if (!(type == rhs.type))
+      return false;
+    if (!(node == rhs.node))
+      return false;
+    if (!(host_node == rhs.host_node))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_update_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const configuration_update_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_update_request &a, configuration_update_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_update_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_update_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_update_response__isset
-{
-    _configuration_update_response__isset() : err(false), config(false) {}
-    bool err : 1;
-    bool config : 1;
+typedef struct _configuration_update_response__isset {
+  _configuration_update_response__isset() : err(false), config(false) {}
+  bool err :1;
+  bool config :1;
 } _configuration_update_response__isset;
 
-class configuration_update_response
-{
-public:
-    configuration_update_response(const configuration_update_response &);
-    configuration_update_response(configuration_update_response &&);
-    configuration_update_response &operator=(const configuration_update_response &);
-    configuration_update_response &operator=(configuration_update_response &&);
-    configuration_update_response() {}
+class configuration_update_response {
+ public:
 
-    virtual ~configuration_update_response() throw();
-    ::dsn::error_code err;
-    ::dsn::partition_configuration config;
+  configuration_update_response(const configuration_update_response&);
+  configuration_update_response(configuration_update_response&&);
+  configuration_update_response& operator=(const configuration_update_response&);
+  configuration_update_response& operator=(configuration_update_response&&);
+  configuration_update_response() {
+  }
 
-    _configuration_update_response__isset __isset;
+  virtual ~configuration_update_response() throw();
+   ::dsn::error_code err;
+   ::dsn::partition_configuration config;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_update_response__isset __isset;
 
-    void __set_config(const ::dsn::partition_configuration &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_update_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(config == rhs.config))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_update_response &rhs) const { return !(*this == rhs); }
+  void __set_config(const  ::dsn::partition_configuration& val);
 
-    bool operator<(const configuration_update_response &) const;
+  bool operator == (const configuration_update_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(config == rhs.config))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_update_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_update_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_update_response &a, configuration_update_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_update_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_update_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _replica_server_info__isset
-{
-    _replica_server_info__isset() : geo_tags(false), total_capacity_mb(false) {}
-    bool geo_tags : 1;
-    bool total_capacity_mb : 1;
+typedef struct _replica_server_info__isset {
+  _replica_server_info__isset() : geo_tags(false), total_capacity_mb(false) {}
+  bool geo_tags :1;
+  bool total_capacity_mb :1;
 } _replica_server_info__isset;
 
-class replica_server_info
-{
-public:
-    replica_server_info(const replica_server_info &);
-    replica_server_info(replica_server_info &&);
-    replica_server_info &operator=(const replica_server_info &);
-    replica_server_info &operator=(replica_server_info &&);
-    replica_server_info() : total_capacity_mb(0) {}
+class replica_server_info {
+ public:
 
-    virtual ~replica_server_info() throw();
-    std::map<std::string, std::string> geo_tags;
-    int64_t total_capacity_mb;
+  replica_server_info(const replica_server_info&);
+  replica_server_info(replica_server_info&&);
+  replica_server_info& operator=(const replica_server_info&);
+  replica_server_info& operator=(replica_server_info&&);
+  replica_server_info() : total_capacity_mb(0) {
+  }
 
-    _replica_server_info__isset __isset;
+  virtual ~replica_server_info() throw();
+  std::map<std::string, std::string>  geo_tags;
+  int64_t total_capacity_mb;
 
-    void __set_geo_tags(const std::map<std::string, std::string> &val);
+  _replica_server_info__isset __isset;
 
-    void __set_total_capacity_mb(const int64_t val);
+  void __set_geo_tags(const std::map<std::string, std::string> & val);
 
-    bool operator==(const replica_server_info &rhs) const
-    {
-        if (!(geo_tags == rhs.geo_tags))
-            return false;
-        if (!(total_capacity_mb == rhs.total_capacity_mb))
-            return false;
-        return true;
-    }
-    bool operator!=(const replica_server_info &rhs) const { return !(*this == rhs); }
+  void __set_total_capacity_mb(const int64_t val);
 
-    bool operator<(const replica_server_info &) const;
+  bool operator == (const replica_server_info & rhs) const
+  {
+    if (!(geo_tags == rhs.geo_tags))
+      return false;
+    if (!(total_capacity_mb == rhs.total_capacity_mb))
+      return false;
+    return true;
+  }
+  bool operator != (const replica_server_info &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const replica_server_info & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(replica_server_info &a, replica_server_info &b);
 
-inline std::ostream &operator<<(std::ostream &out, const replica_server_info &obj)
+inline std::ostream& operator<<(std::ostream& out, const replica_server_info& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_query_by_node_request__isset
-{
-    _configuration_query_by_node_request__isset() : node(false), stored_replicas(false), info(false)
-    {
-    }
-    bool node : 1;
-    bool stored_replicas : 1;
-    bool info : 1;
+typedef struct _configuration_query_by_node_request__isset {
+  _configuration_query_by_node_request__isset() : node(false), stored_replicas(false), info(false) {}
+  bool node :1;
+  bool stored_replicas :1;
+  bool info :1;
 } _configuration_query_by_node_request__isset;
 
-class configuration_query_by_node_request
-{
-public:
-    configuration_query_by_node_request(const configuration_query_by_node_request &);
-    configuration_query_by_node_request(configuration_query_by_node_request &&);
-    configuration_query_by_node_request &operator=(const configuration_query_by_node_request &);
-    configuration_query_by_node_request &operator=(configuration_query_by_node_request &&);
-    configuration_query_by_node_request() {}
+class configuration_query_by_node_request {
+ public:
 
-    virtual ~configuration_query_by_node_request() throw();
-    ::dsn::rpc_address node;
-    std::vector<replica_info> stored_replicas;
-    replica_server_info info;
+  configuration_query_by_node_request(const configuration_query_by_node_request&);
+  configuration_query_by_node_request(configuration_query_by_node_request&&);
+  configuration_query_by_node_request& operator=(const configuration_query_by_node_request&);
+  configuration_query_by_node_request& operator=(configuration_query_by_node_request&&);
+  configuration_query_by_node_request() {
+  }
 
-    _configuration_query_by_node_request__isset __isset;
+  virtual ~configuration_query_by_node_request() throw();
+   ::dsn::rpc_address node;
+  std::vector<replica_info>  stored_replicas;
+  replica_server_info info;
 
-    void __set_node(const ::dsn::rpc_address &val);
+  _configuration_query_by_node_request__isset __isset;
 
-    void __set_stored_replicas(const std::vector<replica_info> &val);
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    void __set_info(const replica_server_info &val);
+  void __set_stored_replicas(const std::vector<replica_info> & val);
 
-    bool operator==(const configuration_query_by_node_request &rhs) const
-    {
-        if (!(node == rhs.node))
-            return false;
-        if (__isset.stored_replicas != rhs.__isset.stored_replicas)
-            return false;
-        else if (__isset.stored_replicas && !(stored_replicas == rhs.stored_replicas))
-            return false;
-        if (__isset.info != rhs.__isset.info)
-            return false;
-        else if (__isset.info && !(info == rhs.info))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_query_by_node_request &rhs) const
-    {
-        return !(*this == rhs);
-    }
+  void __set_info(const replica_server_info& val);
 
-    bool operator<(const configuration_query_by_node_request &) const;
+  bool operator == (const configuration_query_by_node_request & rhs) const
+  {
+    if (!(node == rhs.node))
+      return false;
+    if (__isset.stored_replicas != rhs.__isset.stored_replicas)
+      return false;
+    else if (__isset.stored_replicas && !(stored_replicas == rhs.stored_replicas))
+      return false;
+    if (__isset.info != rhs.__isset.info)
+      return false;
+    else if (__isset.info && !(info == rhs.info))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_by_node_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_query_by_node_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_query_by_node_request &a, configuration_query_by_node_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_query_by_node_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_node_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_query_by_node_response__isset
-{
-    _configuration_query_by_node_response__isset()
-        : err(false), partitions(false), gc_replicas(false)
-    {
-    }
-    bool err : 1;
-    bool partitions : 1;
-    bool gc_replicas : 1;
+typedef struct _configuration_query_by_node_response__isset {
+  _configuration_query_by_node_response__isset() : err(false), partitions(false), gc_replicas(false) {}
+  bool err :1;
+  bool partitions :1;
+  bool gc_replicas :1;
 } _configuration_query_by_node_response__isset;
 
-class configuration_query_by_node_response
-{
-public:
-    configuration_query_by_node_response(const configuration_query_by_node_response &);
-    configuration_query_by_node_response(configuration_query_by_node_response &&);
-    configuration_query_by_node_response &operator=(const configuration_query_by_node_response &);
-    configuration_query_by_node_response &operator=(configuration_query_by_node_response &&);
-    configuration_query_by_node_response() {}
+class configuration_query_by_node_response {
+ public:
 
-    virtual ~configuration_query_by_node_response() throw();
-    ::dsn::error_code err;
-    std::vector<configuration_update_request> partitions;
-    std::vector<replica_info> gc_replicas;
+  configuration_query_by_node_response(const configuration_query_by_node_response&);
+  configuration_query_by_node_response(configuration_query_by_node_response&&);
+  configuration_query_by_node_response& operator=(const configuration_query_by_node_response&);
+  configuration_query_by_node_response& operator=(configuration_query_by_node_response&&);
+  configuration_query_by_node_response() {
+  }
 
-    _configuration_query_by_node_response__isset __isset;
+  virtual ~configuration_query_by_node_response() throw();
+   ::dsn::error_code err;
+  std::vector<configuration_update_request>  partitions;
+  std::vector<replica_info>  gc_replicas;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_query_by_node_response__isset __isset;
 
-    void __set_partitions(const std::vector<configuration_update_request> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    void __set_gc_replicas(const std::vector<replica_info> &val);
+  void __set_partitions(const std::vector<configuration_update_request> & val);
 
-    bool operator==(const configuration_query_by_node_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(partitions == rhs.partitions))
-            return false;
-        if (__isset.gc_replicas != rhs.__isset.gc_replicas)
-            return false;
-        else if (__isset.gc_replicas && !(gc_replicas == rhs.gc_replicas))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_query_by_node_response &rhs) const
-    {
-        return !(*this == rhs);
-    }
+  void __set_gc_replicas(const std::vector<replica_info> & val);
 
-    bool operator<(const configuration_query_by_node_response &) const;
+  bool operator == (const configuration_query_by_node_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(partitions == rhs.partitions))
+      return false;
+    if (__isset.gc_replicas != rhs.__isset.gc_replicas)
+      return false;
+    else if (__isset.gc_replicas && !(gc_replicas == rhs.gc_replicas))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_by_node_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_query_by_node_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_query_by_node_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_by_node_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _create_app_options__isset
-{
-    _create_app_options__isset()
-        : partition_count(false),
-          replica_count(false),
-          success_if_exist(false),
-          app_type(false),
-          is_stateful(false),
-          envs(false)
-    {
-    }
-    bool partition_count : 1;
-    bool replica_count : 1;
-    bool success_if_exist : 1;
-    bool app_type : 1;
-    bool is_stateful : 1;
-    bool envs : 1;
+typedef struct _create_app_options__isset {
+  _create_app_options__isset() : partition_count(false), replica_count(false), success_if_exist(false), app_type(false), is_stateful(false), envs(false) {}
+  bool partition_count :1;
+  bool replica_count :1;
+  bool success_if_exist :1;
+  bool app_type :1;
+  bool is_stateful :1;
+  bool envs :1;
 } _create_app_options__isset;
 
-class create_app_options
-{
-public:
-    create_app_options(const create_app_options &);
-    create_app_options(create_app_options &&);
-    create_app_options &operator=(const create_app_options &);
-    create_app_options &operator=(create_app_options &&);
-    create_app_options()
-        : partition_count(0), replica_count(0), success_if_exist(0), app_type(), is_stateful(0)
-    {
-    }
+class create_app_options {
+ public:
 
-    virtual ~create_app_options() throw();
-    int32_t partition_count;
-    int32_t replica_count;
-    bool success_if_exist;
-    std::string app_type;
-    bool is_stateful;
-    std::map<std::string, std::string> envs;
+  create_app_options(const create_app_options&);
+  create_app_options(create_app_options&&);
+  create_app_options& operator=(const create_app_options&);
+  create_app_options& operator=(create_app_options&&);
+  create_app_options() : partition_count(0), replica_count(0), success_if_exist(0), app_type(), is_stateful(0) {
+  }
 
-    _create_app_options__isset __isset;
+  virtual ~create_app_options() throw();
+  int32_t partition_count;
+  int32_t replica_count;
+  bool success_if_exist;
+  std::string app_type;
+  bool is_stateful;
+  std::map<std::string, std::string>  envs;
 
-    void __set_partition_count(const int32_t val);
+  _create_app_options__isset __isset;
 
-    void __set_replica_count(const int32_t val);
+  void __set_partition_count(const int32_t val);
 
-    void __set_success_if_exist(const bool val);
+  void __set_replica_count(const int32_t val);
 
-    void __set_app_type(const std::string &val);
+  void __set_success_if_exist(const bool val);
 
-    void __set_is_stateful(const bool val);
+  void __set_app_type(const std::string& val);
 
-    void __set_envs(const std::map<std::string, std::string> &val);
+  void __set_is_stateful(const bool val);
 
-    bool operator==(const create_app_options &rhs) const
-    {
-        if (!(partition_count == rhs.partition_count))
-            return false;
-        if (!(replica_count == rhs.replica_count))
-            return false;
-        if (!(success_if_exist == rhs.success_if_exist))
-            return false;
-        if (!(app_type == rhs.app_type))
-            return false;
-        if (!(is_stateful == rhs.is_stateful))
-            return false;
-        if (!(envs == rhs.envs))
-            return false;
-        return true;
-    }
-    bool operator!=(const create_app_options &rhs) const { return !(*this == rhs); }
+  void __set_envs(const std::map<std::string, std::string> & val);
 
-    bool operator<(const create_app_options &) const;
+  bool operator == (const create_app_options & rhs) const
+  {
+    if (!(partition_count == rhs.partition_count))
+      return false;
+    if (!(replica_count == rhs.replica_count))
+      return false;
+    if (!(success_if_exist == rhs.success_if_exist))
+      return false;
+    if (!(app_type == rhs.app_type))
+      return false;
+    if (!(is_stateful == rhs.is_stateful))
+      return false;
+    if (!(envs == rhs.envs))
+      return false;
+    return true;
+  }
+  bool operator != (const create_app_options &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const create_app_options & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(create_app_options &a, create_app_options &b);
 
-inline std::ostream &operator<<(std::ostream &out, const create_app_options &obj)
+inline std::ostream& operator<<(std::ostream& out, const create_app_options& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_create_app_request__isset
-{
-    _configuration_create_app_request__isset() : app_name(false), options(false) {}
-    bool app_name : 1;
-    bool options : 1;
+typedef struct _configuration_create_app_request__isset {
+  _configuration_create_app_request__isset() : app_name(false), options(false) {}
+  bool app_name :1;
+  bool options :1;
 } _configuration_create_app_request__isset;
 
-class configuration_create_app_request
-{
-public:
-    configuration_create_app_request(const configuration_create_app_request &);
-    configuration_create_app_request(configuration_create_app_request &&);
-    configuration_create_app_request &operator=(const configuration_create_app_request &);
-    configuration_create_app_request &operator=(configuration_create_app_request &&);
-    configuration_create_app_request() : app_name() {}
+class configuration_create_app_request {
+ public:
 
-    virtual ~configuration_create_app_request() throw();
-    std::string app_name;
-    create_app_options options;
+  configuration_create_app_request(const configuration_create_app_request&);
+  configuration_create_app_request(configuration_create_app_request&&);
+  configuration_create_app_request& operator=(const configuration_create_app_request&);
+  configuration_create_app_request& operator=(configuration_create_app_request&&);
+  configuration_create_app_request() : app_name() {
+  }
 
-    _configuration_create_app_request__isset __isset;
+  virtual ~configuration_create_app_request() throw();
+  std::string app_name;
+  create_app_options options;
 
-    void __set_app_name(const std::string &val);
+  _configuration_create_app_request__isset __isset;
 
-    void __set_options(const create_app_options &val);
+  void __set_app_name(const std::string& val);
 
-    bool operator==(const configuration_create_app_request &rhs) const
-    {
-        if (!(app_name == rhs.app_name))
-            return false;
-        if (!(options == rhs.options))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_create_app_request &rhs) const { return !(*this == rhs); }
+  void __set_options(const create_app_options& val);
 
-    bool operator<(const configuration_create_app_request &) const;
+  bool operator == (const configuration_create_app_request & rhs) const
+  {
+    if (!(app_name == rhs.app_name))
+      return false;
+    if (!(options == rhs.options))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_create_app_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_create_app_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_create_app_request &a, configuration_create_app_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_create_app_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_create_app_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _drop_app_options__isset
-{
-    _drop_app_options__isset() : success_if_not_exist(false), reserve_seconds(false) {}
-    bool success_if_not_exist : 1;
-    bool reserve_seconds : 1;
+typedef struct _drop_app_options__isset {
+  _drop_app_options__isset() : success_if_not_exist(false), reserve_seconds(false) {}
+  bool success_if_not_exist :1;
+  bool reserve_seconds :1;
 } _drop_app_options__isset;
 
-class drop_app_options
-{
-public:
-    drop_app_options(const drop_app_options &);
-    drop_app_options(drop_app_options &&);
-    drop_app_options &operator=(const drop_app_options &);
-    drop_app_options &operator=(drop_app_options &&);
-    drop_app_options() : success_if_not_exist(0), reserve_seconds(0) {}
+class drop_app_options {
+ public:
 
-    virtual ~drop_app_options() throw();
-    bool success_if_not_exist;
-    int64_t reserve_seconds;
+  drop_app_options(const drop_app_options&);
+  drop_app_options(drop_app_options&&);
+  drop_app_options& operator=(const drop_app_options&);
+  drop_app_options& operator=(drop_app_options&&);
+  drop_app_options() : success_if_not_exist(0), reserve_seconds(0) {
+  }
 
-    _drop_app_options__isset __isset;
+  virtual ~drop_app_options() throw();
+  bool success_if_not_exist;
+  int64_t reserve_seconds;
 
-    void __set_success_if_not_exist(const bool val);
+  _drop_app_options__isset __isset;
 
-    void __set_reserve_seconds(const int64_t val);
+  void __set_success_if_not_exist(const bool val);
 
-    bool operator==(const drop_app_options &rhs) const
-    {
-        if (!(success_if_not_exist == rhs.success_if_not_exist))
-            return false;
-        if (__isset.reserve_seconds != rhs.__isset.reserve_seconds)
-            return false;
-        else if (__isset.reserve_seconds && !(reserve_seconds == rhs.reserve_seconds))
-            return false;
-        return true;
-    }
-    bool operator!=(const drop_app_options &rhs) const { return !(*this == rhs); }
+  void __set_reserve_seconds(const int64_t val);
 
-    bool operator<(const drop_app_options &) const;
+  bool operator == (const drop_app_options & rhs) const
+  {
+    if (!(success_if_not_exist == rhs.success_if_not_exist))
+      return false;
+    if (__isset.reserve_seconds != rhs.__isset.reserve_seconds)
+      return false;
+    else if (__isset.reserve_seconds && !(reserve_seconds == rhs.reserve_seconds))
+      return false;
+    return true;
+  }
+  bool operator != (const drop_app_options &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const drop_app_options & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(drop_app_options &a, drop_app_options &b);
 
-inline std::ostream &operator<<(std::ostream &out, const drop_app_options &obj)
+inline std::ostream& operator<<(std::ostream& out, const drop_app_options& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_drop_app_request__isset
-{
-    _configuration_drop_app_request__isset() : app_name(false), options(false) {}
-    bool app_name : 1;
-    bool options : 1;
+typedef struct _configuration_drop_app_request__isset {
+  _configuration_drop_app_request__isset() : app_name(false), options(false) {}
+  bool app_name :1;
+  bool options :1;
 } _configuration_drop_app_request__isset;
 
-class configuration_drop_app_request
-{
-public:
-    configuration_drop_app_request(const configuration_drop_app_request &);
-    configuration_drop_app_request(configuration_drop_app_request &&);
-    configuration_drop_app_request &operator=(const configuration_drop_app_request &);
-    configuration_drop_app_request &operator=(configuration_drop_app_request &&);
-    configuration_drop_app_request() : app_name() {}
+class configuration_drop_app_request {
+ public:
 
-    virtual ~configuration_drop_app_request() throw();
-    std::string app_name;
-    drop_app_options options;
+  configuration_drop_app_request(const configuration_drop_app_request&);
+  configuration_drop_app_request(configuration_drop_app_request&&);
+  configuration_drop_app_request& operator=(const configuration_drop_app_request&);
+  configuration_drop_app_request& operator=(configuration_drop_app_request&&);
+  configuration_drop_app_request() : app_name() {
+  }
 
-    _configuration_drop_app_request__isset __isset;
+  virtual ~configuration_drop_app_request() throw();
+  std::string app_name;
+  drop_app_options options;
 
-    void __set_app_name(const std::string &val);
+  _configuration_drop_app_request__isset __isset;
 
-    void __set_options(const drop_app_options &val);
+  void __set_app_name(const std::string& val);
 
-    bool operator==(const configuration_drop_app_request &rhs) const
-    {
-        if (!(app_name == rhs.app_name))
-            return false;
-        if (!(options == rhs.options))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_drop_app_request &rhs) const { return !(*this == rhs); }
+  void __set_options(const drop_app_options& val);
 
-    bool operator<(const configuration_drop_app_request &) const;
+  bool operator == (const configuration_drop_app_request & rhs) const
+  {
+    if (!(app_name == rhs.app_name))
+      return false;
+    if (!(options == rhs.options))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_drop_app_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_drop_app_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_drop_app_request &a, configuration_drop_app_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_drop_app_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_drop_app_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_list_apps_request__isset
-{
-    _configuration_list_apps_request__isset() : status(true) {}
-    bool status : 1;
+typedef struct _configuration_list_apps_request__isset {
+  _configuration_list_apps_request__isset() : status(true) {}
+  bool status :1;
 } _configuration_list_apps_request__isset;
 
-class configuration_list_apps_request
-{
-public:
-    configuration_list_apps_request(const configuration_list_apps_request &);
-    configuration_list_apps_request(configuration_list_apps_request &&);
-    configuration_list_apps_request &operator=(const configuration_list_apps_request &);
-    configuration_list_apps_request &operator=(configuration_list_apps_request &&);
-    configuration_list_apps_request() : status((::dsn::app_status::type)0)
-    {
-        status = (::dsn::app_status::type)0;
-    }
+class configuration_list_apps_request {
+ public:
 
-    virtual ~configuration_list_apps_request() throw();
-    ::dsn::app_status::type status;
+  configuration_list_apps_request(const configuration_list_apps_request&);
+  configuration_list_apps_request(configuration_list_apps_request&&);
+  configuration_list_apps_request& operator=(const configuration_list_apps_request&);
+  configuration_list_apps_request& operator=(configuration_list_apps_request&&);
+  configuration_list_apps_request() : status(( ::dsn::app_status::type)0) {
+    status = ( ::dsn::app_status::type)0;
 
-    _configuration_list_apps_request__isset __isset;
+  }
 
-    void __set_status(const ::dsn::app_status::type val);
+  virtual ~configuration_list_apps_request() throw();
+   ::dsn::app_status::type status;
 
-    bool operator==(const configuration_list_apps_request &rhs) const
-    {
-        if (!(status == rhs.status))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_list_apps_request &rhs) const { return !(*this == rhs); }
+  _configuration_list_apps_request__isset __isset;
 
-    bool operator<(const configuration_list_apps_request &) const;
+  void __set_status(const  ::dsn::app_status::type val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const configuration_list_apps_request & rhs) const
+  {
+    if (!(status == rhs.status))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_list_apps_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const configuration_list_apps_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_list_apps_request &a, configuration_list_apps_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_list_apps_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_list_apps_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_list_nodes_request__isset
-{
-    _configuration_list_nodes_request__isset() : status(true) {}
-    bool status : 1;
+typedef struct _configuration_list_nodes_request__isset {
+  _configuration_list_nodes_request__isset() : status(true) {}
+  bool status :1;
 } _configuration_list_nodes_request__isset;
 
-class configuration_list_nodes_request
-{
-public:
-    configuration_list_nodes_request(const configuration_list_nodes_request &);
-    configuration_list_nodes_request(configuration_list_nodes_request &&);
-    configuration_list_nodes_request &operator=(const configuration_list_nodes_request &);
-    configuration_list_nodes_request &operator=(configuration_list_nodes_request &&);
-    configuration_list_nodes_request() : status((node_status::type)0)
-    {
-        status = (node_status::type)0;
-    }
+class configuration_list_nodes_request {
+ public:
 
-    virtual ~configuration_list_nodes_request() throw();
-    node_status::type status;
+  configuration_list_nodes_request(const configuration_list_nodes_request&);
+  configuration_list_nodes_request(configuration_list_nodes_request&&);
+  configuration_list_nodes_request& operator=(const configuration_list_nodes_request&);
+  configuration_list_nodes_request& operator=(configuration_list_nodes_request&&);
+  configuration_list_nodes_request() : status((node_status::type)0) {
+    status = (node_status::type)0;
 
-    _configuration_list_nodes_request__isset __isset;
+  }
 
-    void __set_status(const node_status::type val);
+  virtual ~configuration_list_nodes_request() throw();
+  node_status::type status;
 
-    bool operator==(const configuration_list_nodes_request &rhs) const
-    {
-        if (!(status == rhs.status))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_list_nodes_request &rhs) const { return !(*this == rhs); }
+  _configuration_list_nodes_request__isset __isset;
 
-    bool operator<(const configuration_list_nodes_request &) const;
+  void __set_status(const node_status::type val);
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const configuration_list_nodes_request & rhs) const
+  {
+    if (!(status == rhs.status))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_list_nodes_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const configuration_list_nodes_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_list_nodes_request &a, configuration_list_nodes_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_list_nodes_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_list_nodes_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-class configuration_cluster_info_request
-{
-public:
-    configuration_cluster_info_request(const configuration_cluster_info_request &);
-    configuration_cluster_info_request(configuration_cluster_info_request &&);
-    configuration_cluster_info_request &operator=(const configuration_cluster_info_request &);
-    configuration_cluster_info_request &operator=(configuration_cluster_info_request &&);
-    configuration_cluster_info_request() {}
 
-    virtual ~configuration_cluster_info_request() throw();
+class configuration_cluster_info_request {
+ public:
 
-    bool operator==(const configuration_cluster_info_request & /* rhs */) const { return true; }
-    bool operator!=(const configuration_cluster_info_request &rhs) const { return !(*this == rhs); }
+  configuration_cluster_info_request(const configuration_cluster_info_request&);
+  configuration_cluster_info_request(configuration_cluster_info_request&&);
+  configuration_cluster_info_request& operator=(const configuration_cluster_info_request&);
+  configuration_cluster_info_request& operator=(configuration_cluster_info_request&&);
+  configuration_cluster_info_request() {
+  }
 
-    bool operator<(const configuration_cluster_info_request &) const;
+  virtual ~configuration_cluster_info_request() throw();
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator == (const configuration_cluster_info_request & /* rhs */) const
+  {
+    return true;
+  }
+  bool operator != (const configuration_cluster_info_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    virtual void printTo(std::ostream &out) const;
+  bool operator < (const configuration_cluster_info_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_cluster_info_request &a, configuration_cluster_info_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_cluster_info_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_info_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_recall_app_request__isset
-{
-    _configuration_recall_app_request__isset() : app_id(false), new_app_name(false) {}
-    bool app_id : 1;
-    bool new_app_name : 1;
+typedef struct _configuration_recall_app_request__isset {
+  _configuration_recall_app_request__isset() : app_id(false), new_app_name(false) {}
+  bool app_id :1;
+  bool new_app_name :1;
 } _configuration_recall_app_request__isset;
 
-class configuration_recall_app_request
-{
-public:
-    configuration_recall_app_request(const configuration_recall_app_request &);
-    configuration_recall_app_request(configuration_recall_app_request &&);
-    configuration_recall_app_request &operator=(const configuration_recall_app_request &);
-    configuration_recall_app_request &operator=(configuration_recall_app_request &&);
-    configuration_recall_app_request() : app_id(0), new_app_name() {}
+class configuration_recall_app_request {
+ public:
 
-    virtual ~configuration_recall_app_request() throw();
-    int32_t app_id;
-    std::string new_app_name;
+  configuration_recall_app_request(const configuration_recall_app_request&);
+  configuration_recall_app_request(configuration_recall_app_request&&);
+  configuration_recall_app_request& operator=(const configuration_recall_app_request&);
+  configuration_recall_app_request& operator=(configuration_recall_app_request&&);
+  configuration_recall_app_request() : app_id(0), new_app_name() {
+  }
 
-    _configuration_recall_app_request__isset __isset;
+  virtual ~configuration_recall_app_request() throw();
+  int32_t app_id;
+  std::string new_app_name;
 
-    void __set_app_id(const int32_t val);
+  _configuration_recall_app_request__isset __isset;
 
-    void __set_new_app_name(const std::string &val);
+  void __set_app_id(const int32_t val);
 
-    bool operator==(const configuration_recall_app_request &rhs) const
-    {
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(new_app_name == rhs.new_app_name))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_recall_app_request &rhs) const { return !(*this == rhs); }
+  void __set_new_app_name(const std::string& val);
 
-    bool operator<(const configuration_recall_app_request &) const;
+  bool operator == (const configuration_recall_app_request & rhs) const
+  {
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(new_app_name == rhs.new_app_name))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recall_app_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_recall_app_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_recall_app_request &a, configuration_recall_app_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_recall_app_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_recall_app_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_create_app_response__isset
-{
-    _configuration_create_app_response__isset() : err(false), appid(false) {}
-    bool err : 1;
-    bool appid : 1;
+typedef struct _configuration_create_app_response__isset {
+  _configuration_create_app_response__isset() : err(false), appid(false) {}
+  bool err :1;
+  bool appid :1;
 } _configuration_create_app_response__isset;
 
-class configuration_create_app_response
-{
-public:
-    configuration_create_app_response(const configuration_create_app_response &);
-    configuration_create_app_response(configuration_create_app_response &&);
-    configuration_create_app_response &operator=(const configuration_create_app_response &);
-    configuration_create_app_response &operator=(configuration_create_app_response &&);
-    configuration_create_app_response() : appid(0) {}
+class configuration_create_app_response {
+ public:
 
-    virtual ~configuration_create_app_response() throw();
-    ::dsn::error_code err;
-    int32_t appid;
+  configuration_create_app_response(const configuration_create_app_response&);
+  configuration_create_app_response(configuration_create_app_response&&);
+  configuration_create_app_response& operator=(const configuration_create_app_response&);
+  configuration_create_app_response& operator=(configuration_create_app_response&&);
+  configuration_create_app_response() : appid(0) {
+  }
 
-    _configuration_create_app_response__isset __isset;
+  virtual ~configuration_create_app_response() throw();
+   ::dsn::error_code err;
+  int32_t appid;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_create_app_response__isset __isset;
 
-    void __set_appid(const int32_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_create_app_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(appid == rhs.appid))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_create_app_response &rhs) const { return !(*this == rhs); }
+  void __set_appid(const int32_t val);
 
-    bool operator<(const configuration_create_app_response &) const;
+  bool operator == (const configuration_create_app_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(appid == rhs.appid))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_create_app_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_create_app_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_create_app_response &a, configuration_create_app_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_create_app_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_create_app_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_meta_control_request__isset
-{
-    _configuration_meta_control_request__isset() : level(false) {}
-    bool level : 1;
+typedef struct _configuration_meta_control_request__isset {
+  _configuration_meta_control_request__isset() : level(false) {}
+  bool level :1;
 } _configuration_meta_control_request__isset;
 
-class configuration_meta_control_request
-{
-public:
-    configuration_meta_control_request(const configuration_meta_control_request &);
-    configuration_meta_control_request(configuration_meta_control_request &&);
-    configuration_meta_control_request &operator=(const configuration_meta_control_request &);
-    configuration_meta_control_request &operator=(configuration_meta_control_request &&);
-    configuration_meta_control_request() : level((meta_function_level::type)0) {}
+class configuration_meta_control_request {
+ public:
 
-    virtual ~configuration_meta_control_request() throw();
-    meta_function_level::type level;
+  configuration_meta_control_request(const configuration_meta_control_request&);
+  configuration_meta_control_request(configuration_meta_control_request&&);
+  configuration_meta_control_request& operator=(const configuration_meta_control_request&);
+  configuration_meta_control_request& operator=(configuration_meta_control_request&&);
+  configuration_meta_control_request() : level((meta_function_level::type)0) {
+  }
 
-    _configuration_meta_control_request__isset __isset;
+  virtual ~configuration_meta_control_request() throw();
+  meta_function_level::type level;
 
-    void __set_level(const meta_function_level::type val);
+  _configuration_meta_control_request__isset __isset;
 
-    bool operator==(const configuration_meta_control_request &rhs) const
-    {
-        if (!(level == rhs.level))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_meta_control_request &rhs) const { return !(*this == rhs); }
+  void __set_level(const meta_function_level::type val);
 
-    bool operator<(const configuration_meta_control_request &) const;
+  bool operator == (const configuration_meta_control_request & rhs) const
+  {
+    if (!(level == rhs.level))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_meta_control_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_meta_control_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_meta_control_request &a, configuration_meta_control_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_meta_control_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_meta_control_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_meta_control_response__isset
-{
-    _configuration_meta_control_response__isset() : err(false), old_level(false) {}
-    bool err : 1;
-    bool old_level : 1;
+typedef struct _configuration_meta_control_response__isset {
+  _configuration_meta_control_response__isset() : err(false), old_level(false) {}
+  bool err :1;
+  bool old_level :1;
 } _configuration_meta_control_response__isset;
 
-class configuration_meta_control_response
-{
-public:
-    configuration_meta_control_response(const configuration_meta_control_response &);
-    configuration_meta_control_response(configuration_meta_control_response &&);
-    configuration_meta_control_response &operator=(const configuration_meta_control_response &);
-    configuration_meta_control_response &operator=(configuration_meta_control_response &&);
-    configuration_meta_control_response() : old_level((meta_function_level::type)0) {}
+class configuration_meta_control_response {
+ public:
 
-    virtual ~configuration_meta_control_response() throw();
-    ::dsn::error_code err;
-    meta_function_level::type old_level;
+  configuration_meta_control_response(const configuration_meta_control_response&);
+  configuration_meta_control_response(configuration_meta_control_response&&);
+  configuration_meta_control_response& operator=(const configuration_meta_control_response&);
+  configuration_meta_control_response& operator=(configuration_meta_control_response&&);
+  configuration_meta_control_response() : old_level((meta_function_level::type)0) {
+  }
 
-    _configuration_meta_control_response__isset __isset;
+  virtual ~configuration_meta_control_response() throw();
+   ::dsn::error_code err;
+  meta_function_level::type old_level;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_meta_control_response__isset __isset;
 
-    void __set_old_level(const meta_function_level::type val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_meta_control_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(old_level == rhs.old_level))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_meta_control_response &rhs) const
-    {
-        return !(*this == rhs);
-    }
+  void __set_old_level(const meta_function_level::type val);
 
-    bool operator<(const configuration_meta_control_response &) const;
+  bool operator == (const configuration_meta_control_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(old_level == rhs.old_level))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_meta_control_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_meta_control_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_meta_control_response &a, configuration_meta_control_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_meta_control_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_meta_control_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_proposal_action__isset
-{
-    _configuration_proposal_action__isset() : target(false), node(false), type(false) {}
-    bool target : 1;
-    bool node : 1;
-    bool type : 1;
+typedef struct _configuration_proposal_action__isset {
+  _configuration_proposal_action__isset() : target(false), node(false), type(false) {}
+  bool target :1;
+  bool node :1;
+  bool type :1;
 } _configuration_proposal_action__isset;
 
-class configuration_proposal_action
-{
-public:
-    configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp)
-        : target(t), node(n), type(tp)
-    {
-    }
+class configuration_proposal_action {
+ public:
+  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}
 
-    configuration_proposal_action(const configuration_proposal_action &);
-    configuration_proposal_action(configuration_proposal_action &&);
-    configuration_proposal_action &operator=(const configuration_proposal_action &);
-    configuration_proposal_action &operator=(configuration_proposal_action &&);
-    configuration_proposal_action() : type((config_type::type)0) {}
+  configuration_proposal_action(const configuration_proposal_action&);
+  configuration_proposal_action(configuration_proposal_action&&);
+  configuration_proposal_action& operator=(const configuration_proposal_action&);
+  configuration_proposal_action& operator=(configuration_proposal_action&&);
+  configuration_proposal_action() : type((config_type::type)0) {
+  }
 
-    virtual ~configuration_proposal_action() throw();
-    ::dsn::rpc_address target;
-    ::dsn::rpc_address node;
-    config_type::type type;
+  virtual ~configuration_proposal_action() throw();
+   ::dsn::rpc_address target;
+   ::dsn::rpc_address node;
+  config_type::type type;
 
-    _configuration_proposal_action__isset __isset;
+  _configuration_proposal_action__isset __isset;
 
-    void __set_target(const ::dsn::rpc_address &val);
+  void __set_target(const  ::dsn::rpc_address& val);
 
-    void __set_node(const ::dsn::rpc_address &val);
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    void __set_type(const config_type::type val);
+  void __set_type(const config_type::type val);
 
-    bool operator==(const configuration_proposal_action &rhs) const
-    {
-        if (!(target == rhs.target))
-            return false;
-        if (!(node == rhs.node))
-            return false;
-        if (!(type == rhs.type))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_proposal_action &rhs) const { return !(*this == rhs); }
+  bool operator == (const configuration_proposal_action & rhs) const
+  {
+    if (!(target == rhs.target))
+      return false;
+    if (!(node == rhs.node))
+      return false;
+    if (!(type == rhs.type))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_proposal_action &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_proposal_action &a, configuration_proposal_action &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_proposal_action &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_proposal_action& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_balancer_request__isset
-{
-    _configuration_balancer_request__isset() : gpid(false), action_list(false), force(true) {}
-    bool gpid : 1;
-    bool action_list : 1;
-    bool force : 1;
+typedef struct _configuration_balancer_request__isset {
+  _configuration_balancer_request__isset() : gpid(false), action_list(false), force(true) {}
+  bool gpid :1;
+  bool action_list :1;
+  bool force :1;
 } _configuration_balancer_request__isset;
 
-class configuration_balancer_request
-{
-public:
-    configuration_balancer_request(const configuration_balancer_request &);
-    configuration_balancer_request(configuration_balancer_request &&);
-    configuration_balancer_request &operator=(const configuration_balancer_request &);
-    configuration_balancer_request &operator=(configuration_balancer_request &&);
-    configuration_balancer_request() : force(false) {}
+class configuration_balancer_request {
+ public:
 
-    virtual ~configuration_balancer_request() throw();
-    ::dsn::gpid gpid;
-    std::vector<configuration_proposal_action> action_list;
-    bool force;
+  configuration_balancer_request(const configuration_balancer_request&);
+  configuration_balancer_request(configuration_balancer_request&&);
+  configuration_balancer_request& operator=(const configuration_balancer_request&);
+  configuration_balancer_request& operator=(configuration_balancer_request&&);
+  configuration_balancer_request() : force(false) {
+  }
 
-    _configuration_balancer_request__isset __isset;
+  virtual ~configuration_balancer_request() throw();
+   ::dsn::gpid gpid;
+  std::vector<configuration_proposal_action>  action_list;
+  bool force;
 
-    void __set_gpid(const ::dsn::gpid &val);
+  _configuration_balancer_request__isset __isset;
 
-    void __set_action_list(const std::vector<configuration_proposal_action> &val);
+  void __set_gpid(const  ::dsn::gpid& val);
 
-    void __set_force(const bool val);
+  void __set_action_list(const std::vector<configuration_proposal_action> & val);
 
-    bool operator==(const configuration_balancer_request &rhs) const
-    {
-        if (!(gpid == rhs.gpid))
-            return false;
-        if (!(action_list == rhs.action_list))
-            return false;
-        if (__isset.force != rhs.__isset.force)
-            return false;
-        else if (__isset.force && !(force == rhs.force))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_balancer_request &rhs) const { return !(*this == rhs); }
+  void __set_force(const bool val);
 
-    bool operator<(const configuration_balancer_request &) const;
+  bool operator == (const configuration_balancer_request & rhs) const
+  {
+    if (!(gpid == rhs.gpid))
+      return false;
+    if (!(action_list == rhs.action_list))
+      return false;
+    if (__isset.force != rhs.__isset.force)
+      return false;
+    else if (__isset.force && !(force == rhs.force))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_balancer_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_balancer_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_balancer_request &a, configuration_balancer_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_balancer_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_balancer_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_balancer_response__isset
-{
-    _configuration_balancer_response__isset() : err(false) {}
-    bool err : 1;
+typedef struct _configuration_balancer_response__isset {
+  _configuration_balancer_response__isset() : err(false) {}
+  bool err :1;
 } _configuration_balancer_response__isset;
 
-class configuration_balancer_response
-{
-public:
-    configuration_balancer_response(const configuration_balancer_response &);
-    configuration_balancer_response(configuration_balancer_response &&);
-    configuration_balancer_response &operator=(const configuration_balancer_response &);
-    configuration_balancer_response &operator=(configuration_balancer_response &&);
-    configuration_balancer_response() {}
+class configuration_balancer_response {
+ public:
 
-    virtual ~configuration_balancer_response() throw();
-    ::dsn::error_code err;
+  configuration_balancer_response(const configuration_balancer_response&);
+  configuration_balancer_response(configuration_balancer_response&&);
+  configuration_balancer_response& operator=(const configuration_balancer_response&);
+  configuration_balancer_response& operator=(configuration_balancer_response&&);
+  configuration_balancer_response() {
+  }
 
-    _configuration_balancer_response__isset __isset;
+  virtual ~configuration_balancer_response() throw();
+   ::dsn::error_code err;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_balancer_response__isset __isset;
 
-    bool operator==(const configuration_balancer_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_balancer_response &rhs) const { return !(*this == rhs); }
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator<(const configuration_balancer_response &) const;
+  bool operator == (const configuration_balancer_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_balancer_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_balancer_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_balancer_response &a, configuration_balancer_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_balancer_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_balancer_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_drop_app_response__isset
-{
-    _configuration_drop_app_response__isset() : err(false) {}
-    bool err : 1;
+typedef struct _configuration_drop_app_response__isset {
+  _configuration_drop_app_response__isset() : err(false) {}
+  bool err :1;
 } _configuration_drop_app_response__isset;
 
-class configuration_drop_app_response
-{
-public:
-    configuration_drop_app_response(const configuration_drop_app_response &);
-    configuration_drop_app_response(configuration_drop_app_response &&);
-    configuration_drop_app_response &operator=(const configuration_drop_app_response &);
-    configuration_drop_app_response &operator=(configuration_drop_app_response &&);
-    configuration_drop_app_response() {}
+class configuration_drop_app_response {
+ public:
 
-    virtual ~configuration_drop_app_response() throw();
-    ::dsn::error_code err;
+  configuration_drop_app_response(const configuration_drop_app_response&);
+  configuration_drop_app_response(configuration_drop_app_response&&);
+  configuration_drop_app_response& operator=(const configuration_drop_app_response&);
+  configuration_drop_app_response& operator=(configuration_drop_app_response&&);
+  configuration_drop_app_response() {
+  }
 
-    _configuration_drop_app_response__isset __isset;
+  virtual ~configuration_drop_app_response() throw();
+   ::dsn::error_code err;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_drop_app_response__isset __isset;
 
-    bool operator==(const configuration_drop_app_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_drop_app_response &rhs) const { return !(*this == rhs); }
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator<(const configuration_drop_app_response &) const;
+  bool operator == (const configuration_drop_app_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_drop_app_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_drop_app_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_drop_app_response &a, configuration_drop_app_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_drop_app_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_drop_app_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_list_apps_response__isset
-{
-    _configuration_list_apps_response__isset() : err(false), infos(false) {}
-    bool err : 1;
-    bool infos : 1;
+typedef struct _configuration_list_apps_response__isset {
+  _configuration_list_apps_response__isset() : err(false), infos(false) {}
+  bool err :1;
+  bool infos :1;
 } _configuration_list_apps_response__isset;
 
-class configuration_list_apps_response
-{
-public:
-    configuration_list_apps_response(const configuration_list_apps_response &);
-    configuration_list_apps_response(configuration_list_apps_response &&);
-    configuration_list_apps_response &operator=(const configuration_list_apps_response &);
-    configuration_list_apps_response &operator=(configuration_list_apps_response &&);
-    configuration_list_apps_response() {}
+class configuration_list_apps_response {
+ public:
 
-    virtual ~configuration_list_apps_response() throw();
-    ::dsn::error_code err;
-    std::vector<::dsn::app_info> infos;
+  configuration_list_apps_response(const configuration_list_apps_response&);
+  configuration_list_apps_response(configuration_list_apps_response&&);
+  configuration_list_apps_response& operator=(const configuration_list_apps_response&);
+  configuration_list_apps_response& operator=(configuration_list_apps_response&&);
+  configuration_list_apps_response() {
+  }
 
-    _configuration_list_apps_response__isset __isset;
+  virtual ~configuration_list_apps_response() throw();
+   ::dsn::error_code err;
+  std::vector< ::dsn::app_info>  infos;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_list_apps_response__isset __isset;
 
-    void __set_infos(const std::vector<::dsn::app_info> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_list_apps_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(infos == rhs.infos))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_list_apps_response &rhs) const { return !(*this == rhs); }
+  void __set_infos(const std::vector< ::dsn::app_info> & val);
 
-    bool operator<(const configuration_list_apps_response &) const;
+  bool operator == (const configuration_list_apps_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(infos == rhs.infos))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_list_apps_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_list_apps_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_list_apps_response &a, configuration_list_apps_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_list_apps_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_list_apps_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_list_nodes_response__isset
-{
-    _configuration_list_nodes_response__isset() : err(false), infos(false) {}
-    bool err : 1;
-    bool infos : 1;
+typedef struct _configuration_list_nodes_response__isset {
+  _configuration_list_nodes_response__isset() : err(false), infos(false) {}
+  bool err :1;
+  bool infos :1;
 } _configuration_list_nodes_response__isset;
 
-class configuration_list_nodes_response
-{
-public:
-    configuration_list_nodes_response(const configuration_list_nodes_response &);
-    configuration_list_nodes_response(configuration_list_nodes_response &&);
-    configuration_list_nodes_response &operator=(const configuration_list_nodes_response &);
-    configuration_list_nodes_response &operator=(configuration_list_nodes_response &&);
-    configuration_list_nodes_response() {}
+class configuration_list_nodes_response {
+ public:
 
-    virtual ~configuration_list_nodes_response() throw();
-    ::dsn::error_code err;
-    std::vector<node_info> infos;
+  configuration_list_nodes_response(const configuration_list_nodes_response&);
+  configuration_list_nodes_response(configuration_list_nodes_response&&);
+  configuration_list_nodes_response& operator=(const configuration_list_nodes_response&);
+  configuration_list_nodes_response& operator=(configuration_list_nodes_response&&);
+  configuration_list_nodes_response() {
+  }
 
-    _configuration_list_nodes_response__isset __isset;
+  virtual ~configuration_list_nodes_response() throw();
+   ::dsn::error_code err;
+  std::vector<node_info>  infos;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_list_nodes_response__isset __isset;
 
-    void __set_infos(const std::vector<node_info> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_list_nodes_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(infos == rhs.infos))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_list_nodes_response &rhs) const { return !(*this == rhs); }
+  void __set_infos(const std::vector<node_info> & val);
 
-    bool operator<(const configuration_list_nodes_response &) const;
+  bool operator == (const configuration_list_nodes_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(infos == rhs.infos))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_list_nodes_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_list_nodes_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_list_nodes_response &a, configuration_list_nodes_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_list_nodes_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_list_nodes_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_cluster_info_response__isset
-{
-    _configuration_cluster_info_response__isset() : err(false), keys(false), values(false) {}
-    bool err : 1;
-    bool keys : 1;
-    bool values : 1;
+typedef struct _configuration_cluster_info_response__isset {
+  _configuration_cluster_info_response__isset() : err(false), keys(false), values(false) {}
+  bool err :1;
+  bool keys :1;
+  bool values :1;
 } _configuration_cluster_info_response__isset;
 
-class configuration_cluster_info_response
-{
-public:
-    configuration_cluster_info_response(const configuration_cluster_info_response &);
-    configuration_cluster_info_response(configuration_cluster_info_response &&);
-    configuration_cluster_info_response &operator=(const configuration_cluster_info_response &);
-    configuration_cluster_info_response &operator=(configuration_cluster_info_response &&);
-    configuration_cluster_info_response() {}
+class configuration_cluster_info_response {
+ public:
 
-    virtual ~configuration_cluster_info_response() throw();
-    ::dsn::error_code err;
-    std::vector<std::string> keys;
-    std::vector<std::string> values;
+  configuration_cluster_info_response(const configuration_cluster_info_response&);
+  configuration_cluster_info_response(configuration_cluster_info_response&&);
+  configuration_cluster_info_response& operator=(const configuration_cluster_info_response&);
+  configuration_cluster_info_response& operator=(configuration_cluster_info_response&&);
+  configuration_cluster_info_response() {
+  }
 
-    _configuration_cluster_info_response__isset __isset;
+  virtual ~configuration_cluster_info_response() throw();
+   ::dsn::error_code err;
+  std::vector<std::string>  keys;
+  std::vector<std::string>  values;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_cluster_info_response__isset __isset;
 
-    void __set_keys(const std::vector<std::string> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    void __set_values(const std::vector<std::string> &val);
+  void __set_keys(const std::vector<std::string> & val);
 
-    bool operator==(const configuration_cluster_info_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(keys == rhs.keys))
-            return false;
-        if (!(values == rhs.values))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_cluster_info_response &rhs) const
-    {
-        return !(*this == rhs);
-    }
+  void __set_values(const std::vector<std::string> & val);
 
-    bool operator<(const configuration_cluster_info_response &) const;
+  bool operator == (const configuration_cluster_info_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(keys == rhs.keys))
+      return false;
+    if (!(values == rhs.values))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_cluster_info_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_cluster_info_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_cluster_info_response &a, configuration_cluster_info_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_cluster_info_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_cluster_info_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_recall_app_response__isset
-{
-    _configuration_recall_app_response__isset() : err(false), info(false) {}
-    bool err : 1;
-    bool info : 1;
+typedef struct _configuration_recall_app_response__isset {
+  _configuration_recall_app_response__isset() : err(false), info(false) {}
+  bool err :1;
+  bool info :1;
 } _configuration_recall_app_response__isset;
 
-class configuration_recall_app_response
-{
-public:
-    configuration_recall_app_response(const configuration_recall_app_response &);
-    configuration_recall_app_response(configuration_recall_app_response &&);
-    configuration_recall_app_response &operator=(const configuration_recall_app_response &);
-    configuration_recall_app_response &operator=(configuration_recall_app_response &&);
-    configuration_recall_app_response() {}
+class configuration_recall_app_response {
+ public:
 
-    virtual ~configuration_recall_app_response() throw();
-    ::dsn::error_code err;
-    ::dsn::app_info info;
+  configuration_recall_app_response(const configuration_recall_app_response&);
+  configuration_recall_app_response(configuration_recall_app_response&&);
+  configuration_recall_app_response& operator=(const configuration_recall_app_response&);
+  configuration_recall_app_response& operator=(configuration_recall_app_response&&);
+  configuration_recall_app_response() {
+  }
 
-    _configuration_recall_app_response__isset __isset;
+  virtual ~configuration_recall_app_response() throw();
+   ::dsn::error_code err;
+   ::dsn::app_info info;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_recall_app_response__isset __isset;
 
-    void __set_info(const ::dsn::app_info &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_recall_app_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(info == rhs.info))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_recall_app_response &rhs) const { return !(*this == rhs); }
+  void __set_info(const  ::dsn::app_info& val);
 
-    bool operator<(const configuration_recall_app_response &) const;
+  bool operator == (const configuration_recall_app_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(info == rhs.info))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recall_app_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_recall_app_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_recall_app_response &a, configuration_recall_app_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_recall_app_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_recall_app_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_replica_decree_request__isset
-{
-    _query_replica_decree_request__isset() : pid(false), node(false) {}
-    bool pid : 1;
-    bool node : 1;
+typedef struct _query_replica_decree_request__isset {
+  _query_replica_decree_request__isset() : pid(false), node(false) {}
+  bool pid :1;
+  bool node :1;
 } _query_replica_decree_request__isset;
 
-class query_replica_decree_request
-{
-public:
-    query_replica_decree_request(const query_replica_decree_request &);
-    query_replica_decree_request(query_replica_decree_request &&);
-    query_replica_decree_request &operator=(const query_replica_decree_request &);
-    query_replica_decree_request &operator=(query_replica_decree_request &&);
-    query_replica_decree_request() {}
+class query_replica_decree_request {
+ public:
 
-    virtual ~query_replica_decree_request() throw();
-    ::dsn::gpid pid;
-    ::dsn::rpc_address node;
+  query_replica_decree_request(const query_replica_decree_request&);
+  query_replica_decree_request(query_replica_decree_request&&);
+  query_replica_decree_request& operator=(const query_replica_decree_request&);
+  query_replica_decree_request& operator=(query_replica_decree_request&&);
+  query_replica_decree_request() {
+  }
 
-    _query_replica_decree_request__isset __isset;
+  virtual ~query_replica_decree_request() throw();
+   ::dsn::gpid pid;
+   ::dsn::rpc_address node;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _query_replica_decree_request__isset __isset;
 
-    void __set_node(const ::dsn::rpc_address &val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    bool operator==(const query_replica_decree_request &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(node == rhs.node))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_replica_decree_request &rhs) const { return !(*this == rhs); }
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    bool operator<(const query_replica_decree_request &) const;
+  bool operator == (const query_replica_decree_request & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(node == rhs.node))
+      return false;
+    return true;
+  }
+  bool operator != (const query_replica_decree_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_replica_decree_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_replica_decree_request &a, query_replica_decree_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_replica_decree_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_replica_decree_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_replica_decree_response__isset
-{
-    _query_replica_decree_response__isset() : err(false), last_decree(false) {}
-    bool err : 1;
-    bool last_decree : 1;
+typedef struct _query_replica_decree_response__isset {
+  _query_replica_decree_response__isset() : err(false), last_decree(false) {}
+  bool err :1;
+  bool last_decree :1;
 } _query_replica_decree_response__isset;
 
-class query_replica_decree_response
-{
-public:
-    query_replica_decree_response(const query_replica_decree_response &);
-    query_replica_decree_response(query_replica_decree_response &&);
-    query_replica_decree_response &operator=(const query_replica_decree_response &);
-    query_replica_decree_response &operator=(query_replica_decree_response &&);
-    query_replica_decree_response() : last_decree(0) {}
+class query_replica_decree_response {
+ public:
 
-    virtual ~query_replica_decree_response() throw();
-    ::dsn::error_code err;
-    int64_t last_decree;
+  query_replica_decree_response(const query_replica_decree_response&);
+  query_replica_decree_response(query_replica_decree_response&&);
+  query_replica_decree_response& operator=(const query_replica_decree_response&);
+  query_replica_decree_response& operator=(query_replica_decree_response&&);
+  query_replica_decree_response() : last_decree(0) {
+  }
 
-    _query_replica_decree_response__isset __isset;
+  virtual ~query_replica_decree_response() throw();
+   ::dsn::error_code err;
+  int64_t last_decree;
 
-    void __set_err(const ::dsn::error_code &val);
+  _query_replica_decree_response__isset __isset;
 
-    void __set_last_decree(const int64_t val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const query_replica_decree_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(last_decree == rhs.last_decree))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_replica_decree_response &rhs) const { return !(*this == rhs); }
+  void __set_last_decree(const int64_t val);
 
-    bool operator<(const query_replica_decree_response &) const;
+  bool operator == (const query_replica_decree_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(last_decree == rhs.last_decree))
+      return false;
+    return true;
+  }
+  bool operator != (const query_replica_decree_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_replica_decree_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_replica_decree_response &a, query_replica_decree_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_replica_decree_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_replica_decree_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _replica_info__isset
-{
-    _replica_info__isset()
-        : pid(false),
-          ballot(false),
-          status(false),
-          last_committed_decree(false),
-          last_prepared_decree(false),
-          last_durable_decree(false),
-          app_type(false),
-          disk_tag(false)
-    {
-    }
-    bool pid : 1;
-    bool ballot : 1;
-    bool status : 1;
-    bool last_committed_decree : 1;
-    bool last_prepared_decree : 1;
-    bool last_durable_decree : 1;
-    bool app_type : 1;
-    bool disk_tag : 1;
+typedef struct _replica_info__isset {
+  _replica_info__isset() : pid(false), ballot(false), status(false), last_committed_decree(false), last_prepared_decree(false), last_durable_decree(false), app_type(false), disk_tag(false) {}
+  bool pid :1;
+  bool ballot :1;
+  bool status :1;
+  bool last_committed_decree :1;
+  bool last_prepared_decree :1;
+  bool last_durable_decree :1;
+  bool app_type :1;
+  bool disk_tag :1;
 } _replica_info__isset;
 
-class replica_info
-{
-public:
-    replica_info(const replica_info &);
-    replica_info(replica_info &&);
-    replica_info &operator=(const replica_info &);
-    replica_info &operator=(replica_info &&);
-    replica_info()
-        : ballot(0),
-          status((partition_status::type)0),
-          last_committed_decree(0),
-          last_prepared_decree(0),
-          last_durable_decree(0),
-          app_type(),
-          disk_tag()
-    {
-    }
+class replica_info {
+ public:
 
-    virtual ~replica_info() throw();
-    ::dsn::gpid pid;
-    int64_t ballot;
-    partition_status::type status;
-    int64_t last_committed_decree;
-    int64_t last_prepared_decree;
-    int64_t last_durable_decree;
-    std::string app_type;
-    std::string disk_tag;
+  replica_info(const replica_info&);
+  replica_info(replica_info&&);
+  replica_info& operator=(const replica_info&);
+  replica_info& operator=(replica_info&&);
+  replica_info() : ballot(0), status((partition_status::type)0), last_committed_decree(0), last_prepared_decree(0), last_durable_decree(0), app_type(), disk_tag() {
+  }
 
-    _replica_info__isset __isset;
+  virtual ~replica_info() throw();
+   ::dsn::gpid pid;
+  int64_t ballot;
+  partition_status::type status;
+  int64_t last_committed_decree;
+  int64_t last_prepared_decree;
+  int64_t last_durable_decree;
+  std::string app_type;
+  std::string disk_tag;
 
-    void __set_pid(const ::dsn::gpid &val);
+  _replica_info__isset __isset;
 
-    void __set_ballot(const int64_t val);
+  void __set_pid(const  ::dsn::gpid& val);
 
-    void __set_status(const partition_status::type val);
+  void __set_ballot(const int64_t val);
 
-    void __set_last_committed_decree(const int64_t val);
+  void __set_status(const partition_status::type val);
 
-    void __set_last_prepared_decree(const int64_t val);
+  void __set_last_committed_decree(const int64_t val);
 
-    void __set_last_durable_decree(const int64_t val);
+  void __set_last_prepared_decree(const int64_t val);
 
-    void __set_app_type(const std::string &val);
+  void __set_last_durable_decree(const int64_t val);
 
-    void __set_disk_tag(const std::string &val);
+  void __set_app_type(const std::string& val);
 
-    bool operator==(const replica_info &rhs) const
-    {
-        if (!(pid == rhs.pid))
-            return false;
-        if (!(ballot == rhs.ballot))
-            return false;
-        if (!(status == rhs.status))
-            return false;
-        if (!(last_committed_decree == rhs.last_committed_decree))
-            return false;
-        if (!(last_prepared_decree == rhs.last_prepared_decree))
-            return false;
-        if (!(last_durable_decree == rhs.last_durable_decree))
-            return false;
-        if (!(app_type == rhs.app_type))
-            return false;
-        if (!(disk_tag == rhs.disk_tag))
-            return false;
-        return true;
-    }
-    bool operator!=(const replica_info &rhs) const { return !(*this == rhs); }
+  void __set_disk_tag(const std::string& val);
 
-    bool operator<(const replica_info &) const;
+  bool operator == (const replica_info & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(ballot == rhs.ballot))
+      return false;
+    if (!(status == rhs.status))
+      return false;
+    if (!(last_committed_decree == rhs.last_committed_decree))
+      return false;
+    if (!(last_prepared_decree == rhs.last_prepared_decree))
+      return false;
+    if (!(last_durable_decree == rhs.last_durable_decree))
+      return false;
+    if (!(app_type == rhs.app_type))
+      return false;
+    if (!(disk_tag == rhs.disk_tag))
+      return false;
+    return true;
+  }
+  bool operator != (const replica_info &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const replica_info & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(replica_info &a, replica_info &b);
 
-inline std::ostream &operator<<(std::ostream &out, const replica_info &obj)
+inline std::ostream& operator<<(std::ostream& out, const replica_info& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_replica_info_request__isset
-{
-    _query_replica_info_request__isset() : node(false) {}
-    bool node : 1;
+typedef struct _query_replica_info_request__isset {
+  _query_replica_info_request__isset() : node(false) {}
+  bool node :1;
 } _query_replica_info_request__isset;
 
-class query_replica_info_request
-{
-public:
-    query_replica_info_request(const query_replica_info_request &);
-    query_replica_info_request(query_replica_info_request &&);
-    query_replica_info_request &operator=(const query_replica_info_request &);
-    query_replica_info_request &operator=(query_replica_info_request &&);
-    query_replica_info_request() {}
+class query_replica_info_request {
+ public:
 
-    virtual ~query_replica_info_request() throw();
-    ::dsn::rpc_address node;
+  query_replica_info_request(const query_replica_info_request&);
+  query_replica_info_request(query_replica_info_request&&);
+  query_replica_info_request& operator=(const query_replica_info_request&);
+  query_replica_info_request& operator=(query_replica_info_request&&);
+  query_replica_info_request() {
+  }
 
-    _query_replica_info_request__isset __isset;
+  virtual ~query_replica_info_request() throw();
+   ::dsn::rpc_address node;
 
-    void __set_node(const ::dsn::rpc_address &val);
+  _query_replica_info_request__isset __isset;
 
-    bool operator==(const query_replica_info_request &rhs) const
-    {
-        if (!(node == rhs.node))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_replica_info_request &rhs) const { return !(*this == rhs); }
+  void __set_node(const  ::dsn::rpc_address& val);
 
-    bool operator<(const query_replica_info_request &) const;
+  bool operator == (const query_replica_info_request & rhs) const
+  {
+    if (!(node == rhs.node))
+      return false;
+    return true;
+  }
+  bool operator != (const query_replica_info_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_replica_info_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_replica_info_request &a, query_replica_info_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_replica_info_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_replica_info_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_replica_info_response__isset
-{
-    _query_replica_info_response__isset() : err(false), replicas(false) {}
-    bool err : 1;
-    bool replicas : 1;
+typedef struct _query_replica_info_response__isset {
+  _query_replica_info_response__isset() : err(false), replicas(false) {}
+  bool err :1;
+  bool replicas :1;
 } _query_replica_info_response__isset;
 
-class query_replica_info_response
-{
-public:
-    query_replica_info_response(const query_replica_info_response &);
-    query_replica_info_response(query_replica_info_response &&);
-    query_replica_info_response &operator=(const query_replica_info_response &);
-    query_replica_info_response &operator=(query_replica_info_response &&);
-    query_replica_info_response() {}
+class query_replica_info_response {
+ public:
 
-    virtual ~query_replica_info_response() throw();
-    ::dsn::error_code err;
-    std::vector<replica_info> replicas;
+  query_replica_info_response(const query_replica_info_response&);
+  query_replica_info_response(query_replica_info_response&&);
+  query_replica_info_response& operator=(const query_replica_info_response&);
+  query_replica_info_response& operator=(query_replica_info_response&&);
+  query_replica_info_response() {
+  }
 
-    _query_replica_info_response__isset __isset;
+  virtual ~query_replica_info_response() throw();
+   ::dsn::error_code err;
+  std::vector<replica_info>  replicas;
 
-    void __set_err(const ::dsn::error_code &val);
+  _query_replica_info_response__isset __isset;
 
-    void __set_replicas(const std::vector<replica_info> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const query_replica_info_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(replicas == rhs.replicas))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_replica_info_response &rhs) const { return !(*this == rhs); }
+  void __set_replicas(const std::vector<replica_info> & val);
 
-    bool operator<(const query_replica_info_response &) const;
+  bool operator == (const query_replica_info_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(replicas == rhs.replicas))
+      return false;
+    return true;
+  }
+  bool operator != (const query_replica_info_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_replica_info_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_replica_info_response &a, query_replica_info_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_replica_info_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_replica_info_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_app_info_request__isset
-{
-    _query_app_info_request__isset() : meta_server(false) {}
-    bool meta_server : 1;
+typedef struct _query_app_info_request__isset {
+  _query_app_info_request__isset() : meta_server(false) {}
+  bool meta_server :1;
 } _query_app_info_request__isset;
 
-class query_app_info_request
-{
-public:
-    query_app_info_request(const query_app_info_request &);
-    query_app_info_request(query_app_info_request &&);
-    query_app_info_request &operator=(const query_app_info_request &);
-    query_app_info_request &operator=(query_app_info_request &&);
-    query_app_info_request() {}
+class query_app_info_request {
+ public:
 
-    virtual ~query_app_info_request() throw();
-    ::dsn::rpc_address meta_server;
+  query_app_info_request(const query_app_info_request&);
+  query_app_info_request(query_app_info_request&&);
+  query_app_info_request& operator=(const query_app_info_request&);
+  query_app_info_request& operator=(query_app_info_request&&);
+  query_app_info_request() {
+  }
 
-    _query_app_info_request__isset __isset;
+  virtual ~query_app_info_request() throw();
+   ::dsn::rpc_address meta_server;
 
-    void __set_meta_server(const ::dsn::rpc_address &val);
+  _query_app_info_request__isset __isset;
 
-    bool operator==(const query_app_info_request &rhs) const
-    {
-        if (!(meta_server == rhs.meta_server))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_app_info_request &rhs) const { return !(*this == rhs); }
+  void __set_meta_server(const  ::dsn::rpc_address& val);
 
-    bool operator<(const query_app_info_request &) const;
+  bool operator == (const query_app_info_request & rhs) const
+  {
+    if (!(meta_server == rhs.meta_server))
+      return false;
+    return true;
+  }
+  bool operator != (const query_app_info_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_app_info_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_app_info_request &a, query_app_info_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_app_info_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_app_info_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _query_app_info_response__isset
-{
-    _query_app_info_response__isset() : err(false), apps(false) {}
-    bool err : 1;
-    bool apps : 1;
+typedef struct _query_app_info_response__isset {
+  _query_app_info_response__isset() : err(false), apps(false) {}
+  bool err :1;
+  bool apps :1;
 } _query_app_info_response__isset;
 
-class query_app_info_response
-{
-public:
-    query_app_info_response(const query_app_info_response &);
-    query_app_info_response(query_app_info_response &&);
-    query_app_info_response &operator=(const query_app_info_response &);
-    query_app_info_response &operator=(query_app_info_response &&);
-    query_app_info_response() {}
+class query_app_info_response {
+ public:
 
-    virtual ~query_app_info_response() throw();
-    ::dsn::error_code err;
-    std::vector<::dsn::app_info> apps;
+  query_app_info_response(const query_app_info_response&);
+  query_app_info_response(query_app_info_response&&);
+  query_app_info_response& operator=(const query_app_info_response&);
+  query_app_info_response& operator=(query_app_info_response&&);
+  query_app_info_response() {
+  }
 
-    _query_app_info_response__isset __isset;
+  virtual ~query_app_info_response() throw();
+   ::dsn::error_code err;
+  std::vector< ::dsn::app_info>  apps;
 
-    void __set_err(const ::dsn::error_code &val);
+  _query_app_info_response__isset __isset;
 
-    void __set_apps(const std::vector<::dsn::app_info> &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const query_app_info_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(apps == rhs.apps))
-            return false;
-        return true;
-    }
-    bool operator!=(const query_app_info_response &rhs) const { return !(*this == rhs); }
+  void __set_apps(const std::vector< ::dsn::app_info> & val);
 
-    bool operator<(const query_app_info_response &) const;
+  bool operator == (const query_app_info_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(apps == rhs.apps))
+      return false;
+    return true;
+  }
+  bool operator != (const query_app_info_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const query_app_info_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(query_app_info_response &a, query_app_info_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const query_app_info_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const query_app_info_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_recovery_request__isset
-{
-    _configuration_recovery_request__isset()
-        : recovery_set(false), skip_bad_nodes(false), skip_lost_partitions(false)
-    {
-    }
-    bool recovery_set : 1;
-    bool skip_bad_nodes : 1;
-    bool skip_lost_partitions : 1;
+typedef struct _configuration_recovery_request__isset {
+  _configuration_recovery_request__isset() : recovery_set(false), skip_bad_nodes(false), skip_lost_partitions(false) {}
+  bool recovery_set :1;
+  bool skip_bad_nodes :1;
+  bool skip_lost_partitions :1;
 } _configuration_recovery_request__isset;
 
-class configuration_recovery_request
-{
-public:
-    configuration_recovery_request(const configuration_recovery_request &);
-    configuration_recovery_request(configuration_recovery_request &&);
-    configuration_recovery_request &operator=(const configuration_recovery_request &);
-    configuration_recovery_request &operator=(configuration_recovery_request &&);
-    configuration_recovery_request() : skip_bad_nodes(0), skip_lost_partitions(0) {}
+class configuration_recovery_request {
+ public:
 
-    virtual ~configuration_recovery_request() throw();
-    std::vector<::dsn::rpc_address> recovery_set;
-    bool skip_bad_nodes;
-    bool skip_lost_partitions;
+  configuration_recovery_request(const configuration_recovery_request&);
+  configuration_recovery_request(configuration_recovery_request&&);
+  configuration_recovery_request& operator=(const configuration_recovery_request&);
+  configuration_recovery_request& operator=(configuration_recovery_request&&);
+  configuration_recovery_request() : skip_bad_nodes(0), skip_lost_partitions(0) {
+  }
 
-    _configuration_recovery_request__isset __isset;
+  virtual ~configuration_recovery_request() throw();
+  std::vector< ::dsn::rpc_address>  recovery_set;
+  bool skip_bad_nodes;
+  bool skip_lost_partitions;
 
-    void __set_recovery_set(const std::vector<::dsn::rpc_address> &val);
+  _configuration_recovery_request__isset __isset;
 
-    void __set_skip_bad_nodes(const bool val);
+  void __set_recovery_set(const std::vector< ::dsn::rpc_address> & val);
 
-    void __set_skip_lost_partitions(const bool val);
+  void __set_skip_bad_nodes(const bool val);
 
-    bool operator==(const configuration_recovery_request &rhs) const
-    {
-        if (!(recovery_set == rhs.recovery_set))
-            return false;
-        if (!(skip_bad_nodes == rhs.skip_bad_nodes))
-            return false;
-        if (!(skip_lost_partitions == rhs.skip_lost_partitions))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_recovery_request &rhs) const { return !(*this == rhs); }
+  void __set_skip_lost_partitions(const bool val);
 
-    bool operator<(const configuration_recovery_request &) const;
+  bool operator == (const configuration_recovery_request & rhs) const
+  {
+    if (!(recovery_set == rhs.recovery_set))
+      return false;
+    if (!(skip_bad_nodes == rhs.skip_bad_nodes))
+      return false;
+    if (!(skip_lost_partitions == rhs.skip_lost_partitions))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recovery_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_recovery_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_recovery_request &a, configuration_recovery_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_recovery_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_recovery_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _configuration_recovery_response__isset
-{
-    _configuration_recovery_response__isset() : err(false), hint_message(false) {}
-    bool err : 1;
-    bool hint_message : 1;
+typedef struct _configuration_recovery_response__isset {
+  _configuration_recovery_response__isset() : err(false), hint_message(false) {}
+  bool err :1;
+  bool hint_message :1;
 } _configuration_recovery_response__isset;
 
-class configuration_recovery_response
-{
-public:
-    configuration_recovery_response(const configuration_recovery_response &);
-    configuration_recovery_response(configuration_recovery_response &&);
-    configuration_recovery_response &operator=(const configuration_recovery_response &);
-    configuration_recovery_response &operator=(configuration_recovery_response &&);
-    configuration_recovery_response() : hint_message() {}
+class configuration_recovery_response {
+ public:
 
-    virtual ~configuration_recovery_response() throw();
-    ::dsn::error_code err;
-    std::string hint_message;
+  configuration_recovery_response(const configuration_recovery_response&);
+  configuration_recovery_response(configuration_recovery_response&&);
+  configuration_recovery_response& operator=(const configuration_recovery_response&);
+  configuration_recovery_response& operator=(configuration_recovery_response&&);
+  configuration_recovery_response() : hint_message() {
+  }
 
-    _configuration_recovery_response__isset __isset;
+  virtual ~configuration_recovery_response() throw();
+   ::dsn::error_code err;
+  std::string hint_message;
 
-    void __set_err(const ::dsn::error_code &val);
+  _configuration_recovery_response__isset __isset;
 
-    void __set_hint_message(const std::string &val);
+  void __set_err(const  ::dsn::error_code& val);
 
-    bool operator==(const configuration_recovery_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (!(hint_message == rhs.hint_message))
-            return false;
-        return true;
-    }
-    bool operator!=(const configuration_recovery_response &rhs) const { return !(*this == rhs); }
+  void __set_hint_message(const std::string& val);
 
-    bool operator<(const configuration_recovery_response &) const;
+  bool operator == (const configuration_recovery_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(hint_message == rhs.hint_message))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_recovery_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const configuration_recovery_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(configuration_recovery_response &a, configuration_recovery_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const configuration_recovery_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const configuration_recovery_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
+
+typedef struct _policy_info__isset {
+  _policy_info__isset() : policy_name(false), backup_provider_type(false) {}
+  bool policy_name :1;
+  bool backup_provider_type :1;
+} _policy_info__isset;
+
+class policy_info {
+ public:
+
+  policy_info(const policy_info&);
+  policy_info(policy_info&&);
+  policy_info& operator=(const policy_info&);
+  policy_info& operator=(policy_info&&);
+  policy_info() : policy_name(), backup_provider_type() {
+  }
+
+  virtual ~policy_info() throw();
+  std::string policy_name;
+  std::string backup_provider_type;
+
+  _policy_info__isset __isset;
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_backup_provider_type(const std::string& val);
+
+  bool operator == (const policy_info & rhs) const
+  {
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (!(backup_provider_type == rhs.backup_provider_type))
+      return false;
+    return true;
+  }
+  bool operator != (const policy_info &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const policy_info & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(policy_info &a, policy_info &b);
+
+inline std::ostream& operator<<(std::ostream& out, const policy_info& obj)
+{
+  obj.printTo(out);
+  return out;
 }
-} // namespace
+
+typedef struct _configuration_restore_request__isset {
+  _configuration_restore_request__isset() : cluster_name(false), policy_name(false), time_stamp(false), app_name(false), app_id(false), new_app_name(false), backup_provider_name(false), skip_bad_partition(false) {}
+  bool cluster_name :1;
+  bool policy_name :1;
+  bool time_stamp :1;
+  bool app_name :1;
+  bool app_id :1;
+  bool new_app_name :1;
+  bool backup_provider_name :1;
+  bool skip_bad_partition :1;
+} _configuration_restore_request__isset;
+
+class configuration_restore_request {
+ public:
+
+  configuration_restore_request(const configuration_restore_request&);
+  configuration_restore_request(configuration_restore_request&&);
+  configuration_restore_request& operator=(const configuration_restore_request&);
+  configuration_restore_request& operator=(configuration_restore_request&&);
+  configuration_restore_request() : cluster_name(), policy_name(), time_stamp(0), app_name(), app_id(0), new_app_name(), backup_provider_name(), skip_bad_partition(0) {
+  }
+
+  virtual ~configuration_restore_request() throw();
+  std::string cluster_name;
+  std::string policy_name;
+  int64_t time_stamp;
+  std::string app_name;
+  int32_t app_id;
+  std::string new_app_name;
+  std::string backup_provider_name;
+  bool skip_bad_partition;
+
+  _configuration_restore_request__isset __isset;
+
+  void __set_cluster_name(const std::string& val);
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_time_stamp(const int64_t val);
+
+  void __set_app_name(const std::string& val);
+
+  void __set_app_id(const int32_t val);
+
+  void __set_new_app_name(const std::string& val);
+
+  void __set_backup_provider_name(const std::string& val);
+
+  void __set_skip_bad_partition(const bool val);
+
+  bool operator == (const configuration_restore_request & rhs) const
+  {
+    if (!(cluster_name == rhs.cluster_name))
+      return false;
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (!(time_stamp == rhs.time_stamp))
+      return false;
+    if (!(app_name == rhs.app_name))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(new_app_name == rhs.new_app_name))
+      return false;
+    if (!(backup_provider_name == rhs.backup_provider_name))
+      return false;
+    if (!(skip_bad_partition == rhs.skip_bad_partition))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_restore_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_restore_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_restore_request &a, configuration_restore_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_restore_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _backup_request__isset {
+  _backup_request__isset() : pid(false), policy(false), app_name(false), backup_id(false) {}
+  bool pid :1;
+  bool policy :1;
+  bool app_name :1;
+  bool backup_id :1;
+} _backup_request__isset;
+
+class backup_request {
+ public:
+
+  backup_request(const backup_request&);
+  backup_request(backup_request&&);
+  backup_request& operator=(const backup_request&);
+  backup_request& operator=(backup_request&&);
+  backup_request() : app_name(), backup_id(0) {
+  }
+
+  virtual ~backup_request() throw();
+   ::dsn::gpid pid;
+  policy_info policy;
+  std::string app_name;
+  int64_t backup_id;
+
+  _backup_request__isset __isset;
+
+  void __set_pid(const  ::dsn::gpid& val);
+
+  void __set_policy(const policy_info& val);
+
+  void __set_app_name(const std::string& val);
+
+  void __set_backup_id(const int64_t val);
+
+  bool operator == (const backup_request & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(policy == rhs.policy))
+      return false;
+    if (!(app_name == rhs.app_name))
+      return false;
+    if (!(backup_id == rhs.backup_id))
+      return false;
+    return true;
+  }
+  bool operator != (const backup_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const backup_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(backup_request &a, backup_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const backup_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _backup_response__isset {
+  _backup_response__isset() : err(false), pid(false), progress(false), policy_name(false), backup_id(false) {}
+  bool err :1;
+  bool pid :1;
+  bool progress :1;
+  bool policy_name :1;
+  bool backup_id :1;
+} _backup_response__isset;
+
+class backup_response {
+ public:
+
+  backup_response(const backup_response&);
+  backup_response(backup_response&&);
+  backup_response& operator=(const backup_response&);
+  backup_response& operator=(backup_response&&);
+  backup_response() : progress(0), policy_name(), backup_id(0) {
+  }
+
+  virtual ~backup_response() throw();
+   ::dsn::error_code err;
+   ::dsn::gpid pid;
+  int32_t progress;
+  std::string policy_name;
+  int64_t backup_id;
+
+  _backup_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_pid(const  ::dsn::gpid& val);
+
+  void __set_progress(const int32_t val);
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_backup_id(const int64_t val);
+
+  bool operator == (const backup_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(progress == rhs.progress))
+      return false;
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (!(backup_id == rhs.backup_id))
+      return false;
+    return true;
+  }
+  bool operator != (const backup_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const backup_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(backup_response &a, backup_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const backup_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_modify_backup_policy_request__isset {
+  _configuration_modify_backup_policy_request__isset() : policy_name(false), add_appids(false), removal_appids(false), new_backup_interval_sec(false), backup_history_count_to_keep(false), is_disable(false), start_time(false) {}
+  bool policy_name :1;
+  bool add_appids :1;
+  bool removal_appids :1;
+  bool new_backup_interval_sec :1;
+  bool backup_history_count_to_keep :1;
+  bool is_disable :1;
+  bool start_time :1;
+} _configuration_modify_backup_policy_request__isset;
+
+class configuration_modify_backup_policy_request {
+ public:
+
+  configuration_modify_backup_policy_request(const configuration_modify_backup_policy_request&);
+  configuration_modify_backup_policy_request(configuration_modify_backup_policy_request&&);
+  configuration_modify_backup_policy_request& operator=(const configuration_modify_backup_policy_request&);
+  configuration_modify_backup_policy_request& operator=(configuration_modify_backup_policy_request&&);
+  configuration_modify_backup_policy_request() : policy_name(), new_backup_interval_sec(0), backup_history_count_to_keep(0), is_disable(0), start_time() {
+  }
+
+  virtual ~configuration_modify_backup_policy_request() throw();
+  std::string policy_name;
+  std::vector<int32_t>  add_appids;
+  std::vector<int32_t>  removal_appids;
+  int64_t new_backup_interval_sec;
+  int32_t backup_history_count_to_keep;
+  bool is_disable;
+  std::string start_time;
+
+  _configuration_modify_backup_policy_request__isset __isset;
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_add_appids(const std::vector<int32_t> & val);
+
+  void __set_removal_appids(const std::vector<int32_t> & val);
+
+  void __set_new_backup_interval_sec(const int64_t val);
+
+  void __set_backup_history_count_to_keep(const int32_t val);
+
+  void __set_is_disable(const bool val);
+
+  void __set_start_time(const std::string& val);
+
+  bool operator == (const configuration_modify_backup_policy_request & rhs) const
+  {
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (__isset.add_appids != rhs.__isset.add_appids)
+      return false;
+    else if (__isset.add_appids && !(add_appids == rhs.add_appids))
+      return false;
+    if (__isset.removal_appids != rhs.__isset.removal_appids)
+      return false;
+    else if (__isset.removal_appids && !(removal_appids == rhs.removal_appids))
+      return false;
+    if (__isset.new_backup_interval_sec != rhs.__isset.new_backup_interval_sec)
+      return false;
+    else if (__isset.new_backup_interval_sec && !(new_backup_interval_sec == rhs.new_backup_interval_sec))
+      return false;
+    if (__isset.backup_history_count_to_keep != rhs.__isset.backup_history_count_to_keep)
+      return false;
+    else if (__isset.backup_history_count_to_keep && !(backup_history_count_to_keep == rhs.backup_history_count_to_keep))
+      return false;
+    if (__isset.is_disable != rhs.__isset.is_disable)
+      return false;
+    else if (__isset.is_disable && !(is_disable == rhs.is_disable))
+      return false;
+    if (__isset.start_time != rhs.__isset.start_time)
+      return false;
+    else if (__isset.start_time && !(start_time == rhs.start_time))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_modify_backup_policy_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_modify_backup_policy_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_modify_backup_policy_request &a, configuration_modify_backup_policy_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_modify_backup_policy_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_modify_backup_policy_response__isset {
+  _configuration_modify_backup_policy_response__isset() : err(false), hint_message(false) {}
+  bool err :1;
+  bool hint_message :1;
+} _configuration_modify_backup_policy_response__isset;
+
+class configuration_modify_backup_policy_response {
+ public:
+
+  configuration_modify_backup_policy_response(const configuration_modify_backup_policy_response&);
+  configuration_modify_backup_policy_response(configuration_modify_backup_policy_response&&);
+  configuration_modify_backup_policy_response& operator=(const configuration_modify_backup_policy_response&);
+  configuration_modify_backup_policy_response& operator=(configuration_modify_backup_policy_response&&);
+  configuration_modify_backup_policy_response() : hint_message() {
+  }
+
+  virtual ~configuration_modify_backup_policy_response() throw();
+   ::dsn::error_code err;
+  std::string hint_message;
+
+  _configuration_modify_backup_policy_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_hint_message(const std::string& val);
+
+  bool operator == (const configuration_modify_backup_policy_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(hint_message == rhs.hint_message))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_modify_backup_policy_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_modify_backup_policy_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_modify_backup_policy_response &a, configuration_modify_backup_policy_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_modify_backup_policy_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_add_backup_policy_request__isset {
+  _configuration_add_backup_policy_request__isset() : backup_provider_type(false), policy_name(false), app_ids(false), backup_interval_seconds(false), backup_history_count_to_keep(false), start_time(false) {}
+  bool backup_provider_type :1;
+  bool policy_name :1;
+  bool app_ids :1;
+  bool backup_interval_seconds :1;
+  bool backup_history_count_to_keep :1;
+  bool start_time :1;
+} _configuration_add_backup_policy_request__isset;
+
+class configuration_add_backup_policy_request {
+ public:
+
+  configuration_add_backup_policy_request(const configuration_add_backup_policy_request&);
+  configuration_add_backup_policy_request(configuration_add_backup_policy_request&&);
+  configuration_add_backup_policy_request& operator=(const configuration_add_backup_policy_request&);
+  configuration_add_backup_policy_request& operator=(configuration_add_backup_policy_request&&);
+  configuration_add_backup_policy_request() : backup_provider_type(), policy_name(), backup_interval_seconds(0), backup_history_count_to_keep(0), start_time() {
+  }
+
+  virtual ~configuration_add_backup_policy_request() throw();
+  std::string backup_provider_type;
+  std::string policy_name;
+  std::vector<int32_t>  app_ids;
+  int64_t backup_interval_seconds;
+  int32_t backup_history_count_to_keep;
+  std::string start_time;
+
+  _configuration_add_backup_policy_request__isset __isset;
+
+  void __set_backup_provider_type(const std::string& val);
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_app_ids(const std::vector<int32_t> & val);
+
+  void __set_backup_interval_seconds(const int64_t val);
+
+  void __set_backup_history_count_to_keep(const int32_t val);
+
+  void __set_start_time(const std::string& val);
+
+  bool operator == (const configuration_add_backup_policy_request & rhs) const
+  {
+    if (!(backup_provider_type == rhs.backup_provider_type))
+      return false;
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (!(app_ids == rhs.app_ids))
+      return false;
+    if (!(backup_interval_seconds == rhs.backup_interval_seconds))
+      return false;
+    if (!(backup_history_count_to_keep == rhs.backup_history_count_to_keep))
+      return false;
+    if (!(start_time == rhs.start_time))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_add_backup_policy_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_add_backup_policy_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_add_backup_policy_request &a, configuration_add_backup_policy_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_add_backup_policy_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_add_backup_policy_response__isset {
+  _configuration_add_backup_policy_response__isset() : err(false), hint_message(false) {}
+  bool err :1;
+  bool hint_message :1;
+} _configuration_add_backup_policy_response__isset;
+
+class configuration_add_backup_policy_response {
+ public:
+
+  configuration_add_backup_policy_response(const configuration_add_backup_policy_response&);
+  configuration_add_backup_policy_response(configuration_add_backup_policy_response&&);
+  configuration_add_backup_policy_response& operator=(const configuration_add_backup_policy_response&);
+  configuration_add_backup_policy_response& operator=(configuration_add_backup_policy_response&&);
+  configuration_add_backup_policy_response() : hint_message() {
+  }
+
+  virtual ~configuration_add_backup_policy_response() throw();
+   ::dsn::error_code err;
+  std::string hint_message;
+
+  _configuration_add_backup_policy_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_hint_message(const std::string& val);
+
+  bool operator == (const configuration_add_backup_policy_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(hint_message == rhs.hint_message))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_add_backup_policy_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_add_backup_policy_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_add_backup_policy_response &a, configuration_add_backup_policy_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_add_backup_policy_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _policy_entry__isset {
+  _policy_entry__isset() : policy_name(false), backup_provider_type(false), backup_interval_seconds(false), app_ids(false), backup_history_count_to_keep(false), start_time(false), is_disable(false) {}
+  bool policy_name :1;
+  bool backup_provider_type :1;
+  bool backup_interval_seconds :1;
+  bool app_ids :1;
+  bool backup_history_count_to_keep :1;
+  bool start_time :1;
+  bool is_disable :1;
+} _policy_entry__isset;
+
+class policy_entry {
+ public:
+
+  policy_entry(const policy_entry&);
+  policy_entry(policy_entry&&);
+  policy_entry& operator=(const policy_entry&);
+  policy_entry& operator=(policy_entry&&);
+  policy_entry() : policy_name(), backup_provider_type(), backup_interval_seconds(), backup_history_count_to_keep(0), start_time(), is_disable(0) {
+  }
+
+  virtual ~policy_entry() throw();
+  std::string policy_name;
+  std::string backup_provider_type;
+  std::string backup_interval_seconds;
+  std::set<int32_t>  app_ids;
+  int32_t backup_history_count_to_keep;
+  std::string start_time;
+  bool is_disable;
+
+  _policy_entry__isset __isset;
+
+  void __set_policy_name(const std::string& val);
+
+  void __set_backup_provider_type(const std::string& val);
+
+  void __set_backup_interval_seconds(const std::string& val);
+
+  void __set_app_ids(const std::set<int32_t> & val);
+
+  void __set_backup_history_count_to_keep(const int32_t val);
+
+  void __set_start_time(const std::string& val);
+
+  void __set_is_disable(const bool val);
+
+  bool operator == (const policy_entry & rhs) const
+  {
+    if (!(policy_name == rhs.policy_name))
+      return false;
+    if (!(backup_provider_type == rhs.backup_provider_type))
+      return false;
+    if (!(backup_interval_seconds == rhs.backup_interval_seconds))
+      return false;
+    if (!(app_ids == rhs.app_ids))
+      return false;
+    if (!(backup_history_count_to_keep == rhs.backup_history_count_to_keep))
+      return false;
+    if (!(start_time == rhs.start_time))
+      return false;
+    if (!(is_disable == rhs.is_disable))
+      return false;
+    return true;
+  }
+  bool operator != (const policy_entry &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const policy_entry & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(policy_entry &a, policy_entry &b);
+
+inline std::ostream& operator<<(std::ostream& out, const policy_entry& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _backup_entry__isset {
+  _backup_entry__isset() : backup_id(false), start_time_ms(false), end_time_ms(false), app_ids(false) {}
+  bool backup_id :1;
+  bool start_time_ms :1;
+  bool end_time_ms :1;
+  bool app_ids :1;
+} _backup_entry__isset;
+
+class backup_entry {
+ public:
+
+  backup_entry(const backup_entry&);
+  backup_entry(backup_entry&&);
+  backup_entry& operator=(const backup_entry&);
+  backup_entry& operator=(backup_entry&&);
+  backup_entry() : backup_id(0), start_time_ms(0), end_time_ms(0) {
+  }
+
+  virtual ~backup_entry() throw();
+  int64_t backup_id;
+  int64_t start_time_ms;
+  int64_t end_time_ms;
+  std::set<int32_t>  app_ids;
+
+  _backup_entry__isset __isset;
+
+  void __set_backup_id(const int64_t val);
+
+  void __set_start_time_ms(const int64_t val);
+
+  void __set_end_time_ms(const int64_t val);
+
+  void __set_app_ids(const std::set<int32_t> & val);
+
+  bool operator == (const backup_entry & rhs) const
+  {
+    if (!(backup_id == rhs.backup_id))
+      return false;
+    if (!(start_time_ms == rhs.start_time_ms))
+      return false;
+    if (!(end_time_ms == rhs.end_time_ms))
+      return false;
+    if (!(app_ids == rhs.app_ids))
+      return false;
+    return true;
+  }
+  bool operator != (const backup_entry &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const backup_entry & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(backup_entry &a, backup_entry &b);
+
+inline std::ostream& operator<<(std::ostream& out, const backup_entry& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_query_backup_policy_request__isset {
+  _configuration_query_backup_policy_request__isset() : policy_names(false), backup_info_count(false) {}
+  bool policy_names :1;
+  bool backup_info_count :1;
+} _configuration_query_backup_policy_request__isset;
+
+class configuration_query_backup_policy_request {
+ public:
+
+  configuration_query_backup_policy_request(const configuration_query_backup_policy_request&);
+  configuration_query_backup_policy_request(configuration_query_backup_policy_request&&);
+  configuration_query_backup_policy_request& operator=(const configuration_query_backup_policy_request&);
+  configuration_query_backup_policy_request& operator=(configuration_query_backup_policy_request&&);
+  configuration_query_backup_policy_request() : backup_info_count(0) {
+  }
+
+  virtual ~configuration_query_backup_policy_request() throw();
+  std::vector<std::string>  policy_names;
+  int32_t backup_info_count;
+
+  _configuration_query_backup_policy_request__isset __isset;
+
+  void __set_policy_names(const std::vector<std::string> & val);
+
+  void __set_backup_info_count(const int32_t val);
+
+  bool operator == (const configuration_query_backup_policy_request & rhs) const
+  {
+    if (!(policy_names == rhs.policy_names))
+      return false;
+    if (!(backup_info_count == rhs.backup_info_count))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_backup_policy_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_backup_policy_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_query_backup_policy_request &a, configuration_query_backup_policy_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_backup_policy_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_query_backup_policy_response__isset {
+  _configuration_query_backup_policy_response__isset() : err(false), policys(false), backup_infos(false), hint_msg(false) {}
+  bool err :1;
+  bool policys :1;
+  bool backup_infos :1;
+  bool hint_msg :1;
+} _configuration_query_backup_policy_response__isset;
+
+class configuration_query_backup_policy_response {
+ public:
+
+  configuration_query_backup_policy_response(const configuration_query_backup_policy_response&);
+  configuration_query_backup_policy_response(configuration_query_backup_policy_response&&);
+  configuration_query_backup_policy_response& operator=(const configuration_query_backup_policy_response&);
+  configuration_query_backup_policy_response& operator=(configuration_query_backup_policy_response&&);
+  configuration_query_backup_policy_response() : hint_msg() {
+  }
+
+  virtual ~configuration_query_backup_policy_response() throw();
+   ::dsn::error_code err;
+  std::vector<policy_entry>  policys;
+  std::vector<std::vector<backup_entry> >  backup_infos;
+  std::string hint_msg;
+
+  _configuration_query_backup_policy_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_policys(const std::vector<policy_entry> & val);
+
+  void __set_backup_infos(const std::vector<std::vector<backup_entry> > & val);
+
+  void __set_hint_msg(const std::string& val);
+
+  bool operator == (const configuration_query_backup_policy_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(policys == rhs.policys))
+      return false;
+    if (!(backup_infos == rhs.backup_infos))
+      return false;
+    if (__isset.hint_msg != rhs.__isset.hint_msg)
+      return false;
+    else if (__isset.hint_msg && !(hint_msg == rhs.hint_msg))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_backup_policy_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_backup_policy_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_query_backup_policy_response &a, configuration_query_backup_policy_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_backup_policy_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_report_restore_status_request__isset {
+  _configuration_report_restore_status_request__isset() : pid(false), restore_status(false), progress(false), reason(false) {}
+  bool pid :1;
+  bool restore_status :1;
+  bool progress :1;
+  bool reason :1;
+} _configuration_report_restore_status_request__isset;
+
+class configuration_report_restore_status_request {
+ public:
+
+  configuration_report_restore_status_request(const configuration_report_restore_status_request&);
+  configuration_report_restore_status_request(configuration_report_restore_status_request&&);
+  configuration_report_restore_status_request& operator=(const configuration_report_restore_status_request&);
+  configuration_report_restore_status_request& operator=(configuration_report_restore_status_request&&);
+  configuration_report_restore_status_request() : progress(0), reason() {
+  }
+
+  virtual ~configuration_report_restore_status_request() throw();
+   ::dsn::gpid pid;
+   ::dsn::error_code restore_status;
+  int32_t progress;
+  std::string reason;
+
+  _configuration_report_restore_status_request__isset __isset;
+
+  void __set_pid(const  ::dsn::gpid& val);
+
+  void __set_restore_status(const  ::dsn::error_code& val);
+
+  void __set_progress(const int32_t val);
+
+  void __set_reason(const std::string& val);
+
+  bool operator == (const configuration_report_restore_status_request & rhs) const
+  {
+    if (!(pid == rhs.pid))
+      return false;
+    if (!(restore_status == rhs.restore_status))
+      return false;
+    if (!(progress == rhs.progress))
+      return false;
+    if (__isset.reason != rhs.__isset.reason)
+      return false;
+    else if (__isset.reason && !(reason == rhs.reason))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_report_restore_status_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_report_restore_status_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_report_restore_status_request &a, configuration_report_restore_status_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_report_restore_status_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_report_restore_status_response__isset {
+  _configuration_report_restore_status_response__isset() : err(false) {}
+  bool err :1;
+} _configuration_report_restore_status_response__isset;
+
+class configuration_report_restore_status_response {
+ public:
+
+  configuration_report_restore_status_response(const configuration_report_restore_status_response&);
+  configuration_report_restore_status_response(configuration_report_restore_status_response&&);
+  configuration_report_restore_status_response& operator=(const configuration_report_restore_status_response&);
+  configuration_report_restore_status_response& operator=(configuration_report_restore_status_response&&);
+  configuration_report_restore_status_response() {
+  }
+
+  virtual ~configuration_report_restore_status_response() throw();
+   ::dsn::error_code err;
+
+  _configuration_report_restore_status_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  bool operator == (const configuration_report_restore_status_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_report_restore_status_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_report_restore_status_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_report_restore_status_response &a, configuration_report_restore_status_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_report_restore_status_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_query_restore_request__isset {
+  _configuration_query_restore_request__isset() : restore_app_id(false) {}
+  bool restore_app_id :1;
+} _configuration_query_restore_request__isset;
+
+class configuration_query_restore_request {
+ public:
+
+  configuration_query_restore_request(const configuration_query_restore_request&);
+  configuration_query_restore_request(configuration_query_restore_request&&);
+  configuration_query_restore_request& operator=(const configuration_query_restore_request&);
+  configuration_query_restore_request& operator=(configuration_query_restore_request&&);
+  configuration_query_restore_request() : restore_app_id(0) {
+  }
+
+  virtual ~configuration_query_restore_request() throw();
+  int32_t restore_app_id;
+
+  _configuration_query_restore_request__isset __isset;
+
+  void __set_restore_app_id(const int32_t val);
+
+  bool operator == (const configuration_query_restore_request & rhs) const
+  {
+    if (!(restore_app_id == rhs.restore_app_id))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_restore_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_restore_request & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_query_restore_request &a, configuration_query_restore_request &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_restore_request& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _configuration_query_restore_response__isset {
+  _configuration_query_restore_response__isset() : err(false), restore_status(false), restore_progress(false) {}
+  bool err :1;
+  bool restore_status :1;
+  bool restore_progress :1;
+} _configuration_query_restore_response__isset;
+
+class configuration_query_restore_response {
+ public:
+
+  configuration_query_restore_response(const configuration_query_restore_response&);
+  configuration_query_restore_response(configuration_query_restore_response&&);
+  configuration_query_restore_response& operator=(const configuration_query_restore_response&);
+  configuration_query_restore_response& operator=(configuration_query_restore_response&&);
+  configuration_query_restore_response() : restore_progress(0) {
+  }
+
+  virtual ~configuration_query_restore_response() throw();
+   ::dsn::error_code err;
+   ::dsn::error_code restore_status;
+  int32_t restore_progress;
+
+  _configuration_query_restore_response__isset __isset;
+
+  void __set_err(const  ::dsn::error_code& val);
+
+  void __set_restore_status(const  ::dsn::error_code& val);
+
+  void __set_restore_progress(const int32_t val);
+
+  bool operator == (const configuration_query_restore_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(restore_status == rhs.restore_status))
+      return false;
+    if (!(restore_progress == rhs.restore_progress))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_restore_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_restore_response & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(configuration_query_restore_response &a, configuration_query_restore_response &b);
+
+inline std::ostream& operator<<(std::ostream& out, const configuration_query_restore_response& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+}} // namespace
 
 #endif

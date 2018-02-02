@@ -48,11 +48,19 @@
 namespace dsn {
 namespace replication {
 
-replica::replica(replica_stub *stub, gpid gpid, const app_info &app, const char *dir)
+replica::replica(
+    replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool need_restore)
     : serverlet<replica>("replica"),
       _app_info(app),
       _primary_states(
-          gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
+          gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled),
+      _cold_backup_running_count(0),
+      _cold_backup_max_duration_time_ms(0),
+      _cold_backup_max_upload_file_size(0),
+      _chkpt_total_size(0),
+      _cur_download_size(0),
+      _restore_progress(0),
+      _restore_status(ERR_OK)
 {
     dassert(_app_info.app_type != "", "");
     dassert(stub != nullptr, "");
@@ -72,6 +80,11 @@ replica::replica(replica_stub *stub, gpid gpid, const app_info &app, const char 
        << "@" << gpid.get_app_id() << "." << gpid.get_partition_index();
     _counter_private_log_size.init(
         "eon.replica", ss.str().c_str(), COUNTER_TYPE_NUMBER, "private log size(MB)");
+    if (need_restore) {
+        // add an extra env for restore
+        _extra_envs.insert(
+            std::make_pair(backup_restore_constant::FORCE_RESORE, std::string("true")));
+    }
 }
 
 // void replica::json_state(std::stringstream& out) const
@@ -375,10 +388,7 @@ decree replica::last_prepared_decree() const
     return start;
 }
 
-bool replica::verbose_commit_log() const
-{
-    return _stub->_verbose_commit_log;
-}
+bool replica::verbose_commit_log() const { return _stub->_verbose_commit_log; }
 
 void replica::close()
 {
@@ -390,6 +400,11 @@ void replica::close()
     if (nullptr != _checkpoint_timer) {
         _checkpoint_timer->cancel(true);
         _checkpoint_timer = nullptr;
+    }
+
+    if (_collect_info_timer != nullptr) {
+        _collect_info_timer->cancel(true);
+        _collect_info_timer = nullptr;
     }
 
     cleanup_preparing_mutations(true);

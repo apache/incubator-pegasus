@@ -40,6 +40,7 @@
 
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/perf_counter_.h>
+#include <dsn/dist/block_service.h>
 
 #include "dist/replication/client_lib/replication_common.h"
 #include "dist/replication/meta_server/meta_data.h"
@@ -118,7 +119,23 @@ public:
     error_code initialize_data_structure();
     void register_cli_commands();
 
+    void lock_read(zauto_read_lock &other);
+    void lock_write(zauto_write_lock &other);
     const meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
+    std::shared_ptr<app_state> get_app(const std::string &name)
+    {
+        auto iter = _exist_apps.find(name);
+        if (iter == _exist_apps.end())
+            return nullptr;
+        return iter->second;
+    }
+    std::shared_ptr<app_state> get_app(int32_t app_id)
+    {
+        auto iter = _all_apps.find(app_id);
+        if (iter == _all_apps.end())
+            return nullptr;
+        return iter->second;
+    }
 
     // query state
     void query_configuration_by_node(const configuration_query_by_node_request &request,
@@ -133,6 +150,7 @@ public:
     void recall_app(dsn_message_t msg);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response);
+    void restore_app(dsn_message_t msg);
 
     // update configuration
     void on_config_sync(dsn_message_t msg);
@@ -148,6 +166,9 @@ public:
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
                            configuration_recovery_response &response);
+    void on_recv_restore_report(dsn_message_t msg);
+
+    void on_query_restore_status(dsn_message_t msg);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -178,6 +199,11 @@ private:
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
                                             std::string &hint_message);
+    void sync_app_from_backup_media(const configuration_restore_request &request,
+                                    std::function<void(dsn::error_code, dsn::blob &)> &&callback);
+    std::pair<dsn::error_code, std::shared_ptr<app_state>> restore_app_info(
+        dsn_message_t msg, const configuration_restore_request &req, const dsn::blob &app_info);
+
     error_code initialize_default_apps();
     void initialize_node_state();
 
@@ -249,20 +275,7 @@ private:
         oss << _apps_root << "/" << app.app_id << "/" << partition_id;
         return oss.str();
     }
-    std::shared_ptr<app_state> get_app(const std::string &name)
-    {
-        auto iter = _exist_apps.find(name);
-        if (iter == _exist_apps.end())
-            return nullptr;
-        return iter->second;
-    }
-    std::shared_ptr<app_state> get_app(int32_t app_id)
-    {
-        auto iter = _all_apps.find(app_id);
-        if (iter == _all_apps.end())
-            return nullptr;
-        return iter->second;
-    }
+
     void process_one_partition(std::shared_ptr<app_state> &app);
     void transition_staging_state(std::shared_ptr<app_state> &app);
 

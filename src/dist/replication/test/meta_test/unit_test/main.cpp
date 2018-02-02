@@ -8,6 +8,9 @@
 #include "dist/replication/meta_server/meta_data.h"
 #include "meta_service_test_app.h"
 
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_TEST)
+DEFINE_TASK_CODE(TASK_META_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_META_TEST)
+
 int gtest_flags = 0;
 int gtest_ret = 0;
 meta_service_test_app *g_app;
@@ -53,6 +56,10 @@ TEST(meta, json_compacity) { g_app->json_compacity(); }
 
 TEST(meta, adjust_dropped_size) { g_app->adjust_dropped_size(); }
 
+TEST(meta, policy_context_test) { g_app->policy_context_test(); }
+
+TEST(meta, backup_service_test) { g_app->backup_service_test(); }
+
 dsn::error_code meta_service_test_app::start(int argc, char **argv)
 {
     uint32_t seed =
@@ -76,7 +83,6 @@ GTEST_API_ int main(int argc, char **argv)
         dassert(dsn_run_config("config-test.ini", false), "");
     else
         dassert(dsn_run_config(argv[1], false), "");
-
     while (gtest_flags == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

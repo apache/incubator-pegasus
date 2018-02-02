@@ -434,6 +434,133 @@ struct configuration_recovery_response
     2:string hint_message;
 }
 
+struct policy_info
+{
+    1:string        policy_name;
+    2:string        backup_provider_type;
+}
+
+// using configuration_create_app_response to response
+struct configuration_restore_request
+{
+    1:string            cluster_name;
+    2:string            policy_name;
+    3:i64               time_stamp;   // namely backup_id
+    4:string            app_name;
+    5:i32               app_id;
+    6:string            new_app_name;
+    7:string            backup_provider_name;
+    8:bool              skip_bad_partition;
+}
+
+struct backup_request
+{
+    1:dsn.gpid              pid;
+    2:policy_info           policy;
+    3:string                app_name;
+    4:i64                   backup_id;
+}
+
+struct backup_response
+{
+    1:dsn.error_code    err;
+    2:dsn.gpid          pid;
+    3:i32               progress;  // the progress of the cold_backup
+    4:string            policy_name;
+    5:i64               backup_id;
+}
+
+struct configuration_modify_backup_policy_request
+{
+    1:string                    policy_name;
+    2:optional list<i32>        add_appids;
+    3:optional list<i32>        removal_appids;
+    4:optional i64              new_backup_interval_sec;
+    5:optional i32              backup_history_count_to_keep;
+    6:optional bool             is_disable;
+    7:optional string           start_time; // restrict the start time of each backup, hour:minute
+}
+
+struct configuration_modify_backup_policy_response
+{
+    1:dsn.error_code        err;
+    2:string                hint_message;
+}
+
+struct configuration_add_backup_policy_request
+{
+    1:string            backup_provider_type;
+    2:string            policy_name;
+    3:list<i32>         app_ids;
+    4:i64               backup_interval_seconds;
+    5:i32               backup_history_count_to_keep;
+    6:string            start_time;
+}
+
+struct configuration_add_backup_policy_response
+{
+    1:dsn.error_code        err;
+    2:string                hint_message;
+}
+
+struct policy_entry
+{
+    1:string        policy_name;
+    2:string        backup_provider_type;
+    3:string        backup_interval_seconds;
+    4:set<i32>      app_ids;
+    5:i32           backup_history_count_to_keep;
+    6:string        start_time;
+    7:bool          is_disable;
+}
+
+struct backup_entry
+{
+    1:i64           backup_id;
+    2:i64           start_time_ms;
+    3:i64           end_time_ms;
+    4:set<i32>      app_ids;
+}
+
+struct configuration_query_backup_policy_request
+{
+    1:list<string>      policy_names;
+    2:i32               backup_info_count;
+}
+
+struct configuration_query_backup_policy_response
+{
+    1:dsn.error_code            err;
+    2:list<policy_entry>        policys;
+    3:list<list<backup_entry>>  backup_infos;
+    4:optional string           hint_msg;
+}
+
+struct configuration_report_restore_status_request
+{
+    1:dsn.gpid  pid;
+    2:dsn.error_code    restore_status;
+    3:i32        progress; //[0~1000]
+    4:optional string   reason;
+}
+
+struct configuration_report_restore_status_response
+{
+    1:dsn.error_code    err;
+}
+
+struct configuration_query_restore_request
+{
+    1:i32   restore_app_id;
+}
+
+struct configuration_query_restore_response
+{
+    1:dsn.error_code    err;
+    2:dsn.error_code    restore_status;
+    3:i32               restore_progress;
+}
+
 /*
 service replica_s
 {

@@ -83,6 +83,8 @@ public:
     fd_suboptions _fd_opts;
     lb_suboptions _lb_opts;
 
+    bool cold_backup_disabled;
+
 public:
     void initialize();
 

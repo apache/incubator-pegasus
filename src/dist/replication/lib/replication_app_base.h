@@ -199,6 +199,7 @@ public:
     const char *replica_name() const;
     const std::string &data_dir() const { return _dir_data; }
     const std::string &learn_dir() const { return _dir_learn; }
+    const std::string &backup_dir() const { return _dir_backup; }
     ::dsn::replication::decree last_committed_decree() const
     {
         return _last_committed_decree.load();
@@ -231,8 +232,9 @@ private:
     dsn_app_callbacks _callbacks;
 
 private:
-    std::string _dir_data;  // ${replica_dir}/data
-    std::string _dir_learn; // ${replica_dir}/learn
+    std::string _dir_data;   // ${replica_dir}/data
+    std::string _dir_learn;  // ${replica_dir}/learn
+    std::string _dir_backup; // ${replica_dir}/backup
     replica *_replica;
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;

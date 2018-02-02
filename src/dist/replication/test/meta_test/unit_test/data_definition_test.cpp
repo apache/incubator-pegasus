@@ -21,27 +21,6 @@ dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
     return dsn_msg_copy(request_msg, true, true);
 }
 
-class fake_receiver_meta_service : public meta_service
-{
-public:
-    fake_receiver_meta_service() : meta_service() {}
-    virtual ~fake_receiver_meta_service() {}
-    virtual void reply_message(dsn_message_t request, dsn_message_t response) override
-    {
-        uint64_t ptr;
-        dsn::unmarshall(request, ptr);
-        reply_context *ctx = reinterpret_cast<reply_context *>(ptr);
-        ctx->response = create_corresponding_receive(response);
-        dsn_msg_add_ref(ctx->response);
-
-        // release the response
-        dsn_msg_add_ref(response);
-        dsn_msg_release_ref(response);
-
-        ctx->e.notify();
-    }
-};
-
 #define fake_create_app(state, request_data)                                                       \
     fake_rpc_call(                                                                                 \
         RPC_CM_CREATE_APP, LPC_META_STATE_NORMAL, state, &server_state::create_app, request_data)
@@ -53,13 +32,6 @@ public:
 #define fake_recall_app(state, request_data)                                                       \
     fake_rpc_call(                                                                                 \
         RPC_CM_RECALL_APP, LPC_META_STATE_NORMAL, state, &server_state::recall_app, request_data)
-
-#define fake_wait_rpc(context, response_data)                                                      \
-    do {                                                                                           \
-        context->e.wait();                                                                         \
-        unmarshall(context->response, response_data);                                              \
-        dsn_msg_release_ref(context->response);                                                    \
-    } while (0)
 
 inline void test_logger(const char *str)
 {

@@ -9,13 +9,22 @@ set(MY_PROJ_SRC ../misc/misc.cpp)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
+ms_find_source_files("CXX" "${CMAKE_CURRENT_SOURCE_DIR}/../../../meta_server" "GLOB" MY_PROJ_SRC)
+
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS dsn_meta_server
-                 dsn.replication.zookeeper_provider
+set(MY_PROJ_LIBS dsn.replication.zookeeper_provider
                  dsn.replication.clientlib
+                 dsn.block_service.local
+                 dsn.block_service.fds
                  dsn.failure_detector
                  zookeeper_mt
+                 galaxy-fds-sdk-cpp
+                 PocoNet
+                 PocoFoundation
+                 PocoNetSSL
+                 PocoJSON
+                 crypto
                  gtest)
 
 set(MY_PROJ_LIB_PATH "")
@@ -25,4 +34,5 @@ set(MY_BOOST_PACKAGES system filesystem)
 # Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-ddl-test.ini config-test.ini suite1 suite2)
 
+add_definitions(-DDSN_MOCK_TEST)
 dsn_add_executable()

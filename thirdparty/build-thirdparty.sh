@@ -71,29 +71,31 @@ if [ ! -d $TP_OUTPUT/include/gtest ]; then
     cd $TP_BUILD/googletest
     cmake $TP_SRC/googletest-release-1.8.0
     make -j8
+    res=$?
     cp -R $TP_SRC/googletest-release-1.8.0/googletest/include/gtest $TP_OUTPUT/include
     cp $TP_BUILD/googletest/googlemock/gtest/libgtest.a $TP_BUILD/googletest/googlemock/gtest/libgtest_main.a $TP_OUTPUT/lib
     cd $TP_DIR
-    exit_if_fail "gtest" $?
+    exit_if_fail "gtest" $res
 else
     echo "skip build gtest"
 fi
 
-# build protobuf
-if [ ! -d $TP_OUTPUT/include/google/protobuf ]; then
-    mkdir -p $TP_BUILD/protobuf
-    cd $TP_BUILD/protobuf
-    cmake $TP_SRC/protobuf-3.5.0/cmake -Dprotobuf_BUILD_TESTS=OFF \
-        -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT \
-        -DCMAKE_INSTALL_LIBDIR=$TP_OUTPUT/lib \
-        -DCMAKE_BUILD_TYPE=release
+## build protobuf
+#if [ ! -d $TP_OUTPUT/include/google/protobuf ]; then
+#    mkdir -p $TP_BUILD/protobuf
+#    cd $TP_BUILD/protobuf
+#    cmake $TP_SRC/protobuf-3.5.0/cmake -Dprotobuf_BUILD_TESTS=OFF \
+#        -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT \
+#        -DCMAKE_INSTALL_LIBDIR=$TP_OUTPUT/lib \
+#        -DCMAKE_BUILD_TYPE=release
 
-    make -j8 && make install
-    cd $TP_DIR
-    exit_if_fail "protobuf" $?
-else
-    echo "skip build protobuf"
-fi
+#    make -j8 && make install
+#    res=$?
+#    cd $TP_DIR
+#    exit_if_fail "protobuf" $res
+#else
+#    echo "skip build protobuf"
+#fi
 
 # build rapidjson
 if [ ! -d $TP_OUTPUT/include/rapidjson ]; then
@@ -129,8 +131,9 @@ if [ ! -d $TP_OUTPUT/include/thrift ]; then
     cmake $TP_SRC/thrift-0.9.3 $CMAKE_FLAGS
 
     make -j8 && make install
+    res=$?
     cd $TP_DIR
-    exit_if_fail "thrift" $?
+    exit_if_fail "thrift" $res
 else
     echo "skip build thrift"
 fi
@@ -139,10 +142,10 @@ fi
 if [ ! -d $TP_OUTPUT/include/zookeeper ]; then
     cd $TP_SRC/zookeeper-3.4.10/src/c
     ./configure --enable-static=yes --enable-shared=no --prefix=$TP_OUTPUT --with-pic=yes
-    make -j8
-    make install
+    make -j8 && make install
+    res=$?
     cd $TP_DIR
-    exit_if_fail "zookeeper-c-client" $?
+    exit_if_fail "zookeeper-c-client" $res
 else
     echo "skip build zookeeper-c-client"
 fi
@@ -152,10 +155,86 @@ if [ ! -d $TP_OUTPUT/include/event2 ]; then
     cd $TP_SRC/libevent-release-2.0.22-stable
     ./autogen.sh
     ./configure --enable-shared=no --disable-debug-mode --prefix=$TP_OUTPUT --with-pic=yes
-    make -j8
-    make install
+    make -j8 && make install
+    res=$?
     cd $TP_DIR
-    exit_if_fail "libevent" $?
+    exit_if_fail "libevent" $res
 else
     echo "skip build libevent"
+fi
+
+# build poco
+if [ ! -d $TP_OUTPUT/include/Poco ]; then
+    mkdir -p $TP_BUILD/poco-1.7.8-release
+    cd $TP_BUILD/poco-1.7.8-release
+    CMAKE_FLAGS="-DENABLE_XML=OFF\
+    -DENABLE_MONGODB=OFF\
+    -DENABLE_PDF=OFF\
+    -DENABLE_DATA=OFF\
+    -DENABLE_DATA_SQLITE=OFF\
+    -DENABLE_DATA_MYSQL=OFF\
+    -DENABLE_DATA_ODBC=OFF\
+    -DENABLE_SEVENZIP=OFF\
+    -DENABLE_ZIP=OFF\
+    -DENABLE_APACHECONNECTOR=OFF\
+    -DENABLE_CPPPARSER=OFF\
+    -DENABLE_POCODOC=OFF\
+    -DENABLE_PAGECOMPILER=OFF\
+    -DENABLE_PAGECOMPILER_FILE2PAGE=OFF\
+    -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT\
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+    #-DPOCO_STATIC=1"
+
+    if [ "x"$BOOST_ROOT != "x" ]; then
+        CMAKE_FLAGS="$CMAKE_FLAGS -DBOOST_ROOT=$BOOST_ROOT"
+    fi
+
+    echo $CMAKE_FLAGS
+    cmake $TP_SRC/poco-poco-1.7.8-release $CMAKE_FLAGS
+    make -j8 && make install
+    res=$?
+    cd $TP_DIR
+    exit_if_fail "poco" $res
+else
+    echo "skip build Poco"
+fi
+
+# build fds
+if [ ! -d $TP_OUTPUT/include/fds ]; then
+    if [ ! -d $TP_OUTPUT/include/Poco -o ! -d $TP_OUTPUT/include/gtest ]; then
+        echo "please build poco or gtest first"
+        exit
+    fi
+    # when build fds, we need poco, gtest
+    POCO_INCLUDE_DIR=$TP_OUTPUT/include
+    POCO_LIB_DIR=$TP_OUTPUT/lib
+    GTEST_INCLUDE_DIR=$TP_OUTPUT/include
+    GTEST_LIB_DIR=$TP_OUTPUT/lib
+
+    mkdir -p $TP_BUILD/fds
+    cd $TP_BUILD/fds
+
+    CMAKE_FLAGS="-DPOCO_INCLUDE=${POCO_INCLUDE_DIR}\
+    -DPOCO_LIB=${POCO_LIB_DIR}\
+    -DGTEST_INCLUDE=${GTEST_INCLUDE_DIR}\
+    -DGTEST_LIB=${GTEST_LIB_DIR}\
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+    if [ "x"$BOOST_ROOT != "x" ]; then
+        CMAKE_FLAGS="$CMAKE_FLAGS -DBOOST_ROOT=$BOOST_ROOT"
+    fi
+
+    echo $CMAKE_FLAGS
+    cmake $TP_SRC/fds $CMAKE_FLAGS
+    make -j8
+    res=$?
+    exit_if_fail "fds" $res
+    mkdir -p $TP_OUTPUT/include/fds
+    cd $TP_OUTPUT/include/fds
+    cp -r  $TP_SRC/fds/include/* ./
+    cd $TP_OUTPUT/lib
+    cp $TP_BUILD/fds/libgalaxy-fds-sdk-cpp.a ./
+    cd $TP_DIR
+else
+    echo "skip build fds"
 fi

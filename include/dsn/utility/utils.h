@@ -452,9 +452,13 @@ inline uint64_t get_current_rdtsc()
 #endif
 }
 
-extern void time_ms_to_string(uint64_t ts_ms, char *str); // yyyy-MM-dd hh:mm:ss.SSS
-extern void time_ms_to_date(uint64_t ts_ms, char *str, int len); // yyyy-MM-dd
+extern void time_ms_to_string(uint64_t ts_ms, char *str);             // yyyy-MM-dd hh:mm:ss.SSS
+extern void time_ms_to_date(uint64_t ts_ms, char *str, int len);      // yyyy-MM-dd
 extern void time_ms_to_date_time(uint64_t ts_ms, char *str, int len); // yyyy-MM-dd hh:mm:ss
+extern void time_ms_to_date_time(uint64_t ts_ms,
+                                 int32_t &hour,
+                                 int32_t &min,
+                                 int32_t &sec); // time to hour, min, sec
 
 extern int get_current_tid_internal();
 
@@ -541,6 +545,16 @@ struct disk_space_info
     uint64_t available;
 };
 extern bool get_disk_space_info(const std::string &path, disk_space_info &info);
+
+extern bool link_file(const std::string &src, const std::string &target);
+
+extern error_code md5sum(const std::string &file_path, /*out*/ std::string &result);
+
+// return value:
+//  - <A, B>:
+//          A is represent whether operation encounter some local error
+//          B is represent wheter the directory is empty, true means empty, otherwise false
+extern std::pair<error_code, bool> is_directory_empty(const std::string &dirname);
 }
 }
 } // end namespace dsn::utils

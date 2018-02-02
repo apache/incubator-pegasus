@@ -69,7 +69,9 @@ public:
     //    routines for replica stub
     //
     static replica *load(replica_stub *stub, const char *dir);
-    static replica *newr(replica_stub *stub, gpid gpid, const app_info &app);
+    static replica *
+    newr(replica_stub *stub, gpid gpid, const app_info &app, bool restore_if_necessary);
+
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
     void reset_prepare_list_after_replay();
@@ -92,6 +94,7 @@ public:
     //
     void on_config_proposal(configuration_update_request &proposal);
     void on_config_sync(const partition_configuration &config);
+    void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
     //
     //    messages from peers (primary or secondary)
@@ -140,10 +143,14 @@ public:
     const char *name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
     const replication_options *options() const { return _options; }
+    replica_stub *get_replica_stub() { return _stub; }
     bool verbose_commit_log() const;
 
     // void json_state(std::stringstream& out) const;
     void update_commit_statistics(int count);
+
+    // routine for get extra envs from replica
+    const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
 
 private:
     // common helpers
@@ -153,7 +160,7 @@ private:
     mutation_ptr new_mutation(decree decree);
 
     // initialization
-    replica(replica_stub *stub, gpid gpid, const app_info &app, const char *dir);
+    replica(replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool need_restore);
     error_code initialize_on_new();
     error_code initialize_on_load();
     error_code init_app_and_prepare_list(bool create_new);
@@ -245,6 +252,42 @@ private:
                                            std::shared_ptr<learn_response> resp,
                                            const std::string &chk_dir);
 
+    /////////////////////////////////////////////////////////////////
+    // cold backup
+    void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
+    void trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
+    void wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
+    void local_copy_backup_checkpoint(cold_backup_context_ptr backup_context);
+    void send_backup_request_to_secondary(const backup_request &request);
+    // set all cold_backup_state cancel/pause
+    void set_backup_context_cancel();
+    void set_backup_context_pause();
+    void clear_cold_backup_state();
+
+    void collect_backup_info();
+
+    /////////////////////////////////////////////////////////////////
+    // replica restore from backup
+    bool read_cold_backup_metadata(const std::string &file, cold_backup_metadata &backup_metadata);
+    bool verify_checkpoint(const cold_backup_metadata &backup_metadata,
+                           const std::string &chkpt_dir);
+    // checkpoint on cold backup media maybe contain useless file,
+    // we should abandon these file base cold_backup_metadata
+    bool remove_useless_file_under_chkpt(const std::string &chkpt_dir,
+                                         const cold_backup_metadata &metadata);
+    dsn::error_code download_checkpoint(const configuration_restore_request &req,
+                                        const std::string &remote_chkpt_dir,
+                                        const std::string &local_chkpt_dir);
+    dsn::error_code find_valid_checkpoint(const configuration_restore_request &req,
+                                          /*out*/ std::string &remote_chkpt_dir);
+    dsn::error_code restore_checkpoint();
+
+    void tell_meta_to_restore_rollback();
+
+    void report_restore_status_to_meta();
+
+    void update_restore_progress();
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -275,12 +318,31 @@ private:
     char _name[256]; // app.index @ host:port
     replication_options *_options;
     const app_info _app_info;
+    std::map<std::string, std::string> _extra_envs;
     dsn_app_callbacks _app_callbacks;
 
     // replica status specific states
     primary_context _primary_states;
     secondary_context _secondary_states;
     potential_secondary_context _potential_secondary_states;
+    // policy_name --> cold_backup_context
+    std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
+
+    // timer task that running in replication-thread
+    dsn::task_ptr _collect_info_timer;
+    std::atomic<uint64_t> _cold_backup_running_count;
+    std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
+    std::atomic<uint64_t> _cold_backup_max_upload_file_size;
+
+    // record the progress of restore
+    int64_t _chkpt_total_size;
+    std::atomic<int64_t> _cur_download_size;
+    std::atomic<int32_t> _restore_progress;
+    // ERR_OK is restore succeed
+    // ERR_CORRUPTION data is damaged, should restore rollback
+    // ERR_IGNORE_DAMAGED_DATA, skip the damaged partition, this is just ok
+    dsn::error_code _restore_status;
+
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
 

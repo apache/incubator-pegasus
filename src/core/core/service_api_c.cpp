@@ -1142,7 +1142,7 @@ DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init)
             "//       config.ini -app_list replica -cargs replica-port=34556 to start with "
             "%%replica-port%% var in config.ini\n"
             "//       config.ini to start ALL apps as a new process\n");
-        exit(1);
+        dsn_exit(1);
         return;
     }
 
@@ -1163,7 +1163,7 @@ DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init)
             }
         } else {
             printf("unknown arguments %s\n", argv[i]);
-            exit(1);
+            dsn_exit(1);
             return;
         }
     }

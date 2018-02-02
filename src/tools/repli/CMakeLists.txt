@@ -16,8 +16,16 @@ set(MY_BOOST_PACKAGES system filesystem)
 set(MY_PROJ_LIB_PATH "")
 set(MY_PROJ_LIBS dsn_layer2_stateful_type1
                  dsn.replication.clientlib
+                 dsn.block_service.local
+                 dsn.block_service.fds
                  dsn.failure_detector
                  dsn.failure_detector.multimaster
+                 galaxy-fds-sdk-cpp
+                 PocoNet
+                 PocoFoundation
+                 PocoNetSSL
+                 PocoJSON
+                 crypto
                 )
 
 # Extra files that will be installed

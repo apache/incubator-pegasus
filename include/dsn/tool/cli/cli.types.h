@@ -3,6 +3,10 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/serialization.h>
 
-namespace dsn {
-GENERATED_TYPE_SERIALIZATION(command, THRIFT)
-}
+
+
+
+namespace dsn { 
+    GENERATED_TYPE_SERIALIZATION(command, THRIFT)
+
+} 

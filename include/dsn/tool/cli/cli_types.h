@@ -16,60 +16,63 @@
 
 #include <thrift/cxxfunctional.h>
 
+
 namespace dsn {
 
 class command;
 
-typedef struct _command__isset
-{
-    _command__isset() : cmd(false), arguments(false) {}
-    bool cmd : 1;
-    bool arguments : 1;
+typedef struct _command__isset {
+  _command__isset() : cmd(false), arguments(false) {}
+  bool cmd :1;
+  bool arguments :1;
 } _command__isset;
 
-class command
-{
-public:
-    command(const command &);
-    command(command &&);
-    command &operator=(const command &);
-    command &operator=(command &&);
-    command() : cmd() {}
+class command {
+ public:
 
-    virtual ~command() throw();
-    std::string cmd;
-    std::vector<std::string> arguments;
+  command(const command&);
+  command(command&&);
+  command& operator=(const command&);
+  command& operator=(command&&);
+  command() : cmd() {
+  }
 
-    _command__isset __isset;
+  virtual ~command() throw();
+  std::string cmd;
+  std::vector<std::string>  arguments;
 
-    void __set_cmd(const std::string &val);
+  _command__isset __isset;
 
-    void __set_arguments(const std::vector<std::string> &val);
+  void __set_cmd(const std::string& val);
 
-    bool operator==(const command &rhs) const
-    {
-        if (!(cmd == rhs.cmd))
-            return false;
-        if (!(arguments == rhs.arguments))
-            return false;
-        return true;
-    }
-    bool operator!=(const command &rhs) const { return !(*this == rhs); }
+  void __set_arguments(const std::vector<std::string> & val);
 
-    bool operator<(const command &) const;
+  bool operator == (const command & rhs) const
+  {
+    if (!(cmd == rhs.cmd))
+      return false;
+    if (!(arguments == rhs.arguments))
+      return false;
+    return true;
+  }
+  bool operator != (const command &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const command & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(command &a, command &b);
 
-inline std::ostream &operator<<(std::ostream &out, const command &obj)
+inline std::ostream& operator<<(std::ostream& out, const command& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
 } // namespace

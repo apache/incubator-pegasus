@@ -13,6 +13,8 @@ set(MY_PROJ_INC_PATH)
 
 set(MY_PROJ_LIBS dsn_meta_server
                  dsn.replication.clientlib
+                 dsn.block_service.local
+                 dsn.block_service.fds
                  gtest)
 
 set(MY_PROJ_LIB_PATH "")

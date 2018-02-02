@@ -269,5 +269,19 @@ private:
     THandler _handler;
 };
 
+//
+//  call a safe_late_task with specified response
+//
+template <typename TResponse>
+void call_safe_late_task(const dsn::task_ptr &task, TResponse &&response)
+{
+    typedef std::function<void(const TResponse &)> TCallback;
+    typedef dsn::safe_late_task<TCallback> task_type;
+    task_type *t = reinterpret_cast<task_type *>(task.get());
+    t->bind_and_enqueue([r = std::move(response)](TCallback & callback) {
+        return std::bind(callback, std::move(r));
+    });
+}
+
 // ------- inlined implementation ----------
 }

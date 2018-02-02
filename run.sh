@@ -3,6 +3,12 @@
 os=linux
 scripts_dir=`pwd`/scripts/$os
 
+function exit_if_fail() {
+    if [ $1 != 0 ]; then
+        exit $1
+    fi
+}
+
 function usage()
 {
     echo "usage: run.sh <command> [<args>]"
@@ -120,10 +126,13 @@ function run_build()
     # build thirdparty first
     cd thirdparty
     ./download-thirdparty.sh
+    exit_if_fail $?
     if [ "x"$BOOST_DIR != "x" ]; then
         ./build-thirdparty.sh -b $BOOST_DIR
+        exit_if_fail $?
     else
         ./build-thirdparty.sh
+        exit_if_fail $?
     fi
     cd ..
 

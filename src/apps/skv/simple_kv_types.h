@@ -16,65 +16,66 @@
 
 #include <thrift/cxxfunctional.h>
 
-namespace dsn {
-namespace replication {
-namespace application {
+
+namespace dsn { namespace replication { namespace application {
 
 class kv_pair;
 
-typedef struct _kv_pair__isset
-{
-    _kv_pair__isset() : key(false), value(false) {}
-    bool key : 1;
-    bool value : 1;
+typedef struct _kv_pair__isset {
+  _kv_pair__isset() : key(false), value(false) {}
+  bool key :1;
+  bool value :1;
 } _kv_pair__isset;
 
-class kv_pair
-{
-public:
-    kv_pair(const std::string &_key, const std::string &_val) : key(_key), value(_val) {}
+class kv_pair {
+ public:
+  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {
+  }
 
-    kv_pair(const kv_pair &);
-    kv_pair(kv_pair &&);
-    kv_pair &operator=(const kv_pair &);
-    kv_pair &operator=(kv_pair &&);
-    kv_pair() : key(), value() {}
+  kv_pair(const kv_pair&);
+  kv_pair(kv_pair&&);
+  kv_pair& operator=(const kv_pair&);
+  kv_pair& operator=(kv_pair&&);
+  kv_pair() : key(), value() {
+  }
 
-    virtual ~kv_pair() throw();
-    std::string key;
-    std::string value;
+  virtual ~kv_pair() throw();
+  std::string key;
+  std::string value;
 
-    _kv_pair__isset __isset;
+  _kv_pair__isset __isset;
 
-    void __set_key(const std::string &val);
+  void __set_key(const std::string& val);
 
-    void __set_value(const std::string &val);
+  void __set_value(const std::string& val);
 
-    bool operator==(const kv_pair &rhs) const
-    {
-        if (!(key == rhs.key))
-            return false;
-        if (!(value == rhs.value))
-            return false;
-        return true;
-    }
-    bool operator!=(const kv_pair &rhs) const { return !(*this == rhs); }
+  bool operator == (const kv_pair & rhs) const
+  {
+    if (!(key == rhs.key))
+      return false;
+    if (!(value == rhs.value))
+      return false;
+    return true;
+  }
+  bool operator != (const kv_pair &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(kv_pair &a, kv_pair &b);
 
-inline std::ostream &operator<<(std::ostream &out, const kv_pair &obj)
+inline std::ostream& operator<<(std::ostream& out, const kv_pair& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
-}
-}
-} // namespace
+
+}}} // namespace
 
 #endif

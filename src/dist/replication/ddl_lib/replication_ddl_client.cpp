@@ -31,7 +31,8 @@
  * Revision history:
  *     2015-12-30, xiaotz, first version
  */
-
+#include <boost/lexical_cast.hpp>
+#include <dsn/dist/error_code.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <iostream>
@@ -909,6 +910,304 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
         }
         return resp.err;
     }
+}
+
+dsn::error_code replication_ddl_client::do_restore(const std::string &backup_provider_name,
+                                                   const std::string &cluster_name,
+                                                   const std::string &policy_name,
+                                                   int64_t timestamp,
+                                                   const std::string &old_app_name,
+                                                   int32_t old_app_id,
+                                                   const std::string &new_app_name,
+                                                   bool skip_bad_partition)
+{
+    std::shared_ptr<configuration_restore_request> req =
+        std::make_shared<configuration_restore_request>();
+
+    req->cluster_name = cluster_name;
+    req->policy_name = policy_name;
+    req->app_name = old_app_name;
+    req->app_id = old_app_id;
+    req->new_app_name = new_app_name;
+    req->backup_provider_name = backup_provider_name;
+    req->time_stamp = timestamp;
+    req->skip_bad_partition = skip_bad_partition;
+
+    auto resp_task = request_meta<configuration_restore_request>(RPC_CM_START_RESTORE, req);
+    bool finish = false;
+    while (!finish) {
+        std::cout << "sleep 1 second to wait complete..." << std::endl;
+        finish = resp_task->wait(1000);
+    }
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    } else {
+        configuration_create_app_response resp;
+        dsn::unmarshall(resp_task->response(), resp);
+        if (resp.err == ERR_OBJECT_NOT_FOUND) {
+            std::cout << "app metadata is damaged on cold backup media, restore app failed"
+                      << std::endl;
+            return ERR_OK;
+        } else if (resp.err == ERR_OK) {
+            std::cout << "\t"
+                      << "new app_id = " << resp.appid << std::endl;
+        }
+        return resp.err;
+    }
+}
+
+dsn::error_code replication_ddl_client::add_backup_policy(const std::string &policy_name,
+                                                          const std::string &backup_provider_type,
+                                                          const std::vector<int32_t> &app_ids,
+                                                          int64_t backup_interval_seconds,
+                                                          int32_t backup_history_cnt,
+                                                          const std::string &start_time)
+{
+    std::shared_ptr<configuration_add_backup_policy_request> req =
+        std::make_shared<configuration_add_backup_policy_request>();
+    req->policy_name = policy_name;
+    req->backup_provider_type = backup_provider_type;
+    req->app_ids = app_ids;
+    req->backup_interval_seconds = backup_interval_seconds;
+    req->backup_history_count_to_keep = backup_history_cnt;
+    req->start_time = start_time;
+    auto resp_task =
+        request_meta<configuration_add_backup_policy_request>(RPC_CM_ADD_BACKUP_POLICY, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_add_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else {
+        std::cout << "add backup policy succeed, policy_name = " << policy_name << std::endl;
+    }
+    return ERR_OK;
+}
+
+dsn::error_code replication_ddl_client::disable_backup_policy(const std::string &policy_name)
+{
+    std::shared_ptr<configuration_modify_backup_policy_request> req =
+        std::make_shared<configuration_modify_backup_policy_request>();
+    req->policy_name = policy_name;
+    req->__set_is_disable(true);
+
+    auto resp_task =
+        request_meta<configuration_modify_backup_policy_request>(RPC_CM_MODIFY_BACKUP_POLICY, req);
+
+    resp_task->wait();
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_modify_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else {
+        std::cout << "disable policy result: " << resp.err.to_string() << std::endl;
+        if (!resp.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << resp.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+        return resp.err;
+    }
+}
+
+dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &policy_name)
+{
+    std::shared_ptr<configuration_modify_backup_policy_request> req =
+        std::make_shared<configuration_modify_backup_policy_request>();
+    req->policy_name = policy_name;
+    req->__set_is_disable(false);
+
+    auto resp_task =
+        request_meta<configuration_modify_backup_policy_request>(RPC_CM_MODIFY_BACKUP_POLICY, req);
+
+    resp_task->wait();
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_modify_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else if (resp.err == ERR_BUSY) {
+        std::cout << "policy is under backup, please try disable later" << std::endl;
+        return ERR_OK;
+    } else {
+        std::cout << "enable policy result: " << resp.err.to_string() << std::endl;
+        if (!resp.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << resp.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+        return resp.err;
+    }
+}
+
+dsn::error_code
+replication_ddl_client::query_backup_policy(const std::vector<std::string> &policy_names,
+                                            int backup_info_cnt)
+{
+    std::shared_ptr<configuration_query_backup_policy_request> req =
+        std::make_shared<configuration_query_backup_policy_request>();
+    req->policy_names = policy_names;
+    req->backup_info_count = backup_info_cnt;
+
+    auto resp_task =
+        request_meta<configuration_query_backup_policy_request>(RPC_CM_QUERY_BACKUP_POLICY, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_query_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else {
+        std::cout << "query backup policy succeed" << std::endl;
+        for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
+            const policy_entry &pentry = resp.policys[idx];
+            if (idx > 0) {
+                std::cout << std::endl << std::endl;
+            }
+            std::cout << "policy_info:" << std::endl;
+            std::cout << "\t"
+                      << "name = " << pentry.policy_name << std::endl;
+            std::cout << "\t"
+                      << "backup_provider_type = " << pentry.backup_provider_type << "\t"
+                      << "backup_interval = " << pentry.backup_interval_seconds << "s" << std::endl;
+            std::cout << "\t"
+                      << "app_ids: ";
+            for (auto &app_id : pentry.app_ids) {
+                std::cout << app_id << " ";
+            }
+            std::cout << "\t"
+                      << "start_time = " << pentry.start_time << "\t";
+            std::cout << "\t"
+                      << "status = " << (pentry.is_disable ? "disable" : "enable") << std::endl;
+            std::cout << "\t"
+                      << "backup_history_count_to_keep = " << pentry.backup_history_count_to_keep
+                      << "\t" << std::endl;
+            std::cout << std::endl;
+            // print backup info
+            std::cout << "backup_infos:" << std::endl;
+            const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
+            for (const auto &bentry : backup_infos) {
+                std::cout << "\t"
+                          << "id = " << bentry.backup_id << std::endl;
+                char start_time[30] = {'\0'};
+                char end_time[30] = {'\0'};
+                ::dsn::utils::time_ms_to_date_time(bentry.start_time_ms, start_time, 30);
+                if (bentry.end_time_ms == 0) {
+                    end_time[0] = '-';
+                    end_time[1] = '\0';
+                } else {
+                    ::dsn::utils::time_ms_to_date_time(bentry.end_time_ms, end_time, 30);
+                }
+                std::cout << "\t"
+                          << "start_time = " << start_time << "\t"
+                          << "end_time = " << end_time << std::endl;
+            }
+        }
+    }
+    return ERR_OK;
+}
+
+dsn::error_code
+replication_ddl_client::update_backup_policy(const std::string &policy_name,
+                                             const std::vector<int32_t> &add_appids,
+                                             const std::vector<int32_t> &removal_appids,
+                                             int64_t new_backup_interval_sec,
+                                             int32_t backup_history_count_to_keep,
+                                             const std::string &start_time)
+{
+    std::shared_ptr<configuration_modify_backup_policy_request> req =
+        std::make_shared<configuration_modify_backup_policy_request>();
+    req->policy_name = policy_name;
+    if (!add_appids.empty()) {
+        req->__set_add_appids(add_appids);
+    }
+    if (!removal_appids.empty()) {
+        req->__set_removal_appids(removal_appids);
+    }
+    if (new_backup_interval_sec > 0) {
+        req->__set_new_backup_interval_sec(new_backup_interval_sec);
+    }
+
+    if (backup_history_count_to_keep > 0) {
+        req->__set_backup_history_count_to_keep(backup_history_count_to_keep);
+    }
+
+    if (!start_time.empty()) {
+        req->__set_start_time(start_time);
+    }
+    auto resp_task =
+        request_meta<configuration_modify_backup_policy_request>(RPC_CM_MODIFY_BACKUP_POLICY, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_modify_backup_policy_response resp;
+    ::dsn::unmarshall(resp_task->response(), resp);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    } else {
+        std::cout << "Modify policy result: " << resp.err.to_string() << std::endl;
+        if (!resp.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << resp.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+        return resp.err;
+    }
+}
+
+dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id)
+{
+    if (restore_app_id <= 0) {
+        return ERR_INVALID_PARAMETERS;
+    }
+    std::shared_ptr<configuration_query_restore_request> req =
+        std::make_shared<configuration_query_restore_request>();
+    req->restore_app_id = restore_app_id;
+
+    auto resp_task =
+        request_meta<configuration_query_restore_request>(RPC_CM_QUERY_RESTORE_STATUS, req);
+
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_query_restore_response response;
+    ::dsn::unmarshall(resp_task->response(), response);
+    if (response.err == ERR_OK) {
+        std::cout << "app(" << restore_app_id << ") restore status:" << std::endl;
+        std::cout << "\terror_code = " << response.restore_status.to_string() << std::endl;
+        std::cout << "\tprogress = " << response.restore_progress << std::endl;
+    } else if (response.err == ERR_APP_NOT_EXIST) {
+        std::cout << "invalid restore_app_id(" << restore_app_id << ")" << std::endl;
+    } else if (response.err == ERR_APP_DROPPED) {
+        std::cout << "restore failed, because some partition's data is damaged on cold backup media"
+                  << std::endl;
+    }
+    return ERR_OK;
 }
 
 bool replication_ddl_client::valid_app_char(int c)

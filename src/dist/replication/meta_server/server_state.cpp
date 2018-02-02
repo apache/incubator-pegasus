@@ -61,15 +61,6 @@ namespace replication {
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
-template <typename TResponse>
-static inline void
-reply_message(meta_service *svc, dsn_message_t request_msg, TResponse &&response_data)
-{
-    dsn_message_t response_msg = dsn_msg_create_response(request_msg);
-    dsn::marshall(response_msg, response_data);
-    svc->reply_message(request_msg, response_msg);
-}
-
 server_state::server_state()
     : _meta_svc(nullptr), _cli_json_state_handle(nullptr), _cli_dump_handle(nullptr)
 {
@@ -185,7 +176,7 @@ void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
 #define send_response(meta, msg, response_data)                                                    \
     do {                                                                                           \
         if (msg != nullptr) {                                                                      \
-            reply_message(meta, msg, response_data);                                               \
+            meta->reply_data(msg, response_data);                                                  \
             dsn_msg_release_ref(msg);                                                              \
             msg = nullptr;                                                                         \
         }                                                                                          \
@@ -867,7 +858,7 @@ void server_state::on_config_sync(dsn_message_t msg)
            response.err.to_string(),
            (int)response.partitions.size(),
            (int)response.gc_replicas.size());
-    reply_message(_meta_svc, msg, response);
+    _meta_svc->reply_data(msg, response);
     dsn_msg_release_ref(msg);
 }
 
@@ -1054,7 +1045,7 @@ void server_state::create_app(dsn_message_t msg)
     if (will_create_app) {
         do_app_create(app);
     } else {
-        reply_message(_meta_svc, msg, response);
+        _meta_svc->reply_data(msg, response);
         dsn_msg_release_ref(msg);
     }
 }
@@ -1136,7 +1127,7 @@ void server_state::drop_app(dsn_message_t msg)
     if (do_dropping) {
         do_app_drop(app);
     } else {
-        reply_message(_meta_svc, msg, response);
+        _meta_svc->reply_data(msg, response);
         dsn_msg_release_ref(msg);
     }
 }
@@ -1204,7 +1195,7 @@ void server_state::recall_app(dsn_message_t msg)
     }
 
     if (!do_recalling) {
-        reply_message(_meta_svc, msg, response);
+        _meta_svc->reply_data(msg, response);
         dsn_msg_release_ref(msg);
         return;
     }
@@ -1508,7 +1499,7 @@ void server_state::on_update_configuration_on_remote_reply(
             configuration_update_response resp;
             resp.err = ERR_OK;
             resp.config = config_request->config;
-            reply_message(_meta_svc, cc.msg, resp);
+            _meta_svc->reply_data(cc.msg, resp);
             dsn_msg_release_ref(cc.msg);
             cc.msg = nullptr;
         }
@@ -1782,7 +1773,7 @@ void server_state::on_update_configuration(
     }
 
     if (response.err != ERR_IO_PENDING) {
-        reply_message(_meta_svc, msg, response);
+        _meta_svc->reply_data(msg, response);
         dsn_msg_release_ref(msg);
     } else {
         dassert(config_status::not_pending == cc.stage ||
@@ -2540,6 +2531,18 @@ void server_state::static_cli_dump_app_states_cleanup(dsn_cli_reply reply)
     dassert(reply.context != nullptr, "corrupted cli context");
     std::string *dump_result = reinterpret_cast<std::string *>(reply.context);
     delete dump_result;
+}
+
+void server_state::lock_read(zauto_read_lock &other)
+{
+    zauto_read_lock l(_lock);
+    l.swap(other);
+}
+
+void server_state::lock_write(zauto_write_lock &other)
+{
+    zauto_write_lock l(_lock);
+    l.swap(other);
 }
 }
 }

@@ -13,12 +13,23 @@ set(MY_PROJ_INC_PATH)
 
 set(MY_PROJ_LIBS
     dsn.replication.clientlib
+    dsn.block_service.local
+    dsn.block_service.fds
     dsn.failure_detector
     dsn.replication.zookeeper_provider
     zookeeper_mt
+    galaxy-fds-sdk-cpp
+    PocoNet
+    PocoFoundation
+    PocoNetSSL
+    PocoJSON
+    crypto
     )
 
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_LIB_PATH
+    ${LIBFDS_LIB_DIR}
+    ${POCO_LIB_DIR}
+)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

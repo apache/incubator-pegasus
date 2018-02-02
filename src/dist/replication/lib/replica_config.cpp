@@ -698,6 +698,20 @@ bool replica::update_local_configuration(const replica_configuration &config,
             max_prepared_decree(),
             last_committed_decree());
 
+    // Notice: there has five ways that primary can change its partition_status
+    //   1, primary change partition config, such as add/remove secondary
+    //   2, downgrage to secondary because of load balance
+    //   3, disnconnected with meta-server
+    //   4, connectied with meta-server
+    //   5, crash
+    // here, we just need to care about case １, 2, 3 and 4, ignore case 5
+    // the way that partition status change is:
+    //   case 1: primary -> ps_inactive & _inactive_is_transient = true -> primary
+    //   case 2: primary -> ps_inavtive & _inactive_is_transient = true -> secondary
+    //   case 3: primary -> ps_inactive & _inactive_is_transient = ture
+    //   case 4: ps_inactive & _inactive_is_transient = true -> primary or secondary
+    // the way we process whether primary stop uploading backup checkpoint is that case-1 continue
+    // uploading, others just stop uploading
     switch (old_status) {
     case partition_status::PS_PRIMARY:
         cleanup_preparing_mutations(false);
@@ -707,10 +721,24 @@ bool replica::update_local_configuration(const replica_configuration &config,
             break;
         case partition_status::PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
+            // here we use wheather ballot changes and wheather disconnecting with meta to
+            // distinguish different case above mentioned
+            if (old_ballot == config.ballot && _stub->is_connected()) {
+                // case 1 and case 2, just continue uploading
+                //(when case2, we stop uploading when it change to secondary)
+            } else {
+                set_backup_context_cancel();
+                clear_cold_backup_state();
+            }
             break;
         case partition_status::PS_SECONDARY:
         case partition_status::PS_ERROR:
             _primary_states.cleanup(true);
+            // only load balance will occur primary -> secondary
+            // and we just stop upload and release the _cold_backup_state, and let new primary to
+            // upload
+            set_backup_context_cancel();
+            clear_cold_backup_state();
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
             dassert(false, "invalid execution path");
@@ -721,6 +749,14 @@ bool replica::update_local_configuration(const replica_configuration &config,
         break;
     case partition_status::PS_SECONDARY:
         cleanup_preparing_mutations(false);
+        if (config.status != partition_status::PS_PRIMARY ||
+            config.status != partition_status::PS_SECONDARY) {
+            // if secondary upgrade to primary, shouldn't clear cold_backup_state
+            // because primary will reuse the cold_backup_state
+            // and secondary will upload the checkpoint, so we don't need cancel/pause all
+            // backup_context
+            clear_cold_backup_state();
+        }
         switch (config.status) {
         case partition_status::PS_PRIMARY:
             init_group_check();
@@ -772,6 +808,12 @@ bool replica::update_local_configuration(const replica_configuration &config,
         }
         break;
     case partition_status::PS_INACTIVE:
+        if (config.status != partition_status::PS_PRIMARY || !_inactive_is_transient) {
+            // not case 1, we need stop uploading backup checkpoint
+            // case 2 will stop uploading here
+            set_backup_context_cancel();
+            clear_cold_backup_state();
+        }
         switch (config.status) {
         case partition_status::PS_PRIMARY:
             dassert(_inactive_is_transient, "must be in transient state for being primary next");
